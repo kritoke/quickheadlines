@@ -1,4 +1,5 @@
-refresh_minutes: 10
+refresh_minutes: 1
+item_limit: 10
 page_title: "Quick Headlines"
 feeds:
   - title: "Hacker News"
@@ -7,3 +8,5 @@ feeds:
     url: "http://feeds.arstechnica.com/arstechnica/technology-lab"
   - title: "Tech Radar"
     url: "https://www.techradar.com/feeds.xml"
+  - title: "Hackaday"
+    url: "https://hackaday.com/blog/feed/"

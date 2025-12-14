@@ -2,18 +2,53 @@
 <html>
 <head>
   <meta charset="utf-8">
+  <meta name="color-scheme" content="light dark">
   <title>{{ TITLE }}</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+  tailwind.config = {
+    darkMode: 'class', // we'll toggle via a class on <html> or <body>
+    theme: {
+      extend: {
+        colors: {
+          surface: {
+            DEFAULT: '#1f2937', // slate-800-ish
+            light: '#f9fafb',   // gray-50
+            dark: '#111827',    // gray-900
+          },
+          card: {
+            DEFAULT: '#111827', // card bg on dark
+            light: '#ffffff',   // card bg on light
+          },
+          border: {
+            subtle: '#334155',  // slate-600
+            light: '#e5e7eb',   // gray-200
+          },
+        }
+      }
+    }
+  }
+</script>
+<script>
+  if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+    document.documentElement.classList.add('dark');
+  }
+</script>
   <style>
   {{ CSS }}
   </style>
 </head>
-<body>
-  <h1>{{ TITLE }}</h1>
-  <div class="container">
-    {{ CONTENT }}
-  </div>
-  <p class="updated">Feeds last refreshed on {{ UPDATED_AT }}</p>
-<script>
+<body class="bg-surface.light text-slate-800 dark:bg-surface.dark dark:text-slate-100 text-[15px] md:text-[16px] leading-7">
+  <main class="mx-auto max-w-[1800px] px-4">
+    <h1 class="text-3xl font-semibold tracking-tight my-4">{{ TITLE }}</h1>
+    <section class="grid gap-4 grid-cols-1 md:grid-cols-3 text-[0.95rem] md:text-[1rem]">
+      {{ CONTENT }}
+    </section>
+    <p class="updated mt-3 text-sm opacity-80 text-left">
+      Feeds last refreshed on {{ UPDATED_AT }}
+    </p>
+  </main>
+  <script>
   // rudimentary check for updated feeds/changes.
   (function() {
     const intervalMs = 10000; // check every 10s; 

@@ -27,6 +27,9 @@ struct Config
   # Page title (optional, default: Quick Headlines)
   property page_title : String = "Quick Headlines"
 
+  # Feed Item Limit (optional, default: 10)
+  property item_limit : Int32 = 10
+
   property feeds : Array(Feed)
 end
 
@@ -35,7 +38,6 @@ record ConfigState, config : Config, mtime : Time
 def file_mtime(path : String) : Time
   File.info(path).modification_time
 end
-
 
 def load_config(path : String) : Config
   File.open(path) do |io|
@@ -139,21 +141,23 @@ end
 def render_feed_boxes(feeds : Array(FeedData)) : String
   String.build do |io|
     feeds.each do |feed|
-      io << "<div class=\"feed-box\">\n"
+      io << "<article class=\"feed-box rounded-xl border border-border.light bg-card.light shadow-sm p-4
+                 dark:bg-card dark:border-border.subtle\">\n"
 
       site_href = HTML.escape(feed.site_link.empty? ? feed.url : feed.site_link)
       feed_title = HTML.escape(feed.title)
-      io << "  <h2><a href=\"#{site_href}\" target=\"_blank\" rel=\"noopener noreferrer\">#{feed_title}</a></h2>\n"
-      
-      io << "  <ul>\n"
+      io << "  <h2 class=\"text-sm md:text-base font-semibold mb-2 leading-snug\"><a href=\"#{site_href}\" target=\"_blank\" rel=\"noopener noreferrer\">#{feed_title}</a></h2>\n"
+
+      io << "    <ul class=\"space-y-1 leading-relaxed\">\n"
       feed.items.each do |item|
         # Escape title, and safely include link
         title = HTML.escape(item.title)
         link = HTML.escape(item.link)
-        io << "    <li><a href=\"#{link}\" target=\"_blank\" rel=\"noopener noreferrer\">#{title}</a></li>\n"
+        io << "    <li><a  class=\"text-sm md:text-[0.95rem] text-sky-700 hover:text-sky-800 underline underline-offset-2
+dark:text-sky-400 dark:hover:text-sky-300 break-words\" href=\"#{link}\" target=\"_blank\" rel=\"noopener noreferrer\">#{title}</a></li>\n"
       end
       io << "  </ul>\n"
-      io << "</div>\n"
+      io << "</article>\n"
     end
   end
 end
@@ -175,11 +179,16 @@ end
 
 def refresh_all(config : Config)
   feeds = config.feeds.map { |f| fetch_feed(f) }
-  boxes = render_feed_boxes(feeds)
+
+  limited_feeds = feeds.map do |feed|
+    FeedData.new(feed.title, feed.url, feed.site_link, feed.items.first(config.item_limit))
+  end
+
+  boxes = render_feed_boxes(limited_feeds)
   now = Time.local
   html = apply_template(config.page_title, boxes, now)
 
-  STATE.update(feeds, html, now)
+  STATE.update(limited_feeds, html, now)
 end
 
 # ----- Background refresh fiber -----
@@ -245,7 +254,6 @@ end
 config_path = ARGV[0]
 initial_config = load_config(config_path)
 state = ConfigState.new(initial_config, file_mtime(config_path))
-
 
 # Initial load so the first request sees real data
 refresh_all(state.config)
