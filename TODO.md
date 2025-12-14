@@ -5,7 +5,6 @@ These are just possible features that could be added in the future, for now its 
 ### Minor Features/Configuration for Feeds
 
 - Allow for a custom limit for each feed in yaml
-- Auto Refresh at Same Rate to Check for Updates to yaml (for new settings or new rss feeds to avoid having to reload app)
 
 ### UI Features
 
@@ -18,7 +17,7 @@ These are just possible features that could be added in the future, for now its 
 - Put the favicon from a site and put it into the header box
 
 ### Advanced Features
-s
+
 - Add Special Non-RSS Feed Features for Monitoring Certain Site Releases
     - Github Releases via repo name
     - Youtube Channel Releases via channel name

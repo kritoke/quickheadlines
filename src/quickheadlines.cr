@@ -30,6 +30,13 @@ struct Config
   property feeds : Array(Feed)
 end
 
+record ConfigState, config : Config, mtime : Time
+
+def file_mtime(path : String) : Time
+  File.info(path).modification_time
+end
+
+
 def load_config(path : String) : Config
   File.open(path) do |io|
     Config.from_yaml(io)
@@ -177,18 +184,33 @@ end
 
 # ----- Background refresh fiber -----
 
-def start_refresh_loop(config : Config)
+def start_refresh_loop(config_path : String, state : ConfigState)
   spawn do
+    current = state
     loop do
       begin
-        refresh_all(config)
+        # Check if config file changed
+        begin
+          mtime = file_mtime(config_path)
+          if mtime > current.mtime
+            new_config = load_config(config_path)
+            current = ConfigState.new(new_config, mtime)
+            puts "[#{Time.local}] Reloaded config from #{config_path}"
+          end
+        rescue err
+          # If the file temporarily unreadable, log and continue using last good config
+          puts "Error checking/reloading config: #{err.message}"
+        end
+
+        # Refresh feeds using current config
+        refresh_all(current.config)
         puts "[#{Time.local}] Refreshed feeds"
-      rescue ex
-        # Basic logging; in a real app you might log more context.
-        puts "Error refreshing feeds: #{ex.message}"
+      rescue err
+        puts "Error refreshing feeds: #{err.message}"
       end
 
-      sleep (config.refresh_minutes * 60).seconds
+      # Sleep based on current config's interval
+      sleep (current.config.refresh_minutes * 60).seconds
     end
   end
 end
@@ -214,13 +236,15 @@ if ARGV.size < 1
 end
 
 config_path = ARGV[0]
-config = load_config(config_path)
+initial_config = load_config(config_path)
+state = ConfigState.new(initial_config, file_mtime(config_path))
+
 
 # Initial load so the first request sees real data
-refresh_all(config)
+refresh_all(state.config)
 
 # Start periodic refresh
-start_refresh_loop(config)
+start_refresh_loop(config_path, state)
 
 # Serve in-memory HTML
 start_server(8080)

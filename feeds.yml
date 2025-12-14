@@ -1,7 +1,9 @@
-refresh_minutes: 10
+refresh_minutes: 1
 page_title: "Quick Headlines"
 feeds:
   - title: "Hacker News"
     url: "https://hnrss.org/frontpage"
   - title: "Ars Technica"
     url: "http://feeds.arstechnica.com/arstechnica/technology-lab"
+  - title: "Tech Radar"
+    url: "https://www.techradar.com/feeds.xml"
