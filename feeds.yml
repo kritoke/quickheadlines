@@ -1,4 +1,4 @@
-refresh_minutes: 1
+refresh_minutes: 10
 page_title: "Quick Headlines"
 feeds:
   - title: "Hacker News"
