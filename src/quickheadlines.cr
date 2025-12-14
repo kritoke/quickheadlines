@@ -219,8 +219,15 @@ end
 
 def start_server(port : Int32)
   server = HTTP::Server.new do |context|
-    context.response.content_type = "text/html; charset=utf-8"
-    context.response.print STATE.html
+    case {context.request.method, context.request.path}
+    when {"GET", "/version"}
+      context.response.content_type = "text/plain; charset=utf-8"
+      # Use updated_at as a change token
+      context.response.print STATE.updated_at.to_unix_ms
+    else
+      context.response.content_type = "text/html; charset=utf-8"
+      context.response.print STATE.html
+    end
   end
 
   address = server.bind_tcp port

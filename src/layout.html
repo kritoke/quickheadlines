@@ -13,5 +13,30 @@
     {{ CONTENT }}
   </div>
   <p class="updated">Feeds last refreshed on {{ UPDATED_AT }}</p>
+<script>
+  // rudimentary check for updated feeds/changes.
+  (function() {
+    const intervalMs = 10000; // check every 10s; 
+    let last = null;
+
+    async function check() {
+      try {
+        const res = await fetch('/version', {cache: 'no-store'});
+        if (!res.ok) return;
+        const v = await res.text();
+        if (last === null) {
+          last = v;
+        } else if (v !== last) {
+          location.reload();
+        }
+      } catch (_) {
+        // ignore transient errors
+      }
+    }
+
+    check();
+    setInterval(check, intervalMs);
+  })();
+</script>
 </body>
 </html>
