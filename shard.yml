@@ -1,0 +1,13 @@
+name: quickheadlines
+version: 0.1.0
+
+authors:
+  - kritoke <3081486+kritoke@users.noreply.github.com>
+
+targets:
+  feedme:
+    main: src/quickheadlines.cr
+
+crystal: '>= 1.18.2'
+
+license: MIT

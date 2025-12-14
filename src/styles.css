@@ -1,0 +1,36 @@
+body {
+  font-family: sans-serif;
+  margin: 0;
+  padding: 1rem;
+  background: #f5f5f5;
+}
+.updated {
+  font-size: 0.8rem;
+  color: #666;
+}
+.container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+.feed-box {
+  background: #fff;
+  border: 1px solid #ccc;
+  padding: 1rem;
+  flex: 1 1 300px;
+}
+.feed-box h2 {
+  margin-top: 0;
+  font-size: 1.2rem;
+}
+.feed-box ul { margin: 0.5rem 0 0; padding-left: 1.25rem; }
+.feed-box li { margin: 0.25rem 0; }
+.meta {
+  font-size: 0.8rem;
+  color: #666;
+  margin-bottom: 0.5rem;
+}
+pre {
+  white-space: pre-wrap;
+  font-size: 0.8rem;
+}

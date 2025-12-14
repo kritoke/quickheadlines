@@ -1,0 +1,7 @@
+refresh_minutes: 10
+page_title: "Quick Headlines"
+feeds:
+  - title: "Hacker News"
+    url: "https://hnrss.org/frontpage"
+  - title: "Ars Technica"
+    url: "http://feeds.arstechnica.com/arstechnica/technology-lab"
