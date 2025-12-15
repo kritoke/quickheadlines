@@ -1,6 +1,6 @@
 # --- Stage 1: Builder ---
 # Use the standard image (Ubuntu-based) which has excellent ARM64 support
-FROM 84codes/crystal:latest AS builder
+FROM 84codes/crystal:latest-ubuntu-22.04 AS builder
 
 WORKDIR /app
 
