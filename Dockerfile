@@ -1,6 +1,6 @@
 # --- Stage 1: Builder ---
 # Use the standard image (Ubuntu-based) which has excellent ARM64 support
-FROM crystallang/crystal:latest AS builder
+FROM 84codes/crystal:latest AS builder
 
 WORKDIR /app
 
@@ -46,7 +46,6 @@ RUN apt-get update && apt-get install -y \
 COPY --from=builder /app/server .
 
 # Setup environment
-ENV KEMAL_ENV=production
 EXPOSE 3000
 
 # Run it
