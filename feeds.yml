@@ -1,5 +1,6 @@
-refresh_minutes: 1
+refresh_minutes: 10
 item_limit: 10
+server_port: 3000
 page_title: "Quick Headlines"
 feeds:
   - title: "Hacker News"

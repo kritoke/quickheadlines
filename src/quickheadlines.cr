@@ -30,6 +30,9 @@ struct Config
   # Feed Item Limit (optional, default: 10)
   property item_limit : Int32 = 10
 
+  # Wev Server Port (optional, default: 3000)
+  property server_port : Int32 = 3000
+
   property feeds : Array(Feed)
 end
 
@@ -262,4 +265,4 @@ refresh_all(state.config)
 start_refresh_loop(config_path, state)
 
 # Serve in-memory HTML
-start_server(8080)
+start_server(state.config.server_port)
