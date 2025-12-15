@@ -49,4 +49,4 @@ COPY --from=builder /app/server .
 EXPOSE 3000
 
 # Run it
-CMD ["./server"]
+CMD ["./server -- feed.yml"]
