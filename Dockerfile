@@ -1,48 +1,53 @@
 # --- Stage 1: Builder ---
-# We use the Alpine version of the Crystal image to ensure easy static linking with musl-libc
-FROM crystallang/crystal:latest-alpine AS builder
+# Use the standard image (Ubuntu-based) which has excellent ARM64 support
+FROM crystallang/crystal:latest AS builder
 
 WORKDIR /app
 
-# Install static C-libraries needed for XML and SSL
-# "libxml2-static" is crucial because you are using XML.parse
-RUN apk add --no-cache libxml2-dev libxml2-static openssl-dev openssl-libs-static yaml-static
+# Install development headers for XML and SSL
+# We do NOT need static versions anymore
+RUN apt-get update && apt-get install -y \
+    libxml2-dev \
+    libssl-dev \
+    libyaml-dev \
+    build-essential
 
-# 1. Copy shard definitions first (Docker Cache optimization)
+# 1. Install dependencies
 COPY shard.yml shard.lock ./
+COPY feeds.yml ./feeds.yml
+RUN shards install --production
 
-# 2. Install dependencies
-RUN shards install --production --static
-
-# 3. Copy the rest of the source code
+# 2. Copy code
 COPY . .
 
-# 4. Build the binary
-# --release: Optimizes for performance
-# --static:  Links libraries (like libxml2) inside the binary so it runs anywhere
-RUN crystal build src/quickheadlines.cr --release --static -o /app/server
+# 3. Build the binary
+# REMOVED: --static (This is the key fix for ARM64 stability)
+# The binary will now rely on shared system libraries (Dynamic Linking)
+RUN crystal build src/quickheadlines.cr --release -o /app/server
 
 # --- Stage 2: Runner ---
-# We use a clean, tiny Alpine image. 
-# You could use 'scratch' (empty image), but Alpine allows you to shell in for debugging.
-FROM alpine:latest
-
-# Install CA Certificates so your app can make HTTPS requests (RSS feeds)
-RUN apk add --no-cache ca-certificates tzdata
+# Use Ubuntu (Slim) to match the Builder's OS architecture
+# This ensures "glibc" versions match perfectly.
+FROM ubuntu:22.04
 
 WORKDIR /app
 
-# Copy only the compiled binary from the builder stage
+# Install the RUNTIME versions of the libraries
+# We also need ca-certificates for HTTPS/RSS fetching
+RUN apt-get update && apt-get install -y \
+    libxml2 \
+    libssl3 \
+    libyaml-0-2 \
+    ca-certificates \
+    tzdata \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy the compiled binary
 COPY --from=builder /app/server .
 
-# Copy default feeds.yml file (would be better to mount this so it isn't overwritten each time, i.e. -v $(pwd)/feeds.yml:/app/feeds.yml)
-COPY feeds.yml ./feeds.yml
-
-# Set the production environment
+# Setup environment
 ENV KEMAL_ENV=production
-
-# Expose the port (Change 3000 to whatever your app uses)
 EXPOSE 3000
 
-# Run the app
+# Run it
 CMD ["./server"]
