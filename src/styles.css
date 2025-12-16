@@ -104,3 +104,9 @@
 .dark .feed-box .feed-title-link {
   color: #ffffff;
 }
+
+@media (max-width: 767.98px) {
+  section.grid {
+    grid-template-columns: 1fr !important;
+  }
+}
