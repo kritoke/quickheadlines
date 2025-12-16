@@ -1,0 +1,12 @@
+version: "3.9"
+
+services:
+  quickheadlines:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    volumes:
+       - ./feeds.yml:/app/feeds.yml:rw
+    restart: unless-stopped
