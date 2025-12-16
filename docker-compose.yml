@@ -5,6 +5,8 @@ services:
       dockerfile: Dockerfile
     ports:
       - "3001:3000"
+    environment:
+      TZ: "America/Chicago"
     volumes:
        - ./feeds.yml:/app/feeds.yml:rw
     restart: unless-stopped
