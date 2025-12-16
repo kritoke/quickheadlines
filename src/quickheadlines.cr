@@ -23,6 +23,7 @@ struct Feed
 
   property title : String
   property url : String
+  property header_color : String?
 end
 
 struct Config
@@ -74,7 +75,7 @@ end
 # ----- In-memory state -----
 
 record Item, title : String, link : String
-record FeedData, title : String, url : String, site_link : String, items : Array(Item)
+record FeedData, title : String, url : String, site_link : String, header_color : String?, items : Array(Item)
 
 class AppState
   getter feeds = [] of FeedData
@@ -148,6 +149,7 @@ def fetch_feed(feed : Feed) : FeedData
       feed.title,
       feed.url,
       feed.url,
+      feed.header_color,
       [Item.new("Error fetching feed (status #{response.status_code})", feed.url)],
     )
   end
@@ -160,29 +162,32 @@ def fetch_feed(feed : Feed) : FeedData
     # Show a single placeholder item linking to the feed itself
     items = [Item.new("No items found (or unsupported format)", feed.url)]
   end
-  FeedData.new(feed.title, feed.url, site_link, items)
+  FeedData.new(feed.title, feed.url, site_link, feed.header_color, items)
 end
 
 # Builds the inner HTML for all feed boxes as link lists.
 def render_feed_boxes(feeds : Array(FeedData)) : String
   String.build do |io|
     feeds.each do |feed|
-      io << "<article class=\"feed-box rounded-xl border border-border.light bg-card.light shadow-sm p-4
-                 dark:bg-card dark:border-border.subtle\">\n"
+      io << "<article class=\"feed-box rounded-xl  bg-card.light shadow-sm p-4\">\n"
 
-      site_href = HTML.escape(feed.site_link.empty? ? feed.url : feed.site_link)
-      feed_title = HTML.escape(feed.title)
-      io << "  <h2 class=\"text-sm md:text-base font-semibold mb-2 leading-snug\"><a href=\"#{site_href}\" target=\"_blank\" rel=\"noopener noreferrer\">#{feed_title}</a></h2>\n"
-
+      # Small top bar for header color (defaults to transparent if none)
+      head_color = feed.header_color.try(&.strip).presence || "transparent"
+      color_css = HTML.escape(head_color)
+      io << "  <div class=\"feed-header\" style=\"background: #{color_css};\">\n"
+      io << "    <h2 class=\"feed-title\"><a class=\"feed-title-link\" href=\"#{HTML.escape(feed.site_link.empty? ? feed.url : feed.site_link)}\" target=\"_blank\" rel=\"noopener noreferrer\">#{feed.title}</a></h2>\n"
+      io << "  </div>\n"
+      
+      io << "  <div class=\"feed-body\">\n"
       io << "    <ul class=\"space-y-1 leading-relaxed\">\n"
       feed.items.each do |item|
         # Escape title, and safely include link
         title = HTML.escape(item.title)
         link = HTML.escape(item.link)
-        io << "    <li><a  class=\"text-sm md:text-[0.95rem] text-sky-700 hover:text-sky-800 underline underline-offset-2
-dark:text-sky-400 dark:hover:text-sky-300 break-words\" href=\"#{link}\" target=\"_blank\" rel=\"noopener noreferrer\">#{title}</a></li>\n"
+        io << "    <li><a  class=\"feed-link\" href=\"#{link}\" target=\"_blank\" rel=\"noopener noreferrer\">#{title}</a></li>\n"
       end
-      io << "  </ul>\n"
+      io << "    </ul>\n"
+      io << "  </div>\n" # end padded content
       io << "</article>\n"
     end
   end
@@ -207,7 +212,7 @@ def refresh_all(config : Config)
   feeds = config.feeds.map { |f| fetch_feed(f) }
 
   limited_feeds = feeds.map do |feed|
-    FeedData.new(feed.title, feed.url, feed.site_link, feed.items.first(config.item_limit))
+    FeedData.new(feed.title, feed.url, feed.site_link, feed.header_color, feed.items.first(config.item_limit))
   end
 
   boxes = render_feed_boxes(limited_feeds)

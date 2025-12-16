@@ -2,9 +2,105 @@
 .feed-box {
   overflow-wrap: anywhere;
   hyphens: auto;
+  border-radius: 0.75rem; 
+  background: var(--card-bg, transparent); 
 }
-.feed-box h2 { margin: 0 0 0.5rem 0; font-size: 1.05rem; }
-.feed-box ul { margin: 0; padding-left: 1.2rem; }
-.feed-box li + li { margin-top: 0.35rem; }
+
+/* Top header strip that can be colored per feed */
+.feed-box .feed-header {
+  padding: 0.75rem 1rem;              /* gives breathing room so text isn't on the edge */
+  border-radius: 0.75rem;
+  margin-bottom: 0.5rem; 
+}
+
+/* Title text inside header */
+.feed-box .feed-title {
+  margin: 0; 
+  font-size: 1.2rem;
+  line-height: 1.3;
+  font-weight: 700;
+  color: #ffffff;  
+}
+
+/* Optional: make the title link readable across colors */
+.feed-box .feed-title a {
+  color: inherit;                        /* inherit from header (so themed CSS can adjust if needed) */
+  text-decoration: none;
+}
+.feed-box .feed-title a:hover {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+/* Body spacing */
+.feed-box .feed-body {
+  padding: 1rem;                      
+}
+
+.feed-box ul { margin: 0; padding-left: 1.1rem; }
+.feed-box li + li { margin-top: 0.4rem; }
 .feed-box a, .feed-box p, .feed-box li { overflow-wrap: anywhere; word-break: break-word; }
 
+/* Link typography: size, weight, color, and hover style */
+.feed-box a {
+  font-size: 0.98rem;      /* a touch under 1rem, compact feel */
+  line-height: 1.35;       /* tighter than default for stacked links */
+  font-weight: 500;        /* medium weight like TechURLs headlines */
+  color: #1a56db;          /* blue similar vibe; adjust to your palette */
+  text-decoration: none;   /* clean baseline */
+  text-underline-offset: 2px;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+/* Hover state: underline + slightly darker */
+.feed-box a:hover {
+  color: #174bbf;
+  text-decoration: underline;
+}
+
+/* Dark mode defaults (if you use a .dark root class) */
+.dark .feed-box a {
+  color: #60a5fa;          /* lighter blue for dark backgrounds */
+}
+.dark .feed-box a:hover {
+  color: #93c5fd;
+  text-decoration: underline;
+}
+
+.feed-link {
+  font-size: 0.98rem;
+  line-height: 1.35;
+  font-weight: 500;
+  color: #1a56db;
+  text-decoration: none;
+  text-underline-offset: 2px;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+.feed-link:hover {
+  color: #174bbf;
+  text-decoration: underline;
+}
+.dark .feed-link {
+  color: #60a5fa;
+}
+.dark .feed-link:hover {
+  color: #93c5fd;
+}
+
+.feed-box .feed-title-link {
+  color: #ffffff;            
+  text-decoration: none;     
+  text-underline-offset: 2px;
+}
+.feed-box .feed-title-link:hover,
+.feed-box .feed-title-link:focus {
+  text-decoration: underline;       
+  opacity: 0.95;                    
+}
+
+.dark .feed-box .feed-title,
+.dark .feed-box .feed-title-link {
+  color: #ffffff;
+}
