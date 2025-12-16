@@ -9,7 +9,14 @@ require "xml"
 HTML_TEMPLATE = {{ read_file("src/layout.html") }}
 CSS_TEMPLATE  = {{ read_file("src/styles.css") }}
 
-# ----- Config types -----
+# ----- Config related -----
+
+DEFAULT_CONFIG_CANDIDATES = [
+  "feeds.yml",
+  "config/feeds.yml",
+  "feeds.yaml",
+  "config/feeds.yaml",
+]
 
 struct Feed
   include YAML::Serializable
@@ -46,6 +53,22 @@ def load_config(path : String) : Config
   File.open(path) do |io|
     Config.from_yaml(io)
   end
+end
+
+def find_default_config : String?
+  DEFAULT_CONFIG_CANDIDATES.find { |p| File.exists?(p) }
+end
+
+def parse_config_arg(args : Array(String)) : String?
+  if arg = args.find(&.starts_with?("config="))
+    return arg.split("=", 2)[1]
+  end
+
+  if args.size >= 1 && !args[0].includes?("=")
+    return args[0]
+  end
+
+  nil
 end
 
 # ----- In-memory state -----
@@ -249,12 +272,16 @@ end
 
 # ----- main -----
 
-if ARGV.size < 1
-  puts "Usage: #{PROGRAM_NAME} CONFIG_YAML"
+# Try to get config path from a named argument (config=...), or positional, or fall back to defaults
+config_path = parse_config_arg(ARGV) || find_default_config
+
+unless config_path && File.exists?(config_path)
+  STDERR.puts "Config not found."
+  STDERR.puts "Provide via: config=PATH or positional PATH, or place feeds.yml in one of:"
+  DEFAULT_CONFIG_CANDIDATES.each { |p| STDERR.puts "  - #{p}" }
   exit 1
 end
 
-config_path = ARGV[0]
 initial_config = load_config(config_path)
 state = ConfigState.new(initial_config, file_mtime(config_path))
 
