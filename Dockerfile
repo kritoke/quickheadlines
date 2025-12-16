@@ -47,7 +47,7 @@ COPY --from=builder /app/server .
 COPY --from=builder /app/feeds.yml ./feeds.yml
 
 # Setup environment
-EXPOSE 3000/tcp
+EXPOSE 3030/tcp
 
 # Run it
 ENTRYPOINT ["./server"]
