@@ -169,7 +169,7 @@ end
 def render_feed_boxes(feeds : Array(FeedData)) : String
   String.build do |io|
     feeds.each do |feed|
-      io << "<article class=\"feed-box rounded-xl  bg-card.light shadow-sm p-4\">\n"
+      io << "<article class=\"feed-box min-w-0 break-words rounded-xl shadow-sm p-4\">\n"
 
       # Small top bar for header color (defaults to transparent if none)
       head_color = feed.header_color.try(&.strip).presence || "transparent"
