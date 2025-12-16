@@ -38,8 +38,8 @@ struct Config
   # Feed Item Limit (optional, default: 10)
   property item_limit : Int32 = 10
 
-  # Wev Server Port (optional, default: 3000)
-  property server_port : Int32 = 3000
+  # Wev Server Port (optional, default: 3030)
+  property server_port : Int32 = 3030
 
   property feeds : Array(Feed)
 end
