@@ -44,10 +44,10 @@ RUN apt-get update && apt-get install -y \
 
 # Copy the compiled binary
 COPY --from=builder /app/server .
+COPY --from=builder /app/feeds.yml ./feeds.yml
 
 # Setup environment
 EXPOSE 3000/tcp
-ENV LISTEN_ADDR=0.0.0.0:3000
 
 # Run it
 ENTRYPOINT ["./server"]
