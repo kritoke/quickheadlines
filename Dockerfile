@@ -49,4 +49,4 @@ COPY --from=builder /app/server .
 EXPOSE 3000
 
 # Run it
-ENTRYPOINT ["./server", "-- /app/feeds.yml"]
+ENTRYPOINT ["./server"]
