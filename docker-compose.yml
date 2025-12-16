@@ -4,7 +4,7 @@ services:
       context: .
       dockerfile: Dockerfile
     ports:
-      - "3001:3000"
+      - "3030:3030"
     environment:
       TZ: "America/Chicago"
     volumes:
