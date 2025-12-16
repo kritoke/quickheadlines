@@ -15,8 +15,6 @@ feeds:
   - title: "Hackaday"
     url: "https://hackaday.com/blog/feed/"
     header_color: "black"
-<<<<<<< HEAD
-=======
   - title: "The Verge"
     url: "https://www.theverge.com/rss/index.xml"
     header_color: "blue"
@@ -32,4 +30,3 @@ feeds:
   - title: "Engadget"
     header_color: "black"
     url: "https://www.engadget.com/rss.xml"
->>>>>>> 6110a8a (add more feeds, add viewport to index)
