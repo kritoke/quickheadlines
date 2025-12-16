@@ -46,7 +46,8 @@ RUN apt-get update && apt-get install -y \
 COPY --from=builder /app/server .
 
 # Setup environment
-EXPOSE 3000
+EXPOSE 3000/tcp
+ENV LISTEN_ADDR=0.0.0.0:3000
 
 # Run it
 ENTRYPOINT ["./server"]
