@@ -270,7 +270,7 @@ def start_server(port : Int32)
     end
   end
 
-  address = server.bind_tcp port
+  address = server.bind_tcp "0.0.0.0", port
   puts "Listening on http://#{address}"
   server.listen
 end
