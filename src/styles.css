@@ -242,3 +242,9 @@
     grid-auto-flow: row !important;
   }
 }
+
+@media (max-width: 768px) {
+    #feed-grid {
+      grid-template-columns: 1fr !important;
+    }
+  }
