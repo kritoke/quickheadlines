@@ -8,6 +8,11 @@ targets:
   feedme:
     main: src/quickheadlines.cr
 
+dependencies:
+  slang:
+    github: toddsundsted/slang
+    branch: main
+
 crystal: '>= 1.18.2'
 
 license: MIT
