@@ -226,3 +226,19 @@
     line-height: 1.25;    
   }
 }
+
+/* Force single column on small screens, regardless of Tailwind utilities */
+@media (max-width: 767.98px) {
+  /* Match any grid element under main */
+  main .grid {
+    grid-template-columns: 1fr !important;
+  }
+  /* If any grid-cols-* class exists, still force 1 column */
+  main .grid[class*="grid-cols-"] {
+    grid-template-columns: 1fr !important;
+  }
+  /* Also cap the implicit auto-fit variants */
+  main .grid {
+    grid-auto-flow: row !important;
+  }
+}
