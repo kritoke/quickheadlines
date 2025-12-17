@@ -6,7 +6,7 @@ require "xml"
 # ----- Compile-time embedded templates -----
 
 # These files must exist at compile time in the src directory
-HTML_TEMPLATE = {{ read_file("src/layout.html") }}
+HTML_TEMPLATE = {{ read_file("src/layout.html") }}.gsub('\u00A0', ' ')
 CSS_TEMPLATE = {{ read_file("src/styles.css") }}.gsub('\u00A0', ' ') # remove possible bad spaces
 
 # ----- Config related -----
