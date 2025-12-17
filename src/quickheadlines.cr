@@ -7,7 +7,7 @@ require "xml"
 
 # These files must exist at compile time in the src directory
 HTML_TEMPLATE = {{ read_file("src/layout.html") }}
-CSS_TEMPLATE  = {{ read_file("src/styles.css") }}
+CSS_TEMPLATE = {{ read_file("src/styles.css") }}.gsub('\u00A0', ' ') # remove possible bad spaces
 
 # ----- Config related -----
 
