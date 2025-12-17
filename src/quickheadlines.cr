@@ -2,12 +2,14 @@ require "yaml"
 require "http/server"
 require "http/client"
 require "xml"
+require "slang"
+require "html"
 
 # ----- Compile-time embedded templates -----
 
 # These files must exist at compile time in the src directory
-HTML_TEMPLATE = {{ read_file("src/layout.html") }}.gsub('\u00A0', ' ')
-CSS_TEMPLATE = {{ read_file("src/styles.css") }}.gsub('\u00A0', ' ') # remove possible bad spaces
+LAYOUT_SOURCE = {{ read_file("src/layout.slang") }}.gsub('\u00A0', ' ') # remove possible bad spaces
+CSS_TEMPLATE  = {{ read_file("src/styles.css") }}.gsub('\u00A0', ' ')   # remove possible bad spaces
 
 # ----- Config related -----
 
@@ -177,7 +179,7 @@ def render_feed_boxes(feeds : Array(FeedData)) : String
       io << "  <div class=\"feed-header\" style=\"background: #{color_css};\">\n"
       io << "    <h2 class=\"feed-title\"><a class=\"feed-title-link\" href=\"#{HTML.escape(feed.site_link.empty? ? feed.url : feed.site_link)}\" target=\"_blank\" rel=\"noopener noreferrer\">#{feed.title}</a></h2>\n"
       io << "  </div>\n"
-      
+
       io << "  <div class=\"feed-body\">\n"
       io << "    <ul class=\"space-y-1 leading-relaxed\">\n"
       feed.items.each do |item|
@@ -193,20 +195,26 @@ def render_feed_boxes(feeds : Array(FeedData)) : String
   end
 end
 
-# Applies template placeholders in the embedded layout.
-def apply_template(
-  page_title : String,
-  inner_html : String,
-  updated_at : Time,
-) : String
-  html = HTML_TEMPLATE
-    .gsub("{{ TITLE }}", page_title)
-    .gsub("{{ CSS }}", CSS_TEMPLATE)
-    .gsub("{{ CONTENT }}", inner_html)
-    .gsub("{{ UPDATED_AT }}", updated_at.to_s)
+def apply_template(page_title : String, inner_html : String, updated_at : Time) : String
+  locals = {
+    "title"      => page_title,
+    "css"        => CSS_TEMPLATE,
+    "content"    => inner_html,
+    "updated_at" => updated_at.to_s,
+  }
 
-  html
+  String.build do |str|
+    # Expose locals as variables for the embed macro context
+    title      = locals["title"]
+    css        = locals["css"]
+    content    = locals["content"]
+    updated_at = locals["updated_at"]
+
+    # Compile-time embed of the template into this IO
+    Slang.embed("#{__DIR__}/layout.slang", "str")
+  end
 end
+
 
 def refresh_all(config : Config)
   feeds = config.feeds.map { |f| fetch_feed(f) }
