@@ -52,8 +52,8 @@
 /* Compact link text */
 .feed-box a,
 .feed-link {
-  font-size: 0.95rem;  /* was 0.98rem; adjust to taste */
-  line-height: 1.28;   /* was 1.35 */
+  font-size: 0.95rem;  
+  line-height: 1.28;  
 }
 
 /* scrollbars */
@@ -86,6 +86,27 @@
 @media (min-width: 1024px) {
   .feed-box .feed-body { padding-right: 0.75rem; }
 }
+
+/* On touch devices (no hover), show a thin scrollbar so users see affordance */
+@media (hover: none) and (pointer: coarse) {
+  .feed-box .feed-body {
+    /* Firefox */
+    scrollbar-width: thin;
+    scrollbar-color: rgba(100,116,139,0.6) transparent;
+  }
+  .feed-box .feed-body::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  .feed-box .feed-body::-webkit-scrollbar-thumb {
+    background-color: rgba(100, 116, 139, 0.6);
+    border-radius: 9999px;
+  }
+  .feed-box .feed-body::-webkit-scrollbar-track {
+    background: transparent;
+  }
+}
+
 
 .feed-box ul { margin: 0; padding-left: 0.9rem; }
 .feed-box li + li { margin-top: 0.25rem; }
@@ -155,16 +176,53 @@
   color: #ffffff;
 }
 
-@media (max-width: 767.98px) {
-  section.grid {
-    grid-template-columns: 1fr !important;
-  }
-}
-
 .feed-box { height: 18rem; }
 @media (min-width: 768px) {
   .feed-box { height: 22rem; }
 }
 @media (min-width: 1024px) {
   .feed-box { height: 24rem; }
+}
+
+/* Force single column on phones, regardless of Tailwind utilities */
+@media (max-width: 767.98px) {
+  /* Match the exact section in layout.html */
+  main > section.grid {
+    grid-template-columns: 1fr !important;
+  }
+  /* Extra safety: override any grid-cols-* utility */
+  main > section.grid[class*="grid-cols-"] {
+    grid-template-columns: 1fr !important;
+  }
+  /* Shorter cards on phones */
+  .feed-box {
+    height: 16rem;        
+  }
+
+  /* Tighter header */
+  .feed-box .feed-header {
+    padding: 0.4rem 0.6rem; 
+    margin-bottom: 0.3rem;  
+  }
+  .feed-box .feed-title {
+    font-size: 1.02rem;    
+    line-height: 1.15;    
+  }
+
+  /* Tighter body padding */
+  .feed-box .feed-body {
+    padding: 0.6rem;      
+    padding-right: 0.5rem; /* keep space for scrollbar */
+  }
+
+  /* Denser list spacing + type */
+  .feed-box ul { padding-left: 0.8rem; }   
+  .feed-box li + li { margin-top: 0.2rem; } 
+
+  /* Slightly smaller links on phones */
+  .feed-box a,
+  .feed-link {
+    font-size: 0.92rem;   
+    line-height: 1.25;    
+  }
 }
