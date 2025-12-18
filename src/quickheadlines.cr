@@ -179,30 +179,13 @@ def fetch_feed(feed : Feed) : FeedData
 end
 
 # Builds the inner HTML for all feed boxes as link lists.
-def render_feed_boxes(feeds : Array(FeedData)) : String
+def render_feed_boxes(all_feeds : Array(FeedData)) : String
   String.build do |io|
-    feeds.each do |feed|
-      io << "<article class=\"feed-box min-w-0 break-words rounded-xl shadow-sm p-4\">\n"
+    # Make feeds available in template scope
+    feeds = all_feeds
 
-      # Small top bar for header color (defaults to transparent if none)
-      head_color = feed.header_color.try(&.strip).presence || "transparent"
-      color_css = HTML.escape(head_color)
-      io << "  <div class=\"feed-header\" style=\"background: #{color_css};\">\n"
-      io << "    <h2 class=\"feed-title\"><a class=\"feed-title-link\" href=\"#{HTML.escape(feed.site_link.empty? ? feed.url : feed.site_link)}\" target=\"_blank\" rel=\"noopener noreferrer\">#{feed.title}</a></h2>\n"
-      io << "  </div>\n"
-
-      io << "  <div class=\"feed-body\">\n"
-      io << "    <ul class=\"space-y-1 leading-relaxed\">\n"
-      feed.items.each do |item|
-        # Escape title, and safely include link
-        title = HTML.escape(item.title)
-        link = HTML.escape(item.link)
-        io << "    <li><a  class=\"feed-link\" href=\"#{link}\" target=\"_blank\" rel=\"noopener noreferrer\">#{title}</a></li>\n"
-      end
-      io << "    </ul>\n"
-      io << "  </div>\n" # end padded content
-      io << "</article>\n"
-    end
+    # Emit into the same IO variable name "io"
+    Slang.embed("#{__DIR__}/feed_boxes.slang", "io")
   end
 end
 
@@ -214,12 +197,12 @@ def apply_template(page_title : String, inner_html : String, updated_at : Time) 
     "updated_at" => updated_at.to_s,
   }
 
-  String.build do |str|
+  String.build do |io|
     title = locals["title"]
     css = locals["css"]
     content = locals["content"]
     updated_at = locals["updated_at"]
-    Slang.embed("#{__DIR__}/layout.slang", "str")
+    Slang.embed("#{__DIR__}/layout.slang", "io")
   end
 end
 
