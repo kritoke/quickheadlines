@@ -20,6 +20,9 @@ RUN shards install --production
 # 2. Copy code
 COPY . .
 
+ARG BUILD_REV=0
+RUN echo "BUILD_REV=${BUILD_REV}"
+
 # 3. Build the binary
 # REMOVED: --static (This is the key fix for ARM64 stability)
 # The binary will now rely on shared system libraries (Dynamic Linking)
