@@ -59,7 +59,7 @@ def load_config(path : String) : Config
 end
 
 def find_default_config : String?
-  DEFAULT_CONFIG_CANDIDATES.find { |p| File.exists?(p) }
+  DEFAULT_CONFIG_CANDIDATES.find { |path| File.exists?(path) }
 end
 
 def parse_config_arg(args : Array(String)) : String?
@@ -101,13 +101,25 @@ STATE = AppState.new
 
 # ----- Fetch and render -----
 
+# Keep the same return type
 def parse_feed(xml_str : String) : {site_link: String, items: Array(Item)}
-  items = [] of Item
-  site_link = "#"
-
   xml = XML.parse(xml_str)
 
-  # Handle RSS 2.0: <rss><channel><item>...</item></channel></rss>
+  rss = parse_rss(xml)
+  return rss unless rss[:items].empty?
+
+  atom = parse_atom(xml)
+  return atom unless atom[:items].empty?
+
+  {site_link: "#", items: [] of Item}
+rescue ex : Exception
+  {site_link: "#", items: [] of Item}
+end
+
+private def parse_rss(xml : XML::Node) : {site_link: String, items: Array(Item)}
+  site_link = "#"
+  items = [] of Item
+
   if channel = xml.xpath_node("//channel")
     site_link = channel.xpath_node("./link").try(&.text) || site_link
     channel.xpath_nodes("./item").each do |node|
@@ -117,30 +129,29 @@ def parse_feed(xml_str : String) : {site_link: String, items: Array(Item)}
     end
   end
 
-  # Atom (namespace-agnostic) fallback
-  if items.empty?
-    feed_node = xml.xpath_node("//*[local-name()='feed']")
-    if feed_node
-      # Prefer rel='alternate', else first link's href
-      alt = feed_node.xpath_node("./*[local-name()='link'][@rel='alternate']")
-      site_link = alt.try { |n| n["href"]? } ||
-                  feed_node.xpath_node("./*[local-name()='link']").try { |n| n["href"]? } ||
-                  site_link
+  {site_link: site_link, items: items}
+end
 
-      # We use local-name()='entry' to find <entry> tags regardless of xmlns="..."
-      feed_node.xpath_nodes("./*[local-name()='entry']").each do |node|
-        title = node.xpath_node("./*[local-name()='title']").try(&.text) || "Untitled"
-        # We look for a link tag where rel='alternate' OR where rel is missing (default)
-        link_node = node.xpath_node("./*[local-name()='link'][@rel='alternate' or not(@rel)]")
-        link = link_node.try { |ln| ln["href"]? } || "#"
-        items << Item.new(title, link)
-      end
-    end
+private def parse_atom(xml : XML::Node) : {site_link: String, items: Array(Item)}
+  site_link = "#"
+  items = [] of Item
+
+  feed_node = xml.xpath_node("//*[local-name()='feed']")
+  return {site_link: site_link, items: items} unless feed_node
+
+  alt = feed_node.xpath_node("./*[local-name()='link'][@rel='alternate']")
+  site_link = alt.try(&.[]?("href")) ||
+              feed_node.xpath_node("./*[local-name()='link']").try(&.[]?("href")) ||
+              site_link
+
+  feed_node.xpath_nodes("./*[local-name()='entry']").each do |node|
+    title = node.xpath_node("./*[local-name()='title']").try(&.text) || "Untitled"
+    link_node = node.xpath_node("./*[local-name()='link'][@rel='alternate' or not(@rel)]")
+    link = link_node.try(&.[]?("href")) || "#"
+    items << Item.new(title, link)
   end
 
   {site_link: site_link, items: items}
-rescue
-  {site_link: "#", items: [] of Item}
 end
 
 def fetch_feed(feed : Feed) : FeedData
@@ -204,20 +215,16 @@ def apply_template(page_title : String, inner_html : String, updated_at : Time) 
   }
 
   String.build do |str|
-    # Expose locals as variables for the embed macro context
-    title      = locals["title"]
-    css        = locals["css"]
-    content    = locals["content"]
+    title = locals["title"]
+    css = locals["css"]
+    content = locals["content"]
     updated_at = locals["updated_at"]
-
-    # Compile-time embed of the template into this IO
     Slang.embed("#{__DIR__}/layout.slang", "str")
   end
 end
 
-
 def refresh_all(config : Config)
-  feeds = config.feeds.map { |f| fetch_feed(f) }
+  feeds = config.feeds.map { |feed| fetch_feed(feed) }
 
   limited_feeds = feeds.map do |feed|
     FeedData.new(feed.title, feed.url, feed.site_link, feed.header_color, feed.items.first(config.item_limit))
@@ -245,16 +252,16 @@ def start_refresh_loop(config_path : String, state : ConfigState)
             current = ConfigState.new(new_config, mtime)
             puts "[#{Time.local}] Reloaded config from #{config_path}"
           end
-        rescue err
+        rescue ex
           # If the file temporarily unreadable, log and continue using last good config
-          puts "Error checking/reloading config: #{err.message}"
+          puts "Error checking/reloading config: #{ex.message}"
         end
 
         # Refresh feeds using current config
         refresh_all(current.config)
         puts "[#{Time.local}] Refreshed feeds"
-      rescue err
-        puts "Error refreshing feeds: #{err.message}"
+      rescue ex
+        puts "Error refreshing feeds: #{ex.message}"
       end
 
       # Sleep based on current config's interval
@@ -291,7 +298,7 @@ config_path = parse_config_arg(ARGV) || find_default_config
 unless config_path && File.exists?(config_path)
   STDERR.puts "Config not found."
   STDERR.puts "Provide via: config=PATH or positional PATH, or place feeds.yml in one of:"
-  DEFAULT_CONFIG_CANDIDATES.each { |p| STDERR.puts "  - #{p}" }
+  DEFAULT_CONFIG_CANDIDATES.each { |path| STDERR.puts "  - #{path}" }
   exit 1
 end
 

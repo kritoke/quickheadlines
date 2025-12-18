@@ -1,5 +1,9 @@
 version: 2.0
 shards:
+  ameba:
+    git: https://github.com/crystal-ameba/ameba.git
+    version: 1.6.4
+
   slang:
     git: https://github.com/toddsundsted/slang.git
     version: 2.0.2+git.commit.8ee6cb00c6cfd8228000202e5cdcd6425158596c
