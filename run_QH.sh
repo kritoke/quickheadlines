@@ -1,2 +1,2 @@
 #!/bin/sh
-crystal run src/quickheadlines.cr -- config=feed.yml
+crystal run src/quickheadlines.cr -- config=feeds.yml
