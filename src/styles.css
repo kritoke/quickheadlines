@@ -196,7 +196,7 @@
   }
   /* Shorter cards on phones */
   .feed-box {
-    height: 16rem;        
+    height: auto;        
   }
 
   /* Tighter header */
@@ -224,6 +224,11 @@
   .feed-link {
     font-size: 0.92rem;   
     line-height: 1.25;    
+  }
+
+  .feed-box .feed-body {
+    overflow: visible; 
+    padding-right: 0; 
   }
 }
 
