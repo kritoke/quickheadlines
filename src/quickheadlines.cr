@@ -4,6 +4,7 @@ require "http/client"
 require "xml"
 require "slang"
 require "html"
+require "gc"
 
 # ----- Compile-time embedded templates -----
 
@@ -80,19 +81,12 @@ record Item, title : String, link : String
 record FeedData, title : String, url : String, site_link : String, header_color : String?, items : Array(Item)
 
 class AppState
-  getter feeds = [] of FeedData
-  getter! html : String
-  getter! updated_at : Time
+  property feeds = [] of FeedData
+  property updated_at = Time.local
+  property config_title = "Quick Headlines"
 
-  def initialize
-    @feeds = [] of FeedData
-    @html = "<html><body><p>Loading…</p></body></html>"
-    @updated_at = Time.local
-  end
-
-  def update(feeds : Array(FeedData), html : String, updated_at : Time)
+  def update(feeds : Array(FeedData), updated_at : Time)
     @feeds = feeds
-    @html = html
     @updated_at = updated_at
   end
 end
@@ -102,8 +96,8 @@ STATE = AppState.new
 # ----- Fetch and render -----
 
 # Keep the same return type
-def parse_feed(xml_str : String) : {site_link: String, items: Array(Item)}
-  xml = XML.parse(xml_str)
+def parse_feed(io : IO) : {site_link: String, items: Array(Item)}
+  xml = XML.parse(io)
 
   rss = parse_rss(xml)
   return rss unless rss[:items].empty?
@@ -155,100 +149,90 @@ private def parse_atom(xml : XML::Node) : {site_link: String, items: Array(Item)
 end
 
 def fetch_feed(feed : Feed) : FeedData
-  response = HTTP::Client.get(feed.url)
-  unless response.status.success?
-    # Fall back to an error message in the body box
-    return FeedData.new(
-      feed.title,
-      feed.url,
-      feed.url,
-      feed.header_color,
-      [Item.new("Error fetching feed (status #{response.status_code})", feed.url)],
-    )
-  end
+  HTTP::Client.get(feed.url) do |response|
+    unless response.status.success?
+      # Fall back to an error message in the body box
+      return FeedData.new(
+        feed.title,
+        feed.url,
+        feed.url,
+        feed.header_color,
+        [Item.new("Error fetching feed (status #{response.status_code})", feed.url)],
+      )
+    end
 
-  parsed = parse_feed(response.body)
-  items = parsed[:items]
-  site_link = parsed[:site_link] || feed.url
+    parsed = parse_feed(response.body_io)
+    items = parsed[:items]
+    site_link = parsed[:site_link] || feed.url
 
-  if items.empty?
-    # Show a single placeholder item linking to the feed itself
-    items = [Item.new("No items found (or unsupported format)", feed.url)]
+    if items.empty?
+      # Show a single placeholder item linking to the feed itself
+      items = [Item.new("No items found (or unsupported format)", feed.url)]
+    end
+    FeedData.new(feed.title, feed.url, site_link, feed.header_color, items)
   end
-  FeedData.new(feed.title, feed.url, site_link, feed.header_color, items)
 end
 
 # Builds the inner HTML for all feed boxes as link lists.
-def render_feed_boxes(all_feeds : Array(FeedData)) : String
-  String.build do |io|
-    # Make feeds available in template scope
-    feeds = all_feeds
+def render_feed_boxes(io : IO)
+    feeds = STATE.feeds
 
     # Emit into the same IO variable name "io"
     Slang.embed("#{__DIR__}/feed_boxes.slang", "io")
-  end
 end
 
-def apply_template(page_title : String, inner_html : String, updated_at : Time) : String
-  locals = {
-    "title"      => page_title,
-    "css"        => CSS_TEMPLATE,
-    "content"    => inner_html,
-    "updated_at" => updated_at.to_s,
-  }
+def render_page(io : IO)
+    title      = STATE.config_title
+    css        = CSS_TEMPLATE
+    updated_at = STATE.updated_at.to_s
+    feeds = STATE.feeds
 
-  String.build do |io|
-    title = locals["title"]
-    css = locals["css"]
-    content = locals["content"]
-    updated_at = locals["updated_at"]
     Slang.embed("#{__DIR__}/layout.slang", "io")
-  end
 end
 
 def refresh_all(config : Config)
-  feeds = config.feeds.map { |feed| fetch_feed(feed) }
+  STATE.config_title = config.page_title
 
-  limited_feeds = feeds.map do |feed|
-    FeedData.new(feed.title, feed.url, feed.site_link, feed.header_color, feed.items.first(config.item_limit))
+  new_feeds = config.feeds.map do |feed|
+    data = fetch_feed(feed)
+    FeedData.new(data.title, data.url, data.site_link, data.header_color, data.items.first(config.item_limit))
   end
 
-  boxes = render_feed_boxes(limited_feeds)
-  now = Time.local
-  html = apply_template(config.page_title, boxes, now)
+  STATE.update(new_feeds, Time.local)
 
-  STATE.update(limited_feeds, html, now)
+  # Clear memory after large amount of data processing
+  GC.collect
 end
 
 # ----- Background refresh fiber -----
 
-def start_refresh_loop(config_path : String, state : ConfigState)
+def start_refresh_loop(config_path : String)
+  last_mtime = File.info(config_path).modification_time
+
   spawn do
-    current = state
     loop do
       begin
         # Check if config file changed
-        begin
-          mtime = file_mtime(config_path)
-          if mtime > current.mtime
-            new_config = load_config(config_path)
-            current = ConfigState.new(new_config, mtime)
-            puts "[#{Time.local}] Reloaded config from #{config_path}"
+          current_mtime = File.info(config_path).modification_time
+    
+          config = load_config(config_path)
+
+          if current_mtime > last_mtime
+            puts "[#{Time.local}] Config change detected."
+            last_mtime = current_mtime
           end
-        rescue ex
-          # If the file temporarily unreadable, log and continue using last good config
-          puts "Error checking/reloading config: #{ex.message}"
-        end
 
         # Refresh feeds using current config
-        refresh_all(current.config)
-        puts "[#{Time.local}] Refreshed feeds"
-      rescue ex
-        puts "Error refreshing feeds: #{ex.message}"
-      end
+        refresh_all(config)
+        puts "[#{Time.local}] Refreshed feeds and ran GC"
 
-      # Sleep based on current config's interval
-      sleep (current.config.refresh_minutes * 60).seconds
+        # Sleep based on current config's interval
+        sleep (config.refresh_minutes * 60).seconds
+
+      rescue ex
+        puts "Error refresh loop: #{ex.message}"
+        sleep 1.minute # Safety sleep so errors don't loop instantly
+      end
     end
   end
 end
@@ -264,12 +248,12 @@ def start_server(port : Int32)
       context.response.print STATE.updated_at.to_unix_ms
     else
       context.response.content_type = "text/html; charset=utf-8"
-      context.response.print STATE.html
+      render_page(context.response)
     end
   end
 
   address = server.bind_tcp "0.0.0.0", port
-  puts "Listening on http://#{address}"
+  puts "Listening on http://#{address}:#{port}/ "
   server.listen
 end
 
@@ -292,7 +276,7 @@ state = ConfigState.new(initial_config, file_mtime(config_path))
 refresh_all(state.config)
 
 # Start periodic refresh
-start_refresh_loop(config_path, state)
+start_refresh_loop(config_path)
 
 # Serve in-memory HTML
 start_server(state.config.server_port)
