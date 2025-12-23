@@ -1,5 +1,7 @@
-# Quick Headlines
-![Quick Headlines Logo](public/logo.svg)
+<img src="public/logo.svg" alt="Quick Headlines Logo" width="200"/> 
+
+# Quick Headlines 
+
 
 Quick Headlines is an easily configurable and deployable recent feed dashboard.  I wanted it to be as simple as dropping an executable and a YAML file with feeds in it.  The aim is to have sane defaults, so you can get up and running quickly without fighting with it.  Making it so simple that it can just run locally as well.
 
