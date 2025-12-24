@@ -21,12 +21,11 @@ RUN shards install --production
 COPY . .
 
 ARG BUILD_REV=0
-RUN echo "BUILD_REV=${BUILD_REV}"
 
 # 3. Build the binary
 # REMOVED: --static (This is the key fix for ARM64 stability)
 # The binary will now rely on shared system libraries (Dynamic Linking)
-RUN crystal build src/quickheadlines.cr --release -o /app/server
+RUN CRYSTAL_BUILD_OPTS="--lto" crystal build --release --no-debug src/quickheadlines.cr --release -o /app/server
 
 # --- Stage 2: Runner ---
 # Use Ubuntu (Slim) to match the Builder's OS architecture
