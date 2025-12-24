@@ -5,7 +5,6 @@ require "xml"
 require "slang"
 require "html"
 require "gc"
-require "base64"
 
 # ----- Compile-time embedded templates -----
 
@@ -13,17 +12,10 @@ require "base64"
 LAYOUT_SOURCE = {{ read_file("src/layout.slang") }}.gsub('\u00A0', ' ') # remove possible bad spaces
 CSS_TEMPLATE  = {{ read_file("src/styles.css") }}.gsub('\u00A0', ' ')   # remove possible bad spaces
 
-def load_asset_bytes(path : String) : Bytes
-  if File.exists?(path)
-    File.open(path, &.getb_to_end)
-  else
-    Bytes.empty
-  end
-end
-
-FAVICON_PNG = load_asset_bytes("public/favicon.png")
-FAVICON_SVG = {{ read_file "public/favicon.svg" }}
-FAVICON_ICO = load_asset_bytes("public/favicon.ico")
+# Embed favicon assets at compile time. These must exist during compile.
+FAVICON_PNG = {{ read_file "public/favicon.png" }}.to_slice
+FAVICON_SVG = {{ read_file "public/favicon.svg" }}.to_slice
+FAVICON_ICO = {{ read_file "public/favicon.ico" }}.to_slice
 
 def serve_bytes(ctx : HTTP::Server::Context, bytes : Bytes, content_type : String)
   ctx.response.content_type = content_type
@@ -295,7 +287,7 @@ def start_server(port : Int32)
     when {"GET", "/favicon.png"}
       serve_bytes(context, FAVICON_PNG, "image/png")
     when {"GET", "/favicon.svg"}
-      serve_bytes(context, FAVICON_SVG.to_slice, "image/svg+xml")
+      serve_bytes(context, FAVICON_SVG, "image/svg+xml")
     when {"GET", "/favicon.ico"}
       serve_bytes(context, FAVICON_ICO, "image/x-icon")
     else
