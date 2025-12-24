@@ -5,18 +5,29 @@ require "xml"
 require "slang"
 require "html"
 require "gc"
+require "base64"
 
 # ----- Compile-time embedded templates -----
 
 # These files must exist at compile time in the src directory
 LAYOUT_SOURCE = {{ read_file("src/layout.slang") }}.gsub('\u00A0', ' ') # remove possible bad spaces
 CSS_TEMPLATE  = {{ read_file("src/styles.css") }}.gsub('\u00A0', ' ')   # remove possible bad spaces
-FAVICON_PNG   = {{ read_file "public/favicon.png" }}
-FAVICON_SVG   = {{ read_file "public/favicon.svg" }}
-FAVICON_ICO   = {{ read_file "public/favicon.ico" }}
+
+def load_asset_bytes(path : String) : Bytes
+  if File.exists?(path)
+    File.open(path, &.getb_to_end)
+  else
+    Bytes.empty
+  end
+end
+
+FAVICON_PNG = load_asset_bytes("public/favicon.png")
+FAVICON_SVG = {{ read_file "public/favicon.svg" }}
+FAVICON_ICO = load_asset_bytes("public/favicon.ico")
 
 def serve_bytes(ctx : HTTP::Server::Context, bytes : Bytes, content_type : String)
   ctx.response.content_type = content_type
+  ctx.response.headers["Cache-Control"] = "public, max-age=31536000"
   ctx.response.output.write bytes
 end
 
@@ -86,7 +97,15 @@ end
 # ----- In-memory state -----
 
 record Item, title : String, link : String
-record FeedData, title : String, url : String, site_link : String, header_color : String?, items : Array(Item)
+record FeedData, title : String, url : String, site_link : String, header_color : String?, items : Array(Item) do
+  def display_header_color
+    (header_color.try(&.strip).presence) || "transparent"
+  end
+
+  def display_link
+    site_link.empty? ? url : site_link
+  end
+end
 
 class AppState
   property feeds = [] of FeedData
@@ -186,7 +205,7 @@ def render_feed_boxes(io : IO)
   feeds = STATE.feeds
 
   # Emit into the same IO variable name "io"
-  Slang.embed("#{__DIR__}/feed_boxes.slang", "io")
+  Slang.embed("src/feed_boxes.slang", "io")
 end
 
 def render_page(io : IO)
@@ -195,16 +214,27 @@ def render_page(io : IO)
   updated_at = STATE.updated_at.to_s
   feeds = STATE.feeds
 
-  Slang.embed("#{__DIR__}/layout.slang", "io")
+  Slang.embed("src/layout.slang", "io")
 end
 
 def refresh_all(config : Config)
   STATE.config_title = config.page_title
 
-  new_feeds = config.feeds.map do |feed|
-    data = fetch_feed(feed)
-    FeedData.new(data.title, data.url, data.site_link, data.header_color, data.items.first(config.item_limit))
+  channel = Channel(Tuple(Int32, FeedData)).new
+
+  config.feeds.each_with_index do |feed, index|
+    spawn do
+      data = fetch_feed(feed)
+      channel.send({index, FeedData.new(data.title, data.url, data.site_link, data.header_color, data.items.first(config.item_limit))})
+    end
   end
+
+  results = Array(FeedData?).new(config.feeds.size, nil)
+  config.feeds.size.times do
+    index, data = channel.receive
+    results[index] = data
+  end
+  new_feeds = results.compact
 
   STATE.update(new_feeds, Time.local)
 
@@ -263,19 +293,19 @@ def start_server(port : Int32)
       # Use updated_at as a change token
       context.response.print STATE.updated_at.to_unix_ms
     when {"GET", "/favicon.png"}
-      serve_bytes(context, FAVICON_PNG.to_slice, "image/png")
+      serve_bytes(context, FAVICON_PNG, "image/png")
     when {"GET", "/favicon.svg"}
       serve_bytes(context, FAVICON_SVG.to_slice, "image/svg+xml")
     when {"GET", "/favicon.ico"}
-      serve_bytes(context, FAVICON_ICO.to_slice, "image/x-icon")
+      serve_bytes(context, FAVICON_ICO, "image/x-icon")
     else
       context.response.content_type = "text/html; charset=utf-8"
       render_page(context.response)
     end
   end
 
-  address = server.bind_tcp "0.0.0.0", port
-  puts "Listening on http://#{address}:#{port}/ "
+  server.bind_tcp "0.0.0.0", port
+  puts "Listening on http://0.0.0.0:#{port}/ "
   server.listen
 end
 
