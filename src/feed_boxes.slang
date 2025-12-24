@@ -12,3 +12,6 @@
           li
             a.feed-link href="#{HTML.escape(item.link)}" target="_blank" rel="noopener noreferrer"
               = item.title
+            - if date = item.pub_date
+              span.text-xs.text-slate-500.ml-2.dark:text-slate-400 title="#{date.to_local.to_s("%A, %b %d, %Y at %I:%M %p")}"
+                = relative_time(date)

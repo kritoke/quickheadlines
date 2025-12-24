@@ -88,7 +88,7 @@ end
 
 # ----- In-memory state -----
 
-record Item, title : String, link : String
+record Item, title : String, link : String, pub_date : Time?
 record FeedData, title : String, url : String, site_link : String, header_color : String?, items : Array(Item) do
   def display_header_color
     (header_color.try(&.strip).presence) || "transparent"
@@ -114,6 +114,31 @@ STATE = AppState.new
 
 # ----- Fetch and render -----
 
+def parse_time(str : String?) : Time?
+  return unless str
+
+  [Time::Format::RFC_2822, Time::Format::ISO_8601_TIME, Time::Format::ISO_8601_DATE].each do |format|
+    begin
+      return format.parse(str)
+    rescue
+    end
+  end
+  nil
+end
+
+def relative_time(t : Time?) : String
+  return "" unless t
+  minutes = [(Time.utc - t.to_utc).total_minutes, 0.0].max
+
+  if minutes < 60
+    "#{minutes.to_i}m"
+  elsif minutes < 1440
+    "#{(minutes / 60).to_i}h"
+  else
+    "#{(minutes / 1440).to_i}d"
+  end
+end
+
 # Keep the same return type
 def parse_feed(io : IO) : {site_link: String, items: Array(Item)}
   xml = XML.parse(io)
@@ -138,7 +163,9 @@ private def parse_rss(xml : XML::Node) : {site_link: String, items: Array(Item)}
     channel.xpath_nodes("./item").each do |node|
       title = node.xpath_node("./title").try(&.text) || "Untitled"
       link = node.xpath_node("./link").try(&.text) || "#"
-      items << Item.new(title, link)
+      pub_date_str = node.xpath_node("./pubDate").try(&.text)
+      pub_date = parse_time(pub_date_str)
+      items << Item.new(title, link, pub_date)
     end
   end
 
@@ -161,7 +188,10 @@ private def parse_atom(xml : XML::Node) : {site_link: String, items: Array(Item)
     title = node.xpath_node("./*[local-name()='title']").try(&.text) || "Untitled"
     link_node = node.xpath_node("./*[local-name()='link'][@rel='alternate' or not(@rel)]")
     link = link_node.try(&.[]?("href")) || "#"
-    items << Item.new(title, link)
+    published_str = node.xpath_node("./*[local-name()='published']").try(&.text) ||
+                    node.xpath_node("./*[local-name()='updated']").try(&.text)
+    pub_date = parse_time(published_str)
+    items << Item.new(title, link, pub_date)
   end
 
   {site_link: site_link, items: items}
@@ -176,7 +206,7 @@ def fetch_feed(feed : Feed) : FeedData
         feed.url,
         feed.url,
         feed.header_color,
-        [Item.new("Error fetching feed (status #{response.status_code})", feed.url)],
+        [Item.new("Error fetching feed (status #{response.status_code})", feed.url, nil)],
       )
     end
 
@@ -186,7 +216,7 @@ def fetch_feed(feed : Feed) : FeedData
 
     if items.empty?
       # Show a single placeholder item linking to the feed itself
-      items = [Item.new("No items found (or unsupported format)", feed.url)]
+      items = [Item.new("No items found (or unsupported format)", feed.url, nil)]
     end
     FeedData.new(feed.title, feed.url, site_link, feed.header_color, items)
   end
