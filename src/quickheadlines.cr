@@ -11,9 +11,9 @@ require "gc"
 # These files must exist at compile time in the src directory
 LAYOUT_SOURCE = {{ read_file("src/layout.slang") }}.gsub('\u00A0', ' ') # remove possible bad spaces
 CSS_TEMPLATE  = {{ read_file("src/styles.css") }}.gsub('\u00A0', ' ')   # remove possible bad spaces
-FAVICON_PNG = {{ read_file "public/favicon.png" }}
-FAVICON_SVG = {{ read_file "public/favicon.svg" }}
-FAVICON_ICO = {{ read_file "public/favicon.ico" }}
+FAVICON_PNG   = {{ read_file "public/favicon.png" }}
+FAVICON_SVG   = {{ read_file "public/favicon.svg" }}
+FAVICON_ICO   = {{ read_file "public/favicon.ico" }}
 
 def serve_bytes(ctx : HTTP::Server::Context, bytes : Bytes, content_type : String)
   ctx.response.content_type = content_type
@@ -183,19 +183,19 @@ end
 
 # Builds the inner HTML for all feed boxes as link lists.
 def render_feed_boxes(io : IO)
-    feeds = STATE.feeds
+  feeds = STATE.feeds
 
-    # Emit into the same IO variable name "io"
-    Slang.embed("#{__DIR__}/feed_boxes.slang", "io")
+  # Emit into the same IO variable name "io"
+  Slang.embed("#{__DIR__}/feed_boxes.slang", "io")
 end
 
 def render_page(io : IO)
-    title      = STATE.config_title
-    css        = CSS_TEMPLATE
-    updated_at = STATE.updated_at.to_s
-    feeds = STATE.feeds
+  title = STATE.config_title
+  css = CSS_TEMPLATE
+  updated_at = STATE.updated_at.to_s
+  feeds = STATE.feeds
 
-    Slang.embed("#{__DIR__}/layout.slang", "io")
+  Slang.embed("#{__DIR__}/layout.slang", "io")
 end
 
 def refresh_all(config : Config)
@@ -227,25 +227,24 @@ def start_refresh_loop(config_path : String)
     loop do
       begin
         # Check if config file changed
-          current_mtime = File.info(config_path).modification_time
-    
-          if current_mtime > last_mtime
-            new_config = load_config(config_path)
-            active_config = new_config
-            last_mtime = current_mtime
+        current_mtime = File.info(config_path).modification_time
 
-            puts "[#{Time.local}] Config change detected. Reloaded feeds.yml"
-            refresh_all(active_config)
-            puts "[#{Time.local}] Refreshed after config change"
-          else
-            # Periodic refresh with existing config to fetch new items
-            refresh_all(active_config)
-            puts "[#{Time.local}] Refreshed feeds and ran GC"
+        if current_mtime > last_mtime
+          new_config = load_config(config_path)
+          active_config = new_config
+          last_mtime = current_mtime
+
+          puts "[#{Time.local}] Config change detected. Reloaded feeds.yml"
+          refresh_all(active_config)
+          puts "[#{Time.local}] Refreshed after config change"
+        else
+          # Periodic refresh with existing config to fetch new items
+          refresh_all(active_config)
+          puts "[#{Time.local}] Refreshed feeds and ran GC"
         end
 
         # Sleep based on current config's interval
         sleep (active_config.refresh_minutes * 60).seconds
-
       rescue ex
         puts "Error refresh loop: #{ex.message}"
         sleep 1.minute # Safety sleep so errors don't loop instantly
@@ -284,7 +283,9 @@ end
 def send_static(ctx : HTTP::Server::Context, path : String, content_type : String)
   if File.exists?(path)
     ctx.response.content_type = content_type
-    File.open(path) { |f| IO.copy(f, ctx.response) }
+    File.open(path) do |file|
+      IO.copy(file, ctx.response)
+    end
   else
     ctx.response.status_code = 404
     ctx.response.content_type = "text/plain; charset=utf-8"
