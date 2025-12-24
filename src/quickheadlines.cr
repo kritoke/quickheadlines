@@ -215,7 +215,13 @@ end
 # ----- Background refresh fiber -----
 
 def start_refresh_loop(config_path : String)
+  # Load once and set baseline mtime
+  active_config = load_config(config_path)
   last_mtime = File.info(config_path).modification_time
+
+  # Do an initial refresh with the active config
+  refresh_all(active_config)
+  puts "[#{Time.local}] Initial refresh complete"
 
   spawn do
     loop do
@@ -223,19 +229,22 @@ def start_refresh_loop(config_path : String)
         # Check if config file changed
           current_mtime = File.info(config_path).modification_time
     
-          config = load_config(config_path)
-
           if current_mtime > last_mtime
-            puts "[#{Time.local}] Config change detected."
+            new_config = load_config(config_path)
+            active_config = new_config
             last_mtime = current_mtime
-          end
 
-        # Refresh feeds using current config
-        refresh_all(config)
-        puts "[#{Time.local}] Refreshed feeds and ran GC"
+            puts "[#{Time.local}] Config change detected. Reloaded feeds.yml"
+            refresh_all(active_config)
+            puts "[#{Time.local}] Refreshed after config change"
+          else
+            # Periodic refresh with existing config to fetch new items
+            refresh_all(active_config)
+            puts "[#{Time.local}] Refreshed feeds and ran GC"
+        end
 
         # Sleep based on current config's interval
-        sleep (config.refresh_minutes * 60).seconds
+        sleep (active_config.refresh_minutes * 60).seconds
 
       rescue ex
         puts "Error refresh loop: #{ex.message}"
