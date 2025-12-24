@@ -4,9 +4,9 @@ html
     meta charset="utf-8"
     meta name="color-scheme" content="light dark"
     meta name="viewport" content="width=device-width, initial-scale=1.0"
-    link rel="icon" type="image/svg+xml" href="/favicon.svg" 
-    link rel="shortcut icon" href="/favicon.ico" sizes="any" 
-    link rel="alternate icon" type="image/png" href="/favicon.png"
+    link rel="icon" href="/favicon.ico"
+    link rel="icon" type="image/svg+xml" href="/favicon.svg" sizes="any"
+    link rel="icon" type="image/png" href="/favicon.png"
     title = title
     script src="https://cdn.tailwindcss.com"
     script
@@ -36,7 +36,7 @@ html
         img.w-8.h-8(srcset="/favicon.svg 1x, /favicon.png 1x" src="/favicon.png" alt="Logo" width="32" height="32")
         h1.text-3xl.font-semibold.tracking-tight = title
       section#feed-grid(class="grid gap-4 md:gap-5 lg:gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 text-[0.95rem] md:text-[1rem]")
-        == render_feed_boxes(io)
+        - render_feed_boxes(io)
       p.updated.mt-3.text-sm.opacity-80.text-left.pl-4
         | Feeds last refreshed on #{updated_at}
     script
