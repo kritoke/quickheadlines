@@ -31,11 +31,13 @@ html
     style
       | #{css}
   body(class="bg-surface-light text-slate-800 dark:bg-surface-dark dark:text-slate-100 text-[15px] md:text-[16px] leading-7")
-    main(class="mx-auto max-w-[1800px] px-4")
-      h1.text-3xl.font-semibold.tracking-tight.my-4 = title
-      section#feed-grid(class="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 text-[0.95rem] md:text-[1rem]")
+    main(class="mx-auto max-w-[1600px] px-4 md:px-12 lg:px-24")
+      div.flex.items-center.gap-3.my-3.pl-4
+        img.w-8.h-8(srcset="/favicon.svg 1x, /favicon.png 1x" src="/favicon.png" alt="Logo" width="32" height="32")
+        h1.text-3xl.font-semibold.tracking-tight = title
+      section#feed-grid(class="grid gap-4 md:gap-5 lg:gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 text-[0.95rem] md:text-[1rem]")
         == render_feed_boxes(io)
-      p.updated.mt-3.text-sm.opacity-80.text-left
+      p.updated.mt-3.text-sm.opacity-80.text-left.pl-4
         | Feeds last refreshed on #{updated_at}
     script
       |
