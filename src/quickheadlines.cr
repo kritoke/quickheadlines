@@ -11,6 +11,14 @@ require "gc"
 # These files must exist at compile time in the src directory
 LAYOUT_SOURCE = {{ read_file("src/layout.slang") }}.gsub('\u00A0', ' ') # remove possible bad spaces
 CSS_TEMPLATE  = {{ read_file("src/styles.css") }}.gsub('\u00A0', ' ')   # remove possible bad spaces
+FAVICON_PNG = {{ read_file "public/favicon.png" }}
+FAVICON_SVG = {{ read_file "public/favicon.svg" }}
+FAVICON_ICO = {{ read_file "public/favicon.ico" }}
+
+def serve_bytes(ctx : HTTP::Server::Context, bytes : Bytes, content_type : String)
+  ctx.response.content_type = content_type
+  ctx.response.output.write bytes
+end
 
 # ----- Config related -----
 
@@ -246,6 +254,12 @@ def start_server(port : Int32)
       context.response.content_type = "text/plain; charset=utf-8"
       # Use updated_at as a change token
       context.response.print STATE.updated_at.to_unix_ms
+    when {"GET", "/favicon.png"}
+      serve_bytes(context, FAVICON_PNG.to_slice, "image/png")
+    when {"GET", "/favicon.svg"}
+      serve_bytes(context, FAVICON_SVG.to_slice, "image/svg+xml")
+    when {"GET", "/favicon.ico"}
+      serve_bytes(context, FAVICON_ICO.to_slice, "image/x-icon")
     else
       context.response.content_type = "text/html; charset=utf-8"
       render_page(context.response)
@@ -255,6 +269,18 @@ def start_server(port : Int32)
   address = server.bind_tcp "0.0.0.0", port
   puts "Listening on http://#{address}:#{port}/ "
   server.listen
+end
+
+# Small helper to stream a file with proper content type and 404 on miss
+def send_static(ctx : HTTP::Server::Context, path : String, content_type : String)
+  if File.exists?(path)
+    ctx.response.content_type = content_type
+    File.open(path) { |f| IO.copy(f, ctx.response) }
+  else
+    ctx.response.status_code = 404
+    ctx.response.content_type = "text/plain; charset=utf-8"
+    ctx.response.print "Not found: #{path}"
+  end
 end
 
 # ----- main -----
