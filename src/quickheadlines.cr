@@ -5,6 +5,7 @@ require "xml"
 require "slang"
 require "html"
 require "gc"
+require "uri"
 
 # ----- Compile-time embedded templates -----
 
@@ -112,6 +113,32 @@ end
 
 STATE = AppState.new
 
+# ----- HTTP client pooling and concurrency control -----
+
+class ClientPool
+  def initialize
+    @clients = {} of String => HTTP::Client
+  end
+
+  def for(url : String) : HTTP::Client
+    uri = URI.parse(url)
+    key = "#{uri.scheme}://#{uri.host}:#{uri.port || (uri.scheme == "https" ? 443 : 80)}"
+    @clients[key]? || begin
+      client = HTTP::Client.new(uri)
+      client.read_timeout = 15.seconds
+      client.connect_timeout = 10.seconds
+      @clients[key] = client
+    end
+  end
+end
+
+POOL = ClientPool.new
+
+# Limit concurrent fetches (helps smooth peak allocations)
+# Adjust capacity to your environment (5–10 is a good start).
+CONCURRENCY = 8
+SEM = Channel(Nil).new(CONCURRENCY).tap { |channel| CONCURRENCY.times { channel.send(nil) } }
+
 # ----- Fetch and render -----
 
 def parse_time(str : String?) : Time?
@@ -139,66 +166,78 @@ def relative_time(t : Time?) : String
   end
 end
 
-# Keep the same return type
-def parse_feed(io : IO) : {site_link: String, items: Array(Item)}
+def parse_feed(io : IO, limit : Int32) : {site_link: String, items: Array(Item)}
   xml = XML.parse(io)
-
-  rss = parse_rss(xml)
+  rss = parse_rss(xml, limit)
   return rss unless rss[:items].empty?
-
-  atom = parse_atom(xml)
+  atom = parse_atom(xml, limit)
   return atom unless atom[:items].empty?
-
   {site_link: "#", items: [] of Item}
-rescue ex : Exception
+rescue
   {site_link: "#", items: [] of Item}
 end
 
-private def parse_rss(xml : XML::Node) : {site_link: String, items: Array(Item)}
+private def parse_rss(xml : XML::Node, limit : Int32) : {site_link: String, items: Array(Item)}
   site_link = "#"
   items = [] of Item
-
   if channel = xml.xpath_node("//channel")
     site_link = channel.xpath_node("./link").try(&.text) || site_link
     channel.xpath_nodes("./item").each do |node|
       title = node.xpath_node("./title").try(&.text) || "Untitled"
       link = node.xpath_node("./link").try(&.text) || "#"
-      pub_date_str = node.xpath_node("./pubDate").try(&.text)
-      pub_date = parse_time(pub_date_str)
+      pub_date = parse_time(node.xpath_node("./pubDate").try(&.text))
       items << Item.new(title, link, pub_date)
+      break if items.size >= limit
     end
   end
-
   {site_link: site_link, items: items}
 end
 
-private def parse_atom(xml : XML::Node) : {site_link: String, items: Array(Item)}
+private def parse_atom(xml : XML::Node, limit : Int32) : {site_link: String, items: Array(Item)}
   site_link = "#"
   items = [] of Item
 
+  # FIX: correct XPath string
   feed_node = xml.xpath_node("//*[local-name()='feed']")
   return {site_link: site_link, items: items} unless feed_node
 
-  alt = feed_node.xpath_node("./*[local-name()='link'][@rel='alternate']")
-  site_link = alt.try(&.[]?("href")) ||
-              feed_node.xpath_node("./*[local-name()='link']").try(&.[]?("href")) ||
-              site_link
+  # Site link preference: rel="alternate" (type text/html) -> first link with href -> keep default
+  alt = feed_node.xpath_node("./*[local-name()='link'][@rel='alternate' and (not(@type) or starts-with(@type,'text/html'))]") ||
+        feed_node.xpath_node("./*[local-name()='link'][@rel='alternate']") ||
+        feed_node.xpath_node("./*[local-name()='link'][@href]")
+  site_link = alt.try(&.[]?("href")) || alt.try(&.text).try(&.strip) || site_link
 
+  # Entries
   feed_node.xpath_nodes("./*[local-name()='entry']").each do |node|
-    title = node.xpath_node("./*[local-name()='title']").try(&.text) || "Untitled"
-    link_node = node.xpath_node("./*[local-name()='link'][@rel='alternate' or not(@rel)]")
-    link = link_node.try(&.[]?("href")) || "#"
+    # Title text
+    title = node.xpath_node("./*[local-name()='title']").try(&.text).try(&.strip)
+    title = "Untitled" if title.nil? || title.empty?
+
+    # Entry link preference: rel="alternate" (type text/html) -> any link with href -> text content
+    link_node = node.xpath_node("./*[local-name()='link'][@rel='alternate' and (not(@type) or starts-with(@type,'text/html'))]") ||
+                node.xpath_node("./*[local-name()='link'][@rel='alternate']") ||
+                node.xpath_node("./*[local-name()='link'][@href]") ||
+                node.xpath_node("./*[local-name()='link']")
+    link = link_node.try(&.[]?("href")) || link_node.try(&.text).try(&.strip) || "#"
+
     published_str = node.xpath_node("./*[local-name()='published']").try(&.text) ||
                     node.xpath_node("./*[local-name()='updated']").try(&.text)
     pub_date = parse_time(published_str)
+
     items << Item.new(title, link, pub_date)
+    break if items.size >= limit
   end
 
   {site_link: site_link, items: items}
 end
 
-def fetch_feed(feed : Feed) : FeedData
-  HTTP::Client.get(feed.url) do |response|
+def fetch_feed(feed : Feed, item_limit : Int32) : FeedData
+  uri = URI.parse(feed.url)
+  client = POOL.for(feed.url)
+  client.get(uri.request_target, headers: HTTP::Headers{
+    "User-Agent" => "QuickHeadlines/1.0",
+    "Accept" => "application/rss+xml, application/atom+xml, application/xml;q=0.9, */*;q=0.8",
+  }) do |response|
     unless response.status.success?
       # Fall back to an error message in the body box
       return FeedData.new(
@@ -210,7 +249,7 @@ def fetch_feed(feed : Feed) : FeedData
       )
     end
 
-    parsed = parse_feed(response.body_io)
+    parsed = parse_feed(response.body_io, item_limit)
     items = parsed[:items]
     site_link = parsed[:site_link] || feed.url
 
@@ -220,6 +259,14 @@ def fetch_feed(feed : Feed) : FeedData
     end
     FeedData.new(feed.title, feed.url, site_link, feed.header_color, items)
   end
+rescue ex
+  FeedData.new(
+    feed.title,
+    feed.url,
+    feed.url,
+    feed.header_color,
+    [Item.new("Error: #{ex.message}", feed.url, nil)],
+  )
 end
 
 # Builds the inner HTML for all feed boxes as link lists.
@@ -246,8 +293,13 @@ def refresh_all(config : Config)
 
   config.feeds.each_with_index do |feed, index|
     spawn do
-      data = fetch_feed(feed)
-      channel.send({index, FeedData.new(data.title, data.url, data.site_link, data.header_color, data.items.first(config.item_limit))})
+      SEM.receive
+      begin
+        data = fetch_feed(feed, config.item_limit)
+        channel.send({index, data})
+      ensure
+        SEM.send(nil)
+      end
     end
   end
 
