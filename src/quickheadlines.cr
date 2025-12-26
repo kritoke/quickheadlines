@@ -90,7 +90,7 @@ end
 # ----- In-memory state -----
 
 record Item, title : String, link : String, pub_date : Time?
-record FeedData, title : String, url : String, site_link : String, header_color : String?, items : Array(Item), etag : String? = nil, last_modified : String? = nil do
+record FeedData, title : String, url : String, site_link : String, header_color : String?, items : Array(Item), etag : String? = nil, last_modified : String? = nil, favicon : String? = nil do
   def display_header_color
     (header_color.try(&.strip).presence) || "transparent"
   end
@@ -171,18 +171,18 @@ def relative_time(t : Time?) : String
   end
 end
 
-def parse_feed(io : IO, limit : Int32) : {site_link: String, items: Array(Item)}
+def parse_feed(io : IO, limit : Int32) : {site_link: String, items: Array(Item), favicon: String?}
   xml = XML.parse(io)
   rss = parse_rss(xml, limit)
   return rss unless rss[:items].empty?
   atom = parse_atom(xml, limit)
   return atom unless atom[:items].empty?
-  {site_link: "#", items: [] of Item}
+  {site_link: "#", items: [] of Item, favicon: nil}
 rescue
-  {site_link: "#", items: [] of Item}
+  {site_link: "#", items: [] of Item, favicon: nil}
 end
 
-private def parse_rss(xml : XML::Node, limit : Int32) : {site_link: String, items: Array(Item)}
+private def parse_rss(xml : XML::Node, limit : Int32) : {site_link: String, items: Array(Item), favicon: String?}
   site_link = "#"
   items = [] of Item
   if channel = xml.xpath_node("//channel")
@@ -195,7 +195,8 @@ private def parse_rss(xml : XML::Node, limit : Int32) : {site_link: String, item
       break if items.size >= limit
     end
   end
-  {site_link: site_link, items: items}
+  favicon = xml.xpath_node("//channel/image/url").try(&.text)
+  {site_link: site_link, items: items, favicon: favicon}
 end
 
 private def parse_atom_entry(node : XML::Node) : Item
@@ -218,13 +219,13 @@ private def parse_atom_entry(node : XML::Node) : Item
   Item.new(title, link, pub_date)
 end
 
-private def parse_atom(xml : XML::Node, limit : Int32) : {site_link: String, items: Array(Item)}
+private def parse_atom(xml : XML::Node, limit : Int32) : {site_link: String, items: Array(Item), favicon: String?}
   site_link = "#"
   items = [] of Item
 
   # FIX: correct XPath string
   feed_node = xml.xpath_node("//*[local-name()='feed']")
-  return {site_link: site_link, items: items} unless feed_node
+  return {site_link: site_link, items: items, favicon: nil} unless feed_node
 
   # Site link preference: rel="alternate" (type text/html) -> first link with href -> keep default
   alt = feed_node.xpath_node("./*[local-name()='link'][@rel='alternate' and (not(@type) or starts-with(@type,'text/html'))]") ||
@@ -238,7 +239,9 @@ private def parse_atom(xml : XML::Node, limit : Int32) : {site_link: String, ite
     break if items.size >= limit
   end
 
-  {site_link: site_link, items: items}
+  favicon = feed_node.xpath_node("./*[local-name()='icon']").try(&.text) ||
+            feed_node.xpath_node("./*[local-name()='logo']").try(&.text)
+  {site_link: site_link, items: items, favicon: favicon}
 end
 
 def fetch_feed(feed : Feed, item_limit : Int32, previous_data : FeedData? = nil) : FeedData
@@ -274,6 +277,16 @@ def fetch_feed(feed : Feed, item_limit : Int32, previous_data : FeedData? = nil)
     parsed = parse_feed(response.body_io, item_limit)
     items = parsed[:items]
     site_link = parsed[:site_link] || feed.url
+    favicon = parsed[:favicon]
+
+    if favicon.nil?
+      begin
+        if host = URI.parse(site_link).host
+          favicon = "https://www.google.com/s2/favicons?domain=#{host}&sz=32"
+        end
+      rescue
+      end
+    end
 
     # Capture caching headers
     etag = response.headers["ETag"]?
@@ -283,7 +296,7 @@ def fetch_feed(feed : Feed, item_limit : Int32, previous_data : FeedData? = nil)
       # Show a single placeholder item linking to the feed itself
       items = [Item.new("No items found (or unsupported format)", feed.url, nil)]
     end
-    FeedData.new(feed.title, feed.url, site_link, feed.header_color, items, etag, last_modified)
+    FeedData.new(feed.title, feed.url, site_link, feed.header_color, items, etag, last_modified, favicon)
   end
 rescue ex
   FeedData.new(
