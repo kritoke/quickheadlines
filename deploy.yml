@@ -53,3 +53,4 @@ jobs:
           cache-to: type=gha,mode=max
           build-args: |
             BUILD_REV=${{ github.sha }}
+            CRYSTAL_WORKERS=2
