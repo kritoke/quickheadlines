@@ -61,6 +61,9 @@ RUN apt-get update && apt-get install -y \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
+# Try to resolve issue where it can't locate the timezone sometimes and fails to run outright.
+ENV TZ=UTC
+
 # Copy the compiled binary
 COPY --from=builder /app/server .
 COPY feeds.yml ./feeds.yml
