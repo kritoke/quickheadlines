@@ -409,6 +409,9 @@ def start_server(port : Int32)
       context.response.content_type = "text/plain; charset=utf-8"
       # Use updated_at as a change token
       context.response.print STATE.updated_at.to_unix_ms
+    when {"GET", "/feeds"}
+      context.response.content_type = "text/html; charset=utf-8"
+      render_feed_boxes(context.response)
     when {"GET", "/favicon.png"}
       serve_bytes(context, FAVICON_PNG, "image/png")
     when {"GET", "/favicon.svg"}

@@ -44,15 +44,28 @@ html
         (function() {
           const intervalMs = 10000;
           let last = null;
+          const grid = document.getElementById('feed-grid');
+          const label = document.querySelector('.updated');
+
           async function check() {
             try {
               const res = await fetch('/version', {cache: 'no-store'});
               if (!res.ok) return;
               const v = await res.text();
+
               if (last === null) {
                 last = v;
-              } else if (v !== last) {
-                location.reload();
+                return;
+              }
+
+              if (v !== last) {
+                const feedRes = await fetch('/feeds', {cache: 'no-store'});
+                if (!feedRes.ok) return;
+                const html = await feedRes.text();
+                grid.innerHTML = html;
+                const d = new Date(parseInt(v));
+                if (label) label.innerText = "Feeds last refreshed on " + d.toLocaleString();
+                last = v;
               }
             } catch (_) {}
           }
