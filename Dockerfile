@@ -14,18 +14,20 @@ RUN apt-get update && apt-get install -y \
 
 # 1. Install dependencies
 COPY shard.yml shard.lock ./
-COPY feeds.yml ./feeds.yml
 RUN shards install --production
 
-# 2. Copy code
-COPY . .
+# 2. Copy source code and assets
+# We copy specific directories to avoid cache invalidation when feeds.yml changes
+COPY src ./src
+COPY public ./public
 
 ARG BUILD_REV=0
 
 # 3. Build the binary
 # REMOVED: --static (This is the key fix for ARM64 stability)
 # The binary will now rely on shared system libraries (Dynamic Linking)
-RUN CRYSTAL_BUILD_OPTS="--lto" crystal build --release --no-debug src/quickheadlines.cr --release -o /app/server
+# We echo the build revision to force cache invalidation if the ARG changes
+RUN echo "Build revision: ${BUILD_REV}" && CRYSTAL_BUILD_OPTS="--lto" crystal build --release --no-debug src/quickheadlines.cr -o /app/server
 
 # --- Stage 2: Runner ---
 # Use Ubuntu (Slim) to match the Builder's OS architecture
@@ -42,14 +44,18 @@ RUN apt-get update && apt-get install -y \
     libyaml-0-2 \
     ca-certificates \
     tzdata \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy the compiled binary
 COPY --from=builder /app/server .
-COPY --from=builder /app/feeds.yml ./feeds.yml
+COPY feeds.yml ./feeds.yml
 
 # Setup environment
 EXPOSE 3030/tcp
+
+# Healthcheck to ensure the server is running
+HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 CMD curl -f http://localhost:3030/version || exit 1
 
 # Run it
 ENTRYPOINT ["./server"]
