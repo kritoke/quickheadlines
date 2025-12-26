@@ -116,19 +116,12 @@ STATE = AppState.new
 # ----- HTTP client pooling and concurrency control -----
 
 class ClientPool
-  def initialize
-    @clients = {} of String => HTTP::Client
-  end
-
   def for(url : String) : HTTP::Client
     uri = URI.parse(url)
-    key = "#{uri.scheme}://#{uri.host}:#{uri.port || (uri.scheme == "https" ? 443 : 80)}"
-    @clients[key]? || begin
-      client = HTTP::Client.new(uri)
-      client.read_timeout = 15.seconds
-      client.connect_timeout = 10.seconds
-      @clients[key] = client
-    end
+    client = HTTP::Client.new(uri)
+    client.read_timeout = 15.seconds
+    client.connect_timeout = 10.seconds
+    client
   end
 end
 
@@ -257,46 +250,50 @@ def fetch_feed(feed : Feed, item_limit : Int32, previous_data : FeedData? = nil)
     previous_data.last_modified.try { |v| headers["If-Modified-Since"] = v }
   end
 
-  client.get(uri.request_target, headers: headers) do |response|
-    if response.status_code == 304 && previous_data
-      # Content hasn't changed, return previous data
-      return previous_data
-    end
-
-    unless response.status.success?
-      # Fall back to an error message in the body box
-      return FeedData.new(
-        feed.title,
-        feed.url,
-        feed.url,
-        feed.header_color,
-        [Item.new("Error fetching feed (status #{response.status_code})", feed.url, nil)]
-      )
-    end
-
-    parsed = parse_feed(response.body_io, item_limit)
-    items = parsed[:items]
-    site_link = parsed[:site_link] || feed.url
-    favicon = parsed[:favicon]
-
-    if favicon.nil?
-      begin
-        if host = URI.parse(site_link).host
-          favicon = "https://www.google.com/s2/favicons?domain=#{host}&sz=32"
-        end
-      rescue
+  begin
+    client.get(uri.request_target, headers: headers) do |response|
+      if response.status_code == 304 && previous_data
+        # Content hasn't changed, return previous data
+        return previous_data
       end
-    end
 
-    # Capture caching headers
-    etag = response.headers["ETag"]?
-    last_modified = response.headers["Last-Modified"]?
+      unless response.status.success?
+        # Fall back to an error message in the body box
+        return FeedData.new(
+          feed.title,
+          feed.url,
+          feed.url,
+          feed.header_color,
+          [Item.new("Error fetching feed (status #{response.status_code})", feed.url, nil)]
+        )
+      end
 
-    if items.empty?
-      # Show a single placeholder item linking to the feed itself
-      items = [Item.new("No items found (or unsupported format)", feed.url, nil)]
+      parsed = parse_feed(response.body_io, item_limit)
+      items = parsed[:items]
+      site_link = parsed[:site_link] || feed.url
+      favicon = parsed[:favicon]
+
+      if favicon.nil?
+        begin
+          if host = URI.parse(site_link).host
+            favicon = "https://www.google.com/s2/favicons?domain=#{host}&sz=32"
+          end
+        rescue
+        end
+      end
+
+      # Capture caching headers
+      etag = response.headers["ETag"]?
+      last_modified = response.headers["Last-Modified"]?
+
+      if items.empty?
+        # Show a single placeholder item linking to the feed itself
+        items = [Item.new("No items found (or unsupported format)", feed.url, nil)]
+      end
+      FeedData.new(feed.title, feed.url, site_link, feed.header_color, items, etag, last_modified, favicon)
     end
-    FeedData.new(feed.title, feed.url, site_link, feed.header_color, items, etag, last_modified, favicon)
+  ensure
+    client.close
   end
 rescue ex
   FeedData.new(
@@ -418,6 +415,26 @@ def start_server(port : Int32)
       serve_bytes(context, FAVICON_SVG, "image/svg+xml")
     when {"GET", "/favicon.ico"}
       serve_bytes(context, FAVICON_ICO, "image/x-icon")
+    when {"GET", "/proxy_image"}
+      if url = context.request.query_params["url"]?
+        begin
+          uri = URI.parse(url)
+          client = POOL.for(url)
+          begin
+            client.get(uri.request_target) do |response|
+              context.response.content_type = response.content_type || "image/png"
+              context.response.headers["Cache-Control"] = "public, max-age=86400"
+              IO.copy(response.body_io, context.response)
+            end
+          ensure
+            client.close
+          end
+        rescue
+          context.response.status_code = 404
+        end
+      else
+        context.response.status_code = 400
+      end
     else
       context.response.content_type = "text/html; charset=utf-8"
       render_page(context.response)
