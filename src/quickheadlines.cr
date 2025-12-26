@@ -144,7 +144,12 @@ SEM = Channel(Nil).new(CONCURRENCY).tap { |channel| CONCURRENCY.times { channel.
 def parse_time(str : String?) : Time?
   return unless str
 
-  [Time::Format::RFC_2822, Time::Format::ISO_8601_TIME, Time::Format::ISO_8601_DATE].each do |format|
+  [
+    Time::Format::RFC_2822,
+    Time::Format::RFC_3339,
+    Time::Format::ISO_8601_DATE_TIME,
+    Time::Format::ISO_8601_DATE
+  ].each do |format|
     begin
       return format.parse(str)
     rescue
@@ -183,7 +188,7 @@ private def parse_rss(xml : XML::Node, limit : Int32) : {site_link: String, item
   if channel = xml.xpath_node("//channel")
     site_link = channel.xpath_node("./link").try(&.text) || site_link
     channel.xpath_nodes("./item").each do |node|
-      title = node.xpath_node("./title").try(&.text) || "Untitled"
+      title = node.xpath_node("./title").try(&.text).try { |t| HTML.unescape(t) } || "Untitled"
       link = node.xpath_node("./link").try(&.text) || "#"
       pub_date = parse_time(node.xpath_node("./pubDate").try(&.text))
       items << Item.new(title, link, pub_date)
@@ -211,6 +216,7 @@ private def parse_atom(xml : XML::Node, limit : Int32) : {site_link: String, ite
   feed_node.xpath_nodes("./*[local-name()='entry']").each do |node|
     # Title text
     title = node.xpath_node("./*[local-name()='title']").try(&.text).try(&.strip)
+    title = HTML.unescape(title) if title
     title = "Untitled" if title.nil? || title.empty?
 
     # Entry link preference: rel="alternate" (type text/html) -> any link with href -> text content
