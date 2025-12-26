@@ -31,6 +31,13 @@ html
         }
     style
       | #{css}
+    style
+      |
+        @keyframes highlight {
+          0% { background-color: rgba(253, 224, 71, 0.4); }
+          100% { background-color: transparent; }
+        }
+        .animate-highlight { animation: highlight 2s ease-out; border-radius: 0.25rem; }
   body(class="bg-surface-light text-slate-800 dark:bg-surface-dark dark:text-slate-100 text-[15px] md:text-[16px] leading-7")
     main(class="mx-auto max-w-[1600px] px-4 md:px-12 lg:px-24")
       div.flex.items-center.gap-3.my-3.pl-4
@@ -66,7 +73,13 @@ html
                 if (window.morphdom) {
                   const clone = grid.cloneNode(false);
                   clone.innerHTML = html;
-                  morphdom(grid, clone);
+                  morphdom(grid, clone, {
+                    onNodeAdded: function(node) {
+                      if (node.nodeName === 'LI') {
+                        node.classList.add('animate-highlight');
+                      }
+                    }
+                  });
                 } else {
                   grid.innerHTML = html;
                 }
