@@ -39,7 +39,7 @@ ARG BUILD_REV=0
 # REMOVED: --static (This is the key fix for ARM64 stability)
 # The binary will now rely on shared system libraries (Dynamic Linking)
 # We echo the build revision to force cache invalidation if the ARG changes
-RUN echo "Build revision: ${BUILD_REV}" && APP_ENV=production CRYSTAL_BUILD_OPTS="--lto" crystal build --release --no-debug --lto src/quickheadlines.cr -o /app/server
+RUN echo "Build revision: ${BUILD_REV}" && APP_ENV=production crystal build --release --no-debug --lto src/quickheadlines.cr -o /app/server
 
 # --- Stage 2: Runner ---
 # Use Ubuntu (Slim) to match the Builder's OS architecture
