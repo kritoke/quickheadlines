@@ -9,7 +9,6 @@ These are just possible features that could be added in the future, for now its 
 ### UI Features
 
 - Create a Page Tab Concept for Separating Out Different Topics/Categories
-- Put the favicon from a site and put it into the header box
 
 ### Advanced Features
 

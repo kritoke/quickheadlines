@@ -1,0 +1,53 @@
+@import "tailwindcss";
+@source "../../src/**/*.slang";
+
+@theme {
+  --color-surface: #1f2937;
+  --color-surface-light: #f9fafb;
+  --color-surface-dark: #111827;
+  --color-card: #111827;
+  --color-card-light: #ffffff;
+  --color-border-subtle: #334155;
+  --color-border-light: #e5e7eb;
+}
+
+/* Cards */
+.feed-box {
+  overflow-wrap: anywhere;
+  hyphens: auto;
+  border-radius: 0.75rem; 
+  background-color: var(--color-card-light, #ffffff);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  height: 18rem;
+}
+
+@media (min-width: 768px) { .feed-box { height: 22rem; } }
+@media (min-width: 1024px) { .feed-box { height: 24rem; } }
+
+.feed-box .feed-header {
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.75rem;
+  margin-bottom: 0.4rem; 
+  flex: 0 0 auto;
+}
+
+.feed-box .feed-title {
+  margin: 0; 
+  font-size: 1.1rem;
+  line-height: 1.2;
+  font-weight: 700;
+  color: #ffffff;  
+}
+
+.feed-box .feed-body {
+  padding: 0.75rem;
+  flex: 1 1 auto;
+  overflow: auto;
+  scrollbar-width: none;
+}
+
+:is(.dark .feed-box) {
+  background-color: var(--color-card, #111827);
+}

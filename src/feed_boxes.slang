@@ -8,14 +8,14 @@
           img.w-5.h-5.rounded-sm src="#{data}" loading="lazy" alt=""
         - elsif fav = feed.favicon
           img.w-5.h-5.rounded-sm src="#{HTML.escape(fav)}" loading="lazy" alt=""
-        a.feed-title-link href="#{HTML.escape(feed.display_link)}" target="_blank" rel="noopener noreferrer"
+        a.feed-title-link.hover:underline href="#{HTML.escape(feed.display_link)}" target="_blank" rel="noopener noreferrer"
           = feed.title
 
     .feed-body
       ul.space-y-1.leading-relaxed
         - feed.items.each do |item|
           li
-            a.feed-link href="#{HTML.escape(item.link)}" target="_blank" rel="noopener noreferrer"
+            a.feed-link.hover:underline href="#{HTML.escape(item.link)}" target="_blank" rel="noopener noreferrer"
               = item.title
             - if date = item.pub_date
               span.text-xs.text-slate-500.ml-2.dark:text-slate-400 title="#{date.to_local.to_s("%A, %b %d, %Y at %I:%M %p")}"
