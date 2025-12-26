@@ -1,6 +1,9 @@
 @import "tailwindcss";
 @source "../../src/**/*.slang";
 
+/* Enable class-based dark mode for Tailwind v4 */
+@variant dark (&:where(.dark, .dark *));
+
 @theme {
   --color-surface: #1f2937;
   --color-surface-light: #f9fafb;
@@ -20,10 +23,13 @@
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  height: 18rem;
+  height: auto;
 }
 
-@media (min-width: 768px) { .feed-box { height: 22rem; } }
+@media (min-width: 768px) { 
+  .feed-box { height: 22rem; } 
+  .feed-box .feed-body { overflow: auto; }
+}
 @media (min-width: 1024px) { .feed-box { height: 24rem; } }
 
 .feed-box .feed-header {
@@ -38,16 +44,26 @@
   font-size: 1.1rem;
   line-height: 1.2;
   font-weight: 700;
-  color: #ffffff;  
 }
 
 .feed-box .feed-body {
   padding: 0.75rem;
   flex: 1 1 auto;
-  overflow: auto;
   scrollbar-width: none;
 }
 
-:is(.dark .feed-box) {
-  background-color: var(--color-card, #111827);
+.feed-title-link {
+  color: inherit;
+}
+
+/* Use the dark variant for the feed box background */
+.feed-box {
+  @variant dark {
+    background-color: var(--color-card, #111827);
+  }
+}
+
+/* Theme Toggle */
+#theme-toggle {
+  cursor: pointer;
 }
