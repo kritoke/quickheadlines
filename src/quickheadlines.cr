@@ -6,6 +6,7 @@ require "slang"
 require "html"
 require "gc"
 require "uri"
+require "base64"
 
 # ----- Compile-time embedded templates -----
 
@@ -90,7 +91,7 @@ end
 # ----- In-memory state -----
 
 record Item, title : String, link : String, pub_date : Time?
-record FeedData, title : String, url : String, site_link : String, header_color : String?, items : Array(Item), etag : String? = nil, last_modified : String? = nil, favicon : String? = nil do
+record FeedData, title : String, url : String, site_link : String, header_color : String?, items : Array(Item), etag : String? = nil, last_modified : String? = nil, favicon : String? = nil, favicon_data : String? = nil do
   def display_header_color
     (header_color.try(&.strip).presence) || "transparent"
   end
@@ -104,6 +105,7 @@ class AppState
   property feeds = [] of FeedData
   property updated_at = Time.local
   property config_title = "Quick Headlines"
+  property config : Config?
 
   def update(feeds : Array(FeedData), updated_at : Time)
     @feeds = feeds
@@ -237,6 +239,45 @@ private def parse_atom(xml : XML::Node, limit : Int32) : {site_link: String, ite
   {site_link: site_link, items: items, favicon: favicon}
 end
 
+def fetch_favicon_data_uri(url : String) : String?
+  current_url = url
+  redirects = 0
+
+  loop do
+    return nil if redirects > 3
+
+    uri = URI.parse(current_url)
+    client = POOL.for(current_url)
+    headers = HTTP::Headers{"User-Agent" => "Mozilla/5.0 (compatible; QuickHeadlines/1.0)"}
+
+    begin
+      client.get(uri.request_target, headers: headers) do |response|
+        if response.status.redirection? && (location = response.headers["Location"]?)
+          current_url = uri.resolve(location).to_s
+          redirects += 1
+        elsif response.status.success?
+          content_type = response.content_type || "image/png"
+          data = Base64.strict_encode(response.body_io.getb_to_end)
+          return "data:#{content_type};base64,#{data}"
+        else
+          return nil
+        end
+      end
+    rescue
+      return nil
+    ensure
+      client.close
+    end
+  end
+end
+
+def resolve_url(url : String?, base : String) : String?
+  return nil if url.nil? || url.strip.empty?
+  URI.parse(base).resolve(url.strip).to_s
+rescue
+  nil
+end
+
 def fetch_feed(feed : Feed, item_limit : Int32, previous_data : FeedData? = nil) : FeedData
   uri = URI.parse(feed.url)
   client = POOL.for(feed.url)
@@ -273,12 +314,27 @@ def fetch_feed(feed : Feed, item_limit : Int32, previous_data : FeedData? = nil)
       site_link = parsed[:site_link] || feed.url
       favicon = parsed[:favicon]
 
+      # Resolve relative favicon URLs
+      if favicon && !favicon.starts_with?("http")
+        favicon = resolve_url(favicon, site_link.presence || feed.url)
+      end
+
       if favicon.nil?
         begin
           if host = URI.parse(site_link).host
             favicon = "https://www.google.com/s2/favicons?domain=#{host}&sz=128"
           end
         rescue
+        end
+      end
+
+      # Fetch/Cache Favicon Data
+      favicon_data = nil
+      if favicon
+        if previous_data && previous_data.favicon == favicon && previous_data.favicon_data
+          favicon_data = previous_data.favicon_data
+        else
+          favicon_data = fetch_favicon_data_uri(favicon)
         end
       end
 
@@ -290,7 +346,7 @@ def fetch_feed(feed : Feed, item_limit : Int32, previous_data : FeedData? = nil)
         # Show a single placeholder item linking to the feed itself
         items = [Item.new("No items found (or unsupported format)", feed.url, nil)]
       end
-      FeedData.new(feed.title, feed.url, site_link, feed.header_color, items, etag, last_modified, favicon)
+      FeedData.new(feed.title, feed.url, site_link, feed.header_color, items, etag, last_modified, favicon, favicon_data)
     end
   ensure
     client.close
@@ -324,6 +380,7 @@ end
 
 def refresh_all(config : Config)
   STATE.config_title = config.page_title
+  STATE.config = config
 
   # Create a map of existing feeds to preserve cache data
   previous_feeds = STATE.feeds.index_by(&.url)
@@ -409,6 +466,23 @@ def start_server(port : Int32)
     when {"GET", "/feeds"}
       context.response.content_type = "text/html; charset=utf-8"
       render_feed_boxes(context.response)
+    when {"GET", "/feed_more"}
+      url = context.request.query_params["url"]?
+      limit = context.request.query_params["limit"]?.try(&.to_i?) || 20
+
+      if url && (config = STATE.config)
+        if feed_config = config.feeds.find { |f| f.url == url }
+          # Force fetch with new limit (pass nil for previous_data to avoid 304 and force re-parse)
+          data = fetch_feed(feed_config, limit, nil)
+          context.response.content_type = "text/html; charset=utf-8"
+          feeds = [data]
+          Slang.embed("src/feed_boxes.slang", "context.response")
+        else
+          context.response.status_code = 404
+        end
+      else
+        context.response.status_code = 400
+      end
     when {"GET", "/favicon.png"}
       serve_bytes(context, FAVICON_PNG, "image/png")
     when {"GET", "/favicon.svg"}
@@ -418,16 +492,39 @@ def start_server(port : Int32)
     when {"GET", "/proxy_image"}
       if url = context.request.query_params["url"]?
         begin
-          uri = URI.parse(url)
-          client = POOL.for(url)
-          begin
-            client.get(uri.request_target) do |response|
-              context.response.content_type = response.content_type || "image/png"
-              context.response.headers["Cache-Control"] = "public, max-age=86400"
-              IO.copy(response.body_io, context.response)
+          current_url = url
+          redirects = 0
+          success = false
+
+          loop do
+            if redirects > 3
+              context.response.status_code = 502
+              break
             end
-          ensure
-            client.close
+
+            loop_uri = URI.parse(current_url)
+            loop_client = POOL.for(current_url)
+            loop_headers = HTTP::Headers{"User-Agent" => "Mozilla/5.0 (compatible; QuickHeadlines/1.0)"}
+
+            begin
+              loop_client.get(loop_uri.request_target, headers: loop_headers) do |response|
+                if response.status.redirection? && (location = response.headers["Location"]?)
+                  current_url = loop_uri.resolve(location).to_s
+                  redirects += 1
+                elsif response.status.success?
+                  context.response.content_type = response.content_type || "image/png"
+                  context.response.headers["Cache-Control"] = "public, max-age=86400"
+                  IO.copy(response.body_io, context.response)
+                  success = true
+                else
+                  context.response.status_code = response.status_code
+                  success = true
+                end
+              end
+            ensure
+              loop_client.close
+            end
+            break if success
           end
         rescue
           context.response.status_code = 404
