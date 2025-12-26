@@ -90,7 +90,7 @@ end
 # ----- In-memory state -----
 
 record Item, title : String, link : String, pub_date : Time?
-record FeedData, title : String, url : String, site_link : String, header_color : String?, items : Array(Item) do
+record FeedData, title : String, url : String, site_link : String, header_color : String?, items : Array(Item), etag : String? = nil, last_modified : String? = nil do
   def display_header_color
     (header_color.try(&.strip).presence) || "transparent"
   end
@@ -137,7 +137,7 @@ POOL = ClientPool.new
 # Limit concurrent fetches (helps smooth peak allocations)
 # Adjust capacity to your environment (5–10 is a good start).
 CONCURRENCY = 8
-SEM = Channel(Nil).new(CONCURRENCY).tap { |channel| CONCURRENCY.times { channel.send(nil) } }
+SEM         = Channel(Nil).new(CONCURRENCY).tap { |channel| CONCURRENCY.times { channel.send(nil) } }
 
 # ----- Fetch and render -----
 
@@ -148,7 +148,7 @@ def parse_time(str : String?) : Time?
     Time::Format::RFC_2822,
     Time::Format::RFC_3339,
     Time::Format::ISO_8601_DATE_TIME,
-    Time::Format::ISO_8601_DATE
+    Time::Format::ISO_8601_DATE,
   ].each do |format|
     begin
       return format.parse(str)
@@ -188,7 +188,7 @@ private def parse_rss(xml : XML::Node, limit : Int32) : {site_link: String, item
   if channel = xml.xpath_node("//channel")
     site_link = channel.xpath_node("./link").try(&.text) || site_link
     channel.xpath_nodes("./item").each do |node|
-      title = node.xpath_node("./title").try(&.text).try { |t| HTML.unescape(t) } || "Untitled"
+      title = node.xpath_node("./title").try(&.text).try { |title| HTML.unescape(title) } || "Untitled"
       link = node.xpath_node("./link").try(&.text) || "#"
       pub_date = parse_time(node.xpath_node("./pubDate").try(&.text))
       items << Item.new(title, link, pub_date)
@@ -237,13 +237,25 @@ private def parse_atom(xml : XML::Node, limit : Int32) : {site_link: String, ite
   {site_link: site_link, items: items}
 end
 
-def fetch_feed(feed : Feed, item_limit : Int32) : FeedData
+def fetch_feed(feed : Feed, item_limit : Int32, previous_data : FeedData? = nil) : FeedData
   uri = URI.parse(feed.url)
   client = POOL.for(feed.url)
-  client.get(uri.request_target, headers: HTTP::Headers{
+  headers = HTTP::Headers{
     "User-Agent" => "QuickHeadlines/1.0",
-    "Accept" => "application/rss+xml, application/atom+xml, application/xml;q=0.9, */*;q=0.8",
-  }) do |response|
+    "Accept"     => "application/rss+xml, application/atom+xml, application/xml;q=0.9, */*;q=0.8",
+  }
+
+  if previous_data
+    previous_data.etag.try { |v| headers["If-None-Match"] = v }
+    previous_data.last_modified.try { |v| headers["If-Modified-Since"] = v }
+  end
+
+  client.get(uri.request_target, headers: headers) do |response|
+    if response.status_code == 304 && previous_data
+      # Content hasn't changed, return previous data
+      return previous_data
+    end
+
     unless response.status.success?
       # Fall back to an error message in the body box
       return FeedData.new(
@@ -251,7 +263,7 @@ def fetch_feed(feed : Feed, item_limit : Int32) : FeedData
         feed.url,
         feed.url,
         feed.header_color,
-        [Item.new("Error fetching feed (status #{response.status_code})", feed.url, nil)],
+        [Item.new("Error fetching feed (status #{response.status_code})", feed.url, nil)]
       )
     end
 
@@ -259,11 +271,15 @@ def fetch_feed(feed : Feed, item_limit : Int32) : FeedData
     items = parsed[:items]
     site_link = parsed[:site_link] || feed.url
 
+    # Capture caching headers
+    etag = response.headers["ETag"]?
+    last_modified = response.headers["Last-Modified"]?
+
     if items.empty?
       # Show a single placeholder item linking to the feed itself
       items = [Item.new("No items found (or unsupported format)", feed.url, nil)]
     end
-    FeedData.new(feed.title, feed.url, site_link, feed.header_color, items)
+    FeedData.new(feed.title, feed.url, site_link, feed.header_color, items, etag, last_modified)
   end
 rescue ex
   FeedData.new(
@@ -271,7 +287,7 @@ rescue ex
     feed.url,
     feed.url,
     feed.header_color,
-    [Item.new("Error: #{ex.message}", feed.url, nil)],
+    [Item.new("Error: #{ex.message}", feed.url, nil)]
   )
 end
 
@@ -295,13 +311,17 @@ end
 def refresh_all(config : Config)
   STATE.config_title = config.page_title
 
+  # Create a map of existing feeds to preserve cache data
+  previous_feeds = STATE.feeds.index_by(&.url)
+
   channel = Channel(Tuple(Int32, FeedData)).new
 
   config.feeds.each_with_index do |feed, index|
     spawn do
       SEM.receive
       begin
-        data = fetch_feed(feed, config.item_limit)
+        prev = previous_feeds[feed.url]?
+        data = fetch_feed(feed, config.item_limit, prev)
         channel.send({index, data})
       ensure
         SEM.send(nil)
