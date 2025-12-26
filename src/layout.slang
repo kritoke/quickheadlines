@@ -9,6 +9,7 @@ html
     link rel="icon" type="image/png" href="/favicon.png"
     title = title
     script src="https://cdn.tailwindcss.com"
+    script src="https://unpkg.com/morphdom/dist/morphdom-umd.min.js"
     script
       |
         tailwind.config = {
@@ -62,7 +63,13 @@ html
                 const feedRes = await fetch('/feeds', {cache: 'no-store'});
                 if (!feedRes.ok) return;
                 const html = await feedRes.text();
-                grid.innerHTML = html;
+                if (window.morphdom) {
+                  const clone = grid.cloneNode(false);
+                  clone.innerHTML = html;
+                  morphdom(grid, clone);
+                } else {
+                  grid.innerHTML = html;
+                }
                 const d = new Date(parseInt(v));
                 if (label) label.innerText = "Feeds last refreshed on " + d.toLocaleString();
                 last = v;
