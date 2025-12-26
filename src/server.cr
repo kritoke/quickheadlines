@@ -3,14 +3,18 @@ require "slang"
 
 # ----- Compile-time embedded templates -----
 
-# These files must exist at compile time in the src directory
-LAYOUT_SOURCE = {{ read_file("src/layout.slang") }}.gsub('\u00A0', ' ') # remove possible bad spaces
-CSS_TEMPLATE  = {{ read_file("src/styles.css") }}.gsub('\u00A0', ' ')   # remove possible bad spaces
+{% if env("APP_ENV") == "production" %}
+  CSS_TEMPLATE = {{ read_file("assets/css/production.css") }}.gsub('\u00A0', ' ')
+  IS_DEVELOPMENT = false
+{% else %}
+  CSS_TEMPLATE = {{ read_file("assets/css/development.css") }}.gsub('\u00A0', ' ')
+  IS_DEVELOPMENT = true
+{% end %}
 
 # Embed favicon assets at compile time. These must exist during compile.
-FAVICON_PNG = {{ read_file "public/favicon.png" }}.to_slice
-FAVICON_SVG = {{ read_file "public/favicon.svg" }}.to_slice
-FAVICON_ICO = {{ read_file "public/favicon.ico" }}.to_slice
+FAVICON_PNG = {{ read_file "assets/images/favicon.png" }}.to_slice
+FAVICON_SVG = {{ read_file "assets/images/favicon.svg" }}.to_slice
+FAVICON_ICO = {{ read_file "assets/images/favicon.ico" }}.to_slice
 
 def serve_bytes(ctx : HTTP::Server::Context, bytes : Bytes, content_type : String)
   ctx.response.content_type = content_type
@@ -31,6 +35,7 @@ def render_page(io : IO)
   css = CSS_TEMPLATE
   updated_at = STATE.updated_at.to_s
   feeds = STATE.feeds
+  is_development = IS_DEVELOPMENT
 
   Slang.embed("src/layout.slang", "io")
 end

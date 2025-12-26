@@ -8,30 +8,14 @@ html
     link rel="icon" type="image/svg+xml" href="/favicon.svg" sizes="any"
     link rel="icon" type="image/png" href="/favicon.png"
     title = title
-    script src="https://cdn.tailwindcss.com"
     script src="https://unpkg.com/morphdom/dist/morphdom-umd.min.js"
     script src="https://cdnjs.cloudflare.com/ajax/libs/color-thief/2.3.2/color-thief.umd.js"
-    script
-      |
-        tailwind.config = {
-          darkMode: 'class',
-          theme: {
-            extend: {
-              colors: {
-                surface: { DEFAULT: '#1f2937', light: '#f9fafb', dark: '#111827' },
-                card:    { DEFAULT: '#111827', light: '#ffffff' },
-                border:  { subtle: '#334155', light: '#e5e7eb' },
-              }
-            }
-          }
-        }
     script
       |
         if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
           document.documentElement.classList.add('dark');
         }
-    style
-      | #{css}
+    style == css
     style
       |
         @keyframes highlight {
@@ -51,7 +35,7 @@ html
     script
       |
         (function() {
-          const intervalMs = 10000;
+          const intervalMs = 30000;
           let last = null;
           const grid = document.getElementById('feed-grid');
           const label = document.querySelector('.updated');

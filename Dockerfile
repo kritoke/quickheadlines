@@ -10,6 +10,7 @@ RUN apt-get update && apt-get install -y \
     libxml2-dev \
     libssl-dev \
     libyaml-dev \
+    curl \
     build-essential
 
 # 1. Install dependencies
@@ -19,7 +20,18 @@ RUN shards install --production
 # 2. Copy source code and assets
 # We copy specific directories to avoid cache invalidation when feeds.yml changes
 COPY src ./src
-COPY public ./public
+COPY assets ./assets
+
+# 2.5 Build Tailwind CSS for production
+# Download standalone tailwindcss cli
+ARG TARGETARCH
+RUN if [ "$TARGETARCH" = "arm64" ]; then ARCH="arm64"; else ARCH="x64"; fi && \
+    curl -sLO "https://github.com/tailwindlabs/tailwindcss/releases/latest/download/tailwindcss-linux-$ARCH" && \
+    chmod +x "tailwindcss-linux-$ARCH" && \
+    mv "tailwindcss-linux-$ARCH" tailwindcss
+
+# Generate production CSS (combining custom styles with tailwind directives)
+RUN ./tailwindcss -i assets/css/input.css -o assets/css/production.css --minify
 
 ARG BUILD_REV=0
 
@@ -27,7 +39,7 @@ ARG BUILD_REV=0
 # REMOVED: --static (This is the key fix for ARM64 stability)
 # The binary will now rely on shared system libraries (Dynamic Linking)
 # We echo the build revision to force cache invalidation if the ARG changes
-RUN echo "Build revision: ${BUILD_REV}" && CRYSTAL_BUILD_OPTS="--lto" crystal build --release --no-debug src/quickheadlines.cr -o /app/server
+RUN echo "Build revision: ${BUILD_REV}" && APP_ENV=production CRYSTAL_BUILD_OPTS="--lto" crystal build --release --no-debug --lto src/quickheadlines.cr -o /app/server
 
 # --- Stage 2: Runner ---
 # Use Ubuntu (Slim) to match the Builder's OS architecture
