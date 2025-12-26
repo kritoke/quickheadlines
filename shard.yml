@@ -20,4 +20,4 @@ development_dependencies:
 
 crystal: '>= 1.18.2'
 
-license: MIT
+license: AGPL-3.0
