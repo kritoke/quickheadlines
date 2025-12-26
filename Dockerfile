@@ -36,12 +36,13 @@ RUN if [ "$TARGETARCH" = "arm64" ]; then ARCH="arm64"; else ARCH="x64"; fi && \
 RUN ./tailwindcss -i assets/css/input.css -o assets/css/production.css --minify
 
 ARG BUILD_REV=0
+ARG CRYSTAL_WORKERS=4
 
 # 3. Build the binary
 # REMOVED: --static (This is the key fix for ARM64 stability)
 # The binary will now rely on shared system libraries (Dynamic Linking)
 # We echo the build revision to force cache invalidation if the ARG changes
-RUN echo "Build revision: ${BUILD_REV}" && APP_ENV=production crystal build --release --no-debug src/quickheadlines.cr -o /app/server
+RUN echo "Build revision: ${BUILD_REV}" && APP_ENV=production crystal build --release --no-debug --workers ${CRYSTAL_WORKERS} src/quickheadlines.cr -o /app/server
 
 # --- Stage 2: Runner ---
 # Use Ubuntu (Slim) to match the Builder's OS architecture
