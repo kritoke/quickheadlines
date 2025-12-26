@@ -68,11 +68,32 @@ html
 
               const proxy = new Image();
               proxy.crossOrigin = 'Anonymous';
-              proxy.src = img.src;
+              proxy.src = '/proxy_image?url=' + encodeURIComponent(img.src);
               
               proxy.onload = function() {
                 try {
-                  const [r, g, b] = colorThief.getColor(proxy);
+                  const palette = colorThief.getPalette(proxy, 5);
+                  if (!palette || !palette.length) return;
+
+                  let color = palette[0];
+
+                  // Heuristic: if dominant color is grayscale (low saturation), try next
+                  const isGrayscale = (c) => {
+                    const max = Math.max(c[0], c[1], c[2]);
+                    const min = Math.min(c[0], c[1], c[2]);
+                    return (max - min) < 30;
+                  };
+
+                  if (isGrayscale(color)) {
+                    for (let i = 1; i < palette.length; i++) {
+                      if (!isGrayscale(palette[i])) {
+                        color = palette[i];
+                        break;
+                      }
+                    }
+                  }
+
+                  const [r, g, b] = color;
                   const yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
                   const textColor = (yiq >= 128) ? '#1f2937' : '#ffffff';
                   
