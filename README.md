@@ -5,6 +5,10 @@
 
 Quick Headlines is an easily configurable and deployable recent feed dashboard.  I wanted it to be as simple as dropping an executable and a YAML file with feeds in it.  The aim is to have sane defaults, so you can get up and running quickly without fighting with it.  Making it so simple that it can just run locally as well.  It does utilize some javascript libraries like [Color Thief](https://github.com/lokesh/color-thief) (for guessing a good background/text header colors) and [Morphodom](https://github.com/patrick-steele-idem/morphdom) (for hydrating the DOM with new content). It utilizes Tailwind CSS for stylings. 
 
+## Screenshots
+
+<img src="qh-mobiles-ss.png.png" alt="Mobile Screenshot">
+
 ## Installation
 
 Since the application is very much in early development, there are no releases just yet (binaries are eventually planned to be available to align with the simple deployment).  Until then, the easiest way to use the program is to clone the repo and modify the feeds.yml as needed.  
