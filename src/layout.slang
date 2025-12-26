@@ -56,7 +56,7 @@ html
           const grid = document.getElementById('feed-grid');
           const label = document.querySelector('.updated');
 
-          function updateAdaptiveColors() {
+          window.updateAdaptiveColors = function() {
             if (typeof ColorThief === 'undefined') return;
             const colorThief = new ColorThief();
             document.querySelectorAll('.feed-header').forEach(header => {
@@ -68,7 +68,11 @@ html
 
               const proxy = new Image();
               proxy.crossOrigin = 'Anonymous';
-              proxy.src = '/proxy_image?url=' + encodeURIComponent(img.src);
+              if (img.src.startsWith('data:')) {
+                proxy.src = img.src;
+              } else {
+                proxy.src = '/proxy_image?url=' + encodeURIComponent(img.src);
+              }
               
               proxy.onload = function() {
                 try {
@@ -107,6 +111,37 @@ html
             });
           }
 
+          window.loadMore = async function(btn) {
+            const url = btn.dataset.url;
+            const currentCount = parseInt(btn.dataset.currentCount);
+            const newLimit = currentCount + 10;
+            
+            const originalText = btn.innerText;
+            btn.innerText = "Loading...";
+            btn.disabled = true;
+            
+            try {
+              const res = await fetch(`/feed_more?url=${encodeURIComponent(url)}&limit=${newLimit}`);
+              if (!res.ok) throw new Error();
+              const html = await res.text();
+              
+              const feedBox = btn.closest('.feed-box');
+              if (window.morphdom) {
+                morphdom(feedBox, html, {
+                  onNodeAdded: function(node) {
+                    if (node.nodeName === 'LI') node.classList.add('animate-highlight');
+                  }
+                });
+              } else {
+                feedBox.outerHTML = html;
+              }
+              window.updateAdaptiveColors();
+            } catch (e) {
+              btn.innerText = "Failed";
+              setTimeout(() => { btn.innerText = originalText; btn.disabled = false; }, 2000);
+            }
+          };
+
           async function check() {
             try {
               const res = await fetch('/version', {cache: 'no-store'});
@@ -135,7 +170,7 @@ html
                 } else {
                   grid.innerHTML = html;
                 }
-                updateAdaptiveColors();
+                window.updateAdaptiveColors();
                 const d = new Date(parseInt(v));
                 if (label) label.innerText = "Feeds last refreshed on " + d.toLocaleString();
                 last = v;
@@ -143,6 +178,6 @@ html
             } catch (_) {}
           }
           check();
-          updateAdaptiveColors();
+          window.updateAdaptiveColors();
           setInterval(check, intervalMs);
         })();
