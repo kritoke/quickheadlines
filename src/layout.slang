@@ -10,6 +10,7 @@ html
     title = title
     script src="https://cdn.tailwindcss.com"
     script src="https://unpkg.com/morphdom/dist/morphdom-umd.min.js"
+    script src="https://cdnjs.cloudflare.com/ajax/libs/color-thief/2.3.2/color-thief.umd.js"
     script
       |
         tailwind.config = {
@@ -55,6 +56,36 @@ html
           const grid = document.getElementById('feed-grid');
           const label = document.querySelector('.updated');
 
+          function updateAdaptiveColors() {
+            if (typeof ColorThief === 'undefined') return;
+            const colorThief = new ColorThief();
+            document.querySelectorAll('.feed-header').forEach(header => {
+              if (header.dataset.adaptive) return;
+              if (header.dataset.hasCustomColor === 'true') return;
+              
+              const img = header.querySelector('img');
+              if (!img) return;
+
+              const proxy = new Image();
+              proxy.crossOrigin = 'Anonymous';
+              proxy.src = img.src;
+              
+              proxy.onload = function() {
+                try {
+                  const [r, g, b] = colorThief.getColor(proxy);
+                  const yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
+                  const textColor = (yiq >= 128) ? '#1f2937' : '#ffffff';
+                  
+                  header.style.backgroundColor = 'rgb(' + r + ',' + g + ',' + b + ')';
+                  header.style.color = textColor;
+                  const link = header.querySelector('a');
+                  if (link) link.style.color = textColor;
+                  header.dataset.adaptive = 'true';
+                } catch (e) {}
+              };
+            });
+          }
+
           async function check() {
             try {
               const res = await fetch('/version', {cache: 'no-store'});
@@ -83,6 +114,7 @@ html
                 } else {
                   grid.innerHTML = html;
                 }
+                updateAdaptiveColors();
                 const d = new Date(parseInt(v));
                 if (label) label.innerText = "Feeds last refreshed on " + d.toLocaleString();
                 last = v;
@@ -90,5 +122,6 @@ html
             } catch (_) {}
           }
           check();
+          updateAdaptiveColors();
           setInterval(check, intervalMs);
         })();
