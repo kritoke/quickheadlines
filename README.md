@@ -36,9 +36,9 @@ feeds:
     header_color: "orange"
 ```
 
-## Development
+## Docker Image
 
-TODO
+You should be able to use the following docker image ```ghcr.io/kritoke/quickheadlines:latest``` to get the latest package.
 
 ## Contributing
 
