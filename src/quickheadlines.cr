@@ -179,7 +179,7 @@ private def parse_rss(xml : XML::Node, limit : Int32) : {site_link: String, item
   site_link = "#"
   items = [] of Item
   if channel = xml.xpath_node("//channel")
-    site_link = channel.xpath_node("./link").try(&.text) || site_link
+    site_link = channel.xpath_node("./link").try(&.text).try(&.strip) || site_link
     channel.xpath_nodes("./item").each do |node|
       title = node.xpath_node("./title").try(&.text).try { |text| HTML.unescape(text) } || "Untitled"
       link = node.xpath_node("./link").try(&.text) || "#"
@@ -224,7 +224,7 @@ private def parse_atom(xml : XML::Node, limit : Int32) : {site_link: String, ite
   alt = feed_node.xpath_node("./*[local-name()='link'][@rel='alternate' and (not(@type) or starts-with(@type,'text/html'))]") ||
         feed_node.xpath_node("./*[local-name()='link'][@rel='alternate']") ||
         feed_node.xpath_node("./*[local-name()='link'][@href]")
-  site_link = alt.try(&.[]?("href")) || alt.try(&.text).try(&.strip) || site_link
+  site_link = alt.try(&.[]?("href")).try(&.strip) || alt.try(&.text).try(&.strip) || site_link
 
   # Entries
   feed_node.xpath_nodes("./*[local-name()='entry']").each do |node|
@@ -276,7 +276,7 @@ def fetch_feed(feed : Feed, item_limit : Int32, previous_data : FeedData? = nil)
       if favicon.nil?
         begin
           if host = URI.parse(site_link).host
-            favicon = "https://www.google.com/s2/favicons?domain=#{host}&sz=32"
+            favicon = "https://www.google.com/s2/favicons?domain=#{host}&sz=128"
           end
         rescue
         end
