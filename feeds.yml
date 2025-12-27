@@ -2,35 +2,50 @@ refresh_minutes: 10
 item_limit: 10
 server_port: 3030
 page_title: "Quick Headlines"
-feeds:
-  - title: "Hacker News"
-    url: "https://news.ycombinator.com/rss"
-  - title: "Tech Radar"
-    url: "https://www.techradar.com/feeds.xml"
-  - title: "Ars Technica"
-    url: "https://feeds.arstechnica.com/arstechnica/index"
-  - title: "Hackaday"
-    url: "https://hackaday.com/blog/feed/"
-  - title: "The Verge"
-    url: "https://www.theverge.com/rss/index.xml"
-  - title: "Slashdot"
-    url: "https://rss.slashdot.org/Slashdot/slashdotMainatom"
-  - title: "Techcrunch"
-    url: "https://techcrunch.com/feed/"
-  - title: "Mashable"
-    url: "https://mashable.com/feeds/rss/all"
-  - title: "Engadget"
-    url: "https://www.engadget.com/rss.xml"
-  - title: "Daring Fireball"
-    url: "https://daringfireball.net/feeds/main"
-  - title: "Mac Rumors"
-    url: "https://feeds.macrumors.com/MacRumors-All"
-  - title: "Android Police"
-    url: "https://www.androidpolice.com/feed/"
-software_releases:
-  title: "Project Updates"
-  repos:
-    - "crystal-lang/crystal"          # Defaults to GitHub
-    - "inkscape/inkscape:gl"          # GitLab
-    - "supercell/luce:cb"             # Codeberg
-    - "luckyframework/lucky:gh"       # Explicit GitHub
+tabs:
+  - name: "Tech"
+    feeds:
+      - title: "Hacker News"
+        url: "https://news.ycombinator.com/rss"
+      - title: "Tech Radar"
+        url: "https://www.techradar.com/feeds.xml"
+      - title: "Ars Technica"
+        url: "https://feeds.arstechnica.com/arstechnica/index"
+      - title: "Hackaday"
+        url: "https://hackaday.com/blog/feed/"
+      - title: "The Verge"
+        url: "https://www.theverge.com/rss/index.xml"
+      - title: "Slashdot"
+        url: "https://rss.slashdot.org/Slashdot/slashdotMainatom"
+      - title: "Techcrunch"
+        url: "https://techcrunch.com/feed/"
+      - title: "Mashable"
+        url: "https://mashable.com/feeds/rss/all"
+      - title: "Engadget"
+        url: "https://www.engadget.com/rss.xml"
+      - title: "Daring Fireball"
+        url: "https://daringfireball.net/feeds/main"
+      - title: "Mac Rumors"
+        url: "https://feeds.macrumors.com/MacRumors-All"
+      - title: "Android Police"
+        url: "https://www.androidpolice.com/feed/"
+    software_releases:
+      title: "Project Updates"
+      repos:
+        - "crystal-lang/crystal"          # Defaults to GitHub
+        - "inkscape/inkscape:gl"          # GitLab
+        - "supercell/luce:cb"             # Codeberg
+        - "luckyframework/lucky:gh"       # Explicit GitHub
+  - name: "Dev"
+    feeds:
+      - title: "Lobste.rs"
+        url: "https://lobste.rs/rss"
+      - title: "Google Developers"
+        url: "https://developer.chrome.com/static/blog/feed.xml"
+      - title: "Dev.to"
+        url: "https://dev.to/feed"
+      - title: "Phoronix"
+        url: "https://www.phoronix.com/rss.php"
+
+
+  

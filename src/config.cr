@@ -22,6 +22,13 @@ struct SoftwareConfig
   property repos : Array(String)
 end
 
+struct TabConfig
+  include YAML::Serializable
+  property name : String
+  property feeds : Array(Feed) = [] of Feed
+  property software_releases : SoftwareConfig?
+end
+
 struct Config
   include YAML::Serializable
 
@@ -37,9 +44,11 @@ struct Config
   # Wev Server Port (optional, default: 3030)
   property server_port : Int32 = 3030
 
-  property feeds : Array(Feed)
+  property feeds : Array(Feed) = [] of Feed
 
   property software_releases : SoftwareConfig?
+
+  property tabs : Array(TabConfig) = [] of TabConfig
 end
 
 record ConfigState, config : Config, mtime : Time

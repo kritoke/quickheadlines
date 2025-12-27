@@ -133,36 +133,57 @@ def refresh_all(config : Config)
   STATE.config_title = config.page_title
   STATE.config = config
 
-  # Create a map of existing feeds to preserve cache data
-  previous_feeds = STATE.feeds.index_by(&.url)
+  # 1. Collect all unique feed configurations to fetch
+  all_configs = {} of String => Feed
+  config.feeds.each { |f| all_configs[f.url] = f }
+  config.tabs.each { |t| t.feeds.each { |f| all_configs[f.url] = f } }
 
-  channel = Channel(Tuple(Int32, FeedData)).new
+  # 2. Map existing data for caching (ETags/Last-Modified)
+  existing_data = (STATE.feeds + STATE.tabs.flat_map(&.feeds)).index_by(&.url)
 
-  config.feeds.each_with_index do |feed, index|
+  # 3. Fetch all feeds concurrently
+  channel = Channel(FeedData).new
+  all_configs.each_value do |feed|
     spawn do
       SEM.receive
       begin
-        prev = previous_feeds[feed.url]?
-        data = fetch_feed(feed, config.item_limit, prev)
-        channel.send({index, data})
+        prev = existing_data[feed.url]?
+        channel.send(fetch_feed(feed, config.item_limit, prev))
       ensure
         SEM.send(nil)
       end
     end
   end
 
-  results = Array(FeedData?).new(config.feeds.size, nil)
-  config.feeds.size.times do
-    index, data = channel.receive
-    results[index] = data
-  end
-  new_feeds = results.compact
-
-  if sw_box = fetch_sw(config)
-    new_feeds << sw_box
+  fetched_map = {} of String => FeedData
+  all_configs.size.times do
+    data = channel.receive
+    fetched_map[data.url] = data
   end
 
-  STATE.update(new_feeds, Time.local)
+  # 4. Populate Top-Level State
+  STATE.feeds = config.feeds.map { |f| fetched_map[f.url] }
+  STATE.software_releases = [] of FeedData
+  if sw = config.software_releases
+    # Assuming fetch_sw is updated to take SoftwareConfig and limit
+    if sw_box = fetch_sw_with_config(sw, config.item_limit)
+      STATE.software_releases << sw_box
+    end
+  end
+
+  # 5. Populate Tab State
+  STATE.tabs = config.tabs.map do |tc|
+    tab = Tab.new(tc.name)
+    tab.feeds = tc.feeds.map { |f| fetched_map[f.url] }
+    if sw = tc.software_releases
+      if sw_box = fetch_sw_with_config(sw, config.item_limit)
+        tab.software_releases = [sw_box]
+      end
+    end
+    tab
+  end
+
+  STATE.update(Time.local)
 
   # Clear memory after large amount of data processing
   GC.collect
