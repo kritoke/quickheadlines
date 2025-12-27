@@ -29,7 +29,9 @@
 
 @media (min-width: 768px) { 
   .feed-box { height: 22rem; } 
-  .feed-box .feed-body { overflow: auto; }
+  .feed-box .feed-body { 
+    overflow-y: auto;
+  }
 }
 @media (min-width: 1024px) { .feed-box { height: 24rem; } }
 
@@ -49,10 +51,30 @@
 
 .feed-box .feed-body {
   padding: 0.75rem;
-  flex: 1 0 auto;
+  /* flex-shrink: 1 allows the body to be smaller than its content on desktop to trigger scrolling */
+  flex: 1 1 auto;
+  min-height: 0;
   width: 100%;
   min-width: 0;
   scrollbar-width: none;
+}
+
+.feed-box .feed-body:hover {
+  scrollbar-width: thin;
+}
+
+.feed-box .feed-body::-webkit-scrollbar {
+  width: 5px;
+}
+
+.feed-box .feed-body::-webkit-scrollbar-thumb {
+  background-color: transparent;
+  border-radius: 10px;
+}
+
+.feed-box .feed-body:hover::-webkit-scrollbar-thumb {
+  background-color: #cbd5e1;
+  @variant dark { background-color: #475569; }
 }
 
 .feed-box .feed-body ul,
