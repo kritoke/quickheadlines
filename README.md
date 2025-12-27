@@ -17,7 +17,7 @@ Desktop (Dark Mode)           |  Desktop (Light Mode)
 
 ## Installation
 
-Download the associated binary for your operating system, there should be arm64/amd64 for Linux, amd64 for FreeBSD, and arm64 for Mac OS X.  It will also need to have the feeds.yml in the same folder.
+Download the associated binary for your operating system from the [Releases](https://github.com/kritoke/quickheadlines/releases) page. There are builds for Linux (arm64/amd64), FreeBSD (amd64), and macOS (arm64). You will also need to have the `feeds.yml` file in the same folder as the executable.
 
 If you are just wanting to run & compile it locally, there is a shell script that should execute the required steps called ```run_QH.sh```.  It will build the program and then run it.  If you are wanting to run it in development mode, there is a different shell script that should do the commands for you called ```dev_QH.sh```.  
 
