@@ -27,11 +27,11 @@ class AppState
   property config : Config?
 
   def feeds_for_tab(tab_name : String)
-    tabs.find { |t| t.name == tab_name }.try(&.feeds) || [] of FeedData
+    tabs.find { |tab| tab.name == tab_name }.try(&.feeds) || [] of FeedData
   end
 
   def releases_for_tab(tab_name : String)
-    tabs.find { |t| t.name == tab_name }.try(&.software_releases) || [] of FeedData
+    tabs.find { |tab| tab.name == tab_name }.try(&.software_releases) || [] of FeedData
   end
 
   def update(updated_at : Time)
