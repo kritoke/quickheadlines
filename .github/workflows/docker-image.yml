@@ -3,6 +3,7 @@ name: Deploy
 on:
   push:
     branches: [ "main" ]
+    tags: [ "v*.*.*" ]
 
 env:
   REGISTRY: ghcr.io
@@ -38,6 +39,8 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
             type=raw,value=latest,enable={{is_default_branch}}
             type=sha
 
@@ -52,4 +55,83 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
           build-args: |
-            BUILD_REV=${{ github.sha }}
+            BUILD_REV=${{ github.ref_name }}
+
+  build-binaries:
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: linux
+            arch: x64
+          - os: ubuntu-latest
+            target: linux
+            arch: arm64
+          - os: macos-latest
+            target: macos
+            arch: arm64
+          - os: macos-13 # Intel Mac
+            target: macos
+            arch: x64
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Build Linux Binaries (via Docker)
+        if: matrix.target == 'linux'
+        run: |
+          docker run --rm --platform linux/${{ matrix.arch == 'x64' && 'amd64' || 'arm64' }} \
+            -v ${{ github.workspace }}:/app -w /app 84codes/crystal:latest-ubuntu-22.04 \
+            sh -c "apt-get update && apt-get install -y libxml2-dev libssl-dev libyaml-dev curl && \
+            shards install --production && \
+            make build-release OS_NAME=linux ARCH_NAME=${{ matrix.arch }} BUILD_REV=${{ github.ref_name }}"
+
+      - name: Build macOS Binaries
+        if: matrix.target == 'macos'
+        run: |
+          brew install crystal shards
+          shards install --production
+          make build-release OS_NAME=macos ARCH_NAME=${{ matrix.arch }} BUILD_REV=${{ github.ref_name }}
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: bin-${{ matrix.target }}-${{ matrix.arch }}
+          path: bin/quickheadlines-*
+
+  build-freebsd:
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build in FreeBSD VM
+        uses: vmactions/freebsd-vm@v1
+        with:
+          prepare: pkg install -y crystal shards libxml2 libyaml openssl libevent libiconv bash
+          run: |
+            shards install --production
+            make build-release OS_NAME=freebsd ARCH_NAME=x64 BUILD_REV=${{ github.ref_name }}
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: bin-freebsd-x64
+          path: bin/quickheadlines-*
+
+  publish-release:
+    needs: [build-binaries, build-freebsd]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: ./dist
+          pattern: bin-*
+          merge-multiple: true
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ./dist/*
+          generate_release_notes: true

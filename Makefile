@@ -1,6 +1,10 @@
 # Makefile for QuickHeadlines
 
+NAME = quickheadlines
 CRYSTAL ?= crystal
+VERSION := $(shell grep '^version:' shard.yml | awk '{print $$2}')
+BUILD_REV ?= v$(VERSION)
+
 TAILWIND_CLI ?= ./tailwindcss
 
 # Detect system for Tailwind binary download
@@ -24,7 +28,7 @@ ifeq ($(UNAME_M),aarch64)
 	ARCH_NAME = arm64
 endif
 
-.PHONY: all build run clean css css-dev tailwind-download
+.PHONY: all build run clean css css-dev tailwind-download build-release
 
 all: build
 
@@ -56,10 +60,15 @@ css-dev: tailwind-download
 # 3. Build Release Binary
 # Sets APP_ENV=production so the compiler embeds the generated CSS
 build: css
-	@echo "Compiling release binary..."
+	@echo "Compiling release binary for $(OS_NAME)-$(ARCH_NAME)..."
 	@mkdir -p bin
-	
-	APP_ENV=production CRYSTAL_BUILD_OPTS="--lto" $(CRYSTAL) build --release --no-debug src/quickheadlines.cr -o bin/server
+	APP_ENV=production $(CRYSTAL) build --release --no-debug -Dversion=$(BUILD_REV) src/quickheadlines.cr -o bin/$(NAME)
+
+# 3.5 Build with specific OS/Arch naming for GitHub Releases
+build-release: css
+	@echo "Compiling release binary: bin/$(NAME)-$(BUILD_REV)-$(OS_NAME)-$(ARCH_NAME)"
+	@mkdir -p bin
+	APP_ENV=production $(CRYSTAL) build --release --no-debug -Dversion=$(BUILD_REV) src/quickheadlines.cr -o bin/$(NAME)-$(BUILD_REV)-$(OS_NAME)-$(ARCH_NAME)
 
 # 4. Run in Development Mode
 # Sets APP_ENV=development and compiles CSS locally
