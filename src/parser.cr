@@ -2,7 +2,14 @@ require "xml"
 require "html"
 
 def parse_feed(io : IO, limit : Int32) : {site_link: String, items: Array(Item), favicon: String?}
-  xml = XML.parse(io)
+  # Buffer raw bytes to avoid premature UTF-8 decoding.
+  # This allows libxml2 to detect the encoding from the XML declaration correctly.
+  mem = IO::Memory.new
+  IO.copy(io, mem)
+  mem.rewind
+
+  # RECOVER allows parsing feeds with non-standard HTML entities like &nbsp;
+  xml = XML.parse(mem, options: XML::ParserOptions::RECOVER | XML::ParserOptions::NOENT)
   rss = parse_rss(xml, limit)
   return rss unless rss[:items].empty?
   atom = parse_atom(xml, limit)
@@ -18,7 +25,10 @@ private def parse_rss(xml : XML::Node, limit : Int32) : {site_link: String, item
   if channel = xml.xpath_node("//channel")
     site_link = channel.xpath_node("./link").try(&.text).try(&.strip) || site_link
     channel.xpath_nodes("./item").each do |node|
-      title = node.xpath_node("./title").try(&.text).try { |text| HTML.unescape(text) } || "Untitled"
+      title = node.xpath_node("./title").try(&.text).try(&.strip)
+      title = HTML.unescape(title) if title
+      title = "Untitled" if title.nil? || title.empty?
+
       link = node.xpath_node("./link").try(&.text) || "#"
       pub_date = parse_time(node.xpath_node("./pubDate").try(&.text))
       items << Item.new(title, link, pub_date)
