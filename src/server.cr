@@ -49,7 +49,7 @@ def handle_feed_more(context : HTTP::Server::Context)
   if url && (config = STATE.config)
     # Search top-level feeds and all feeds within tabs
     all_feeds = config.feeds + config.tabs.flat_map(&.feeds)
-    
+
     if feed_config = all_feeds.find { |f| f.url == url }
       # Force fetch with new limit (pass nil for previous_data to avoid 304 and force re-parse)
       data = fetch_feed(feed_config, limit, nil)

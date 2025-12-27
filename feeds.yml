@@ -29,13 +29,6 @@ tabs:
         url: "https://feeds.macrumors.com/MacRumors-All"
       - title: "Android Police"
         url: "https://www.androidpolice.com/feed/"
-    software_releases:
-      title: "Project Updates"
-      repos:
-        - "crystal-lang/crystal"          # Defaults to GitHub
-        - "inkscape/inkscape:gl"          # GitLab
-        - "supercell/luce:cb"             # Codeberg
-        - "luckyframework/lucky:gh"       # Explicit GitHub
   - name: "Dev"
     feeds:
       - title: "Lobste.rs"
@@ -46,6 +39,11 @@ tabs:
         url: "https://dev.to/feed"
       - title: "Phoronix"
         url: "https://www.phoronix.com/rss.php"
-
-
+    software_releases:
+      title: "Project Updates"
+      repos:
+        - "crystal-lang/crystal"          # Defaults to GitHub
+        - "inkscape/inkscape:gl"          # GitLab
+        - "supercell/luce:cb"             # Codeberg
+        - "luckyframework/lucky:gh"       # Explicit GitHub
   
