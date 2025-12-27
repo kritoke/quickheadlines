@@ -57,6 +57,7 @@ html
             const isDark = document.documentElement.classList.toggle('dark');
             localStorage.theme = isDark ? 'dark' : 'light';
             if (window.updateAdaptiveColors) window.updateAdaptiveColors();
+            if (window.updateScrollShadows) window.updateScrollShadows();
           };
 
           window.loadTab = async function(tabName, pushState = true) {
@@ -82,6 +83,7 @@ html
                 grid.innerHTML = html;
               }
               window.updateAdaptiveColors();
+              window.updateScrollShadows();
             } catch(e) {}
           };
 
@@ -92,6 +94,27 @@ html
           });
           const initialTab = new URLSearchParams(window.location.search).get('tab') || document.querySelector('.tab-link.active')?.innerText.trim();
           if (initialTab) window.history.replaceState({tab: initialTab}, '', window.location);
+
+          window.updateScrollShadows = function() {
+            document.querySelectorAll('.feed-body').forEach(el => {
+              const box = el.closest('.feed-box');
+              if (box) {
+                const isAtBottom = el.scrollHeight - el.scrollTop <= el.clientHeight + 5;
+                box.classList.toggle('is-at-bottom', isAtBottom);
+              }
+            });
+          };
+
+          window.addEventListener('scroll', (e) => {
+            if (e.target.classList && e.target.classList.contains('feed-body')) {
+              const el = e.target;
+              const box = el.closest('.feed-box');
+              if (box) {
+                const isAtBottom = el.scrollHeight - el.scrollTop <= el.clientHeight + 5;
+                box.classList.toggle('is-at-bottom', isAtBottom);
+              }
+            }
+          }, true);
 
           window.updateAdaptiveColors = function() {
             if (typeof ColorThief === 'undefined') return;
@@ -174,6 +197,7 @@ html
                 feedBox.outerHTML = html;
               }
               window.updateAdaptiveColors();
+              window.updateScrollShadows();
             } catch (e) {
               btn.innerText = "Failed";
               setTimeout(() => { btn.innerText = originalText; btn.disabled = false; }, 2000);
@@ -211,6 +235,7 @@ html
                   grid.innerHTML = html;
                 }
                 window.updateAdaptiveColors();
+              window.updateScrollShadows();
                 const d = new Date(parseInt(v));
                 if (label) label.innerText = "Feeds last refreshed on " + d.toLocaleString();
                 last = v;
@@ -219,5 +244,6 @@ html
           }
           check();
           window.updateAdaptiveColors();
+          window.updateScrollShadows();
           setInterval(check, intervalMs);
         })();
