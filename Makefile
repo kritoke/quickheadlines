@@ -48,14 +48,14 @@ tailwind-download:
 css: tailwind-download
 	@echo "Generating production CSS..."
 	@$(TAILWIND_CLI) --input assets/css/input.css --output assets/css/production.css --minify
-	@touch src/server.cr
+	@touch src/quickheadlines.cr
 
 # 2.5 Generate Development CSS
 css-dev: tailwind-download
 	@echo "Generating development CSS..."
 	@rm -f assets/css/development.css
 	@$(TAILWIND_CLI) --input assets/css/input.css --output assets/css/development.css --minify
-	@touch src/server.cr
+	@touch src/quickheadlines.cr
 
 # 3. Build Release Binary
 # Sets APP_ENV=production so the compiler embeds the generated CSS

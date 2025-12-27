@@ -17,9 +17,9 @@ Desktop (Dark Mode)           |  Desktop (Light Mode)
 
 ## Installation
 
-Since the application is very much in early development, there are no releases just yet (binaries are eventually planned to be available to align with the simple deployment).  Until then, the easiest way to use the program is to clone the repo and modify the feeds.yml as needed.  
+Download the associated binary for your operating system, there should be arm64/amd64 for Linux, amd64 for FreeBSD, and arm64 for Mac OS X.  It will also need to have the feeds.yml in the same folder.
 
-If you are just wanting to run it locally, there is a shell script that should execute the required steps called ```run_QH.sh```.  It will build the program and then run it.  If you are wanting to run it in development mode, there is a different shell script that should do the commands for you called ```dev_QH.sh```.  
+If you are just wanting to run & compile it locally, there is a shell script that should execute the required steps called ```run_QH.sh```.  It will build the program and then run it.  If you are wanting to run it in development mode, there is a different shell script that should do the commands for you called ```dev_QH.sh```.  
 
 The included example feeds.yml has example tech related feeds to get you started and the default properties.  It should only require feed title and feed url, everything else should have some basic defaults to allow it to "just work."  
 
