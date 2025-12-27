@@ -135,8 +135,8 @@ def refresh_all(config : Config)
 
   # 1. Collect all unique feed configurations to fetch
   all_configs = {} of String => Feed
-  config.feeds.each { |f| all_configs[f.url] = f }
-  config.tabs.each { |t| t.feeds.each { |f| all_configs[f.url] = f } }
+  config.feeds.each { |feed| all_configs[feed.url] = feed }
+  config.tabs.each { |tab| tab.feeds.each { |feed| all_configs[feed.url] = feed } }
 
   # 2. Map existing data for caching (ETags/Last-Modified)
   existing_data = (STATE.feeds + STATE.tabs.flat_map(&.feeds)).index_by(&.url)
@@ -162,7 +162,7 @@ def refresh_all(config : Config)
   end
 
   # 4. Populate Top-Level State
-  STATE.feeds = config.feeds.map { |f| fetched_map[f.url] }
+  STATE.feeds = config.feeds.map { |feed| fetched_map[feed.url] }
   STATE.software_releases = [] of FeedData
   if sw = config.software_releases
     # Assuming fetch_sw is updated to take SoftwareConfig and limit
@@ -172,10 +172,10 @@ def refresh_all(config : Config)
   end
 
   # 5. Populate Tab State
-  STATE.tabs = config.tabs.map do |tc|
-    tab = Tab.new(tc.name)
-    tab.feeds = tc.feeds.map { |f| fetched_map[f.url] }
-    if sw = tc.software_releases
+  STATE.tabs = config.tabs.map do |tab_config|
+    tab = Tab.new(tab_config.name)
+    tab.feeds = tab_config.feeds.map { |feed| fetched_map[feed.url] }
+    if sw = tab_config.software_releases
       if sw_box = fetch_sw_with_config(sw, config.item_limit)
         tab.software_releases = [sw_box]
       end

@@ -25,19 +25,19 @@ end
 # Builds the inner HTML for all feed boxes as link lists.
 def render_feed_boxes(io : IO, active_tab : String? = nil)
   # Filter content based on the active tab
-  feeds = active_tab ? STATE.feeds_for_tab(active_tab) : STATE.feeds
-  releases = active_tab ? STATE.releases_for_tab(active_tab) : STATE.software_releases
+  feeds = active_tab ? STATE.feeds_for_tab(active_tab) : STATE.feeds                   # ameba:disable Lint/UselessAssign
+  releases = active_tab ? STATE.releases_for_tab(active_tab) : STATE.software_releases # ameba:disable Lint/UselessAssign
 
   # Emit into the same IO variable name "io"
   Slang.embed("src/feed_boxes.slang", "io")
 end
 
 def render_page(io : IO, active_tab : String = "all")
-  title = STATE.config_title
+  title = STATE.config_title # ameba:disable Lint/UselessAssign
   css = CSS_TEMPLATE
-  updated_at = STATE.updated_at.to_s
-  tabs = STATE.tabs
-  is_development = IS_DEVELOPMENT
+  updated_at = STATE.updated_at.to_s # ameba:disable Lint/UselessAssign
+  tabs = STATE.tabs                  # ameba:disable Lint/UselessAssign
+  is_development = IS_DEVELOPMENT    # ameba:disable Lint/UselessAssign
 
   Slang.embed("src/layout.slang", "io")
 end
@@ -50,12 +50,12 @@ def handle_feed_more(context : HTTP::Server::Context)
     # Search top-level feeds and all feeds within tabs
     all_feeds = config.feeds + config.tabs.flat_map(&.feeds)
 
-    if feed_config = all_feeds.find { |f| f.url == url }
+    if feed_config = all_feeds.find { |feed| feed.url == url }
       # Force fetch with new limit (pass nil for previous_data to avoid 304 and force re-parse)
       data = fetch_feed(feed_config, limit, nil)
       context.response.content_type = "text/html; charset=utf-8"
-      feeds = [data]
-      releases = [] of FeedData
+      feeds = [data]            # ameba:disable Lint/UselessAssign
+      releases = [] of FeedData # ameba:disable Lint/UselessAssign
       Slang.embed("src/feed_boxes.slang", "context.response")
     else
       context.response.status_code = 404
