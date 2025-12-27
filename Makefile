@@ -24,6 +24,12 @@ ifeq ($(UNAME_S),FreeBSD)
 	OS_NAME = freebsd
 endif
 
+# Add Homebrew OpenSSL paths for macOS
+ifeq ($(OS_NAME),macos)
+	OPENSSL_PREFIX := $(shell brew --prefix openssl@3 2>/dev/null)
+	export PKG_CONFIG_PATH := $(OPENSSL_PREFIX)/lib/pkgconfig:$(PKG_CONFIG_PATH)
+endif
+
 ifeq ($(UNAME_M),x86_64)
 	ARCH_NAME = x64
 endif
@@ -75,13 +81,13 @@ css-dev: tailwind-download
 build: css
 	@echo "Compiling release binary for $(OS_NAME)-$(ARCH_NAME)..."
 	@mkdir -p bin
-	APP_ENV=production $(CRYSTAL) build --release --no-debug src/quickheadlines.cr -o bin/$(NAME)
+	APP_ENV=production $(CRYSTAL) build --release --no-debug $(CRYSTAL_BUILD_OPTS) src/quickheadlines.cr -o bin/$(NAME)
 
 # 3.5 Build with specific OS/Arch naming for GitHub Releases
 build-release: css
 	@echo "Compiling release binary: bin/$(NAME)-$(BUILD_REV)-$(OS_NAME)-$(ARCH_NAME)"
 	@mkdir -p bin
-	APP_ENV=production $(CRYSTAL) build --release --no-debug -Dversion=$(BUILD_REV) src/quickheadlines.cr -o bin/$(NAME)-$(BUILD_REV)-$(OS_NAME)-$(ARCH_NAME)
+	APP_ENV=production $(CRYSTAL) build --release --no-debug $(CRYSTAL_BUILD_OPTS) -Dversion=$(BUILD_REV) src/quickheadlines.cr -o bin/$(NAME)-$(BUILD_REV)-$(OS_NAME)-$(ARCH_NAME)
 
 # 4. Run in Development Mode
 # Sets APP_ENV=development and compiles CSS locally

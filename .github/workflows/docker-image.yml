@@ -94,7 +94,8 @@ jobs:
       - name: Build macOS Binaries
         if: matrix.target == 'macos'
         run: |
-          brew install libyaml libxml2
+          brew install libyaml libxml2 openssl@3
+          echo "PKG_CONFIG_PATH=$(brew --prefix openssl@3)/lib/pkgconfig" >> $GITHUB_ENV
         
       - name: Install Crystal
         if: matrix.target == 'macos'
