@@ -27,10 +27,10 @@ feeds:
     url: "https://feeds.macrumors.com/MacRumors-All"
   - title: "Android Police"
     url: "https://www.androidpolice.com/feed/"
-github_releases:
-  title: "Software Updates"
+software_releases:
+  title: "Project Updates"
   repos:
-    - "crystal-lang/crystal"
-    - "luckyframework/lucky"
-    - "toddsundsted/slang"
-    - "crystal-ameba/ameba"
+    - "crystal-lang/crystal"          # Defaults to GitHub
+    - "inkscape/inkscape:gl"          # GitLab
+    - "supercell/luce:cb"             # Codeberg
+    - "luckyframework/lucky:gh"       # Explicit GitHub

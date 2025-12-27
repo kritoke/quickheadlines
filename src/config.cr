@@ -15,9 +15,9 @@ struct Feed
   property header_color : String?
 end
 
-struct GithubConfig
+struct SoftwareConfig
   include YAML::Serializable
-  property title : String = "GitHub Releases"
+  property title : String = "Software Updates"
   property header_color : String?
   property repos : Array(String)
 end
@@ -39,7 +39,7 @@ struct Config
 
   property feeds : Array(Feed)
 
-  property github_releases : GithubConfig?
+  property software_releases : SoftwareConfig?
 end
 
 record ConfigState, config : Config, mtime : Time
