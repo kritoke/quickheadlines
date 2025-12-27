@@ -2,14 +2,13 @@ require "xml"
 require "html"
 
 def parse_feed(io : IO, limit : Int32) : {site_link: String, items: Array(Item), favicon: String?}
-  # Buffer raw bytes to avoid premature UTF-8 decoding.
-  # This allows libxml2 to detect the encoding from the XML declaration correctly.
-  mem = IO::Memory.new
-  IO.copy(io, mem)
-  mem.rewind
+  # Buffer raw bytes to allow libxml2 to detect encoding from the XML declaration.
+  # NOENT substitutes entities (like &Yuml;) during parsing.
+  buffer = IO::Memory.new
+  IO.copy(io, buffer)
+  buffer.rewind
 
-  # RECOVER allows parsing feeds with non-standard HTML entities like &nbsp;
-  xml = XML.parse(mem, options: XML::ParserOptions::RECOVER | XML::ParserOptions::NOENT)
+  xml = XML.parse(buffer, options: XML::ParserOptions::RECOVER | XML::ParserOptions::NOENT)
   rss = parse_rss(xml, limit)
   return rss unless rss[:items].empty?
   atom = parse_atom(xml, limit)
