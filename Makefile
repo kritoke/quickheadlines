@@ -11,11 +11,17 @@ TAILWIND_CLI ?= ./tailwindcss
 UNAME_S := $(shell uname -s)
 UNAME_M := $(shell uname -m)
 
+OS_NAME = unknown
+ARCH_NAME = unknown
+
 ifeq ($(UNAME_S),Linux)
 	OS_NAME = linux
 endif
 ifeq ($(UNAME_S),Darwin)
 	OS_NAME = macos
+endif
+ifeq ($(UNAME_S),FreeBSD)
+	OS_NAME = freebsd
 endif
 
 ifeq ($(UNAME_M),x86_64)
@@ -38,31 +44,38 @@ all: build
 tailwind-download:
 	@if [ ! -f $(TAILWIND_CLI) ]; then \
 		echo "Downloading Tailwind CLI for $(OS_NAME)-$(ARCH_NAME)..."; \
-		curl -sLO "https://github.com/tailwindlabs/tailwindcss/releases/latest/download/tailwindcss-$(OS_NAME)-$(ARCH_NAME)"; \
-		chmod +x tailwindcss-$(OS_NAME)-$(ARCH_NAME); \
-		mv tailwindcss-$(OS_NAME)-$(ARCH_NAME) $(TAILWIND_CLI); \
+		if curl -fsLO "https://github.com/tailwindlabs/tailwindcss/releases/latest/download/tailwindcss-$(OS_NAME)-$(ARCH_NAME)"; then \
+			chmod +x tailwindcss-$(OS_NAME)-$(ARCH_NAME); \
+			mv tailwindcss-$(OS_NAME)-$(ARCH_NAME) $(TAILWIND_CLI); \
+		else \
+			echo "Warning: Tailwind CLI not available for $(OS_NAME)-$(ARCH_NAME). Skipping download."; \
+		fi \
 	fi
 
 # 2. Generate Production CSS
 # Combines custom styles with Tailwind utilities and minifies
 css: tailwind-download
-	@echo "Generating production CSS..."
-	@$(TAILWIND_CLI) --input assets/css/input.css --output assets/css/production.css --minify
-	@touch src/quickheadlines.cr
+	@if [ -f $(TAILWIND_CLI) ]; then \
+		echo "Generating production CSS..."; \
+		$(TAILWIND_CLI) --input assets/css/input.css --output assets/css/production.css --minify; \
+		touch src/server.cr; \
+	else \
+		echo "Tailwind CLI not found. Skipping CSS generation (assuming assets/css/production.css exists)."; \
+	fi
 
 # 2.5 Generate Development CSS
 css-dev: tailwind-download
 	@echo "Generating development CSS..."
 	@rm -f assets/css/development.css
 	@$(TAILWIND_CLI) --input assets/css/input.css --output assets/css/development.css --minify
-	@touch src/quickheadlines.cr
+	@touch src/server.cr
 
 # 3. Build Release Binary
 # Sets APP_ENV=production so the compiler embeds the generated CSS
 build: css
 	@echo "Compiling release binary for $(OS_NAME)-$(ARCH_NAME)..."
 	@mkdir -p bin
-	APP_ENV=production $(CRYSTAL) build --release --no-debug -Dversion=$(BUILD_REV) src/quickheadlines.cr -o bin/$(NAME)
+	APP_ENV=production $(CRYSTAL) build --release --no-debug src/quickheadlines.cr -o bin/$(NAME)
 
 # 3.5 Build with specific OS/Arch naming for GitHub Releases
 build-release: css
