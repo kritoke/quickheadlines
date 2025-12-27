@@ -17,7 +17,7 @@ Desktop (Dark Mode)           |  Desktop (Light Mode)
 
 ## Installation
 
-Download the associated binary for your operating system from the [Releases](https://github.com/kritoke/quickheadlines/releases) page. There are builds for Linux (arm64/amd64), FreeBSD (amd64), and macOS (arm64). You will also need to have the `feeds.yml` file in the same folder as the executable.
+Download the associated binary for your operating system from the Releases page. There are builds for Linux (arm64/amd64), FreeBSD (amd64), and macOS (arm64). You will also need to have the `feeds.yml` file in the same folder as the executable.  **Note for macOS users:** You must have OpenSSL 3 installed (`brew install openssl@3`) to run the binary.
 
 If you are just wanting to run & compile it locally, there is a shell script that should execute the required steps called ```run_QH.sh```.  It will build the program and then run it.  If you are wanting to run it in development mode, there is a different shell script that should do the commands for you called ```dev_QH.sh```.  
 
