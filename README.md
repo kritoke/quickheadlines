@@ -7,7 +7,13 @@ Quick Headlines is an easily configurable and deployable recent feed dashboard. 
 
 ## Screenshots
 
-<img src="qh-mobiles-ss.png.png" alt="Mobile Screenshot">
+Mobile (Dark Mode)           |  Mobile (Light Mode)
+:-------------------------:|:-------------------------:
+![](ss/qh-mobile-dm-ss.png)  |  ![](ss/qh-mobile-lm-ss.png)
+
+Desktop (Dark Mode)           |  Desktop (Light Mode)
+:-------------------------:|:-------------------------:
+![](ss/qh-desktop-dm-ss.png)  |  ![](ss/qh-desktop-lm-ss.png)
 
 ## Installation
 
