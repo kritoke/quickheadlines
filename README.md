@@ -19,7 +19,7 @@ Desktop (Dark Mode)           |  Desktop (Light Mode)
 
 Download the associated binary for your operating system from the Releases page. There are builds for Linux (arm64/amd64), FreeBSD (amd64), and macOS (arm64). You will also need to have the `feeds.yml` file in the same folder as the executable.  **Note for macOS users:** You must have OpenSSL 3 installed (`brew install openssl@3`) to run the binary.
 
-If you are just wanting to run & compile it locally, there is a shell script that should execute the required steps called ```run_QH.sh```.  It will build the program and then run it.  If you are wanting to run it in development mode, there is a different shell script that should do the commands for you called ```dev_QH.sh```.  
+If you are just wanting to run & compile it locally, you can run ```make build``` and then run bin\quickheadlines.  If you want to run it in development mode, run ```make run``` and it will auto execute. 
 
 The included example feeds.yml has example tech related feeds to get you started and the default properties.  It should only require feed title and feed url, everything else should have some basic defaults to allow it to "just work."  
 
@@ -34,16 +34,16 @@ refresh_minutes: 10
 item_limit: 10
 server_port: 3030
 page_title: "Quick Headlines"
-feeds:
-  - title: "Hacker News"
-    url: "https://news.ycombinator.com/rss"
-    header_color: "orange"
-  - title: "Tech Radar"
-    url: "https://www.techradar.com/feeds.xml"
-    header_color: "pink"
-  - title: "Ars Technica"
-    url: "https://feeds.arstechnica.com/arstechnica/index"
-    header_color: "orange"
+tabs:
+  - name: "Tech"
+    feeds:
+      - title: "Hacker News"
+        url: "https://news.ycombinator.com/rss"
+        header_color: "orange"
+    software_releases:
+      title: "Frameworks"
+      repos:
+        - "crystal-lang/crystal"
 ```
 
 ## Docker Image

@@ -1,5 +1,6 @@
-- feeds.each do |feed|
-  article.feed-box.min-w-0.break-words.rounded-xl.shadow-sm.p-4
+- all_content = feeds + releases
+- all_content.each do |feed|
+  article.feed-box.w-full.min-w-0.shadow-sm
     - color_css = HTML.escape(feed.display_header_color)
     - has_custom = !feed.header_color.nil?
     - is_sw_default = feed.url == "software://releases" && feed.header_color == "#24292e"

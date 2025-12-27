@@ -9,14 +9,32 @@ record FeedData, title : String, url : String, site_link : String, header_color 
   end
 end
 
+class Tab
+  property name : String
+  property feeds = [] of FeedData
+  property software_releases = [] of FeedData
+
+  def initialize(@name)
+  end
+end
+
 class AppState
   property feeds = [] of FeedData
+  property software_releases = [] of FeedData
+  property tabs = [] of Tab
   property updated_at = Time.local
   property config_title = "Quick Headlines"
   property config : Config?
 
-  def update(feeds : Array(FeedData), updated_at : Time)
-    @feeds = feeds
+  def feeds_for_tab(tab_name : String)
+    tabs.find { |t| t.name == tab_name }.try(&.feeds) || [] of FeedData
+  end
+
+  def releases_for_tab(tab_name : String)
+    tabs.find { |t| t.name == tab_name }.try(&.software_releases) || [] of FeedData
+  end
+
+  def update(updated_at : Time)
     @updated_at = updated_at
   end
 end

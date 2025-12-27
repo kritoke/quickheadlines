@@ -23,18 +23,20 @@ def serve_bytes(ctx : HTTP::Server::Context, bytes : Bytes, content_type : Strin
 end
 
 # Builds the inner HTML for all feed boxes as link lists.
-def render_feed_boxes(io : IO)
-  feeds = STATE.feeds
+def render_feed_boxes(io : IO, active_tab : String? = nil)
+  # Filter content based on the active tab
+  feeds = active_tab ? STATE.feeds_for_tab(active_tab) : STATE.feeds
+  releases = active_tab ? STATE.releases_for_tab(active_tab) : STATE.software_releases
 
   # Emit into the same IO variable name "io"
   Slang.embed("src/feed_boxes.slang", "io")
 end
 
-def render_page(io : IO)
+def render_page(io : IO, active_tab : String = "all")
   title = STATE.config_title
   css = CSS_TEMPLATE
   updated_at = STATE.updated_at.to_s
-  feeds = STATE.feeds
+  tabs = STATE.tabs
   is_development = IS_DEVELOPMENT
 
   Slang.embed("src/layout.slang", "io")
@@ -45,11 +47,15 @@ def handle_feed_more(context : HTTP::Server::Context)
   limit = context.request.query_params["limit"]?.try(&.to_i?) || 20
 
   if url && (config = STATE.config)
-    if feed_config = config.feeds.find { |feed| feed.url == url }
+    # Search top-level feeds and all feeds within tabs
+    all_feeds = config.feeds + config.tabs.flat_map(&.feeds)
+    
+    if feed_config = all_feeds.find { |f| f.url == url }
       # Force fetch with new limit (pass nil for previous_data to avoid 304 and force re-parse)
       data = fetch_feed(feed_config, limit, nil)
       context.response.content_type = "text/html; charset=utf-8"
       feeds = [data]
+      releases = [] of FeedData
       Slang.embed("src/feed_boxes.slang", "context.response")
     else
       context.response.status_code = 404
@@ -106,6 +112,9 @@ end
 
 def start_server(port : Int32)
   server = HTTP::Server.new do |context|
+    # Determine active tab from query param, defaulting to the first tab
+    active_tab = context.request.query_params["tab"]? || STATE.tabs.first?.try(&.name) || "all"
+
     case {context.request.method, context.request.path}
     when {"GET", "/version"}
       context.response.content_type = "text/plain; charset=utf-8"
@@ -113,7 +122,7 @@ def start_server(port : Int32)
       context.response.print STATE.updated_at.to_unix_ms
     when {"GET", "/feeds"}
       context.response.content_type = "text/html; charset=utf-8"
-      render_feed_boxes(context.response)
+      render_feed_boxes(context.response, active_tab)
     when {"GET", "/feed_more"}
       handle_feed_more(context)
     when {"GET", "/favicon.png"}
@@ -126,7 +135,7 @@ def start_server(port : Int32)
       handle_proxy_image(context)
     else
       context.response.content_type = "text/html; charset=utf-8"
-      render_page(context.response)
+      render_page(context.response, active_tab)
     end
   end
 
