@@ -28,9 +28,34 @@
 }
 
 @media (min-width: 768px) { 
-  .feed-box { height: 22rem; } 
+  .feed-box { 
+    height: 22rem; 
+    position: relative;
+  } 
   .feed-box .feed-body { 
     overflow-y: auto;
+  }
+  /* Subtle shadow at the bottom to indicate more content to scroll */
+  .feed-box::after {
+    content: "";
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 1.5rem;
+    pointer-events: none;
+    /* Increased opacity for better visibility in light mode */
+    background: linear-gradient(to bottom, transparent, rgba(0, 0, 0, 0.2));
+    transition: opacity 0.3s ease;
+    z-index: 10;
+  }
+
+  :where(.dark, .dark *) .feed-box::after {
+    background: linear-gradient(to bottom, transparent, rgba(0, 0, 0, 0.6));
+  }
+
+  .feed-box.is-at-bottom::after {
+    opacity: 0;
   }
 }
 @media (min-width: 1024px) { .feed-box { height: 24rem; } }
@@ -56,25 +81,42 @@
   min-height: 0;
   width: 100%;
   min-width: 0;
-  scrollbar-width: none;
+  scrollbar-width: none;            /* Firefox */
+}
+
+.dark .feed-box .feed-body {
+  /* Keep hidden by default */
 }
 
 .feed-box .feed-body:hover {
   scrollbar-width: thin;
+  scrollbar-color: rgba(0, 0, 0, 0.4) transparent; /* Firefox light mode */
 }
 
+:where(.dark, .dark *) .feed-box .feed-body:hover {
+  scrollbar-color: rgba(255, 255, 255, 0.4) transparent; /* Firefox dark mode */
+}
+
+/* WebKit (Safari/Chrome) Scrollbar Styling */
 .feed-box .feed-body::-webkit-scrollbar {
-  width: 5px;
+  width: 8px;
+}
+
+.feed-box .feed-body::-webkit-scrollbar-track {
+  background: transparent !important;
 }
 
 .feed-box .feed-body::-webkit-scrollbar-thumb {
-  background-color: transparent;
+  background-color: transparent; 
   border-radius: 10px;
 }
 
 .feed-box .feed-body:hover::-webkit-scrollbar-thumb {
-  background-color: #cbd5e1;
-  @variant dark { background-color: #475569; }
+  background-color: rgba(0, 0, 0, 0.3); /* Visible gray for light mode */
+}
+
+:where(.dark, .dark *) .feed-box .feed-body:hover::-webkit-scrollbar-thumb {
+  background-color: rgba(255, 255, 255, 0.3); /* Visible gray for dark mode */
 }
 
 .feed-box .feed-body ul,
