@@ -2,7 +2,6 @@ name: Deploy
 
 on:
   push:
-    branches: [ "main" ]
     tags: [ "v*.*.*" ]
 
 env:
@@ -41,7 +40,7 @@ jobs:
           tags: |
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
-            type=raw,value=latest,enable={{is_default_branch}}
+            type=raw,value=latest
             type=sha
 
       - name: Build and push Docker image
@@ -89,7 +88,15 @@ jobs:
       - name: Build macOS Binaries
         if: matrix.target == 'macos'
         run: |
-          brew install crystal shards
+          brew install libyaml libxml2
+        
+      - name: Install Crystal
+        if: matrix.target == 'macos'
+        uses: crystal-lang/install-crystal@v1
+
+      - name: Build macOS
+        if: matrix.target == 'macos'
+        run: |
           shards install --production
           make build-release OS_NAME=macos ARCH_NAME=${{ matrix.arch }} BUILD_REV=${{ github.ref_name }}
 
@@ -107,10 +114,10 @@ jobs:
       - name: Build in FreeBSD VM
         uses: vmactions/freebsd-vm@v1
         with:
-          prepare: pkg install -y crystal shards libxml2 libyaml openssl libevent libiconv bash
+          prepare: pkg install -y crystal shards libxml2 libyaml openssl libevent libiconv bash gmake
           run: |
             shards install --production
-            make build-release OS_NAME=freebsd ARCH_NAME=x64 BUILD_REV=${{ github.ref_name }}
+            gmake build-release OS_NAME=freebsd ARCH_NAME=x64 BUILD_REV=${{ github.ref_name }}
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:

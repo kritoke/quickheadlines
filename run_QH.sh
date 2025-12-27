@@ -10,4 +10,4 @@ make clean
 make build
 
 # Run the program
-bin/server
+bin/quickheadlines
