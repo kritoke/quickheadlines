@@ -55,24 +55,10 @@ html
           window.updateAdaptiveColors = function() {
             if (typeof ColorThief === 'undefined') return;
             const colorThief = new ColorThief();
-
-            const setContrast = (el, r, g, b) => {
-              const yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
-              const textColor = (yiq >= 128) ? '#1f2937' : '#ffffff';
-              el.style.color = textColor;
-              const link = el.querySelector('a');
-              if (link) link.style.color = textColor;
-            };
-
+            
             document.querySelectorAll('.feed-header').forEach(header => {
               if (header.dataset.adaptive) return;
-
-              if (header.dataset.hasCustomColor === 'true') {
-                const rgb = header.style.backgroundColor.match(/\d+/g);
-                if (rgb) setContrast(header, ...rgb.map(Number));
-                header.dataset.adaptive = 'true';
-                return;
-              }
+              if (header.dataset.hasCustomColor === 'true') return;
 
               const img = header.querySelector('img');
               if (!img) return;
@@ -109,8 +95,14 @@ html
                   }
 
                   const [r, g, b] = color;
+                  const yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
+                  const textColor = (yiq >= 128) ? '#1f2937' : '#ffffff';
+                  
                   header.style.backgroundColor = 'rgb(' + r + ',' + g + ',' + b + ')';
-                  setContrast(header, r, g, b);
+                  header.style.color = textColor;
+                  const link = header.querySelector('a');
+                  if (link) link.style.color = textColor;
+                  
                   header.dataset.adaptive = 'true';
                 } catch (e) {}
               };
