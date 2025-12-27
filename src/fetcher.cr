@@ -2,7 +2,7 @@ require "base64"
 require "gc"
 require "./software_fetcher"
 
-def fetch_favicon_data_uri(url : String) : String?
+def fetch_favicon_uri(url : String) : String?
   current_url = url
   redirects = 0
 
@@ -34,7 +34,7 @@ def fetch_favicon_data_uri(url : String) : String?
   end
 end
 
-private def fetch_favicon(feed : Feed, site_link : String, parsed_favicon : String?, previous_data : FeedData?) : {String?, String?}
+private def resolve_favicon(feed : Feed, site_link : String, parsed_favicon : String?) : String?
   favicon = parsed_favicon
 
   # Resolve relative favicon URLs
@@ -50,15 +50,20 @@ private def fetch_favicon(feed : Feed, site_link : String, parsed_favicon : Stri
     rescue
     end
   end
+  favicon
+end
+
+private def get_favicon(feed : Feed, site_link : String, parsed_favicon : String?, previous_data : FeedData?) : {String?, String?}
+  favicon = resolve_favicon(feed, site_link, parsed_favicon)
 
   # Fetch/Cache Favicon Data
   favicon_data = nil
-  if favicon
-    if previous_data && previous_data.favicon == favicon && previous_data.favicon_data
-      favicon_data = previous_data.favicon_data
-    else
-      favicon_data = fetch_favicon_data_uri(favicon)
-    end
+  return {favicon, nil} unless favicon
+
+  if previous_data && previous_data.favicon == favicon && previous_data.favicon_data
+    favicon_data = previous_data.favicon_data
+  else
+    favicon_data = fetch_favicon_uri(favicon)
   end
 
   {favicon, favicon_data}
@@ -99,7 +104,7 @@ def fetch_feed(feed : Feed, item_limit : Int32, previous_data : FeedData? = nil)
       items = parsed[:items]
       site_link = parsed[:site_link] || feed.url
 
-      favicon, favicon_data = fetch_favicon(feed, site_link, parsed[:favicon], previous_data)
+      favicon, favicon_data = get_favicon(feed, site_link, parsed[:favicon], previous_data)
 
       # Capture caching headers
       etag = response.headers["ETag"]?
@@ -153,7 +158,7 @@ def refresh_all(config : Config)
   end
   new_feeds = results.compact
 
-  if sw_box = fetch_software_releases(config)
+  if sw_box = fetch_sw(config)
     new_feeds << sw_box
   end
 
