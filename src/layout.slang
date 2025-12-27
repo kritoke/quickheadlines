@@ -38,7 +38,7 @@ html
       nav.tab-container
         - tabs.each do |tab|
           - is_active = (active_tab == tab.name)
-          a(class="tab-link #{is_active ? "active" : ""}" href="/?tab=#{tab.name}")
+          a(class="tab-link #{is_active ? "active" : ""}" href="/?tab=#{tab.name}" onclick="switchTab(event, '#{tab.name}')")
             = tab.name
 
       section#feed-grid(class="grid w-full gap-4 md:gap-5 lg:gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 text-[0.95rem] md:text-[1rem]")
@@ -58,6 +58,40 @@ html
             localStorage.theme = isDark ? 'dark' : 'light';
             if (window.updateAdaptiveColors) window.updateAdaptiveColors();
           };
+
+          window.loadTab = async function(tabName, pushState = true) {
+            document.querySelectorAll('.tab-link').forEach(link => {
+              link.classList.toggle('active', link.innerText.trim() === tabName);
+            });
+
+            if (pushState) {
+              const url = new URL(window.location);
+              url.searchParams.set('tab', tabName);
+              window.history.pushState({tab: tabName}, '', url);
+            }
+
+            try {
+              const res = await fetch('/feeds?tab=' + encodeURIComponent(tabName));
+              if (!res.ok) return;
+              const html = await res.text();
+              if (window.morphdom) {
+                const clone = grid.cloneNode(false);
+                clone.innerHTML = html;
+                morphdom(grid, clone);
+              } else {
+                grid.innerHTML = html;
+              }
+              window.updateAdaptiveColors();
+            } catch(e) {}
+          };
+
+          window.switchTab = (e, name) => { e.preventDefault(); window.loadTab(name); };
+          window.addEventListener('popstate', () => {
+            const tab = new URLSearchParams(window.location.search).get('tab') || document.querySelector('.tab-link')?.innerText.trim();
+            if (tab) window.loadTab(tab, false);
+          });
+          const initialTab = new URLSearchParams(window.location.search).get('tab') || document.querySelector('.tab-link.active')?.innerText.trim();
+          if (initialTab) window.history.replaceState({tab: initialTab}, '', window.location);
 
           window.updateAdaptiveColors = function() {
             if (typeof ColorThief === 'undefined') return;
@@ -158,7 +192,9 @@ html
               }
 
               if (v !== last) {
-                const feedRes = await fetch('/feeds', {cache: 'no-store'});
+                const params = new URLSearchParams(window.location.search);
+                const currentTab = params.get('tab') || "";
+                const feedRes = await fetch('/feeds' + (currentTab ? '?tab=' + encodeURIComponent(currentTab) : ''), {cache: 'no-store'});
                 if (!feedRes.ok) return;
                 const html = await feedRes.text();
                 if (window.morphdom) {
