@@ -27,3 +27,10 @@ feeds:
     url: "https://feeds.macrumors.com/MacRumors-All"
   - title: "Android Police"
     url: "https://www.androidpolice.com/feed/"
+github_releases:
+  title: "Software Updates"
+  repos:
+    - "crystal-lang/crystal"
+    - "luckyframework/lucky"
+    - "toddsundsted/slang"
+    - "crystal-ameba/ameba"

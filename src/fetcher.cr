@@ -1,5 +1,6 @@
 require "base64"
 require "gc"
+require "./github_fetcher"
 
 def fetch_favicon_data_uri(url : String) : String?
   current_url = url
@@ -151,6 +152,10 @@ def refresh_all(config : Config)
     results[index] = data
   end
   new_feeds = results.compact
+
+  if gh_box = fetch_github_releases(config)
+    new_feeds << gh_box
+  end
 
   STATE.update(new_feeds, Time.local)
 
