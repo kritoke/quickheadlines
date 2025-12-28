@@ -25,7 +25,7 @@ The included example feeds.yml has example tech related feeds to get you started
 
 ## Usage
 
-Run ./run_QH.sh to have it automatically build and then run the program in "production" mode, edit the feeds.yml file as needed.  It has only been tested on Linux and Mac OS X so far.
+Download the binary for your system and run it with the feeds.yml file in the same directory, edit the feeds.yml file as needed.  It has only been tested on Linux and Mac OS X so far.  A FreeBSD binary has been provided but not tested yet.
 
 Example ```feeds.yml``` (only the feeds with title/url is required, it will use defaults otherwise):
 
