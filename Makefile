@@ -51,6 +51,12 @@ all: build
 
 # 1. Download Tailwind CLI if not present
 tailwind-download:
+ifeq ($(OS_NAME),freebsd)
+	@if [ ! -f ./node_modules/.bin/tailwindcss ]; then \
+		echo "Installing Tailwind CLI and dependencies locally for FreeBSD..."; \
+		npm install @tailwindcss/cli tailwindcss; \
+	fi
+else
 	@if [ ! -f $(TAILWIND_CLI) ]; then \
 		echo "Downloading Tailwind CLI for $(OS_NAME)-$(ARCH_NAME)..."; \
 		if curl -fsLO "https://github.com/tailwindlabs/tailwindcss/releases/latest/download/tailwindcss-$(OS_NAME)-$(ARCH_NAME)"; then \
@@ -60,22 +66,25 @@ tailwind-download:
 			echo "Warning: Tailwind CLI not available for $(OS_NAME)-$(ARCH_NAME). Skipping download."; \
 		fi \
 	fi
+endif
 
 # 2. Generate Production CSS
 # Combines custom styles with Tailwind utilities and minifies
 css: tailwind-download
-	@if [ -f $(TAILWIND_CLI) ]; then CMD=$(TAILWIND_CLI); \
-	elif command -v tailwindcss >/dev/null 2>&1; then CMD=tailwindcss; \
-	else echo "Error: Tailwind CLI not found. Install via 'npm install -g tailwindcss' on FreeBSD."; exit 1; fi; \
+	@if [ -f $(TAILWIND_CLI) ]; then CMD="./$(TAILWIND_CLI)"; \
+	elif [ -f ./node_modules/.bin/tailwindcss ]; then CMD="./node_modules/.bin/tailwindcss"; \
+	elif command -v tailwindcss >/dev/null 2>&1; then CMD="tailwindcss"; \
+	else echo "Error: Tailwind CLI not found. Install via 'npm install @tailwindcss/cli tailwindcss' on FreeBSD."; exit 1; fi; \
 	echo "Generating production CSS using $$CMD..."; \
 	$$CMD --input assets/css/input.css --output assets/css/production.css --minify; \
 	touch src/server.cr
 
 # 2.5 Generate Development CSS
 css-dev: tailwind-download
-	@if [ -f $(TAILWIND_CLI) ]; then CMD=$(TAILWIND_CLI); \
-	elif command -v tailwindcss >/dev/null 2>&1; then CMD=tailwindcss; \
-	else echo "Error: Tailwind CLI not found. Install via 'npm install -g tailwindcss' on FreeBSD."; exit 1; fi; \
+	@if [ -f $(TAILWIND_CLI) ]; then CMD="./$(TAILWIND_CLI)"; \
+	elif [ -f ./node_modules/.bin/tailwindcss ]; then CMD="./node_modules/.bin/tailwindcss"; \
+	elif command -v tailwindcss >/dev/null 2>&1; then CMD="tailwindcss"; \
+	else echo "Error: Tailwind CLI not found. Install via 'npm install @tailwindcss/cli tailwindcss' on FreeBSD."; exit 1; fi; \
 	echo "Generating development CSS using $$CMD..."; \
 	rm -f assets/css/development.css; \
 	$$CMD --input assets/css/input.css --output assets/css/development.css --minify; \
