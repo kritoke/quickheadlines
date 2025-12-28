@@ -4,17 +4,17 @@ require "slang"
 # ----- Compile-time embedded templates -----
 
 {% if env("APP_ENV") == "production" %}
-  CSS_TEMPLATE = {{ read_file("assets/css/production.css") }}.gsub('\u00A0', ' ')
+  CSS_TEMPLATE = {{ read_file(__DIR__ + "/../assets/css/production.css") }}.gsub('\u00A0', ' ')
   IS_DEVELOPMENT = false
 {% else %}
-  CSS_TEMPLATE = {{ read_file("assets/css/development.css") }}.gsub('\u00A0', ' ')
+  CSS_TEMPLATE = {{ read_file(__DIR__ + "/../assets/css/development.css") }}.gsub('\u00A0', ' ')
   IS_DEVELOPMENT = true
 {% end %}
 
 # Embed favicon assets at compile time. These must exist during compile.
-FAVICON_PNG = {{ read_file "assets/images/favicon.png" }}.to_slice
-FAVICON_SVG = {{ read_file "assets/images/favicon.svg" }}.to_slice
-FAVICON_ICO = {{ read_file "assets/images/favicon.ico" }}.to_slice
+FAVICON_PNG = {{ read_file(__DIR__ + "/../assets/images/favicon.png") }}.to_slice
+FAVICON_SVG = {{ read_file(__DIR__ + "/../assets/images/favicon.svg") }}.to_slice
+FAVICON_ICO = {{ read_file(__DIR__ + "/../assets/images/favicon.ico") }}.to_slice
 
 def serve_bytes(ctx : HTTP::Server::Context, bytes : Bytes, content_type : String)
   ctx.response.content_type = content_type
