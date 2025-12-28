@@ -4,10 +4,18 @@ require "slang"
 # ----- Compile-time embedded templates -----
 
 {% if env("APP_ENV") == "production" %}
-  CSS_TEMPLATE = {{ read_file(__DIR__ + "/../assets/css/production.css") }}.gsub('\u00A0', ' ')
+  {% if file_exists?(__DIR__ + "/../assets/css/production.css") %}
+    CSS_TEMPLATE = {{ read_file(__DIR__ + "/../assets/css/production.css") }}.gsub('\u00A0', ' ')
+  {% else %}
+    {{ raise "Production CSS missing! Run 'make css' before building." }}
+  {% end %}
   IS_DEVELOPMENT = false
 {% else %}
-  CSS_TEMPLATE = {{ read_file(__DIR__ + "/../assets/css/development.css") }}.gsub('\u00A0', ' ')
+  {% if file_exists?(__DIR__ + "/../assets/css/development.css") %}
+    CSS_TEMPLATE = {{ read_file(__DIR__ + "/../assets/css/development.css") }}.gsub('\u00A0', ' ')
+  {% else %}
+    {{ raise "Development CSS missing! Run 'make css-dev' before building." }}
+  {% end %}
   IS_DEVELOPMENT = true
 {% end %}
 

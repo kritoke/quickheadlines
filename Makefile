@@ -61,20 +61,22 @@ tailwind-download:
 # 2. Generate Production CSS
 # Combines custom styles with Tailwind utilities and minifies
 css: tailwind-download
-	@if [ -f $(TAILWIND_CLI) ]; then \
-		echo "Generating production CSS..."; \
-		$(TAILWIND_CLI) --input assets/css/input.css --output assets/css/production.css --minify; \
-		touch src/server.cr; \
-	else \
-		echo "Tailwind CLI not found. Skipping CSS generation (assuming assets/css/production.css exists)."; \
-	fi
+	@if [ -f $(TAILWIND_CLI) ]; then CMD=$(TAILWIND_CLI); \
+	elif command -v tailwindcss >/dev/null 2>&1; then CMD=tailwindcss; \
+	else echo "Error: Tailwind CLI not found. Install via 'npm install -g tailwindcss' on FreeBSD."; exit 1; fi; \
+	echo "Generating production CSS using $$CMD..."; \
+	$$CMD --input assets/css/input.css --output assets/css/production.css --minify; \
+	touch src/server.cr
 
 # 2.5 Generate Development CSS
 css-dev: tailwind-download
-	@echo "Generating development CSS..."
-	@rm -f assets/css/development.css
-	@$(TAILWIND_CLI) --input assets/css/input.css --output assets/css/development.css --minify
-	@touch src/server.cr
+	@if [ -f $(TAILWIND_CLI) ]; then CMD=$(TAILWIND_CLI); \
+	elif command -v tailwindcss >/dev/null 2>&1; then CMD=tailwindcss; \
+	else echo "Error: Tailwind CLI not found. Install via 'npm install -g tailwindcss' on FreeBSD."; exit 1; fi; \
+	echo "Generating development CSS using $$CMD..."; \
+	rm -f assets/css/development.css; \
+	$$CMD --input assets/css/input.css --output assets/css/development.css --minify; \
+	touch src/server.cr
 
 # 3. Build Release Binary
 # Sets APP_ENV=production so the compiler embeds the generated CSS
