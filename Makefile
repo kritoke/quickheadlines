@@ -33,6 +33,9 @@ endif
 ifeq ($(UNAME_M),x86_64)
 	ARCH_NAME = x64
 endif
+ifeq ($(UNAME_M),amd64)
+    ARCH_NAME = x64
+endif
 ifeq ($(UNAME_M),arm64)
 	ARCH_NAME = arm64
 endif
