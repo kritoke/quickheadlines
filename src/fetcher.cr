@@ -70,54 +70,62 @@ private def get_favicon(feed : Feed, site_link : String, parsed_favicon : String
 end
 
 def fetch_feed(feed : Feed, item_limit : Int32, previous_data : FeedData? = nil) : FeedData
-  uri = URI.parse(feed.url)
-  client = POOL.for(feed.url)
-  headers = HTTP::Headers{
-    "User-Agent" => "QuickHeadlines/1.0",
-    "Accept"     => "application/rss+xml, application/atom+xml, application/xml;q=0.9, */*;q=0.8",
-  }
+  current_url = feed.url
+  redirects = 0
 
-  if previous_data
-    previous_data.etag.try { |v| headers["If-None-Match"] = v }
-    previous_data.last_modified.try { |v| headers["If-Modified-Since"] = v }
-  end
+  loop do
+    return FeedData.new(feed.title, feed.url, feed.url, feed.header_color, [Item.new("Error: Too many redirects", feed.url, nil)]) if redirects > 10
 
-  begin
-    client.get(uri.request_target, headers: headers) do |response|
-      if response.status_code == 304 && previous_data
-        # Content hasn't changed, return previous data
-        return previous_data
-      end
+    uri = URI.parse(current_url)
+    client = POOL.for(current_url)
+    headers = HTTP::Headers{
+      "User-Agent" => "QuickHeadlines/1.0",
+      "Accept"     => "application/rss+xml, application/atom+xml, application/xml;q=0.9, */*;q=0.8",
+    }
 
-      unless response.status.success?
-        # Fall back to an error message in the body box
-        return FeedData.new(
-          feed.title,
-          feed.url,
-          feed.url,
-          feed.header_color,
-          [Item.new("Error fetching feed (status #{response.status_code})", feed.url, nil)]
-        )
-      end
-
-      parsed = parse_feed(response.body_io, item_limit)
-      items = parsed[:items]
-      site_link = parsed[:site_link] || feed.url
-
-      favicon, favicon_data = get_favicon(feed, site_link, parsed[:favicon], previous_data)
-
-      # Capture caching headers
-      etag = response.headers["ETag"]?
-      last_modified = response.headers["Last-Modified"]?
-
-      if items.empty?
-        # Show a single placeholder item linking to the feed itself
-        items = [Item.new("No items found (or unsupported format)", feed.url, nil)]
-      end
-      FeedData.new(feed.title, feed.url, site_link, feed.header_color, items, etag, last_modified, favicon, favicon_data)
+    if previous_data && current_url == feed.url
+      previous_data.etag.try { |v| headers["If-None-Match"] = v }
+      previous_data.last_modified.try { |v| headers["If-Modified-Since"] = v }
     end
-  ensure
-    client.close
+
+    begin
+      client.get(uri.request_target, headers: headers) do |response|
+        if response.status.redirection? && (location = response.headers["Location"]?)
+          current_url = uri.resolve(location).to_s
+          redirects += 1
+        elsif response.status_code == 304 && previous_data
+          # Content hasn't changed, return previous data
+          return previous_data
+        elsif response.status.success?
+          parsed = parse_feed(response.body_io, item_limit)
+          items = parsed[:items]
+          site_link = parsed[:site_link] || feed.url
+
+          favicon, favicon_data = get_favicon(feed, site_link, parsed[:favicon], previous_data)
+
+          # Capture caching headers
+          etag = response.headers["ETag"]?
+          last_modified = response.headers["Last-Modified"]?
+
+          if items.empty?
+            # Show a single placeholder item linking to the feed itself
+            items = [Item.new("No items found (or unsupported format)", feed.url, nil)]
+          end
+          return FeedData.new(feed.title, feed.url, site_link, feed.header_color, items, etag, last_modified, favicon, favicon_data)
+        else
+          # Fall back to an error message in the body box
+          return FeedData.new(
+            feed.title,
+            feed.url,
+            feed.url,
+            feed.header_color,
+            [Item.new("Error fetching feed (status #{response.status_code})", feed.url, nil)]
+          )
+        end
+      end
+    ensure
+      client.close
+    end
   end
 rescue ex
   FeedData.new(

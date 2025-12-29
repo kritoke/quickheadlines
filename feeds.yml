@@ -1,5 +1,5 @@
-refresh_minutes: 10
-item_limit: 10
+refresh_minutes: 30
+item_limit: 20
 server_port: 3030
 page_title: "Quick Headlines"
 tabs:
@@ -29,6 +29,54 @@ tabs:
         url: "https://feeds.macrumors.com/MacRumors-All"
       - title: "Android Police"
         url: "https://www.androidpolice.com/feed/"
+  - name: "Security"
+    feeds:
+      - title: "Sophos News"
+        url: "https://news.sophos.com/en-us/blog/feed?id=blt6f15f4f7deaf4242"
+      - title: "Sentinel One"
+        url: "https://sentinelone.com/feed/"
+      - title: "JUMPSEC LABS"
+        url: "https://www.jumpsec.com/feed/"
+      - title: "CISO"
+        url: "https://www.csoonline.com/feed/"
+      - title: "Huntress Labs"
+        url: "https://www.huntress.com/blog/rss.xml"
+      - title: "WeLiveSecurity"
+        url: "http://feeds.feedburner.com/eset/blog?format=xml"
+      - title: "Cisco Talos Blog"
+        url: "https://blog.talosintelligence.com/rss/"
+      - title: "Secure List"
+        url: "https://securelist.com/feed/"
+      - title: "Blumira Blog"
+        url: "https://www.blumira.com/blog/rss.xml"
+      - title: "Krebs on Security"
+        url: "https://krebsonsecurity.com/feed/"
+      - title: "Troy Hunt"
+        url: "https://www.troyhunt.com/rss/"
+      - title: "eSet Support News"
+        url: "https://support-feed.eset.com/news"
+      - title: "Bleeping Computer"
+        url: "https://www.bleepingcomputer.com/feed/"
+  - name: "3D Printing"
+    feeds:
+      - title: "TCT Magazine"
+        url: "https://www.tctmagazine.com/feed/"
+      - title: "All3DP"
+        url: "https://all3dp.com/feed/newsfeed"
+      - title: "Prusa 3D"
+        url: "https://blog.prusa3d.com/feed/"
+      - title: "Bambu Lab Blog"
+        url: "https://blog.bambulab.com/rss/"
+      - title: "3DPrint.com"
+        url: "https://3dprint.com/feed"
+      - title: "3D Printing Industry"
+        url: "https://3dprintingindustry.com/feed"
+      - title: "3DPrinting.com"
+        url: "https://3dprinting.com/news/feed"
+      - title: "MatterHackers"
+        url: "https://matterhackers.com/rss/news"
+      - title: "Fabbaloo"
+        url: "http://feeds.fabbaloo.com/fabbaloo/default/"
   - name: "Dev"
     feeds:
       - title: "Lobste.rs"
@@ -39,6 +87,12 @@ tabs:
         url: "https://dev.to/feed"
       - title: "Phoronix"
         url: "https://www.phoronix.com/rss.php"
+      - title: "freeCodeCamp"
+        url: "https://freecodecamp.org/news/rss"
+      - title: "A List Apart"
+        url: "https://alistapart.com/main/feed"
+      - title: "Scott Hanselman's Blog"
+        url: "https://feeds.hanselman.com/ScottHanselman"
     software_releases:
       title: "Project Updates"
       repos:
@@ -46,4 +100,4 @@ tabs:
         - "inkscape/inkscape:gl"          # GitLab
         - "supercell/luce:cb"             # Codeberg
         - "luckyframework/lucky:gh"       # Explicit GitHub
-  
+
