@@ -125,7 +125,7 @@ html
               if (header.dataset.hasCustomColor === 'true') return;
 
               const img = header.querySelector('img');
-              if (!img) return;
+              if (!img || !img.getAttribute('src')) return;
 
               const proxy = new Image();
               proxy.crossOrigin = 'Anonymous';

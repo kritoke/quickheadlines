@@ -62,9 +62,15 @@
 
 .feed-box .feed-header {
   padding: 0.5rem 0.75rem;
+  background-color: #f3f4f6;
   border-radius: 0.75rem;
   margin-bottom: 0.4rem;
+  transition: background-color 0.4s ease, color 0.4s ease;
   flex: 0 0 auto;
+}
+
+:where(.dark, .dark *) .feed-box .feed-header {
+  background-color: #1f2937;
 }
 
 .feed-box .feed-title {
@@ -72,6 +78,7 @@
   font-size: 1.1rem;
   line-height: 1.2;
   font-weight: 700;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.05);
 }
 
 .feed-box .feed-body {

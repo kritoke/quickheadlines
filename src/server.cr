@@ -81,14 +81,14 @@ def handle_proxy_image(context : HTTP::Server::Context)
       success = false
 
       loop do
-        if redirects > 3
+        if redirects > 10
           context.response.status_code = 502
           break
         end
 
         loop_uri = URI.parse(current_url)
         loop_client = POOL.for(current_url)
-        loop_headers = HTTP::Headers{"User-Agent" => "Mozilla/5.0 (compatible; QuickHeadlines/1.0)"}
+        loop_headers = HTTP::Headers{"User-Agent" => "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"}
 
         begin
           loop_client.get(loop_uri.request_target, headers: loop_headers) do |response|
@@ -97,6 +97,7 @@ def handle_proxy_image(context : HTTP::Server::Context)
               redirects += 1
             elsif response.status.success?
               context.response.content_type = response.content_type || "image/png"
+              context.response.headers["Access-Control-Allow-Origin"] = "*"
               context.response.headers["Cache-Control"] = "public, max-age=86400"
               IO.copy(response.body_io, context.response)
               success = true
@@ -105,8 +106,6 @@ def handle_proxy_image(context : HTTP::Server::Context)
               success = true
             end
           end
-        ensure
-          loop_client.close
         end
         break if success
       end

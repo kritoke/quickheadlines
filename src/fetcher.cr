@@ -7,11 +7,11 @@ def fetch_favicon_uri(url : String) : String?
   redirects = 0
 
   loop do
-    return if redirects > 3
+    return if redirects > 10
 
     uri = URI.parse(current_url)
     client = POOL.for(current_url)
-    headers = HTTP::Headers{"User-Agent" => "Mozilla/5.0 (compatible; QuickHeadlines/1.0)"}
+    headers = HTTP::Headers{"User-Agent" => "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"}
 
     begin
       client.get(uri.request_target, headers: headers) do |response|
@@ -20,7 +20,10 @@ def fetch_favicon_uri(url : String) : String?
           redirects += 1
         elsif response.status.success?
           content_type = response.content_type || "image/png"
-          data = Base64.strict_encode(response.body_io.getb_to_end)
+          memory = IO::Memory.new
+          IO.copy(response.body_io, memory)
+          return if memory.size == 0
+          data = Base64.strict_encode(memory.to_slice)
           return "data:#{content_type};base64,#{data}"
         else
           return
@@ -28,14 +31,12 @@ def fetch_favicon_uri(url : String) : String?
       end
     rescue
       return
-    ensure
-      client.close
     end
   end
 end
 
 private def resolve_favicon(feed : Feed, site_link : String, parsed_favicon : String?) : String?
-  favicon = parsed_favicon
+  favicon = parsed_favicon.presence
 
   # Resolve relative favicon URLs
   if favicon && !favicon.starts_with?("http")
@@ -44,7 +45,8 @@ private def resolve_favicon(feed : Feed, site_link : String, parsed_favicon : St
 
   if favicon.nil?
     begin
-      if host = URI.parse(site_link).host
+      # Clean up the site link to find a valid host for the favicon fallback
+      if host = URI.parse(site_link.gsub(/\/feed\/?$/, "")).host
         favicon = "https://www.google.com/s2/favicons?domain=#{host}&sz=128"
       end
     rescue
@@ -79,7 +81,7 @@ def fetch_feed(feed : Feed, item_limit : Int32, previous_data : FeedData? = nil)
     uri = URI.parse(current_url)
     client = POOL.for(current_url)
     headers = HTTP::Headers{
-      "User-Agent" => "QuickHeadlines/1.0",
+      "User-Agent" => "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
       "Accept"     => "application/rss+xml, application/atom+xml, application/xml;q=0.9, */*;q=0.8",
     }
 
@@ -123,8 +125,6 @@ def fetch_feed(feed : Feed, item_limit : Int32, previous_data : FeedData? = nil)
           )
         end
       end
-    ensure
-      client.close
     end
   end
 rescue ex
