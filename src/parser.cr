@@ -21,20 +21,24 @@ end
 private def parse_rss(xml : XML::Node, limit : Int32) : {site_link: String, items: Array(Item), favicon: String?}
   site_link = "#"
   items = [] of Item
-  if channel = xml.xpath_node("//channel")
-    site_link = channel.xpath_node("./link").try(&.text).try(&.strip) || site_link
-    channel.xpath_nodes("./item").each do |node|
-      title = node.xpath_node("./title").try(&.text).try(&.strip)
+  if channel = xml.xpath_node("//*[local-name()='channel']")
+    # Prefer the link that isn't the atom:link "self" and handle both text content and href attributes
+    links = channel.xpath_nodes("./*[local-name()='link']")
+    site_link_node = links.find { |n| n["rel"]? != "self" && (n.text.presence || n["href"]?) } || links.first?
+    site_link = site_link_node.try { |n| n["href"]? || n.text }.try(&.strip) || site_link
+
+    channel.xpath_nodes("./*[local-name()='item']").each do |node|
+      title = node.xpath_node("./*[local-name()='title']").try(&.text).try(&.strip)
       title = HTML.unescape(title) if title
       title = "Untitled" if title.nil? || title.empty?
 
-      link = node.xpath_node("./link").try(&.text) || "#"
-      pub_date = parse_time(node.xpath_node("./pubDate").try(&.text))
+      link = node.xpath_node("./*[local-name()='link']").try(&.text) || "#"
+      pub_date = parse_time(node.xpath_node("./*[local-name()='pubDate']").try(&.text))
       items << Item.new(title, link, pub_date)
       break if items.size >= limit
     end
   end
-  favicon = xml.xpath_node("//channel/image/url").try(&.text)
+  favicon = xml.xpath_node("//*[local-name()='channel']/*[local-name()='image']/*[local-name()='url']").try(&.text)
   {site_link: site_link, items: items, favicon: favicon}
 end
 
