@@ -5,7 +5,8 @@ def parse_feed(io : IO, limit : Int32) : {site_link: String, items: Array(Item),
   # Buffer raw bytes to allow libxml2 to detect encoding from the XML declaration.
   # NOENT substitutes entities (like &Yuml;) during parsing.
   buffer = IO::Memory.new
-  IO.copy(io, buffer)
+  # Limit feed size to 5MB
+  IO.copy(io, buffer, limit: 5 * 1024 * 1024)
   buffer.rewind
 
   xml = XML.parse(buffer, options: XML::ParserOptions::RECOVER | XML::ParserOptions::NOENT)

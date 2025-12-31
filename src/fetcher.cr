@@ -21,7 +21,8 @@ def fetch_favicon_uri(url : String) : String?
         elsif response.status.success?
           content_type = response.content_type || "image/png"
           memory = IO::Memory.new
-          IO.copy(response.body_io, memory)
+          # Limit favicon downloads to 100KB to prevent memory exhaustion
+          IO.copy(response.body_io, memory, limit: 100 * 1024)
           return if memory.size == 0
           data = Base64.strict_encode(memory.to_slice)
           return "data:#{content_type};base64,#{data}"
