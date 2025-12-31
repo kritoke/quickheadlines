@@ -81,11 +81,6 @@ def handle_proxy_image(context : HTTP::Server::Context)
       success = false
 
       loop do
-        if redirects > 10
-          context.response.status_code = 502
-          break
-        end
-
         loop_uri = URI.parse(current_url)
         loop_client = POOL.for(current_url)
         loop_headers = HTTP::Headers{
@@ -93,6 +88,9 @@ def handle_proxy_image(context : HTTP::Server::Context)
           "Accept-Language" => "en-US,en;q=0.9",
           "Connection"      => "keep-alive",
         }
+
+        context.response.status_code = 502 if redirects > 10
+        break if redirects > 10
 
         begin
           loop_client.get(loop_uri.request_target, headers: loop_headers) do |response|
@@ -123,15 +121,13 @@ end
 
 def start_server(port : Int32)
   server = HTTP::Server.new do |context|
-    # Determine active tab from query param, defaulting to the first tab
-    active_tab = context.request.query_params["tab"]? || STATE.tabs.first?.try(&.name) || "all"
-
     case {context.request.method, context.request.path}
     when {"GET", "/version"}
       context.response.content_type = "text/plain; charset=utf-8"
       # Use updated_at as a change token
       context.response.print STATE.updated_at.to_unix_ms
     when {"GET", "/feeds"}
+      active_tab = context.request.query_params["tab"]? || STATE.tabs.first?.try(&.name) || "all"
       context.response.content_type = "text/html; charset=utf-8"
       render_feed_boxes(context.response, active_tab)
     when {"GET", "/feed_more"}
@@ -144,9 +140,13 @@ def start_server(port : Int32)
       serve_bytes(context, FAVICON_ICO, "image/x-icon")
     when {"GET", "/proxy_image"}
       handle_proxy_image(context)
-    else
+    when {"GET", "/"}
+      active_tab = context.request.query_params["tab"]? || STATE.tabs.first?.try(&.name) || "all"
       context.response.content_type = "text/html; charset=utf-8"
       render_page(context.response, active_tab)
+    else
+      context.response.status_code = 404
+      context.response.print "404 Not Found"
     end
   end
 
