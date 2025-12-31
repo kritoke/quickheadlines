@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.2.4] - 2025-12-31
+
+### Added
+- **Explicit 404 Handling**: Added a proper 404 Not Found response for unknown routes in the server.
+
+### Fixed
+- **403 Forbidden Errors**: Resolved access issues for feeds by enhancing HTTP headers (`Accept-Language`, `Connection`) and updating legacy URLs.
+
+### Changed
+- **Server Refactoring**: Optimized routing logic in `server.cr` to improve performance and code clarity.
+- **HTTP Compression**: Enabled Gzip/Deflate support for all outgoing fetcher requests in `utils.cr` to reduce bandwidth usage.
+
 ## [0.2.3] - 2025-12-30
 
 ### Added
