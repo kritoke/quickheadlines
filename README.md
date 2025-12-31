@@ -76,6 +76,21 @@ tabs:
 
 You should be able to use the following docker image ```ghcr.io/kritoke/quickheadlines:latest``` to get the latest package.
 
+## Performance & Memory Tuning
+
+For long-running instances, especially in resource-constrained environments like Docker containers or FreeBSD jails, you can tune the Garbage Collector (Boehm GC) using environment variables to maintain a flat memory footprint:
+
+- `GC_MARKERS=1`: Limits the number of parallel markers. Recommended for systems with low CPU core counts to reduce thread overhead.
+- `GC_FREE_SPACE_DIVISOR=20`: Makes the GC more aggressive about reclaiming memory and returning it to the OS. Increasing this value (default is ~3) helps prevent slow memory growth over time.
+
+### Setting Variables
+
+Add them to your docker-compose.yml or docker run command (these are already made on the included docker/docker-compose files):
+```yaml +environment:
+GC_MARKERS=1
+GC_FREE_SPACE_DIVISOR=20
+```
+
 ## Contributing
 
 1. Fork it (<https://github.com/kritoke/quickheadlines/fork>)

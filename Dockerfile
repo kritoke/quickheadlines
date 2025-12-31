@@ -67,7 +67,9 @@ ENV TZ=UTC
 # GC Tuning: 
 # GC_MARKERS=1 reduces CPU usage during collection in small containers.
 # GC_INITIAL_HEAP_SIZE sets a baseline to avoid frequent early reallocations.
+# GC_FREE_SPACE_DIVISOR=20 makes the GC much more aggressive at returning memory to the OS.
 ENV GC_MARKERS=1
+ENV GC_FREE_SPACE_DIVISOR=20
 
 # Copy the compiled binary
 COPY --from=builder /app/server .
