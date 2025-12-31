@@ -64,6 +64,11 @@ RUN apt-get update && apt-get install -y \
 # Try to resolve issue where it can't locate the timezone sometimes and fails to run outright.
 ENV TZ=UTC
 
+# GC Tuning: 
+# GC_MARKERS=1 reduces CPU usage during collection in small containers.
+# GC_INITIAL_HEAP_SIZE sets a baseline to avoid frequent early reallocations.
+ENV GC_MARKERS=1
+
 # Copy the compiled binary
 COPY --from=builder /app/server .
 COPY feeds.yml ./feeds.yml
