@@ -76,7 +76,7 @@ tabs:
       - title: "MatterHackers"
         url: "https://matterhackers.com/rss/news"
       - title: "Fabbaloo"
-        url: "http://feeds.fabbaloo.com/fabbaloo/default/"
+        url: "https://www.fabbaloo.com/feed/"
   - name: "Dev"
     feeds:
       - title: "Lobste.rs"
@@ -100,4 +100,3 @@ tabs:
         - "inkscape/inkscape:gl"          # GitLab
         - "supercell/luce:cb"             # Codeberg
         - "luckyframework/lucky:gh"       # Explicit GitHub
-

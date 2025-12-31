@@ -11,7 +11,11 @@ def fetch_favicon_uri(url : String) : String?
 
     uri = URI.parse(current_url)
     client = POOL.for(current_url)
-    headers = HTTP::Headers{"User-Agent" => "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"}
+    headers = HTTP::Headers{
+      "User-Agent"      => "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+      "Accept-Language" => "en-US,en;q=0.9",
+      "Connection"      => "keep-alive",
+    }
 
     begin
       client.get(uri.request_target, headers: headers) do |response|
@@ -83,7 +87,9 @@ def fetch_feed(feed : Feed, item_limit : Int32, previous_data : FeedData? = nil)
     client = POOL.for(current_url)
     headers = HTTP::Headers{
       "User-Agent" => "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-      "Accept"     => "application/rss+xml, application/atom+xml, application/xml;q=0.9, */*;q=0.8",
+      "Accept"          => "application/rss+xml, application/atom+xml, application/xml;q=0.9, text/xml;q=0.8, */*;q=0.7",
+      "Accept-Language" => "en-US,en;q=0.9",
+      "Connection"      => "keep-alive",
     }
 
     if previous_data && current_url == feed.url

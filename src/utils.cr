@@ -7,6 +7,7 @@ class ClientPool
   def for(url : String) : HTTP::Client
     uri = URI.parse(url)
     client = HTTP::Client.new(uri)
+    client.compress = true
     client.read_timeout = 15.seconds
     client.connect_timeout = 10.seconds
     client
