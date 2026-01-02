@@ -119,17 +119,35 @@ def handle_proxy_image(context : HTTP::Server::Context)
   end
 end
 
+def handle_version(context : HTTP::Server::Context)
+  context.response.content_type = "text/plain; charset=utf-8"
+  # Use updated_at as a change token
+  context.response.print STATE.updated_at.to_unix_ms
+end
+
+def get_active_tab(context : HTTP::Server::Context) : String
+  context.request.query_params["tab"]? || STATE.tabs.first?.try(&.name) || "all"
+end
+
+def handle_feeds(context : HTTP::Server::Context)
+  active_tab = get_active_tab(context)
+  context.response.content_type = "text/html; charset=utf-8"
+  render_feed_boxes(context.response, active_tab)
+end
+
+def handle_root(context : HTTP::Server::Context)
+  active_tab = get_active_tab(context)
+  context.response.content_type = "text/html; charset=utf-8"
+  render_page(context.response, active_tab)
+end
+
 def start_server(port : Int32)
   server = HTTP::Server.new do |context|
     case {context.request.method, context.request.path}
     when {"GET", "/version"}
-      context.response.content_type = "text/plain; charset=utf-8"
-      # Use updated_at as a change token
-      context.response.print STATE.updated_at.to_unix_ms
+      handle_version(context)
     when {"GET", "/feeds"}
-      active_tab = context.request.query_params["tab"]? || STATE.tabs.first?.try(&.name) || "all"
-      context.response.content_type = "text/html; charset=utf-8"
-      render_feed_boxes(context.response, active_tab)
+      handle_feeds(context)
     when {"GET", "/feed_more"}
       handle_feed_more(context)
     when {"GET", "/favicon.png"}
@@ -141,9 +159,7 @@ def start_server(port : Int32)
     when {"GET", "/proxy_image"}
       handle_proxy_image(context)
     when {"GET", "/"}
-      active_tab = context.request.query_params["tab"]? || STATE.tabs.first?.try(&.name) || "all"
-      context.response.content_type = "text/html; charset=utf-8"
-      render_page(context.response, active_tab)
+      handle_root(context)
     else
       context.response.status_code = 404
       context.response.print "404 Not Found"
