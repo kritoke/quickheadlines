@@ -23,24 +23,38 @@ private def parse_rss(xml : XML::Node, limit : Int32) : {site_link: String, item
   site_link = "#"
   items = [] of Item
   if channel = xml.xpath_node("//*[local-name()='channel']")
-    # Prefer the link that isn't the atom:link "self" and handle both text content and href attributes
-    links = channel.xpath_nodes("./*[local-name()='link']")
-    site_link_node = links.find { |n| n["rel"]? != "self" && (n.text.presence || n["href"]?) } || links.first?
-    site_link = site_link_node.try { |n| n["href"]? || n.text }.try(&.strip) || site_link
+    site_link = resolve_rss_site_link(channel)
 
     channel.xpath_nodes("./*[local-name()='item']").each do |node|
-      title = node.xpath_node("./*[local-name()='title']").try(&.text).try(&.strip)
-      title = HTML.unescape(title) if title
-      title = "Untitled" if title.nil? || title.empty?
-
-      link = node.xpath_node("./*[local-name()='link']").try(&.text) || "#"
-      pub_date = parse_time(node.xpath_node("./*[local-name()='pubDate']").try(&.text))
-      items << Item.new(title, link, pub_date)
+      items << parse_rss_item(node)
       break if items.size >= limit
     end
   end
   favicon = xml.xpath_node("//*[local-name()='channel']/*[local-name()='image']/*[local-name()='url']").try(&.text)
   {site_link: site_link, items: items, favicon: favicon}
+end
+
+private def resolve_rss_site_link(channel : XML::Node) : String
+  # Prefer the link that isn't the atom:link "self" and handle both text content and href attributes
+  links = channel.xpath_nodes("./*[local-name()='link']")
+  site_link_node = links.find do |node|
+    node["rel"]? != "self" && (node.text.presence || node["href"]?)
+  end || links.first?
+
+  return "#" unless site_link_node
+
+  link = site_link_node["href"]? || site_link_node.text
+  link.strip.presence || "#"
+end
+
+private def parse_rss_item(node : XML::Node) : Item
+  title = node.xpath_node("./*[local-name()='title']").try(&.text).try(&.strip)
+  title = HTML.unescape(title) if title
+  title = "Untitled" if title.nil? || title.empty?
+
+  link = node.xpath_node("./*[local-name()='link']").try(&.text) || "#"
+  pub_date = parse_time(node.xpath_node("./*[local-name()='pubDate']").try(&.text))
+  Item.new(title, link, pub_date)
 end
 
 private def parse_atom_entry(node : XML::Node) : Item

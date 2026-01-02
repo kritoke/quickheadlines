@@ -76,72 +76,78 @@ private def get_favicon(feed : Feed, site_link : String, parsed_favicon : String
   {favicon, favicon_data}
 end
 
-def fetch_feed(feed : Feed, item_limit : Int32, previous_data : FeedData? = nil) : FeedData
-  current_url = feed.url
-  redirects = 0
+private def build_fetch_headers(feed : Feed, current_url : String, previous_data : FeedData?) : HTTP::Headers
+  headers = HTTP::Headers{
+    "User-Agent"      => "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    "Accept"          => "application/rss+xml, application/atom+xml, application/xml;q=0.9, text/xml;q=0.8, */*;q=0.7",
+    "Accept-Language" => "en-US,en;q=0.9",
+    "Connection"      => "keep-alive",
+  }
 
-  loop do
-    return FeedData.new(feed.title, feed.url, feed.url, feed.header_color, [Item.new("Error: Too many redirects", feed.url, nil)]) if redirects > 10
-
-    uri = URI.parse(current_url)
-    client = POOL.for(current_url)
-    headers = HTTP::Headers{
-      "User-Agent" => "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-      "Accept"          => "application/rss+xml, application/atom+xml, application/xml;q=0.9, text/xml;q=0.8, */*;q=0.7",
-      "Accept-Language" => "en-US,en;q=0.9",
-      "Connection"      => "keep-alive",
-    }
-
-    if previous_data && current_url == feed.url
-      previous_data.etag.try { |v| headers["If-None-Match"] = v }
-      previous_data.last_modified.try { |v| headers["If-Modified-Since"] = v }
-    end
-
-    begin
-      client.get(uri.request_target, headers: headers) do |response|
-        if response.status.redirection? && (location = response.headers["Location"]?)
-          current_url = uri.resolve(location).to_s
-          redirects += 1
-        elsif response.status_code == 304 && previous_data
-          # Content hasn't changed, return previous data
-          return previous_data
-        elsif response.status.success?
-          parsed = parse_feed(response.body_io, item_limit)
-          items = parsed[:items]
-          site_link = parsed[:site_link] || feed.url
-
-          favicon, favicon_data = get_favicon(feed, site_link, parsed[:favicon], previous_data)
-
-          # Capture caching headers
-          etag = response.headers["ETag"]?
-          last_modified = response.headers["Last-Modified"]?
-
-          if items.empty?
-            # Show a single placeholder item linking to the feed itself
-            items = [Item.new("No items found (or unsupported format)", feed.url, nil)]
-          end
-          return FeedData.new(feed.title, feed.url, site_link, feed.header_color, items, etag, last_modified, favicon, favicon_data)
-        else
-          # Fall back to an error message in the body box
-          return FeedData.new(
-            feed.title,
-            feed.url,
-            feed.url,
-            feed.header_color,
-            [Item.new("Error fetching feed (status #{response.status_code})", feed.url, nil)]
-          )
-        end
-      end
-    end
+  if previous_data && current_url == feed.url
+    previous_data.etag.try { |v| headers["If-None-Match"] = v }
+    previous_data.last_modified.try { |v| headers["If-Modified-Since"] = v }
   end
-rescue ex
+  headers
+end
+
+private def handle_success_response(feed : Feed, response : HTTP::Client::Response, item_limit : Int32, previous_data : FeedData?) : FeedData
+  parsed = parse_feed(response.body_io, item_limit)
+  items = parsed[:items]
+  site_link = parsed[:site_link] || feed.url
+
+  favicon, favicon_data = get_favicon(feed, site_link, parsed[:favicon], previous_data)
+
+  # Capture caching headers
+  etag = response.headers["ETag"]?
+  last_modified = response.headers["Last-Modified"]?
+
+  if items.empty?
+    # Show a single placeholder item linking to the feed itself
+    items = [Item.new("No items found (or unsupported format)", feed.url, nil)]
+  end
+
+  FeedData.new(feed.title, feed.url, site_link, feed.header_color, items, etag, last_modified, favicon, favicon_data)
+end
+
+private def error_feed_data(feed : Feed, message : String) : FeedData
   FeedData.new(
     feed.title,
     feed.url,
     feed.url,
     feed.header_color,
-    [Item.new("Error: #{ex.message}", feed.url, nil)]
+    [Item.new(message, feed.url, nil)]
   )
+end
+
+def fetch_feed(feed : Feed, item_limit : Int32, previous_data : FeedData? = nil) : FeedData
+  current_url = feed.url
+  redirects = 0
+
+  loop do
+    return error_feed_data(feed, "Error: Too many redirects") if redirects > 10
+
+    uri = URI.parse(current_url)
+    client = POOL.for(current_url)
+    headers = build_fetch_headers(feed, current_url, previous_data)
+
+    client.get(uri.request_target, headers: headers) do |response|
+      if response.status.redirection? && (location = response.headers["Location"]?)
+        current_url = uri.resolve(location).to_s
+        redirects += 1
+      elsif response.status_code == 304 && previous_data
+        # Content hasn't changed, return previous data
+        return previous_data
+      elsif response.status.success?
+        return handle_success_response(feed, response, item_limit, previous_data)
+      else
+        # Fall back to an error message in the body box
+        return error_feed_data(feed, "Error fetching feed (status #{response.status_code})")
+      end
+    end
+  end
+rescue ex
+  error_feed_data(feed, "Error: #{ex.message}")
 end
 
 def refresh_all(config : Config)
