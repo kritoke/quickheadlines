@@ -15,7 +15,7 @@ def parse_feed(io : IO, limit : Int32) : {site_link: String, items: Array(Item),
   atom = parse_atom(xml, limit)
   return atom unless atom[:items].empty?
   {site_link: "#", items: [] of Item, favicon: nil}
-rescue
+rescue ex
   {site_link: "#", items: [] of Item, favicon: nil}
 end
 

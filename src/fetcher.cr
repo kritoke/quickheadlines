@@ -2,6 +2,64 @@ require "base64"
 require "gc"
 require "./software_fetcher"
 
+# ----- Favicon cache with size limits and expiration -----
+
+class FaviconCache
+  CACHE_SIZE_LIMIT = 100 * 1024 * 1024  # 100MB total
+  ENTRY_TTL = 7.days                      # 7 day expiration
+
+  @cache = Hash(String, {String, Time}).new
+  @current_size = 0
+  @mutex = Mutex.new
+
+  def get(url : String) : String?
+    @mutex.synchronize do
+      if entry = @cache[url]?
+        data_uri, timestamp = entry
+        if Time.local - timestamp < ENTRY_TTL
+          data_uri
+        else
+          # Expired - calculate size and remove
+          @current_size -= data_uri.bytesize
+          @cache.delete(url)
+          nil
+        end
+      end
+    end
+  end
+
+  def set(url : String, data_uri : String) : Nil
+    return unless data_uri.starts_with?("data:")
+
+    @mutex.synchronize do
+      # Calculate size of new entry
+      new_size = data_uri.bytesize
+
+      # Evict if needed
+      while @current_size + new_size > CACHE_SIZE_LIMIT && !@cache.empty?
+        oldest = @cache.min_by(&.[1][1]).[0]
+        @current_size -= @cache[oldest][0].bytesize
+        @cache.delete(oldest)
+      end
+
+      # Skip if single entry exceeds limit
+      return if new_size > CACHE_SIZE_LIMIT
+
+      @cache[url] = {data_uri, Time.local}
+      @current_size += new_size
+    end
+  end
+
+  def clear : Nil
+    @mutex.synchronize do
+      @cache.clear
+      @current_size = 0
+    end
+  end
+end
+
+FAVICON_CACHE = FaviconCache.new
+
 def fetch_favicon_uri(url : String) : String?
   current_url = url
   redirects = 0
@@ -67,10 +125,21 @@ private def get_favicon(feed : Feed, site_link : String, parsed_favicon : String
   favicon_data = nil
   return {favicon, nil} unless favicon
 
-  if previous_data && previous_data.favicon == favicon && previous_data.favicon_data
-    favicon_data = previous_data.favicon_data
+  # Check the shared cache first
+  if cached_data = FAVICON_CACHE.get(favicon)
+    favicon_data = cached_data
+  elsif previous_data && previous_data.favicon == favicon && (prev_data = previous_data.favicon_data)
+    # Use previous data if still valid
+    favicon_data = prev_data
+    # Store in shared cache
+    FAVICON_CACHE.set(favicon, prev_data)
   else
-    favicon_data = fetch_favicon_uri(favicon)
+    # Fetch new favicon data
+    if new_data = fetch_favicon_uri(favicon)
+      favicon_data = new_data
+      # Store in shared cache
+      FAVICON_CACHE.set(favicon, new_data)
+    end
   end
 
   {favicon, favicon_data}
@@ -127,27 +196,31 @@ def fetch_feed(feed : Feed, item_limit : Int32, previous_data : FeedData? = nil)
   loop do
     return error_feed_data(feed, "Error: Too many redirects") if redirects > 10
 
-    uri = URI.parse(current_url)
-    client = POOL.for(current_url)
-    headers = build_fetch_headers(feed, current_url, previous_data)
+    begin
+      uri = URI.parse(current_url)
 
-    client.get(uri.request_target, headers: headers) do |response|
-      if response.status.redirection? && (location = response.headers["Location"]?)
-        current_url = uri.resolve(location).to_s
-        redirects += 1
-      elsif response.status_code == 304 && previous_data
-        # Content hasn't changed, return previous data
-        return previous_data
-      elsif response.status.success?
-        return handle_success_response(feed, response, item_limit, previous_data)
-      else
-        # Fall back to an error message in the body box
-        return error_feed_data(feed, "Error fetching feed (status #{response.status_code})")
+      # Use pooled client for better performance
+      client = POOL.for(current_url)
+      headers = build_fetch_headers(feed, current_url, previous_data)
+
+      client.get(uri.request_target, headers: headers) do |response|
+        if response.status.redirection? && (location = response.headers["Location"]?)
+          current_url = uri.resolve(location).to_s
+          redirects += 1
+        elsif response.status_code == 304 && previous_data
+          # Content hasn't changed, return previous data
+          return previous_data
+        elsif response.status.success?
+          return handle_success_response(feed, response, item_limit, previous_data)
+        else
+          # Fall back to an error message in the body box
+          return error_feed_data(feed, "Error fetching feed (status #{response.status_code})")
+        end
       end
+    rescue ex
+      return error_feed_data(feed, "Error: #{ex.class} - #{ex.message}")
     end
   end
-rescue ex
-  error_feed_data(feed, "Error: #{ex.message}")
 end
 
 def refresh_all(config : Config)
