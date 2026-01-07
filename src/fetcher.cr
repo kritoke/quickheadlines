@@ -5,8 +5,8 @@ require "./software_fetcher"
 # ----- Favicon cache with size limits and expiration -----
 
 class FaviconCache
-  CACHE_SIZE_LIMIT = 100 * 1024 * 1024  # 100MB total
-  ENTRY_TTL = 7.days                      # 7 day expiration
+  CACHE_SIZE_LIMIT = 100 * 1024 * 1024 # 100MB total
+  ENTRY_TTL        = 7.days            # 7 day expiration
 
   @cache = Hash(String, {String, Time}).new
   @current_size = 0
@@ -68,7 +68,7 @@ def fetch_favicon_uri(url : String) : String?
     return if redirects > 10
 
     uri = URI.parse(current_url)
-    client = POOL.for(current_url)
+    client = create_client(current_url)
     headers = HTTP::Headers{
       "User-Agent"      => "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
       "Accept-Language" => "en-US,en;q=0.9",
@@ -200,7 +200,7 @@ def fetch_feed(feed : Feed, item_limit : Int32, previous_data : FeedData? = nil)
       uri = URI.parse(current_url)
 
       # Use pooled client for better performance
-      client = POOL.for(current_url)
+      client = create_client(current_url)
       headers = build_fetch_headers(feed, current_url, previous_data)
 
       client.get(uri.request_target, headers: headers) do |response|
@@ -255,7 +255,12 @@ def refresh_all(config : Config)
     fetched_map[data.url] = data
   end
 
-  # 4. Populate Top-Level State
+  # 4. Clear old feed data before replacing to reduce memory pressure
+  STATE.feeds.clear
+  STATE.tabs.each &.feeds.clear
+  STATE.software_releases.clear
+
+  # 5. Populate Top-Level State
   STATE.feeds = config.feeds.map { |feed| fetched_map[feed.url] }
   STATE.software_releases = [] of FeedData
   if sw = config.software_releases
@@ -265,7 +270,7 @@ def refresh_all(config : Config)
     end
   end
 
-  # 5. Populate Tab State
+  # 6. Populate Tab State
   STATE.tabs = config.tabs.map do |tab_config|
     tab = Tab.new(tab_config.name)
     tab.feeds = tab_config.feeds.map { |feed| fetched_map[feed.url] }
