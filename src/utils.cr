@@ -3,18 +3,16 @@ require "uri"
 
 # ----- HTTP client pooling and concurrency control -----
 
-class ClientPool
-  def for(url : String) : HTTP::Client
-    uri = URI.parse(url)
-    client = HTTP::Client.new(uri)
-    client.compress = true
-    client.read_timeout = 15.seconds
-    client.connect_timeout = 10.seconds
-    client
-  end
+# Simple client factory - creates a new client for each request
+# This avoids issues with connection state and malformed responses
+def create_client(url : String) : HTTP::Client
+  uri = URI.parse(url)
+  client = HTTP::Client.new(uri)
+  client.compress = true
+  client.read_timeout = 15.seconds
+  client.connect_timeout = 10.seconds
+  client
 end
-
-POOL = ClientPool.new
 
 # Limit concurrent fetches (helps smooth peak allocations)
 # Adjust capacity to your environment (5–10 is a good start).
