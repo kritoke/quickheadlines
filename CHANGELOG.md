@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.2.6] - 2026-01-07
+
+### Fixed
+- **Memory Leak**: Fixed memory leak from feed data not being cleared between refreshes.
+  - Old feed data now properly cleared before populating with new data to prevent continuous memory growth over time.
+
+## [0.2.5] - 2026-01-06
+
+### Added
+- Favicon cache with 100MB limit and 7-day expiration
+
+### Fixed
+- Correct shard build target
+
 ## [0.2.4] - 2025-12-31
 
 ### Added
