@@ -1,4 +1,6 @@
 require "yaml"
+require "http/client"
+require "process"
 
 DEFAULT_CONFIG_CANDIDATES = [
   "feeds.yml",
@@ -77,4 +79,91 @@ def parse_config_arg(args : Array(String)) : String?
   end
 
   nil
+end
+
+# Detect GitHub repository from git remote
+def detect_github_repo : String?
+  begin
+    # Get the origin remote URL
+    process = Process.new("git", ["remote", "get-url", "origin"],
+      output: Process::Redirect::Pipe,
+      error: Process::Redirect::Pipe)
+
+    if process.wait.success?
+      url = process.output.gets_to_end.strip
+
+      # Parse GitHub URL (both HTTPS and SSH formats)
+      if url =~ %r{github.com[/:]([^/]+)/([^/.]+?)(\.git)?$}
+        owner = $1
+        repo = $2
+        return "#{owner}/#{repo}"
+      end
+    end
+  rescue ex
+    # Silently fail if git is not available or not in a git repo
+  end
+
+  nil
+end
+
+# Fetch feeds.yml from GitHub repository
+def fetch_config_from_github(repo_path : String, branch : String = "main") : String?
+  url = "https://raw.githubusercontent.com/#{repo_path}/#{branch}/feeds.yml"
+
+  begin
+    response = HTTP::Client.get(url)
+    if response.status_code == 200
+      return response.body
+    elsif response.status_code == 404 && branch == "main"
+      # Try master as fallback
+      return fetch_config_from_github(repo_path, "master")
+    end
+  rescue ex
+    STDERR.puts "Error fetching config from GitHub: #{ex.message}"
+  end
+
+  nil
+end
+
+# Download and save feeds.yml from GitHub
+def download_config_from_github(target_path : String) : Bool
+  # Don't download if custom config path was specified via CLI args
+  if parse_config_arg(ARGV)
+    return false
+  end
+
+  # Detect GitHub repository
+  if repo_path = detect_github_repo
+    puts "No feeds.yml found locally."
+    puts "Detected GitHub repository: #{repo_path}"
+    print "Download feeds.yml from GitHub? [Y/n] "
+
+    # Read user input (default: yes)
+    response = STDIN.gets(chomp: true).try(&.strip) || ""
+    should_download = response.empty? || response.downcase == "y"
+
+    if should_download
+      if yaml_content = fetch_config_from_github(repo_path)
+        begin
+          # Validate YAML before saving
+          Config.from_yaml(yaml_content)
+
+          # Save to file
+          File.write(target_path, yaml_content)
+          puts "✅ Successfully downloaded feeds.yml to #{target_path}"
+          return true
+        rescue ex : YAML::ParseException
+          STDERR.puts "❌ Invalid YAML in downloaded feeds.yml: #{ex.message}"
+        rescue ex
+          STDERR.puts "❌ Error saving feeds.yml: #{ex.message}"
+        end
+      else
+        STDERR.puts "❌ Could not fetch feeds.yml from GitHub (file may not exist in repository)"
+      end
+    end
+  else
+    STDERR.puts "Could not detect GitHub repository (not in a git repo or no origin remote)"
+  end
+
+  false
 end

@@ -20,11 +20,21 @@ require "./server"
 # Try to get config path from a named argument (config=...), or positional, or fall back to defaults
 config_path = parse_config_arg(ARGV) || find_default_config
 
+# If no config found, try to download from GitHub
 unless config_path && File.exists?(config_path)
-  STDERR.puts "Config not found."
-  STDERR.puts "Provide via: config=PATH or positional PATH, or place feeds.yml in one of:"
-  DEFAULT_CONFIG_CANDIDATES.each { |path| STDERR.puts "  - #{path}" }
-  exit 1
+  # Try to download from GitHub to default location
+  target_path = "feeds.yml"
+
+  unless download_config_from_github(target_path)
+    # If download failed or was declined, show error and exit
+    STDERR.puts "\nConfig not found."
+    STDERR.puts "Provide via: config=PATH or positional PATH, or place feeds.yml in one of:"
+    DEFAULT_CONFIG_CANDIDATES.each { |path| STDERR.puts "  - #{path}" }
+    STDERR.puts "\nOr ensure you're in a git repository with GitHub origin remote to auto-download."
+    exit 1
+  end
+
+  config_path = target_path
 end
 
 initial_config = load_config(config_path)
