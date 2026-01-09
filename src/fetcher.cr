@@ -190,6 +190,31 @@ private def error_feed_data(feed : Feed, message : String) : FeedData
 end
 
 def fetch_feed(feed : Feed, item_limit : Int32, previous_data : FeedData? = nil) : FeedData
+  # Check cache first
+  cache = FeedCache.instance
+  if cached = cache.get(feed.url)
+    if last_fetched = cache.get_fetched_time(feed.url)
+      # Use cache if fresh (within 5 minutes)
+      if cache_fresh?(last_fetched, 5)
+        # Merge with existing favicon_data if available
+        if previous_data && previous_data.favicon_data
+          return FeedData.new(
+            cached.title,
+            cached.url,
+            cached.site_link,
+            cached.header_color,
+            cached.items,
+            cached.etag,
+            cached.last_modified,
+            cached.favicon,
+            previous_data.favicon_data
+          )
+        end
+        return cached
+      end
+    end
+  end
+
   current_url = feed.url
   redirects = 0
 
@@ -211,7 +236,12 @@ def fetch_feed(feed : Feed, item_limit : Int32, previous_data : FeedData? = nil)
           # Content hasn't changed, return previous data
           return previous_data
         elsif response.status.success?
-          return handle_success_response(feed, response, item_limit, previous_data)
+          result = handle_success_response(feed, response, item_limit, previous_data)
+
+          # Save to cache
+          cache.add(result)
+
+          return result
         else
           # Fall back to an error message in the body box
           return error_feed_data(feed, "Error fetching feed (status #{response.status_code})")
@@ -297,6 +327,9 @@ def start_refresh_loop(config_path : String)
   refresh_all(active_config)
   puts "[#{Time.local}] Initial refresh complete"
 
+  # Save initial cache
+  save_feed_cache(FeedCache.instance)
+
   spawn do
     loop do
       begin
@@ -316,6 +349,9 @@ def start_refresh_loop(config_path : String)
           refresh_all(active_config)
           puts "[#{Time.local}] Refreshed feeds and ran GC"
         end
+
+        # Save cache after each refresh
+        save_feed_cache(FeedCache.instance)
 
         # Sleep based on current config's interval
         sleep (active_config.refresh_minutes * 60).seconds

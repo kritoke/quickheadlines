@@ -40,3 +40,18 @@ class AppState
 end
 
 STATE = AppState.new
+
+# Global feed cache (singleton accessor)
+class FeedCache
+  @@instance : FeedCache?
+
+  def self.instance : FeedCache
+    @@instance ||= FeedCache.new
+  end
+
+  def self.instance=(cache : FeedCache)
+    @@instance = cache
+  end
+end
+
+FEED_CACHE = FeedCache.instance

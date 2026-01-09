@@ -9,5 +9,9 @@ tailwindcss
 assets/css/production.css
 assets/css/development.css
 
+# Cache directory (SQLite database and feed cache)
+/cache/
+
 # Beads issue tracking (managed on beads-sync branch)
+.beads/cache/
 .beads/
