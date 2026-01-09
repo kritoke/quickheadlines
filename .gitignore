@@ -8,3 +8,6 @@
 tailwindcss
 assets/css/production.css
 assets/css/development.css
+
+# Beads issue tracking (managed on beads-sync branch)
+.beads/
