@@ -27,15 +27,17 @@ html
         .animate-highlight { animation: highlight 2s ease-out; border-radius: 0.25rem; }
   body(class="bg-surface-light text-slate-800 dark:bg-surface-dark dark:text-slate-100 text-[15px] md:text-[16px] leading-7")
     main(class="mx-auto max-w-[1600px] px-4 md:px-12 lg:px-24")
-      div.flex.items-center.justify-between.my-3
-        div.flex.items-center.gap-3
-          img.w-8.h-8(srcset="/favicon.svg 1x, /favicon.png 1x" src="/favicon.png" alt="Logo" width="32" height="32")
-          h1.text-3xl.font-semibold.tracking-tight = title
-        div.flex.items-center.gap-3
-          span#last-update-time.text-sm.text-slate-500.dark:text-slate-400 = last_updated_format(Time.parse_iso8601(updated_at))
-          button#theme-toggle(class="p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" onclick="toggleTheme()" aria-label="Toggle Theme")
-            span.dark:hidden 🌙
-            span.hidden.dark:inline ☀️
+      header(class="mb-4")
+        div(class="flex items-center justify-between py-3 border-b border-slate-200 dark:border-slate-700")
+          div.flex.items-center.gap-3
+            img.w-8.h-8(srcset="/favicon.svg 1x, /favicon.png 1x" src="/favicon.png" alt="Logo" width="32" height="32")
+            h1.text-3xl.font-semibold.tracking-tight = title
+          div(class="flex items-center gap-3 bg-slate-100 dark:bg-slate-800 px-3 py-1.5 rounded-full border border-slate-200 dark:border-slate-700")
+            span#last-update-time(class="text-sm font-medium text-slate-600 dark:text-slate-300 mr-1" title="Last updated time")
+              = last_updated_format(Time.parse_iso8601(updated_at))
+            button#theme-toggle(class="p-1.5 rounded-md hover:bg-slate-200 dark:hover:bg-slate-700 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-slate-300 dark:focus:ring-slate-600" aria-label="Toggle Theme" onclick="toggleTheme()")
+              span(class="text-slate-700 dark:hidden transition-transform duration-200 hover:scale-110 inline-block") 🌙
+              span(class="text-yellow-500 hidden dark:inline-block transition-transform duration-200 hover:scale-110") ☀️
 
       nav.tab-container
         - tabs.each do |tab|
