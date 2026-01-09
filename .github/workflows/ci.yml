@@ -43,7 +43,7 @@ jobs:
       - name: Run ameba linter
         run: |
           shards install --development
-          crystal build src/quickheadlines.cr --no-codegen
+          APP_ENV=production crystal build src/quickheadlines.cr --no-codegen
 
       - name: Test binary exists
         run: |
@@ -77,7 +77,7 @@ jobs:
       - name: Run ameba linter
         run: |
           shards install --development
-          crystal build src/quickheadlines.cr --no-codegen
+          APP_ENV=production crystal build src/quickheadlines.cr --no-codegen
 
       - name: Test binary exists
         run: |
