@@ -48,7 +48,7 @@ jobs:
       - name: Test binary exists
         run: |
           test -f bin/quickheadlines
-          ./bin/quickheadlines --help || true
+          file bin/quickheadlines
 
   test-macos:
     name: Test on macOS
@@ -82,4 +82,4 @@ jobs:
       - name: Test binary exists
         run: |
           test -f bin/quickheadlines
-          ./bin/quickheadlines --help || true
+          file bin/quickheadlines
