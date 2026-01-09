@@ -89,9 +89,10 @@ def detect_github_repo : String?
       output: Process::Redirect::Pipe,
       error: Process::Redirect::Pipe)
 
-    if process.wait.success?
-      url = process.output.gets_to_end.strip
+    # Read output BEFORE waiting (stream closes after wait)
+    url = process.output.gets_to_end.strip
 
+    if process.wait.success?
       # Parse GitHub URL (both HTTPS and SSH formats)
       if url =~ %r{github.com[/:]([^/]+)/([^/.]+?)(\.git)?$}
         owner = $1
@@ -127,42 +128,29 @@ end
 
 # Download and save feeds.yml from GitHub
 def download_config_from_github(target_path : String) : Bool
-  # Don't download if custom config path was specified via CLI args
-  if parse_config_arg(ARGV)
-    return false
-  end
-
   # Detect GitHub repository
   if repo_path = detect_github_repo
-    puts "No feeds.yml found locally."
-    puts "Detected GitHub repository: #{repo_path}"
-    print "Download feeds.yml from GitHub? [Y/n] "
+    if yaml_content = fetch_config_from_github(repo_path)
+      begin
+        # Validate YAML before saving
+        Config.from_yaml(yaml_content)
 
-    # Read user input (default: yes)
-    response = STDIN.gets(chomp: true).try(&.strip) || ""
-    should_download = response.empty? || response.downcase == "y"
-
-    if should_download
-      if yaml_content = fetch_config_from_github(repo_path)
-        begin
-          # Validate YAML before saving
-          Config.from_yaml(yaml_content)
-
-          # Save to file
-          File.write(target_path, yaml_content)
-          puts "✅ Successfully downloaded feeds.yml to #{target_path}"
-          return true
-        rescue ex : YAML::ParseException
-          STDERR.puts "❌ Invalid YAML in downloaded feeds.yml: #{ex.message}"
-        rescue ex
-          STDERR.puts "❌ Error saving feeds.yml: #{ex.message}"
-        end
-      else
-        STDERR.puts "❌ Could not fetch feeds.yml from GitHub (file may not exist in repository)"
+        # Save to file
+        File.write(target_path, yaml_content)
+        STDERR.puts "[#{Time.local}] Auto-downloaded feeds.yml from GitHub (#{repo_path})"
+        return true
+      rescue ex : YAML::ParseException
+        STDERR.puts "Error: Invalid YAML in downloaded feeds.yml: #{ex.message}"
+      rescue ex : File::Error
+        STDERR.puts "Error: Cannot write feeds.yml to #{target_path}: #{ex.message}"
+      rescue ex
+        STDERR.puts "Error: Failed to save feeds.yml: #{ex.message}"
       end
+    else
+      STDERR.puts "Error: Could not fetch feeds.yml from GitHub (file may not exist in repository)"
     end
   else
-    STDERR.puts "Could not detect GitHub repository (not in a git repo or no origin remote)"
+    STDERR.puts "Error: Could not detect GitHub repository (not in a git repo or no origin remote)"
   end
 
   false
