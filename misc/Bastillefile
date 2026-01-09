@@ -1,0 +1,33 @@
+# Bastillefile for quickheadlines (Persistence Optimized)
+
+# 1. Install dependencies
+PKG crystal shards git openssl ca_root_nss node npm gmake curl sqlite3
+
+# Ensure system-wide SSL certificates are linked
+CMD ln -sf /usr/local/share/certs/ca-root-nss.crt /etc/ssl/cert.pem
+
+# 2. Create the application directory
+CMD mkdir -p /usr/local/share/quickheadlines
+
+# 3. Build the application and add a GC env variable
+CMD sysrc quickheadlines_env="GC_MARKERS=1 GC_FREE_SPACE_DIVISOR=20"
+CMD git clone https://github.com/kritoke/quickheadlines.git /tmp/qh
+CMD cd /tmp/qh && npm install @tailwindcss/cli tailwindcss && shards install --production
+CMD cd /tmp/qh && gmake build
+CMD cp /tmp/qh/bin/quickheadlines /usr/local/share/quickheadlines/quickheadlines
+
+# 4. Conditional Config Copy
+# Only copy feeds.yml if the file does NOT already exist in the target folder
+CMD [ ! -f /usr/local/share/quickheadlines/feeds.yml ] && cp /tmp/qh/feeds.yml /usr/local/share/quickheadlines/feeds.yml || true
+
+# 5. Cleanup build files
+CMD rm -rf /tmp/qh
+
+# 6. Create user and set permissions
+CMD pw useradd qh -d /usr/local/share/quickheadlines -s /usr/sbin/nologin || true
+CMD chown -R qh:qh /usr/local/share/quickheadlines
+
+# 7. Setup Service
+CP usr /
+SYSRC quickheadlines_enable="YES"
+CMD chmod +x /usr/local/etc/rc.d/quickheadlines

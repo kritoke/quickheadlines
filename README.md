@@ -28,16 +28,113 @@ Desktop (Dark Mode)           |  Desktop (Light Mode)
 
 Download the associated binary for your operating system from the Releases page. There are builds for Linux (arm64/amd64), FreeBSD (amd64), and macOS (arm64). You will also need to have the `feeds.yml` file in the same folder as the executable.  **Note for macOS users:** You must have OpenSSL 3 installed (`brew install openssl@3`) to run the binary.
 
+## Building from Source
+
+### Prerequisites
+
+- **Crystal** (>= 1.18.2)
+- **SQLite3** development libraries
+- **OpenSSL** development libraries
+- **Node.js/npm** (for Tailwind CSS CLI during build)
+
+The Makefile will automatically check for these dependencies and provide installation instructions if any are missing.
+
+### Platform-Specific Setup
+
+#### Ubuntu / Debian
+
+```bash
+# Install Crystal compiler
+curl -fsSL https://crystal-lang.org/install.sh | sudo bash
+
+# Install system dependencies
+sudo apt-get update
+sudo apt-get install -y libsqlite3-dev libssl-dev pkg-config
+
+# Clone and build
+git clone https://github.com/kritoke/quickheadlines.git
+cd quickheadlines
+make build
+```
+
+#### Fedora / RHEL
+
+```bash
+# Install Crystal compiler
+curl -fsSL https://crystal-lang.org/install.sh | sudo bash
+
+# Install system dependencies
+sudo dnf install -y sqlite-devel openssl-devel pkg-config
+
+# Clone and build
+git clone https://github.com/kritoke/quickheadlines.git
+cd quickheadlines
+make build
+```
+
+#### Arch Linux
+
+```bash
+# Install Crystal and dependencies
+sudo pacman -S crystal sqlite openssl pkg-config
+
+# Clone and build
+git clone https://github.com/kritoke/quickheadlines.git
+cd quickheadlines
+make build
+```
+
+#### macOS
+
+```bash
+# Install Crystal and dependencies via Homebrew
+brew install crystal openssl@3
+
+# Clone and build
+git clone https://github.com/kritoke/quickheadlines.git
+cd quickheadlines
+make build
+```
+
+#### FreeBSD
+
+```bash
+# Install Crystal and dependencies
+pkg install crystal shards sqlite3 openssl node npm gmake
+
+# Clone and build
+git clone https://github.com/kritoke/quickheadlines.git
+cd quickheadlines
+gmake build
+```
+
+### Build Commands
+
+- **Production Mode**: `make build` - Compiles optimized binary to `bin/quickheadlines`
+- **Development Mode**: `make run` - Compiles and runs with live CSS reloading
+- **Check Dependencies**: `make check-deps` - Verify all required dependencies are installed
+- **Clean Build**: `make clean && make build` - Remove all build artifacts and rebuild
+
+### Running the Application
+
+```bash
+# Run the compiled binary
+./bin/quickheadlines
+
+# Or use development mode
+make run
+```
+
+The application will:
+1. Auto-download `feeds.yml` from GitHub if missing
+2. Create SQLite cache database on first run
+3. Start listening on port 3030 on localhost unless you changed the port in the `feeds.yml` file.
+
 ## Usage
 
 Edit the `feeds.yml` file to add your own content. It only requires a feed title and URL; other properties have sane defaults.
 
-If you are compiling from source:
-
-- **Production Mode**: Run `make build` to compile, then run `./bin/quickheadlines`.
-- **Development Mode**: Run `make run` to automatically compile and execute.
-
-Example ```feeds.yml```:
+Example `feeds.yml`:
 
 ```
 refresh_minutes: 10 # optional, defaults to 10

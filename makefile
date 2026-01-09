@@ -43,9 +43,70 @@ ifeq ($(UNAME_M),aarch64)
 	ARCH_NAME = arm64
 endif
 
-.PHONY: all build run clean css css-dev tailwind-download build-release
+.PHONY: all build run clean css css-dev tailwind-download build-release check-deps
 
 all: build
+
+# Check for required dependencies
+check-deps:
+	@echo "Checking dependencies..."
+	@command -v $(CRYSTAL) >/dev/null 2>&1 || { \
+		echo "❌ Error: Crystal compiler not found"; \
+		echo ""; \
+		echo "Install Crystal:"; \
+		echo "  macOS:   brew install crystal"; \
+		echo "  Ubuntu:  curl -fsSL https://crystal-lang.org/install.sh | sudo bash"; \
+		echo "  FreeBSD: pkg install crystal"; \
+		echo ""; \
+		echo "See https://crystal-lang.org/install/ for details"; \
+		exit 1; \
+	}
+	@echo "✓ Crystal compiler: $$($(CRYSTAL) --version)"
+	@if [ "$(OS_NAME)" = "linux" ]; then \
+		pkg-config --exists sqlite3 || { \
+			echo "❌ Error: SQLite3 development files not found"; \
+			echo ""; \
+			echo "Install SQLite3:"; \
+			echo "  Ubuntu/Debian: sudo apt-get install libsqlite3-dev"; \
+			echo "  Fedora/RHEL:   sudo dnf install sqlite-devel"; \
+			echo "  Arch:          sudo pacman -S sqlite"; \
+			exit 1; \
+		}; \
+		echo "✓ SQLite3 development files found"; \
+	fi
+	@if [ "$(OS_NAME)" = "freebsd" ]; then \
+		pkg info -e sqlite3 >/dev/null 2>&1 || { \
+			echo "❌ Error: SQLite3 not found"; \
+			echo ""; \
+			echo "Install SQLite3:"; \
+			echo "  FreeBSD: sudo pkg install sqlite3"; \
+			exit 1; \
+		}; \
+		echo "✓ SQLite3 found"; \
+	fi
+	@if [ "$(OS_NAME)" = "linux" ]; then \
+		pkg-config --exists openssl || { \
+			echo "❌ Error: OpenSSL development files not found"; \
+			echo ""; \
+			echo "Install OpenSSL:"; \
+			echo "  Ubuntu/Debian: sudo apt-get install libssl-dev"; \
+			echo "  Fedora/RHEL:   sudo dnf install openssl-devel"; \
+			echo "  Arch:          sudo pacman -S openssl"; \
+			exit 1; \
+		}; \
+		echo "✓ OpenSSL development files found"; \
+	fi
+	@if [ "$(OS_NAME)" = "freebsd" ]; then \
+		pkg info -e openssl >/dev/null 2>&1 || { \
+			echo "❌ Error: OpenSSL not found"; \
+			echo ""; \
+			echo "Install OpenSSL:"; \
+			echo "  FreeBSD: sudo pkg install openssl"; \
+			exit 1; \
+		}; \
+		echo "✓ OpenSSL found"; \
+	fi
+	@echo ""
 
 # --- Tasks ---
 
@@ -92,20 +153,20 @@ css-dev: tailwind-download
 
 # 3. Build Release Binary
 # Sets APP_ENV=production so the compiler embeds the generated CSS
-build: css
+build: check-deps css
 	@echo "Compiling release binary for $(OS_NAME)-$(ARCH_NAME)..."
 	@mkdir -p bin
 	APP_ENV=production $(CRYSTAL) build --release --no-debug $(CRYSTAL_BUILD_OPTS) src/quickheadlines.cr -o bin/$(NAME)
 
 # 3.5 Build with specific OS/Arch naming for GitHub Releases
-build-release: css
+build-release: check-deps css
 	@echo "Compiling release binary: bin/$(NAME)-$(BUILD_REV)-$(OS_NAME)-$(ARCH_NAME)"
 	@mkdir -p bin
 	APP_ENV=production $(CRYSTAL) build --release --no-debug $(CRYSTAL_BUILD_OPTS) -Dversion=$(BUILD_REV) src/quickheadlines.cr -o bin/$(NAME)-$(BUILD_REV)-$(OS_NAME)-$(ARCH_NAME)
 
 # 4. Run in Development Mode
 # Sets APP_ENV=development and compiles CSS locally
-run: css-dev
+run: check-deps css-dev
 	@echo "Starting server in development mode..."
 	APP_ENV=development $(CRYSTAL) run src/quickheadlines.cr -- config=feeds.yml
 
