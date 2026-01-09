@@ -53,7 +53,13 @@ private def parse_rss_item(node : XML::Node) : Item
   title = "Untitled" if title.nil? || title.empty?
 
   link = node.xpath_node("./*[local-name()='link']").try(&.text) || "#"
-  pub_date = parse_time(node.xpath_node("./*[local-name()='pubDate']").try(&.text))
+
+  # Try pubDate first, then dc:date (Dublin Core), then other date elements
+  pub_date_str = node.xpath_node("./*[local-name()='pubDate']").try(&.text) ||
+                  node.xpath_node("./*[local-name()='date']").try(&.text) ||
+                  node.xpath_node(".//*[local-name()='date']").try(&.text)
+  pub_date = parse_time(pub_date_str)
+
   Item.new(title, link, pub_date)
 end
 

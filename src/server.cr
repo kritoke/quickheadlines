@@ -43,7 +43,7 @@ end
 def render_page(io : IO, active_tab : String = "all")
   title = STATE.config_title # ameba:disable Lint/UselessAssign
   css = CSS_TEMPLATE
-  updated_at = STATE.updated_at.to_s # ameba:disable Lint/UselessAssign
+  updated_at = STATE.updated_at.to_utc.to_s("%Y-%m-%dT%H:%M:%S%z") # ameba:disable Lint/UselessAssign
   tabs = STATE.tabs                  # ameba:disable Lint/UselessAssign
   is_development = IS_DEVELOPMENT    # ameba:disable Lint/UselessAssign
 

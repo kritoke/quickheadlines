@@ -25,15 +25,16 @@
           li
             a.feed-link.hover:underline href="#{HTML.escape(item.link)}" target="_blank" rel="noopener noreferrer"
               = item.title
-            - if item.version || item.pub_date
-              span.text-xs.text-slate-500.ml-2.dark:text-slate-400
-                - if version = item.version
-                  = version
-                  - if item.pub_date
-                    |  • 
-                - if date = item.pub_date
-                  span title="#{date.to_local.to_s("%A, %b %d, %Y at %I:%M %p")}"
-                    = relative_time(date)
+            span.text-xs.text-slate-500.ml-2.dark:text-slate-400
+              - if version = item.version
+                = version
+                - if item.pub_date
+                  |  •
+              - if date = item.pub_date
+                span title="#{date.to_local.to_s("%A, %b %d, %Y at %I:%M %p")}"
+                  = relative_time(date)
+              - elsif !item.version
+                = current_date_fallback
       - if feed.items.size >= 10 && feed.url != "software://releases"
         div.mt-4.text-center
           button.text-xs.font-medium.text-slate-500.hover:text-slate-800.dark:text-slate-400.dark:hover:text-slate-200.transition-colors.px-3.py-1.rounded-md.bg-slate-100.dark:bg-slate-800.hover:bg-slate-200.dark:hover:bg-slate-700 onclick="loadMore(this)" data-url="#{HTML.escape(feed.url)}" data-current-count="#{feed.items.size}"

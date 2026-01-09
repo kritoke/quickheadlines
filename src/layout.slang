@@ -31,9 +31,11 @@ html
         div.flex.items-center.gap-3
           img.w-8.h-8(srcset="/favicon.svg 1x, /favicon.png 1x" src="/favicon.png" alt="Logo" width="32" height="32")
           h1.text-3xl.font-semibold.tracking-tight = title
-        button#theme-toggle(class="p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" onclick="toggleTheme()" aria-label="Toggle Theme")
-          span.dark:hidden 🌙
-          span.hidden.dark:inline ☀️
+        div.flex.items-center.gap-3
+          span#last-update-time.text-sm.text-slate-500.dark:text-slate-400 = last_updated_format(Time.parse_iso8601(updated_at))
+          button#theme-toggle(class="p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" onclick="toggleTheme()" aria-label="Toggle Theme")
+            span.dark:hidden 🌙
+            span.hidden.dark:inline ☀️
 
       nav.tab-container
         - tabs.each do |tab|
@@ -43,15 +45,13 @@ html
 
       section#feed-grid(class="grid w-full gap-4 md:gap-5 lg:gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 text-[0.95rem] md:text-[1rem]")
         - render_feed_boxes(io, active_tab)
-      p.updated.mt-3.text-sm.opacity-80.text-left
-        | Feeds last refreshed on #{updated_at}
     script
       |
         (function() {
           const intervalMs = 30000;
           let last = null;
           const grid = document.getElementById('feed-grid');
-          const label = document.querySelector('.updated');
+          const lastUpdateLabel = document.getElementById('last-update-time');
 
           window.toggleTheme = function() {
             const isDark = document.documentElement.classList.toggle('dark');
@@ -237,7 +237,18 @@ html
                 window.updateAdaptiveColors();
               window.updateScrollShadows();
                 const d = new Date(parseInt(v));
-                if (label) label.innerText = "Feeds last refreshed on " + d.toLocaleString();
+                if (lastUpdateLabel) {
+                  const localDate = new Date(d.toLocaleString('en-US', { timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone }));
+                  lastUpdateLabel.innerText = localDate.toLocaleString('en-US', {
+                    hour: 'numeric',
+                    minute: '2-digit',
+                    hour12: true,
+                    timeZoneName: 'short',
+                    month: 'long',
+                    day: 'numeric',
+                    year: 'numeric'
+                  });
+                }
                 last = v;
               }
             } catch (_) {}
