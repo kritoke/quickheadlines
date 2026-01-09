@@ -5,22 +5,70 @@ require "time"
 require "mutex"
 require "./models"
 
-# Cache directory and database file paths
-CACHE_DIR             = "cache"
-FEED_CACHE_DB         = File.join(CACHE_DIR, "feed_cache.db")
 CACHE_RETENTION_HOURS = 24
 
-# Ensure cache directory exists
-def ensure_cache_dir
-  Dir.mkdir(CACHE_DIR) unless Dir.exists?(CACHE_DIR)
+# Get cache directory from various sources with fallbacks
+def get_cache_dir(config : Config?) : String
+  # 1. Check environment variable
+  if env_dir = ENV.fetch("QUICKHEADLINES_CACHE_DIR", nil)
+    return env_dir
+  end
+
+  # 2. Check config file setting
+  if config_dir = config.try(&.cache_dir)
+    return config_dir
+  end
+
+  # 3. Use XDG cache directory
+  if xdg_cache = ENV.fetch("XDG_CACHE_HOME", nil)
+    return File.join(xdg_cache, "quickheadlines")
+  end
+
+  # 4. Fallback to platform-specific home cache
+  home = ENV.fetch("HOME", nil)
+  if home
+    return File.join(home, ".cache", "quickheadlines")
+  end
+
+  # 5. Last resort: current directory
+  "cache"
+end
+
+# Get database file path
+def get_cache_db_path(config : Config?) : String
+  cache_dir = get_cache_dir(config)
+  File.join(cache_dir, "feed_cache.db")
+end
+
+# Ensure cache directory exists with proper error handling
+def ensure_cache_dir(cache_dir : String)
+  unless Dir.exists?(cache_dir)
+    begin
+      Dir.mkdir_p(cache_dir)
+      STDERR.puts "[#{Time.local}] Created cache directory: #{cache_dir}"
+    rescue ex : File::AccessDeniedError
+      STDERR.puts "Error: Cannot create cache directory '#{cache_dir}': Permission denied"
+      STDERR.puts ""
+      STDERR.puts "Solutions:"
+      STDERR.puts "  1. Set QUICKHEADLINES_CACHE_DIR to a writable location"
+      STDERR.puts "  2. Add 'cache_dir: /path/to/cache' to your feeds.yml"
+      STDERR.puts "  3. Run in a directory where you have write permissions"
+      exit 1
+    rescue ex : Exception
+      STDERR.puts "Error: Cannot create cache directory '#{cache_dir}': #{ex.message}"
+      exit 1
+    end
+  end
 end
 
 # Get or create database connection
-def get_db(&) : DB::Database
-  ensure_cache_dir
+def get_db(config : Config?, &)
+  cache_dir = get_cache_dir(config)
+  ensure_cache_dir(cache_dir)
+  db_path = get_cache_db_path(config)
 
   # Open database using DB interface
-  DB.open("sqlite3", FEED_CACHE_DB) do |db|
+  DB.open("sqlite3", db_path) do |db|
     yield db
   end
 end
@@ -65,10 +113,12 @@ def create_schema(db : DB::Database)
 end
 
 # Initialize database on first run
-def init_db
-  ensure_cache_dir
+def init_db(config : Config?)
+  cache_dir = get_cache_dir(config)
+  ensure_cache_dir(cache_dir)
+  db_path = get_cache_db_path(config)
 
-  DB.open("sqlite3://#{FEED_CACHE_DB}") do |db|
+  DB.open("sqlite3://#{db_path}") do |db|
     create_schema(db)
   end
 end
@@ -77,13 +127,18 @@ end
 class FeedCache
   @mutex : Mutex
   @db : DB::Database
+  @db_path : String
 
-  def initialize
+  def initialize(config : Config?)
     @mutex = Mutex.new
+    cache_dir = get_cache_dir(config)
+    ensure_cache_dir(cache_dir)
+    @db_path = get_cache_db_path(config)
+
     # Open a single long-lived connection
-    @db = DB.open("sqlite3://#{FEED_CACHE_DB}")
+    @db = DB.open("sqlite3://#{@db_path}")
     create_schema(@db)
-    STDERR.puts "[#{Time.local}] Database initialized: #{FEED_CACHE_DB}"
+    STDERR.puts "[#{Time.local}] Database initialized: #{@db_path}"
   end
 
   # Add a feed and its items to the cache
@@ -325,19 +380,21 @@ class FeedCache
 end
 
 # Load cache from disk (returns FeedCache instance)
-def load_feed_cache : FeedCache
-  ensure_cache_dir
+def load_feed_cache(config : Config?) : FeedCache
+  cache_dir = get_cache_dir(config)
+  ensure_cache_dir(cache_dir)
+  db_path = get_cache_db_path(config)
 
   # Initialize DB if first run
-  init_db unless File.exists?(FEED_CACHE_DB)
+  init_db(config) unless File.exists?(db_path)
 
-  cache = FeedCache.new
+  cache = FeedCache.new(config)
 
   # Clean up old entries on load
   cache.cleanup_old_entries
 
   # Vacuum if database is getting large
-  if File.size(FEED_CACHE_DB) > 10 * 1024 * 1024 # 10MB
+  if File.size(db_path) > 10 * 1024 * 1024 # 10MB
     cache.vacuum
   end
 

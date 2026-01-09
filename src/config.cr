@@ -46,6 +46,9 @@ struct Config
   # Wev Server Port (optional, default: 3030)
   property server_port : Int32 = 3030
 
+  # Cache directory path (optional, defaults to XDG cache or ./cache)
+  property cache_dir : String?
+
   property feeds : Array(Feed) = [] of Feed
 
   property software_releases : SoftwareConfig?

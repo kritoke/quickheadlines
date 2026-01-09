@@ -45,7 +45,7 @@ initial_config = load_config(config_path)
 state = ConfigState.new(initial_config, file_mtime(config_path))
 
 # Load feed cache from disk (creates SQLite connection)
-FeedCache.instance = load_feed_cache
+FeedCache.instance = load_feed_cache(initial_config)
 puts "[#{Time.local}] Loaded #{FeedCache.instance.size} feeds from cache"
 
 # Initial load so the first request sees real data

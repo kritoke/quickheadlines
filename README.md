@@ -108,6 +108,14 @@ cd quickheadlines
 gmake build
 ```
 
+#### FreeBSD Jail Deployment (Bastille)
+
+For automated FreeBSD jail deployment, the project includes:
+- **misc/Bastillefile** - Bastille template for automated jail creation and configuration
+- **misc/quickheadlines** - rc.d script for service management and supervision
+
+These files set up the service user, cache directory at `/var/cache/quickheadlines`, and proper TLS certificates for feed fetching.
+
 ### Build Commands
 
 - **Production Mode**: `make build` - Compiles optimized binary to `bin/quickheadlines`
@@ -129,6 +137,34 @@ The application will:
 1. Auto-download `feeds.yml` from GitHub if missing
 2. Create SQLite cache database on first run
 3. Start listening on port 3030 on localhost unless you changed the port in the `feeds.yml` file.
+
+### Cache Directory Configuration
+
+QuickHeadlines stores feed data in an SQLite database for better performance. The cache directory location is determined by the following priority:
+
+1. **Environment variable** `QUICKHEADLINES_CACHE_DIR`
+2. **Config file** option `cache_dir` in `feeds.yml`
+3. **XDG cache directory** `~/.cache/quickheadlines` (or `$XDG_CACHE_HOME/quickheadlines`)
+4. **Fallback** `./cache` in the current directory
+
+#### Setting the Cache Directory
+
+**Via environment variable:**
+```bash
+export QUICKHEADLINES_CACHE_DIR=/var/cache/quickheadlines
+./quickheadlines
+```
+
+**Via feeds.yml:**
+```yaml
+cache_dir: /var/cache/quickheadlines
+```
+
+**For production/Docker/jails:**
+Use `/var/cache/quickheadlines` and ensure the directory is writable by the application user. The included FreeBSD Bastille template sets this up automatically.
+
+**For development:**
+The default `~/.cache/quickheadlines` location works well for local development.
 
 ## Usage
 

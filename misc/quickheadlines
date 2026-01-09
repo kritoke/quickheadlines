@@ -1,0 +1,79 @@
+#!/bin/sh
+# PROVIDE: quickheadlines
+# REQUIRE: LOGIN
+# KEYWORD: shutdown
+
+. /etc/rc.subr
+
+name="quickheadlines"
+rcvar="quickheadlines_enable"
+
+load_rc_config $name
+
+: ${quickheadlines_enable:="NO"}
+: ${quickheadlines_svcuser:="qh"}
+: ${quickheadlines_env:=""}
+: ${quickheadlines_dir:="/usr/local/share/quickheadlines"}
+: ${quickheadlines_piddir:="/var/run/quickheadlines"}
+: ${quickheadlines_logdir:="/var/log/quickheadlines"}
+: ${quickheadlines_cachedir:="/var/cache/quickheadlines"}
+
+# rc.subr integration
+pidfile="${quickheadlines_piddir}/${name}.pid"
+required_dirs="${quickheadlines_dir} ${quickheadlines_piddir} ${quickheadlines_logdir} ${quickheadlines_cachedir}"
+command="/usr/sbin/daemon"
+procname="${quickheadlines_dir}/quickheadlines"
+quickheadlines_chdir="${quickheadlines_dir}"
+
+
+# Make CA bundle discoverable for TLS
+export SSL_CERT_FILE="/usr/local/share/certs/ca-root-nss.crt"
+export SSL_CERT_DIR="/usr/local/share/certs"
+
+# daemon(8) will:
+#  -S: supervise and restart if it exits
+#  -u: run as service user
+#  -p: create/manage pidfile
+#  -o: append to logfile
+#  -f: run in foreground (daemon will background itself)
+#  -c: change to this directory before running the command
+command_args="-S -u ${quickheadlines_svcuser} -p ${pidfile} -o ${quickheadlines_logdir}/${name}.log -f ${procname} ${quickheadlines_dir}/feeds.yml"
+
+start_precmd="${name}_prestart"
+stop_postcmd="${name}_poststop"
+
+quickheadlines_prestart()
+{
+    # Export user-provided env vars like: quickheadlines_env="GC_MARKERS=1 FOO=bar"
+    if [ -n "${quickheadlines_env}" ]; then
+        for _kv in ${quickheadlines_env}; do
+            export "${_kv}"
+        done
+    fi
+
+    # Ensure runtime directories exist with correct ownership/permissions
+    install -d -o "${quickheadlines_svcuser}" -g "${quickheadlines_svcuser}" -m 755 "${quickheadlines_piddir}" || return 1
+    install -d -o "${quickheadlines_svcuser}" -g "${quickheadlines_svcuser}" -m 755 "${quickheadlines_logdir}" || return 1
+    install -d -o "${quickheadlines_svcuser}" -g "${quickheadlines_svcuser}" -m 755 "${quickheadlines_cachedir}" || return 1
+
+    # Ensure the binary exists and is executable
+    if [ ! -x "${procname}" ]; then
+        echo "${name}: missing or non-executable ${procname}" >&2
+        return 1
+    fi
+
+    # Do NOT pre-create the pidfile; daemon(8) will handle it atomically
+    # Also don't chown/chmod the binary tree here; keep rc.d fast/minimal
+}
+
+quickheadlines_poststop()
+{
+    # Clean up stale pidfile if the process is not running
+    if [ -f "${pidfile}" ]; then
+        if ! pgrep -F "${pidfile}" >/dev/null 2>&1; then
+            rm -f "${pidfile}"
+        fi
+    fi
+}
+
+run_rc_command "$1"

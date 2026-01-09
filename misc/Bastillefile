@@ -9,8 +9,9 @@ CMD ln -sf /usr/local/share/certs/ca-root-nss.crt /etc/ssl/cert.pem
 # 2. Create the application directory
 CMD mkdir -p /usr/local/share/quickheadlines
 
-# 3. Build the application and add a GC env variable
-CMD sysrc quickheadlines_env="GC_MARKERS=1 GC_FREE_SPACE_DIVISOR=20"
+# 3. Create cache directory and build the application
+CMD mkdir -p /var/cache/quickheadlines
+CMD sysrc quickheadlines_env="GC_MARKERS=1 GC_FREE_SPACE_DIVISOR=20 QUICKHEADLINES_CACHE_DIR=/var/cache/quickheadlines"
 CMD git clone https://github.com/kritoke/quickheadlines.git /tmp/qh
 CMD cd /tmp/qh && npm install @tailwindcss/cli tailwindcss && shards install --production
 CMD cd /tmp/qh && gmake build
@@ -25,7 +26,7 @@ CMD rm -rf /tmp/qh
 
 # 6. Create user and set permissions
 CMD pw useradd qh -d /usr/local/share/quickheadlines -s /usr/sbin/nologin || true
-CMD chown -R qh:qh /usr/local/share/quickheadlines
+CMD chown -R qh:qh /usr/local/share/quickheadlines /var/cache/quickheadlines
 
 # 7. Setup Service
 CP usr /

@@ -46,7 +46,7 @@ class FeedCache
   @@instance : FeedCache?
 
   def self.instance : FeedCache
-    @@instance ||= FeedCache.new
+    @@instance ||= FeedCache.new(nil)
   end
 
   def self.instance=(cache : FeedCache)
