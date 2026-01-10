@@ -28,12 +28,12 @@ html
   body(class="bg-surface-light text-slate-800 dark:bg-surface-dark dark:text-slate-100 text-[15px] md:text-[16px] leading-7")
     main(class="mx-auto max-w-[1600px] px-4 md:px-12 lg:px-24")
       header(class="mb-4")
-        div(class="flex items-center justify-between py-3 border-b border-slate-200 dark:border-slate-700")
-          div.flex.items-center.gap-3
+        div(class="flex flex-col md:flex-row md:items-center justify-between py-3 border-b border-slate-200 dark:border-slate-700 gap-2 md:gap-0")
+          div.flex.items-center.gap-3.w-full.md:w-auto
             img.w-8.h-8(srcset="/favicon.svg 1x, /favicon.png 1x" src="/favicon.png" alt="Logo" width="32" height="32")
-            h1.text-3xl.font-semibold.tracking-tight = title
-          div(class="flex items-center gap-3 bg-slate-100 dark:bg-slate-800 px-3 py-1.5 rounded-full border border-slate-200 dark:border-slate-700")
-            span#last-update-time(class="text-sm font-medium text-slate-600 dark:text-slate-300 mr-1" title="Last updated time")
+            h1.text-2xl.md:text-3xl.font-semibold.tracking-tight = title
+          div(class="flex items-center justify-between md:justify-end gap-3 w-full md:w-auto bg-slate-100 dark:bg-slate-800 px-3 py-1.5 rounded-full border border-slate-200 dark:border-slate-700")
+            span#last-update-time(class="text-[0.7rem] md:text-sm font-medium text-slate-600 dark:text-slate-300 mr-1" title="Last updated time")
               = last_updated_format(Time.parse_iso8601(updated_at))
             button#theme-toggle(class="p-1.5 rounded-md hover:bg-slate-200 dark:hover:bg-slate-700 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-slate-300 dark:focus:ring-slate-600" aria-label="Toggle Theme" onclick="toggleTheme()")
               span(class="text-slate-700 dark:hidden transition-transform duration-200 hover:scale-110 inline-block") 🌙
@@ -54,6 +54,7 @@ html
           let last = null;
           const grid = document.getElementById('feed-grid');
           const lastUpdateLabel = document.getElementById('last-update-time');
+          window.feedHeaderCache = window.feedHeaderCache || {};
 
           window.toggleTheme = function() {
             const isDark = document.documentElement.classList.toggle('dark');
@@ -123,11 +124,22 @@ html
             const colorThief = new ColorThief();
 
             document.querySelectorAll('.feed-header').forEach(header => {
-              if (header.dataset.adaptive) return;
               if (header.dataset.hasCustomColor === 'true') return;
 
+              const link = header.querySelector('a.feed-title-link');
+              const feedUrl = link ? link.href : null;
+
+              if (feedUrl && window.feedHeaderCache[feedUrl]) {
+                const cached = window.feedHeaderCache[feedUrl];
+                header.style.backgroundColor = cached.bg;
+                header.style.color = cached.text;
+                if (link) link.style.color = cached.text;
+                header.dataset.adaptive = 'true';
+                return;
+              }
+
               const img = header.querySelector('img');
-              if (!img || !img.getAttribute('src')) return;
+              if (!img || !img.getAttribute('src') || header.dataset.adaptive) return;
 
               const proxy = new Image();
               proxy.crossOrigin = 'Anonymous';
@@ -162,11 +174,15 @@ html
                   const [r, g, b] = color;
                   const yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
                   const textColor = (yiq >= 128) ? '#1f2937' : '#ffffff';
+                  const bgColor = 'rgb(' + r + ',' + g + ',' + b + ')';
 
-                  header.style.backgroundColor = 'rgb(' + r + ',' + g + ',' + b + ')';
+                  header.style.backgroundColor = bgColor;
                   header.style.color = textColor;
-                  const link = header.querySelector('a');
                   if (link) link.style.color = textColor;
+
+                  if (feedUrl) {
+                    window.feedHeaderCache[feedUrl] = { bg: bgColor, text: textColor };
+                  }
 
                   header.dataset.adaptive = 'true';
                 } catch (e) {}
@@ -259,4 +275,4 @@ html
           window.updateAdaptiveColors();
           window.updateScrollShadows();
           setInterval(check, intervalMs);
-        })();
+        })();```

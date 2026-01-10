@@ -1,6 +1,13 @@
 require "http/server"
 require "slang"
 
+# Require local dependencies that are used in this file
+require "./config"
+require "./fetcher"
+require "./models"
+require "./storage"
+require "./utils"
+
 # ----- Compile-time embedded templates -----
 
 {% if env("APP_ENV") == "production" %}
@@ -61,10 +68,18 @@ def handle_feed_more(context : HTTP::Server::Context)
     if feed_config = all_feeds.find { |feed| feed.url == url }
       # Force fetch with new limit (pass nil for previous_data to avoid 304 and force re-parse)
       data = fetch_feed(feed_config, limit, nil)
-      context.response.content_type = "text/html; charset=utf-8"
-      feeds = [data]            # ameba:disable Lint/UselessAssign
-      releases = [] of FeedData # ameba:disable Lint/UselessAssign
-      Slang.embed("src/feed_boxes.slang", "context.response")
+      
+      # Check if fetch returned valid data to prevent crashing
+      if data
+        context.response.content_type = "text/html; charset=utf-8"
+        feeds = [data]            # ameba:disable Lint/UselessAssign
+        releases = [] of FeedData # ameba:disable Lint/UselessAssign
+        Slang.embed("src/feed_boxes.slang", "context.response")
+      else
+        context.response.content_type = "text/plain; charset=utf-8"
+        context.response.status_code = 500
+        context.response.print "Error fetching feed data"
+      end
     else
       context.response.status_code = 404
     end
