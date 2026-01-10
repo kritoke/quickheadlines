@@ -15,3 +15,7 @@ assets/css/development.css
 # Beads issue tracking (managed on beads-sync branch)
 .beads/cache/
 .beads/
+.aider*
+
+# bv (beads viewer) local config and caches
+.bv/

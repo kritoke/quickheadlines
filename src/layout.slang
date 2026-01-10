@@ -124,7 +124,15 @@ html
             const colorThief = new ColorThief();
 
             document.querySelectorAll('.feed-header').forEach(header => {
-              if (header.dataset.hasCustomColor === 'true') return;
+              // Check if a custom color is explicitly set in the config.
+              // If the attribute is true but the style is transparent/empty (e.g., empty string in config),
+              // we should treat it as "no custom color" and allow adaptive colors to run.
+              if (header.dataset.hasCustomColor === 'true') {
+                const bg = header.style.backgroundColor;
+                if (bg && bg !== 'transparent' && bg !== '' && bg !== 'rgba(0, 0, 0, 0)') {
+                  return; // A valid color is set, do not override
+                }
+              }
 
               const link = header.querySelector('a.feed-title-link');
               const feedUrl = link ? link.href : null;
@@ -138,7 +146,15 @@ html
                 return;
               }
 
-              const img = header.querySelector('img');
+              let img = header.querySelector('img');
+              // Fallback: If the image is not inside the header, search within the parent .feed-box
+              if (!img) {
+                const box = header.closest('.feed-box');
+                if (box) {
+                  img = box.querySelector('img');
+                }
+              }
+
               if (!img || !img.getAttribute('src') || header.dataset.adaptive) return;
 
               const proxy = new Image();
@@ -275,4 +291,4 @@ html
           window.updateAdaptiveColors();
           window.updateScrollShadows();
           setInterval(check, intervalMs);
-        })();```
+        })();``````
