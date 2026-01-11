@@ -119,7 +119,8 @@ private def resolve_favicon(feed : Feed, site_link : String, parsed_favicon : St
     begin
       # Clean up the site link to find a valid host for the favicon fallback
       if host = URI.parse(site_link.gsub(/\/feed\/?$/, "")).host
-        favicon = "https://www.google.com/s2/favicons?domain=#{host}&sz=128"
+        # Try favicon.ico directly from the site first (more reliable than Google's service)
+        favicon = "https://#{host}/favicon.ico"
       end
     rescue
     end
@@ -134,15 +135,24 @@ private def get_favicon(feed : Feed, site_link : String, parsed_favicon : String
   favicon_data = nil
   return {favicon, nil} unless favicon
 
-  # Check the shared cache first
-  if cached_data = FAVICON_CACHE.get(favicon)
-    # Convert base64 data URI to saved file if needed
-    favicon_data = convert_cached_data_uri(cached_data)
+  # Skip Google favicon URLs from cache - they return gray placeholders
+  # Force re-fetch from actual site instead
+  if favicon.includes?("google.com/s2/favicons")
+    # Don't check cache for Google favicons, force fresh fetch
+    if new_data = fetch_favicon_uri(favicon)
+      favicon_data = new_data
+      # Store in shared cache
+      FAVICON_CACHE.set(favicon, new_data)
+    end
   elsif previous_data && previous_data.favicon == favicon && (prev_data = previous_data.favicon_data)
     # Use previous data if still valid
     favicon_data = convert_cached_data_uri(prev_data)
     # Store in shared cache
     FAVICON_CACHE.set(favicon, prev_data)
+  elsif cached_data = FAVICON_CACHE.get(favicon)
+    # Check the shared cache first
+    # Convert base64 data URI to saved file if needed
+    favicon_data = convert_cached_data_uri(cached_data)
   else
     # Fetch new favicon data
     if new_data = fetch_favicon_uri(favicon)
