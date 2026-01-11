@@ -49,8 +49,8 @@ html
           div.flex.items-center.gap-3.w-full.md:w-auto
             img.w-8.h-8(srcset="/favicon.svg 1x, /favicon.png 1x" src="/favicon.png" alt="Logo" width="32" height="32")
             h1.text-2xl.md:text-3xl.font-semibold.tracking-tight = title
-          div(class="flex items-center justify-between md:justify-end gap-3 w-full md:w-auto bg-slate-100 dark:bg-slate-800 px-3 py-1.5 rounded-full border border-slate-200 dark:border-slate-700")
-            span#last-update-time(class="text-[0.7rem] md:text-sm font-medium text-slate-600 dark:text-slate-300 mr-1" title="Last updated time")
+          div(class="flex items-center justify-end gap-0.25 md:justify-between md:gap-3 w-full md:w-auto bg-slate-100 dark:bg-slate-800 px-2 py-1.5 md:px-3 md:py-1.5 rounded-full border border-slate-200 dark:border-slate-700")
+            span#last-update-time(class="text-sm font-medium text-slate-600 dark:text-slate-300 mr-1" title="Last updated time")
               = last_updated_format(Time.parse_iso8601(updated_at))
             a#timeline-link(href="/timeline" class="p-1.5 rounded-md hover:bg-slate-200 dark:hover:bg-slate-700 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-slate-300 dark:focus:ring-slate-600 flex items-center justify-center" aria-label="View Timeline" title="View Timeline")
               svg.w-5.h-5(viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" class="text-slate-700 dark:text-slate-300")
@@ -63,7 +63,7 @@ html
       nav.tab-container
         - tabs.each do |tab|
           - is_active = (active_tab == tab.name)
-          a(class="tab-link #{is_active ? "active" : ""}" href="/?tab=#{tab.name}" onclick="switchTab(event, '#{tab.name}')")
+          a(class="tab-link text-lg md:text-2xl #{is_active ? "active" : ""}" href="/?tab=#{tab.name}" onclick="switchTab(event, '#{tab.name}')")
             = tab.name
 
       section#feed-grid(class="grid w-full gap-4 md:gap-5 lg:gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 text-[0.95rem] md:text-[1rem]")

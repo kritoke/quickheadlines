@@ -30,11 +30,9 @@ div.timeline-container.max-w-6xl.mx-auto.px-4.pb-8
           - elsif (fav = timeline_item.favicon) && !fav.empty?
             img.inline.mr-1.align-middle.rounded-sm.bg-white.dark:bg-slate-300.p-0_5 src="#{fav}" alt="" style="width: 12px; height: 12px; object-fit: contain;"
           = timeline_item.feed_title
-        span.mx-3.text-slate-400.dark:text-slate-600
+        span.text-slate-400.dark:text-slate-600
           | •
-        span.ml-4
-        a.timeline-link.text-lg.font-medium.text-slate-900.dark:text-slate-100.hover:text-blue-600.dark:hover:text-blue-400 href="#{HTML.escape(timeline_item.item.link)}" target="_blank" rel="noopener noreferrer"
-          = timeline_item.item.title
+        a.timeline-link.text-xs.md:text-sm.font-medium.text-slate-900.dark:text-slate-100.hover:text-blue-600.dark:hover:text-blue-400 href="#{HTML.escape(timeline_item.item.link)}" target="_blank" rel="noopener noreferrer" = timeline_item.item.title
 
   - if has_more
     div.mt-8.text-center

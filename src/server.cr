@@ -51,10 +51,10 @@ def render_feed_boxes(io : IO, active_tab : String? = nil)
 end
 
 def render_page(io : IO, active_tab : String = "all")
-  title = STATE.config_title                    # ameba:disable Lint/UselessAssign
+  title = STATE.config_title # ameba:disable Lint/UselessAssign
   css = CSS_TEMPLATE
   updated_at = STATE.updated_at.to_utc.to_s("%Y-%m-%dT%H:%M:%S%z") # ameba:disable Lint/UselessAssign
-  tabs = STATE.tabs                             # ameba:disable Lint/UselessAssign
+  tabs = STATE.tabs                                                # ameba:disable Lint/UselessAssign
 
   Slang.embed("src/layout.slang", "io")
 end
@@ -114,8 +114,8 @@ def handle_feed_more(context : HTTP::Server::Context)
 
         # Set render_full to false so the template returns only list items
         render_full = false
-        feeds = [full_data]        # ameba:disable Lint/UselessAssign
-        releases = [] of FeedData  # ameba:disable Lint/UselessAssign
+        feeds = [full_data]       # ameba:disable Lint/UselessAssign
+        releases = [] of FeedData # ameba:disable Lint/UselessAssign
         # Pass cumulative count for the Load More button
         total_item_count = trimmed_items.size
         Slang.embed("src/feed_boxes.slang", "context.response")
@@ -214,15 +214,15 @@ def handle_firehose(context : HTTP::Server::Context)
   context.response.content_type = "text/html; charset=utf-8"
 
   # Pass variables to template
-  timeline_items = items              # ameba:disable Lint/UselessAssign
-  has_more = max_index < total_count  # ameba:disable Lint/UselessAssign
-  next_offset = offset + limit        # ameba:disable Lint/UselessAssign
+  timeline_items = items             # ameba:disable Lint/UselessAssign
+  has_more = max_index < total_count # ameba:disable Lint/UselessAssign
+  next_offset = offset + limit       # ameba:disable Lint/UselessAssign
 
   Slang.embed("src/timeline.slang", "context.response")
 end
 
 def handle_timeline(context : HTTP::Server::Context)
-  title = STATE.config_title          # ameba:disable Lint/UselessAssign
+  title = STATE.config_title # ameba:disable Lint/UselessAssign
   css = CSS_TEMPLATE
   updated_at = STATE.updated_at.to_utc.to_s("%Y-%m-%dT%H:%M:%S%z") # ameba:disable Lint/UselessAssign
 
@@ -239,24 +239,23 @@ def handle_timeline(context : HTTP::Server::Context)
       item_date && item_date.to_local.to_s("%Y-%m-%d") == first_day
     end
 
-    timeline_items = one_day_items  # ameba:disable Lint/UselessAssign
-    has_more = all_items.size > one_day_items.size  # ameba:disable Lint/UselessAssign
-    next_offset = one_day_items.size  # ameba:disable Lint/UselessAssign
+    timeline_items = one_day_items                 # ameba:disable Lint/UselessAssign
+    has_more = all_items.size > one_day_items.size # ameba:disable Lint/UselessAssign
+    next_offset = one_day_items.size               # ameba:disable Lint/UselessAssign
   else
-    timeline_items = all_items[0...100]  # ameba:disable Lint/UselessAssign
+    timeline_items = all_items[0...100] # ameba:disable Lint/UselessAssign
     has_more = all_items.size > 100     # ameba:disable Lint/UselessAssign
-    next_offset = 100                  # ameba:disable Lint/UselessAssign
+    next_offset = 100                   # ameba:disable Lint/UselessAssign
   end
 
   # Pre-render the timeline content
   timeline_html = String.build { |fh_io| # ameba:disable Lint/UselessAssign
-    Slang.embed("src/timeline.slang", "fh_io")
-  }
+ Slang.embed("src/timeline.slang", "fh_io") }
 
   context.response.content_type = "text/html; charset=utf-8"
 
   # Pass timeline_html as a variable to the template
-  rendered_timeline = timeline_html  # ameba:disable Lint/UselessAssign
+  rendered_timeline = timeline_html # ameba:disable Lint/UselessAssign
 
   Slang.embed("src/timeline_page.slang", "context.response")
 end
