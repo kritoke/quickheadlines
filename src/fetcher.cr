@@ -1,6 +1,7 @@
 require "base64"
 require "gc"
 require "./software_fetcher"
+require "./favicon_storage"
 
 # ----- Favicon cache with size limits and expiration -----
 
@@ -61,6 +62,11 @@ end
 FAVICON_CACHE = FaviconCache.new
 
 def fetch_favicon_uri(url : String) : String?
+  # Check if we already have this favicon saved
+  if cached_url = FaviconStorage.get_or_fetch(url)
+    return cached_url
+  end
+
   current_url = url
   redirects = 0
 
@@ -86,8 +92,11 @@ def fetch_favicon_uri(url : String) : String?
           # Limit favicon downloads to 100KB to prevent memory exhaustion
           IO.copy(response.body_io, memory, limit: 100 * 1024)
           return if memory.size == 0
-          data = Base64.strict_encode(memory.to_slice)
-          return "data:#{content_type};base64,#{data}"
+
+          # Save favicon to disk and return URL
+          if saved_url = FaviconStorage.save_favicon(url, memory.to_slice, content_type)
+            return saved_url
+          end
         else
           return
         end
@@ -127,10 +136,11 @@ private def get_favicon(feed : Feed, site_link : String, parsed_favicon : String
 
   # Check the shared cache first
   if cached_data = FAVICON_CACHE.get(favicon)
-    favicon_data = cached_data
+    # Convert base64 data URI to saved file if needed
+    favicon_data = convert_cached_data_uri(cached_data)
   elsif previous_data && previous_data.favicon == favicon && (prev_data = previous_data.favicon_data)
     # Use previous data if still valid
-    favicon_data = prev_data
+    favicon_data = convert_cached_data_uri(prev_data)
     # Store in shared cache
     FAVICON_CACHE.set(favicon, prev_data)
   else
@@ -143,6 +153,16 @@ private def get_favicon(feed : Feed, site_link : String, parsed_favicon : String
   end
 
   {favicon, favicon_data}
+end
+
+# Convert base64 data URI to saved file URL if needed
+private def convert_cached_data_uri(data : String) : String
+  if data.starts_with?("data:image/")
+    if converted_url = FaviconStorage.convert_data_uri(data)
+      return converted_url
+    end
+  end
+  data
 end
 
 private def build_fetch_headers(feed : Feed, current_url : String, previous_data : FeedData?) : HTTP::Headers
@@ -191,31 +211,11 @@ end
 
 def fetch_feed(feed : Feed, item_limit : Int32, previous_data : FeedData? = nil) : FeedData
   # Check cache first
-  cache = FeedCache.instance
-  if cached = cache.get(feed.url)
-    if last_fetched = cache.get_fetched_time(feed.url)
-      # Use cache if fresh (within 5 minutes) AND has enough items
-      # If cache doesn't have enough items, we need to fetch more (e.g., for "Load More" button)
-      if cache_fresh?(last_fetched, 5) && cached.items.size >= item_limit
-        # Merge with existing favicon_data if available
-        if previous_data && previous_data.favicon_data
-          return FeedData.new(
-            cached.title,
-            cached.url,
-            cached.site_link,
-            cached.header_color,
-            cached.items,
-            cached.etag,
-            cached.last_modified,
-            cached.favicon,
-            previous_data.favicon_data
-          )
-        end
-        return cached
-      end
-    end
+  if cached_data = get_cached_feed(feed, item_limit, previous_data)
+    return cached_data
   end
 
+  cache = FeedCache.instance
   current_url = feed.url
   redirects = 0
 
@@ -252,6 +252,34 @@ def fetch_feed(feed : Feed, item_limit : Int32, previous_data : FeedData? = nil)
       return error_feed_data(feed, "Error: #{ex.class} - #{ex.message}")
     end
   end
+end
+
+# Get cached feed data if available and fresh enough
+private def get_cached_feed(feed : Feed, item_limit : Int32, previous_data : FeedData?) : FeedData?
+  cache = FeedCache.instance
+  return unless cached = cache.get(feed.url)
+  return unless last_fetched = cache.get_fetched_time(feed.url)
+
+  # Use cache if fresh (within 5 minutes) AND has enough items
+  # If cache doesn't have enough items, we need to fetch more (e.g., for "Load More" button)
+  return unless cache_fresh?(last_fetched, 5) && cached.items.size >= item_limit
+
+  # Merge with existing favicon_data if available
+  if previous_data && previous_data.favicon_data
+    return FeedData.new(
+      cached.title,
+      cached.url,
+      cached.site_link,
+      cached.header_color,
+      cached.items,
+      cached.etag,
+      cached.last_modified,
+      cached.favicon,
+      previous_data.favicon_data
+    )
+  end
+
+  cached
 end
 
 def refresh_all(config : Config)

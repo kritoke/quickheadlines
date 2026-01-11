@@ -1,9 +1,3 @@
 require "./spec_helper"
 
-describe Quickheadlines do
-  # TODO: Write tests
-
-  it "works" do
-    false.should eq(true)
-  end
-end
+# TODO: Write tests for favicon caching and storage

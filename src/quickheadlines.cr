@@ -15,6 +15,7 @@ require "./parser"
 require "./fetcher"
 require "./server"
 require "./storage"
+require "./favicon_storage"
 
 # ----- main -----
 
@@ -47,6 +48,9 @@ state = ConfigState.new(initial_config, file_mtime(config_path))
 # Load feed cache from disk (creates SQLite connection)
 FeedCache.instance = load_feed_cache(initial_config)
 puts "[#{Time.local}] Loaded #{FeedCache.instance.size} feeds from cache"
+
+# Initialize favicon storage directory
+FaviconStorage.init
 
 # Initial load so the first request sees real data
 refresh_all(state.config)

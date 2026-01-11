@@ -7,6 +7,7 @@ require "./fetcher"
 require "./models"
 require "./storage"
 require "./utils"
+require "./favicon_storage"
 
 # ----- Compile-time embedded templates -----
 
@@ -44,6 +45,7 @@ def render_feed_boxes(io : IO, active_tab : String? = nil)
   releases = active_tab ? STATE.releases_for_tab(active_tab) : STATE.software_releases # ameba:disable Lint/UselessAssign
 
   # total_item_count is nil for initial render, set for load more
+  # ameba:disable Lint/UselessAssign
   total_item_count = nil
 
   # Emit into the same IO variable name "io"
@@ -113,10 +115,12 @@ def handle_feed_more(context : HTTP::Server::Context)
         context.response.content_type = "text/html; charset=utf-8"
 
         # Set render_full to false so the template returns only list items
+        # ameba:disable Lint/UselessAssign
         render_full = false
         feeds = [full_data]       # ameba:disable Lint/UselessAssign
         releases = [] of FeedData # ameba:disable Lint/UselessAssign
         # Pass cumulative count for the Load More button
+        # ameba:disable Lint/UselessAssign
         total_item_count = trimmed_items.size
         Slang.embed("src/feed_boxes.slang", "context.response")
       else
@@ -249,20 +253,53 @@ def handle_timeline(context : HTTP::Server::Context)
   end
 
   # Pre-render the timeline content
-  timeline_html = String.build { |fh_io| # ameba:disable Lint/UselessAssign
- Slang.embed("src/timeline.slang", "fh_io") }
+  timeline_html = String.build do |_fh_io|
+    Slang.embed("src/timeline.slang", "_fh_io")
+  end
 
   context.response.content_type = "text/html; charset=utf-8"
 
   # Pass timeline_html as a variable to the template
-  rendered_timeline = timeline_html # ameba:disable Lint/UselessAssign
+  # ameba:disable Lint/UselessAssign
+  rendered_timeline = timeline_html
 
   Slang.embed("src/timeline_page.slang", "context.response")
 end
 
+def handle_favicon(context : HTTP::Server::Context, path : String)
+  # Extract filename from path
+  filename = path.lstrip("/favicons/")
+  filepath = File.join(FaviconStorage::FAVICON_DIR, filename)
+
+  if File.exists?(filepath)
+    # Determine content type based on extension
+    ext = File.extname(filename).lstrip('.')
+    content_type = case ext.downcase
+                   when "png"         then "image/png"
+                   when "jpg", "jpeg" then "image/jpeg"
+                   when "ico"         then "image/x-icon"
+                   when "svg"         then "image/svg+xml"
+                   when "webp"        then "image/webp"
+                   else                    "image/png"
+                   end
+
+    context.response.content_type = content_type
+    context.response.headers["Cache-Control"] = "public, max-age=31536000"
+    File.open(filepath) do |file|
+      IO.copy(file, context.response)
+    end
+  else
+    context.response.status_code = 404
+    context.response.content_type = "text/plain; charset=utf-8"
+    context.response.print "Favicon not found"
+  end
+end
+
 def start_server(port : Int32)
   server = HTTP::Server.new do |context|
-    case {context.request.method, context.request.path}
+    path = context.request.path
+
+    case {context.request.method, path}
     when {"GET", "/version"}
       handle_version(context)
     when {"GET", "/feeds"}
@@ -284,8 +321,12 @@ def start_server(port : Int32)
     when {"GET", "/"}
       handle_root(context)
     else
-      context.response.status_code = 404
-      context.response.print "404 Not Found"
+      if path.starts_with?("/favicons/")
+        handle_favicon(context, path)
+      else
+        context.response.status_code = 404
+        context.response.print "404 Not Found"
+      end
     end
   end
 
