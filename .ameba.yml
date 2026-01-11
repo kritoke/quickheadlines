@@ -1,0 +1,35 @@
+# AI-Optimized Ameba Configuration
+# Focuses on logic and safety while ignoring AI "flavor" choices
+
+# 1. Global Exclusions
+# Prevents Aider from wasting time trying to "fix" your dependencies or generated code
+Sources:
+  Excluded:
+    - lib/**
+    - bin/**
+
+# 2. Rules optimized for AI workflow
+Rules:
+  # AI often skips boilerplate documentation.
+  # We disable this to prevent Aider from constantly adding empty comments.
+  Documentation/Documentation:
+    Enabled: false
+
+  # AI-generated code often has long lines (especially in Kemal or HTML-heavy shards).
+  # We increase the limit to avoid constant refactoring.
+  Style/LineLength:
+    MaxLineLength: 120
+
+  # Logic & Safety: Keep these ENABLED and STRICT
+  # These help the AI catch "hallucinated" variables or methods
+  Lint/UselessAssign:
+    Enabled: true
+  Lint/UnusedArgument:
+    Enabled: true
+  Lint/ShadowingOuterLocalVar:
+    Enabled: true
+
+  # AI sometimes uses literal numbers. We keep this enabled but 
+  # set it to warning so it doesn't block a build if not strictly necessary.
+  Style/LargeNumbers:
+    Severity: Warning

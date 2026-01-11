@@ -51,11 +51,10 @@ def render_feed_boxes(io : IO, active_tab : String? = nil)
 end
 
 def render_page(io : IO, active_tab : String = "all")
-  title = STATE.config_title # ameba:disable Lint/UselessAssign
+  title = STATE.config_title                    # ameba:disable Lint/UselessAssign
   css = CSS_TEMPLATE
   updated_at = STATE.updated_at.to_utc.to_s("%Y-%m-%dT%H:%M:%S%z") # ameba:disable Lint/UselessAssign
-  tabs = STATE.tabs                                                # ameba:disable Lint/UselessAssign
-  is_development = IS_DEVELOPMENT                                  # ameba:disable Lint/UselessAssign
+  tabs = STATE.tabs                             # ameba:disable Lint/UselessAssign
 
   Slang.embed("src/layout.slang", "io")
 end
@@ -71,7 +70,7 @@ def handle_feed_more(context : HTTP::Server::Context)
 
     if feed_config = all_feeds.find { |feed| feed.url == url }
       cache = FeedCache.instance
-      
+
       # 1. Check if we have enough data in the cache to fulfill the request
       # We count the items currently stored for this URL.
       # Note: This is a rough check; if we have 100 items but they are old, we still show them.
@@ -201,6 +200,67 @@ def handle_root(context : HTTP::Server::Context)
   render_page(context.response, active_tab)
 end
 
+def handle_firehose(context : HTTP::Server::Context)
+  limit = context.request.query_params["limit"]?.try(&.to_i?) || 100
+  offset = context.request.query_params["offset"]?.try(&.to_i?) || 0
+
+  # Get all timeline items and apply pagination
+  all_items = STATE.all_firehose_items
+  total_count = all_items.size
+
+  max_index = Math.min(offset + limit, total_count)
+  items = all_items[offset...max_index]
+
+  context.response.content_type = "text/html; charset=utf-8"
+
+  # Pass variables to template
+  timeline_items = items              # ameba:disable Lint/UselessAssign
+  has_more = max_index < total_count  # ameba:disable Lint/UselessAssign
+  next_offset = offset + limit        # ameba:disable Lint/UselessAssign
+
+  Slang.embed("src/timeline.slang", "context.response")
+end
+
+def handle_timeline(context : HTTP::Server::Context)
+  title = STATE.config_title          # ameba:disable Lint/UselessAssign
+  css = CSS_TEMPLATE
+  updated_at = STATE.updated_at.to_utc.to_s("%Y-%m-%dT%H:%M:%S%z") # ameba:disable Lint/UselessAssign
+
+  # Get all timeline items and filter to show only one day by default
+  all_items = STATE.all_firehose_items
+
+  # Find items from the first day
+  if all_items.size > 0 && (first_item_date = all_items[0].item.pub_date)
+    first_day = first_item_date.to_local.to_s("%Y-%m-%d")
+
+    # Filter items to only show the first day
+    one_day_items = all_items.select do |item|
+      item_date = item.item.pub_date
+      item_date && item_date.to_local.to_s("%Y-%m-%d") == first_day
+    end
+
+    timeline_items = one_day_items  # ameba:disable Lint/UselessAssign
+    has_more = all_items.size > one_day_items.size  # ameba:disable Lint/UselessAssign
+    next_offset = one_day_items.size  # ameba:disable Lint/UselessAssign
+  else
+    timeline_items = all_items[0...100]  # ameba:disable Lint/UselessAssign
+    has_more = all_items.size > 100     # ameba:disable Lint/UselessAssign
+    next_offset = 100                  # ameba:disable Lint/UselessAssign
+  end
+
+  # Pre-render the timeline content
+  timeline_html = String.build { |fh_io| # ameba:disable Lint/UselessAssign
+    Slang.embed("src/timeline.slang", "fh_io")
+  }
+
+  context.response.content_type = "text/html; charset=utf-8"
+
+  # Pass timeline_html as a variable to the template
+  rendered_timeline = timeline_html  # ameba:disable Lint/UselessAssign
+
+  Slang.embed("src/timeline_page.slang", "context.response")
+end
+
 def start_server(port : Int32)
   server = HTTP::Server.new do |context|
     case {context.request.method, context.request.path}
@@ -210,6 +270,10 @@ def start_server(port : Int32)
       handle_feeds(context)
     when {"GET", "/feed_more"}
       handle_feed_more(context)
+    when {"GET", "/timeline"}
+      handle_timeline(context)
+    when {"GET", "/timeline_items"}
+      handle_firehose(context)
     when {"GET", "/favicon.png"}
       serve_bytes(context, FAVICON_PNG, "image/png")
     when {"GET", "/favicon.svg"}

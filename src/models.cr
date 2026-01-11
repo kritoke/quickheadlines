@@ -1,4 +1,5 @@
 record Item, title : String, link : String, pub_date : Time?, version : String? = nil
+record FirehoseItem, item : Item, feed_title : String, feed_url : String, feed_link : String, favicon : String?, favicon_data : String?, header_color : String?
 record FeedData, title : String, url : String, site_link : String, header_color : String?, items : Array(Item), etag : String? = nil, last_modified : String? = nil, favicon : String? = nil, favicon_data : String? = nil do
   def display_header_color
     (header_color.try(&.strip).presence) || "transparent"
@@ -32,6 +33,48 @@ class AppState
 
   def releases_for_tab(tab_name : String)
     tabs.find { |tab| tab.name == tab_name }.try(&.software_releases) || [] of FeedData
+  end
+
+  # Get all items from all feeds for firehose view, sorted by publication date (newest first)
+  def all_firehose_items : Array(FirehoseItem)
+    items = [] of FirehoseItem
+
+    # Add items from top-level feeds
+    feeds.each do |feed|
+      feed.items.each do |item|
+        items << FirehoseItem.new(
+          item,
+          feed.title,
+          feed.url,
+          feed.site_link,
+          feed.favicon,
+          feed.favicon_data,
+          feed.header_color
+        )
+      end
+    end
+
+    # Add items from all tab feeds
+    tabs.each do |tab|
+      tab.feeds.each do |feed|
+        feed.items.each do |item|
+          items << FirehoseItem.new(
+            item,
+            feed.title,
+            feed.url,
+            feed.site_link,
+            feed.favicon,
+            feed.favicon_data,
+            feed.header_color
+          )
+        end
+      end
+    end
+
+    # Sort by publication date (newest first), items without dates go to the end
+    items.sort_by do |firehose_item|
+      firehose_item.item.pub_date || Time.utc(1970, 1, 1)
+    end.reverse!
   end
 
   def update(updated_at : Time)

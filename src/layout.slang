@@ -52,7 +52,11 @@ html
           div(class="flex items-center justify-between md:justify-end gap-3 w-full md:w-auto bg-slate-100 dark:bg-slate-800 px-3 py-1.5 rounded-full border border-slate-200 dark:border-slate-700")
             span#last-update-time(class="text-[0.7rem] md:text-sm font-medium text-slate-600 dark:text-slate-300 mr-1" title="Last updated time")
               = last_updated_format(Time.parse_iso8601(updated_at))
-            button#theme-toggle(class="p-1.5 rounded-md hover:bg-slate-200 dark:hover:bg-slate-700 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-slate-300 dark:focus:ring-slate-600" aria-label="Toggle Theme" onclick="toggleTheme()")
+            a#timeline-link(href="/timeline" class="p-1.5 rounded-md hover:bg-slate-200 dark:hover:bg-slate-700 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-slate-300 dark:focus:ring-slate-600 flex items-center justify-center" aria-label="View Timeline" title="View Timeline")
+              svg.w-5.h-5(viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" class="text-slate-700 dark:text-slate-300")
+                circle(cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round")
+                path(d="M12 3v6l4 2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round")
+            button#theme-toggle(class="p-1.5 rounded-md hover:bg-slate-200 dark:hover:bg-slate-700 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-slate-300 dark:focus:ring-slate-600 flex items-center justify-center" aria-label="Toggle Theme" onclick="toggleTheme()")
               span(class="text-slate-700 dark:hidden transition-transform duration-200 hover:scale-110 inline-block") 🌙
               span(class="text-yellow-500 hidden dark:inline-block transition-transform duration-200 hover:scale-110") ☀️
 
