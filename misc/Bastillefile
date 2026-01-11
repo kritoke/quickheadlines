@@ -33,7 +33,7 @@ CMD pw useradd qh -d /usr/local/share/quickheadlines -s /usr/sbin/nologin || tru
 CMD chown -R qh:qh /usr/local/share/quickheadlines /var/cache/quickheadlines
 
 # 7. Setup Service
-CP usr /
+CP quickheadlines /usr/local/etc/rc.d/quickheadlines
 SYSRC quickheadlines_enable="YES"
 CMD chmod +x /usr/local/etc/rc.d/quickheadlines
 
