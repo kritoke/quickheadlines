@@ -87,7 +87,7 @@ jobs:
           docker run --rm --platform linux/${{ matrix.arch == 'x64' && 'amd64' || 'arm64' }} \
             --entrypoint /bin/sh \
             -v ${{ github.workspace }}:/app -w /app 84codes/crystal:latest-ubuntu-22.04 \
-            -c "apt-get update && apt-get install -y libxml2-dev libssl-dev libyaml-dev curl make && \
+            -c "apt-get update && apt-get install -y libxml2-dev libssl-dev libyaml-dev libsqlite3-dev curl make && \
             shards install --production && \
             make build-release OS_NAME=linux ARCH_NAME=${{ matrix.arch }} BUILD_REV=${{ github.ref_name }}"
 

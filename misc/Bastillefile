@@ -1,5 +1,9 @@
 # Bastillefile for quickheadlines (Persistence Optimized)
 
+# 0. Stop existing service before rebuilding (prevents build failures)
+CMD service quickheadlines stop || true
+CMD rm -rf /tmp/qh || true
+
 # 1. Install dependencies
 PKG crystal shards git openssl ca_root_nss node npm gmake curl sqlite3
 
@@ -32,3 +36,12 @@ CMD chown -R qh:qh /usr/local/share/quickheadlines /var/cache/quickheadlines
 CP usr /
 SYSRC quickheadlines_enable="YES"
 CMD chmod +x /usr/local/etc/rc.d/quickheadlines
+
+# 8. Start the service
+CMD service quickheadlines start
+
+# 9. Display service status and provide stop command info
+CMD echo "=== QuickHeadlines Service Started ==="
+CMD service quickheadlines status
+CMD echo ""
+CMD echo "To stop the service later, run: service quickheadlines stop"
