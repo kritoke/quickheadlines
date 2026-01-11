@@ -1,4 +1,4 @@
-div.timeline-container.max-w-6xl.mx-auto.px-4.py-8
+div.timeline-container.max-w-6xl.mx-auto.px-4.pb-8
   - current_day = nil
   - timeline_items.each do |timeline_item|
     - item_date = timeline_item.item.pub_date
@@ -7,8 +7,8 @@ div.timeline-container.max-w-6xl.mx-auto.px-4.py-8
       - if item_day != current_day
         - current_day = item_day
         .timeline-day-header.mt-8.mb-6
-          .timeline-day-badge.inline-block.rounded-lg.bg-slate-200.dark:bg-slate-700.px-4.py-2
-            h2.timeline-day.text-xl.font-bold.text-slate-800.dark:text-slate-200
+          .timeline-day-badge.inline-block.rounded-lg.bg-slate-200.dark:bg-indigo-900.px-4.py-2
+            h2.timeline-day.text-xl.font-bold.text-slate-800.dark:text-indigo-100
               = current_day
 
     .timeline-item.flex.items-start.gap-3.py-2.border-b.border-slate-200.dark:border-slate-700
