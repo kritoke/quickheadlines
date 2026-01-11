@@ -166,6 +166,32 @@ Use `/var/cache/quickheadlines` and ensure the directory is writable by the appl
 **For development:**
 The default `~/.cache/quickheadlines` location works well for local development.
 
+### Cache Retention & Size Limits
+
+QuickHeadlines automatically manages the SQLite cache database with configurable retention and size limits:
+
+- **Default retention**: 168 hours (1 week) - feeds not fetched within this period are automatically cleaned up
+- **Warning threshold**: 50MB - logs a warning when database exceeds this size
+- **Hard limit**: 100MB - automatically removes oldest entries when database exceeds this size
+
+#### Configuring Cache Retention
+
+Add `cache_retention_hours` to your `feeds.yml`:
+
+```yaml
+cache_retention_hours: 168  # 1 week (default)
+# cache_retention_hours: 720  # 30 days
+# cache_retention_hours: 24   # 1 day
+```
+
+The application will:
+1. Log database size on startup
+2. Clean up feeds older than the retention period on each refresh
+3. Automatically remove oldest entries if database exceeds 100MB
+4. Log cleanup actions with details
+
+**Note**: The cache retention setting is backwards compatible - if not specified, it defaults to 168 hours (1 week).
+
 ## Usage
 
 Edit the `feeds.yml` file to add your own content. It only requires a feed title and URL; other properties have sane defaults.
@@ -177,6 +203,7 @@ refresh_minutes: 10 # optional, defaults to 10
 item_limit: 10 # optional, defaults to 10
 server_port: 3030 # optional, defaults to 3030
 page_title: "Quick Headlines" # optional, defaults to Quick Headlines
+cache_retention_hours: 168 # optional, defaults to 168 (1 week)
 tabs:
   - name: "Tech"
     feeds:

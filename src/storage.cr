@@ -5,7 +5,11 @@ require "time"
 require "mutex"
 require "./models"
 
-CACHE_RETENTION_HOURS = 24
+CACHE_RETENTION_HOURS = 168
+
+# Database size limits (in bytes)
+DB_SIZE_WARNING_THRESHOLD = 50 * 1024 * 1024  # 50MB
+DB_SIZE_HARD_LIMIT        = 100 * 1024 * 1024 # 100MB
 
 # Get cache directory from various sources with fallbacks
 def get_cache_dir(config : Config?) : String
@@ -36,6 +40,49 @@ end
 # Get database file path
 def get_cache_db_path(config : Config?) : String
   File.join(get_cache_dir(config), "feed_cache.db")
+end
+
+# Get database file size in bytes
+def get_db_size(db_path : String) : Int64
+  if File.exists?(db_path)
+    File.size(db_path)
+  else
+    0_i64
+  end
+end
+
+# Format bytes to human-readable string
+def format_bytes(bytes : Int64) : String
+  units = ["B", "KB", "MB", "GB"]
+  size = bytes.to_f
+  unit_index = 0
+
+  while size >= 1024 && unit_index < units.size - 1
+    size /= 1024
+    unit_index += 1
+  end
+
+  rounded = size.round(2)
+  if rounded == rounded.to_i
+    "#{rounded.to_i} #{units[unit_index]}"
+  else
+    "#{rounded} #{units[unit_index]}"
+  end
+end
+
+# Log database size with warnings if needed
+def log_db_size(db_path : String, context : String = "")
+  size = get_db_size(db_path)
+  size_str = format_bytes(size)
+  context_msg = context.empty? ? "" : " (#{context})"
+
+  STDERR.puts "[#{Time.local}] Database size: #{size_str}#{context_msg}"
+
+  if size > DB_SIZE_HARD_LIMIT
+    STDERR.puts "[Cache WARNING] Database exceeds hard limit (#{format_bytes(DB_SIZE_HARD_LIMIT)})"
+  elsif size > DB_SIZE_WARNING_THRESHOLD
+    STDERR.puts "[Cache WARNING] Database exceeds warning threshold (#{format_bytes(DB_SIZE_WARNING_THRESHOLD)})"
+  end
 end
 
 # Ensure cache directory exists with proper error handling
@@ -164,6 +211,9 @@ class FeedCache
     @db = DB.open("sqlite3://#{@db_path}")
     create_schema(@db, @db_path)
     STDERR.puts "[#{Time.local}] Database initialized: #{@db_path}"
+
+    # Log database size on startup
+    log_db_size(@db_path, "on startup")
   end
 
   # Add a feed and its items to the cache
@@ -278,12 +328,11 @@ class FeedCache
         }
       end
 
-      return nil unless result
+      return unless result
 
       # Get feed_id
       feed_id_result = @db.query_one?("SELECT id FROM feeds WHERE url = ?", url, as: {Int64})
-      # ameba:disable Style/RedundantNilInControlExpression
-      return nil unless feed_id_result
+      return unless feed_id_result
       feed_id = feed_id_result
 
       # Get items
@@ -318,7 +367,7 @@ class FeedCache
   def get_fetched_time(url : String) : Time?
     @mutex.synchronize do
       result = @db.query_one?("SELECT last_fetched FROM feeds WHERE url = ?", url, as: {String})
-      return nil unless result
+      return unless result
 
       Time.parse(result, "%Y-%m-%d %H:%M:%S", Time::Location::UTC)
     end
@@ -340,11 +389,11 @@ class FeedCache
         }
       end
 
-      return nil unless result
+      return unless result
 
       # Get feed_id
       feed_id_result = @db.query_one?("SELECT id FROM feeds WHERE url = ?", url, as: {Int64})
-      return nil unless feed_id_result
+      return unless feed_id_result
       feed_id = feed_id_result
 
       # Get items slice ordered by pub_date descending
@@ -406,12 +455,64 @@ class FeedCache
   # Clean up old entries based on retention time
   def cleanup_old_entries(retention_hours : Int32 = CACHE_RETENTION_HOURS)
     @mutex.synchronize do
+      # Log size before cleanup
+      log_db_size(@db_path, "before cleanup")
+
       cutoff = (Time.utc - retention_hours.hours).to_s("%Y-%m-%d %H:%M:%S")
 
       # Delete feeds (cascade deletes items)
       result = @db.exec("DELETE FROM feeds WHERE last_fetched < ?", cutoff)
       deleted_count = result.rows_affected
       STDERR.puts "[#{Time.local}] Cleaned up #{deleted_count} old feeds (older than #{retention_hours}h)" if deleted_count > 0
+
+      # Log size after cleanup
+      log_db_size(@db_path, "after cleanup")
+    end
+  end
+
+  # Clean up oldest entries until database is under size limit
+  def cleanup_by_size(max_size : Int64)
+    @mutex.synchronize do
+      current_size = get_db_size(@db_path)
+
+      return if current_size <= max_size
+
+      STDERR.puts "[#{Time.local}] Database size (#{format_bytes(current_size)}) exceeds limit (#{format_bytes(max_size)}), cleaning up oldest entries..."
+
+      # Delete oldest items first, regardless of age
+      # We delete items in batches to avoid long-running transactions
+      total_deleted = 0
+
+      while current_size > max_size
+        # Delete oldest 1000 items
+        result = @db.exec(<<-SQL
+          DELETE FROM items
+          WHERE id IN (
+            SELECT id FROM items
+            ORDER BY pub_date ASC
+            LIMIT 1000
+          )
+          SQL
+        )
+        deleted = result.rows_affected
+        total_deleted += deleted
+
+        # Break if no more items to delete
+        break if deleted == 0
+
+        # Check size again
+        current_size = get_db_size(@db_path)
+
+        # Also clean up feeds with no items
+        @db.exec(<<-SQL
+          DELETE FROM feeds
+          WHERE id NOT IN (SELECT DISTINCT feed_id FROM items)
+          SQL
+        )
+      end
+
+      STDERR.puts "[#{Time.local}] Cleaned up #{total_deleted} items to reduce database size to #{format_bytes(current_size)}"
+      log_db_size(@db_path, "after size cleanup")
     end
   end
 
@@ -443,13 +544,11 @@ class FeedCache
       }
     end
 
-    # ameba:disable Style/RedundantNilInControlExpression
-    return nil unless result
+    return unless result
 
     # Get feed_id
     feed_id_result = @db.query_one?("SELECT id FROM feeds WHERE url = ?", url, as: {Int64})
-    # ameba:disable Style/RedundantNilInControlExpression
-    return nil unless feed_id_result
+    return unless feed_id_result
     feed_id = feed_id_result
 
     # Get items
@@ -491,11 +590,20 @@ def load_feed_cache(config : Config?) : FeedCache
 
   cache = FeedCache.new(config)
 
-  # Clean up old entries on load
-  cache.cleanup_old_entries
+  # Get retention hours from config or use default
+  retention_hours = config.try(&.cache_retention_hours) || CACHE_RETENTION_HOURS
 
-  # Vacuum if database is getting large
-  if File.size(db_path) > 10 * 1024 * 1024 # 10MB
+  # Clean up old entries on load
+  cache.cleanup_old_entries(retention_hours)
+
+  # Check if database exceeds hard limit and clean up by size if needed
+  db_size = get_db_size(db_path)
+  if db_size > DB_SIZE_HARD_LIMIT
+    cache.cleanup_by_size(DB_SIZE_HARD_LIMIT)
+  end
+
+  # Vacuum if database is getting large (over 10MB)
+  if db_size > 10 * 1024 * 1024
     cache.vacuum
   end
 
@@ -503,7 +611,7 @@ def load_feed_cache(config : Config?) : FeedCache
 end
 
 # Save cache (SQLite auto-commits, but we vacuum occasionally)
-def save_feed_cache(cache : FeedCache)
+def save_feed_cache(cache : FeedCache, retention_hours : Int32 = CACHE_RETENTION_HOURS)
   # SQLite saves immediately, but we can vacuum occasionally to optimize
   # This is called after each refresh to periodically optimize
   if rand(100) < 5 # 5% chance to vacuum
@@ -512,6 +620,11 @@ def save_feed_cache(cache : FeedCache)
     rescue ex
       # Vacuum can fail if database is locked, ignore
     end
+  end
+
+  # Periodically clean up old entries based on retention
+  if rand(100) < 10 # 10% chance to run cleanup
+    cache.cleanup_old_entries(retention_hours)
   end
 end
 

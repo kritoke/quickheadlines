@@ -43,11 +43,14 @@ struct Config
   # Feed Item Limit (optional, default: 10)
   property item_limit : Int32 = 10
 
-  # Wev Server Port (optional, default: 3030)
+  # Web Server Port (optional, default: 3030)
   property server_port : Int32 = 3030
 
   # Cache directory path (optional, defaults to XDG cache or ./cache)
   property cache_dir : String?
+
+  # Cache retention period in hours (default: 168 = 1 week)
+  property cache_retention_hours : Int32 = 168
 
   property feeds : Array(Feed) = [] of Feed
 

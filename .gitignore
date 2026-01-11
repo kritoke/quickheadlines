@@ -19,3 +19,9 @@ assets/css/development.css
 
 # bv (beads viewer) local config and caches
 .bv/
+
+# AI assistant files
+check_z_ai.cr
+CLAUDE.md
+AGENTS.md
+.gitattributes

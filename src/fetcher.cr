@@ -329,7 +329,7 @@ def start_refresh_loop(config_path : String)
   puts "[#{Time.local}] Initial refresh complete"
 
   # Save initial cache
-  save_feed_cache(FeedCache.instance)
+  save_feed_cache(FeedCache.instance, active_config.cache_retention_hours)
 
   spawn do
     loop do
@@ -352,7 +352,7 @@ def start_refresh_loop(config_path : String)
         end
 
         # Save cache after each refresh
-        save_feed_cache(FeedCache.instance)
+        save_feed_cache(FeedCache.instance, active_config.cache_retention_hours)
 
         # Sleep based on current config's interval
         sleep (active_config.refresh_minutes * 60).seconds
