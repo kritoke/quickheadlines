@@ -43,6 +43,9 @@ def render_feed_boxes(io : IO, active_tab : String? = nil)
   feeds = active_tab ? STATE.feeds_for_tab(active_tab) : STATE.feeds                   # ameba:disable Lint/UselessAssign
   releases = active_tab ? STATE.releases_for_tab(active_tab) : STATE.software_releases # ameba:disable Lint/UselessAssign
 
+  # total_item_count is nil for initial render, set for load more
+  total_item_count = nil
+
   # Emit into the same IO variable name "io"
   Slang.embed("src/feed_boxes.slang", "io")
 end
@@ -60,25 +63,67 @@ end
 def handle_feed_more(context : HTTP::Server::Context)
   url = context.request.query_params["url"]?
   limit = context.request.query_params["limit"]?.try(&.to_i?) || 20
+  offset = context.request.query_params["offset"]?.try(&.to_i?) || 0
 
   if url && (config = STATE.config)
     # Search top-level feeds and all feeds within tabs
     all_feeds = config.feeds + config.tabs.flat_map(&.feeds)
 
     if feed_config = all_feeds.find { |feed| feed.url == url }
-      # Force fetch with new limit (pass nil for previous_data to avoid 304 and force re-parse)
-      data = fetch_feed(feed_config, limit, nil)
+      cache = FeedCache.instance
       
-      # Check if fetch returned valid data to prevent crashing
-      if data
+      # 1. Check if we have enough data in the cache to fulfill the request
+      # We count the items currently stored for this URL.
+      # Note: This is a rough check; if we have 100 items but they are old, we still show them.
+      # To support "infinite scroll" effectively, we ensure the DB has at least (offset + limit) items.
+      current_count = 0
+      if cached_feed = cache.get(url)
+        current_count = cached_feed.items.size
+      end
+
+      needed_count = offset + limit
+
+      # 2. If cache is shallow, fetch a larger batch to populate it
+      # We fetch a buffer (e.g., +50) to avoid hitting the network on every single click.
+      # We pass 'nil' for previous_data to force a fresh parse and skip ETag checks,
+      # ensuring we dig deep into the history.
+      if current_count < needed_count
+        fetch_feed(feed_config, needed_count + 50, nil)
+      end
+
+      # 3. Retrieve ALL items from the cache (not just a slice)
+      # This ensures morphdom gets the complete feed with all items
+      if data = cache.get(url)
+        # Only include items up to offset + limit, but don't exceed available items
+        max_index = Math.min(offset + limit, data.items.size)
+        trimmed_items = data.items[0...max_index]
+
+        # Create a new FeedData with trimmed items
+        full_data = FeedData.new(
+          data.title,
+          data.url,
+          data.site_link,
+          data.header_color,
+          trimmed_items,
+          data.etag,
+          data.last_modified,
+          data.favicon,
+          data.favicon_data
+        )
+
         context.response.content_type = "text/html; charset=utf-8"
-        feeds = [data]            # ameba:disable Lint/UselessAssign
-        releases = [] of FeedData # ameba:disable Lint/UselessAssign
+
+        # Set render_full to false so the template returns only list items
+        render_full = false
+        feeds = [full_data]        # ameba:disable Lint/UselessAssign
+        releases = [] of FeedData  # ameba:disable Lint/UselessAssign
+        # Pass cumulative count for the Load More button
+        total_item_count = trimmed_items.size
         Slang.embed("src/feed_boxes.slang", "context.response")
       else
         context.response.content_type = "text/plain; charset=utf-8"
         context.response.status_code = 500
-        context.response.print "Error fetching feed data"
+        context.response.print "Error retrieving feed slice"
       end
     else
       context.response.status_code = 404

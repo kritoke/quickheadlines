@@ -10,23 +10,22 @@ CACHE_RETENTION_HOURS = 24
 # Get cache directory from various sources with fallbacks
 def get_cache_dir(config : Config?) : String
   # 1. Check environment variable
-  if env_dir = ENV.fetch("QUICKHEADLINES_CACHE_DIR", nil)
-    return env_dir
+  if env = ENV["QUICKHEADLINES_CACHE_DIR"]?
+    return env
   end
 
   # 2. Check config file setting
-  if config_dir = config.try(&.cache_dir)
-    return config_dir
+  if config && (cache = config.cache_dir)
+    return cache
   end
 
   # 3. Use XDG cache directory
-  if xdg_cache = ENV.fetch("XDG_CACHE_HOME", nil)
-    return File.join(xdg_cache, "quickheadlines")
+  if xdg = ENV["XDG_CACHE_HOME"]?
+    return File.join(xdg, "quickheadlines")
   end
 
   # 4. Fallback to platform-specific home cache
-  home = ENV.fetch("HOME", nil)
-  if home
+  if home = ENV["HOME"]?
     return File.join(home, ".cache", "quickheadlines")
   end
 
@@ -36,8 +35,7 @@ end
 
 # Get database file path
 def get_cache_db_path(config : Config?) : String
-  cache_dir = get_cache_dir(config)
-  File.join(cache_dir, "feed_cache.db")
+  File.join(get_cache_dir(config), "feed_cache.db")
 end
 
 # Ensure cache directory exists with proper error handling
@@ -65,7 +63,7 @@ end
 def get_db(config : Config?, &)
   cache_dir = get_cache_dir(config)
   ensure_cache_dir(cache_dir)
-  db_path = get_cache_db_path(config)
+  db_path = get_cache_db_path(config).as(String)
 
   # Open database using DB interface
   DB.open("sqlite3", db_path) do |db|
@@ -74,7 +72,7 @@ def get_db(config : Config?, &)
 end
 
 # Create database schema
-def create_schema(db : DB::Database)
+def create_schema(db : DB::Database, db_path : String)
   # Feeds table
   db.exec <<-SQL
     CREATE TABLE IF NOT EXISTS feeds (
@@ -101,7 +99,8 @@ def create_schema(db : DB::Database)
       pub_date TEXT,
       version TEXT,
       position INTEGER NOT NULL,
-      FOREIGN KEY (feed_id) REFERENCES feeds(id) ON DELETE CASCADE
+      FOREIGN KEY (feed_id) REFERENCES feeds(id) ON DELETE CASCADE,
+      UNIQUE(feed_id, link)
     )
     SQL
 
@@ -110,6 +109,29 @@ def create_schema(db : DB::Database)
   db.exec("CREATE INDEX IF NOT EXISTS idx_items_pub_date ON items(pub_date DESC)")
   db.exec("CREATE INDEX IF NOT EXISTS idx_feeds_last_fetched ON feeds(last_fetched DESC)")
   db.exec("CREATE INDEX IF NOT EXISTS idx_feeds_url ON feeds(url)")
+
+  # Ensure unique constraint exists (migration logic for legacy DBs)
+  # If table was created before UNIQUE constraint, constraint might be missing.
+  # Creating a unique index enforces this.
+
+  # Clean up any duplicate items before creating the unique index
+  # Keep the newest entry (highest id) for each (feed_id, link) pair
+  cleanup_result = db.exec(<<-SQL
+    DELETE FROM items
+    WHERE id NOT IN (
+      SELECT MAX(id)
+      FROM items
+      GROUP BY feed_id, link
+    )
+    SQL
+  )
+
+  if cleanup_result.rows_affected > 0
+    STDERR.puts "[Cache] Cleaned up #{cleanup_result.rows_affected} duplicate items from database"
+  end
+
+  # Now create the unique index
+  db.exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_items_unique_feed_link ON items(feed_id, link)")
 end
 
 # Initialize database on first run
@@ -119,7 +141,7 @@ def init_db(config : Config?)
   db_path = get_cache_db_path(config)
 
   DB.open("sqlite3://#{db_path}") do |db|
-    create_schema(db)
+    create_schema(db, db_path)
   end
 end
 
@@ -133,11 +155,14 @@ class FeedCache
     @mutex = Mutex.new
     cache_dir = get_cache_dir(config)
     ensure_cache_dir(cache_dir)
-    @db_path = get_cache_db_path(config)
+
+    # Compute path locally to ensure type inference is strict
+    db_path = get_cache_db_path(config).as(String)
+    @db_path = db_path
 
     # Open a single long-lived connection
     @db = DB.open("sqlite3://#{@db_path}")
-    create_schema(@db)
+    create_schema(@db, @db_path)
     STDERR.puts "[#{Time.local}] Database initialized: #{@db_path}"
   end
 
@@ -166,8 +191,33 @@ class FeedCache
             feed_id
           )
 
-          # Delete old items
-          @db.exec("DELETE FROM items WHERE feed_id = ?", feed_id)
+          # Delete old items that are no longer in the feed to prevent duplicates
+          # Get current item links from the feed
+          current_links = feed_data.items.map(&.link)
+          if current_links.empty?
+            # If the feed has no items, delete all items for this feed
+            @db.exec("DELETE FROM items WHERE feed_id = ?", feed_id)
+          else
+            # Delete items that are not in the current feed
+            # We need to delete items that aren't in our current_links list
+            # Since we can't easily mix types in parameter binding, we'll delete in batches
+            # First, get all existing links for this feed
+            existing_links = [] of String
+            @db.query("SELECT link FROM items WHERE feed_id = ?", feed_id) do |rows|
+              rows.each do
+                existing_links << rows.read(String)
+              end
+            end
+
+            # Find links to delete (exist in DB but not in current feed)
+            links_to_delete = existing_links - current_links
+            unless links_to_delete.empty?
+              # Delete items one at a time to avoid type mixing issues
+              links_to_delete.each do |link|
+                @db.exec("DELETE FROM items WHERE feed_id = ? AND link = ?", feed_id, link)
+              end
+            end
+          end
         else
           # Insert new feed
           @db.exec(
@@ -185,12 +235,12 @@ class FeedCache
           feed_id = @db.scalar("SELECT last_insert_rowid()").as(Int64)
         end
 
-        # Insert items
+        # Insert items (Upsert logic: Ignore if already exists)
         feed_data.items.each_with_index do |item, index|
           pub_date_str = item.pub_date.try(&.to_s("%Y-%m-%d %H:%M:%S"))
 
           @db.exec(
-            "INSERT INTO items (feed_id, title, link, pub_date, version, position) VALUES (?, ?, ?, ?, ?, ?)",
+            "INSERT OR IGNORE INTO items (feed_id, title, link, pub_date, version, position) VALUES (?, ?, ?, ?, ?, ?)",
             feed_id,
             item.title,
             item.link,
@@ -228,7 +278,6 @@ class FeedCache
         }
       end
 
-      # ameba:disable Style/RedundantNilInControlExpression
       return nil unless result
 
       # Get feed_id
@@ -239,7 +288,7 @@ class FeedCache
 
       # Get items
       items = [] of Item
-      @db.query("SELECT title, link, pub_date, version FROM items WHERE feed_id = ? ORDER BY position ASC", feed_id) do |rows|
+      @db.query("SELECT title, link, pub_date, version FROM items WHERE feed_id = ? ORDER BY pub_date DESC", feed_id) do |rows|
         rows.each do
           title = rows.read(String)
           link = rows.read(String)
@@ -269,10 +318,62 @@ class FeedCache
   def get_fetched_time(url : String) : Time?
     @mutex.synchronize do
       result = @db.query_one?("SELECT last_fetched FROM feeds WHERE url = ?", url, as: {String})
-      # ameba:disable Style/RedundantNilInControlExpression
       return nil unless result
 
       Time.parse(result, "%Y-%m-%d %H:%M:%S", Time::Location::UTC)
+    end
+  end
+
+  # Get a specific slice of items for pagination
+  def get_slice(url : String, limit : Int32, offset : Int32) : FeedData?
+    @mutex.synchronize do
+      # Get feed metadata
+      result = @db.query_one?("SELECT title, url, site_link, header_color, etag, last_modified, favicon FROM feeds WHERE url = ?", url) do |row|
+        {
+          title:         row.read(String),
+          url:           row.read(String),
+          site_link:     row.read(String),
+          header_color:  row.read(String?),
+          etag:          row.read(String?),
+          last_modified: row.read(String?),
+          favicon:       row.read(String?),
+        }
+      end
+
+      return nil unless result
+
+      # Get feed_id
+      feed_id_result = @db.query_one?("SELECT id FROM feeds WHERE url = ?", url, as: {Int64})
+      return nil unless feed_id_result
+      feed_id = feed_id_result
+
+      # Get items slice ordered by pub_date descending
+      items = [] of Item
+      query = "SELECT title, link, pub_date, version FROM items WHERE feed_id = ? ORDER BY pub_date DESC LIMIT ? OFFSET ?"
+
+      @db.query(query, feed_id, limit, offset) do |rows|
+        rows.each do
+          title = rows.read(String)
+          link = rows.read(String)
+          pub_date_str = rows.read(String?)
+          version = rows.read(String?)
+
+          pub_date = pub_date_str.try { |date_str| Time.parse(date_str, "%Y-%m-%d %H:%M:%S", Time::Location::UTC) }
+          items << Item.new(title, link, pub_date, version)
+        end
+      end
+
+      FeedData.new(
+        result[:title],
+        result[:url],
+        result[:site_link],
+        result[:header_color],
+        items,
+        result[:etag],
+        result[:last_modified],
+        result[:favicon],
+        nil # Don't cache favicon_data
+      )
     end
   end
 
@@ -353,7 +454,7 @@ class FeedCache
 
     # Get items
     items = [] of Item
-    @db.query("SELECT title, link, pub_date, version FROM items WHERE feed_id = ? ORDER BY position ASC", feed_id) do |rows|
+    @db.query("SELECT title, link, pub_date, version FROM items WHERE feed_id = ? ORDER BY pub_date DESC", feed_id) do |rows|
       rows.each do
         title = rows.read(String)
         link = rows.read(String)
@@ -383,7 +484,7 @@ end
 def load_feed_cache(config : Config?) : FeedCache
   cache_dir = get_cache_dir(config)
   ensure_cache_dir(cache_dir)
-  db_path = get_cache_db_path(config)
+  db_path : String = get_cache_db_path(config)
 
   # Initialize DB if first run
   init_db(config) unless File.exists?(db_path)

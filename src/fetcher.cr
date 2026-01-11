@@ -194,8 +194,9 @@ def fetch_feed(feed : Feed, item_limit : Int32, previous_data : FeedData? = nil)
   cache = FeedCache.instance
   if cached = cache.get(feed.url)
     if last_fetched = cache.get_fetched_time(feed.url)
-      # Use cache if fresh (within 5 minutes)
-      if cache_fresh?(last_fetched, 5)
+      # Use cache if fresh (within 5 minutes) AND has enough items
+      # If cache doesn't have enough items, we need to fetch more (e.g., for "Load More" button)
+      if cache_fresh?(last_fetched, 5) && cached.items.size >= item_limit
         # Merge with existing favicon_data if available
         if previous_data && previous_data.favicon_data
           return FeedData.new(

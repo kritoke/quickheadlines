@@ -12,7 +12,24 @@ html
     script(src="https://cdnjs.cloudflare.com/ajax/libs/color-thief/2.3.2/color-thief.umd.js")
     script
       |
-        if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        // Cookie helper functions
+        function getCookie(name) {
+          const value = `; ${document.cookie}`;
+          const parts = value.split(`; ${name}=`);
+          if (parts.length === 2) return parts.pop().split(';').shift();
+          return null;
+        }
+
+        function setCookie(name, value, days) {
+          const expires = new Date();
+          expires.setTime(expires.getTime() + (days * 24 * 60 * 60 * 1000));
+          document.cookie = `${name}=${value};expires=${expires.toUTCString()};path=/;SameSite=Lax`;
+        }
+
+        // Initialize theme from cookie or system preference
+        const themeCookie = getCookie('theme');
+        const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        if (themeCookie === 'dark' || (!themeCookie && systemPrefersDark)) {
           document.documentElement.classList.add('dark');
         } else {
           document.documentElement.classList.remove('dark');
@@ -58,7 +75,7 @@ html
 
           window.toggleTheme = function() {
             const isDark = document.documentElement.classList.toggle('dark');
-            localStorage.theme = isDark ? 'dark' : 'light';
+            setCookie('theme', isDark ? 'dark' : 'light', 365);
             if (window.updateAdaptiveColors) window.updateAdaptiveColors();
             if (window.updateScrollShadows) window.updateScrollShadows();
           };
@@ -209,14 +226,14 @@ html
           window.loadMore = async function(btn) {
             const url = btn.dataset.url;
             const currentCount = parseInt(btn.dataset.currentCount);
-            const newLimit = currentCount + 10;
 
             const originalText = btn.innerText;
             btn.innerText = "Loading...";
             btn.disabled = true;
 
             try {
-              const res = await fetch(`/feed_more?url=${encodeURIComponent(url)}&limit=${newLimit}`);
+              // Request next 10 items starting from currentCount
+              const res = await fetch(`/feed_more?url=${encodeURIComponent(url)}&limit=10&offset=${currentCount}`);
               if (!res.ok) throw new Error();
               const html = await res.text();
 
@@ -233,6 +250,7 @@ html
               window.updateAdaptiveColors();
               window.updateScrollShadows();
             } catch (e) {
+              console.error('Load More error:', e);
               btn.innerText = "Failed";
               setTimeout(() => { btn.innerText = originalText; btn.disabled = false; }, 2000);
             }
