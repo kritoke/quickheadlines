@@ -19,23 +19,23 @@ CMD sysrc quickheadlines_env="GC_MARKERS=1 GC_FREE_SPACE_DIVISOR=20 QUICKHEADLIN
 CMD git clone https://github.com/kritoke/quickheadlines.git /tmp/qh
 CMD cd /tmp/qh && npm install @tailwindcss/cli tailwindcss && shards install --production
 CMD cd /tmp/qh && gmake build
-CMD cp /tmp/qh/bin/quickheadlines /usr/local/share/quickheadlines/quickheadlines
+CMD cp /tmp/qh/bin/quickheadlines /usr/local/share/quickheadlines
 
 # 4. Conditional Config Copy
 # Only copy feeds.yml if the file does NOT already exist in the target folder
 CMD [ ! -f /usr/local/share/quickheadlines/feeds.yml ] && cp /tmp/qh/feeds.yml /usr/local/share/quickheadlines/feeds.yml || true
 
-# 5. Cleanup build files
-CMD rm -rf /tmp/qh
-
-# 6. Create user and set permissions
-CMD pw useradd qh -d /usr/local/share/quickheadlines -s /usr/sbin/nologin || true
-CMD chown -R qh:qh /usr/local/share/quickheadlines /var/cache/quickheadlines
-
-# 7. Setup Service
-CP quickheadlines /usr/local/etc/rc.d/quickheadlines
+# 5. Setup Service (before cleanup)
+CMD cp /tmp/qh/misc/quickheadlines /usr/local/etc/rc.d/quickheadlines
 SYSRC quickheadlines_enable="YES"
 CMD chmod +x /usr/local/etc/rc.d/quickheadlines
+
+# 6. Cleanup build files
+CMD rm -rf /tmp/qh
+
+# 7. Create user and set permissions
+CMD pw useradd qh -d /usr/local/share/quickheadlines -s /usr/sbin/nologin || true
+CMD chown -R qh:qh /usr/local/share/quickheadlines /var/cache/quickheadlines
 
 # 8. Start the service
 CMD service quickheadlines start
