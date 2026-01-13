@@ -16,12 +16,14 @@ class FaviconCache
   def get(url : String) : String?
     @mutex.synchronize do
       if entry = @cache[url]?
-        data_uri, timestamp = entry
+        data, timestamp = entry
         if Time.local - timestamp < ENTRY_TTL
-          data_uri
+          data
         else
           # Expired - calculate size and remove
-          @current_size -= data_uri.bytesize
+          # For data URIs, use actual size; for local paths, use fixed size
+          size = data.starts_with?("data:") ? data.bytesize : 1024
+          @current_size -= size
           @cache.delete(url)
           nil
         end
@@ -29,24 +31,30 @@ class FaviconCache
     end
   end
 
-  def set(url : String, data_uri : String) : Nil
-    return unless data_uri.starts_with?("data:")
+  def set(url : String, data : String) : Nil
+    # Cache both base64 data URIs and local file paths
+    # Local paths are much smaller, so we can cache more of them
+    is_data_uri = data.starts_with?("data:")
 
     @mutex.synchronize do
       # Calculate size of new entry
-      new_size = data_uri.bytesize
+      # For local paths, use a small fixed size (1KB) for cache accounting
+      new_size = is_data_uri ? data.bytesize : 1024
 
       # Evict if needed
       while @current_size + new_size > CACHE_SIZE_LIMIT && !@cache.empty?
         oldest = @cache.min_by(&.[1][1]).[0]
-        @current_size -= @cache[oldest][0].bytesize
+        oldest_data = @cache[oldest][0]
+        # For data URIs, use actual size; for local paths, use fixed size
+        oldest_size = oldest_data.starts_with?("data:") ? oldest_data.bytesize : 1024
+        @current_size -= oldest_size
         @cache.delete(oldest)
       end
 
-      # Skip if single entry exceeds limit
-      return if new_size > CACHE_SIZE_LIMIT
+      # Skip if single entry exceeds limit (only applies to data URIs)
+      return if is_data_uri && new_size > CACHE_SIZE_LIMIT
 
-      @cache[url] = {data_uri, Time.local}
+      @cache[url] = {data, Time.local}
       @current_size += new_size
     end
   end
@@ -107,7 +115,7 @@ def fetch_favicon_uri(url : String) : String?
   end
 end
 
-private def resolve_favicon(feed : Feed, site_link : String, parsed_favicon : String?) : String?
+private def resolve_favicon(feed : Feed, site_link : String?, parsed_favicon : String?) : String?
   favicon = parsed_favicon.presence
 
   # Resolve relative favicon URLs
@@ -115,17 +123,101 @@ private def resolve_favicon(feed : Feed, site_link : String, parsed_favicon : St
     favicon = resolve_url(favicon, site_link.presence || feed.url)
   end
 
-  if favicon.nil?
+  if favicon.nil? && site_link
     begin
       # Clean up the site link to find a valid host for the favicon fallback
       if host = URI.parse(site_link.gsub(/\/feed\/?$/, "")).host
-        # Try favicon.ico directly from the site first (more reliable than Google's service)
+        # Try favicon.ico directly from the site first
         favicon = "https://#{host}/favicon.ico"
+
+        # Note: We don't pre-check if favicon.ico exists here
+        # The fetch_favicon_uri function will handle the actual fetching
+        # and will return nil if it fails, allowing fallback to HTML parsing
+        # and finally to Google favicon service if needed
       end
     rescue
     end
   end
   favicon
+end
+
+# Extract favicon URL from HTML by parsing link tags
+private def extract_favicon_from_html(site_link : String) : String?
+  begin
+    # Clean up the site link
+    clean_link = site_link.gsub(/\/feed\/?$/, "")
+    uri = URI.parse(clean_link)
+
+    client = create_client(clean_link)
+    headers = HTTP::Headers{
+      "User-Agent" => "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+      "Accept"     => "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    }
+
+    client.get(uri.request_target, headers: headers) do |response|
+      if response.status.success?
+        html = response.body_io.gets_to_end
+
+        # Parse HTML to find favicon links
+        # Look for: <link rel="icon">, <link rel="shortcut icon">, <link rel="apple-touch-icon">
+        favicon_patterns = [
+          /<link[^>]+rel=["'](?:shortcut )?icon["'][^>]+href=["']([^"']+)["']/i,
+          /<link[^>]+href=["']([^"']+)["'][^>]+rel=["'](?:shortcut )?icon["']/i,
+          /<link[^>]+rel=["']apple-touch-icon["'][^>]+href=["']([^"']+)["']/i,
+        ]
+
+        favicon_patterns.each do |pattern|
+          if match = html.match(pattern)
+            favicon_url = match[1]
+            # Resolve relative URLs
+            if favicon_url.starts_with?("//")
+              favicon_url = "https:#{favicon_url}"
+            elsif !favicon_url.starts_with?("http")
+              favicon_url = resolve_url(favicon_url, clean_link)
+            end
+            return favicon_url
+          end
+        end
+      end
+    end
+  rescue
+    # If HTML parsing fails, return nil
+  end
+
+  nil
+end
+
+# Try to fetch favicon from HTML as a fallback
+# Returns {favicon_url, favicon_data} tuple
+private def try_html_fallback(site_link : String) : {String?, String?}
+  begin
+    # Try parsing HTML for favicon links
+    html_favicon = extract_favicon_from_html(site_link)
+    if html_favicon
+      if html_data = fetch_favicon_uri(html_favicon)
+        FAVICON_CACHE.set(html_favicon, html_data)
+        return {html_favicon, html_data}
+      end
+    end
+  rescue
+  end
+  {nil, nil}
+end
+
+# Try to fetch favicon from Google service as final fallback
+# Returns {favicon_url, favicon_data} tuple
+private def try_google_fallback(site_link : String) : {String?, String?}
+  begin
+    if host = URI.parse(site_link.gsub(/\/feed\/?$/, "")).host
+      google_favicon = "https://www.google.com/s2/favicons?domain=#{host}&sz=64"
+      if google_data = fetch_favicon_uri(google_favicon)
+        FAVICON_CACHE.set(google_favicon, google_data)
+        return {google_favicon, google_data}
+      end
+    end
+  rescue
+  end
+  {nil, nil}
 end
 
 private def get_favicon(feed : Feed, site_link : String, parsed_favicon : String?, previous_data : FeedData?) : {String?, String?}
@@ -135,30 +227,37 @@ private def get_favicon(feed : Feed, site_link : String, parsed_favicon : String
   favicon_data = nil
   return {favicon, nil} unless favicon
 
-  # Skip Google favicon URLs from cache - they return gray placeholders
-  # Force re-fetch from actual site instead
-  if favicon.includes?("google.com/s2/favicons")
-    # Don't check cache for Google favicons, force fresh fetch
-    if new_data = fetch_favicon_uri(favicon)
-      favicon_data = new_data
-      # Store in shared cache
-      FAVICON_CACHE.set(favicon, new_data)
-    end
+  # Check shared cache first
+  if cached_data = FAVICON_CACHE.get(favicon)
+    # Convert base64 data URI to saved file if needed
+    favicon_data = convert_cached_data_uri(cached_data)
   elsif previous_data && previous_data.favicon == favicon && (prev_data = previous_data.favicon_data)
     # Use previous data if still valid
     favicon_data = convert_cached_data_uri(prev_data)
     # Store in shared cache
     FAVICON_CACHE.set(favicon, prev_data)
-  elsif cached_data = FAVICON_CACHE.get(favicon)
-    # Check the shared cache first
-    # Convert base64 data URI to saved file if needed
-    favicon_data = convert_cached_data_uri(cached_data)
   else
     # Fetch new favicon data
     if new_data = fetch_favicon_uri(favicon)
       favicon_data = new_data
+      # Update favicon to point to local path if fetch succeeded
+      favicon = new_data if new_data.starts_with?("/favicons/")
       # Store in shared cache
       FAVICON_CACHE.set(favicon, new_data)
+    elsif site_link
+      # If favicon.ico fetch failed, try HTML parsing
+      fallback_url, fallback_data = try_html_fallback(site_link)
+
+      # If HTML parsing also failed, use Google favicon service as final fallback
+      if fallback_data.nil?
+        fallback_url, fallback_data = try_google_fallback(site_link)
+      end
+
+      # Update favicon to point to fallback URL if it succeeded
+      if fallback_url && fallback_data
+        favicon = fallback_url
+        favicon_data = fallback_data
+      end
     end
   end
 
@@ -362,7 +461,7 @@ def start_refresh_loop(config_path : String)
   active_config = load_config(config_path)
   last_mtime = File.info(config_path).modification_time
 
-  # Do an initial refresh with the active config
+  # Do an initial refresh with active config
   refresh_all(active_config)
   puts "[#{Time.local}] Initial refresh complete"
 
