@@ -94,6 +94,7 @@ def fetch_favicon_uri(url : String) : String?
         if response.status.redirection? && (location = response.headers["Location"]?)
           current_url = uri.resolve(location).to_s
           redirects += 1
+          next
         elsif response.status.success?
           content_type = response.content_type || "image/png"
           memory = IO::Memory.new
