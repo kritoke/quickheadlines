@@ -11,7 +11,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0 # Fetch all history so we can check for branches
+          fetch-depth: 0
 
       - name: Configure Git
         run: |
@@ -20,7 +20,7 @@ jobs:
 
       - name: Prepare Inbox Branch
         run: |
-          # Check if the branch exists on remote
+          # If the branch exists on remote, fetch it. Otherwise, create it locally.
           if git ls-remote --exit-code --heads origin beads-inbox; then
             git fetch origin beads-inbox
             git checkout beads-inbox
@@ -45,8 +45,15 @@ jobs:
             echo "${{ github.event.issue.body }}"
           } > $FILE_PATH
 
-      - name: Commit and Push
+      - name: Commit and Force-Push
         run: |
-          git add .beads/*.md
-          git commit -m "feat: mobile bead entry #${{ github.event.issue.number }}"
-          git push origin beads-inbox
+          # Use -f to bypass the .gitignore for the .beads folder
+          git add -f .beads/*.md
+          
+          # Only commit and push if there are actual changes
+          if ! git diff --cached --quiet; then
+            git commit -m "feat: mobile bead entry #${{ github.event.issue.number }}"
+            git push origin beads-inbox
+          else
+            echo "No changes to commit."
+          fi
