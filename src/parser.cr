@@ -1,22 +1,48 @@
 require "xml"
 require "html"
 
-def parse_feed(io : IO, limit : Int32) : {site_link: String, items: Array(Item), favicon: String?}
+# Maximum feed size to prevent memory exhaustion
+MAX_FEED_SIZE = 5 * 1024 * 1024 # 5MB
+
+def parse_feed(io : IO, limit : Int32) : {site_link: String?, items: Array(Item), favicon: String?}
   # Buffer raw bytes to allow libxml2 to detect encoding from the XML declaration.
   # NOENT substitutes entities (like &Yuml;) during parsing.
   buffer = IO::Memory.new
-  # Limit feed size to 5MB
-  IO.copy(io, buffer, limit: 5 * 1024 * 1024)
+
+  # Limit feed size to prevent memory exhaustion
+  bytes_copied = IO.copy(io, buffer, limit: MAX_FEED_SIZE)
+
+  # If feed is too large, log and return empty
+  if bytes_copied >= MAX_FEED_SIZE
+    STDERR.puts "[WARN] Feed too large (>5MB), skipping parsing"
+    return {site_link: "#", items: [] of Item, favicon: nil}
+  end
+
   buffer.rewind
 
-  xml = XML.parse(buffer, options: XML::ParserOptions::RECOVER | XML::ParserOptions::NOENT)
-  rss = parse_rss(xml, limit)
-  return rss unless rss[:items].empty?
-  atom = parse_atom(xml, limit)
-  return atom unless atom[:items].empty?
-  {site_link: "#", items: [] of Item, favicon: nil}
-rescue ex
-  {site_link: "#", items: [] of Item, favicon: nil}
+  # Parse with timeout protection and error handling
+  begin
+    xml = XML.parse(buffer, options: XML::ParserOptions::RECOVER | XML::ParserOptions::NOENT)
+
+    # Validate XML structure
+    unless xml.root
+      STDERR.puts "[WARN] Feed has no root element, skipping"
+      return {site_link: "#", items: [] of Item, favicon: nil}
+    end
+
+    rss = parse_rss(xml, limit)
+    return rss unless rss[:items].empty?
+    atom = parse_atom(xml, limit)
+    return atom unless atom[:items].empty?
+    {site_link: "#", items: [] of Item, favicon: nil}
+  rescue ex : XML::Error
+    STDERR.puts "[ERROR] XML parsing error: #{ex.message}"
+    {site_link: "#", items: [] of Item, favicon: nil}
+  rescue ex : Exception
+    STDERR.puts "[ERROR] Unexpected error parsing feed: #{ex.class} - #{ex.message}"
+    STDERR.puts ex.backtrace.join("\n") if ex.backtrace
+    {site_link: "#", items: [] of Item, favicon: nil}
+  end
 end
 
 private def parse_rss(xml : XML::Node, limit : Int32) : {site_link: String, items: Array(Item), favicon: String?}
@@ -83,19 +109,20 @@ private def parse_atom_entry(node : XML::Node) : Item
   Item.new(title, link, pub_date)
 end
 
-private def parse_atom(xml : XML::Node, limit : Int32) : {site_link: String, items: Array(Item), favicon: String?}
-  site_link = "#"
+private def parse_atom(xml : XML::Node, limit : Int32) : {site_link: String?, items: Array(Item), favicon: String?}
   items = [] of Item
 
   # FIX: correct XPath string
   feed_node = xml.xpath_node("//*[local-name()='feed']")
-  return {site_link: site_link, items: items, favicon: nil} unless feed_node
+  return {site_link: nil, items: items, favicon: nil} unless feed_node
 
   # Site link preference: rel="alternate" (type text/html) -> first link with href -> keep default
+  # Also handle links without a rel attribute (like Slashdot)
   alt = feed_node.xpath_node("./*[local-name()='link'][@rel='alternate' and (not(@type) or starts-with(@type,'text/html'))]") ||
         feed_node.xpath_node("./*[local-name()='link'][@rel='alternate']") ||
+        feed_node.xpath_node("./*[local-name()='link'][not(@rel) and @href]") ||
         feed_node.xpath_node("./*[local-name()='link'][@href]")
-  site_link = alt.try(&.[]?("href")).try(&.strip) || alt.try(&.text).try(&.strip) || site_link
+  site_link = alt.try(&.[]?("href")).try(&.strip) || alt.try(&.text).try(&.strip)
 
   # Entries
   feed_node.xpath_nodes("./*[local-name()='entry']").each do |node|

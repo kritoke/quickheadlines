@@ -184,6 +184,57 @@ def create_schema(db : DB::Database, db_path : String)
   db.exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_items_unique_feed_link ON items(feed_id, link)")
 end
 
+# Check database integrity
+def check_db_integrity(db_path : String) : Bool
+  DB.open("sqlite3://#{db_path}") do |db|
+    result = db.query_one("PRAGMA integrity_check", as: {String})
+    if result == "ok"
+      STDERR.puts "[#{Time.local}] Database integrity check passed"
+      true
+    else
+      STDERR.puts "[ERROR] Database integrity check failed: #{result}"
+      false
+    end
+  end
+rescue ex : Exception
+  STDERR.puts "[ERROR] Database integrity check failed: #{ex.message}"
+  false
+end
+
+# Repair corrupted database by creating a new one
+def repair_database(config : Config?)
+  db_path = get_cache_db_path(config)
+
+  STDERR.puts "[#{Time.local}] Attempting to repair corrupted database..."
+
+  # Backup corrupted database
+  backup_path = "#{db_path}.corrupted.#{Time.utc.to_s("%Y%m%d%H%M%S")}"
+  begin
+    File.rename(db_path, backup_path)
+    STDERR.puts "[#{Time.local}] Backed up corrupted database to: #{backup_path}"
+  rescue ex : Exception
+    STDERR.puts "[ERROR] Failed to backup corrupted database: #{ex.message}"
+    return false
+  end
+
+  # Create new database
+  begin
+    init_db(config)
+    STDERR.puts "[#{Time.local}] Successfully repaired database (created new one)"
+    true
+  rescue ex : Exception
+    STDERR.puts "[ERROR] Failed to create new database: #{ex.message}"
+    # Try to restore backup
+    begin
+      File.rename(backup_path, db_path)
+      STDERR.puts "[#{Time.local}] Restored backup database"
+    rescue
+      STDERR.puts "[ERROR] Failed to restore backup database"
+    end
+    false
+  end
+end
+
 # Initialize database on first run
 def init_db(config : Config?)
   cache_dir = get_cache_dir(config)
@@ -632,6 +683,17 @@ def load_feed_cache(config : Config?) : FeedCache
 
   # Initialize DB if first run
   init_db(config) unless File.exists?(db_path)
+
+  # Check database integrity on startup
+  if File.exists?(db_path)
+    unless check_db_integrity(db_path)
+      STDERR.puts "[ERROR] Database corruption detected, attempting repair..."
+      unless repair_database(config)
+        STDERR.puts "[FATAL] Failed to repair database, exiting"
+        exit 1
+      end
+    end
+  end
 
   cache = FeedCache.new(config)
 

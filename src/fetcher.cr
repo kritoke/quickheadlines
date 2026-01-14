@@ -73,8 +73,15 @@ FAVICON_CACHE = FaviconCache.new
 def fetch_favicon_uri(url : String) : String?
   current_url = url
   redirects = 0
+  start_time = Time.monotonic
 
   loop do
+    # Timeout after 30 seconds total
+    if (Time.monotonic - start_time).total_seconds > 30
+      HealthMonitor.log_warning("fetch_favicon_uri(#{url}) timeout after 30s")
+      return
+    end
+
     return if redirects > 10
 
     # Check if we already have this favicon saved (using current URL after redirects)
@@ -344,8 +351,15 @@ def fetch_feed(feed : Feed, item_limit : Int32, previous_data : FeedData? = nil)
   cache = FeedCache.instance
   current_url = feed.url
   redirects = 0
+  start_time = Time.monotonic
 
   loop do
+    # Timeout after 60 seconds total
+    if (Time.monotonic - start_time).total_seconds > 60
+      HealthMonitor.log_warning("fetch_feed(#{feed.url}) timeout after 60s")
+      return error_feed_data(feed, "Error: Fetch timeout")
+    end
+
     return error_feed_data(feed, "Error: Too many redirects") if redirects > 10
 
     begin
@@ -490,6 +504,8 @@ def start_refresh_loop(config_path : String)
 
   spawn do
     loop do
+      refresh_start_time = Time.monotonic
+
       begin
         # Check if config file changed
         current_mtime = File.info(config_path).modification_time
@@ -510,6 +526,12 @@ def start_refresh_loop(config_path : String)
 
         # Save cache after each refresh
         save_feed_cache(FeedCache.instance, active_config.cache_retention_hours)
+
+        # Check if refresh took too long (potential hang)
+        refresh_duration = (Time.monotonic - refresh_start_time).total_seconds
+        if refresh_duration > (active_config.refresh_minutes * 60) * 2
+          HealthMonitor.log_warning("Refresh took #{refresh_duration.round(2)}s (expected #{active_config.refresh_minutes * 60}s) - possible hang detected")
+        end
 
         # Sleep based on current config's interval
         sleep (active_config.refresh_minutes * 60).seconds

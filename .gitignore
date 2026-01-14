@@ -9,6 +9,10 @@ tailwindcss
 assets/css/production.css
 assets/css/development.css
 
+# Compiled binary and database (generated at runtime)
+quickheadlines
+quickheadlines.db
+
 # Cache directory (SQLite database and feed cache)
 /cache/
 

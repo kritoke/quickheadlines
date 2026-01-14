@@ -180,7 +180,8 @@ html
 
               const proxy = new Image();
               proxy.crossOrigin = 'Anonymous';
-              if (img.src.startsWith('data:')) {
+              // Local favicons don't need proxying - they're on the same origin
+              if (img.src.startsWith('data:') || img.src.startsWith('/favicons/')) {
                 proxy.src = img.src;
               } else {
                 proxy.src = '/proxy_image?url=' + encodeURIComponent(img.src);
