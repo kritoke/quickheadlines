@@ -1,0 +1,52 @@
+name: Sync GitHub Issue to Beads Inbox
+on:
+  issues:
+    types: [opened]
+
+jobs:
+  update-inbox:
+    runs-on: ubuntu-latest
+    if: contains(github.event.issue.labels.*.name, 'bead')
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Fetch all history so we can check for branches
+
+      - name: Configure Git
+        run: |
+          git config --global user.name "GitHub Action"
+          git config --global user.email "action@github.com"
+
+      - name: Prepare Inbox Branch
+        run: |
+          # Check if the branch exists on remote
+          if git ls-remote --exit-code --heads origin beads-inbox; then
+            git fetch origin beads-inbox
+            git checkout beads-inbox
+          else
+            git checkout -b beads-inbox
+          fi
+
+      - name: Create Bead file
+        run: |
+          FILENAME=$(echo "${{ github.event.issue.title }}" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9]/-/g' | cut -c1-50)
+          mkdir -p .beads
+          FILE_PATH=".beads/$(date +%Y%m%d)-${FILENAME}.md"
+          
+          {
+            echo "---"
+            echo "title: ${{ github.event.issue.title }}"
+            echo "status: todo"
+            echo "created_at: $(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+            echo "issue_url: ${{ github.event.issue.html_url }}"
+            echo "---"
+            echo ""
+            echo "${{ github.event.issue.body }}"
+          } > $FILE_PATH
+
+      - name: Commit and Push
+        run: |
+          git add .beads/*.md
+          git commit -m "feat: mobile bead entry #${{ github.event.issue.number }}"
+          git push origin beads-inbox
