@@ -1,11 +1,13 @@
 name: Sync GitHub Issue to Beads Inbox
 on:
   issues:
-    types: [opened]
+    # Added 'labeled' so removing/adding the label triggers the sync
+    types: [opened, labeled, reopened]
 
 jobs:
   update-inbox:
     runs-on: ubuntu-latest
+    # Only run if the issue currently has the 'bead' label
     if: contains(github.event.issue.labels.*.name, 'bead')
     steps:
       - name: Checkout code
@@ -20,7 +22,6 @@ jobs:
 
       - name: Prepare Inbox Branch
         run: |
-          # If the branch exists on remote, fetch it. Otherwise, create it locally.
           if git ls-remote --exit-code --heads origin beads-inbox; then
             git fetch origin beads-inbox
             git checkout beads-inbox
@@ -47,13 +48,18 @@ jobs:
 
       - name: Commit and Force-Push
         run: |
-          # Use -f to bypass the .gitignore for the .beads folder
           git add -f .beads/*.md
-          
-          # Only commit and push if there are actual changes
           if ! git diff --cached --quiet; then
             git commit -m "feat: mobile bead entry #${{ github.event.issue.number }}"
             git push origin beads-inbox
           else
             echo "No changes to commit."
           fi
+
+      - name: Comment on Issue
+        # This provides a confirmation notification on your phone
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh issue comment ${{ github.event.issue.number }} \
+            --body "✅ **Bead Synced!** This task has been committed to the \`beads-inbox\` branch. It will be available next time you \`git merge\` at your desk."
