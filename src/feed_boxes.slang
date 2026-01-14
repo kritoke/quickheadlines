@@ -1,9 +1,8 @@
-- all_content = feeds + releases
 - # render_full defaults to true (full render)
 - # Set to false before Slang.embed to render only items (for "load more")
 - render_full = true
 
-- all_content.each do |feed|
+- feeds.each do |feed|
   article.feed-box.w-full.min-w-0.shadow-sm
     - color_css = HTML.escape(feed.display_header_color)
     - has_custom = !feed.header_color.nil?
@@ -22,6 +21,12 @@
             img class="w-5 h-5 rounded-sm bg-white dark:bg-slate-300 p-0.5 ring-1 ring-black/5 dark:ring-black/60 flex-shrink-0" src="#{data}" loading="lazy" alt=""
           - elsif (fav = feed.favicon) && !fav.empty?
             img class="w-5 h-5 rounded-sm bg-white dark:bg-slate-300 p-0.5 ring-1 ring-black/5 dark:ring-black/60 flex-shrink-0" src="#{fav}" loading="lazy" alt=""
+          - else
+            # Fallback to Google favicon service
+            - host = feed.site_link.empty? ? feed.url : feed.site_link
+            - if parsed = URI.parse(host)
+              - if parsed_host = parsed.host
+                img class="w-5 h-5 rounded-sm bg-white dark:bg-slate-300 p-0.5 ring-1 ring-black/5 dark:ring-black/60 flex-shrink-0" src="https://www.google.com/s2/favicons?domain=#{parsed_host}&sz=64" loading="lazy" alt=""
           a.feed-title-link.hover:underline href="#{HTML.escape(feed.display_link)}" target="_blank" rel="noopener noreferrer"
             = feed.title
 
@@ -35,14 +40,14 @@
               - if version = item.version
                 = version
                 - if item.pub_date
-                  |  •
+                  | •
               - if date = item.pub_date
                 span title="#{date.to_local.to_s("%A, %b %d, %Y at %I:%M %p")}"
                   = relative_time(date)
               - elsif !item.version
                 = current_date_fallback
-      - if feed.items.size >= 10 && feed.url != "software://releases"
-        div.mt-4.text-center
-          - count = total_item_count || feed.items.size
-          button.text-xs.font-medium.text-slate-500.hover:text-slate-800.dark:text-slate-400.dark:hover:text-slate-200.transition-colors.px-3.py-1.rounded-md.bg-slate-100.dark:bg-slate-800.hover:bg-slate-200.dark:hover:bg-slate-700 onclick="loadMore(this)" data-url="#{HTML.escape(feed.url)}" data-current-count="#{count}"
-            | Load More
+        - if feed.items.size >= 10 && feed.url != "software://releases"
+          div.mt-4.text-center
+            - count = total_item_count || feed.items.size
+            button.text-xs.font-medium.text-slate-500.hover:text-slate-800.dark:text-slate-400.dark:hover:text-slate-200.transition-colors.px-3.py-1.rounded-md.bg-slate-100.dark:bg-slate-800.hover:bg-slate-200.dark:hover:bg-slate-700 onclick="loadMore(this)" data-url="#{HTML.escape(feed.url)}" data-current-count="#{count}"
+              | Load More

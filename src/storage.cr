@@ -3,7 +3,10 @@ require "sqlite3"
 require "file_utils"
 require "time"
 require "mutex"
+require "openssl"
 require "./models"
+require "./favicon_storage"
+require "./health_monitor"
 
 CACHE_RETENTION_HOURS = 168
 
@@ -315,7 +318,8 @@ class FeedCache
 
   # Get a feed from cache by URL
   def get(url : String) : FeedData?
-    @mutex.synchronize do
+    start_time = Time.monotonic
+    feed_data = @mutex.synchronize do
       result = @db.query_one?("SELECT title, url, site_link, header_color, etag, last_modified, favicon FROM feeds WHERE url = ?", url) do |row|
         {
           title:         row.read(String),
@@ -328,7 +332,11 @@ class FeedCache
         }
       end
 
-      return unless result
+      unless result
+        HealthMonitor.record_cache_miss
+        return
+      end
+      HealthMonitor.record_cache_hit
 
       # Get feed_id
       feed_id_result = @db.query_one?("SELECT id FROM feeds WHERE url = ?", url, as: {Int64})
@@ -361,6 +369,9 @@ class FeedCache
         nil # Don't cache favicon_data
       )
     end
+    query_time = (Time.monotonic - start_time).total_milliseconds
+    HealthMonitor.record_db_query(query_time)
+    feed_data
   end
 
   # Get last fetched time for a URL
@@ -523,6 +534,40 @@ class FeedCache
     end
   end
 
+  # Sync favicon paths to ensure database points to local files
+  def sync_favicon_paths
+    @mutex.synchronize do
+      # Get all feeds with external favicon URLs
+      @db.query("SELECT id, url, favicon FROM feeds WHERE favicon IS NOT NULL") do |rows|
+        rows.each do
+          feed_id = rows.read(Int64)
+          url = rows.read(String)
+          favicon = rows.read(String)
+
+          # If favicon is an external URL, check if we have a local file
+          if favicon.starts_with?("http")
+            # Generate hash-based filename from the URL
+            hash = OpenSSL::Digest.new("SHA256").update(favicon).final.hexstring
+            possible_extensions = ["png", "jpg", "jpeg", "ico", "svg", "webp"]
+
+            found_local = false
+            possible_extensions.each do |ext|
+              filename = "#{hash[0...16]}.#{ext}"
+              filepath = File.join(FaviconStorage::FAVICON_DIR, filename)
+              if File.exists?(filepath)
+                # Update database to point to local file
+                @db.exec("UPDATE feeds SET favicon = ? WHERE id = ?", "/favicons/#{filename}", feed_id)
+                STDERR.puts "[Cache] Synced favicon for #{url}: #{favicon} -> /favicons/#{filename}"
+                found_local = true
+                break
+              end
+            end
+          end
+        end
+      end
+    end
+  end
+
   # Close database connection
   def close
     @mutex.synchronize do
@@ -626,6 +671,9 @@ def save_feed_cache(cache : FeedCache, retention_hours : Int32 = CACHE_RETENTION
   if rand(100) < 10 # 10% chance to run cleanup
     cache.cleanup_old_entries(retention_hours)
   end
+
+  # Sync favicon paths to ensure database points to local files
+  cache.sync_favicon_paths
 end
 
 # Check if cache is fresh (within X minutes)

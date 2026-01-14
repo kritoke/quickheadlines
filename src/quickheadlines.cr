@@ -16,6 +16,7 @@ require "./fetcher"
 require "./server"
 require "./storage"
 require "./favicon_storage"
+require "./health_monitor"
 
 # ----- main -----
 
@@ -52,8 +53,15 @@ puts "[#{Time.local}] Loaded #{FeedCache.instance.size} feeds from cache"
 # Initialize favicon storage directory
 FaviconStorage.init
 
+# Clear in-memory favicon cache to prevent stale base64 data from previous runs
+FAVICON_CACHE.clear
+
 # Initial load so the first request sees real data
 refresh_all(state.config)
+
+# Start health monitoring
+HealthMonitor.start_monitoring
+HealthMonitor.log_info("Health monitoring started")
 
 # Start periodic refresh
 start_refresh_loop(config_path)

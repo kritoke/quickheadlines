@@ -2,6 +2,7 @@ require "base64"
 require "gc"
 require "./software_fetcher"
 require "./favicon_storage"
+require "./health_monitor"
 
 # ----- Favicon cache with size limits and expiration -----
 
@@ -70,16 +71,16 @@ end
 FAVICON_CACHE = FaviconCache.new
 
 def fetch_favicon_uri(url : String) : String?
-  # Check if we already have this favicon saved
-  if cached_url = FaviconStorage.get_or_fetch(url)
-    return cached_url
-  end
-
   current_url = url
   redirects = 0
 
   loop do
     return if redirects > 10
+
+    # Check if we already have this favicon saved (using current URL after redirects)
+    if cached_url = FaviconStorage.get_or_fetch(current_url)
+      return cached_url
+    end
 
     uri = URI.parse(current_url)
     client = create_client(current_url)
@@ -102,15 +103,17 @@ def fetch_favicon_uri(url : String) : String?
           IO.copy(response.body_io, memory, limit: 100 * 1024)
           return if memory.size == 0
 
-          # Save favicon to disk and return URL
-          if saved_url = FaviconStorage.save_favicon(url, memory.to_slice, content_type)
+          # Save favicon to disk using the final URL (after redirects)
+          # This ensures the filename matches the actual image source
+          if saved_url = FaviconStorage.save_favicon(current_url, memory.to_slice, content_type)
             return saved_url
           end
         else
           return
         end
       end
-    rescue
+    rescue ex
+      HealthMonitor.log_error("fetch_favicon_uri(#{url})", ex)
       return
     end
   end
@@ -136,7 +139,8 @@ private def resolve_favicon(feed : Feed, site_link : String?, parsed_favicon : S
         # and will return nil if it fails, allowing fallback to HTML parsing
         # and finally to Google favicon service if needed
       end
-    rescue
+    rescue ex
+      HealthMonitor.log_error("resolve_favicon(#{feed.url})", ex)
     end
   end
   favicon
@@ -181,8 +185,8 @@ private def extract_favicon_from_html(site_link : String) : String?
         end
       end
     end
-  rescue
-    # If HTML parsing fails, return nil
+  rescue ex
+    HealthMonitor.log_error("extract_favicon_from_html(#{site_link})", ex)
   end
 
   nil
@@ -200,7 +204,8 @@ private def try_html_fallback(site_link : String) : {String?, String?}
         return {html_favicon, html_data}
       end
     end
-  rescue
+  rescue ex
+    HealthMonitor.log_error("try_html_fallback(#{site_link})", ex)
   end
   {nil, nil}
 end
@@ -216,7 +221,8 @@ private def try_google_fallback(site_link : String) : {String?, String?}
         return {google_favicon, google_data}
       end
     end
-  rescue
+  rescue ex
+    HealthMonitor.log_error("try_google_fallback(#{site_link})", ex)
   end
   {nil, nil}
 end
@@ -224,45 +230,55 @@ end
 private def get_favicon(feed : Feed, site_link : String, parsed_favicon : String?, previous_data : FeedData?) : {String?, String?}
   favicon = resolve_favicon(feed, site_link, parsed_favicon)
 
-  # Fetch/Cache Favicon Data
-  favicon_data = nil
   return {favicon, nil} unless favicon
 
-  # Check shared cache first
-  if cached_data = FAVICON_CACHE.get(favicon)
-    # Convert base64 data URI to saved file if needed
-    favicon_data = convert_cached_data_uri(cached_data)
-  elsif previous_data && previous_data.favicon == favicon && (prev_data = previous_data.favicon_data)
-    # Use previous data if still valid
-    favicon_data = convert_cached_data_uri(prev_data)
-    # Store in shared cache
-    FAVICON_CACHE.set(favicon, prev_data)
-  else
-    # Fetch new favicon data
-    if new_data = fetch_favicon_uri(favicon)
-      favicon_data = new_data
-      # Update favicon to point to local path if fetch succeeded
-      favicon = new_data if new_data.starts_with?("/favicons/")
-      # Store in shared cache
-      FAVICON_CACHE.set(favicon, new_data)
-    elsif site_link
-      # If favicon.ico fetch failed, try HTML parsing
-      fallback_url, fallback_data = try_html_fallback(site_link)
+  favicon_data = fetch_favicon_data(favicon, site_link, previous_data)
 
-      # If HTML parsing also failed, use Google favicon service as final fallback
-      if fallback_data.nil?
-        fallback_url, fallback_data = try_google_fallback(site_link)
-      end
-
-      # Update favicon to point to fallback URL if it succeeded
-      if fallback_url && fallback_data
-        favicon = fallback_url
-        favicon_data = fallback_data
-      end
-    end
+  # Ensure favicon points to local path if we have local favicon_data
+  # This prevents storing external URLs in the database when we have cached files
+  if favicon_data && favicon_data.starts_with?("/favicons/")
+    favicon = favicon_data
   end
 
   {favicon, favicon_data}
+end
+
+# Fetch favicon data from cache or network
+private def fetch_favicon_data(favicon : String, site_link : String?, previous_data : FeedData?) : String?
+  # Check shared cache first
+  if cached_data = FAVICON_CACHE.get(favicon)
+    return convert_cached_data_uri(cached_data)
+  end
+
+  # Use previous data if still valid
+  if previous_data && previous_data.favicon == favicon && (prev_data = previous_data.favicon_data)
+    FAVICON_CACHE.set(favicon, prev_data)
+    return convert_cached_data_uri(prev_data)
+  end
+
+  # Fetch new favicon data
+  if new_data = fetch_favicon_uri(favicon)
+    FAVICON_CACHE.set(favicon, new_data)
+    return new_data
+  end
+
+  # Try fallbacks if site_link is available
+  try_favicon_fallbacks(site_link)
+end
+
+# Try HTML and Google favicon fallbacks
+private def try_favicon_fallbacks(site_link : String?) : String?
+  return unless site_link
+
+  # Try HTML parsing first
+  _fallback_url, fallback_data = try_html_fallback(site_link)
+
+  # If HTML parsing failed, use Google favicon service as final fallback
+  if fallback_data.nil?
+    _fallback_url, fallback_data = try_google_fallback(site_link)
+  end
+
+  fallback_data
 end
 
 # Convert base64 data URI to saved file URL if needed
@@ -359,6 +375,7 @@ def fetch_feed(feed : Feed, item_limit : Int32, previous_data : FeedData? = nil)
         end
       end
     rescue ex
+      HealthMonitor.log_error("fetch_feed(#{feed.url})", ex)
       return error_feed_data(feed, "Error: #{ex.class} - #{ex.message}")
     end
   end
@@ -375,7 +392,9 @@ private def get_cached_feed(feed : Feed, item_limit : Int32, previous_data : Fee
   return unless cache_fresh?(last_fetched, 5) && cached.items.size >= item_limit
 
   # Merge with existing favicon_data if available
-  if previous_data && previous_data.favicon_data
+  if previous_data && (prev_favicon_data = previous_data.favicon_data)
+    # Use local path for favicon if we have local favicon_data
+    favicon = prev_favicon_data.starts_with?("/favicons/") ? prev_favicon_data : cached.favicon
     return FeedData.new(
       cached.title,
       cached.url,
@@ -384,8 +403,8 @@ private def get_cached_feed(feed : Feed, item_limit : Int32, previous_data : Fee
       cached.items,
       cached.etag,
       cached.last_modified,
-      cached.favicon,
-      previous_data.favicon_data
+      favicon,
+      prev_favicon_data
     )
   end
 
@@ -495,7 +514,7 @@ def start_refresh_loop(config_path : String)
         # Sleep based on current config's interval
         sleep (active_config.refresh_minutes * 60).seconds
       rescue ex
-        puts "Error refresh loop: #{ex.message}"
+        HealthMonitor.log_error("refresh_loop", ex)
         sleep 1.minute # Safety sleep so errors don't loop instantly
       end
     end
