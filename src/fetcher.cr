@@ -303,11 +303,37 @@ private def build_fetch_headers(feed : Feed, current_url : String, previous_data
     "Connection"      => "keep-alive",
   }
 
+  # Apply authentication if configured
+  if auth = feed.auth
+    apply_auth_headers(headers, auth)
+  end
+
   if previous_data && current_url == feed.url
     previous_data.etag.try { |v| headers["If-None-Match"] = v }
     previous_data.last_modified.try { |v| headers["If-Modified-Since"] = v }
   end
+
   headers
+end
+
+# Apply authentication headers based on auth type
+private def apply_auth_headers(headers : HTTP::Headers, auth : AuthConfig) : Nil
+  case auth.type
+  when "basic"
+    if username = auth.username
+      password = auth.password || ""
+      credentials = Base64.encode("#{username}:#{password}")
+      headers[auth.header] = "#{auth.prefix}#{credentials}"
+    end
+  when "bearer"
+    if token = auth.token
+      headers[auth.header] = "#{auth.prefix}#{token}"
+    end
+  when "apikey"
+    if token = auth.token
+      headers[auth.header] = "#{auth.prefix}#{token}"
+    end
+  end
 end
 
 private def handle_success_response(feed : Feed, response : HTTP::Client::Response, item_limit : Int32, previous_data : FeedData?) : FeedData

@@ -3,6 +3,13 @@ item_limit: 20
 server_port: 3030
 page_title: "Quick Headlines"
 cache_retention_hours: 168
+
+# HTTP client configuration (optional)
+# http_client:
+#   timeout: 30              # Read timeout in seconds (default: 30)
+#   connect_timeout: 10      # Connection timeout in seconds (default: 10)
+#   user_agent: "QuickHeadlines/0.3"  # Custom User-Agent
+
 tabs:
   - name: "Tech"
     feeds:

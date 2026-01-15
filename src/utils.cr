@@ -3,14 +3,35 @@ require "uri"
 
 # ----- HTTP client pooling and concurrency control -----
 
-# Simple client factory - creates a new client for each request
-# This avoids issues with connection state and malformed responses
+# ----- HTTP client pooling and concurrency control -----
+
+# Create HTTP client with optional configuration from STATE.config
 def create_client(url : String) : HTTP::Client
   uri = URI.parse(url)
   client = HTTP::Client.new(uri)
   client.compress = true
-  client.read_timeout = 15.seconds
-  client.connect_timeout = 10.seconds
+
+  # Apply configuration from STATE.config if available
+  if config = STATE.config
+    if http_config = config.http_client
+      client.read_timeout = http_config.timeout.seconds
+      client.connect_timeout = http_config.connect_timeout.seconds
+
+      # Note: Proxy support would require creating client with proxy URI directly
+      # For now, proxy configuration is logged but not applied
+      if http_config.proxy
+        STDERR.puts "[INFO] Proxy configured but not yet supported: #{http_config.proxy}"
+      end
+    else
+      # Default timeouts if no config
+      client.read_timeout = 30.seconds
+      client.connect_timeout = 10.seconds
+    end
+  else
+    client.read_timeout = 30.seconds
+    client.connect_timeout = 10.seconds
+  end
+
   client
 end
 

@@ -23,6 +23,52 @@ struct Feed
 
   # Feed-specific item limit (nil = use global default)
   property item_limit : Int32? = nil
+
+  # Feed-specific authentication
+  property auth : AuthConfig? = nil
+end
+
+# HTTP client configuration for global settings
+struct HttpClientConfig
+  include YAML::Serializable
+
+  # Connection timeout in seconds (default: 10)
+  property connect_timeout : Int32 = 10
+
+  # Read timeout in seconds (default: 30)
+  property timeout : Int32 = 30
+
+  # Maximum redirects to follow (default: 10)
+  property max_redirects : Int32 = 10
+
+  # Custom User-Agent header (default: QuickHeadlines/version)
+  property user_agent : String = "QuickHeadlines/0.3"
+
+  # HTTP proxy URL (optional)
+  property proxy : String? = nil
+end
+
+# Authentication configuration for feeds
+struct AuthConfig
+  include YAML::Serializable
+
+  # Authentication type: "basic", "bearer", or "apikey"
+  property type : String = "basic"
+
+  # Username for Basic auth (optional)
+  property username : String? = nil
+
+  # Password for Basic auth (optional)
+  property password : String? = nil
+
+  # Token for Bearer or API Key auth (optional)
+  property token : String? = nil
+
+  # Custom header name (default: "Authorization")
+  property header : String = "Authorization"
+
+  # Header value prefix (e.g., "Bearer " for Bearer tokens)
+  property prefix : String = ""
 end
 
 struct SoftwareConfig
@@ -59,6 +105,9 @@ struct Config
 
   # Cache retention period in hours (default: 168 = 1 week)
   property cache_retention_hours : Int32 = 168
+
+  # HTTP client configuration (optional)
+  property http_client : HttpClientConfig? = nil
 
   property feeds : Array(Feed) = [] of Feed
 
@@ -105,7 +154,8 @@ end
 def validate_feed(feed : Feed) : Bool
   return false unless valid_url?(feed)
   return false unless valid_item_limit?(feed)
-  valid_retry_config?(feed)
+  return false unless valid_retry_config?(feed)
+  valid_auth_config?(feed)
 end
 
 # Validate feed URL
@@ -164,6 +214,41 @@ private def valid_retry_config?(feed : Feed) : Bool
 
   if feed.timeout < 5 || feed.timeout > 120
     STDERR.puts "[WARN] Invalid timeout for '#{feed.title}' (5-120s), using default"
+  end
+
+  true
+end
+
+# Validate authentication configuration
+private def valid_auth_config?(feed : Feed) : Bool
+  auth = feed.auth
+  return true unless auth
+
+  # Validate auth type
+  valid_types = ["basic", "bearer", "apikey"]
+  unless valid_types.includes?(auth.type)
+    STDERR.puts "[WARN] Invalid auth type for '#{feed.title}' (must be: basic, bearer, apikey), ignoring auth"
+    return true # Warning only, don't fail validation
+  end
+
+  # Validate Basic auth requires username and password
+  if auth.type == "basic"
+    username = auth.username
+    if username.nil? || username.strip.empty?
+      STDERR.puts "[WARN] Basic auth for '#{feed.title}' missing username"
+    end
+    password = auth.password
+    if password.nil? || password.strip.empty?
+      STDERR.puts "[WARN] Basic auth for '#{feed.title}' missing password"
+    end
+  end
+
+  # Validate Bearer/API Key auth requires token
+  if auth.type == "bearer" || auth.type == "apikey"
+    token = auth.token
+    if token.nil? || token.strip.empty?
+      STDERR.puts "[WARN] #{auth.type.capitalize} auth for '#{feed.title}' missing token"
+    end
   end
 
   true

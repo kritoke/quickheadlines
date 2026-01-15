@@ -196,34 +196,70 @@ The application will:
 
 Edit the `feeds.yml` file to add your own content. It only requires a feed title and URL; other properties have sane defaults.
 
-Example `feeds.yml`:
+### Global Configuration Options
 
+```yaml
+refresh_minutes: 10           # Refresh interval in minutes (default: 10)
+item_limit: 10                 # Default number of items per feed (default: 10)
+server_port: 3030              # HTTP server port (default: 3030)
+page_title: "Quick Headlines" # Page title (default: "Quick Headlines")
+cache_retention_hours: 168     # Cache retention in hours (default: 168 = 1 week)
 ```
-refresh_minutes: 10 # optional, defaults to 10
-item_limit: 10 # optional, defaults to 10
-server_port: 3030 # optional, defaults to 3030
-page_title: "Quick Headlines" # optional, defaults to Quick Headlines
-cache_retention_hours: 168 # optional, defaults to 168 (1 week)
+
+### HTTP Client Configuration
+
+Configure global HTTP client settings:
+
+```yaml
+http_client:
+  timeout: 30              # Read timeout in seconds (default: 30)
+  connect_timeout: 10      # Connection timeout in seconds (default: 10)
+  user_agent: "QuickHeadlines/0.3"  # Custom User-Agent header
+```
+
+### Feed-Specific Configuration
+
+Each feed can override global settings:
+
+```yaml
 tabs:
   - name: "Tech"
     feeds:
       - title: "Hacker News"
         url: "https://news.ycombinator.com/rss"
-        header_color: "orange" # optional, can take hex or color names
-      - title: "Tech Radar"
-        url: "https://www.techradar.com/feeds.xml"
-      - title: "Ars Technica"
-        url: "https://feeds.arstechnica.com/arstechnica/index"
-      - title: "Hackaday"
-        url: "https://hackaday.com/blog/feed/"
-  - name: "Dev"
+        header_color: "orange"  # Header background color
+        item_limit: 20          # Override global item limit
+        max_retries: 5          # Retry attempts on failure (default: 3)
+        retry_delay: 3          # Base delay between retries in seconds (default: 5)
+        timeout: 45             # Request timeout in seconds (default: 30)
+```
+
+### Authentication
+
+Feeds can require authentication. Supported types: `basic`, `bearer`, `apikey`:
+
+```yaml
+tabs:
+  - name: "Private"
     feeds:
-      - title: "Lobste.rs"
-        url: "https://lobste.rs/rss"
-      - title: "Google Developers"
-        url: "https://developer.chrome.com/static/blog/feed.xml"
-      - title: "Dev.to"
-        url: "https://dev.to/feed"
+      - title: "Internal Feed"
+        url: "https://example.com/private/feed.xml"
+        auth:
+          type: "basic"              # Authentication type
+          username: "user"           # Username for Basic auth
+          password: "pass"           # Password for Basic auth
+          # OR for Bearer/API Key:
+          # type: "bearer"
+          # token: "your-token-here"
+          # header: "Authorization"  # Custom header name (default)
+          # prefix: "Bearer "        # Value prefix (default: "")
+```
+
+### Software Releases
+
+Monitor releases from GitHub, GitLab, and Codeberg:
+
+```yaml
     software_releases: 
       title: "Software Releases" # optional, defaults to Software Releases
       repos:
