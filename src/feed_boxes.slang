@@ -22,7 +22,7 @@
           - elsif (fav = feed.favicon) && !fav.empty? && fav.starts_with?("/favicons/")
             img class="w-5 h-5 rounded-sm bg-white dark:bg-slate-300 p-0.5 ring-1 ring-black/5 dark:ring-black/60 flex-shrink-0" src="#{fav}" loading="lazy" alt=""
           - else
-            # Fallback to Google favicon service
+            -# Fallback to Google favicon service
             - host = feed.site_link.empty? ? feed.url : feed.site_link
             - if parsed = URI.parse(host)
               - if parsed_host = parsed.host
