@@ -25,9 +25,9 @@ div.timeline-container.max-w-6xl.mx-auto.px-4.pb-8
             svg.inline.mr-1.align-middle xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="width: 12px; height: 12px;"
               polyline points="16 18 22 12 16 6"
               polyline points="8 6 2 12 8 18"
-          - elsif (data = timeline_item.favicon_data) && !data.empty?
+          - elsif (data = timeline_item.favicon_data) && !data.empty? && data.starts_with?("/favicons/")
             img.inline.mr-1.align-middle.rounded-sm.bg-white.dark:bg-slate-300.p-0_5 src="#{data}" alt="" style="width: 12px; height: 12px; object-fit: contain;"
-          - elsif (fav = timeline_item.favicon) && !fav.empty?
+          - elsif (fav = timeline_item.favicon) && !fav.empty? && fav.starts_with?("/favicons/")
             img.inline.mr-1.align-middle.rounded-sm.bg-white.dark:bg-slate-300.p-0_5 src="#{fav}" alt="" style="width: 12px; height: 12px; object-fit: contain;"
           = timeline_item.feed_title
         span.text-slate-400.dark:text-slate-600

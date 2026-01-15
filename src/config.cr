@@ -15,6 +15,14 @@ struct Feed
   property title : String
   property url : String
   property header_color : String?
+
+  # Retry and timeout configuration
+  property max_retries : Int32 = 3 # Number of retry attempts on failure
+  property retry_delay : Int32 = 5 # Base delay between retries (seconds)
+  property timeout : Int32 = 30    # Request timeout (seconds)
+
+  # Feed-specific item limit (nil = use global default)
+  property item_limit : Int32? = nil
 end
 
 struct SoftwareConfig
@@ -66,9 +74,15 @@ def file_mtime(path : String) : Time
 end
 
 def load_config(path : String) : Config
-  File.open(path) do |io|
+  config = File.open(path) do |io|
     Config.from_yaml(io)
   end
+
+  # Validate feeds and log warnings for invalid configurations
+  # (result is logged but not used - validation errors are printed to stderr)
+  validate_config_feeds(config)
+
+  config
 end
 
 def find_default_config : String?
@@ -85,6 +99,101 @@ def parse_config_arg(args : Array(String)) : String?
   end
 
   nil
+end
+
+# Validate a single feed configuration
+def validate_feed(feed : Feed) : Bool
+  return false unless valid_url?(feed)
+  return false unless valid_item_limit?(feed)
+  valid_retry_config?(feed)
+end
+
+# Validate feed URL
+private def valid_url?(feed : Feed) : Bool
+  url = feed.url
+
+  # Check for nil or empty URL
+  return false if url.nil? || url.empty?
+
+  # Check for valid URL format
+  unless url.starts_with?("http")
+    STDERR.puts "[WARN] Invalid feed URL (must start with http/https): #{url}"
+    return false
+  end
+
+  # Validate URL can be parsed
+  begin
+    uri = URI.parse(url)
+    host = uri.host
+    if host.nil? || host.strip.empty?
+      STDERR.puts "[WARN] Invalid feed URL (missing host): #{url}"
+      return false
+    end
+  rescue ex
+    STDERR.puts "[WARN] Invalid feed URL (parse error): #{url}"
+    return false
+  end
+
+  true
+end
+
+# Validate feed item_limit
+private def valid_item_limit?(feed : Feed) : Bool
+  limit = feed.item_limit
+  return true unless limit
+
+  if limit < 1
+    STDERR.puts "[WARN] Invalid item_limit for '#{feed.title}' (must be >= 1), using global default"
+    return false
+  elsif limit > 100
+    STDERR.puts "[WARN] High item_limit for '#{feed.title}' (#{limit}), may impact performance"
+  end
+
+  true
+end
+
+# Validate retry and timeout configuration
+private def valid_retry_config?(feed : Feed) : Bool
+  if feed.max_retries < 0 || feed.max_retries > 10
+    STDERR.puts "[WARN] Invalid max_retries for '#{feed.title}' (0-10), using default"
+  end
+
+  if feed.retry_delay < 1 || feed.retry_delay > 60
+    STDERR.puts "[WARN] Invalid retry_delay for '#{feed.title}' (1-60s), using default"
+  end
+
+  if feed.timeout < 5 || feed.timeout > 120
+    STDERR.puts "[WARN] Invalid timeout for '#{feed.title}' (5-120s), using default"
+  end
+
+  true
+end
+
+# Validate all feeds in a configuration and log warnings
+def validate_config_feeds(config : Config) : Array(Feed)
+  valid_feeds = [] of Feed
+
+  # Validate top-level feeds
+  config.feeds.each do |feed|
+    if validate_feed(feed)
+      valid_feeds << feed
+    else
+      STDERR.puts "[WARN] Skipping invalid feed: #{feed.title} (#{feed.url})"
+    end
+  end
+
+  # Validate tab feeds
+  config.tabs.each do |tab|
+    tab.feeds.each do |feed|
+      if validate_feed(feed)
+        valid_feeds << feed
+      else
+        STDERR.puts "[WARN] Skipping invalid feed in tab '#{tab.name}': #{feed.title} (#{feed.url})"
+      end
+    end
+  end
+
+  valid_feeds
 end
 
 # Detect GitHub repository from git remote

@@ -5,10 +5,11 @@ require "./favicon_storage"
 require "./health_monitor"
 
 # ----- Favicon cache with size limits and expiration -----
+# Only caches local file paths (not base64 data URIs) to reduce memory usage
 
 class FaviconCache
-  CACHE_SIZE_LIMIT = 100 * 1024 * 1024 # 100MB total
-  ENTRY_TTL        = 7.days            # 7 day expiration
+  CACHE_SIZE_LIMIT = 10 * 1024 * 1024 # 10MB total (reduced since we only cache paths)
+  ENTRY_TTL        = 7.days           # 7 day expiration
 
   @cache = Hash(String, {String, Time}).new
   @current_size = 0
@@ -21,10 +22,8 @@ class FaviconCache
         if Time.local - timestamp < ENTRY_TTL
           data
         else
-          # Expired - calculate size and remove
-          # For data URIs, use actual size; for local paths, use fixed size
-          size = data.starts_with?("data:") ? data.bytesize : 1024
-          @current_size -= size
+          # Expired - remove entry
+          @current_size -= 1024 # Fixed size for local paths
           @cache.delete(url)
           nil
         end
@@ -33,27 +32,19 @@ class FaviconCache
   end
 
   def set(url : String, data : String) : Nil
-    # Cache both base64 data URIs and local file paths
-    # Local paths are much smaller, so we can cache more of them
-    is_data_uri = data.starts_with?("data:")
+    # Only cache local file paths, not base64 data URIs
+    return unless data.starts_with?("/favicons/")
 
     @mutex.synchronize do
-      # Calculate size of new entry
-      # For local paths, use a small fixed size (1KB) for cache accounting
-      new_size = is_data_uri ? data.bytesize : 1024
+      # Fixed size for local paths (1KB for cache accounting)
+      new_size = 1024
 
       # Evict if needed
       while @current_size + new_size > CACHE_SIZE_LIMIT && !@cache.empty?
         oldest = @cache.min_by(&.[1][1]).[0]
-        oldest_data = @cache[oldest][0]
-        # For data URIs, use actual size; for local paths, use fixed size
-        oldest_size = oldest_data.starts_with?("data:") ? oldest_data.bytesize : 1024
-        @current_size -= oldest_size
         @cache.delete(oldest)
+        @current_size -= 1024
       end
-
-      # Skip if single entry exceeds limit (only applies to data URIs)
-      return if is_data_uri && new_size > CACHE_SIZE_LIMIT
 
       @cache[url] = {data, Time.local}
       @current_size += new_size
@@ -112,6 +103,7 @@ def fetch_favicon_uri(url : String) : String?
 
           # Save favicon to disk using the final URL (after redirects)
           # This ensures the filename matches the actual image source
+          # Always return local path, never base64 data URI
           if saved_url = FaviconStorage.save_favicon(current_url, memory.to_slice, content_type)
             return saved_url
           end
@@ -241,7 +233,7 @@ private def get_favicon(feed : Feed, site_link : String, parsed_favicon : String
 
   favicon_data = fetch_favicon_data(favicon, site_link, previous_data)
 
-  # Ensure favicon points to local path if we have local favicon_data
+  # Ensure both favicon and favicon_data point to local paths
   # This prevents storing external URLs in the database when we have cached files
   if favicon_data && favicon_data.starts_with?("/favicons/")
     favicon = favicon_data
@@ -254,16 +246,18 @@ end
 private def fetch_favicon_data(favicon : String, site_link : String?, previous_data : FeedData?) : String?
   # Check shared cache first
   if cached_data = FAVICON_CACHE.get(favicon)
-    return convert_cached_data_uri(cached_data)
+    return cached_data
   end
 
-  # Use previous data if still valid
+  # Use previous data if still valid and is a local path
   if previous_data && previous_data.favicon == favicon && (prev_data = previous_data.favicon_data)
-    FAVICON_CACHE.set(favicon, prev_data)
-    return convert_cached_data_uri(prev_data)
+    if prev_data.starts_with?("/favicons/")
+      FAVICON_CACHE.set(favicon, prev_data)
+      return prev_data
+    end
   end
 
-  # Fetch new favicon data
+  # Fetch new favicon data (always returns local path)
   if new_data = fetch_favicon_uri(favicon)
     FAVICON_CACHE.set(favicon, new_data)
     return new_data
@@ -289,9 +283,12 @@ private def try_favicon_fallbacks(site_link : String?) : String?
 end
 
 # Convert base64 data URI to saved file URL if needed
-private def convert_cached_data_uri(data : String) : String
+# Note: This function is deprecated. We now always use local paths.
+# This is only called as a safety net for legacy cached data.
+private def convert_cached_data_uri(data : String, url : String) : String
+  # If we somehow get a data URI, convert it to local path using the feed URL for hashing
   if data.starts_with?("data:image/")
-    if converted_url = FaviconStorage.convert_data_uri(data)
+    if converted_url = FaviconStorage.convert_data_uri(data, url)
       return converted_url
     end
   end
@@ -342,55 +339,130 @@ private def error_feed_data(feed : Feed, message : String) : FeedData
   )
 end
 
-def fetch_feed(feed : Feed, item_limit : Int32, previous_data : FeedData? = nil) : FeedData
+# Check if fetch should be aborted due to timeout or retries
+private def should_abort_fetch?(feed : Feed, elapsed_seconds : Float, retries : Int32, redirects : Int32, timeout_seconds : Int32) : {Bool, String?}
+  if elapsed_seconds > timeout_seconds
+    return {true, "Error: Fetch timeout after #{timeout_seconds}s (retries: #{retries})"}
+  end
+
+  if redirects > 10
+    return {true, "Error: Too many redirects (#{redirects})"}
+  end
+
+  if retries >= feed.max_retries
+    return {true, "Error: Failed after #{retries} retries"}
+  end
+
+  {false, nil}
+end
+
+# Calculate backoff time for retry
+private def calculate_backoff(feed : Feed, retries : Int32) : Int32
+  feed.retry_delay * retries
+end
+
+# Handle server error with retry
+private def handle_server_error(feed : Feed, retries : Int32, status_code : Int32) : Int32
+  new_retries = retries + 1
+  backoff_seconds = calculate_backoff(feed, new_retries)
+  HealthMonitor.log_warning("fetch_feed(#{feed.url}) server error #{status_code}, retry #{new_retries}/#{feed.max_retries} in #{backoff_seconds}s")
+  sleep(backoff_seconds.seconds)
+  new_retries
+end
+
+# Handle timeout error with retry
+private def handle_timeout_error(feed : Feed, retries : Int32) : Int32
+  new_retries = retries + 1
+  backoff_seconds = calculate_backoff(feed, new_retries)
+  HealthMonitor.log_warning("fetch_feed(#{feed.url}) timeout, retry #{new_retries}/#{feed.max_retries} in #{backoff_seconds}s")
+  sleep(backoff_seconds.seconds)
+  new_retries
+end
+
+# Handle HTTP response for feed fetching
+private def handle_feed_response(feed : Feed, response : HTTP::Client::Response, current_url : String, redirects : Int32, effective_item_limit : Int32, previous_data : FeedData?, cache : FeedCache) : {FeedData?, Int32, Bool, String}
+  if response.status.redirection? && (location = response.headers["Location"]?)
+    new_url = URI.parse(current_url).resolve(location).to_s
+    return {nil, redirects + 1, false, new_url}
+  end
+
+  if response.status_code == 304 && previous_data
+    return {previous_data, redirects, true, current_url}
+  end
+
+  if response.status.success?
+    result = handle_success_response(feed, response, effective_item_limit, previous_data)
+    cache.add(result)
+    return {result, redirects, true, current_url}
+  end
+
+  if response.status.server_error?
+    return {nil, redirects, false, current_url}
+  end
+
+  # Client error - return error, don't retry
+  error_result = error_feed_data(feed, "Error fetching feed (status #{response.status_code})")
+  {error_result, redirects, true, current_url}
+end
+
+def fetch_feed(feed : Feed, global_item_limit : Int32, previous_data : FeedData? = nil) : FeedData
+  # Use feed-specific item limit or global default
+  effective_item_limit = feed.item_limit || global_item_limit
+
   # Check cache first
-  if cached_data = get_cached_feed(feed, item_limit, previous_data)
+  if cached_data = get_cached_feed(feed, effective_item_limit, previous_data)
     return cached_data
   end
 
   cache = FeedCache.instance
   current_url = feed.url
   redirects = 0
+  retries = 0
   start_time = Time.monotonic
 
   loop do
-    # Timeout after 60 seconds total
-    if (Time.monotonic - start_time).total_seconds > 60
-      HealthMonitor.log_warning("fetch_feed(#{feed.url}) timeout after 60s")
-      return error_feed_data(feed, "Error: Fetch timeout")
-    end
+    # Use feed-specific timeout or default to 60 seconds
+    timeout_seconds = feed.timeout > 0 ? feed.timeout : 60
 
-    return error_feed_data(feed, "Error: Too many redirects") if redirects > 10
+    # Check if we should abort
+    elapsed_seconds = (Time.monotonic - start_time).total_seconds
+    abort_msg = should_abort_fetch?(feed, elapsed_seconds, retries, redirects, timeout_seconds)
+    if abort_msg[0]
+      message = abort_msg[1] || "Error: Unknown fetch error"
+      HealthMonitor.log_warning("fetch_feed(#{feed.url}) #{message}")
+      return error_feed_data(feed, message)
+    end
 
     begin
       uri = URI.parse(current_url)
-
-      # Use pooled client for better performance
       client = create_client(current_url)
       headers = build_fetch_headers(feed, current_url, previous_data)
 
       client.get(uri.request_target, headers: headers) do |response|
-        if response.status.redirection? && (location = response.headers["Location"]?)
-          current_url = uri.resolve(location).to_s
-          redirects += 1
-        elsif response.status_code == 304 && previous_data
-          # Content hasn't changed, return previous data
-          return previous_data
-        elsif response.status.success?
-          result = handle_success_response(feed, response, item_limit, previous_data)
+        result, new_redirects, should_return, new_url = handle_feed_response(
+          feed, response, current_url, redirects, effective_item_limit, previous_data, cache
+        )
+        current_url = new_url
 
-          # Save to cache
-          cache.add(result)
+        if should_return
+          return result.as(FeedData)
+        end
 
-          return result
-        else
-          # Fall back to an error message in the body box
-          return error_feed_data(feed, "Error fetching feed (status #{response.status_code})")
+        redirects = new_redirects
+
+        # Handle server error with retry
+        if response.status.server_error?
+          retries = handle_server_error(feed, retries, response.status_code)
         end
       end
     rescue ex
-      HealthMonitor.log_error("fetch_feed(#{feed.url})", ex)
-      return error_feed_data(feed, "Error: #{ex.class} - #{ex.message}")
+      # Check if this is a timeout-related error
+      if ex.message =~ /timeout/i
+        retries = handle_timeout_error(feed, retries)
+      else
+        HealthMonitor.log_error("fetch_feed(#{feed.url})", ex)
+        return error_feed_data(feed, "Error: #{ex.class} - #{ex.message}")
+      end
     end
   end
 end

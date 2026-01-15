@@ -134,10 +134,19 @@ def create_schema(db : DB::Database, db_path : String)
       etag TEXT,
       last_modified TEXT,
       favicon TEXT,
+      favicon_data TEXT,
       last_fetched TEXT NOT NULL,
       created_at TEXT NOT NULL DEFAULT (datetime('now'))
     )
     SQL
+
+  # Migration: Add favicon_data column if it doesn't exist (for existing databases)
+  begin
+    db.exec("ALTER TABLE feeds ADD COLUMN favicon_data TEXT")
+    STDERR.puts "[Cache] Added favicon_data column to existing database"
+  rescue ex : SQLite3::Exception
+    # Column already exists, ignore error
+  end
 
   # Items table
   db.exec <<-SQL
@@ -284,13 +293,14 @@ class FeedCache
           feed_id = result
 
           @db.exec(
-            "UPDATE feeds SET title = ?, site_link = ?, header_color = ?, etag = ?, last_modified = ?, favicon = ?, last_fetched = ? WHERE id = ?",
+            "UPDATE feeds SET title = ?, site_link = ?, header_color = ?, etag = ?, last_modified = ?, favicon = ?, favicon_data = ?, last_fetched = ? WHERE id = ?",
             feed_data.title,
             feed_data.site_link,
             feed_data.header_color,
             feed_data.etag,
             feed_data.last_modified,
             feed_data.favicon,
+            feed_data.favicon_data,
             Time.utc.to_s("%Y-%m-%d %H:%M:%S"),
             feed_id
           )
@@ -325,7 +335,7 @@ class FeedCache
         else
           # Insert new feed
           @db.exec(
-            "INSERT INTO feeds (url, title, site_link, header_color, etag, last_modified, favicon, last_fetched) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            "INSERT INTO feeds (url, title, site_link, header_color, etag, last_modified, favicon, favicon_data, last_fetched) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
             feed_data.url,
             feed_data.title,
             feed_data.site_link,
@@ -333,6 +343,7 @@ class FeedCache
             feed_data.etag,
             feed_data.last_modified,
             feed_data.favicon,
+            feed_data.favicon_data,
             Time.utc.to_s("%Y-%m-%d %H:%M:%S")
           )
 
@@ -371,7 +382,7 @@ class FeedCache
   def get(url : String) : FeedData?
     start_time = Time.monotonic
     feed_data = @mutex.synchronize do
-      result = @db.query_one?("SELECT title, url, site_link, header_color, etag, last_modified, favicon FROM feeds WHERE url = ?", url) do |row|
+      result = @db.query_one?("SELECT title, url, site_link, header_color, etag, last_modified, favicon, favicon_data FROM feeds WHERE url = ?", url) do |row|
         {
           title:         row.read(String),
           url:           row.read(String),
@@ -380,6 +391,7 @@ class FeedCache
           etag:          row.read(String?),
           last_modified: row.read(String?),
           favicon:       row.read(String?),
+          favicon_data:  row.read(String?),
         }
       end
 
@@ -388,6 +400,24 @@ class FeedCache
         return
       end
       HealthMonitor.record_cache_hit
+
+      # If favicon_data is nil but favicon is a local path, copy it
+      if result[:favicon_data].nil?
+        if favicon = result[:favicon]
+          if favicon.starts_with?("/favicons/")
+            result = {
+              title:         result[:title],
+              url:           result[:url],
+              site_link:     result[:site_link],
+              header_color:  result[:header_color],
+              etag:          result[:etag],
+              last_modified: result[:last_modified],
+              favicon:       result[:favicon],
+              favicon_data:  favicon,
+            }
+          end
+        end
+      end
 
       # Get feed_id
       feed_id_result = @db.query_one?("SELECT id FROM feeds WHERE url = ?", url, as: {Int64})
@@ -417,7 +447,7 @@ class FeedCache
         result[:etag],
         result[:last_modified],
         result[:favicon],
-        nil # Don't cache favicon_data
+        result[:favicon_data]
       )
     end
     query_time = (Time.monotonic - start_time).total_milliseconds
@@ -439,7 +469,7 @@ class FeedCache
   def get_slice(url : String, limit : Int32, offset : Int32) : FeedData?
     @mutex.synchronize do
       # Get feed metadata
-      result = @db.query_one?("SELECT title, url, site_link, header_color, etag, last_modified, favicon FROM feeds WHERE url = ?", url) do |row|
+      result = @db.query_one?("SELECT title, url, site_link, header_color, etag, last_modified, favicon, favicon_data FROM feeds WHERE url = ?", url) do |row|
         {
           title:         row.read(String),
           url:           row.read(String),
@@ -448,10 +478,29 @@ class FeedCache
           etag:          row.read(String?),
           last_modified: row.read(String?),
           favicon:       row.read(String?),
+          favicon_data:  row.read(String?),
         }
       end
 
       return unless result
+
+      # If favicon_data is nil but favicon is a local path, copy it
+      if result[:favicon_data].nil?
+        if favicon = result[:favicon]
+          if favicon.starts_with?("/favicons/")
+            result = {
+              title:         result[:title],
+              url:           result[:url],
+              site_link:     result[:site_link],
+              header_color:  result[:header_color],
+              etag:          result[:etag],
+              last_modified: result[:last_modified],
+              favicon:       result[:favicon],
+              favicon_data:  favicon,
+            }
+          end
+        end
+      end
 
       # Get feed_id
       feed_id_result = @db.query_one?("SELECT id FROM feeds WHERE url = ?", url, as: {Int64})
@@ -483,7 +532,7 @@ class FeedCache
         result[:etag],
         result[:last_modified],
         result[:favicon],
-        nil # Don't cache favicon_data
+        result[:favicon_data]
       )
     end
   end
@@ -586,33 +635,64 @@ class FeedCache
   end
 
   # Sync favicon paths to ensure database points to local files
+  # This is an aggressive cleanup that:
+  # 1. Clears favicon_data if it contains external URLs
+  # 2. Copies local paths from favicon to favicon_data where missing
+  # 3. Ensures both columns point to local paths when possible
   def sync_favicon_paths
     @mutex.synchronize do
-      # Get all feeds with external favicon URLs
-      @db.query("SELECT id, url, favicon FROM feeds WHERE favicon IS NOT NULL") do |rows|
+      # Collect all feed data first to avoid modifying DB while iterating
+      feeds_data = [] of {Int64, String, String, String?}
+
+      @db.query("SELECT id, url, favicon, favicon_data FROM feeds WHERE favicon IS NOT NULL") do |rows|
         rows.each do
           feed_id = rows.read(Int64)
           url = rows.read(String)
           favicon = rows.read(String)
+          favicon_data = rows.read(String?)
+          feeds_data << {feed_id, url, favicon, favicon_data}
+        end
+      end
 
-          # If favicon is an external URL, check if we have a local file
-          if favicon.starts_with?("http")
-            # Generate hash-based filename from the URL
-            hash = OpenSSL::Digest.new("SHA256").update(favicon).final.hexstring
-            possible_extensions = ["png", "jpg", "jpeg", "ico", "svg", "webp"]
+      # Now process updates in a separate pass
+      feeds_data.each do |feed_id, url, favicon, favicon_data|
+        # Case 1: favicon_data contains an external URL - clear it
+        if favicon_data && favicon_data.starts_with?("http")
+          @db.exec("UPDATE feeds SET favicon_data = NULL WHERE id = ?", feed_id)
+          STDERR.puts "[Cache] Cleared external URL from favicon_data for #{url}: #{favicon_data}"
+          favicon_data = nil
+        end
 
-            found_local = false
-            possible_extensions.each do |ext|
-              filename = "#{hash[0...16]}.#{ext}"
-              filepath = File.join(FaviconStorage::FAVICON_DIR, filename)
-              if File.exists?(filepath)
-                # Update database to point to local file
-                @db.exec("UPDATE feeds SET favicon = ? WHERE id = ?", "/favicons/#{filename}", feed_id)
-                STDERR.puts "[Cache] Synced favicon for #{url}: #{favicon} -> /favicons/#{filename}"
-                found_local = true
-                break
-              end
+        # Case 2: favicon_data is nil but favicon is a local path - copy it
+        if favicon_data.nil? && favicon.starts_with?("/favicons/")
+          @db.exec("UPDATE feeds SET favicon_data = ? WHERE id = ?", favicon, feed_id)
+          STDERR.puts "[Cache] Synced favicon_data for #{url}: #{favicon}"
+        end
+
+        # Case 3: favicon is an external URL, check if we have a local file
+        if favicon.starts_with?("http")
+          # Generate hash-based filename from the URL
+          hash = OpenSSL::Digest.new("SHA256").update(favicon).final.hexstring
+          possible_extensions = ["png", "jpg", "jpeg", "ico", "svg", "webp"]
+
+          found_local = false
+          possible_extensions.each do |ext|
+            filename = "#{hash[0...16]}.#{ext}"
+            filepath = File.join(FaviconStorage::FAVICON_DIR, filename)
+            if File.exists?(filepath)
+              local_path = "/favicons/#{filename}"
+              # Update database to point to local file in both columns
+              @db.exec("UPDATE feeds SET favicon = ?, favicon_data = ? WHERE id = ?", local_path, local_path, feed_id)
+              STDERR.puts "[Cache] Synced favicon for #{url}: #{favicon} -> #{local_path}"
+              found_local = true
+              break
             end
+          end
+
+          # If no local file found, clear both columns to force refetch
+          unless found_local
+            @db.exec("UPDATE feeds SET favicon = NULL, favicon_data = NULL WHERE id = ?", feed_id)
+            STDERR.puts "[Cache] Cleared missing favicon for #{url}: #{favicon}"
           end
         end
       end
@@ -628,7 +708,7 @@ class FeedCache
 
   # Private helper to get feed without acquiring lock (already in mutex)
   private def get_without_lock(url : String) : FeedData?
-    result = @db.query_one?("SELECT title, url, site_link, header_color, etag, last_modified, favicon FROM feeds WHERE url = ?", url) do |row|
+    result = @db.query_one?("SELECT title, url, site_link, header_color, etag, last_modified, favicon, favicon_data FROM feeds WHERE url = ?", url) do |row|
       {
         title:         row.read(String),
         url:           row.read(String),
@@ -637,10 +717,29 @@ class FeedCache
         etag:          row.read(String?),
         last_modified: row.read(String?),
         favicon:       row.read(String?),
+        favicon_data:  row.read(String?),
       }
     end
 
     return unless result
+
+    # If favicon_data is nil but favicon is a local path, copy it
+    if result[:favicon_data].nil?
+      if favicon = result[:favicon]
+        if favicon.starts_with?("/favicons/")
+          result = {
+            title:         result[:title],
+            url:           result[:url],
+            site_link:     result[:site_link],
+            header_color:  result[:header_color],
+            etag:          result[:etag],
+            last_modified: result[:last_modified],
+            favicon:       result[:favicon],
+            favicon_data:  favicon,
+          }
+        end
+      end
+    end
 
     # Get feed_id
     feed_id_result = @db.query_one?("SELECT id FROM feeds WHERE url = ?", url, as: {Int64})
@@ -670,7 +769,7 @@ class FeedCache
       result[:etag],
       result[:last_modified],
       result[:favicon],
-      nil # Don't cache favicon_data
+      result[:favicon_data]
     )
   end
 end
@@ -696,6 +795,9 @@ def load_feed_cache(config : Config?) : FeedCache
   end
 
   cache = FeedCache.new(config)
+
+  # Sync favicon paths to ensure database points to local files
+  cache.sync_favicon_paths
 
   # Get retention hours from config or use default
   retention_hours = config.try(&.cache_retention_hours) || CACHE_RETENTION_HOURS

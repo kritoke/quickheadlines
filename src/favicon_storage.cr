@@ -64,7 +64,9 @@ module FaviconStorage
 
   # Convert a base64 data URI to a saved file URL
   # Returns the URL if successful, nil if the data URI is invalid
-  def self.convert_data_uri(data_uri : String) : String?
+  # Uses URL hash for consistency with save_favicon() - same favicon gets same filename
+  # regardless of how it was fetched (URL vs data URI)
+  def self.convert_data_uri(data_uri : String, url : String) : String?
     return unless data_uri.starts_with?("data:image/")
 
     # Parse data URI: data:image/png;base64,iVBORw0KGgo...
@@ -76,8 +78,8 @@ module FaviconStorage
 
     begin
       image_data = Base64.decode(base64_data)
-      # Generate a hash from the base64 data for consistent filename
-      hash = OpenSSL::Digest.new("SHA256").update(base64_data).final.hexstring
+      # Use URL hash for consistency (same URL = same filename)
+      hash = OpenSSL::Digest.new("SHA256").update(url).final.hexstring
       filename = "#{hash[0...16]}.#{extension_from_content_type(content_type)}"
       filepath = File.join(FAVICON_DIR, filename)
 
