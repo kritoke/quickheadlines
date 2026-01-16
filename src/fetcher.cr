@@ -3,6 +3,7 @@ require "gc"
 require "./software_fetcher"
 require "./favicon_storage"
 require "./health_monitor"
+require "./config"
 require "./minhash"
 
 # ----- Favicon cache with size limits and expiration -----
@@ -512,13 +513,25 @@ def fetch_feed(feed : Feed, global_item_limit : Int32, previous_data : FeedData?
           retries = handle_server_error(feed, retries, response.status_code)
         end
       end
+    rescue ex : IO::TimeoutError
+      # Handle timeout error specifically
+      HealthMonitor.log_warning("fetch_feed(#{feed.url}) timeout after #{feed.timeout}s")
+      HealthMonitor.update_feed_health(feed.url, FeedHealthStatus::Timeout)
+
+      retries = handle_timeout_error(feed, retries)
     rescue ex
-      # Check if this is a timeout-related error
-      if ex.message =~ /timeout/i
+      # Check if this is a timeout-related error (for other timeout types)
+      error_msg = ex.message
+      is_timeout = error_msg.is_a?(String) && error_msg.downcase.includes?("timeout")
+
+      if is_timeout
+        HealthMonitor.log_warning("fetch_feed(#{feed.url}) timeout: #{error_msg}")
+        HealthMonitor.update_feed_health(feed.url, FeedHealthStatus::Timeout)
         retries = handle_timeout_error(feed, retries)
       else
         HealthMonitor.log_error("fetch_feed(#{feed.url})", ex)
-        return error_feed_data(feed, "Error: #{ex.class} - #{ex.message}")
+        HealthMonitor.update_feed_health(feed.url, FeedHealthStatus::Unreachable)
+        return error_feed_data(feed, "Error: #{ex.class} - #{error_msg}")
       end
     end
   end

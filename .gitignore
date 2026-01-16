@@ -34,3 +34,6 @@ CLAUDE.md
 AGENTS.md
 .gitattributes
 server.log
+
+# Active design plan (working document, not for commit)
+ACTIVE_DESIGN_PLAN.md

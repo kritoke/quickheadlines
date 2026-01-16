@@ -39,10 +39,14 @@ RUN ./tailwindcss -i assets/css/input.css -o assets/css/production.css --minify
 ARG BUILD_REV=unknown
 
 # 3. Build the binary
+# CRYSTAL_WORKERS: Set number of parallel workers for compilation (optimized for ARM64)
+# Using 4 workers provides good balance between speed and memory usage on ARM64
+ENV CRYSTAL_WORKERS=4
+
 # REMOVED: --static (This is the key fix for ARM64 stability)
 # The binary will now rely on shared system libraries (Dynamic Linking)
 # We echo the build revision to force cache invalidation if the ARG changes
-RUN echo "Build revision: ${BUILD_REV}" && APP_ENV=production crystal build --release --no-debug -Dversion=${BUILD_REV} src/quickheadlines.cr -o /app/server
+RUN echo "Build revision: ${BUILD_REV}" && echo "CRYSTAL_WORKERS: ${CRYSTAL_WORKERS}" && APP_ENV=production crystal build --release --no-debug -Dversion=${BUILD_REV} src/quickheadlines.cr -o /app/server
 
 # --- Stage 2: Runner ---
 # Use Ubuntu (Slim) to match the Builder's OS architecture

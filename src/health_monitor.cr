@@ -1,4 +1,5 @@
 require "time"
+require "./config"
 
 # Health monitoring utilities for tracking system resources and detecting issues
 module HealthMonitor
@@ -7,6 +8,8 @@ module HealthMonitor
   CPU_WARNING_THRESHOLD    = 80.0              # 80% CPU usage
   MEMORY_WARNING_THRESHOLD = 500 * 1024 * 1024 # 500MB
   FIBER_WARNING_THRESHOLD  = 1000              # 1000 fibers
+  FEED_TIMEOUT_THRESHOLD   =    3              # Number of timeouts before marking feed as slow
+  FEED_COOLDOWN_PERIOD     = 30.minutes        # Cooldown before re-enabling disabled feeds
 
   # Metrics tracking
   @@last_cpu_time : Process::Tms?
@@ -15,6 +18,11 @@ module HealthMonitor
   @@cache_misses = 0
   @@db_query_times = [] of Float64
   @@db_query_count = 0
+
+  # Feed health tracking
+  @@feed_health : Hash(String, FeedHealth) = Hash(String, FeedHealth).new
+  @@feed_health_mutex = Mutex.new
+  @@disabled_feeds : Hash(String, Time) = Hash(String, Time).new
 
   # Log current system health metrics
   def self.log_health_metrics
@@ -129,5 +137,108 @@ module HealthMonitor
   # Log info
   def self.log_info(message : String)
     STDERR.puts "[#{Time.local}] INFO: #{message}"
+  end
+
+  # ============================================
+  # Feed Health Tracking
+  # ============================================
+
+  # Update feed health status
+  def self.update_feed_health(url : String, status : FeedHealthStatus, response_time : Float64? = nil)
+    @@feed_health_mutex.synchronize do
+      existing = @@feed_health[url]?
+
+      new_status = status
+      consecutive_failures = existing ? existing.consecutive_failures : 0
+      last_success = existing ? existing.last_success : nil
+      last_failure = existing ? existing.last_failure : nil
+      avg_response_time = existing ? existing.average_response_time : (response_time || 0.0)
+
+      case status
+      when FeedHealthStatus::Healthy
+        consecutive_failures = 0
+        last_success = Time.local
+        # Update average response time
+        if response_time && existing
+          avg_response_time = (avg_response_time * 0.7) + (response_time * 0.3)
+        elsif response_time
+          avg_response_time = response_time
+        end
+      when FeedHealthStatus::Timeout, FeedHealthStatus::Unreachable
+        consecutive_failures += 1
+        last_failure = Time.local
+
+        # Mark feed as slow if too many timeouts
+        if consecutive_failures >= FEED_TIMEOUT_THRESHOLD
+          new_status = FeedHealthStatus::Slow
+        end
+      else
+        # Slow status - maintain failure count but don't increment
+        last_failure = Time.local
+      end
+
+      @@feed_health[url] = FeedHealth.new(
+        url: url,
+        status: new_status,
+        last_success: last_success,
+        last_failure: last_failure,
+        consecutive_failures: consecutive_failures,
+        average_response_time: avg_response_time
+      )
+
+      # Log status change
+      if existing.nil? || existing.status != new_status
+        log_info("Feed health updated: #{url} -> #{new_status} (failures: #{consecutive_failures})")
+      end
+    end
+  end
+
+  # Check if a feed is disabled (due to repeated failures)
+  def self.feed_disabled?(url : String) : Bool
+    @@feed_health_mutex.synchronize do
+      if disabled_time = @@disabled_feeds[url]?
+        # Check if cooldown period has passed
+        if Time.local - disabled_time > FEED_COOLDOWN_PERIOD
+          @@disabled_feeds.delete(url)
+          return false
+        end
+        return true
+      end
+      false
+    end
+  end
+
+  # Temporarily disable a feed due to repeated failures
+  def self.disable_feed(url : String)
+    @@feed_health_mutex.synchronize do
+      @@disabled_feeds[url] = Time.local
+      log_warning("Feed disabled due to repeated failures: #{url} (will retry after #{FEED_COOLDOWN_PERIOD})")
+    end
+  end
+
+  # Get feed health status
+  def self.get_feed_health(url : String) : FeedHealth?
+    @@feed_health_mutex.synchronize do
+      @@feed_health[url]?
+    end
+  end
+
+  # Get all feed health statuses
+  def self.all_feed_health : Array(FeedHealth)
+    @@feed_health_mutex.synchronize do
+      @@feed_health.values
+    end
+  end
+
+  # Log all feed health statuses
+  def self.log_feed_health
+    health = all_feed_health
+    return if health.empty?
+
+    STDERR.puts "[#{Time.local}] Feed Health Status:"
+    health.each do |feed|
+      disabled = feed_disabled?(feed.url) ? " [DISABLED]" : ""
+      STDERR.puts "  #{feed.url}: #{feed.status}#{disabled} (failures: #{feed.consecutive_failures}, avg response: #{feed.average_response_time.round(2)}ms)"
+    end
   end
 end

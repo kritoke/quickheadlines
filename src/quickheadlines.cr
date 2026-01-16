@@ -43,7 +43,23 @@ unless config_path && File.exists?(config_path)
   config_path = target_path
 end
 
-initial_config = load_config(config_path)
+# Load config with enhanced validation and error handling
+config_result = load_config_with_validation(config_path)
+
+unless config_result.success
+  STDERR.puts "\n[ERROR] Failed to load configuration from #{config_path}:"
+  STDERR.puts "  #{config_result.error_message}"
+  if line = config_result.error_line
+    STDERR.puts "  Line: #{line}, Column: #{config_result.error_column || "unknown"}"
+  end
+  if suggestion = config_result.suggestion
+    STDERR.puts "  Suggestion: #{suggestion}"
+  end
+  STDERR.puts "\nPlease fix the configuration file and try again."
+  exit 1
+end
+
+initial_config = config_result.config.as(Config)
 state = ConfigState.new(initial_config, file_mtime(config_path))
 
 # Load feed cache from disk (creates SQLite connection)

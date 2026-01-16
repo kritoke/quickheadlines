@@ -245,38 +245,138 @@ rescue ex : Exception
   false
 end
 
-# Repair corrupted database by creating a new one
-def repair_database(config : Config?)
-  db_path = get_cache_db_path(config)
+# Enhanced database health check with multiple validations
+def check_db_health(db_path : String) : DbHealthStatus
+  # Check if database file exists and has content
+  unless File.exists?(db_path)
+    return DbHealthStatus::NeedsRepopulation
+  end
 
-  STDERR.puts "[#{Time.local}] Attempting to repair corrupted database..."
+  # Check file size (empty database would be very small)
+  if File.size(db_path) < 100
+    STDERR.puts "[WARN] Database file is too small (#{File.size(db_path)} bytes), may be empty"
+    return DbHealthStatus::NeedsRepopulation
+  end
+
+  # Run integrity check
+  DB.open("sqlite3://#{db_path}") do |db|
+    # Check basic integrity
+    integrity_result = db.query_one("PRAGMA integrity_check", as: {String})
+    if integrity_result != "ok"
+      STDERR.puts "[ERROR] Database integrity check failed: #{integrity_result}"
+      return DbHealthStatus::Corrupted
+    end
+
+    # Check foreign key constraints
+    begin
+      fk_result = db.query_one("PRAGMA foreign_key_check", as: Array(Array(Int64)))
+      if fk_result && !fk_result.empty?
+        STDERR.puts "[WARN] Database has #{fk_result.size} foreign key violations"
+        # Foreign key violations don't necessarily mean corruption
+        # but we should note them
+      end
+    rescue ex
+      # Some SQLite versions don't support this pragma in all modes
+      # Ignore if not supported
+    end
+
+    # Check if database has feeds (for repopulation detection)
+    feed_count = db.query_one("SELECT COUNT(*) FROM feeds", as: {Int64})
+    if feed_count == 0
+      STDERR.puts "[WARN] Database has no feeds, needs repopulation"
+      return DbHealthStatus::NeedsRepopulation
+    end
+
+    STDERR.puts "[#{Time.local}] Database health check passed (#{feed_count} feeds)"
+    DbHealthStatus::Healthy
+  end
+rescue ex : Exception
+  STDERR.puts "[ERROR] Database health check failed: #{ex.message}"
+  DbHealthStatus::Corrupted
+end
+
+# Repair corrupted database by creating a new one
+def repair_database(config : Config?, backup_path : String? = nil) : DbRepairResult
+  db_path = get_cache_db_path(config)
+  repair_time = Time.utc
+
+  STDERR.puts "[#{repair_time}] Attempting to repair corrupted database..."
+
+  # Determine backup path (use provided or generate new)
+  actual_backup_path = backup_path || "#{db_path}.corrupted.#{repair_time.to_s("%Y%m%d%H%M%S")}"
 
   # Backup corrupted database
-  backup_path = "#{db_path}.corrupted.#{Time.utc.to_s("%Y%m%d%H%M%S")}"
-  begin
-    File.rename(db_path, backup_path)
-    STDERR.puts "[#{Time.local}] Backed up corrupted database to: #{backup_path}"
-  rescue ex : Exception
-    STDERR.puts "[ERROR] Failed to backup corrupted database: #{ex.message}"
-    return false
+  unless File.exists?(actual_backup_path)
+    begin
+      File.rename(db_path, actual_backup_path) if File.exists?(db_path)
+      STDERR.puts "[#{repair_time}] Backed up corrupted database to: #{actual_backup_path}"
+    rescue ex : Exception
+      STDERR.puts "[ERROR] Failed to backup corrupted database: #{ex.message}"
+      return DbRepairResult.new(
+        status: DbHealthStatus::Corrupted,
+        backup_path: nil,
+        repair_time: repair_time,
+        feeds_to_restore: 0,
+        items_to_restore: 0
+      )
+    end
   end
 
   # Create new database
   begin
     init_db(config)
-    STDERR.puts "[#{Time.local}] Successfully repaired database (created new one)"
-    true
+    STDERR.puts "[#{repair_time}] Successfully repaired database (created new one)"
+    DbRepairResult.new(
+      status: DbHealthStatus::Repaired,
+      backup_path: actual_backup_path,
+      repair_time: repair_time,
+      feeds_to_restore: 0,
+      items_to_restore: 0
+    )
   rescue ex : Exception
     STDERR.puts "[ERROR] Failed to create new database: #{ex.message}"
     # Try to restore backup
     begin
-      File.rename(backup_path, db_path)
-      STDERR.puts "[#{Time.local}] Restored backup database"
+      File.rename(actual_backup_path, db_path) if File.exists?(actual_backup_path)
+      STDERR.puts "[#{repair_time}] Restored backup database"
     rescue
       STDERR.puts "[ERROR] Failed to restore backup database"
     end
-    false
+    DbRepairResult.new(
+      status: DbHealthStatus::Corrupted,
+      backup_path: actual_backup_path,
+      repair_time: repair_time,
+      feeds_to_restore: 0,
+      items_to_restore: 0
+    )
   end
+end
+
+# Automatic repopulation after repair
+def repopulate_database(config : Config?, cache : FeedCache?, restore_config : FeedRestoreConfig = FeedRestoreConfig.new) : Bool
+  return false unless config
+
+  STDERR.puts "[#{Time.local}] Repopulating database..."
+
+  # Determine how many hours of feeds to fetch
+  timeframe_hours = restore_config.timeframe_hours
+
+  # Get all feeds from config
+  all_feeds = [] of Feed
+  all_feeds.concat(config.feeds)
+  config.tabs.each do |tab|
+    all_feeds.concat(tab.feeds)
+  end
+
+  feeds_to_restore = all_feeds.size
+  items_to_restore = 0
+
+  # Check if we have a fetcher available (this would be called from quickheadlines.cr)
+  # For now, just log what we would do
+  STDERR.puts "[#{Time.local}] Would restore #{feeds_to_restore} feeds from past #{timeframe_hours} hours"
+
+  # Return true if we have feeds to restore (actual fetching happens in the calling code)
+  feeds_to_restore > 0
 end
 
 # Initialize database on first run
@@ -943,7 +1043,7 @@ class FeedCache
   end
 end
 
-# Load cache from disk (returns FeedCache instance)
+# Load cache from disk with enhanced recovery (returns FeedCache instance)
 def load_feed_cache(config : Config?) : FeedCache
   cache_dir = get_cache_dir(config)
   ensure_cache_dir(cache_dir)
@@ -952,14 +1052,28 @@ def load_feed_cache(config : Config?) : FeedCache
   # Initialize DB if first run
   init_db(config) unless File.exists?(db_path)
 
-  # Check database integrity on startup
+  # Enhanced health check on startup
   if File.exists?(db_path)
-    unless check_db_integrity(db_path)
+    health_status = check_db_health(db_path)
+
+    case health_status
+    when DbHealthStatus::Healthy
+      STDERR.puts "[#{Time.local}] Database is healthy"
+    when DbHealthStatus::Corrupted
       STDERR.puts "[ERROR] Database corruption detected, attempting repair..."
-      unless repair_database(config)
+      repair_result = repair_database(config)
+
+      if repair_result.status == DbHealthStatus::Repaired
+        STDERR.puts "[#{Time.local}] Database repaired successfully. Automatic repopulation will occur on next refresh."
+      else
         STDERR.puts "[FATAL] Failed to repair database, exiting"
         exit 1
       end
+    when DbHealthStatus::NeedsRepopulation
+      STDERR.puts "[WARN] Database needs repopulation (empty or missing feeds)"
+      STDERR.puts "[#{Time.local}] Database will be populated on next refresh cycle"
+    when DbHealthStatus::Repaired
+      STDERR.puts "[#{Time.local}] Database was previously repaired"
     end
   end
 

@@ -119,6 +119,60 @@ struct Config
   property tabs : Array(TabConfig) = [] of TabConfig
 end
 
+# YAML parsing result with detailed error information
+record ConfigLoadResult,
+  success : Bool,
+  config : Config?,
+  error_message : String?,
+  error_line : Int32?,
+  error_column : Int32?,
+  suggestion : String?
+
+# Feed timeout configuration
+record FeedTimeoutConfig,
+  default_timeout : Int32 = 30,
+  slow_feed_timeout : Int32 = 60,
+  timeout_multiplier : Float64 = 2.0,
+  max_retries_on_timeout : Int32 = 2
+
+# Feed health tracking
+enum FeedHealthStatus
+  Healthy
+  Slow
+  Timeout
+  Unreachable
+end
+
+record FeedHealth,
+  url : String,
+  status : FeedHealthStatus,
+  last_success : Time?,
+  last_failure : Time?,
+  consecutive_failures : Int32,
+  average_response_time : Float64
+
+# Database health status enum
+enum DbHealthStatus
+  Healthy
+  Corrupted
+  Repaired
+  NeedsRepopulation
+end
+
+# Database repair result
+record DbRepairResult,
+  status : DbHealthStatus,
+  backup_path : String?,
+  repair_time : Time,
+  feeds_to_restore : Int32,
+  items_to_restore : Int32
+
+# Feed restoration configuration
+record FeedRestoreConfig,
+  timeframe_hours : Int32 = 168,
+  force_full_refresh : Bool = false,
+  restore_on_startup : Bool = true
+
 record ConfigState, config : Config, mtime : Time
 
 def file_mtime(path : String) : Time
@@ -151,6 +205,123 @@ def parse_config_arg(args : Array(String)) : String?
   end
 
   nil
+end
+
+# Enhanced YAML loading with detailed error handling
+def load_config_with_validation(path : String) : ConfigLoadResult
+  begin
+    # Check file encoding and read content
+    content = File.read(path)
+
+    # Remove BOM if present (UTF-8 BOM: \uFEFF)
+    if content.starts_with?("\uFEFF")
+      content = content[1..-1]
+    end
+
+    # Validate YAML structure before parsing
+    validate_yaml_structure(content)
+
+    # Parse YAML
+    config = Config.from_yaml(content)
+
+    # Validate feeds and log warnings
+    validate_config_feeds(config)
+
+    ConfigLoadResult.new(
+      success: true,
+      config: config,
+      error_message: nil,
+      error_line: nil,
+      error_column: nil,
+      suggestion: nil
+    )
+  rescue ex : YAML::ParseException
+    # Extract line and column from error message
+    error_msg = ex.message || "Unknown YAML parsing error"
+
+    # Parse error location
+    error_line = nil
+    error_column = nil
+
+    if error_msg =~ /at line (\d+), column (\d+)/
+      error_line = $1.to_i
+      error_column = $2.to_i
+    end
+
+    # Provide helpful suggestions
+    suggestion = suggest_yaml_fix(error_msg, error_line)
+
+    ConfigLoadResult.new(
+      success: false,
+      config: nil,
+      error_message: error_msg,
+      error_line: error_line,
+      error_column: error_column,
+      suggestion: suggestion
+    )
+  rescue ex : File::Error
+    ConfigLoadResult.new(
+      success: false,
+      config: nil,
+      error_message: "Cannot read config file: #{ex.message}",
+      error_line: nil,
+      error_column: nil,
+      suggestion: "Check file permissions and path"
+    )
+  rescue ex
+    ConfigLoadResult.new(
+      success: false,
+      config: nil,
+      error_message: "Unexpected error: #{ex.message}",
+      error_line: nil,
+      error_column: nil,
+      suggestion: "Check file format and encoding"
+    )
+  end
+end
+
+# Validate YAML structure before parsing
+private def validate_yaml_structure(content : String) : Nil
+  # Check for common YAML issues
+  lines = content.lines
+
+  lines.each_with_index do |line, index|
+    line_num = index + 1
+
+    # Check for tabs (YAML requires spaces)
+    if line.includes?("\t")
+      raise YAML::ParseException.new("Line #{line_num}: Contains tab character (use spaces instead)", line_num, 1)
+    end
+
+    # Check for trailing whitespace
+    if line.rstrip != line
+      STDERR.puts "[WARN] Line #{line_num}: Trailing whitespace detected"
+    end
+
+    # Check for mixed indentation
+    if line =~ /^(\s+)/
+      indent = $1
+      if indent.includes?("\t")
+        raise YAML::ParseException.new("Line #{line_num}: Mixed tabs and spaces in indentation", line_num, 1)
+      end
+    end
+  end
+end
+
+# Provide helpful suggestions based on error type
+private def suggest_yaml_fix(error_msg : String, error_line : Int32?) : String?
+  case error_msg
+  when /cannot start any token/
+    "Check for invalid characters, missing quotes, or incorrect indentation at line #{error_line}"
+  when /mapping values are not allowed/
+    "Check for missing colon or incorrect list syntax at line #{error_line}"
+  when /did not find expected key/
+    "Check for inconsistent indentation or missing key at line #{error_line}"
+  when /unexpected character/
+    "Check for special characters that need quotes at line #{error_line}"
+  else
+    "Check YAML syntax at line #{error_line}. Ensure proper indentation and no trailing spaces"
+  end
 end
 
 # Validate a single feed configuration
