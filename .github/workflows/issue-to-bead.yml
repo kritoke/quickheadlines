@@ -6,12 +6,13 @@ on:
 jobs:
   sync-to-beads-branch:
     runs-on: ubuntu-latest
+    # Only execute if the 'bead' label is applied
     if: contains(github.event.issue.labels.*.name, 'bead')
     steps:
       - name: Checkout Beads Sync Branch
         uses: actions/checkout@v4
         with:
-          ref: 'beads-sync' # Switch directly to the branch Beads watches
+          ref: 'beads-sync'
           fetch-depth: 0
 
       - name: Configure Git
@@ -19,15 +20,18 @@ jobs:
           git config --global user.name "GitHub Action"
           git config --global user.email "action@github.com"
 
-      - name: Create Bead file
+      - name: Create Formal Bead File
         run: |
-          FILENAME=$(echo "${{ github.event.issue.title }}" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9]/-/g' | cut -c1-50)
+          # Use Issue Number as the ID to ensure 'bd' indexes it correctly
+          ID="${{ github.event.issue.number }}"
           mkdir -p .beads
-          FILE_PATH=".beads/$(date +%Y%m%d)-${FILENAME}.md"
+          FILE_PATH=".beads/bead-${ID}.md"
           
+          # Construct valid Beads frontmatter
           {
             echo "---"
-            echo "title: ${{ github.event.issue.title }}"
+            echo "id: ${ID}"
+            echo "title: \"${{ github.event.issue.title }}\""
             echo "status: todo"
             echo "created_at: $(date -u +"%Y-%m-%dT%H:%M:%SZ")"
             echo "issue_url: ${{ github.event.issue.html_url }}"
@@ -38,17 +42,18 @@ jobs:
 
       - name: Commit and Push to beads-sync
         run: |
-          # On the sync branch, .beads is usually NOT ignored, 
-          # but we use -f just in case.
+          # Force add in case .beads is ignored on this branch too
           git add -f .beads/*.md
           if ! git diff --cached --quiet; then
-            git commit -m "feat: mobile entry #${{ github.event.issue.number }}"
+            git commit -m "feat: sync mobile bead #${{ github.event.issue.number }}"
             git push origin beads-sync
+          else
+            echo "No changes detected, skipping push."
           fi
 
-      - name: Comment on Issue
+      - name: Success Notification
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh issue comment ${{ github.event.issue.number }} \
-            --body "🚀 **Bead Dispatched!** Task sent directly to the sync branch. It will appear locally in a moment."
+            --body "🚀 **Synced to Beads!** Added with ID: \`${{ github.event.issue.number }}\`. Run \`bd sync\` locally to import."
