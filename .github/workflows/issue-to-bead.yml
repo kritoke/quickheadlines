@@ -1,4 +1,4 @@
-name: Mobile to Beads Sync (JSONL)
+name: Mobile to Beads JSONL
 on:
   issues:
     types: [opened, labeled, reopened]
@@ -17,13 +17,12 @@ jobs:
       - name: Create JSONL Bead
         run: |
           ID="${{ github.event.issue.number }}"
-          # Clean title and body for JSON safety
+          # Using jq to ensure JSON safety for SQLite import
           TITLE=$(echo "${{ github.event.issue.title }}" | jq -R .)
           BODY=$(echo "${{ github.event.issue.body }}" | jq -R .)
           CREATED=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
           
           mkdir -p .beads
-          # Construct a single line of JSON
           echo "{\"id\":$ID,\"title\":$TITLE,\"description\":$BODY,\"status\":\"todo\",\"created_at\":\"$CREATED\"}" > ".beads/bead-${ID}.jsonl"
 
       - name: Push to Inbox
