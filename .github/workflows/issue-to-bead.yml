@@ -6,7 +6,7 @@ on:
 jobs:
   sync-to-beads:
     runs-on: ubuntu-latest
-    # Only run if the 'bead' label is applied
+    # Only run if the 'bead' label is applied to the issue
     if: contains(github.event.issue.labels.*.name, 'bead')
     permissions:
       contents: write
@@ -31,10 +31,10 @@ jobs:
           FULL_ID="${PREFIX}${ID}"
           CREATED=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 
-          # 2. Build the JSON safely using jq variables
-          # This handles multi-line bodies and inner quotes automatically
+          # 2. Build COMPACT single-line JSON safely using jq variables
+          # The '-c' flag is critical for the Go-based 'bd import' to read it correctly
           mkdir -p .beads
-          jq -n \
+          jq -n -c \
             --arg id "$FULL_ID" \
             --arg title "${{ github.event.issue.title }}" \
             --arg desc "${{ github.event.issue.body }}" \
@@ -43,14 +43,14 @@ jobs:
             '{id: $id, title: $title, description: $desc, status: $status, created_at: $created}' \
             > ".beads/bead-${ID}.jsonl"
           
-          echo "✅ Generated and validated JSON for bead-${ID}.jsonl"
+          echo "✅ Generated compact JSON for bead-${ID}.jsonl"
 
       - name: Force Push to beads-sync
         run: |
           git add -f .beads/bead-*.jsonl
           if ! git diff --cached --quiet; then
             git commit -m "feat: sync mobile bead #${{ github.event.issue.number }}"
-            # Pull with rebase ensures we don't conflict with local 'bds' cleanups
+            # Rebase ensures we don't conflict with local 'bds' cleanups in the worktree
             git pull --rebase origin beads-sync
             git push origin beads-sync
           else
