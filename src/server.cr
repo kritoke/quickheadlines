@@ -208,6 +208,7 @@ end
 def handle_timeline_items(context : HTTP::Server::Context)
   limit = context.request.query_params["limit"]?.try(&.to_i?) || 100
   offset = context.request.query_params["offset"]?.try(&.to_i?) || 0
+  last_day = context.request.query_params["last_day"]? # ameba:disable Lint/UselessAssign
 
   # Get all timeline items and apply pagination
   all_items = STATE.all_timeline_items

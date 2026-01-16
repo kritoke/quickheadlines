@@ -1,4 +1,4 @@
-  - current_day = nil
+  - current_day = last_day
   - timeline_items.each do |timeline_item|
     - item_date = timeline_item.item.pub_date
     - if item_date

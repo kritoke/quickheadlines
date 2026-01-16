@@ -161,7 +161,7 @@ html
 
           async function loadMoreItems() {
             if (isLoading || !hasMore) return;
-
+            
             isLoading = true;
             const sentinel = document.getElementById('infinite-scroll-sentinel');
             if (sentinel) {
@@ -169,7 +169,10 @@ html
             }
 
             try {
-              const url = `/timeline_items?limit=30&offset=${currentOffset}`;
+              // Capture the last day header to prevent duplicate headers
+              const lastDayHeader = document.querySelector('.timeline-day-header:last-of-type');
+              const lastDay = lastDayHeader ? lastDayHeader.textContent.trim() : null;
+              const url = `/timeline_items?limit=30&offset=${currentOffset}&last_day=${encodeURIComponent(lastDay || '')}`;
               const res = await fetch(url);
               if (!res.ok) throw new Error();
               const html = await res.text();

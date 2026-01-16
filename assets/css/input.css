@@ -151,8 +151,10 @@
 /* Tabs */
 .tab-container {
   display: flex;
-  gap: 1rem;
+  flex-wrap: wrap;
+  gap: 0.25rem;
   margin-bottom: 1.5rem;
+  padding-bottom: 0.25rem;
   border-bottom: 1px solid var(--color-border-light);
   @variant dark { border-bottom-color: var(--color-border-subtle); }
 }
@@ -160,11 +162,19 @@
 .tab-link {
   padding: 0.5rem 1rem;
   font-weight: 500;
-  border-bottom: 2px solid transparent;
-  transition: all 0.2s;
+  border-radius: 0.375rem;
+  color: #64748b;
+  transition: all 0.15s ease;
+}
+
+.tab-link:hover {
+  background-color: #f1f5f9;
+  color: #1e293b;
+  @variant dark { background-color: #1e293b; color: #e2e8f0; }
 }
 
 .tab-link.active {
-  border-bottom-color: #3b82f6;
-  color: #3b82f6;
+  background-color: #eff6ff;
+  color: #2563eb;
+  @variant dark { background-color: #1e3a5f; color: #60a5fa; }
 }
