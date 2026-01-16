@@ -11,7 +11,7 @@ jobs:
       contents: write
       issues: read
     steps:
-      - name: Checkout
+      - name: Checkout Beads Sync Branch
         uses: actions/checkout@v4
         with:
           ref: 'beads-sync'
@@ -24,21 +24,28 @@ jobs:
 
       - name: Create JSONL Bead
         run: |
-          # Use jq for safety; ID is the issue number
+          # 1. Configuration
+          PREFIX="quickheadlines-"
           ID="${{ github.event.issue.number }}"
+          FULL_ID="${PREFIX}${ID}"
+          
+          # 2. Extract and clean strings
           TITLE=$(echo "${{ github.event.issue.title }}" | jq -R .)
           BODY=$(echo "${{ github.event.issue.body }}" | jq -R .)
           CREATED=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
           
+          # 3. Build the JSON line (ID must be a string with the prefix)
           mkdir -p .beads
-          # Wrap ID in quotes to satisfy Go's 'string' type expectation
-          echo "{\"id\":\"$ID\",\"title\":$TITLE,\"description\":$BODY,\"status\":\"todo\",\"created_at\":\"$CREATED\"}" > ".beads/bead-${ID}.jsonl"
+          echo "{\"id\":\"$FULL_ID\",\"title\":$TITLE,\"description\":$BODY,\"status\":\"todo\",\"created_at\":\"$CREATED\"}" > ".beads/bead-${ID}.jsonl"
+          
+          echo "Generated Bead: .beads/bead-${ID}.jsonl"
 
-      - name: Force Push to beads-sync
+      - name: Push to beads-sync
         run: |
           git add -f .beads/bead-*.jsonl
           if ! git diff --cached --quiet; then
             git commit -m "feat: mobile jsonl bead #${{ github.event.issue.number }}"
+            # Rebase to stay in sync with local deletions
             git pull --rebase origin beads-sync
             git push origin beads-sync
           else
