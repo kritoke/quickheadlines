@@ -6,13 +6,14 @@ on:
 jobs:
   sync-to-beads:
     runs-on: ubuntu-latest
-    # Only run if the 'bead' label is applied
     if: contains(github.event.issue.labels.*.name, 'bead')
+    permissions:
+      contents: write
+      issues: read
     steps:
-      - name: Checkout Beads Sync Branch
+      - name: Checkout
         uses: actions/checkout@v4
         with:
-          # Directly target the branch Beads uses for its SQLite data
           ref: 'beads-sync'
           fetch-depth: 0
 
@@ -23,29 +24,23 @@ jobs:
 
       - name: Create JSONL Bead
         run: |
-          # Use jq to handle special characters in the title/body safely for JSON
+          # Use jq for safety; ID is the issue number
+          ID="${{ github.event.issue.number }}"
           TITLE=$(echo "${{ github.event.issue.title }}" | jq -R .)
           BODY=$(echo "${{ github.event.issue.body }}" | jq -R .)
-          ID="${{ github.event.issue.number }}"
           CREATED=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
           
           mkdir -p .beads
-          # Create a single line JSON file for the SQLite importer
-          echo "{\"id\":$ID,\"title\":$TITLE,\"description\":$BODY,\"status\":\"todo\",\"created_at\":\"$CREATED\"}" > ".beads/bead-${ID}.jsonl"
+          # Wrap ID in quotes to satisfy Go's 'string' type expectation
+          echo "{\"id\":\"$ID\",\"title\":$TITLE,\"description\":$BODY,\"status\":\"todo\",\"created_at\":\"$CREATED\"}" > ".beads/bead-${ID}.jsonl"
 
-      - name: Push to beads-sync
+      - name: Force Push to beads-sync
         run: |
           git add -f .beads/bead-*.jsonl
           if ! git diff --cached --quiet; then
             git commit -m "feat: mobile jsonl bead #${{ github.event.issue.number }}"
+            git pull --rebase origin beads-sync
             git push origin beads-sync
           else
-            echo "No changes detected, skipping push."
+            echo "No changes detected."
           fi
-
-      - name: Confirmation Comment
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          gh issue comment ${{ github.event.issue.number }} \
-            --body "✅ **JSONL Created!** Task is now on the \`beads-sync\` branch. Run \`bd-sync-all\` at your desk."
