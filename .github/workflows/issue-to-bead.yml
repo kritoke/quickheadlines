@@ -6,12 +6,13 @@ on:
 jobs:
   sync-to-beads:
     runs-on: ubuntu-latest
+    # Only run if the 'bead' label is applied
     if: contains(github.event.issue.labels.*.name, 'bead')
     permissions:
       contents: write
       issues: read
     steps:
-      - name: Checkout
+      - name: Checkout Beads Sync Branch
         uses: actions/checkout@v4
         with:
           ref: 'beads-sync'
@@ -24,23 +25,31 @@ jobs:
 
       - name: Create JSONL Bead
         run: |
+          # 1. Configuration
           PREFIX="quickheadlines-"
           ID="${{ github.event.issue.number }}"
           FULL_ID="${PREFIX}${ID}"
+          
+          # 2. Extract and clean strings using jq for JSON safety
           TITLE=$(echo "${{ github.event.issue.title }}" | jq -R .)
           BODY=$(echo "${{ github.event.issue.body }}" | jq -R .)
-          # Ensure ISO 8601 format
           CREATED=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
           
+          # 3. Build the JSON line 
+          # ID is "quickheadlines-9", status is "open"
           mkdir -p .beads
-          # ID is "quickheadlines-9"
-          echo "{\"id\":\"$FULL_ID\",\"title\":$TITLE,\"description\":$BODY,\"status\":\"todo\",\"created_at\":\"$CREATED\"}" > ".beads/bead-${ID}.jsonl"
+          echo "{\"id\":\"$FULL_ID\",\"title\":$TITLE,\"description\":$BODY,\"status\":\"open\",\"created_at\":\"$CREATED\"}" > ".beads/bead-${ID}.jsonl"
+          
+          echo "✅ Generated: .beads/bead-${ID}.jsonl"
 
-      - name: Force Push
+      - name: Force Push to beads-sync
         run: |
           git add -f .beads/bead-*.jsonl
           if ! git diff --cached --quiet; then
-            git commit -m "feat: mobile jsonl bead #${{ github.event.issue.number }}"
+            git commit -m "feat: sync mobile bead #${{ github.event.issue.number }}"
+            # Rebase ensures we don't conflict with local 'bds' cleanups
             git pull --rebase origin beads-sync
             git push origin beads-sync
+          else
+            echo "No changes detected, skipping push."
           fi
