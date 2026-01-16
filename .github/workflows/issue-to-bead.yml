@@ -1,59 +1,35 @@
-name: Mobile to Beads Sync
+name: Mobile to Beads Sync (JSONL)
 on:
   issues:
     types: [opened, labeled, reopened]
 
 jobs:
-  sync-to-beads-branch:
+  sync-to-beads:
     runs-on: ubuntu-latest
-    # Only execute if the 'bead' label is applied
     if: contains(github.event.issue.labels.*.name, 'bead')
     steps:
-      - name: Checkout Beads Sync Branch
+      - name: Checkout
         uses: actions/checkout@v4
         with:
-          ref: 'beads-sync'
+          ref: 'beads-inbox'
           fetch-depth: 0
 
-      - name: Configure Git
+      - name: Create JSONL Bead
+        run: |
+          ID="${{ github.event.issue.number }}"
+          # Clean title and body for JSON safety
+          TITLE=$(echo "${{ github.event.issue.title }}" | jq -R .)
+          BODY=$(echo "${{ github.event.issue.body }}" | jq -R .)
+          CREATED=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+          
+          mkdir -p .beads
+          # Construct a single line of JSON
+          echo "{\"id\":$ID,\"title\":$TITLE,\"description\":$BODY,\"status\":\"todo\",\"created_at\":\"$CREATED\"}" > ".beads/bead-${ID}.jsonl"
+
+      - name: Push to Inbox
         run: |
           git config --global user.name "GitHub Action"
           git config --global user.email "action@github.com"
-
-      - name: Create Formal Bead File
-        run: |
-          # Use Issue Number as the ID to ensure 'bd' indexes it correctly
-          ID="${{ github.event.issue.number }}"
-          mkdir -p .beads
-          FILE_PATH=".beads/bead-${ID}.md"
-          
-          # Construct valid Beads frontmatter
-          {
-            echo "---"
-            echo "id: ${ID}"
-            echo "title: \"${{ github.event.issue.title }}\""
-            echo "status: todo"
-            echo "created_at: $(date -u +"%Y-%m-%dT%H:%M:%SZ")"
-            echo "issue_url: ${{ github.event.issue.html_url }}"
-            echo "---"
-            echo ""
-            echo "${{ github.event.issue.body }}"
-          } > $FILE_PATH
-
-      - name: Commit and Push to beads-sync
-        run: |
-          # Force add in case .beads is ignored on this branch too
-          git add -f .beads/*.md
-          if ! git diff --cached --quiet; then
-            git commit -m "feat: sync mobile bead #${{ github.event.issue.number }}"
-            git push origin beads-sync
-          else
-            echo "No changes detected, skipping push."
-          fi
-
-      - name: Success Notification
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          gh issue comment ${{ github.event.issue.number }} \
-            --body "🚀 **Synced to Beads!** Added with ID: \`${{ github.event.issue.number }}\`. Run \`bd sync\` locally to import."
+          git add -f .beads/*.jsonl
+          git commit -m "feat: mobile jsonl bead #${{ github.event.issue.number }}"
+          git push origin beads-inbox
