@@ -7,6 +7,22 @@ require "./health_monitor"
 # ----- Favicon cache with size limits and expiration -----
 # Only caches local file paths (not base64 data URIs) to reduce memory usage
 
+# Helper module for generating favicon URLs
+module FaviconHelper
+  # Generate Google favicon service URL for a given domain
+  # Returns nil if domain cannot be extracted
+  def self.google_favicon_url(site_link : String, feed_url : String) : String?
+    host = site_link.empty? ? feed_url : site_link
+    parsed = URI.parse(host)
+    return unless parsed_host = parsed.host
+
+    "https://www.google.com/s2/favicons?domain=#{parsed_host}&sz=64"
+  rescue ex
+    # Invalid URI - return nil
+    nil
+  end
+end
+
 class FaviconCache
   CACHE_SIZE_LIMIT = 10 * 1024 * 1024 # 10MB total (reduced since we only cache paths)
   ENTRY_TTL        = 7.days           # 7 day expiration
@@ -356,12 +372,26 @@ private def handle_success_response(feed : Feed, response : HTTP::Client::Respon
 end
 
 private def error_feed_data(feed : Feed, message : String) : FeedData
+  site_link = feed.url
+
+  # Attempt to fetch favicon even on error
+  favicon, favicon_data = get_favicon(feed, site_link, nil, nil)
+
+  # If all fallbacks failed, use Google favicon service URL directly
+  if favicon.nil? && favicon_data.nil?
+    favicon = FaviconHelper.google_favicon_url(site_link, feed.url)
+  end
+
   FeedData.new(
     feed.title,
     feed.url,
-    feed.url,
+    site_link,
     feed.header_color,
-    [Item.new(message, feed.url, nil)]
+    [Item.new(message, feed.url, nil)],
+    nil, # etag
+    nil, # last_modified
+    favicon,
+    favicon_data
   )
 end
 

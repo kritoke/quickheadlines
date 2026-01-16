@@ -26,9 +26,28 @@ div.timeline-container.max-w-6xl.mx-auto.px-4.pb-8
               polyline points="16 18 22 12 16 6"
               polyline points="8 6 2 12 8 18"
           - elsif (data = timeline_item.favicon_data) && !data.empty? && data.starts_with?("/favicons/")
-            img.inline.mr-1.align-middle.rounded-sm.bg-white.dark:bg-slate-300.p-0_5 src="#{data}" alt="" style="width: 12px; height: 12px; object-fit: contain;"
+            -# Use Google favicon as primary for reliability, fall back to local if needed
+            - host = timeline_item.feed_link.empty? ? timeline_item.feed_url : timeline_item.feed_link
+            - parsed = URI.parse(host)
+            - if parsed && (parsed_host = parsed.host)
+              img.inline.mr-1.align-middle.rounded-sm.bg-white.dark:bg-slate-300.p-0_5 src="https://www.google.com/s2/favicons?domain=#{parsed_host}&sz=64" alt="" style="width: 12px; height: 12px; object-fit: contain;"
+            - elsif !data.empty?
+              img.inline.mr-1.align-middle.rounded-sm.bg-white.dark:bg-slate-300.p-0_5 src="#{data}" alt="" style="width: 12px; height: 12px; object-fit: contain;"
           - elsif (fav = timeline_item.favicon) && !fav.empty? && fav.starts_with?("/favicons/")
+            - host = timeline_item.feed_link.empty? ? timeline_item.feed_url : timeline_item.feed_link
+            - parsed = URI.parse(host)
+            - if parsed && (parsed_host = parsed.host)
+              img.inline.mr-1.align-middle.rounded-sm.bg-white.dark:bg-slate-300.p-0_5 src="https://www.google.com/s2/favicons?domain=#{parsed_host}&sz=64" alt="" style="width: 12px; height: 12px; object-fit: contain;"
+            - elsif !fav.empty?
+              img.inline.mr-1.align-middle.rounded-sm.bg-white.dark:bg-slate-300.p-0_5 src="#{fav}" alt="" style="width: 12px; height: 12px; object-fit: contain;"
+          - elsif (fav = timeline_item.favicon) && !fav.empty? && fav.starts_with?("http")
             img.inline.mr-1.align-middle.rounded-sm.bg-white.dark:bg-slate-300.p-0_5 src="#{fav}" alt="" style="width: 12px; height: 12px; object-fit: contain;"
+          - else
+            -# Final fallback to Google favicon service
+            - host = timeline_item.feed_link.empty? ? timeline_item.feed_url : timeline_item.feed_link
+            - parsed = URI.parse(host)
+            - if parsed && (parsed_host = parsed.host)
+              img.inline.mr-1.align-middle.rounded-sm.bg-white.dark:bg-slate-300.p-0_5 src="https://www.google.com/s2/favicons?domain=#{parsed_host}&sz=64" alt="" style="width: 12px; height: 12px; object-fit: contain;"
           = timeline_item.feed_title
         span.text-slate-400.dark:text-slate-600
           | •

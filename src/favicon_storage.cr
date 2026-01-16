@@ -47,7 +47,6 @@ module FaviconStorage
   def self.get_or_fetch(url : String) : String?
     # Check if we already have this favicon saved
     hash = OpenSSL::Digest.new("SHA256").update(url).final.hexstring
-    possible_extensions = ["png", "jpg", "jpeg", "ico", "svg", "webp"]
 
     @@mutex.synchronize do
       possible_extensions.each do |ext|
@@ -104,6 +103,25 @@ module FaviconStorage
         FileUtils.mkdir_p(FAVICON_DIR)
       end
     end
+  end
+
+  # Check if a cached favicon file exists on disk
+  # Returns true if any extension of the favicon exists
+  def self.exists?(url : String) : Bool
+    hash = OpenSSL::Digest.new("SHA256").update(url).final.hexstring
+
+    @@mutex.synchronize do
+      possible_extensions.each do |ext|
+        filename = "#{hash[0...16]}.#{ext}"
+        filepath = File.join(FAVICON_DIR, filename)
+        return true if File.exists?(filepath)
+      end
+    end
+    false
+  end
+
+  private def self.possible_extensions : Array(String)
+    ["png", "jpg", "jpeg", "ico", "svg", "webp"]
   end
 
   private def self.extension_from_content_type(content_type : String) : String

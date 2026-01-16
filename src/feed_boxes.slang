@@ -18,15 +18,28 @@
               polyline points="16 18 22 12 16 6"
               polyline points="8 6 2 12 8 18"
           - elsif (data = feed.favicon_data) && !data.empty? && data.starts_with?("/favicons/")
-            img class="w-5 h-5 rounded-sm bg-white dark:bg-slate-300 p-0.5 ring-1 ring-black/5 dark:ring-black/60 flex-shrink-0" src="#{data}" loading="lazy" alt=""
+            -# Use Google favicon as primary for reliability, fall back to local if needed
+            - host = feed.site_link.empty? ? feed.url : feed.site_link
+            - parsed = URI.parse(host)
+            - if parsed && (parsed_host = parsed.host)
+              img class="w-5 h-5 rounded-sm bg-white dark:bg-slate-300 p-0.5 ring-1 ring-black/5 dark:ring-black/60 flex-shrink-0" src="https://www.google.com/s2/favicons?domain=#{parsed_host}&sz=64" loading="lazy" alt=""
+            - elsif !data.empty?
+              img class="w-5 h-5 rounded-sm bg-white dark:bg-slate-300 p-0.5 ring-1 ring-black/5 dark:ring-black/60 flex-shrink-0" src="#{data}" loading="lazy" alt=""
           - elsif (fav = feed.favicon) && !fav.empty? && fav.starts_with?("/favicons/")
+            - host = feed.site_link.empty? ? feed.url : feed.site_link
+            - parsed = URI.parse(host)
+            - if parsed && (parsed_host = parsed.host)
+              img class="w-5 h-5 rounded-sm bg-white dark:bg-slate-300 p-0.5 ring-1 ring-black/5 dark:ring-black/60 flex-shrink-0" src="https://www.google.com/s2/favicons?domain=#{parsed_host}&sz=64" loading="lazy" alt=""
+            - elsif !fav.empty?
+              img class="w-5 h-5 rounded-sm bg-white dark:bg-slate-300 p-0.5 ring-1 ring-black/5 dark:ring-black/60 flex-shrink-0" src="#{fav}" loading="lazy" alt=""
+          - elsif (fav = feed.favicon) && !fav.empty? && fav.starts_with?("http")
             img class="w-5 h-5 rounded-sm bg-white dark:bg-slate-300 p-0.5 ring-1 ring-black/5 dark:ring-black/60 flex-shrink-0" src="#{fav}" loading="lazy" alt=""
           - else
-            -# Fallback to Google favicon service
+            -# Final fallback to Google favicon service
             - host = feed.site_link.empty? ? feed.url : feed.site_link
-            - if parsed = URI.parse(host)
-              - if parsed_host = parsed.host
-                img class="w-5 h-5 rounded-sm bg-white dark:bg-slate-300 p-0.5 ring-1 ring-black/5 dark:ring-black/60 flex-shrink-0" src="https://www.google.com/s2/favicons?domain=#{parsed_host}&sz=64" loading="lazy" alt=""
+            - parsed = URI.parse(host)
+            - if parsed && (parsed_host = parsed.host)
+              img class="w-5 h-5 rounded-sm bg-white dark:bg-slate-300 p-0.5 ring-1 ring-black/5 dark:ring-black/60 flex-shrink-0" src="https://www.google.com/s2/favicons?domain=#{parsed_host}&sz=64" loading="lazy" alt=""
           a.feed-title-link.hover:underline href="#{HTML.escape(feed.display_link)}" target="_blank" rel="noopener noreferrer"
             = feed.title
 
