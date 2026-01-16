@@ -4,7 +4,9 @@ require "file_utils"
 require "time"
 require "mutex"
 require "openssl"
+require "./config"
 require "./models"
+require "./minhash"
 require "./favicon_storage"
 require "./health_monitor"
 
@@ -158,8 +160,39 @@ def create_schema(db : DB::Database, db_path : String)
       pub_date TEXT,
       version TEXT,
       position INTEGER NOT NULL,
+      minhash_signature BLOB,
+      cluster_id INTEGER REFERENCES items(id),
       FOREIGN KEY (feed_id) REFERENCES feeds(id) ON DELETE CASCADE,
       UNIQUE(feed_id, link)
+    )
+    SQL
+
+  # Migration: Add minhash_signature column if it doesn't exist (for existing databases)
+  begin
+    db.exec("ALTER TABLE items ADD COLUMN minhash_signature BLOB")
+    STDERR.puts "[Cache] Added minhash_signature column to existing database"
+  rescue ex : SQLite3::Exception
+    # Column already exists, ignore error
+  end
+
+  # Migration: Add cluster_id column if it doesn't exist (for existing databases)
+  begin
+    db.exec("ALTER TABLE items ADD COLUMN cluster_id INTEGER REFERENCES items(id)")
+    STDERR.puts "[Cache] Added cluster_id column to existing database"
+  rescue ex : SQLite3::Exception
+    # Column already exists, ignore error
+  end
+
+  # LSH bands table for fast similarity lookup
+  db.exec <<-SQL
+    CREATE TABLE IF NOT EXISTS lsh_bands (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      item_id INTEGER NOT NULL,
+      band_index INTEGER NOT NULL,
+      band_hash INTEGER NOT NULL,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      FOREIGN KEY (item_id) REFERENCES items(id) ON DELETE CASCADE,
+      UNIQUE(item_id, band_index)
     )
     SQL
 
@@ -168,6 +201,8 @@ def create_schema(db : DB::Database, db_path : String)
   db.exec("CREATE INDEX IF NOT EXISTS idx_items_pub_date ON items(pub_date DESC)")
   db.exec("CREATE INDEX IF NOT EXISTS idx_feeds_last_fetched ON feeds(last_fetched DESC)")
   db.exec("CREATE INDEX IF NOT EXISTS idx_feeds_url ON feeds(url)")
+  db.exec("CREATE INDEX IF NOT EXISTS idx_items_cluster ON items(cluster_id)")
+  db.exec("CREATE INDEX IF NOT EXISTS idx_lsh_band_search ON lsh_bands(band_index, band_hash)")
 
   # Ensure unique constraint exists (migration logic for legacy DBs)
   # If table was created before UNIQUE constraint, constraint might be missing.
@@ -697,6 +732,140 @@ class FeedCache
         end
       end
     end
+  end
+
+  # ============================================
+  # Story Grouping / Clustering Methods
+  # ============================================
+
+  # Store MinHash signature for an item
+  def store_item_signature(item_id : Int64, signature : Array(UInt32))
+    @mutex.synchronize do
+      bytes = StoryHasher.signature_to_bytes(signature)
+      @db.exec("UPDATE items SET minhash_signature = ? WHERE id = ?", bytes, item_id)
+    end
+  end
+
+  # Get MinHash signature for an item
+  def get_item_signature(item_id : Int64) : Array(UInt32)?
+    @mutex.synchronize do
+      result = @db.query_one?("SELECT minhash_signature FROM items WHERE id = ?", item_id, as: {Bytes?})
+      return unless result
+      StoryHasher.bytes_to_signature(result)
+    end
+  end
+
+  # Store LSH bands for an item
+  def store_lsh_bands(item_id : Int64, bands : Array({Int32, UInt64}))
+    @mutex.synchronize do
+      @db.exec("BEGIN TRANSACTION")
+      begin
+        # Delete existing bands for this item
+        @db.exec("DELETE FROM lsh_bands WHERE item_id = ?", item_id)
+
+        # Insert new bands (convert UInt64 to Int64 for SQLite)
+        bands.each do |band_index, band_hash|
+          @db.exec(
+            "INSERT INTO lsh_bands (item_id, band_index, band_hash, created_at) VALUES (?, ?, ?, ?)",
+            item_id,
+            band_index,
+            band_hash.to_i64,
+            Time.utc.to_s("%Y-%m-%d %H:%M:%S")
+          )
+        end
+        @db.exec("COMMIT")
+      rescue ex
+        @db.exec("ROLLBACK")
+        STDERR.puts "[Cache ERROR] Failed to store LSH bands for item #{item_id}: #{ex.message}"
+      end
+    end
+  end
+
+  # Find candidate similar items using LSH
+  # Returns item IDs that share at least one LSH band
+  def find_lsh_candidates(signature : Array(UInt32)) : Array(Int64)
+    bands = StoryHasher.generate_bands(signature)
+    candidates = Set(Int64).new
+
+    @mutex.synchronize do
+      bands.each do |band_index, band_hash|
+        # Convert UInt64 to Int64 for SQLite compatibility
+        band_hash_int = band_hash.to_i64
+        @db.query("SELECT DISTINCT item_id FROM lsh_bands WHERE band_index = ? AND band_hash = ?", band_index, band_hash_int) do |rows|
+          rows.each do
+            item_id = rows.read(Int64)
+            candidates << item_id
+          end
+        end
+      end
+    end
+
+    candidates.to_a
+  end
+
+  # Assign an item to a cluster
+  def assign_cluster(item_id : Int64, cluster_id : Int64?)
+    @mutex.synchronize do
+      @db.exec("UPDATE items SET cluster_id = ? WHERE id = ?", cluster_id, item_id)
+    end
+  end
+
+  # Get all item IDs in a cluster
+  def get_cluster_items(cluster_id : Int64) : Array(Int64)
+    items = [] of Int64
+    @mutex.synchronize do
+      @db.query("SELECT id FROM items WHERE cluster_id = ? ORDER BY id ASC", cluster_id) do |rows|
+        rows.each do
+          items << rows.read(Int64)
+        end
+      end
+    end
+    items
+  end
+
+  # Get the cluster size for an item
+  def get_cluster_size(item_id : Int64) : Int32
+    @mutex.synchronize do
+      result = @db.query_one?(
+        "SELECT COUNT(*) FROM items WHERE cluster_id = (SELECT cluster_id FROM items WHERE id = ?)",
+        item_id,
+        as: {Int64}
+      )
+      result ? result.to_i : 1
+    end
+  end
+
+  # Check if an item is the representative (first in cluster)
+  def cluster_representative?(item_id : Int64) : Bool
+    @mutex.synchronize do
+      cluster_id = @db.query_one?("SELECT cluster_id FROM items WHERE id = ?", item_id, as: {Int64?})
+      return true unless cluster_id
+
+      # Get the minimum item_id in the cluster (that's the representative)
+      min_id = @db.query_one?(
+        "SELECT MIN(id) FROM items WHERE cluster_id = ?",
+        cluster_id,
+        as: {Int64}
+      )
+      min_id == item_id
+    end
+  end
+
+  # Get item ID by feed URL and link
+  def get_item_id(feed_url : String, item_link : String) : Int64?
+    @mutex.synchronize do
+      @db.query_one?(
+        "SELECT items.id FROM items JOIN feeds ON items.feed_id = feeds.id WHERE feeds.url = ? AND items.link = ?",
+        feed_url,
+        item_link,
+        as: {Int64}
+      )
+    end
+  end
+
+  # Public getter for database (for cluster queries)
+  def db : DB::Database
+    @db
   end
 
   # Close database connection

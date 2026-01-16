@@ -2,7 +2,7 @@ version: 2.0
 shards:
   ameba:
     git: https://github.com/crystal-ameba/ameba.git
-    version: 1.7.0-dev+git.commit.40bb2591c66292a9e2ec1c8e25c14e8fab0d183d
+    version: 1.7.0-dev+git.commit.a74c675501891beba1ef0eb4ad926b41af1b53f2
 
   db:
     git: https://github.com/crystal-lang/crystal-db.git
@@ -10,7 +10,7 @@ shards:
 
   slang:
     git: https://github.com/toddsundsted/slang.git
-    version: 2.0.2+git.commit.8ee6cb00c6cfd8228000202e5cdcd6425158596c
+    version: 2.0.3+git.commit.bd5ac5203d369139058d0b9ba102b71a2cb5098c
 
   sqlite3:
     git: https://github.com/crystal-lang/crystal-sqlite3.git

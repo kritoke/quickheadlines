@@ -8,6 +8,7 @@ require "./models"
 require "./storage"
 require "./utils"
 require "./favicon_storage"
+require "./minhash"
 
 # ----- Compile-time embedded templates -----
 
@@ -209,16 +210,21 @@ def handle_firehose(context : HTTP::Server::Context)
   offset = context.request.query_params["offset"]?.try(&.to_i?) || 0
 
   # Get all timeline items and apply pagination
-  all_items = STATE.all_firehose_items
+  all_items = STATE.all_timeline_items
   total_count = all_items.size
 
   max_index = Math.min(offset + limit, total_count)
-  items = all_items[offset...max_index]
+  raw_items = all_items[offset...max_index]
+
+  # Convert to clustered items with cluster information
+  # ameba:disable Lint/UselessAssign
+  timeline_items = raw_items.map do |item|
+    add_cluster_info(item)
+  end
 
   context.response.content_type = "text/html; charset=utf-8"
 
   # Pass variables to template
-  timeline_items = items             # ameba:disable Lint/UselessAssign
   has_more = max_index < total_count # ameba:disable Lint/UselessAssign
   next_offset = offset + limit       # ameba:disable Lint/UselessAssign
 
@@ -231,7 +237,7 @@ def handle_timeline(context : HTTP::Server::Context)
   updated_at = STATE.updated_at.to_utc.to_s("%Y-%m-%dT%H:%M:%S%z") # ameba:disable Lint/UselessAssign
 
   # Get all timeline items and filter to show only one day by default
-  all_items = STATE.all_firehose_items
+  all_items = STATE.all_timeline_items
 
   # Find items from the first day
   if all_items.size > 0 && (first_item_date = all_items[0].item.pub_date)
@@ -243,13 +249,18 @@ def handle_timeline(context : HTTP::Server::Context)
       item_date && item_date.to_local.to_s("%Y-%m-%d") == first_day
     end
 
-    timeline_items = one_day_items                 # ameba:disable Lint/UselessAssign
+    # Convert to clustered items
+    # ameba:disable Lint/UselessAssign
+    timeline_items = one_day_items.map { |item| add_cluster_info(item) }
+
     has_more = all_items.size > one_day_items.size # ameba:disable Lint/UselessAssign
     next_offset = one_day_items.size               # ameba:disable Lint/UselessAssign
   else
-    timeline_items = all_items[0...100] # ameba:disable Lint/UselessAssign
-    has_more = all_items.size > 100     # ameba:disable Lint/UselessAssign
-    next_offset = 100                   # ameba:disable Lint/UselessAssign
+    raw_items = all_items[0...100]
+    # ameba:disable Lint/UselessAssign
+    timeline_items = raw_items.map { |item| add_cluster_info(item) }
+    has_more = all_items.size > 100 # ameba:disable Lint/UselessAssign
+    next_offset = 100               # ameba:disable Lint/UselessAssign
   end
 
   # Pre-render the timeline content
@@ -264,6 +275,47 @@ def handle_timeline(context : HTTP::Server::Context)
   rendered_timeline = timeline_html
 
   Slang.embed("src/timeline_page.slang", "context.response")
+end
+
+# Helper function to add cluster information to a timeline item
+def add_cluster_info(item : TimelineItem) : ClusteredTimelineItem
+  cache = FeedCache.instance
+
+  # Get item_id from database
+  item_id = cache.get_item_id(item.feed_url, item.item.link)
+
+  if item_id
+    cluster_id = cache.db.query_one?("SELECT cluster_id FROM items WHERE id = ?", item_id, as: {Int64?})
+    cluster_size = cache.get_cluster_size(item_id)
+    is_representative = cache.cluster_representative?(item_id)
+
+    ClusteredTimelineItem.new(
+      item.item,
+      item.feed_title,
+      item.feed_url,
+      item.feed_link,
+      item.favicon,
+      item.favicon_data,
+      item.header_color,
+      cluster_id,
+      is_representative,
+      cluster_size > 1 ? cluster_size : nil
+    )
+  else
+    # No cluster info available, return item as-is with defaults
+    ClusteredTimelineItem.new(
+      item.item,
+      item.feed_title,
+      item.feed_url,
+      item.feed_link,
+      item.favicon,
+      item.favicon_data,
+      item.header_color,
+      nil,
+      true,
+      nil
+    )
+  end
 end
 
 def handle_favicon(context : HTTP::Server::Context, path : String)

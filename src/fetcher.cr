@@ -3,6 +3,7 @@ require "gc"
 require "./software_fetcher"
 require "./favicon_storage"
 require "./health_monitor"
+require "./minhash"
 
 # ----- Favicon cache with size limits and expiration -----
 # Only caches local file paths (not base64 data URIs) to reduce memory usage
@@ -614,8 +615,94 @@ def refresh_all(config : Config)
 
   STATE.update(Time.local)
 
+  # 7. Process story clustering for all fetched feeds
+  # This assigns similar stories to the same cluster to prevent duplicates
+  fetched_map.values.each do |feed_data|
+    process_feed_item_clustering(feed_data)
+  end
+
   # Clear memory after large amount of data processing
   GC.collect
+end
+
+# ============================================
+# Story Clustering Functions
+# ============================================
+
+# Compute cluster assignment for a single item
+def compute_cluster_for_item(item_id : Int64, title : String) : Int64?
+  # Compute MinHash signature for the title
+  signature = StoryHasher.compute_signature(title)
+
+  # Store the signature
+  FeedCache.instance.store_item_signature(item_id, signature)
+
+  # Generate LSH bands
+  bands = StoryHasher.generate_bands(signature)
+  FeedCache.instance.store_lsh_bands(item_id, bands)
+
+  # Find candidate similar items using LSH
+  candidates = FeedCache.instance.find_lsh_candidates(signature)
+
+  # Remove self from candidates
+  candidates = candidates.reject { |id| id == item_id }
+
+  if candidates.empty?
+    # No similar items found, create a new cluster
+    # Use the item_id as the cluster_id (self-referencing)
+    FeedCache.instance.assign_cluster(item_id, item_id)
+    return item_id
+  end
+
+  # Find the most similar candidate
+  best_match = nil
+  best_similarity = 0.0_f64
+
+  candidates.each do |candidate_id|
+    if existing_sig = FeedCache.instance.get_item_signature(candidate_id)
+      similarity = StoryHasher.similarity(signature, existing_sig)
+      if similarity > best_similarity
+        best_similarity = similarity
+        best_match = candidate_id
+      end
+    end
+  end
+
+  # Check if similarity exceeds threshold
+  if best_match && best_similarity >= StoryHasher::SIMILARITY_THRESHOLD
+    # Get the cluster_id of the best match
+    cluster_items = FeedCache.instance.get_cluster_items(best_match)
+    if cluster_items.any? { |id| id != best_match }
+      # Use the first item in the cluster as the cluster_id
+      cluster_id = cluster_items.first
+    else
+      cluster_id = best_match
+    end
+    FeedCache.instance.assign_cluster(item_id, cluster_id)
+    cluster_id
+  else
+    # No similar enough match, create new cluster
+    FeedCache.instance.assign_cluster(item_id, item_id)
+    item_id
+  end
+end
+
+# Process clustering for all items in a feed
+def process_feed_item_clustering(feed_data : FeedData) : Nil
+  return if feed_data.items.empty?
+
+  cache = FeedCache.instance
+
+  # Process each item
+  feed_data.items.each do |item|
+    # Get the item_id from the database
+    item_id = cache.get_item_id(feed_data.url, item.link)
+
+    next unless item_id
+
+    # Compute and assign cluster
+    compute_cluster_for_item(item_id, item.title)
+  end
 end
 
 def start_refresh_loop(config_path : String)
