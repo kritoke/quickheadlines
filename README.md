@@ -1,6 +1,6 @@
-<img src="assets/images/logo.svg" alt="Quick Headlines Logo" width="200"/> 
+<img src="assets/images/logo.svg" alt="Quick Headlines Logo" width="200"/>
 
-# Quick Headlines 
+# Quick Headlines
 
 Quick Headlines is an easily configurable and deployable recent feed dashboard. It allows you to organize your favorite RSS/Atom feeds and software releases into **tabs** for a clean, categorized view.
 
@@ -9,13 +9,18 @@ I wanted it to be as simple as dropping an executable and a YAML file with feeds
 ## Features
 
 - **Tabbed Interface**: Group feeds into logical categories (e.g., "Tech", "Dev", "News").
+- **Timeline View**: Chronological view of all feed items with day grouping and time stamps.
 - **Software Release Tracking**: Monitor releases from GitHub, GitLab, and Codeberg in a unified view.
 - **Adaptive UI**: Automatically extracts colors from site favicons to style feed headers.
 - **Dark Mode**: Built-in support with a toggle, including high-contrast scrollbars and scroll-indicators for Safari compatibility.
 - **Live Updates**: Automatically refreshes feeds in the background and updates the UI without a page reload using [Morphodom](https://github.com/patrick-steele-idem/morphdom).
+- **Authentication**: Support for Basic, Bearer token, and API Key authentication for private feeds.
+- **Configurable Caching**: SQLite-based caching with configurable retention and size limits.
+- **Health Monitoring**: Built-in health monitoring with CPU spike detection and error logging.
 - **Lightweight**: Single binary deployment with minimal dependencies.
 
 ## Screenshots
+
 Mobile (Dark Mode)           |  Mobile (Light Mode)
 :-------------------------:|:-------------------------:
 ![](ss/qh-mobile-dm-ss.png)  |  ![](ss/qh-mobile-lm-ss.png)
@@ -23,6 +28,18 @@ Mobile (Dark Mode)           |  Mobile (Light Mode)
 Desktop (Dark Mode)           |  Desktop (Light Mode)
 :-------------------------:|:-------------------------:
 ![](ss/qh-desktop-dm-ss.png)  |  ![](ss/qh-desktop-lm-ss.png)
+
+---
+
+### Timeline View
+
+Mobile Timeline (Dark Mode)           |  Mobile Timeline (Light Mode)
+:-------------------------:|:-------------------------:
+![](ss/qh-mobile-dm-timeline-ss.png)  |  ![](ss/qh-mobile-lm-timeline-ss.png)
+
+Desktop Timeline (Dark Mode)           |  Desktop Timeline (Light Mode)
+:-------------------------:|:-------------------------:
+![](ss/qh-desktop-dm-timeline-ss.png)  |  ![](ss/qh-desktop-lm-timeline-ss.png)
 
 ## Installation
 
@@ -111,6 +128,7 @@ gmake build
 #### FreeBSD Jail Deployment (Bastille)
 
 For automated FreeBSD jail deployment, the project includes:
+
 - **misc/Bastillefile** - Bastille template for automated jail creation and configuration
 - **misc/quickheadlines** - rc.d script for service management and supervision
 
@@ -134,6 +152,7 @@ make run
 ```
 
 The application will:
+
 1. Auto-download `feeds.yml` from GitHub if missing
 2. Create SQLite cache database on first run
 3. Start listening on port 3030 on localhost unless you changed the port in the `feeds.yml` file.
@@ -150,12 +169,14 @@ QuickHeadlines stores feed data in an SQLite database for better performance. Th
 #### Setting the Cache Directory
 
 **Via environment variable:**
+
 ```bash
 export QUICKHEADLINES_CACHE_DIR=/var/cache/quickheadlines
 ./quickheadlines
 ```
 
 **Via feeds.yml:**
+
 ```yaml
 cache_dir: /var/cache/quickheadlines
 ```
@@ -185,6 +206,7 @@ cache_retention_hours: 168  # 1 week (default)
 ```
 
 The application will:
+
 1. Log database size on startup
 2. Clean up feeds older than the retention period on each refresh
 3. Automatically remove oldest entries if database exceeds 100MB
@@ -282,6 +304,7 @@ For long-running instances, especially in resource-constrained environments like
 ### Setting Variables
 
 Add them to your docker-compose.yml or docker run command (these are already made on the included docker/docker-compose files):
+
 ```yaml +environment:
 GC_MARKERS=1
 GC_FREE_SPACE_DIVISOR=20
