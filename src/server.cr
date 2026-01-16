@@ -224,11 +224,8 @@ def handle_firehose(context : HTTP::Server::Context)
 
   context.response.content_type = "text/html; charset=utf-8"
 
-  # Pass variables to template
-  has_more = max_index < total_count # ameba:disable Lint/UselessAssign
-  next_offset = offset + limit       # ameba:disable Lint/UselessAssign
-
-  Slang.embed("src/timeline.slang", "context.response")
+  # Render only the timeline items (no container, no sentinel) for infinite scroll
+  Slang.embed("src/timeline_items.slang", "context.response")
 end
 
 def handle_timeline(context : HTTP::Server::Context)

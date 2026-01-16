@@ -1,4 +1,4 @@
-require "./spec_helper"
+require "spec"
 require "../src/minhash"
 
 describe StoryHasher do

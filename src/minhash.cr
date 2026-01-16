@@ -16,11 +16,14 @@ module StoryHasher
   # Similarity threshold for clustering (0.0 to 1.0)
   SIMILARITY_THRESHOLD = 0.7
 
+  # Shingle size for text decomposition
+  SHINGLE_SIZE = 3
+
   # Hash seeds for generating multiple hash functions from a single hash function
   HASH_SEEDS = (0...SIGNATURE_SIZE).to_a
 
   # Compute MinHash signature for a text string
-  # Uses multiple hash functions simulated with different seeds
+  # Uses shingling + multiple hash functions simulated with different seeds
   def self.compute_signature(text : String) : Array(UInt32)
     # Normalize text: lowercase and strip
     normalized = text.downcase.strip
@@ -28,31 +31,57 @@ module StoryHasher
     # Return empty array for empty text
     return Array(UInt32).new(SIGNATURE_SIZE, 0_u32) if normalized.empty?
 
+    # Generate shingles (character n-grams)
+    shingles = generate_shingles(normalized, SHINGLE_SIZE)
+
+    # If no shingles generated, return zeros
+    return Array(UInt32).new(SIGNATURE_SIZE, 0_u32) if shingles.empty?
+
     # Compute hash values using different seeds
+    # Each hash function returns the minimum hash value across all shingles
     HASH_SEEDS.map do |seed|
-      hash_value(normalized, seed)
+      min_hash(shingles, seed)
     end
   end
 
-  # Compute hash value with seed
-  private def self.hash_value(text : String, seed : Int32) : UInt32
-    # Combine text and seed into a single string
-    combined = "#{text}#{seed}"
+  # Generate character n-grams (shingles) from text
+  private def self.generate_shingles(text : String, size : Int32) : Array(String)
+    return [] of String if text.size < size
 
-    # Use CRC32 for fast hashing (Crystal's built-in)
-    crc = Digest::CRC32.update(combined.to_slice, 0_u32)
-    crc
+    (0...(text.size - size + 1)).map do |i|
+      text[i...i + size]
+    end
   end
 
-  # Compute Jaccard similarity between two signatures
-  # Jaccard similarity = |A ∩ B| / |A ∪ B|
+  # Compute minimum hash value for a set of shingles using a seeded hash function
+  private def self.min_hash(shingles : Array(String), seed : Int32) : UInt32
+    min_val = UInt32::MAX
+
+    shingles.each do |shingle|
+      hash_val = hash_shingle(shingle, seed)
+      min_val = hash_val if hash_val < min_val
+    end
+
+    min_val
+  end
+
+  # Hash a single shingle with seed
+  private def self.hash_shingle(shingle : String, seed : Int32) : UInt32
+    combined = "#{shingle}#{seed}"
+
+    # Use CRC32 for hashing (fast and uniform distribution)
+    Digest::CRC32.update(combined.to_slice, 0_u32)
+  end
+
+  # Compute MinHash similarity between two signatures
+  # Returns the proportion of hash functions that produced the same minimum value
   def self.similarity(sig1 : Array(UInt32), sig2 : Array(UInt32)) : Float64
     return 0.0_f64 if sig1.empty? || sig2.empty?
 
-    # Count matching positions
+    # Count positions where minimum hash values match
     matches = 0
-    sig1.each_with_index do |val, idx|
-      matches += 1 if val == sig2[idx]?
+    sig1.each_with_index do |val1, idx|
+      matches += 1 if val1 == sig2[idx]?
     end
 
     matches.to_f64 / sig1.size.to_f64

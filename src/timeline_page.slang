@@ -174,9 +174,11 @@ html
               if (!res.ok) throw new Error();
               const html = await res.text();
 
+              // Parse the response HTML (contains items directly, no container)
               const temp = document.createElement('div');
               temp.innerHTML = html;
 
+              // Get the existing timeline container from the page
               const timelineContainer = document.querySelector('.timeline-container');
               if (!timelineContainer) {
                 hasMore = false;
@@ -184,32 +186,26 @@ html
                 return;
               }
 
-              // Get new items
-              const newContainer = temp.querySelector('.timeline-container');
-              if (newContainer) {
-                const newItems = Array.from(newContainer.children).filter(
-                  el => el.classList.contains('timeline-item') || el.classList.contains('timeline-day-header')
-                );
+              // Get new items from the response (items and day headers)
+              const newItems = Array.from(temp.children).filter(
+                el => el.classList.contains('timeline-item') || el.classList.contains('timeline-day-header')
+              );
 
-                if (newItems.length === 0) {
-                  // No more items
-                  hasMore = false;
-                  showEndMessage();
-                  isLoading = false;
-                  return;
-                }
-
-                // Append new items with fade-in animation
-                newItems.forEach((item, index) => {
-                  item.classList.add('fade-in');
-                  timelineContainer.appendChild(item);
-                });
-
-                currentOffset += newItems.length;
-              } else {
+              if (newItems.length === 0) {
+                // No more items
                 hasMore = false;
                 showEndMessage();
+                isLoading = false;
+                return;
               }
+
+              // Append new items with fade-in animation
+              newItems.forEach((item) => {
+                item.classList.add('fade-in');
+                timelineContainer.appendChild(item);
+              });
+
+              currentOffset += newItems.length;
             } catch (e) {
               console.error('Infinite scroll error:', e);
               if (sentinel) {
