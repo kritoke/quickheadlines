@@ -29,25 +29,28 @@ jobs:
           PREFIX="quickheadlines-"
           ID="${{ github.event.issue.number }}"
           FULL_ID="${PREFIX}${ID}"
-          
-          # 2. Extract and clean strings using jq for JSON safety
-          TITLE=$(echo "${{ github.event.issue.title }}" | jq -R .)
-          BODY=$(echo "${{ github.event.issue.body }}" | jq -R .)
           CREATED=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-          
-          # 3. Build the JSON line 
-          # ID is "quickheadlines-9", status is "open"
+
+          # 2. Build the JSON safely using jq variables
+          # This handles multi-line bodies and inner quotes automatically
           mkdir -p .beads
-          echo "{\"id\":\"$FULL_ID\",\"title\":$TITLE,\"description\":$BODY,\"status\":\"open\",\"created_at\":\"$CREATED\"}" > ".beads/bead-${ID}.jsonl"
+          jq -n \
+            --arg id "$FULL_ID" \
+            --arg title "${{ github.event.issue.title }}" \
+            --arg desc "${{ github.event.issue.body }}" \
+            --arg status "open" \
+            --arg created "$CREATED" \
+            '{id: $id, title: $title, description: $desc, status: $status, created_at: $created}' \
+            > ".beads/bead-${ID}.jsonl"
           
-          echo "✅ Generated: .beads/bead-${ID}.jsonl"
+          echo "✅ Generated and validated JSON for bead-${ID}.jsonl"
 
       - name: Force Push to beads-sync
         run: |
           git add -f .beads/bead-*.jsonl
           if ! git diff --cached --quiet; then
             git commit -m "feat: sync mobile bead #${{ github.event.issue.number }}"
-            # Rebase ensures we don't conflict with local 'bds' cleanups
+            # Pull with rebase ensures we don't conflict with local 'bds' cleanups
             git pull --rebase origin beads-sync
             git push origin beads-sync
           else
