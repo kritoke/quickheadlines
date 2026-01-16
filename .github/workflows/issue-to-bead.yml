@@ -1,33 +1,23 @@
-name: Sync GitHub Issue to Beads Inbox
+name: Mobile to Beads Sync
 on:
   issues:
-    # Added 'labeled' so removing/adding the label triggers the sync
     types: [opened, labeled, reopened]
 
 jobs:
-  update-inbox:
+  sync-to-beads-branch:
     runs-on: ubuntu-latest
-    # Only run if the issue currently has the 'bead' label
     if: contains(github.event.issue.labels.*.name, 'bead')
     steps:
-      - name: Checkout code
+      - name: Checkout Beads Sync Branch
         uses: actions/checkout@v4
         with:
+          ref: 'beads-sync' # Switch directly to the branch Beads watches
           fetch-depth: 0
 
       - name: Configure Git
         run: |
           git config --global user.name "GitHub Action"
           git config --global user.email "action@github.com"
-
-      - name: Prepare Inbox Branch
-        run: |
-          if git ls-remote --exit-code --heads origin beads-inbox; then
-            git fetch origin beads-inbox
-            git checkout beads-inbox
-          else
-            git checkout -b beads-inbox
-          fi
 
       - name: Create Bead file
         run: |
@@ -46,20 +36,19 @@ jobs:
             echo "${{ github.event.issue.body }}"
           } > $FILE_PATH
 
-      - name: Commit and Force-Push
+      - name: Commit and Push to beads-sync
         run: |
+          # On the sync branch, .beads is usually NOT ignored, 
+          # but we use -f just in case.
           git add -f .beads/*.md
           if ! git diff --cached --quiet; then
-            git commit -m "feat: mobile bead entry #${{ github.event.issue.number }}"
-            git push origin beads-inbox
-          else
-            echo "No changes to commit."
+            git commit -m "feat: mobile entry #${{ github.event.issue.number }}"
+            git push origin beads-sync
           fi
 
       - name: Comment on Issue
-        # This provides a confirmation notification on your phone
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh issue comment ${{ github.event.issue.number }} \
-            --body "✅ **Bead Synced!** This task has been committed to the \`beads-inbox\` branch. It will be available next time you \`git merge\` at your desk."
+            --body "🚀 **Bead Dispatched!** Task sent directly to the sync branch. It will appear locally in a moment."
