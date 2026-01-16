@@ -17,6 +17,38 @@ html
           100% { background-color: transparent; }
         }
         .animate-highlight { animation: highlight 2s ease-out; border-radius: 0.25rem; }
+        .timeline-item { opacity: 1; transform: translateY(0); }
+        .timeline-item.fade-in {
+          animation: fadeIn 0.3s ease-out forwards;
+        }
+        @keyframes fadeIn {
+          from { opacity: 0; transform: translateY(20px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        .loading-sentinel {
+          height: 60px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          margin: 1rem 0;
+        }
+        .loading-spinner {
+          width: 24px;
+          height: 24px;
+          border: 3px solid #e2e8f0;
+          border-top-color: #6366f1;
+          border-radius: 50%;
+          animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin {
+          to { transform: rotate(360deg); }
+        }
+        .end-message {
+          text-align: center;
+          padding: 1.5rem;
+          color: #64748b;
+          font-size: 0.875rem;
+        }
   body(class="bg-surface-light text-slate-800 dark:bg-surface-dark dark:text-slate-100 text-[15px] md:text-[16px] leading-7")
     main(class="mx-auto max-w-[1600px] px-4 md:px-12 lg:px-24")
       header(class="mb-4")
@@ -105,15 +137,39 @@ html
             });
           };
 
-          window.loadMoreTimeline = async function(btn) {
-            const offset = parseInt(btn.dataset.offset);
+          // Infinite scroll implementation
+          let currentOffset = 0; // Will be calculated from rendered items
+          let isLoading = false;
+          let hasMore = true;
+          let observer = null;
 
-            const originalText = btn.innerText;
-            btn.innerText = "Loading...";
-            btn.disabled = true;
+          function calculateInitialOffset() {
+            const timelineContainer = document.querySelector('.timeline-container');
+            if (timelineContainer) {
+              // Count the number of timeline items rendered
+              const items = timelineContainer.querySelectorAll('.timeline-item:not(.hidden)');
+              currentOffset = items.length;
+            }
+          }
+
+          function showEndMessage() {
+            const sentinel = document.getElementById('infinite-scroll-sentinel');
+            if (sentinel) {
+              sentinel.innerHTML = '<div class="end-message">You\'ve reached the end of the timeline</div>';
+            }
+          }
+
+          async function loadMoreItems() {
+            if (isLoading || !hasMore) return;
+
+            isLoading = true;
+            const sentinel = document.getElementById('infinite-scroll-sentinel');
+            if (sentinel) {
+              sentinel.innerHTML = '<div class="loading-spinner"></div>';
+            }
 
             try {
-              const url = `/timeline_items?limit=100&offset=${offset}`;
+              const url = `/timeline_items?limit=30&offset=${currentOffset}`;
               const res = await fetch(url);
               if (!res.ok) throw new Error();
               const html = await res.text();
@@ -122,37 +178,79 @@ html
               temp.innerHTML = html;
 
               const timelineContainer = document.querySelector('.timeline-container');
-              if (!timelineContainer) return;
+              if (!timelineContainer) {
+                hasMore = false;
+                isLoading = false;
+                return;
+              }
 
-              // Get new items and animate them in
+              // Get new items
               const newContainer = temp.querySelector('.timeline-container');
               if (newContainer) {
                 const newItems = Array.from(newContainer.children).filter(
                   el => el.classList.contains('timeline-item') || el.classList.contains('timeline-day-header')
                 );
 
-                // Remove existing load more button
-                const existingBtn = timelineContainer.querySelector('button[onclick^="loadMoreTimeline"]');
-                if (existingBtn) existingBtn.remove();
+                if (newItems.length === 0) {
+                  // No more items
+                  hasMore = false;
+                  showEndMessage();
+                  isLoading = false;
+                  return;
+                }
 
                 // Append new items with fade-in animation
                 newItems.forEach((item, index) => {
-                  item.style.opacity = '0';
-                  item.style.transform = 'translateY(20px)';
-                  item.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+                  item.classList.add('fade-in');
                   timelineContainer.appendChild(item);
-
-                  // Trigger animation
-                  setTimeout(() => {
-                    item.style.opacity = '1';
-                    item.style.transform = 'translateY(0)';
-                  }, index * 50);
                 });
+
+                currentOffset += newItems.length;
+              } else {
+                hasMore = false;
+                showEndMessage();
               }
             } catch (e) {
-              console.error('Load More error:', e);
-              btn.innerText = "Failed";
-              setTimeout(() => { btn.innerText = originalText; btn.disabled = false; }, 2000);
+              console.error('Infinite scroll error:', e);
+              if (sentinel) {
+                sentinel.innerHTML = '<div class="end-message">Error loading more items</div>';
+              }
             }
-          };
+
+            isLoading = false;
+
+            // Update sentinel for next load or show end message
+            if (hasMore && sentinel) {
+              sentinel.innerHTML = '<div class="loading-spinner"></div>';
+            }
+          }
+
+          // Set up Intersection Observer for infinite scroll
+          function setupInfiniteScroll() {
+            // First calculate the initial offset from rendered items
+            calculateInitialOffset();
+
+            const sentinel = document.getElementById('infinite-scroll-sentinel');
+            if (!sentinel) return;
+
+            observer = new IntersectionObserver((entries) => {
+              entries.forEach(entry => {
+                if (entry.isIntersecting && hasMore && !isLoading) {
+                  loadMoreItems();
+                }
+              });
+            }, {
+              rootMargin: '100px', // Start loading before reaching the bottom
+              threshold: 0.1
+            });
+
+            observer.observe(sentinel);
+          }
+
+          // Initialize infinite scroll when DOM is ready
+          if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', setupInfiniteScroll);
+          } else {
+            setupInfiniteScroll();
+          }
         })();

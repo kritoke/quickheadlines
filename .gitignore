@@ -23,6 +23,7 @@ quickheadlines.db
 .beads/cache/
 .beads/
 .aider*
+.beads.db
 
 # bv (beads viewer) local config and caches
 .bv/

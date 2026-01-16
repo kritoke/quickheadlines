@@ -94,11 +94,14 @@ struct Config
   # Page title (optional, default: Quick Headlines)
   property page_title : String = "Quick Headlines"
 
-  # Feed Item Limit (optional, default: 50 - increased for better story grouping)
-  property item_limit : Int32 = 50
+  # Feed Item Limit (optional, default: 100 - increased for better story grouping)
+  property item_limit : Int32 = 100
 
   # Web Server Port (optional, default: 3030)
   property server_port : Int32 = 3030
+
+  # Firehose mode batch size for infinite scroll (optional, default: 30)
+  property firehose_batch_size : Int32 = 30
 
   # Cache directory path (optional, defaults to XDG cache or ./cache)
   property cache_dir : String?
