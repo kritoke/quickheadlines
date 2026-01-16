@@ -1,0 +1,1 @@
+{"id":"quickheadlines-10","title":"Apostrophe in Timeline HTML Breaks Infinite Scroll","description":"The text \"`sentinel.innerHTML = '<div class=\"end-message\">You've reached the end of the timeline</div>';` \" is kicking out errors in javascript:\n\n`Uncaught SyntaxError: Unexpected identifier 've' (at timeline:92:58)`","status":"open","created_at":"2026-01-16T17:31:00Z"}
