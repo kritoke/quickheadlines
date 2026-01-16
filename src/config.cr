@@ -100,8 +100,8 @@ struct Config
   # Web Server Port (optional, default: 3030)
   property server_port : Int32 = 3030
 
-  # Firehose mode batch size for infinite scroll (optional, default: 30)
-  property firehose_batch_size : Int32 = 30
+  # Timeline mode batch size for infinite scroll (optional, default: 30)
+  property timeline_batch_size : Int32 = 30
 
   # Cache directory path (optional, defaults to XDG cache or ./cache)
   property cache_dir : String?

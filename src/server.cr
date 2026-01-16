@@ -205,7 +205,7 @@ def handle_root(context : HTTP::Server::Context)
   render_page(context.response, active_tab)
 end
 
-def handle_firehose(context : HTTP::Server::Context)
+def handle_timeline_items(context : HTTP::Server::Context)
   limit = context.request.query_params["limit"]?.try(&.to_i?) || 100
   offset = context.request.query_params["offset"]?.try(&.to_i?) || 0
 
@@ -358,7 +358,7 @@ def start_server(port : Int32)
     when {"GET", "/timeline"}
       handle_timeline(context)
     when {"GET", "/timeline_items"}
-      handle_firehose(context)
+      handle_timeline_items(context)
     when {"GET", "/favicon.png"}
       serve_bytes(context, FAVICON_PNG, "image/png")
     when {"GET", "/favicon.svg"}
