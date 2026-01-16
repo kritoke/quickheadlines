@@ -94,8 +94,8 @@ struct Config
   # Page title (optional, default: Quick Headlines)
   property page_title : String = "Quick Headlines"
 
-  # Feed Item Limit (optional, default: 10)
-  property item_limit : Int32 = 10
+  # Feed Item Limit (optional, default: 50 - increased for better story grouping)
+  property item_limit : Int32 = 50
 
   # Web Server Port (optional, default: 3030)
   property server_port : Int32 = 3030
