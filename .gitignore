@@ -44,3 +44,29 @@ elm-stuff/
 # Active design plan (working document, not for commit)
 ACTIVE_DESIGN_PLAN.md
 DESIGN_PLAN.md
+
+# Land the Plane - Production Release Artifacts
+
+*.log
+
+spec_out.txt
+
+.env
+
+*.env.local
+
+erl_crash.dump
+
+*.cr.bak
+
+*.ex.bak
+
+*.gleam.bak
+
+*.elm.bak
+
+.crystal/
+
+build/dev/
+
+_build/dev/
