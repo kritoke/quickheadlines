@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="color-scheme" content="light dark">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="/favicon.ico">
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" sizes="any">
+    <link rel="icon" type="image/png" href="/favicon.png">
+    <title>QuickHeadlines</title>
+    <script src="https://unpkg.com/morphdom/dist/morphdom-umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/color-thief/2.3.2/color-thief.umd.js"></script>
+    <style>
+        @keyframes highlight {
+            0% { background-color: rgba(253, 224, 71, 0.4); }
+            100% { background-color: transparent; }
+        }
+        .animate-highlight { animation: highlight 2s ease-out; border-radius: 0.25rem; }
+    </style>
+</head>
+<body>
+    <div id="app"></div>
+    <script>
+        // Cookie helper functions
+        function getCookie(name) {
+            const value = `; ${document.cookie}`;
+            const parts = value.split(`; ${name}=`);
+            if (parts.length === 2) return parts.pop().split(';').shift();
+            return null;
+        }
+
+        function setCookie(name, value, days) {
+            const expires = new Date();
+            expires.setTime(expires.getTime() + (days * 24 * 60 * 60 * 1000));
+            document.cookie = `${name}=${value};expires=${expires.toUTCString()};path=/;SameSite=Lax`;
+        }
+
+        // Initialize theme from cookie or system preference
+        const themeCookie = getCookie('theme');
+        const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        const initialTheme = themeCookie || (systemPrefersDark ? 'dark' : 'light');
+
+        // Initialize Elm app
+        const app = Elm.Main.init({
+            node: document.getElementById('app'),
+            flags: {
+                initialTheme: initialTheme,
+                windowWidth: window.innerWidth,
+                windowHeight: window.innerHeight
+            }
+        });
+
+        // Theme management
+        app.ports.setTheme.subscribe(function(theme) {
+            if (theme === 'dark') {
+                document.documentElement.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+            }
+            setCookie('theme', theme, 365);
+        });
+
+        // Scroll shadow management
+        app.ports.updateScrollShadow.subscribe(function(data) {
+            const element = document.getElementById(data.elementId);
+            if (element) {
+                const box = element.closest('.feed-box');
+                if (box) {
+                    box.classList.toggle('is-at-bottom', data.isAtBottom);
+                }
+            }
+        });
+
+        // Intersection Observer for infinite scroll
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                app.ports.elementIntersected.send({
+                    elementId: entry.target.id,
+                    isIntersecting: entry.isIntersecting
+                });
+            });
+        }, {
+            rootMargin: '100px',
+            threshold: 0.1
+        });
+
+        app.ports.observeElement.subscribe(function(elementId) {
+            const element = document.getElementById(elementId);
+            if (element) {
+                observer.observe(element);
+            }
+        });
+
+        // Color extraction using ColorThief
+        const colorThief = new ColorThief();
+        const colorCache = {};
+
+        app.ports.extractColor.subscribe(function(data) {
+            if (colorCache[data.feedUrl]) {
+                app.ports.colorExtracted.send(colorCache[data.feedUrl]);
+                return;
+            }
+
+            const img = new Image();
+            img.crossOrigin = 'Anonymous';
+            img.src = data.imageUrl.startsWith('/') || data.imageUrl.startsWith('data:')
+                ? data.imageUrl
+                : '/proxy_image?url=' + encodeURIComponent(data.imageUrl);
+
+            img.onload = function() {
+                try {
+                    const palette = colorThief.getPalette(img, 5);
+                    if (!palette || !palette.length) return;
+
+                    const color = palette[0];
+                    const [r, g, b] = color;
+                    const yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
+                    const textColor = (yiq >= 128) ? '#1f2937' : '#ffffff';
+                    const backgroundColor = 'rgb(' + r + ',' + g + ',' + b + ')';
+
+                    const result = {
+                        feedUrl: data.feedUrl,
+                        backgroundColor: backgroundColor,
+                        textColor: textColor
+                    };
+
+                    colorCache[data.feedUrl] = result;
+                    app.ports.colorExtracted.send(result);
+                } catch (e) {
+                    console.error('Color extraction error:', e);
+                }
+            };
+        });
+
+        // Window resize handler
+        window.addEventListener('resize', function() {
+            app.ports.windowResized.send({
+                width: window.innerWidth,
+                height: window.innerHeight
+            });
+        });
+    </script>
+</body>
+</html>

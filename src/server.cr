@@ -33,10 +33,36 @@ FAVICON_PNG = {{ read_file(__DIR__ + "/../assets/images/favicon.png") }}.to_slic
 FAVICON_SVG = {{ read_file(__DIR__ + "/../assets/images/favicon.svg") }}.to_slice
 FAVICON_ICO = {{ read_file(__DIR__ + "/../assets/images/favicon.ico") }}.to_slice
 
+# ----- Embedded Elm JavaScript (optional) -----
+
+{% if file_exists?(__DIR__ + "/../src/embedded_elm.cr") %}
+  require "../src/embedded_elm"
+  ELM_EMBEDDED = true
+{% else %}
+  ELM_EMBEDDED = false
+{% end %}
+
 def serve_bytes(ctx : HTTP::Server::Context, bytes : Bytes, content_type : String)
   ctx.response.content_type = content_type
   ctx.response.headers["Cache-Control"] = "public, max-age=31536000"
   ctx.response.output.write bytes
+end
+
+# Handle embedded elm.js request
+def handle_elm_js(context : HTTP::Server::Context)
+  {% if file_exists?(__DIR__ + "/../src/embedded_elm.cr") %}
+    if defined?(EmbeddedElm)
+      context.response.content_type = EmbeddedElm.content_type
+      context.response.headers["Cache-Control"] = "public, max-age=31536000"
+      context.response.print EmbeddedElm.js
+    else
+      context.response.status_code = 500
+      context.response.print "Elm not embedded"
+    end
+  {% else %}
+    context.response.status_code = 404
+    context.response.print "elm.js not found - run 'make elm-embed' first"
+  {% end %}
 end
 
 # Builds the inner HTML for all feed boxes as link lists.
@@ -393,6 +419,8 @@ def start_server(port : Int32)
     case {context.request.method, path}
     when {"GET", "/version"}
       handle_version(context)
+    when {"GET", "/elm.js"}
+      handle_elm_js(context)
     when {"GET", "/feeds"}
       handle_feeds(context)
     when {"GET", "/feed_more"}

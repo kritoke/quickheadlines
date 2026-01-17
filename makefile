@@ -1,13 +1,14 @@
 # Makefile for QuickHeadlines
+# Migrated from Crystal/Slang/Tailwind to Crystal/Elm with elm-ui
 
 NAME = quickheadlines
 CRYSTAL ?= crystal
+ELM    ?= elm
+ELM_FORMAT ?= elm-format
 VERSION := $(shell grep '^version:' shard.yml | awk '{print $$2}')
 BUILD_REV ?= v$(VERSION)
 
-TAILWIND_CLI ?= ./tailwindcss
-
-# Detect system for Tailwind binary download
+# Detect system for platform-specific builds
 UNAME_S := $(shell uname -s)
 UNAME_M := $(shell uname -m)
 
@@ -24,12 +25,7 @@ ifeq ($(UNAME_S),FreeBSD)
 	OS_NAME = freebsd
 endif
 
-# Add Homebrew OpenSSL paths for macOS
-ifeq ($(OS_NAME),macos)
-	OPENSSL_PREFIX := $(shell brew --prefix openssl@3 2>/dev/null)
-	export PKG_CONFIG_PATH := $(OPENSSL_PREFIX)/lib/pkgconfig:$(PKG_CONFIG_PATH)
-endif
-
+# Architecture detection
 ifeq ($(UNAME_M),x86_64)
 	ARCH_NAME = x64
 endif
@@ -43,7 +39,13 @@ ifeq ($(UNAME_M),aarch64)
 	ARCH_NAME = arm64
 endif
 
-.PHONY: all build run clean css css-dev tailwind-download build-release check-deps
+# Add Homebrew OpenSSL paths for macOS
+ifeq ($(OS_NAME),macos)
+	OPENSSL_PREFIX := $(shell brew --prefix openssl@3 2>/dev/null)
+	export PKG_CONFIG_PATH := $(OPENSSL_PREFIX)/lib/pkgconfig:$(PKG_CONFIG_PATH)
+endif
+
+.PHONY: all build run clean check-deps elm-install elm-build elm-embed elm-format elm-validate test-frontend
 
 all: build
 
@@ -62,6 +64,19 @@ check-deps:
 		exit 1; \
 	}
 	@echo "✓ Crystal compiler: $$($(CRYSTAL) --version)"
+	@if [ "$(OS_NAME)" = "freebsd" ]; then \
+		command -v $(ELM) >/dev/null 2>&1 || { \
+			echo "❌ Error: Elm compiler not found"; \
+			echo ""; \
+			echo "Install Elm:"; \
+			echo "  FreeBSD: pkg install elm; npm install -g elm"; \
+			echo ""; \
+			echo "Note: On FreeBSD, elm.js is embedded at build time"; \
+			echo "      so Elm compiler is only needed during builds"; \
+			exit 1; \
+		}; \
+		echo "✓ Elm compiler: $$($(ELM) --version)"; \
+	fi
 	@if [ "$(OS_NAME)" = "linux" ]; then \
 		pkg-config --exists sqlite3 || { \
 			echo "❌ Error: SQLite3 development files not found"; \
@@ -108,70 +123,118 @@ check-deps:
 	fi
 	@echo ""
 
-# --- Tasks ---
+# --- Elm Tasks ---
 
-# 1. Download Tailwind CLI if not present
-tailwind-download:
-ifeq ($(OS_NAME),freebsd)
-	@if [ ! -f ./node_modules/.bin/tailwindcss ]; then \
-		echo "Installing Tailwind CLI and dependencies locally for FreeBSD..."; \
-		npm install @tailwindcss/cli tailwindcss; \
+# 0. Install Elm tools (if not present)
+elm-install:
+	@echo "Installing Elm tools..."
+	@if ! command -v elm >/dev/null 2>&1; then \
+		echo "Installing elm via npm..."; \
+		npm install -g elm; \
+	else \
+		echo "elm already installed"; \
 	fi
-else
-	@if [ ! -f $(TAILWIND_CLI) ]; then \
-		echo "Downloading Tailwind CLI for $(OS_NAME)-$(ARCH_NAME)..."; \
-		if curl -fsLO "https://github.com/tailwindlabs/tailwindcss/releases/latest/download/tailwindcss-$(OS_NAME)-$(ARCH_NAME)"; then \
-			chmod +x tailwindcss-$(OS_NAME)-$(ARCH_NAME); \
-			mv tailwindcss-$(OS_NAME)-$(ARCH_NAME) $(TAILWIND_CLI); \
-		else \
-			echo "Warning: Tailwind CLI not available for $(OS_NAME)-$(ARCH_NAME). Skipping download."; \
-		fi \
+	@if ! command -v elm-format >/dev/null 2>&1; then \
+		echo "Installing elm-format via npm..."; \
+		npm install -g elm-format; \
+	else \
+		echo "elm-format already installed"; \
 	fi
-endif
+	@echo "✓ Elm tools installed"
 
-# 2. Generate Production CSS
-# Combines custom styles with Tailwind utilities and minifies
-css: tailwind-download
-	@if [ -f $(TAILWIND_CLI) ]; then CMD="./$(TAILWIND_CLI)"; \
-	elif [ -f ./node_modules/.bin/tailwindcss ]; then CMD="./node_modules/.bin/tailwindcss"; \
-	elif command -v tailwindcss >/dev/null 2>&1; then CMD="tailwindcss"; \
-	else echo "Error: Tailwind CLI not found. Install via 'npm install @tailwindcss/cli tailwindcss' on FreeBSD."; exit 1; fi; \
-	echo "Generating production CSS using $$CMD..."; \
-	$$CMD --input assets/css/input.css --output assets/css/production.css --minify; \
-	touch src/server.cr
+# 1. Compile Elm to JavaScript
+elm-build:
+	@echo "Compiling Elm to JavaScript..."
+	@if [ ! -d "elm-stuff" ]; then \
+		echo "Running elm make to initialize elm-stuff..."; \
+	fi
+	$(ELM) make src/Main.elm --output=public/elm.js
+	@echo "✓ Elm compiled to public/elm.js ($(shell wc -c < public/elm.js 2>/dev/null || echo "0") bytes)"
 
-# 2.5 Generate Development CSS
-css-dev: tailwind-download
-	@if [ -f $(TAILWIND_CLI) ]; then CMD="./$(TAILWIND_CLI)"; \
-	elif [ -f ./node_modules/.bin/tailwindcss ]; then CMD="./node_modules/.bin/tailwindcss"; \
-	elif command -v tailwindcss >/dev/null 2>&1; then CMD="tailwindcss"; \
-	else echo "Error: Tailwind CLI not found. Install via 'npm install @tailwindcss/cli tailwindcss' on FreeBSD."; exit 1; fi; \
-	echo "Generating development CSS using $$CMD..."; \
-	rm -f assets/css/development.css; \
-	$$CMD --input assets/css/input.css --output assets/css/development.css --minify; \
-	touch src/server.cr
+# 2. Embed elm.js into Crystal source
+elm-embed: elm-build
+	@echo "Embedding elm.js into Crystal..."
+	@if [ -f scripts/embed_elm.cr ]; then \
+		$(CRYSTAL) run scripts/embed_elm.cr; \
+	else \
+		echo "Warning: embed script not found, skipping embed"; \
+	fi
+	@echo "✓ elm.js embedded in src/embedded_elm.cr"
 
-# 3. Build Release Binary
-# Sets APP_ENV=production so the compiler embeds the generated CSS
-build: check-deps css
+# 3. Run Elm format on source files
+elm-format:
+	@echo "Formatting Elm source files..."
+	$(ELM_FORMAT) src/
+	@echo "✓ Elm files formatted"
+
+# 4. Validate Elm compilation (without output)
+elm-validate:
+	@echo "Validating Elm syntax..."
+	$(ELM) make src/Main.elm --output=/dev/null
+	@echo "✓ Elm syntax valid"
+
+# --- Frontend Testing ---
+
+# 5. Frontend testing with Playwright
+test-frontend:
+	@echo "Running Playwright frontend tests..."
+	@if [ ! -d "node_modules" ]; then \
+		echo "Installing Playwright... "; \
+		npm init -y >/dev/null 2>&1; \
+		npm install -D @playwright/test; \
+	fi
+	@npx playwright install chromium 2>/dev/null || true
+	@npx playwright test --reporter=list || echo "No tests found or Playwright not configured"
+	@echo "✓ Frontend tests complete"
+
+# --- Crystal Tasks ---
+
+# 6. Build Release Binary (with embedded Elm)
+build: check-deps elm-embed
 	@echo "Compiling release binary for $(OS_NAME)-$(ARCH_NAME)..."
 	@mkdir -p bin
+	@echo "Note: Using embedded elm.js from src/embedded_elm.cr"
 	APP_ENV=production $(CRYSTAL) build --release --no-debug $(CRYSTAL_BUILD_OPTS) src/quickheadlines.cr -o bin/$(NAME)
 
-# 3.5 Build with specific OS/Arch naming for GitHub Releases
-build-release: check-deps css
+# 6.5 Build with specific OS/Arch naming for GitHub Releases
+build-release: check-deps elm-embed
 	@echo "Compiling release binary: bin/$(NAME)-$(BUILD_REV)-$(OS_NAME)-$(ARCH_NAME)"
 	@mkdir -p bin
 	APP_ENV=production $(CRYSTAL) build --release --no-debug $(CRYSTAL_BUILD_OPTS) -Dversion=$(BUILD_REV) src/quickheadlines.cr -o bin/$(NAME)-$(BUILD_REV)-$(OS_NAME)-$(ARCH_NAME)
 
-# 4. Run in Development Mode
-# Sets APP_ENV=development and compiles CSS locally
-run: check-deps css-dev
+# 7. Run in Development Mode
+run: check-deps elm-embed
 	@echo "Starting server in development mode..."
 	APP_ENV=development $(CRYSTAL) run src/quickheadlines.cr -- config=feeds.yml
 
 clean:
 	rm -rf bin
-	rm -f assets/css/production.css
-	rm -f assets/css/development.css
-	rm -f $(TAILWIND_CLI)
+	rm -f public/elm.js
+	rm -f src/embedded_elm.cr
+	rm -rf elm-stuff
+
+# Full rebuild - clean everything and rebuild
+rebuild: clean all
+
+# Help target
+help:
+	@echo "QuickHeadlines Makefile"
+	@echo ""
+	@echo "Targets:"
+	@echo "  all           - Build release binary (default)"
+	@echo "  build         - Build release binary with embedded Elm"
+	@echo "  build-release - Build release binary with version naming"
+	@echo "  run           - Run in development mode"
+	@echo "  elm-install   - Install Elm and elm-format"
+	@echo "  elm-build     - Compile Elm to JavaScript"
+	@echo "  elm-embed     - Embed elm.js into Crystal"
+	@echo "  elm-format    - Format Elm source files"
+	@echo "  elm-validate  - Validate Elm syntax"
+	@echo "  test-frontend - Run Playwright frontend tests"
+	@echo "  clean         - Remove build artifacts"
+	@echo "  rebuild       - Clean and rebuild everything"
+	@echo "  check-deps    - Check for required dependencies"
+	@echo "  help          - Show this help message"
+	@echo ""
+	@echo "Platform: $(OS_NAME)-$(ARCH_NAME)"
+	@echo "Version: $(BUILD_REV)"

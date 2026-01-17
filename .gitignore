@@ -35,5 +35,12 @@ AGENTS.md
 .gitattributes
 server.log
 
+# Elm compiler artifacts and cache
+elm-stuff/
+
+# Note: public/elm.js is NOT ignored - it is committed for FreeBSD support
+# since Elm compiler may not be available on FreeBSD
+
 # Active design plan (working document, not for commit)
-ACTIVE_DESIGN_PLAN.mdDESIGN_PLAN.md
+ACTIVE_DESIGN_PLAN.md
+DESIGN_PLAN.md
