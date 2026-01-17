@@ -10,6 +10,16 @@ html
     title Quick Timeline - #{title}
     script(src="https://unpkg.com/morphdom/dist/morphdom-umd.min.js")
     style == css
+    script
+      | // Theme initialization - runs immediately to prevent flash
+      | (function() {
+      |   const match = document.cookie.match(/theme=([^;]+)/);
+      |   const theme = match ? match[1] : null;
+      |   const systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      |   if (theme === 'dark' || (!theme && systemDark)) {
+      |     document.documentElement.classList.add('dark');
+      |   }
+      | })();
     style
       |
         @keyframes highlight {
@@ -74,33 +84,18 @@ html
 
     script
       |
-        // Cookie helper functions
+        // Cookie helper functions - robust implementation
         function getCookie(name) {
-          const value = `; ${document.cookie}`;
-          const parts = value.split(`; ${name}=`);
-          if (parts.length === 2) return parts.pop().split(';').shift();
+          const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
+          return match ? decodeURIComponent(match[2]) : null;
         }
 
         function setCookie(name, value, days) {
           const expires = new Date(Date.now() + days * 864e5).toUTCString();
-          document.cookie = `${name}=${value}; expires=${expires}; path=/`;
+          document.cookie = name + '=' + encodeURIComponent(value) + '; expires=' + expires + '; path=/; SameSite=Lax';
         }
 
-        // Apply theme before DOM render to prevent flash
-        (function() {
-          const themeCookie = getCookie('theme');
-          const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-          const shouldBeDark = themeCookie === 'dark' || (!themeCookie && systemPrefersDark);
-          if (shouldBeDark) {
-            document.documentElement.classList.add('dark');
-          } else {
-            document.documentElement.classList.remove('dark');
-          }
-        })();
-
-        // First day to filter by (set from server-side)
-        const firstDay = '#{first_day_filter}';
-
+        // Toggle theme function
         window.toggleTheme = function() {
           const isDark = document.documentElement.classList.toggle('dark');
           setCookie('theme', isDark ? 'dark' : 'light', 365);
@@ -141,7 +136,7 @@ html
         };
 
         // Infinite scroll implementation
-        let currentOffset = 0; // Will be calculated from rendered items
+        let currentOffset = 0;
         let isLoading = false;
         let hasMore = true;
         let observer = null;
@@ -149,8 +144,8 @@ html
         function calculateInitialOffset() {
           const timelineContainer = document.querySelector('.timeline-container');
           if (timelineContainer) {
-            // Count the number of timeline items rendered (not qh-hidden)
-            const items = timelineContainer.querySelectorAll('.timeline-item:not(.qh-hidden)');
+            // Count all timeline items rendered
+            const items = timelineContainer.querySelectorAll('.timeline-item');
             currentOffset = items.length;
           }
         }
@@ -158,7 +153,7 @@ html
         function showEndMessage() {
           const sentinel = document.getElementById('infinite-scroll-sentinel');
           if (sentinel) {
-            sentinel.innerHTML = `<div class="end-message">You've reached the end of the timeline</div>`;
+            sentinel.innerHTML = '<div class="end-message">You have reached the end of the timeline</div>';
           }
         }
 
@@ -172,17 +167,24 @@ html
           }
 
           try {
-            // Use first_day for filtering (consistent across all loads)
-            const url = `/timeline_items?limit=30&offset=${currentOffset}&first_day=${encodeURIComponent(firstDay)}`;
+            // Build URL with parameters
+            const params = new URLSearchParams({
+              limit: '30',
+              offset: currentOffset.toString()
+            });
+            
+            const url = '/timeline_items?' + params.toString();
             const res = await fetch(url);
-            if (!res.ok) throw new Error();
+            
+            if (!res.ok) throw new Error('Failed to fetch: ' + res.status);
+            
             const html = await res.text();
-
-            // Parse the response HTML (contains items directly, no container)
+            
+            // Parse the response HTML
             const temp = document.createElement('div');
             temp.innerHTML = html;
 
-            // Get the existing timeline container from the page
+            // Get the existing timeline container
             const timelineContainer = document.querySelector('.timeline-container');
             if (!timelineContainer) {
               hasMore = false;
@@ -190,20 +192,17 @@ html
               return;
             }
 
-            // Get new items from the response (items and day headers)
-            const newItems = Array.from(temp.children).filter(
-              el => el.classList.contains('timeline-item') || el.classList.contains('timeline-day-header')
-            );
+            // Get new items from the response
+            const newItems = Array.from(temp.querySelectorAll('.timeline-item, .timeline-day-header'));
 
             if (newItems.length === 0) {
-              // No more items
               hasMore = false;
               showEndMessage();
               isLoading = false;
               return;
             }
 
-            // Append new items with fade-in animation
+            // Append new items
             newItems.forEach((item) => {
               item.classList.add('fade-in');
               timelineContainer.appendChild(item);
@@ -211,7 +210,6 @@ html
 
             currentOffset += newItems.length;
           } catch (e) {
-            console.error('Infinite scroll error:', e);
             if (sentinel) {
               sentinel.innerHTML = '<div class="end-message">Error loading more items</div>';
             }
@@ -219,7 +217,6 @@ html
 
           isLoading = false;
 
-          // Update sentinel for next load or show end message
           if (hasMore && sentinel) {
             sentinel.innerHTML = '<div class="loading-spinner"></div>';
           }

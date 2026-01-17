@@ -54,7 +54,7 @@
           = timeline_item.feed_title
         span.text-slate-400.dark:text-slate-600
           | •
-        a.timeline-link.text-xs.md:text-sm.font-medium.text-slate-900.dark:text-slate-100.hover:text-blue-600.dark:hover:text-blue-400 href="#{HTML.escape(timeline_item.item.link)}" target="_blank" rel="noopener noreferrer" = timeline_item.item.title
+        a.timeline-link.text-xs.md:text-sm.font-medium.text-slate-900.dark:text-slate-100.hover:text-blue-600.dark:hover:text-blue-400 href="#{HTML.escape(timeline_item.item.link)}" target="_blank" rel="noopener noreferrer" == HTML.escape(timeline_item.item.title)
 
         -# Cluster expand/collapse button - only show for representatives with hidden items in view
         - if timeline_item.is_representative && timeline_item.cluster_id && (hidden_count = hidden_counts[timeline_item.cluster_id]?)
