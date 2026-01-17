@@ -20,8 +20,8 @@ describe StoryHasher do
     end
 
     it "returns different signatures for different texts" do
-      sig1 = StoryHasher.compute_signature("First Article")
-      sig2 = StoryHasher.compute_signature("Second Article")
+      sig1 = StoryHasher.compute_signature("Technology company announces revolutionary new product update")
+      sig2 = StoryHasher.compute_signature("Government officials discuss new policy changes for citizens")
       sig1.should_not eq(sig2)
     end
 
@@ -39,8 +39,8 @@ describe StoryHasher do
     end
 
     it "returns 0.0 for completely different signatures" do
-      sig1 = StoryHasher.compute_signature("AAAA")
-      sig2 = StoryHasher.compute_signature("BBBB")
+      sig1 = StoryHasher.compute_signature("AAAA BBBB CCCC DDDD EEEE FFFF")
+      sig2 = StoryHasher.compute_signature("1111 2222 3333 4444 5555 6666")
       similarity = StoryHasher.similarity(sig1, sig2)
       similarity.should be < 0.5_f64
     end

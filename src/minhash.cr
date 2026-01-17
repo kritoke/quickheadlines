@@ -22,7 +22,8 @@ module StoryHasher
 
   # Minimum word count to consider for clustering
   # Headlines with fewer words are more likely to be falsely clustered
-  MIN_WORDS_FOR_CLUSTERING = 4
+  # Increased from 4 to 6 to reduce false positives from generic terms
+  MIN_WORDS_FOR_CLUSTERING = 6
 
   # Shingle size for text decomposition
   SHINGLE_SIZE = 3
@@ -31,15 +32,30 @@ module StoryHasher
   HASH_SEEDS = (0...SIGNATURE_SIZE).to_a
 
   # Stop words to exclude from clustering (common words that create false positives)
+  # These are words that appear frequently in headlines but don't contribute to meaning
   STOP_WORDS = Set.new([
     "the", "a", "an", "and", "or", "but", "in", "on", "at", "to", "for",
     "of", "with", "by", "from", "as", "is", "was", "are", "were", "been",
     "be", "have", "has", "had", "do", "does", "did", "will", "would",
     "could", "should", "may", "might", "must", "shall", "can", "need",
     "this", "that", "these", "those", "it", "its", "they", "them",
+    # Time-related words (common in headlines, low semantic value)
     "time", "times", "day", "days", "week", "weeks", "month", "months",
-    "year", "years", "new", "latest", "update", "updates", "report", "reports",
-    "says", "said", "just", "now", "how", "what", "when", "where", "why",
+    "year", "years", "today", "yesterday", "tomorrow", "morning", "afternoon", "evening",
+    # News-related words (generic, appear in many different stories)
+    "new", "news", "latest", "update", "updates", "report", "reports",
+    "breaking", "exclusive", "special", "alert", "alerts", "coverage",
+    # Speaking verbs (who said what)
+    "says", "said", "saying", "tell", "tells", "told", "claim", "claims", "claimed",
+    # Common adverbs and modifiers
+    "just", "now", "how", "what", "when", "where", "why", "also", "too",
+    "up", "down", "out", "over", "after", "before", "between", "under", "above",
+    # Numeric words
+    "one", "two", "three", "first", "second", "third", "top", "bottom",
+    # Verbs
+    "get", "gets", "got", "make", "makes", "made", "take", "takes", "took",
+    "see", "sees", "saw", "know", "knows", "knew", "think", "thinks", "thought",
+    "want", "wants", "use", "uses", "used", "find", "finds", "found",
   ])
 
   # Compute MinHash signature for a text string
