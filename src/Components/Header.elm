@@ -4,8 +4,10 @@ import Element exposing (..)
 import Element.Background as Background
 import Element.Border as Border
 import Element.Font as Font
-import Theme exposing (.., ThemeColors, getThemeColors, textColor, borderColor)
+import Html.Attributes
+import Theme exposing (ThemeColors, borderColor, getThemeColors, textColor)
 import Time exposing (Posix, Zone)
+import Types exposing (Theme(..))
 
 
 view : Theme -> Maybe Posix -> Zone -> Element msg
@@ -21,19 +23,19 @@ view theme lastUpdated timeZone =
         , Border.widthEach { bottom = 1, top = 0, left = 0, right = 0 }
         , Border.color colors.border
         ]
-        [ logoSection
+        [ logoSection theme
         , rightSection theme lastUpdated timeZone
         ]
 
 
-logoSection : Element msg
-logoSection =
+logoSection : Theme -> Element msg
+logoSection theme =
     row [ spacing 12 ]
         [ logoImage
         , el
             [ Font.size 24
             , Font.bold
-            , Font.color (textColor Light)
+            , Font.color (textColor theme)
             ]
             (text "QuickHeadlines")
         ]
@@ -66,20 +68,20 @@ rightSection theme lastUpdated timeZone =
         , Border.width 1
         , Border.color (rgb255 226 232 240)
         ]
-        [ lastUpdatedTime lastUpdated timeZone
-        , timelineLink
+        [ lastUpdatedTime theme lastUpdated timeZone
+        , timelineLink theme
         , themeToggle theme
         ]
 
 
-lastUpdatedTime : Maybe Posix -> Zone -> Element msg
-lastUpdatedTime lastUpdated timeZone =
+lastUpdatedTime : Theme -> Maybe Posix -> Zone -> Element msg
+lastUpdatedTime theme lastUpdated timeZone =
     case lastUpdated of
         Just time ->
             el
                 [ Font.size 14
                 , Font.medium
-                , Font.color (textColor Light)
+                , Font.color (textColor theme)
                 ]
                 (text (formatTime time timeZone))
 
@@ -106,10 +108,21 @@ formatTime time zone =
             Time.toMinute zone time |> String.fromInt |> String.padLeft 2 '0'
 
         ampm =
-            if hour >= 12 then "PM" else "AM"
+            if hour >= 12 then
+                "PM"
+
+            else
+                "AM"
 
         displayHour =
-            if hour > 12 then hour - 12 else if hour == 0 then 12 else hour
+            if hour > 12 then
+                hour - 12
+
+            else if hour == 0 then
+                12
+
+            else
+                hour
     in
     month ++ " " ++ day ++ ", " ++ year ++ " at " ++ String.fromInt displayHour ++ ":" ++ minute ++ " " ++ ampm
 
@@ -117,22 +130,45 @@ formatTime time zone =
 monthToString : Time.Month -> String
 monthToString month =
     case month of
-        Time.Jan -> "January"
-        Time.Feb -> "February"
-        Time.Mar -> "March"
-        Time.Apr -> "April"
-        Time.May -> "May"
-        Time.Jun -> "June"
-        Time.Jul -> "July"
-        Time.Aug -> "August"
-        Time.Sep -> "September"
-        Time.Oct -> "October"
-        Time.Nov -> "November"
-        Time.Dec -> "December"
+        Time.Jan ->
+            "January"
+
+        Time.Feb ->
+            "February"
+
+        Time.Mar ->
+            "March"
+
+        Time.Apr ->
+            "April"
+
+        Time.May ->
+            "May"
+
+        Time.Jun ->
+            "June"
+
+        Time.Jul ->
+            "July"
+
+        Time.Aug ->
+            "August"
+
+        Time.Sep ->
+            "September"
+
+        Time.Oct ->
+            "October"
+
+        Time.Nov ->
+            "November"
+
+        Time.Dec ->
+            "December"
 
 
-timelineLink : Element msg
-timelineLink =
+timelineLink : Theme -> Element msg
+timelineLink theme =
     link
         [ paddingXY 6 6
         , Border.rounded 6
@@ -144,9 +180,9 @@ timelineLink =
             el
                 [ width (px 20)
                 , height (px 20)
-                , Font.color (textColor Light)
+                , Font.color (textColor theme)
                 ]
-                (html "🕐")
+                (text "🕐")
         }
 
 

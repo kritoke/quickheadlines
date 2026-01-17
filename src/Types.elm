@@ -1,6 +1,7 @@
 module Types exposing (..)
 
 import Browser
+import Browser.Navigation as Navigation
 import Http
 import Set exposing (Set)
 import Time exposing (Posix, Zone)
@@ -12,7 +13,7 @@ import Url exposing (Url)
 
 
 type alias Model =
-    { key : Browser.Navigation.Key
+    { key : Navigation.Key
     , url : Url
     , page : Page
     , theme : Theme

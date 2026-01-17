@@ -1,13 +1,14 @@
 module Main exposing (main)
 
+import Api exposing (getFeeds, getVersion)
 import Browser
 import Browser.Navigation as Nav
-import Element exposing (Element, layout)
+import Element exposing (layout, rgb255)
 import Element.Background as Background
-import Ports exposing (..)
-import Theme exposing (..)
+import Element.Font as Font
+import Html
 import Time exposing (Posix, Zone)
-import Types exposing (..)
+import Types exposing (FeedsModel, Model, Msg(..), Page(..), Theme(..), TimelineModel)
 import Update exposing (update)
 import Url exposing (Url)
 import View exposing (view)
@@ -17,7 +18,7 @@ import View exposing (view)
 -- Main entry point
 
 
-main : Program Flags Model Msg
+main : Program () Model Msg
 main =
     Browser.application
         { init = init
@@ -30,49 +31,31 @@ main =
 
 
 
--- Flags from JavaScript
-
-
-type alias Flags =
-    { initialTheme : String
-    , windowWidth : Int
-    , windowHeight : Int
-    }
-
-
-
 -- Initialize the application
 
 
-init : Flags -> Url -> Nav.Key -> ( Model, Cmd Msg )
-init flags url key =
+init : () -> Url -> Nav.Key -> ( Model, Cmd Msg )
+init _ url key =
     let
         theme =
-            case flags.initialTheme of
-                "dark" ->
-                    Dark
-
-                _ ->
-                    Light
+            Light
 
         initialModel =
             { key = key
             , url = url
             , page = FeedsPage (initialFeedsModel (extractTabFromUrl url))
             , theme = theme
-            , windowWidth = flags.windowWidth
-            , windowHeight = flags.windowHeight
+            , windowWidth = 1280
+            , windowHeight = 720
             , lastUpdated = Nothing
             , timeZone = Time.utc
             }
-
-        initialCmds =
-            [ getFeeds (extractTabFromUrl url)
-            , getVersion
-            ]
     in
     ( initialModel
-    , Cmd.batch initialCmds
+    , Cmd.batch
+        [ getFeeds (extractTabFromUrl url)
+        , getVersion
+        ]
     )
 
 
@@ -82,11 +65,26 @@ init flags url key =
 
 viewDocument : Model -> Browser.Document Msg
 viewDocument model =
+    let
+        bgColor =
+            if model.theme == Light then
+                rgb255 249 250 251
+
+            else
+                rgb255 17 24 39
+
+        textColor =
+            if model.theme == Light then
+                rgb255 30 41 59
+
+            else
+                rgb255 226 232 240
+    in
     { title = "QuickHeadlines"
     , body =
         [ layout
-            [ Background.color (surfaceColor model.theme)
-            , Font.color (textColor model.theme)
+            [ Background.color bgColor
+            , Font.color textColor
             ]
             (view model)
         ]
@@ -99,13 +97,7 @@ viewDocument model =
 
 subscriptions : Model -> Sub Msg
 subscriptions model =
-    Sub.batch
-        [ themeChanged ThemeChanged
-        , scrollEvent ScrollEvent
-        , elementIntersected ElementIntersected
-        , extractColor ExtractColor
-        , windowResized WindowResized
-        ]
+    Sub.none
 
 
 
@@ -156,48 +148,3 @@ initialFeedsModel activeTab =
     , loading = True
     , error = Nothing
     }
-
-
-
--- Theme changed handler
-
-
-themeChanged : (String -> msg) -> Sub msg
-themeChanged toMsg =
-    themeChanged toMsg
-
-
-
--- Scroll event handler
-
-
-scrollEvent : ({ elementId : String, scrollTop : Int, scrollHeight : Int, clientHeight : Int } -> msg) -> Sub msg
-scrollEvent toMsg =
-    scrollEvent toMsg
-
-
-
--- Element intersected handler
-
-
-elementIntersected : ({ elementId : String, isIntersecting : Bool } -> msg) -> Sub msg
-elementIntersected toMsg =
-    elementIntersected toMsg
-
-
-
--- Extract color handler
-
-
-extractColor : ({ imageUrl : String, feedUrl : String } -> msg) -> Sub msg
-extractColor toMsg =
-    extractColor toMsg
-
-
-
--- Window resized handler
-
-
-windowResized : ({ width : Int, height : Int } -> msg) -> Sub msg
-windowResized toMsg =
-    windowResized toMsg

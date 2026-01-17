@@ -4,8 +4,9 @@ import Element exposing (..)
 import Element.Background as Background
 import Element.Border as Border
 import Element.Font as Font
-import Element.Image as Image
-import Theme exposing (.., ThemeColors, getThemeColors, feedHeaderColor, feedHeaderTextColor)
+import Html.Attributes
+import Theme exposing (ThemeColors, feedHeaderColor, feedHeaderTextColor, getThemeColors)
+import Types exposing (Feed, Theme(..))
 
 
 view : Theme -> Feed -> Element msg
@@ -68,7 +69,8 @@ feedInfo theme feed =
             [ Font.size 16
             , Font.bold
             , Font.color (feedHeaderTextColor theme)
-            , Element.htmlAttribute (Element.Attribute "style" "word-wrap: break-word; line-height: 1.2;")
+            , htmlAttribute (Html.Attributes.style "word-wrap" "break-word")
+            , htmlAttribute (Html.Attributes.style "line-height" "1.2")
             ]
             (text feed.title)
         , if feed.displayLink /= "" then

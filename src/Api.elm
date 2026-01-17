@@ -24,7 +24,7 @@ getFeeds : String -> Cmd Msg
 getFeeds tab =
     Http.get
         { url = baseUrl ++ "/feeds?tab=" ++ tab
-        , expect = Http.expectJson (Result.mapError GotFeeds feedsDecoder)
+        , expect = Http.expectJson (FeedsMsg << GotFeeds) feedsDecoder
         }
 
 
@@ -36,7 +36,7 @@ getTimelineItems : Int -> Int -> Cmd Msg
 getTimelineItems limit offset =
     Http.get
         { url = baseUrl ++ "/timeline_items?limit=" ++ String.fromInt limit ++ "&offset=" ++ String.fromInt offset
-        , expect = Http.expectJson (Result.mapError GotTimelineItems timelineItemsDecoder)
+        , expect = Http.expectJson (TimelineMsg << GotTimelineItems) timelineItemsDecoder
         }
 
 
@@ -48,7 +48,7 @@ getFeedMore : String -> Int -> Cmd Msg
 getFeedMore url offset =
     Http.get
         { url = baseUrl ++ "/feed_more?url=" ++ url ++ "&limit=10&offset=" ++ String.fromInt offset
-        , expect = Http.expectJson (Result.mapError (GotMoreItems url) feedDecoder)
+        , expect = Http.expectJson (FeedsMsg << GotMoreItems url) feedDecoder
         }
 
 
@@ -60,7 +60,7 @@ getVersion : Cmd Msg
 getVersion =
     Http.get
         { url = baseUrl ++ "/version"
-        , expect = Http.expectString (Result.mapError GotLastUpdated versionDecoder)
+        , expect = Http.expectJson GotLastUpdated versionDecoder
         }
 
 
@@ -85,22 +85,8 @@ errorToString error =
         Http.NetworkError ->
             "Network error"
 
-        Http.BadStatus status _ ->
+        Http.BadStatus status ->
             "Server returned status: " ++ String.fromInt status
 
         Http.BadBody message ->
             "Invalid response: " ++ message
-
-
-
--- Map Http.Error to our error type
-
-
-mapError : (a -> msg) -> Http.Error -> Result Http.Error a
-mapError toMsg httpError =
-    case httpError of
-        Ok value ->
-            Ok value
-
-        Err error ->
-            Err error

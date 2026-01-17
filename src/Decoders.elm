@@ -1,62 +1,12 @@
 module Decoders exposing (..)
 
-import Json.Decode exposing (Decoder, field, int, list, map, map2, map3, map4, map5, map6, map7, map8, maybe, nullable, string)
+import Json.Decode exposing (Decoder, andThen, field, int, list, map, map2, map7, maybe, nullable, string, succeed)
 import Time exposing (Posix, millisToPosix)
 import Types exposing (..)
 
 
 
 -- Feed Decoder
-
-
-feedDecoder : Decoder Feed
-feedDecoder =
-    map8 Feed
-        (field "url" string)
-        (field "title" string)
-        (field "display_link" string)
-        (field "site_link" string)
-        (field "favicon" string)
-        (field "favicon_data" string)
-        (field "header_color" (nullable string))
-        (field "items" (list feedItemDecoder))
-        |> andThen
-            (\url title displayLink siteLink favicon faviconData headerColor items ->
-                map7 (\totalItemCount -> Feed url title displayLink siteLink favicon faviconData headerColor items totalItemCount)
-                    (field "total_item_count" int)
-            )
-
-
-
--- This is a workaround since elm 0.19 doesn't have Json.Decode.Pipeline
--- We need to use a different approach
-
-
-feedDecoder : Decoder Feed
-feedDecoder =
-    let
-        decodeFeed url title displayLink siteLink favicon faviconData headerColor items =
-            map2 (\totalItemCount -> Feed url title displayLink siteLink favicon faviconData headerColor items)
-                (field "total_item_count" int)
-    in
-    map7 decodeFeed
-        (field "url" string)
-        (field "title" string)
-        (field "display_link" string)
-        (field "site_link" string)
-        (field "favicon" string)
-        (field "favicon_data" string)
-        (field "header_color" (nullable string))
-        |> andThen
-            (\url title displayLink siteLink favicon faviconData headerColor ->
-                map2 (Feed url title displayLink siteLink favicon faviconData headerColor)
-                    (field "items" (list feedItemDecoder))
-                    |> andThen (\feed -> map (\totalItemCount -> { feed | totalItemCount = totalItemCount }) (field "total_item_count" int))
-            )
-
-
-
--- Simplified Feed Decoder
 
 
 feedDecoder : Decoder Feed

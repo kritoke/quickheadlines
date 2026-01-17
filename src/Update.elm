@@ -3,8 +3,10 @@ module Update exposing (update)
 import Api exposing (..)
 import Browser
 import Browser.Navigation as Nav
+import Http
 import Ports exposing (..)
-import Time exposing (Zone)
+import Set exposing (Set)
+import Time exposing (Posix, Zone)
 import Types exposing (..)
 import Url exposing (Url)
 
@@ -343,7 +345,7 @@ errorToString error =
         Http.NetworkError ->
             "Network error"
 
-        Http.BadStatus status _ ->
+        Http.BadStatus status ->
             "Server error: " ++ String.fromInt status
 
         Http.BadBody message ->

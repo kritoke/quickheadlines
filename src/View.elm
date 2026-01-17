@@ -25,13 +25,13 @@ view model =
         colors =
             getThemeColors model.theme
     in
-    Element.layout
+    column
         [ width fill
         , height fill
         , Background.color colors.background
         , Font.color colors.text
         ]
-        (case model.page of
+        [ case model.page of
             FeedsPage feedsModel ->
                 viewFeedsPage model feedsModel
 
@@ -40,7 +40,7 @@ view model =
 
             NotFound ->
                 viewNotFound
-        )
+        ]
 
 
 

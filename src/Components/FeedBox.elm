@@ -1,12 +1,13 @@
 module Components.FeedBox exposing (view)
 
+import Components.FeedBody as FeedBody
+import Components.FeedHeader as FeedHeader
 import Element exposing (..)
 import Element.Background as Background
 import Element.Border as Border
 import Element.Font as Font
-import Theme exposing (.., ThemeColors, getThemeColors, cardColor)
-import Components.FeedHeader as FeedHeader
-import Components.FeedBody as FeedBody
+import Theme exposing (ThemeColors, cardColor, getThemeColors)
+import Types exposing (Feed, Theme)
 
 
 view : Int -> Theme -> Feed -> Element msg
@@ -30,6 +31,7 @@ view windowWidth theme feed =
         , FeedBody.view feed.items
         , if feed.totalItemCount >= 10 && feed.url /= "software://releases" then
             loadMoreButton feed.url feed.totalItemCount
+
           else
             Element.none
         ]
@@ -39,8 +41,10 @@ feedBoxHeight : Int -> Element.Length
 feedBoxHeight windowWidth =
     if windowWidth >= 1024 then
         px 384
+
     else if windowWidth >= 768 then
         px 352
+
     else
         shrink
 
