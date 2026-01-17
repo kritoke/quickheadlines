@@ -45,7 +45,7 @@ ifeq ($(OS_NAME),macos)
 	export PKG_CONFIG_PATH := $(OPENSSL_PREFIX)/lib/pkgconfig:$(PKG_CONFIG_PATH)
 endif
 
-.PHONY: all build run clean check-deps elm-install elm-build elm-embed elm-format elm-validate test-frontend
+.PHONY: all build run clean check-deps elm-install elm-build elm-format elm-validate test-frontend
 
 all: build
 
@@ -151,17 +151,10 @@ elm-build:
 	$(ELM) make src/Main.elm --output=public/elm.js
 	@echo "✓ Elm compiled to public/elm.js ($(shell wc -c < public/elm.js 2>/dev/null || echo "0") bytes)"
 
-# 2. Embed elm.js into Crystal source
-elm-embed: elm-build
-	@echo "Embedding elm.js into Crystal..."
-	@if [ -f scripts/embed_elm.cr ]; then \
-		$(CRYSTAL) run scripts/embed_elm.cr; \
-	else \
-		echo "Warning: embed script not found, skipping embed"; \
-	fi
-	@echo "✓ elm.js embedded in src/embedded_elm.cr"
+# --- Removed elm-embed target ---
+# Elm.js is now served directly from disk with GitHub fallback
 
-# 3. Run Elm format on source files
+# 2. Run Elm format on source files
 elm-format:
 	@echo "Formatting Elm source files..."
 	$(ELM_FORMAT) src/
@@ -189,21 +182,21 @@ test-frontend:
 
 # --- Crystal Tasks ---
 
-# 6. Build Release Binary (with embedded Elm)
-build: check-deps elm-embed
+# 6. Build Release Binary (no embedding needed)
+build: check-deps elm-build
 	@echo "Compiling release binary for $(OS_NAME)-$(ARCH_NAME)..."
 	@mkdir -p bin
-	@echo "Note: Using embedded elm.js from src/embedded_elm.cr"
+	@echo "Note: elm.js is served from disk with GitHub fallback"
 	APP_ENV=production $(CRYSTAL) build --release --no-debug $(CRYSTAL_BUILD_OPTS) src/quickheadlines.cr -o bin/$(NAME)
 
 # 6.5 Build with specific OS/Arch naming for GitHub Releases
-build-release: check-deps elm-embed
+build-release: check-deps elm-build
 	@echo "Compiling release binary: bin/$(NAME)-$(BUILD_REV)-$(OS_NAME)-$(ARCH_NAME)"
 	@mkdir -p bin
 	APP_ENV=production $(CRYSTAL) build --release --no-debug $(CRYSTAL_BUILD_OPTS) -Dversion=$(BUILD_REV) src/quickheadlines.cr -o bin/$(NAME)-$(BUILD_REV)-$(OS_NAME)-$(ARCH_NAME)
 
 # 7. Run in Development Mode
-run: check-deps elm-embed
+run: check-deps elm-build
 	@echo "Starting server in development mode..."
 	APP_ENV=development $(CRYSTAL) run src/quickheadlines.cr -- config=feeds.yml
 
@@ -222,12 +215,11 @@ help:
 	@echo ""
 	@echo "Targets:"
 	@echo "  all           - Build release binary (default)"
-	@echo "  build         - Build release binary with embedded Elm"
+	@echo "  build         - Build release binary (elm.js served from disk)"
 	@echo "  build-release - Build release binary with version naming"
 	@echo "  run           - Run in development mode"
 	@echo "  elm-install   - Install Elm and elm-format"
 	@echo "  elm-build     - Compile Elm to JavaScript"
-	@echo "  elm-embed     - Embed elm.js into Crystal"
 	@echo "  elm-format    - Format Elm source files"
 	@echo "  elm-validate  - Validate Elm syntax"
 	@echo "  test-frontend - Run Playwright frontend tests"
