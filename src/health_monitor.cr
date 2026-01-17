@@ -144,6 +144,7 @@ module HealthMonitor
   # ============================================
 
   # Update feed health status
+  # ameba:disable Metrics/CyclomaticComplexity
   def self.update_feed_health(url : String, status : FeedHealthStatus, response_time : Float64? = nil)
     @@feed_health_mutex.synchronize do
       existing = @@feed_health[url]?

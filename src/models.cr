@@ -76,11 +76,6 @@ class AppState
 
   # Get all items from all feeds for timeline view, sorted by publication date (newest first)
   def all_timeline_items : Array(TimelineItem)
-    # Check cache first
-    if (Time.local - @timeline_cache[:cached_at]) < TIMELINE_CACHE_TTL
-      return @timeline_cache[:items]
-    end
-
     items = [] of TimelineItem
 
     # Add items from top-level feeds
@@ -116,13 +111,19 @@ class AppState
     end
 
     # Sort by publication date (newest first), items without dates go to the end
-    items.sort_by do |timeline_item|
-      timeline_item.item.pub_date || Time.utc(1970, 1, 1)
-    end.reverse!
-
-    # Update cache
-    @timeline_cache = {items: items, cached_at: Time.local}
-    items
+    items.sort! do |a, b|
+      date_a = a.item.pub_date
+      date_b = b.item.pub_date
+      if date_a && date_b
+        date_b <=> date_a # Descending order (newest first)
+      elsif date_a
+        -1 # a comes first if it has a date
+      elsif date_b
+        1 # b comes first if it has a date
+      else
+        0 # Both nil, maintain order
+      end
+    end
   end
 
   def update(updated_at : Time)

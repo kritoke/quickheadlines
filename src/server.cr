@@ -208,24 +208,58 @@ end
 def handle_timeline_items(context : HTTP::Server::Context)
   limit = context.request.query_params["limit"]?.try(&.to_i?) || 100
   offset = context.request.query_params["offset"]?.try(&.to_i?) || 0
-  last_day = context.request.query_params["last_day"]? # ameba:disable Lint/UselessAssign
+  first_day = context.request.query_params["first_day"]?
 
-  # Get all timeline items and apply pagination
+  # Get all timeline items
   all_items = STATE.all_timeline_items
-  total_count = all_items.size
+
+  # Filter by first_day if provided (for consistent day-based pagination)
+  filtered_items = if first_day && !first_day.empty?
+                     all_items.select do |item|
+                       item_date = item.item.pub_date
+                       item_date && item_date.to_local.to_s("%Y-%m-%d") == first_day
+                     end
+                   else
+                     all_items
+                   end
+
+  total_count = filtered_items.size
 
   max_index = Math.min(offset + limit, total_count)
-  raw_items = all_items[offset...max_index]
+  raw_items = filtered_items[offset...max_index]
 
   # Convert to clustered items with cluster information
+  # Track first occurrence of each cluster to determine representative
+  cluster_first_seen = {} of Int64 => Bool
   # ameba:disable Lint/UselessAssign
   timeline_items = raw_items.map do |item|
-    add_cluster_info(item)
+    clustered = add_cluster_info(item)
+    # Override is_representative: first item with this cluster_id is representative
+    if cluster_id = clustered.cluster_id
+      unless cluster_first_seen.has_key?(cluster_id)
+        cluster_first_seen[cluster_id] = true
+        clustered = ClusteredTimelineItem.new(
+          clustered.item,
+          clustered.feed_title,
+          clustered.feed_url,
+          clustered.feed_link,
+          clustered.favicon,
+          clustered.favicon_data,
+          clustered.header_color,
+          cluster_id,
+          true, # First occurrence is representative
+          clustered.cluster_size
+        )
+      end
+    end
+    clustered
   end
 
   context.response.content_type = "text/html; charset=utf-8"
 
   # Render only the timeline items (no container, no sentinel) for infinite scroll
+  # ameba:disable Lint/UselessAssign
+  last_day = "" # Required by timeline_items.slang template
   Slang.embed("src/timeline_items.slang", "context.response")
 end
 
@@ -237,26 +271,97 @@ def handle_timeline(context : HTTP::Server::Context)
   # Get all timeline items and filter to show only one day by default
   all_items = STATE.all_timeline_items
 
+  # DEBUG: Log first few items to verify sorting
+  STDERR.puts "[Timeline DEBUG] Total items: #{all_items.size}"
+  if all_items.size > 0
+    STDERR.puts "[Timeline DEBUG] First item pub_date: #{all_items[0].item.pub_date}"
+    if all_items.size > 1
+      STDERR.puts "[Timeline DEBUG] Second item pub_date: #{all_items[1].item.pub_date}"
+    end
+  end
+
+  # Track the first day to filter by for pagination
+  # ameba:disable Lint/UselessAssign
+  first_day_filter = ""
+
   # Find items from the first day
   if all_items.size > 0 && (first_item_date = all_items[0].item.pub_date)
     first_day = first_item_date.to_local.to_s("%Y-%m-%d")
+    # ameba:disable Lint/UselessAssign
+    first_day_filter = first_day
+    STDERR.puts "[Timeline DEBUG] First day filter: #{first_day}"
 
     # Filter items to only show the first day
     one_day_items = all_items.select do |item|
       item_date = item.item.pub_date
       item_date && item_date.to_local.to_s("%Y-%m-%d") == first_day
     end
+    STDERR.puts "[Timeline DEBUG] Items for first day: #{one_day_items.size}"
+
+    # DEBUG: Log first few items in one_day_items
+    if one_day_items.size > 0
+      STDERR.puts "[Timeline DEBUG] First day item 0: #{one_day_items[0].item.pub_date}"
+      if one_day_items.size > 1
+        STDERR.puts "[Timeline DEBUG] First day item 1: #{one_day_items[1].item.pub_date}"
+      end
+    end
 
     # Convert to clustered items
+    # Track first occurrence of each cluster to determine representative
+    cluster_first_seen = {} of Int64 => Bool
     # ameba:disable Lint/UselessAssign
-    timeline_items = one_day_items.map { |item| add_cluster_info(item) }
+    timeline_items = one_day_items.map do |item|
+      clustered = add_cluster_info(item)
+      # Override is_representative: first item with this cluster_id is representative
+      if cluster_id = clustered.cluster_id
+        unless cluster_first_seen.has_key?(cluster_id)
+          cluster_first_seen[cluster_id] = true
+          clustered = ClusteredTimelineItem.new(
+            clustered.item,
+            clustered.feed_title,
+            clustered.feed_url,
+            clustered.feed_link,
+            clustered.favicon,
+            clustered.favicon_data,
+            clustered.header_color,
+            cluster_id,
+            true, # First occurrence is representative
+            clustered.cluster_size
+          )
+        end
+      end
+      clustered
+    end
 
     has_more = all_items.size > one_day_items.size # ameba:disable Lint/UselessAssign
     next_offset = one_day_items.size               # ameba:disable Lint/UselessAssign
   else
     raw_items = all_items[0...100]
+    # Track first occurrence of each cluster to determine representative
+    cluster_first_seen = {} of Int64 => Bool
     # ameba:disable Lint/UselessAssign
-    timeline_items = raw_items.map { |item| add_cluster_info(item) }
+    timeline_items = raw_items.map do |item|
+      clustered = add_cluster_info(item)
+      # Override is_representative: first item with this cluster_id is representative
+      if cluster_id = clustered.cluster_id
+        unless cluster_first_seen.has_key?(cluster_id)
+          cluster_first_seen[cluster_id] = true
+          clustered = ClusteredTimelineItem.new(
+            clustered.item,
+            clustered.feed_title,
+            clustered.feed_url,
+            clustered.feed_link,
+            clustered.favicon,
+            clustered.favicon_data,
+            clustered.header_color,
+            cluster_id,
+            true, # First occurrence is representative
+            clustered.cluster_size
+          )
+        end
+      end
+      clustered
+    end
     has_more = all_items.size > 100 # ameba:disable Lint/UselessAssign
     next_offset = 100               # ameba:disable Lint/UselessAssign
   end
@@ -272,6 +377,7 @@ def handle_timeline(context : HTTP::Server::Context)
   # ameba:disable Lint/UselessAssign
   rendered_timeline = timeline_html
 
+  # Pass first_day to template (used in JavaScript for infinite scroll)
   Slang.embed("src/timeline_page.slang", "context.response")
 end
 

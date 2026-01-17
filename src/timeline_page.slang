@@ -74,182 +74,182 @@ html
 
     script
       |
+        // Cookie helper functions
+        function getCookie(name) {
+          const value = `; ${document.cookie}`;
+          const parts = value.split(`; ${name}=`);
+          if (parts.length === 2) return parts.pop().split(';').shift();
+        }
+
+        function setCookie(name, value, days) {
+          const expires = new Date(Date.now() + days * 864e5).toUTCString();
+          document.cookie = `${name}=${value}; expires=${expires}; path=/`;
+        }
+
+        // Apply theme before DOM render to prevent flash
         (function() {
-          // Cookie helper functions
-          function getCookie(name) {
-            const value = `; ${document.cookie}`;
-            const parts = value.split(`; ${name}=`);
-            if (parts.length === 2) return parts.pop().split(';').shift();
-            return null;
-          }
-
-          function setCookie(name, value, days) {
-            const expires = new Date();
-            expires.setTime(expires.getTime() + (days * 24 * 60 * 60 * 1000));
-            document.cookie = `${name}=${value};expires=${expires.toUTCString()};path=/;SameSite=Lax`;
-          }
-
-          // Initialize theme from cookie or system preference
           const themeCookie = getCookie('theme');
           const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-          if (themeCookie === 'dark' || (!themeCookie && systemPrefersDark)) {
+          const shouldBeDark = themeCookie === 'dark' || (!themeCookie && systemPrefersDark);
+          if (shouldBeDark) {
             document.documentElement.classList.add('dark');
           } else {
             document.documentElement.classList.remove('dark');
           }
-
-          window.toggleTheme = function() {
-            const isDark = document.documentElement.classList.toggle('dark');
-            setCookie('theme', isDark ? 'dark' : 'light', 365);
-          };
-
-          window.expandCluster = function(clusterId) {
-            var clusterItems = document.querySelectorAll('.cluster-' + clusterId);
-            clusterItems.forEach(function(el) {
-              el.classList.remove('hidden');
-            });
-            var expandBtn = document.querySelector('.cluster-expand-btn[onclick^="expandCluster(' + clusterId + ')"]');
-            if (expandBtn) {
-              expandBtn.style.display = 'none';
-            }
-            var collapseBtn = document.createElement('span');
-            collapseBtn.className = 'cluster-collapse-btn ml-2 text-xs text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 cursor-pointer';
-            collapseBtn.textContent = ' Collapse';
-            collapseBtn.onclick = function() { collapseCluster(clusterId); };
-            var representative = document.querySelector('.cluster-' + clusterId + ':not(.hidden)');
-            if (representative) {
-              representative.querySelector('.timeline-content').appendChild(collapseBtn);
-            }
-          };
-
-          window.collapseCluster = function(clusterId) {
-            var clusterItems = document.querySelectorAll('.cluster-item.cluster-' + clusterId);
-            clusterItems.forEach(function(el) {
-              el.classList.add('hidden');
-            });
-            var expandBtn = document.querySelector('.cluster-expand-btn[onclick^="expandCluster(' + clusterId + ')"]');
-            if (expandBtn) {
-              expandBtn.style.display = 'inline';
-            }
-            var collapseBtns = document.querySelectorAll('.cluster-' + clusterId + ' .cluster-collapse-btn');
-            collapseBtns.forEach(function(btn) {
-              btn.remove();
-            });
-          };
-
-          // Infinite scroll implementation
-          let currentOffset = 0; // Will be calculated from rendered items
-          let isLoading = false;
-          let hasMore = true;
-          let observer = null;
-
-          function calculateInitialOffset() {
-            const timelineContainer = document.querySelector('.timeline-container');
-            if (timelineContainer) {
-              // Count the number of timeline items rendered
-              const items = timelineContainer.querySelectorAll('.timeline-item:not(.hidden)');
-              currentOffset = items.length;
-            }
-          }
-
-          function showEndMessage() {
-            const sentinel = document.getElementById('infinite-scroll-sentinel');
-            if (sentinel) {
-              sentinel.innerHTML = '<div class="end-message">You\'ve reached the end of the timeline</div>';
-            }
-          }
-
-          async function loadMoreItems() {
-            if (isLoading || !hasMore) return;
-            
-            isLoading = true;
-            const sentinel = document.getElementById('infinite-scroll-sentinel');
-            if (sentinel) {
-              sentinel.innerHTML = '<div class="loading-spinner"></div>';
-            }
-
-            try {
-              // Capture the last day header to prevent duplicate headers
-              const lastDayHeader = document.querySelector('.timeline-day-header:last-of-type');
-              const lastDay = lastDayHeader ? lastDayHeader.textContent.trim() : null;
-              const url = `/timeline_items?limit=30&offset=${currentOffset}&last_day=${encodeURIComponent(lastDay || '')}`;
-              const res = await fetch(url);
-              if (!res.ok) throw new Error();
-              const html = await res.text();
-
-              // Parse the response HTML (contains items directly, no container)
-              const temp = document.createElement('div');
-              temp.innerHTML = html;
-
-              // Get the existing timeline container from the page
-              const timelineContainer = document.querySelector('.timeline-container');
-              if (!timelineContainer) {
-                hasMore = false;
-                isLoading = false;
-                return;
-              }
-
-              // Get new items from the response (items and day headers)
-              const newItems = Array.from(temp.children).filter(
-                el => el.classList.contains('timeline-item') || el.classList.contains('timeline-day-header')
-              );
-
-              if (newItems.length === 0) {
-                // No more items
-                hasMore = false;
-                showEndMessage();
-                isLoading = false;
-                return;
-              }
-
-              // Append new items with fade-in animation
-              newItems.forEach((item) => {
-                item.classList.add('fade-in');
-                timelineContainer.appendChild(item);
-              });
-
-              currentOffset += newItems.length;
-            } catch (e) {
-              console.error('Infinite scroll error:', e);
-              if (sentinel) {
-                sentinel.innerHTML = '<div class="end-message">Error loading more items</div>';
-              }
-            }
-
-            isLoading = false;
-
-            // Update sentinel for next load or show end message
-            if (hasMore && sentinel) {
-              sentinel.innerHTML = '<div class="loading-spinner"></div>';
-            }
-          }
-
-          // Set up Intersection Observer for infinite scroll
-          function setupInfiniteScroll() {
-            // First calculate the initial offset from rendered items
-            calculateInitialOffset();
-
-            const sentinel = document.getElementById('infinite-scroll-sentinel');
-            if (!sentinel) return;
-
-            observer = new IntersectionObserver((entries) => {
-              entries.forEach(entry => {
-                if (entry.isIntersecting && hasMore && !isLoading) {
-                  loadMoreItems();
-                }
-              });
-            }, {
-              rootMargin: '100px', // Start loading before reaching the bottom
-              threshold: 0.1
-            });
-
-            observer.observe(sentinel);
-          }
-
-          // Initialize infinite scroll when DOM is ready
-          if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', setupInfiniteScroll);
-          } else {
-            setupInfiniteScroll();
-          }
         })();
+
+        // First day to filter by (set from server-side)
+        const firstDay = '#{first_day_filter}';
+
+        window.toggleTheme = function() {
+          const isDark = document.documentElement.classList.toggle('dark');
+          setCookie('theme', isDark ? 'dark' : 'light', 365);
+        };
+
+        window.expandCluster = function(clusterId) {
+          var clusterItems = document.querySelectorAll('.cluster-' + clusterId);
+          clusterItems.forEach(function(el) {
+            el.classList.remove('qh-hidden');
+          });
+          var expandBtn = document.querySelector('.cluster-expand-btn[onclick^="expandCluster(' + clusterId + ')"]');
+          if (expandBtn) {
+            expandBtn.style.display = 'none';
+          }
+          var collapseBtn = document.createElement('span');
+          collapseBtn.className = 'cluster-collapse-btn ml-2 text-xs text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 cursor-pointer';
+          collapseBtn.textContent = ' Collapse';
+          collapseBtn.onclick = function() { collapseCluster(clusterId); };
+          var representative = document.querySelector('.cluster-' + clusterId + ':not(.qh-hidden)');
+          if (representative) {
+            representative.querySelector('.timeline-content').appendChild(collapseBtn);
+          }
+        };
+
+        window.collapseCluster = function(clusterId) {
+          var clusterItems = document.querySelectorAll('.cluster-item.cluster-' + clusterId);
+          clusterItems.forEach(function(el) {
+            el.classList.add('qh-hidden');
+          });
+          var expandBtn = document.querySelector('.cluster-expand-btn[onclick^="expandCluster(' + clusterId + ')"]');
+          if (expandBtn) {
+            expandBtn.style.display = 'inline';
+          }
+          var collapseBtns = document.querySelectorAll('.cluster-' + clusterId + ' .cluster-collapse-btn');
+          collapseBtns.forEach(function(btn) {
+            btn.remove();
+          });
+        };
+
+        // Infinite scroll implementation
+        let currentOffset = 0; // Will be calculated from rendered items
+        let isLoading = false;
+        let hasMore = true;
+        let observer = null;
+
+        function calculateInitialOffset() {
+          const timelineContainer = document.querySelector('.timeline-container');
+          if (timelineContainer) {
+            // Count the number of timeline items rendered (not qh-hidden)
+            const items = timelineContainer.querySelectorAll('.timeline-item:not(.qh-hidden)');
+            currentOffset = items.length;
+          }
+        }
+
+        function showEndMessage() {
+          const sentinel = document.getElementById('infinite-scroll-sentinel');
+          if (sentinel) {
+            sentinel.innerHTML = `<div class="end-message">You've reached the end of the timeline</div>`;
+          }
+        }
+
+        async function loadMoreItems() {
+          if (isLoading || !hasMore) return;
+          
+          isLoading = true;
+          const sentinel = document.getElementById('infinite-scroll-sentinel');
+          if (sentinel) {
+            sentinel.innerHTML = '<div class="loading-spinner"></div>';
+          }
+
+          try {
+            // Use first_day for filtering (consistent across all loads)
+            const url = `/timeline_items?limit=30&offset=${currentOffset}&first_day=${encodeURIComponent(firstDay)}`;
+            const res = await fetch(url);
+            if (!res.ok) throw new Error();
+            const html = await res.text();
+
+            // Parse the response HTML (contains items directly, no container)
+            const temp = document.createElement('div');
+            temp.innerHTML = html;
+
+            // Get the existing timeline container from the page
+            const timelineContainer = document.querySelector('.timeline-container');
+            if (!timelineContainer) {
+              hasMore = false;
+              isLoading = false;
+              return;
+            }
+
+            // Get new items from the response (items and day headers)
+            const newItems = Array.from(temp.children).filter(
+              el => el.classList.contains('timeline-item') || el.classList.contains('timeline-day-header')
+            );
+
+            if (newItems.length === 0) {
+              // No more items
+              hasMore = false;
+              showEndMessage();
+              isLoading = false;
+              return;
+            }
+
+            // Append new items with fade-in animation
+            newItems.forEach((item) => {
+              item.classList.add('fade-in');
+              timelineContainer.appendChild(item);
+            });
+
+            currentOffset += newItems.length;
+          } catch (e) {
+            console.error('Infinite scroll error:', e);
+            if (sentinel) {
+              sentinel.innerHTML = '<div class="end-message">Error loading more items</div>';
+            }
+          }
+
+          isLoading = false;
+
+          // Update sentinel for next load or show end message
+          if (hasMore && sentinel) {
+            sentinel.innerHTML = '<div class="loading-spinner"></div>';
+          }
+        }
+
+        // Set up Intersection Observer for infinite scroll
+        function setupInfiniteScroll() {
+          // First calculate the initial offset from rendered items
+          calculateInitialOffset();
+
+          const sentinel = document.getElementById('infinite-scroll-sentinel');
+          if (!sentinel) return;
+
+          observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+              if (entry.isIntersecting && hasMore && !isLoading) {
+                loadMoreItems();
+              }
+            });
+          }, {
+            rootMargin: '100px', // Start loading before reaching the bottom
+            threshold: 0.1
+          });
+
+          observer.observe(sentinel);
+        }
+
+        // Initialize infinite scroll when DOM is ready
+        if (document.readyState === 'loading') {
+          document.addEventListener('DOMContentLoaded', setupInfiniteScroll);
+        } else {
+          setupInfiniteScroll();
+        }

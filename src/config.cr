@@ -209,75 +209,73 @@ end
 
 # Enhanced YAML loading with detailed error handling
 def load_config_with_validation(path : String) : ConfigLoadResult
-  begin
-    # Check file encoding and read content
-    content = File.read(path)
+  # Check file encoding and read content
+  content = File.read(path)
 
-    # Remove BOM if present (UTF-8 BOM: \uFEFF)
-    if content.starts_with?("\uFEFF")
-      content = content[1..-1]
-    end
-
-    # Validate YAML structure before parsing
-    validate_yaml_structure(content)
-
-    # Parse YAML
-    config = Config.from_yaml(content)
-
-    # Validate feeds and log warnings
-    validate_config_feeds(config)
-
-    ConfigLoadResult.new(
-      success: true,
-      config: config,
-      error_message: nil,
-      error_line: nil,
-      error_column: nil,
-      suggestion: nil
-    )
-  rescue ex : YAML::ParseException
-    # Extract line and column from error message
-    error_msg = ex.message || "Unknown YAML parsing error"
-
-    # Parse error location
-    error_line = nil
-    error_column = nil
-
-    if error_msg =~ /at line (\d+), column (\d+)/
-      error_line = $1.to_i
-      error_column = $2.to_i
-    end
-
-    # Provide helpful suggestions
-    suggestion = suggest_yaml_fix(error_msg, error_line)
-
-    ConfigLoadResult.new(
-      success: false,
-      config: nil,
-      error_message: error_msg,
-      error_line: error_line,
-      error_column: error_column,
-      suggestion: suggestion
-    )
-  rescue ex : File::Error
-    ConfigLoadResult.new(
-      success: false,
-      config: nil,
-      error_message: "Cannot read config file: #{ex.message}",
-      error_line: nil,
-      error_column: nil,
-      suggestion: "Check file permissions and path"
-    )
-  rescue ex
-    ConfigLoadResult.new(
-      success: false,
-      config: nil,
-      error_message: "Unexpected error: #{ex.message}",
-      error_line: nil,
-      error_column: nil,
-      suggestion: "Check file format and encoding"
-    )
+  # Remove BOM if present (UTF-8 BOM: \uFEFF)
+  if content.starts_with?("\uFEFF")
+    content = content[1..-1]
   end
+
+  # Validate YAML structure before parsing
+  validate_yaml_structure(content)
+
+  # Parse YAML
+  config = Config.from_yaml(content)
+
+  # Validate feeds and log warnings
+  validate_config_feeds(config)
+
+  ConfigLoadResult.new(
+    success: true,
+    config: config,
+    error_message: nil,
+    error_line: nil,
+    error_column: nil,
+    suggestion: nil
+  )
+rescue ex : YAML::ParseException
+  # Extract line and column from error message
+  error_msg = ex.message || "Unknown YAML parsing error"
+
+  # Parse error location
+  error_line = nil
+  error_column = nil
+
+  if error_msg =~ /at line (\d+), column (\d+)/
+    error_line = $1.to_i
+    error_column = $2.to_i
+  end
+
+  # Provide helpful suggestions
+  suggestion = suggest_yaml_fix(error_msg, error_line)
+
+  ConfigLoadResult.new(
+    success: false,
+    config: nil,
+    error_message: error_msg,
+    error_line: error_line,
+    error_column: error_column,
+    suggestion: suggestion
+  )
+rescue ex : File::Error
+  ConfigLoadResult.new(
+    success: false,
+    config: nil,
+    error_message: "Cannot read config file: #{ex.message}",
+    error_line: nil,
+    error_column: nil,
+    suggestion: "Check file permissions and path"
+  )
+rescue ex
+  ConfigLoadResult.new(
+    success: false,
+    config: nil,
+    error_message: "Unexpected error: #{ex.message}",
+    error_line: nil,
+    error_column: nil,
+    suggestion: "Check file format and encoding"
+  )
 end
 
 # Validate YAML structure before parsing
@@ -305,6 +303,13 @@ private def validate_yaml_structure(content : String) : Nil
         raise YAML::ParseException.new("Line #{line_num}: Mixed tabs and spaces in indentation", line_num, 1)
       end
     end
+  end
+
+  # Check for trailing blank lines (can cause YAML parsing errors)
+  non_empty_lines = lines.reject(&.strip.empty?)
+  if lines.size > non_empty_lines.size
+    trailing_blanks = lines.size - non_empty_lines.size
+    STDERR.puts "[WARN] Found #{trailing_blanks} trailing blank line(s) at end of file"
   end
 end
 

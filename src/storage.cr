@@ -12,6 +12,9 @@ require "./health_monitor"
 
 CACHE_RETENTION_HOURS = 168
 
+# Cache retention period in days (for cleanup)
+CACHE_RETENTION_DAYS = 7
+
 # Database size limits (in bytes)
 DB_SIZE_WARNING_THRESHOLD = 50 * 1024 * 1024  # 50MB
 DB_SIZE_HARD_LIMIT        = 100 * 1024 * 1024 # 100MB
@@ -125,6 +128,17 @@ end
 
 # Create database schema
 def create_schema(db : DB::Database, db_path : String)
+  # Enable WAL mode for improved concurrent access
+  # WAL (write_to_file-Ahead Logging) allows concurrent reads while writing
+  db.exec("PRAGMA journal_mode = WAL")
+
+  # Set synchronous to NORMAL for better performance without sacrificing reliability
+  # FULL ensures durability but is slower; NORMAL is a good balance
+  db.exec("PRAGMA synchronous = NORMAL")
+
+  # Set cache size (negative value = KB, -64000 = 64MB)
+  db.exec("PRAGMA cache_size = -64000")
+
   # Feeds table
   db.exec <<-SQL
     CREATE TABLE IF NOT EXISTS feeds (
@@ -369,6 +383,7 @@ def repopulate_database(config : Config?, cache : FeedCache?, restore_config : F
   end
 
   feeds_to_restore = all_feeds.size
+  # ameba:disable Lint/UselessAssign
   items_to_restore = 0
 
   # Check if we have a fetcher available (this would be called from quickheadlines.cr)
@@ -485,10 +500,12 @@ class FeedCache
           feed_id = @db.scalar("SELECT last_insert_rowid()").as(Int64)
         end
 
-        # Insert items (Upsert logic: Ignore if already exists)
+        # Insert items with proper upsert logic
+        # First insert new items, then update pub_date for existing items if changed
         feed_data.items.each_with_index do |item, index|
           pub_date_str = item.pub_date.try(&.to_s("%Y-%m-%d %H:%M:%S"))
 
+          # Try to insert, ignore if already exists
           @db.exec(
             "INSERT OR IGNORE INTO items (feed_id, title, link, pub_date, version, position) VALUES (?, ?, ?, ?, ?, ?)",
             feed_id,
@@ -497,6 +514,16 @@ class FeedCache
             pub_date_str,
             item.version,
             index
+          )
+
+          # Update pub_date and position for existing items
+          # This handles the case when a feed comes back online with updated timestamps
+          @db.exec(
+            "UPDATE items SET pub_date = ?, position = ? WHERE feed_id = ? AND link = ?",
+            pub_date_str,
+            index,
+            feed_id,
+            item.link
           )
         end
 
@@ -714,6 +741,47 @@ class FeedCache
       # Log size after cleanup
       log_db_size(@db_path, "after cleanup")
     end
+  end
+
+  # Clean up old cached articles based on pub_date (for timeline)
+  # This removes articles older than CACHE_RETENTION_DAYS to keep timeline fresh
+  def cleanup_old_articles(retention_days : Int32 = CACHE_RETENTION_DAYS)
+    @mutex.synchronize do
+      cutoff = (Time.utc - retention_days.days).to_s("%Y-%m-%d %H:%M:%S")
+
+      # Delete items with pub_date older than cutoff
+      result = @db.exec("DELETE FROM items WHERE pub_date < ? AND cluster_id IS NULL", cutoff)
+      deleted_count = result.rows_affected
+
+      if deleted_count > 0
+        STDERR.puts "[#{Time.local}] Cleaned up #{deleted_count} old articles (older than #{retention_days} days)"
+      end
+
+      # Clean up orphaned items (items whose feeds no longer exist)
+      result = @db.exec("DELETE FROM items WHERE feed_id NOT IN (SELECT id FROM feeds)")
+      orphaned_count = result.rows_affected
+
+      if orphaned_count > 0
+        STDERR.puts "[#{Time.local}] Cleaned up #{orphaned_count} orphaned items"
+      end
+
+      # Clean up feeds with no items
+      result = @db.exec("DELETE FROM feeds WHERE id NOT IN (SELECT DISTINCT feed_id FROM items)")
+      empty_feeds = result.rows_affected
+
+      if empty_feeds > 0
+        STDERR.puts "[#{Time.local}] Cleaned up #{empty_feeds} empty feeds"
+      end
+    end
+  end
+
+  # Full cleanup: removes old articles and optimizes database
+  def full_cleanup(retention_days : Int32 = CACHE_RETENTION_DAYS)
+    cleanup_old_articles(retention_days)
+
+    # Vacuum to reclaim space after cleanup
+    @db.exec("VACUUM")
+    STDERR.puts "[#{Time.local}] Database vacuumed after cleanup"
   end
 
   # Clean up oldest entries until database is under size limit
@@ -1081,6 +1149,11 @@ def load_feed_cache(config : Config?) : FeedCache
 
   # Sync favicon paths to ensure database points to local files
   cache.sync_favicon_paths
+
+  # Clean up old articles to keep timeline fresh (only if DB is healthy)
+  if health_status == DbHealthStatus::Healthy
+    cache.cleanup_old_articles(CACHE_RETENTION_DAYS)
+  end
 
   # Get retention hours from config or use default
   retention_hours = config.try(&.cache_retention_hours) || CACHE_RETENTION_HOURS

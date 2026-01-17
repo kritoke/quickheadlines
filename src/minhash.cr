@@ -14,13 +14,33 @@ module StoryHasher
   ROWS_PER_BAND = SIGNATURE_SIZE // NUM_BANDS
 
   # Similarity threshold for clustering (0.0 to 1.0)
-  SIMILARITY_THRESHOLD = 0.7
+  # Increased from 0.7 to 0.75 to reduce false positives from generic terms
+  SIMILARITY_THRESHOLD = 0.75
+
+  # Higher threshold for headlines with few words (avoid clustering generic terms)
+  SHORT_HEADLINE_THRESHOLD = 0.85
+
+  # Minimum word count to consider for clustering
+  # Headlines with fewer words are more likely to be falsely clustered
+  MIN_WORDS_FOR_CLUSTERING = 4
 
   # Shingle size for text decomposition
   SHINGLE_SIZE = 3
 
   # Hash seeds for generating multiple hash functions from a single hash function
   HASH_SEEDS = (0...SIGNATURE_SIZE).to_a
+
+  # Stop words to exclude from clustering (common words that create false positives)
+  STOP_WORDS = Set.new([
+    "the", "a", "an", "and", "or", "but", "in", "on", "at", "to", "for",
+    "of", "with", "by", "from", "as", "is", "was", "are", "were", "been",
+    "be", "have", "has", "had", "do", "does", "did", "will", "would",
+    "could", "should", "may", "might", "must", "shall", "can", "need",
+    "this", "that", "these", "those", "it", "its", "they", "them",
+    "time", "times", "day", "days", "week", "weeks", "month", "months",
+    "year", "years", "new", "latest", "update", "updates", "report", "reports",
+    "says", "said", "just", "now", "how", "what", "when", "where", "why",
+  ])
 
   # Compute MinHash signature for a text string
   # Uses shingling + multiple hash functions simulated with different seeds
@@ -31,8 +51,19 @@ module StoryHasher
     # Return empty array for empty text
     return Array(UInt32).new(SIGNATURE_SIZE, 0_u32) if normalized.empty?
 
-    # Generate shingles (character n-grams)
-    shingles = generate_shingles(normalized, SHINGLE_SIZE)
+    # Check minimum word count (avoid short/generic headlines)
+    word_count = normalized.split(/\s+/).size
+    return Array(UInt32).new(SIGNATURE_SIZE, 0_u32) if word_count < MIN_WORDS_FOR_CLUSTERING
+
+    # Remove stop words from the text
+    filtered_text = remove_stop_words(normalized)
+
+    # Return zeros if too many words were filtered out
+    filtered_word_count = filtered_text.split(/\s+/).size
+    return Array(UInt32).new(SIGNATURE_SIZE, 0_u32) if filtered_word_count < 2
+
+    # Generate shingles (character n-grams) from filtered text
+    shingles = generate_shingles(filtered_text, SHINGLE_SIZE)
 
     # If no shingles generated, return zeros
     return Array(UInt32).new(SIGNATURE_SIZE, 0_u32) if shingles.empty?
@@ -42,6 +73,13 @@ module StoryHasher
     HASH_SEEDS.map do |seed|
       min_hash(shingles, seed)
     end
+  end
+
+  # Remove stop words from text
+  private def self.remove_stop_words(text : String) : String
+    words = text.split(/\s+/)
+    filtered = words.reject { |word| STOP_WORDS.includes?(word) }
+    filtered.join(" ")
   end
 
   # Generate character n-grams (shingles) from text
