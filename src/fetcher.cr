@@ -82,11 +82,11 @@ FAVICON_CACHE = FaviconCache.new
 def fetch_favicon_uri(url : String) : String?
   current_url = url
   redirects = 0
-  start_time = Time.monotonic
+  start_time = Time.instant
 
   loop do
     # Timeout after 30 seconds total
-    if (Time.monotonic - start_time).total_seconds > 30
+    if (Time.instant - start_time).total_seconds > 30
       HealthMonitor.log_warning("fetch_favicon_uri(#{url}) timeout after 30s")
       return
     end
@@ -476,14 +476,14 @@ def fetch_feed(feed : Feed, global_item_limit : Int32, previous_data : FeedData?
   current_url = feed.url
   redirects = 0
   retries = 0
-  start_time = Time.monotonic
+  start_time = Time.instant
 
   loop do
     # Use feed-specific timeout or default to 60 seconds
     timeout_seconds = feed.timeout > 0 ? feed.timeout : 60
 
     # Check if we should abort
-    elapsed_seconds = (Time.monotonic - start_time).total_seconds
+    elapsed_seconds = (Time.instant - start_time).total_seconds
     abort_msg = should_abort_fetch?(feed, elapsed_seconds, retries, redirects, timeout_seconds)
     if abort_msg[0]
       message = abort_msg[1] || "Error: Unknown fetch error"
@@ -747,7 +747,7 @@ def start_refresh_loop(config_path : String)
 
   spawn do
     loop do
-      refresh_start_time = Time.monotonic
+      refresh_start_time = Time.instant
 
       begin
         # Check if config file changed
@@ -771,7 +771,7 @@ def start_refresh_loop(config_path : String)
         save_feed_cache(FeedCache.instance, active_config.cache_retention_hours)
 
         # Check if refresh took too long (potential hang)
-        refresh_duration = (Time.monotonic - refresh_start_time).total_seconds
+        refresh_duration = (Time.instant - refresh_start_time).total_seconds
         if refresh_duration > (active_config.refresh_minutes * 60) * 2
           HealthMonitor.log_warning("Refresh took #{refresh_duration.round(2)}s (expected #{active_config.refresh_minutes * 60}s) - possible hang detected")
         end

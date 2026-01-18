@@ -1,8 +1,8 @@
 require "athena"
 
 class Quickheadlines::Controllers::FeedController < Athena::Framework::Controller
-  # GET /api/feeds
-  @[ARTA::Get(path: "/api/feeds")]
+  # GET /api/feed_list - List all feeds (simplified view)
+  @[ARTA::Get(path: "/api/feed_list")]
   def index : Array(Quickheadlines::DTOs::FeedDTO)
     # TODO: Implement index method
     [] of Quickheadlines::DTOs::FeedDTO

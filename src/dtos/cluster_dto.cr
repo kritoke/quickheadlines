@@ -12,7 +12,7 @@ class Quickheadlines::DTOs::ClusterDTO
     @id : String,
     @representative : Quickheadlines::DTOs::StoryDTO,
     @others : Array(Quickheadlines::DTOs::StoryDTO) = [] of Quickheadlines::DTOs::StoryDTO,
-    @cluster_size : Int32 = 1
+    @cluster_size : Int32 = 1,
   )
     @cluster_size = 1 + others.size
   end

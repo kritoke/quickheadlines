@@ -11,7 +11,7 @@ module Quickheadlines::Entities
       @id : String,
       @representative : Story,
       @others : Array(Story) = [] of Story,
-      @size : Int32 = 1
+      @size : Int32 = 1,
     )
       @size = 1 + others.size
     end

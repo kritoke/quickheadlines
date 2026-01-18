@@ -542,7 +542,7 @@ class FeedCache
 
   # Get a feed from cache by URL
   def get(url : String) : FeedData?
-    start_time = Time.monotonic
+    start_time = Time.instant
     feed_data = @mutex.synchronize do
       result = @db.query_one?("SELECT title, url, site_link, header_color, etag, last_modified, favicon, favicon_data FROM feeds WHERE url = ?", url) do |row|
         {
@@ -612,7 +612,7 @@ class FeedCache
         result[:favicon_data]
       )
     end
-    query_time = (Time.monotonic - start_time).total_milliseconds
+    query_time = (Time.instant - start_time).total_milliseconds
     HealthMonitor.record_db_query(query_time)
     feed_data
   end

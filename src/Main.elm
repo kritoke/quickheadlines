@@ -115,10 +115,14 @@ init flags url key =
         theme =
             Light
 
+        initialPage =
+            extractPageFromUrl url
+                |> Maybe.withDefault (FeedsPage (initialFeedsModel "Tech"))
+
         initialModel =
             { key = key
             , url = url
-            , page = FeedsPage (initialFeedsModel (extractTabFromUrl url))
+            , page = initialPage
             , theme = theme
             , windowWidth = 1280
             , windowHeight = 720
@@ -129,11 +133,12 @@ init flags url key =
     in
     ( initialModel
     , Cmd.batch
-        [ if url.path == "/timeline" then
-            getTimelineItems 30 0
+        [ case initialPage of
+            TimelinePage _ ->
+                getTimelineItems 30 0
 
-          else
-            getFeeds (extractTabFromUrl url)
+            _ ->
+                getFeeds (extractTabFromUrl url)
         , getVersion
         , Task.perform Tick Time.now
         ]
@@ -245,7 +250,16 @@ handleUrlChanged url model =
     in
     case extractPageFromUrl url of
         Just page ->
-            ( { newModel | page = page }, Cmd.none )
+            let
+                cmd =
+                    case page of
+                        TimelinePage _ ->
+                            getTimelineItems 30 0
+
+                        _ ->
+                            Cmd.none
+            in
+            ( { newModel | page = page }, cmd )
 
         Nothing ->
             ( { newModel | page = NotFound }, Cmd.none )

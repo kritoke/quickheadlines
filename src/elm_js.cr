@@ -6,6 +6,47 @@ module ElmJs
   ELM_JS_PATH    = "public/elm.js"
   GITHUB_RAW_URL = "https://raw.githubusercontent.com/kritoke/quickheadlines/main/public/elm.js"
 
+  # Get the elm.js content as a string
+  def self.content : String
+    # In development, always require file on disk
+    {% if env("APP_ENV") == "development" %}
+      unless exists?
+        raise "elm.js not found - run 'make elm-build' first"
+      end
+
+      File.read(ELM_JS_PATH)
+    {% else %}
+      # In production, serve from disk if available, otherwise download from GitHub
+      if exists?
+        File.read(ELM_JS_PATH)
+      else
+        # Fallback to downloading from GitHub in production
+        download_and_get_content
+      end
+    {% end %}
+  end
+
+  # Download elm.js from GitHub and return as string
+  private def self.download_and_get_content : String
+    puts "[ElmJs] Downloading elm.js from GitHub..."
+
+    content = ""
+    HTTP::Client.get(GITHUB_RAW_URL) do |response|
+      if response.status_code == 200
+        content = response.body_io.gets_to_end
+        File.write(ELM_JS_PATH, content)
+        puts "[ElmJs] Successfully downloaded and cached elm.js"
+      else
+        raise "Failed to download elm.js from GitHub (status: #{response.status_code})"
+      end
+    end
+
+    content
+  rescue ex : Exception
+    puts "[ElmJs] Error downloading elm.js from GitHub: #{ex.message}"
+    raise ex
+  end
+
   # Check if elm.js file exists on disk
   def self.exists? : Bool
     File.exists?(ELM_JS_PATH)

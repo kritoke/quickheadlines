@@ -23,7 +23,7 @@ module Quickheadlines::Entities
       @feed_link : String = "",
       @favicon : String? = nil,
       @favicon_data : String? = nil,
-      @header_color : String? = nil
+      @header_color : String? = nil,
     )
     end
   end

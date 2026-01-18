@@ -17,7 +17,7 @@ module Quickheadlines::Entities
       @site_link : String = "",
       @header_color : String? = nil,
       @favicon : String? = nil,
-      @favicon_data : String? = nil
+      @favicon_data : String? = nil,
     )
     end
   end
