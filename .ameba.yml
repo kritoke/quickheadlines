@@ -29,7 +29,11 @@ Rules:
   Lint/ShadowingOuterLocalVar:
     Enabled: true
 
-  # AI sometimes uses literal numbers. We keep this enabled but 
+  # AI sometimes uses literal numbers. We keep this enabled but
   # set it to warning so it doesn't block a build if not strictly necessary.
   Style/LargeNumbers:
     Severity: Warning
+
+  # Heredoc with HTML content needs flexible indentation
+  Style/HeredocIndent:
+    Enabled: false

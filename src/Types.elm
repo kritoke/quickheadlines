@@ -20,6 +20,7 @@ type alias Model =
     , windowWidth : Int
     , windowHeight : Int
     , lastUpdated : Maybe Posix
+    , now : Posix
     , timeZone : Zone
     }
 
@@ -74,7 +75,8 @@ type Theme
 
 
 type alias Feed =
-    { url : String
+    { tab : String
+    , url : String
     , title : String
     , displayLink : String
     , siteLink : String
@@ -117,7 +119,14 @@ type alias TimelineItem =
     , link : String
     , pubDate : Maybe Posix
     , feedTitle : String
+    , feedUrl : String
+    , feedLink : String
+    , favicon : String
+    , faviconData : String
+    , headerColor : Maybe String
     , clusterId : Maybe String
+    , isRepresentative : Bool
+    , clusterSize : Maybe Int
     }
 
 
@@ -133,6 +142,7 @@ type Msg
     | ToggleTheme
     | GotLastUpdated (Result Http.Error Posix)
     | CheckForUpdates
+    | Tick Posix
     | -- Feeds page messages
       FeedsMsg FeedsMsg
     | -- Timeline page messages
@@ -145,7 +155,7 @@ type Msg
 
 type FeedsMsg
     = SwitchTab String
-    | GotFeeds (Result Http.Error (List Feed))
+    | GotFeeds (Result Http.Error { tabs : List Tab, activeTab : String, feeds : List Feed })
     | LoadMore String Int
     | GotMoreItems String (Result Http.Error Feed)
     | UpdateAdaptiveColors
@@ -157,6 +167,6 @@ type FeedsMsg
 
 type TimelineMsg
     = LoadMoreTimeline
-    | GotTimelineItems (Result Http.Error (List TimelineItem))
+    | GotTimelineItems (Result Http.Error { items : List TimelineItem, hasMore : Bool, totalCount : Int })
     | ExpandCluster String
     | CollapseCluster String

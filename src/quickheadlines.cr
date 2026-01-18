@@ -75,6 +75,21 @@ FAVICON_CACHE.clear
 # Initial load so the first request sees real data
 refresh_all(state.config)
 
+# Verify feeds are loaded before starting server
+STDERR.puts "[#{Time.local}] Verifying feeds loaded..."
+STDERR.puts "[#{Time.local}] STATE.feeds.size=#{STATE.feeds.size}"
+STATE.tabs.each do |tab|
+  STDERR.puts "[#{Time.local}] STATE.tabs[#{tab.name}].feeds.size=#{tab.feeds.size}"
+end
+
+if STATE.feeds.empty? && STATE.tabs.all?(&.feeds.empty?)
+  STDERR.puts "[ERROR] #{Time.local}] No feeds loaded after initial refresh!"
+  STDERR.puts "[ERROR] #{Time.local}] Check network connectivity and feed URLs"
+  # Continue anyway - the periodic refresh may populate feeds later
+else
+  STDERR.puts "[#{Time.local}] Feeds verified: #{STATE.feeds.size} top-level, #{STATE.tabs.sum(&.feeds.size)} in tabs"
+end
+
 # Start health monitoring
 HealthMonitor.start_monitoring
 HealthMonitor.log_info("Health monitoring started")

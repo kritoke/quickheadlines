@@ -6,12 +6,13 @@ import Element exposing (..)
 import Element.Background as Background
 import Element.Border as Border
 import Element.Font as Font
-import Theme exposing (ThemeColors, cardColor, getThemeColors)
+import Theme exposing (cardColor, getThemeColors)
+import Time exposing (Posix)
 import Types exposing (Feed, Theme)
 
 
-view : Int -> Theme -> Feed -> Element msg
-view windowWidth theme feed =
+view : Int -> Posix -> Theme -> Feed -> Element msg
+view windowWidth now theme feed =
     let
         boxHeight =
             feedBoxHeight windowWidth
@@ -28,7 +29,7 @@ view windowWidth theme feed =
         , pointer
         ]
         [ FeedHeader.view theme feed
-        , FeedBody.view feed.items
+        , FeedBody.view now feed.items
         , if feed.totalItemCount >= 10 && feed.url /= "software://releases" then
             loadMoreButton feed.url feed.totalItemCount
 

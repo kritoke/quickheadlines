@@ -23,8 +23,8 @@ baseUrl =
 getFeeds : String -> Cmd Msg
 getFeeds tab =
     Http.get
-        { url = baseUrl ++ "/feeds?tab=" ++ tab
-        , expect = Http.expectJson (FeedsMsg << GotFeeds) feedsDecoder
+        { url = baseUrl ++ "/api/feeds?tab=" ++ tab
+        , expect = Http.expectJson (FeedsMsg << GotFeeds) feedsPageDecoder
         }
 
 
@@ -35,8 +35,8 @@ getFeeds tab =
 getTimelineItems : Int -> Int -> Cmd Msg
 getTimelineItems limit offset =
     Http.get
-        { url = baseUrl ++ "/timeline_items?limit=" ++ String.fromInt limit ++ "&offset=" ++ String.fromInt offset
-        , expect = Http.expectJson (TimelineMsg << GotTimelineItems) timelineItemsDecoder
+        { url = baseUrl ++ "/api/timeline?limit=" ++ String.fromInt limit ++ "&offset=" ++ String.fromInt offset
+        , expect = Http.expectJson (TimelineMsg << GotTimelineItems) timelinePageDecoder
         }
 
 
@@ -47,7 +47,7 @@ getTimelineItems limit offset =
 getFeedMore : String -> Int -> Cmd Msg
 getFeedMore url offset =
     Http.get
-        { url = baseUrl ++ "/feed_more?url=" ++ url ++ "&limit=10&offset=" ++ String.fromInt offset
+        { url = baseUrl ++ "/api/feed_more?url=" ++ url ++ "&limit=10&offset=" ++ String.fromInt offset
         , expect = Http.expectJson (FeedsMsg << GotMoreItems url) feedDecoder
         }
 
@@ -59,7 +59,7 @@ getFeedMore url offset =
 getVersion : Cmd Msg
 getVersion =
     Http.get
-        { url = baseUrl ++ "/version"
+        { url = baseUrl ++ "/api/version"
         , expect = Http.expectJson GotLastUpdated versionDecoder
         }
 

@@ -3,6 +3,7 @@ module Components.Header exposing (view)
 import Element exposing (..)
 import Element.Background as Background
 import Element.Border as Border
+import Element.Events as Events
 import Element.Font as Font
 import Html.Attributes
 import Theme exposing (ThemeColors, borderColor, getThemeColors, textColor)
@@ -10,8 +11,8 @@ import Time exposing (Posix, Zone)
 import Types exposing (Theme(..))
 
 
-view : Theme -> Maybe Posix -> Zone -> Element msg
-view theme lastUpdated timeZone =
+view : Theme -> Maybe Posix -> Zone -> msg -> Element msg
+view theme lastUpdated timeZone onToggleMsg =
     let
         colors =
             getThemeColors theme
@@ -24,7 +25,7 @@ view theme lastUpdated timeZone =
         , Border.color colors.border
         ]
         [ logoSection theme
-        , rightSection theme lastUpdated timeZone
+        , rightSection theme lastUpdated timeZone onToggleMsg
         ]
 
 
@@ -58,8 +59,8 @@ logoImage =
         }
 
 
-rightSection : Theme -> Maybe Posix -> Zone -> Element msg
-rightSection theme lastUpdated timeZone =
+rightSection : Theme -> Maybe Posix -> Zone -> msg -> Element msg
+rightSection theme lastUpdated timeZone onToggleMsg =
     row
         [ spacing 3
         , paddingXY 12 8
@@ -70,7 +71,7 @@ rightSection theme lastUpdated timeZone =
         ]
         [ lastUpdatedTime theme lastUpdated timeZone
         , timelineLink theme
-        , themeToggle theme
+        , themeToggle theme onToggleMsg
         ]
 
 
@@ -186,13 +187,14 @@ timelineLink theme =
         }
 
 
-themeToggle : Theme -> Element msg
-themeToggle theme =
+themeToggle : Theme -> msg -> Element msg
+themeToggle theme onToggleMsg =
     el
         [ paddingXY 6 6
         , Border.rounded 6
         , mouseOver [ Background.color (rgb255 226 232 240) ]
         , pointer
+        , Events.onClick onToggleMsg
         ]
         (text
             (case theme of

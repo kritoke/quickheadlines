@@ -12,7 +12,8 @@ import Element.Border as Border
 import Element.Font as Font
 import Element.Region as Region
 import Theme exposing (ThemeColors, getThemeColors)
-import Types exposing (Feed, FeedsModel, Model, Msg, Page(..), Theme(..), TimelineModel)
+import Time exposing (Posix, Zone)
+import Types exposing (..)
 
 
 
@@ -58,8 +59,8 @@ viewFeedsPage model feedsModel =
         , padding (responsivePadding model.windowWidth)
         , spacing 20
         ]
-        [ Header.view model.theme model.lastUpdated model.timeZone
-        , TabBar.view model.theme feedsModel.tabs feedsModel.activeTab
+        [ Header.view model.theme model.lastUpdated model.timeZone ToggleTheme
+        , TabBar.view model.theme feedsModel.tabs feedsModel.activeTab (\tabName -> FeedsMsg (SwitchTab tabName))
         , if feedsModel.loading then
             loadingIndicator colors
 
@@ -67,7 +68,7 @@ viewFeedsPage model feedsModel =
             errorView colors (Maybe.withDefault "" feedsModel.error)
 
           else
-            feedGrid model.windowWidth model.theme feedsModel.feeds
+            feedGrid model.windowWidth model.now model.theme feedsModel.tabs feedsModel.activeTab feedsModel.feeds
         ]
 
 
@@ -86,12 +87,12 @@ viewTimelinePage model timelineModel =
         , padding (responsivePadding model.windowWidth)
         , spacing 20
         ]
-        [ Header.view model.theme model.lastUpdated model.timeZone
+        [ Header.view model.theme model.lastUpdated model.timeZone ToggleTheme
         , if timelineModel.loading && List.isEmpty timelineModel.items then
             loadingIndicator colors
 
           else
-            Timeline.view model.windowWidth model.theme timelineModel
+            Timeline.view model.windowWidth model.theme model.timeZone model.now timelineModel
         ]
 
 
@@ -146,8 +147,8 @@ errorView colors errorMessage =
 -- Responsive feed grid layout (maps to CSS: grid-cols-1 md:grid-cols-2 lg:grid-cols-3)
 
 
-feedGrid : Int -> Theme -> List Feed -> Element Msg
-feedGrid windowWidth theme feeds =
+feedGrid : Int -> Posix -> Theme -> List Tab -> String -> List Feed -> Element Msg
+feedGrid windowWidth now theme tabs activeTab feeds =
     let
         colors =
             getThemeColors theme
@@ -162,8 +163,30 @@ feedGrid windowWidth theme feeds =
             else
                 ( 1, 16 )
 
+        -- Use first tab if activeTab is empty, show all feeds for "all" tab
+        effectiveTab =
+            if activeTab == "" then
+                tabs
+                    |> List.head
+                    |> Maybe.map .name
+                    |> Maybe.withDefault ""
+
+            else if activeTab == "all" then
+                ""
+
+            else
+                activeTab
+
+        -- Filter feeds by effectiveTab
+        filteredFeeds =
+            if effectiveTab == "" then
+                feeds
+
+            else
+                List.filter (\feed -> feed.tab == effectiveTab) feeds
+
         chunkedFeeds =
-            chunkList columnCount feeds
+            chunkList columnCount filteredFeeds
     in
     column
         [ width fill
@@ -177,9 +200,7 @@ feedGrid windowWidth theme feeds =
                     ]
                     (List.map
                         (\feed ->
-                            el
-                                [ width (fill |> maximum 500) ]
-                                (FeedBox.view windowWidth theme feed)
+                            FeedBox.view windowWidth now theme feed
                         )
                         feedRow
                     )

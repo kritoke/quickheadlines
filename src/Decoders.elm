@@ -1,128 +1,56 @@
 module Decoders exposing (..)
 
-import Json.Decode exposing (Decoder, andThen, field, int, list, map, map2, map7, maybe, nullable, string, succeed)
+import Json.Decode exposing (Decoder, bool, field, int, list, map, map3, map4, nullable, string, succeed)
+import Json.Decode.Pipeline exposing (optional, required, requiredAt)
 import Time exposing (Posix, millisToPosix)
 import Types exposing (..)
 
 
-
--- Feed Decoder
-
-
 feedDecoder : Decoder Feed
 feedDecoder =
-    field "url" string
-        |> andThen
-            (\url ->
-                field "title" string
-                    |> andThen
-                        (\title ->
-                            field "display_link" string
-                                |> andThen
-                                    (\displayLink ->
-                                        field "site_link" string
-                                            |> andThen
-                                                (\siteLink ->
-                                                    field "favicon" string
-                                                        |> andThen
-                                                            (\favicon ->
-                                                                field "favicon_data" string
-                                                                    |> andThen
-                                                                        (\faviconData ->
-                                                                            field "header_color" (nullable string)
-                                                                                |> andThen
-                                                                                    (\headerColor ->
-                                                                                        field "items" (list feedItemDecoder)
-                                                                                            |> andThen
-                                                                                                (\items ->
-                                                                                                    field "total_item_count" int
-                                                                                                        |> andThen
-                                                                                                            (\totalItemCount ->
-                                                                                                                succeed (Feed url title displayLink siteLink favicon faviconData headerColor items totalItemCount)
-                                                                                                            )
-                                                                                                )
-                                                                                    )
-                                                                        )
-                                                            )
-                                                )
-                                    )
-                        )
-            )
-
-
-
--- Feed Item Decoder
+    succeed Feed
+        |> required "tab" string
+        |> required "url" string
+        |> required "title" string
+        |> required "display_link" string
+        |> required "site_link" string
+        |> optional "favicon" string ""
+        |> optional "favicon_data" string ""
+        |> optional "header_color" (nullable string) Nothing
+        |> required "items" (list feedItemDecoder)
+        |> required "total_item_count" int
 
 
 feedItemDecoder : Decoder FeedItem
 feedItemDecoder =
-    field "title" string
-        |> andThen
-            (\title ->
-                field "link" string
-                    |> andThen
-                        (\link ->
-                            field "version" (nullable string)
-                                |> andThen
-                                    (\version ->
-                                        field "pub_date" (nullable (map millisToPosix int))
-                                            |> andThen
-                                                (\pubDate ->
-                                                    succeed (FeedItem title link version pubDate)
-                                                )
-                                    )
-                        )
-            )
-
-
-
--- Tab Decoder
+    succeed FeedItem
+        |> required "title" string
+        |> required "link" string
+        |> optional "version" (nullable string) Nothing
+        |> optional "pub_date" (nullable (map millisToPosix int)) Nothing
 
 
 tabDecoder : Decoder Tab
 tabDecoder =
-    field "name" string
-        |> andThen
-            (\name ->
-                succeed (Tab name)
-            )
-
-
-
--- Timeline Item Decoder
+    map Tab (field "name" string)
 
 
 timelineItemDecoder : Decoder TimelineItem
 timelineItemDecoder =
-    field "id" string
-        |> andThen
-            (\id ->
-                field "title" string
-                    |> andThen
-                        (\title ->
-                            field "link" string
-                                |> andThen
-                                    (\link ->
-                                        field "pub_date" (nullable (map millisToPosix int))
-                                            |> andThen
-                                                (\pubDate ->
-                                                    field "feed_title" string
-                                                        |> andThen
-                                                            (\feedTitle ->
-                                                                field "cluster_id" (nullable string)
-                                                                    |> andThen
-                                                                        (\clusterId ->
-                                                                            succeed (TimelineItem id title link pubDate feedTitle clusterId)
-                                                                        )
-                                                            )
-                                                )
-                                    )
-                        )
-            )
-
-
-
--- List of Feeds Decoder
+    succeed TimelineItem
+        |> required "id" string
+        |> required "title" string
+        |> required "link" string
+        |> optional "pub_date" (nullable (map millisToPosix int)) Nothing
+        |> required "feed_title" string
+        |> required "feed_url" string
+        |> required "feed_link" string
+        |> optional "favicon" string ""
+        |> optional "favicon_data" string ""
+        |> optional "header_color" (nullable string) Nothing
+        |> optional "cluster_id" (nullable string) Nothing
+        |> required "is_representative" bool
+        |> optional "cluster_size" (nullable int) Nothing
 
 
 feedsDecoder : Decoder (List Feed)
@@ -130,17 +58,9 @@ feedsDecoder =
     list feedDecoder
 
 
-
--- List of Timeline Items Decoder
-
-
 timelineItemsDecoder : Decoder (List TimelineItem)
 timelineItemsDecoder =
     list timelineItemDecoder
-
-
-
--- List of Tabs Decoder
 
 
 tabsDecoder : Decoder (List Tab)
@@ -148,19 +68,31 @@ tabsDecoder =
     list tabDecoder
 
 
+feedsPageDecoder : Decoder { tabs : List Tab, activeTab : String, feeds : List Feed }
+feedsPageDecoder =
+    map3 (\tabs activeTab feeds -> { tabs = tabs, activeTab = activeTab, feeds = feeds })
+        (field "tabs" (list tabDecoder))
+        (field "active_tab" string)
+        (field "feeds" (list feedDecoder))
 
--- Version Decoder (returns timestamp as Posix)
+
+type alias TimelinePage =
+    { items : List TimelineItem, hasMore : Bool, totalCount : Int }
+
+
+timelinePageDecoder : Decoder TimelinePage
+timelinePageDecoder =
+    map3 TimelinePage
+        (field "items" (list timelineItemDecoder))
+        (field "has_more" bool)
+        (field "total_count" int)
 
 
 versionDecoder : Decoder Posix
 versionDecoder =
-    map millisToPosix int
-
-
-
--- Error Decoder
+    map millisToPosix (field "updated_at" int)
 
 
 errorDecoder : Decoder String
 errorDecoder =
-    field "error" string
+    field "message" string

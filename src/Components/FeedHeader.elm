@@ -5,7 +5,7 @@ import Element.Background as Background
 import Element.Border as Border
 import Element.Font as Font
 import Html.Attributes
-import Theme exposing (ThemeColors, feedHeaderColor, feedHeaderTextColor, getThemeColors)
+import Theme exposing (feedHeaderColor, feedHeaderTextColor, getThemeColors)
 import Types exposing (Feed, Theme(..))
 
 
@@ -65,14 +65,17 @@ feedInfo theme feed =
         [ width fill
         , spacing 2
         ]
-        [ el
+        [ link
             [ Font.size 16
             , Font.bold
             , Font.color (feedHeaderTextColor theme)
             , htmlAttribute (Html.Attributes.style "word-wrap" "break-word")
             , htmlAttribute (Html.Attributes.style "line-height" "1.2")
+            , Font.underline
             ]
-            (text feed.title)
+            { url = feed.siteLink
+            , label = text feed.title
+            }
         , if feed.displayLink /= "" then
             el
                 [ Font.size 12

@@ -1,5 +1,4 @@
 require "http/server"
-require "slang"
 
 # Require local dependencies that are used in this file
 require "./config"
@@ -10,6 +9,7 @@ require "./utils"
 require "./favicon_storage"
 require "./minhash"
 require "./elm_js"
+require "./api"
 
 # ----- Compile-time embedded templates -----
 
@@ -45,102 +45,10 @@ def handle_elm_js(context : HTTP::Server::Context)
   ElmJs.serve(context)
 end
 
-# Builds the inner HTML for all feed boxes as link lists.
-def render_feed_boxes(io : IO, active_tab : String? = nil)
-  # Filter content based on the active tab
-  feeds = active_tab ? STATE.feeds_for_tab(active_tab) : STATE.feeds                   # ameba:disable Lint/UselessAssign
-  releases = active_tab ? STATE.releases_for_tab(active_tab) : STATE.software_releases # ameba:disable Lint/UselessAssign
-
-  # total_item_count is nil for initial render, set for load more
-  # ameba:disable Lint/UselessAssign
-  total_item_count = nil
-
-  # Emit into the same IO variable name "io"
-  Slang.embed("src/feed_boxes.slang", "io")
-end
-
-def render_page(io : IO, active_tab : String = "all")
-  title = STATE.config_title # ameba:disable Lint/UselessAssign
-  css = CSS_TEMPLATE
-  updated_at = STATE.updated_at.to_utc.to_s("%Y-%m-%dT%H:%M:%S%z") # ameba:disable Lint/UselessAssign
-  tabs = STATE.tabs                                                # ameba:disable Lint/UselessAssign
-
-  Slang.embed("src/layout.slang", "io")
-end
-
-def handle_feed_more(context : HTTP::Server::Context)
-  url = context.request.query_params["url"]?
-  limit = context.request.query_params["limit"]?.try(&.to_i?) || 20
-  offset = context.request.query_params["offset"]?.try(&.to_i?) || 0
-
-  if url && (config = STATE.config)
-    # Search top-level feeds and all feeds within tabs
-    all_feeds = config.feeds + config.tabs.flat_map(&.feeds)
-
-    if feed_config = all_feeds.find { |feed| feed.url == url }
-      cache = FeedCache.instance
-
-      # 1. Check if we have enough data in the cache to fulfill the request
-      # We count the items currently stored for this URL.
-      # Note: This is a rough check; if we have 100 items but they are old, we still show them.
-      # To support "infinite scroll" effectively, we ensure the DB has at least (offset + limit) items.
-      current_count = 0
-      if cached_feed = cache.get(url)
-        current_count = cached_feed.items.size
-      end
-
-      needed_count = offset + limit
-
-      # 2. If cache is shallow, fetch a larger batch to populate it
-      # We fetch a buffer (e.g., +50) to avoid hitting the network on every single click.
-      # We pass 'nil' for previous_data to force a fresh parse and skip ETag checks,
-      # ensuring we dig deep into the history.
-      if current_count < needed_count
-        fetch_feed(feed_config, needed_count + 50, nil)
-      end
-
-      # 3. Retrieve ALL items from the cache (not just a slice)
-      # This ensures morphdom gets the complete feed with all items
-      if data = cache.get(url)
-        # Only include items up to offset + limit, but don't exceed available items
-        max_index = Math.min(offset + limit, data.items.size)
-        trimmed_items = data.items[0...max_index]
-
-        # Create a new FeedData with trimmed items
-        full_data = FeedData.new(
-          data.title,
-          data.url,
-          data.site_link,
-          data.header_color,
-          trimmed_items,
-          data.etag,
-          data.last_modified,
-          data.favicon,
-          data.favicon_data
-        )
-
-        context.response.content_type = "text/html; charset=utf-8"
-
-        # Set render_full to false so the template returns only list items
-        # ameba:disable Lint/UselessAssign
-        render_full = false
-        feeds = [full_data]       # ameba:disable Lint/UselessAssign
-        releases = [] of FeedData # ameba:disable Lint/UselessAssign
-        # Pass cumulative count for the Load More button
-        # ameba:disable Lint/UselessAssign
-        total_item_count = trimmed_items.size
-        Slang.embed("src/feed_boxes.slang", "context.response")
-      else
-        context.response.content_type = "text/plain; charset=utf-8"
-        context.response.status_code = 500
-        context.response.print "Error retrieving feed slice"
-      end
-    else
-      context.response.status_code = 404
-    end
-  else
-    context.response.status_code = 400
-  end
+def handle_version(context : HTTP::Server::Context)
+  context.response.content_type = "text/plain; charset=utf-8"
+  # Use updated_at as a change token
+  context.response.print STATE.updated_at.to_unix_ms
 end
 
 def handle_proxy_image(context : HTTP::Server::Context)
@@ -189,180 +97,6 @@ def handle_proxy_image(context : HTTP::Server::Context)
   end
 end
 
-def handle_version(context : HTTP::Server::Context)
-  context.response.content_type = "text/plain; charset=utf-8"
-  # Use updated_at as a change token
-  context.response.print STATE.updated_at.to_unix_ms
-end
-
-def get_active_tab(context : HTTP::Server::Context) : String
-  context.request.query_params["tab"]? || STATE.tabs.first?.try(&.name) || "all"
-end
-
-def handle_feeds(context : HTTP::Server::Context)
-  active_tab = get_active_tab(context)
-  context.response.content_type = "text/html; charset=utf-8"
-  render_feed_boxes(context.response, active_tab)
-end
-
-def handle_root(context : HTTP::Server::Context)
-  active_tab = get_active_tab(context)
-  context.response.content_type = "text/html; charset=utf-8"
-  render_page(context.response, active_tab)
-end
-
-def handle_timeline_items(context : HTTP::Server::Context)
-  limit = context.request.query_params["limit"]?.try(&.to_i?) || 100
-  offset = context.request.query_params["offset"]?.try(&.to_i?) || 0
-
-  # Get all timeline items
-  all_items = STATE.all_timeline_items
-
-  # Fixed: Don't filter by first_day - this was breaking infinite scroll pagination
-  # The first_day parameter was filtering to only one day, preventing loading of subsequent days
-  filtered_items = all_items
-
-  total_count = filtered_items.size
-
-  max_index = Math.min(offset + limit, total_count)
-  raw_items = filtered_items[offset...max_index]
-
-  # Convert to clustered items with cluster information
-  # Track first occurrence of each cluster to determine representative
-  cluster_first_seen = {} of Int64 => Bool
-  # ameba:disable Lint/UselessAssign
-  timeline_items = raw_items.map do |item|
-    clustered = add_cluster_info(item)
-    # Override is_representative: first item with this cluster_id is representative
-    if cluster_id = clustered.cluster_id
-      unless cluster_first_seen.has_key?(cluster_id)
-        cluster_first_seen[cluster_id] = true
-        clustered = ClusteredTimelineItem.new(
-          clustered.item,
-          clustered.feed_title,
-          clustered.feed_url,
-          clustered.feed_link,
-          clustered.favicon,
-          clustered.favicon_data,
-          clustered.header_color,
-          cluster_id,
-          true, # First occurrence is representative
-          clustered.cluster_size
-        )
-      end
-    end
-    clustered
-  end
-
-  context.response.content_type = "text/html; charset=utf-8"
-
-  # Render only the timeline items (no container, no sentinel) for infinite scroll
-  # ameba:disable Lint/UselessAssign
-  last_day = "" # Required by timeline_items.slang template
-  Slang.embed("src/timeline_items.slang", "context.response")
-end
-
-def handle_timeline(context : HTTP::Server::Context)
-  title = STATE.config_title # ameba:disable Lint/UselessAssign
-  css = CSS_TEMPLATE
-  updated_at = STATE.updated_at.to_utc.to_s("%Y-%m-%dT%H:%M:%S%z") # ameba:disable Lint/UselessAssign
-
-  # Get all timeline items (sorted by date descending)
-  all_items = STATE.all_timeline_items
-
-  # Fixed: Don't filter by day - show items from all days for proper infinite scroll pagination
-  # Set first_day_filter to empty string so JavaScript doesn't filter by day
-  first_day_filter = "" # ameba:disable Lint/UselessAssign
-
-  # Show first 100 items for initial page load (performance)
-  initial_limit = 100
-  raw_items = all_items[0...initial_limit]
-
-  # Convert to clustered items
-  # Track first occurrence of each cluster to determine representative
-  cluster_first_seen = {} of Int64 => Bool
-  # ameba:disable Lint/UselessAssign
-  timeline_items = raw_items.map do |item|
-    clustered = add_cluster_info(item)
-    # Override is_representative: first item with this cluster_id is representative
-    if cluster_id = clustered.cluster_id
-      unless cluster_first_seen.has_key?(cluster_id)
-        cluster_first_seen[cluster_id] = true
-        clustered = ClusteredTimelineItem.new(
-          clustered.item,
-          clustered.feed_title,
-          clustered.feed_url,
-          clustered.feed_link,
-          clustered.favicon,
-          clustered.favicon_data,
-          clustered.header_color,
-          cluster_id,
-          true, # First occurrence is representative
-          clustered.cluster_size
-        )
-      end
-    end
-    clustered
-  end
-
-  has_more = all_items.size > initial_limit # ameba:disable Lint/UselessAssign
-
-  # Pre-render the timeline content
-  timeline_html = String.build do |_fh_io|
-    Slang.embed("src/timeline.slang", "_fh_io")
-  end
-
-  context.response.content_type = "text/html; charset=utf-8"
-
-  # Pass timeline_html as a variable to the template
-  # ameba:disable Lint/UselessAssign
-  rendered_timeline = timeline_html
-
-  # Pass first_day to template (used in JavaScript for infinite scroll)
-  Slang.embed("src/timeline_page.slang", "context.response")
-end
-
-# Helper function to add cluster information to a timeline item
-def add_cluster_info(item : TimelineItem) : ClusteredTimelineItem
-  cache = FeedCache.instance
-
-  # Get item_id from database
-  item_id = cache.get_item_id(item.feed_url, item.item.link)
-
-  if item_id
-    cluster_id = cache.db.query_one?("SELECT cluster_id FROM items WHERE id = ?", item_id, as: {Int64?})
-    cluster_size = cache.get_cluster_size(item_id)
-    is_representative = cache.cluster_representative?(item_id)
-
-    ClusteredTimelineItem.new(
-      item.item,
-      item.feed_title,
-      item.feed_url,
-      item.feed_link,
-      item.favicon,
-      item.favicon_data,
-      item.header_color,
-      cluster_id,
-      is_representative,
-      cluster_size > 1 ? cluster_size : nil
-    )
-  else
-    # No cluster info available, return item as-is with defaults
-    ClusteredTimelineItem.new(
-      item.item,
-      item.feed_title,
-      item.feed_url,
-      item.feed_link,
-      item.favicon,
-      item.favicon_data,
-      item.header_color,
-      nil,
-      true,
-      nil
-    )
-  end
-end
-
 def handle_favicon(context : HTTP::Server::Context, path : String)
   # Extract filename from path
   filename = path.lstrip("/favicons/")
@@ -392,41 +126,85 @@ def handle_favicon(context : HTTP::Server::Context, path : String)
   end
 end
 
-def start_server(port : Int32)
-  server = HTTP::Server.new do |context|
-    path = context.request.path
+# Generate HTML for the main page
+def generate_main_page_html : String
+  # ameba:disable:next Style/HeredocIndent
+  <<-HTML
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>#{STATE.config_title}</title>
+        <link rel="icon" type="image/png" href="/favicon.png">
+        <link rel="stylesheet" href="#{CSS_TEMPLATE.starts_with?("/") ? CSS_TEMPLATE : "/css"}">
+        <script src="/elm.js"></script>
+      </head>
+      <body>
+        <div id="elm-app"></div>
+        <script>
+          if (typeof Elm !== 'undefined' && Elm.Main) {
+            var app = Elm.Main.init({
+              node: document.getElementById('elm-app')
+            });
+          } else {
+            document.getElementById('elm-app').innerHTML = '<p>Loading application...</p>';
+          }
+        </script>
+      </body>
+    </html>
+  HTML
+end
 
-    case {context.request.method, path}
-    when {"GET", "/version"}
-      handle_version(context)
-    when {"GET", "/elm.js"}
-      handle_elm_js(context)
-    when {"GET", "/feeds"}
-      handle_feeds(context)
-    when {"GET", "/feed_more"}
-      handle_feed_more(context)
-    when {"GET", "/timeline"}
-      handle_timeline(context)
-    when {"GET", "/timeline_items"}
-      handle_timeline_items(context)
-    when {"GET", "/favicon.png"}
-      serve_bytes(context, FAVICON_PNG, "image/png")
-    when {"GET", "/favicon.svg"}
-      serve_bytes(context, FAVICON_SVG, "image/svg+xml")
-    when {"GET", "/favicon.ico"}
-      serve_bytes(context, FAVICON_ICO, "image/x-icon")
-    when {"GET", "/proxy_image"}
-      handle_proxy_image(context)
-    when {"GET", "/"}
-      handle_root(context)
-    else
+# Route request to appropriate handler
+# ameba:disable Metrics/CyclomaticComplexity
+def route_request(context : HTTP::Server::Context)
+  path = context.request.path
+
+  case {context.request.method, path}
+  when {"GET", "/api/feeds"}
+    Api.handle_feeds(context)
+  when {"GET", "/api/feed_more"}
+    Api.handle_feed_more(context)
+  when {"GET", "/api/timeline"}
+    Api.handle_timeline(context)
+  when {"GET", "/api/version"}
+    Api.handle_version(context)
+  when {"GET", "/version"}
+    handle_version(context)
+  when {"GET", "/elm.js"}
+    handle_elm_js(context)
+  when {"GET", "/favicon.png"}
+    serve_bytes(context, FAVICON_PNG, "image/png")
+  when {"GET", "/favicon.svg"}
+    serve_bytes(context, FAVICON_SVG, "image/svg+xml")
+  when {"GET", "/favicon.ico"}
+    serve_bytes(context, FAVICON_ICO, "image/x-icon")
+  when {"GET", "/proxy_image"}
+    handle_proxy_image(context)
+  when {"GET", "/"}
+    context.response.content_type = "text/html; charset=utf-8"
+    context.response.print generate_main_page_html
+  else
+    # Serve main page for all non-API routes (Elm client-side routing)
+    if path.starts_with?("/api/") || path.starts_with?("/favicons/") || path == "/elm.js" || path == "/css" || path.starts_with?("/proxy_image")
       if path.starts_with?("/favicons/")
         handle_favicon(context, path)
       else
         context.response.status_code = 404
         context.response.print "404 Not Found"
       end
+    else
+      # Serve main HTML for client-side routing (handles /timeline, /search, etc.)
+      context.response.content_type = "text/html; charset=utf-8"
+      context.response.print generate_main_page_html
     end
+  end
+end
+
+def start_server(port : Int32)
+  server = HTTP::Server.new do |context|
+    route_request(context)
   end
 
   server.bind_tcp "0.0.0.0", port

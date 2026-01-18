@@ -576,8 +576,11 @@ def refresh_all(config : Config)
   config.feeds.each { |feed| all_configs[feed.url] = feed }
   config.tabs.each { |tab| tab.feeds.each { |feed| all_configs[feed.url] = feed } }
 
+  STDERR.puts "[#{Time.local}] refresh_all: starting - #{all_configs.size} feeds to fetch"
+
   # 2. Map existing data for caching (ETags/Last-Modified)
   existing_data = (STATE.feeds + STATE.tabs.flat_map(&.feeds)).index_by(&.url)
+  STDERR.puts "[#{Time.local}] refresh_all: existing_data.size=#{existing_data.size}"
 
   # 3. Fetch all feeds concurrently
   channel = Channel(FeedData).new
@@ -594,21 +597,30 @@ def refresh_all(config : Config)
   end
 
   fetched_map = {} of String => FeedData
+  success_count = 0
   all_configs.size.times do
     data = channel.receive
-    fetched_map[data.url] = data
+    if data && !data.items.empty?
+      fetched_map[data.url] = data
+      success_count += 1
+    else
+      STDERR.puts "[#{Time.local}] refresh_all: failed to fetch #{data ? data.url : "unknown"}"
+    end
   end
 
+  STDERR.puts "[#{Time.local}] refresh_all: fetched #{fetched_map.size}/#{all_configs.size} feeds successfully"
+
   # 4. Clear old feed data before replacing to reduce memory pressure
+  STDERR.puts "[#{Time.local}] refresh_all: clearing STATE (feeds=#{STATE.feeds.size}, tabs=#{STATE.tabs.size})"
   STATE.feeds.clear
   STATE.tabs.each &.feeds.clear
   STATE.software_releases.clear
 
   # 5. Populate Top-Level State
-  STATE.feeds = config.feeds.map { |feed| fetched_map[feed.url] }
+  STATE.feeds = config.feeds.map { |feed| fetched_map[feed.url] || error_feed_data(feed, "Failed to fetch") }
+  STDERR.puts "[#{Time.local}] refresh_all: STATE.feeds=#{STATE.feeds.size}"
   STATE.software_releases = [] of FeedData
   if sw = config.software_releases
-    # Assuming fetch_sw is updated to take SoftwareConfig and limit
     if sw_box = fetch_sw_with_config(sw, config.item_limit)
       STATE.software_releases << sw_box
     end
@@ -617,7 +629,8 @@ def refresh_all(config : Config)
   # 6. Populate Tab State
   STATE.tabs = config.tabs.map do |tab_config|
     tab = Tab.new(tab_config.name)
-    tab.feeds = tab_config.feeds.map { |feed| fetched_map[feed.url] }
+    tab.feeds = tab_config.feeds.map { |feed| fetched_map[feed.url] || error_feed_data(feed, "Failed to fetch") }
+    STDERR.puts "[#{Time.local}] refresh_all: tab '#{tab.name}' has #{tab.feeds.size} feeds"
     if sw = tab_config.software_releases
       if sw_box = fetch_sw_with_config(sw, config.item_limit)
         tab.software_releases = [sw_box]
@@ -629,13 +642,14 @@ def refresh_all(config : Config)
   STATE.update(Time.local)
 
   # 7. Process story clustering for all fetched feeds
-  # This assigns similar stories to the same cluster to prevent duplicates
   fetched_map.values.each do |feed_data|
     process_feed_item_clustering(feed_data)
   end
 
   # Clear memory after large amount of data processing
   GC.collect
+
+  STDERR.puts "[#{Time.local}] refresh_all: complete - STATE.feeds=#{STATE.feeds.size}, STATE.tabs=#{STATE.tabs.size}"
 end
 
 # ============================================
