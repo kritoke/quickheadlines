@@ -6,7 +6,7 @@ require "mutex"
 require "openssl"
 require "./config"
 require "./models"
-require "./minhash"
+require "lexis-minhash"
 require "./favicon_storage"
 require "./health_monitor"
 
@@ -909,7 +909,7 @@ class FeedCache
   # Store MinHash signature for an item
   def store_item_signature(item_id : Int64, signature : Array(UInt32))
     @mutex.synchronize do
-      bytes = StoryHasher.signature_to_bytes(signature)
+      bytes = LexisMinhash::Engine.signature_to_bytes(signature)
       @db.exec("UPDATE items SET minhash_signature = ? WHERE id = ?", bytes, item_id)
     end
   end
@@ -919,7 +919,7 @@ class FeedCache
     @mutex.synchronize do
       result = @db.query_one?("SELECT minhash_signature FROM items WHERE id = ?", item_id, as: {Bytes?})
       return unless result
-      StoryHasher.bytes_to_signature(result)
+      LexisMinhash::Engine.bytes_to_signature(result)
     end
   end
 
@@ -952,7 +952,7 @@ class FeedCache
   # Find candidate similar items using LSH
   # Returns item IDs that share at least one LSH band
   def find_lsh_candidates(signature : Array(UInt32)) : Array(Int64)
-    bands = StoryHasher.generate_bands(signature)
+    bands = LexisMinhash::Engine.generate_bands(signature)
     candidates = Set(Int64).new
 
     @mutex.synchronize do

@@ -8,6 +8,10 @@ shards:
     git: https://github.com/crystal-lang/crystal-db.git
     version: 0.11.0
 
+  lexis-minhash:
+    git: https://github.com/kritoke/lexis-minhash.git
+    version: 0.1.0
+
   slang:
     git: https://github.com/toddsundsted/slang.git
     version: 2.0.3+git.commit.bd5ac5203d369139058d0b9ba102b71a2cb5098c
