@@ -230,3 +230,35 @@ help:
 	@echo ""
 	@echo "Platform: $(OS_NAME)-$(ARCH_NAME)"
 	@echo "Version: $(BUILD_REV)"
+	@if [ "$(OS_NAME)" = "macos" ]; then \
+		pkg-config --exists libmagic || { \
+			echo "❌ Error: libmagic (file command library) not found"; \
+			echo ""; \
+			echo "Install libmagic:"; \
+			echo "  macOS: brew install libmagic"; \
+			exit 1; \
+		}; \
+		echo "✓ libmagic development files found"; \
+	fi
+	@if [ "$(OS_NAME)" = "linux" ]; then \
+		pkg-config --exists libmagic || { \
+			echo "❌ Error: libmagic (file command library) not found"; \
+			echo ""; \
+			echo "Install libmagic:"; \
+			echo "  Ubuntu/Debian: sudo apt-get install libmagic-dev"; \
+			echo "  Fedora/RHEL:   sudo dnf install file-devel"; \
+			echo "  Arch:          sudo pacman -S file"; \
+			exit 1; \
+		}; \
+		echo "✓ libmagic development files found"; \
+	fi
+	@if [ "$(OS_NAME)" = "freebsd" ]; then \
+		pkg info -e libmagic >/dev/null 2>&1 || { \
+			echo "❌ Error: libmagic (file command library) not found"; \
+			echo ""; \
+			echo "Install libmagic:"; \
+			echo "  FreeBSD: sudo pkg install libmagic"; \
+			exit 1; \
+		}; \
+		echo "✓ libmagic found"; \
+	fi

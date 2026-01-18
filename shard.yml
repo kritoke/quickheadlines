@@ -9,6 +9,9 @@ targets:
     main: src/quickheadlines.cr
 
 dependencies:
+  athena:
+    github: athena-framework/framework
+    version: ~> 0.21.0
   slang:
     github: toddsundsted/slang
     branch: main
@@ -24,6 +27,6 @@ development_dependencies:
     github: crystal-ameba/ameba
     branch: master
 
-crystal: ">= 1.18.2"
+crystal: ">= 1.19.0"
 
 license: AGPL-3.0
