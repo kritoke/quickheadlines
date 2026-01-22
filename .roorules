@@ -1,6 +1,0 @@
-# 🛡️ PROJECT-SPECIFIC GUARDRAILS
-
-1. **ANTI-FREEZE MANDATE**: You are FORBIDDEN from running `crystal spec` or `crystal run` directly.
-2. **THE TOOL**: You MUST use `safe-spec <args>` for all testing.
-3. **WHY**: Foreground compilation freezes your provider connection. `safe-spec` uses `nohup` and background redirection to keep the session alive.
-4. **RECOVERY**: If a process hangs, run `pkill -9 crystal`.
