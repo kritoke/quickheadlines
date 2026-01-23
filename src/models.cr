@@ -67,11 +67,11 @@ class AppState
   TIMELINE_CACHE_TTL = 30.seconds
 
   def feeds_for_tab(tab_name : String)
-    tabs.find { |tab| tab.name == tab_name }.try(&.feeds) || [] of FeedData
+    tabs.find { |tab| tab.name.downcase == tab_name.downcase }.try(&.feeds) || [] of FeedData
   end
 
   def releases_for_tab(tab_name : String)
-    tabs.find { |tab| tab.name == tab_name }.try(&.software_releases) || [] of FeedData
+    tabs.find { |tab| tab.name.downcase == tab_name.downcase }.try(&.software_releases) || [] of FeedData
   end
 
   # Get all items from all feeds for timeline view, sorted by publication date (newest first)

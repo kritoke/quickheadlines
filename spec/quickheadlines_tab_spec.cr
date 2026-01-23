@@ -63,7 +63,7 @@ describe "Tab API behavior" do
         {tab: "tech", url: "http://tech2.example.com"},
       ]
 
-      tech_feeds = feeds.select { |f| f[:tab] == "tech" }
+      tech_feeds = feeds.select { |feed| feed[:tab] == "tech" }
       tech_feeds.size.should eq(2)
     end
 
@@ -84,7 +84,7 @@ describe "Tab API behavior" do
         {tab: "security", url: "http://security.example.com"},
       ]
 
-      nonexistent_feeds = feeds.select { |f| f[:tab] == "nonexistent" }
+      nonexistent_feeds = feeds.select { |feed| feed[:tab] == "nonexistent" }
       nonexistent_feeds.size.should eq(0)
     end
   end
@@ -103,7 +103,6 @@ describe "Tab API behavior" do
 
     it "can switch back to all tab" do
       tabs = ["all", "tech", "security"]
-      current_tab = "tech"
 
       # Should be able to switch back to 'all'
       tabs.includes?("all").should be_true

@@ -66,7 +66,7 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
     if feed_config = all_feeds.find { |feed| feed.url == url }
       # Find the tab name for this feed
       tab_name = ""
-      if tab = config.tabs.find { |t| t.feeds.any? { |f| f.url == url } }
+      if tab = config.tabs.find { |tab_item| tab_item.feeds.any? { |feed_item| feed_item.url == url } }
         tab_name = tab.name
       end
 
@@ -161,15 +161,13 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
   # Serve static files
   @[ARTA::Get(path: "/elm.js")]
   def elm_js(request : ATH::Request) : ATH::Response
-    begin
-      content = ElmJs.content
-      response = ATH::Response.new(content)
-      response.headers["content-type"] = "application/javascript; charset=utf-8"
-      response.headers["Cache-Control"] = "public, max-age=31536000"
-      response
-    rescue ex : Exception
-      ATH::Response.new(ex.message, 404, HTTP::Headers{"content-type" => "text/plain"})
-    end
+    content = ElmJs.content
+    response = ATH::Response.new(content)
+    response.headers["content-type"] = "application/javascript; charset=utf-8"
+    response.headers["Cache-Control"] = "public, max-age=31536000"
+    response
+  rescue ex : Exception
+    ATH::Response.new(ex.message, 404, HTTP::Headers{"content-type" => "text/plain"})
   end
 
   @[ARTA::Get(path: "/favicon.png")]
@@ -204,29 +202,30 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
   @[ARTA::Get(path: "/timeline")]
   def index(request : ATH::Request) : ATH::Response
     # Generate HTML for the main page
+    # ameba:disable Style/HeredocIndent
     html = <<-HTML
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <meta charset="UTF-8">
-          <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <title>#{STATE.config_title}</title>
-          <link rel="icon" type="image/png" href="/favicon.png">
-          <script src="/elm.js"></script>
-        </head>
-        <body>
-          <div id="elm-app"></div>
-          <script>
-            if (typeof Elm !== 'undefined' && Elm.Main) {
-              var app = Elm.Main.init({
-                node: document.getElementById('elm-app')
-              });
-            } else {
-              document.getElementById('elm-app').innerHTML = '<p>Loading application...</p>';
-            }
-          </script>
-        </body>
-      </html>
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>#{STATE.config_title}</title>
+            <link rel="icon" type="image/png" href="/favicon.png">
+            <script src="/elm.js?v=#{STATE.updated_at.to_unix_ms}"></script>
+          </head>
+          <body>
+            <div id="elm-app"></div>
+            <script>
+              if (typeof Elm !== 'undefined' && Elm.Main) {
+                var app = Elm.Main.init({
+                  node: document.getElementById('elm-app')
+                });
+              } else {
+                document.getElementById('elm-app').innerHTML = '<p>Loading application...</p>';
+              }
+            </script>
+          </body>
+        </html>
     HTML
 
     response = ATH::Response.new(html)

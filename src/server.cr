@@ -128,7 +128,7 @@ end
 
 # Generate HTML for the main page
 def generate_main_page_html : String
-  # ameba:disable:next Style/HeredocIndent
+  # ameba:disable Style/HeredocIndent
   <<-HTML
     <!DOCTYPE html>
     <html>
