@@ -8,6 +8,9 @@ WORKDIR /app
 # We do NOT need static versions anymore
 RUN apt-get update && apt-get install -y --no-install-recommends libmagic1 && \
     libxml2-dev \
+    libxslt-dev \
+    gcc \
+    python3-dev \
     libssl-dev \
     libyaml-dev \
     libsqlite3-dev \
@@ -57,14 +60,16 @@ WORKDIR /app
 
 # Install the RUNTIME versions of the libraries
 # We also need ca-certificates for HTTPS/RSS fetching
-RUN apt-get update && apt-get install -y \
-    libxml2 \
-    libssl3 \
-    libyaml-0-2 \
-    libsqlite3-0 \
-    ca-certificates \
-    tzdata \
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libmagic1 \
+    libxml2-dev \
+    libssl-dev \
+    libyaml-dev \
+    libsqlite3-dev \
     curl \
+    libevent-dev \
+    libpcre2-dev \
+    build-essential \
     && rm -rf /var/lib/apt/lists/*
 
 # Try to resolve issue where it can't locate the timezone sometimes and fails to run outright.
