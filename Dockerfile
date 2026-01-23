@@ -6,7 +6,7 @@ WORKDIR /app
 
 # Install development headers for XML and SSL
 # We do NOT need static versions anymore
-RUN apt-get update && apt-get install -y \
+RUN apt-get update && apt-get install -y --no-install-recommends libmagic1 && \
     libxml2-dev \
     libssl-dev \
     libyaml-dev \
