@@ -63,6 +63,9 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libmagic1 \
     libxml2-dev \
+    libxslt-dev \
+    gcc \
+    python3-dev \
     libssl-dev \
     libyaml-dev \
     libsqlite3-dev \
