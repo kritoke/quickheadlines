@@ -3,9 +3,16 @@ require "athena"
 class Quickheadlines::DTOs::ClusterDTO
   include ASR::Serializable
 
+  @[ASRA::Name("id")]
   property id : String
+
+  @[ASRA::Name("representative")]
   property representative : Quickheadlines::DTOs::StoryDTO
+
+  @[ASRA::Name("others")]
   property others : Array(Quickheadlines::DTOs::StoryDTO)
+
+  @[ASRA::Name("clusterSize")]
   property cluster_size : Int32
 
   def initialize(

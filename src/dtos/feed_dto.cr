@@ -3,12 +3,25 @@ require "athena"
 class Quickheadlines::DTOs::FeedDTO
   include ASR::Serializable
 
+  @[ASRA::Name("id")]
   property id : String
+
+  @[ASRA::Name("title")]
   property title : String
+
+  @[ASRA::Name("url")]
   property url : String
+
+  @[ASRA::Name("siteLink")]
   property site_link : String
+
+  @[ASRA::Name("headerColor")]
   property header_color : String?
+
+  @[ASRA::Name("favicon")]
   property favicon : String?
+
+  @[ASRA::Name("faviconData")]
   property favicon_data : String?
 
   def initialize(
