@@ -1,0 +1,29 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: ..
+      dockerfile: .devcontainer/Dockerfile
+    container_name: quickheadlines-dev
+    volumes:
+      - ..:/workspaces/quickheadlines:cached
+      - ${HOME}/.kilocode:/home/vscode/.kilocode:ro
+      - /Users/kritoke/code/lang-db:/workspaces/lang-db:rw
+      - /Users/kritoke/code/thebrain:/workspaces/thebrain:ro
+      - kilocode-db-storage:/home/vscode/.kilocode-storage
+    ports:
+      - "8080:8080"
+    environment:
+      - APP_ENV=development
+      - TZ=America/Chicago
+    command: sleep infinity
+    networks:
+      - quickheadlines-net
+
+networks:
+  quickheadlines-net:
+    driver: bridge
+
+volumes:
+  kilocode-db-storage: # This stays inside Docker, very fast, no host conflicts
