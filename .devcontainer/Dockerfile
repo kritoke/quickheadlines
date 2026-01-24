@@ -4,7 +4,6 @@ FROM crystallang/crystal:1.19
 ENV APP_ENV=development
 ENV TZ=America/Chicago
 ENV DEBIAN_FRONTEND=noninteractive
-# Define PATH without $HOME since it's not defined yet
 ENV PATH="/workspaces/quickheadlines/bin:/home/vscode/.local/bin:/home/vscode/.npm-global/bin:${PATH}"
 
 # Configure fast apt mirrors for faster downloads (ARM64 compatible)
@@ -43,7 +42,7 @@ RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - && \
 # Use UID 1001 to avoid conflict with crystal user (UID 1000)
 RUN groupadd --gid 1001 vscode \
     && useradd --uid 1001 --gid vscode --shell /bin/bash --create-home vscode \
-    && echo vscode ALL=\(root\) NOPASSWD:ALL > /etc/sudoers.d/vscode \
+    && echo vscode ALL=(root) NOPASSWD:ALL > /etc/sudoers.d/vscode \
     && chmod 0440 /etc/sudoers.d/vscode
 
 # Create symlink for /bin/bd to point to /workspaces/quickheadlines/bin/bd

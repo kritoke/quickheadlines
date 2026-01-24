@@ -1,24 +1,20 @@
 {
-  "name": "QuickHeadlines Devcontainer",
+  "name": "Dev Sandbox (crystal-elm): quickheadlines",
   "dockerComposeFile": "docker-compose.yml",
   "service": "app",
   "workspaceFolder": "/workspaces/quickheadlines",
   "customizations": {
     "vscode": {
       "extensions": [
+        "kilocode.kilo-code",
+        "planet57.vscode-beads",
         "crystal-lang-tools.crystal-lang",
         "elmTooling.elm-ls-vscode",
         "dbaeumer.vscode-eslint",
         "editorconfig.editorconfig",
-        "streetsidesoftware.code-spell-checker",
-        "kilocode.kilo-code",
-        "planet57.vscode-beads"
+        "streetsidesoftware.code-spell-checker"
       ],
       "settings": {
-        "crystal-lang.compiler": "crystal",
-        "crystal-lang.lsp.path": "/usr/bin/crystalline",
-        "elm.compiler": "/usr/local/bin/elm",
-        "editor.formatOnSave": true,
         "beads.executablePath": "/workspaces/quickheadlines/bin/bd",
         "beads.daemonMode": "auto",
         "beads.autoStartDaemon": false,
@@ -29,13 +25,18 @@
         "kilocode.rulesPath": "/home/vscode/.kilocode/rules",
         "kilocode.skillsPath": "/home/vscode/.kilocode/skills",
         "kilocode.memoryBankPath": "/home/vscode/.kilocode/memory_bank",
-        "kilocode.customStoragePath": "/home/vscode/.kilocode-storage"
+        "kilocode.customStoragePath": "/home/vscode/.kilocode-storage",
+        "crystal-lang.compiler": "crystal",
+        "crystal-lang.lsp.path": "/usr/bin/crystalline",
+        "elm.compiler": "/usr/local/bin/elm",
+        "editor.formatOnSave": true
       }
     }
   },
   "remoteUser": "vscode",
   "features": {
     "ghcr.io/devcontainers/features/git:1": {},
+    "ghcr.io/devcontainers/features/node:1": {},
     "ghcr.io/devcontainers/features/docker-in-docker:2": {}
   },
   "forwardPorts": [

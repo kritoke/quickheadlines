@@ -5,14 +5,28 @@ set -e
 
 echo "🔍 Verifying MCP settings and custom modes for Kilo Code extension..."
 
-# Target directory and files
+# Determine project name from workspace path
+if [ -n "$WORKSPACE_NAME" ]; then
+    PROJECT_NAME="$WORKSPACE_NAME"
+elif [ -d "/workspaces" ]; then
+    # Get the actual project directory name from /workspaces
+    PROJECT_NAME=$(ls -1 /workspaces | head -n 1)
+    # If still empty, try to get from current directory
+    if [ -z "$PROJECT_NAME" ]; then
+        PROJECT_NAME=$(basename "$(pwd)")
+    fi
+else
+    PROJECT_NAME=$(basename "$(pwd)")
+fi
+
+# Target directory and files (Kilo Code extension stores settings in globalStorage)
 TARGET_DIR="/home/vscode/.vscode-server/data/User/globalStorage/kilocode.kilo-code/settings"
 TARGET_MCP_FILE="$TARGET_DIR/mcp_settings.json"
 TARGET_CUSTOM_MODES_FILE="$TARGET_DIR/custom_modes.yaml"
 
 # Source files in project
-SOURCE_MCP_FILE="/workspaces/quickheadlines/.kilocode/mcp_settings.json"
-SOURCE_CUSTOM_MODES_FILE="/workspaces/quickheadlines/.kilocode/custom_modes.yaml"
+SOURCE_MCP_FILE="/workspaces/$PROJECT_NAME/.kilocode/mcp_settings.json"
+SOURCE_CUSTOM_MODES_FILE="/workspaces/$PROJECT_NAME/.kilocode/custom_modes.yaml"
 
 # Check if source files exist
 echo ""

@@ -9,11 +9,12 @@ services:
     volumes:
       - ..:/workspaces/quickheadlines:cached
       - ${HOME}/.kilocode:/home/vscode/.kilocode:ro
+      - ${AI_WORKFLOW_ROOT}/docs:/home/vscode/.kilocode/rules:ro
       - /Users/kritoke/code/lang-db:/workspaces/lang-db:rw
       - /Users/kritoke/code/thebrain:/workspaces/thebrain:ro
       - kilocode-db-storage:/home/vscode/.kilocode-storage
     ports:
-      - "8080:8080"
+      - "${APP_PORT:-3000}:${APP_PORT:-3000}"
     environment:
       - APP_ENV=development
       - TZ=America/Chicago
