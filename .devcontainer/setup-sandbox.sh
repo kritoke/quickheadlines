@@ -125,38 +125,29 @@ else
 fi
 
 # Install Beads (bd) tool
-echo "📦 Installing Beads (bd) tool..."
+echo "📦 Configuring Beads (bd) tool..."
 
-# Ensure Go is installed and GOPATH is set
-if ! command_exists go; then
-    echo "❌ Go is not installed. Cannot install bd."
-    echo "   Please install Go first or ensure it's in your PATH."
-    exit 1
-fi
-
-# Set up Go environment
-export GOPATH="${GOPATH:-$HOME/go}"
+# bd is now pre-installed in Docker image at /go/bin/bd
+# We just need to set up the environment and symlink
+export GOPATH="${GOPATH:-/go}"
 export PATH="$PATH:$GOPATH/bin"
-
-# Set up pipx environment
-export PIPX_HOME="${PIPX_HOME:-$HOME/.local/pipx}"
-export PIPX_BIN_DIR="${PIPX_BIN_DIR:-$HOME/.local/bin}"
-export PATH="$PATH:$PIPX_BIN_DIR"
 
 # Create bin directory for bd
 mkdir -p bin
 
-# Install bd if not already in PATH
-if ! command_exists bd; then
-    echo "Installing bd from GitHub..."
-    if go install github.com/steveyegge/beads/cmd/bd@latest; then
-        echo "✅ bd installed successfully"
+# Check if bd is already installed (pre-installed in Docker image)
+if command_exists bd; then
+    echo "✅ bd already installed: $(bd --version 2>/dev/null || echo "Unknown version")"
+else
+    echo "⚠️  bd not found in PATH, checking /go/bin..."
+    if [ -f "$GOPATH/bin/bd" ]; then
+        export PATH="$PATH:$GOPATH/bin"
+        echo "✅ bd found at $GOPATH/bin/bd: $(bd --version 2>/dev/null || echo "Unknown version")"
     else
-        echo "❌ Failed to install bd"
+        echo "❌ bd executable not found. Please rebuild the Docker image."
+        echo "   Expected location: $GOPATH/bin/bd"
         exit 1
     fi
-else
-    echo "✅ bd already installed: $(bd --version 2>/dev/null || echo "Unknown version")"
 fi
 
 # Verify bd is accessible and get its path
@@ -164,17 +155,14 @@ BD_PATH=""
 if command_exists bd; then
     BD_PATH=$(which bd)
     echo "✅ bd found at: $BD_PATH"
+elif [ -f "$GOPATH/bin/bd" ]; then
+    BD_PATH="$GOPATH/bin/bd"
+    echo "✅ bd found at: $BD_PATH"
 else
-    # Check if bd exists in GOPATH/bin
-    if [ -f "$GOPATH/bin/bd" ]; then
-        BD_PATH="$GOPATH/bin/bd"
-        echo "✅ bd found at: $BD_PATH"
-    else
-        echo "❌ bd executable not found in PATH or GOPATH/bin"
-        echo "   GOPATH: $GOPATH"
-        echo "   PATH: $PATH"
-        exit 1
-    fi
+    echo "❌ bd executable not found in PATH or $GOPATH/bin"
+    echo "   GOPATH: $GOPATH"
+    echo "   PATH: $PATH"
+    exit 1
 fi
 
 # Symlink bd to project bin directory
@@ -228,6 +216,7 @@ echo "🔍 Verifying Elm installation..."
 if ! command_exists elm; then
     echo "❌ Elm compiler not found, installing via npm..."
     npm install -g elm
+    echo "✅ Elm installed successfully: $(elm --version)"
 fi
 echo "✅ Elm version: $(elm --version)"
 
@@ -285,50 +274,95 @@ else
     echo "⚠️  Generic rules not found at /home/vscode/.kilocode/rules/generic"
 fi
 
-# Copy skills from mounted docs directory
-if [ -d "/home/vscode/.kilocode/rules/skills" ]; then
-    echo "📚 Copying skills from mounted docs..."
-    cp -r /home/vscode/.kilocode/rules/skills/* /home/vscode/.kilocode/skills/
-    echo "✅ Skills copied to /home/vscode/.kilocode/skills"
+# Verify skills directory exists (created by setup-skills.sh)
+if [ -d "/home/vscode/.kilocode/skills" ]; then
+    echo "✅ Skills directory exists: /home/vscode/.kilocode/skills"
 else
-    echo "⚠️  Skills not found at /home/vscode/.kilocode/rules/skills"
+    echo "⚠️  Skills directory not found: /home/vscode/.kilocode/skills"
+    echo "   Running setup-skills.sh to create it..."
+    bash /workspaces/$PROJECT_NAME/.devcontainer/setup-skills.sh
 fi
 
-# Copy memory_bank from mounted docs directory
-if [ -d "/home/vscode/.kilocode/rules/memory_bank" ]; then
-    echo "📚 Copying memory_bank from mounted docs..."
-    cp -r /home/vscode/.kilocode/rules/memory_bank/* /home/vscode/.kilocode/memory_bank/
-    echo "✅ Memory bank copied to /home/vscode/.kilocode/memory_bank"
+# Verify memory_bank directory exists (mounted directly)
+if [ -d "/home/vscode/.kilocode/memory_bank" ]; then
+    echo "✅ Memory bank directory exists: /home/vscode/.kilocode/memory_bank"
 else
-    echo "⚠️  Memory bank not found at /home/vscode/.kilocode/rules/memory_bank"
+    echo "⚠️  Memory bank directory not found: /home/vscode/.kilocode/memory_bank"
+    echo "   Check if devcontainer mount is configured correctly"
 fi
 
-# Copy custom modes and settings if available
-if [ -d "/workspaces/$PROJECT_NAME/.kilocode/rules/backups/kilo" ]; then
-    cp -r /workspaces/$PROJECT_NAME/.kilocode/rules/backups/kilo/* /home/vscode/.kilocode/
-    echo "✅ Kilo Code custom modes copied"
+# Create symlinks for custom modes and settings (like bootstrap script)
+echo "🔧 Setting up Kilo Code symlinks..."
+mkdir -p /home/vscode/.kilocode
+
+# Change to project directory to create relative symlinks
+cd /workspaces/$PROJECT_NAME
+
+# Create symlinks for custom_modes.yaml and mcp_settings.json
+# These symlinks point to the backup files in rules/backups/kilo/
+if [ -f ".kilocode/rules/backups/kilo/custom_modes.yaml" ]; then
+    rm -f .kilocode/custom_modes.yaml
+    ln -sf "rules/backups/kilo/custom_modes.yaml" .kilocode/custom_modes.yaml
+    echo "✅ Kilo Code custom_modes.yaml symlinked"
+else
+    echo "⚠️  custom_modes.yaml not found in .kilocode/rules/backups/kilo/"
 fi
 
-# Setup MCP settings for Kilo Code extension
-echo "🔧 Setting up MCP settings for Kilo Code extension..."
-MCP_TARGET_DIR="/home/vscode/.kilocode"
-MCP_SOURCE_FILE="/workspaces/$PROJECT_NAME/.kilocode/mcp_settings.json"
-CUSTOM_MODES_SOURCE_FILE="/workspaces/$PROJECT_NAME/.kilocode/custom_modes.yaml"
-
-if [ -f "$MCP_SOURCE_FILE" ]; then
-    mkdir -p "$MCP_TARGET_DIR"
-    cp "$MCP_SOURCE_FILE" "$MCP_TARGET_DIR/mcp_settings.json"
-    echo "✅ MCP settings copied to $MCP_TARGET_DIR/mcp_settings.json"
+if [ -f ".kilocode/rules/backups/kilo/mcp_settings.json" ]; then
+    rm -f .kilocode/mcp_settings.json
+    ln -sf "rules/backups/kilo/mcp_settings.json" .kilocode/mcp_settings.json
+    echo "✅ Kilo Code mcp_settings.json symlinked"
 else
-    echo "⚠️  MCP settings source file not found: $MCP_SOURCE_FILE"
+    echo "⚠️  mcp_settings.json not found in .kilocode/rules/backups/kilo/"
 fi
 
-if [ -f "$CUSTOM_MODES_SOURCE_FILE" ]; then
-    mkdir -p "$MCP_TARGET_DIR"
-    cp "$CUSTOM_MODES_SOURCE_FILE" "$MCP_TARGET_DIR/custom_modes.yaml"
-    echo "✅ Custom modes copied to $MCP_TARGET_DIR/custom_modes.yaml"
+# Also create symlinks in /home/vscode/.kilocode/ (mounted directory)
+cd /home/vscode
+if [ -f ".kilocode/rules/backups/kilo/custom_modes.yaml" ]; then
+    rm -f .kilocode/custom_modes.yaml 2>/dev/null || true
+    ln -sf "rules/backups/kilo/custom_modes.yaml" .kilocode/custom_modes.yaml
+    echo "✅ Kilo Code custom_modes.yaml symlinked in /home/vscode"
 else
-    echo "⚠️  Custom modes source file not found: $CUSTOM_MODES_SOURCE_FILE"
+    echo "⚠️  custom_modes.yaml not found in mounted directory"
+fi
+
+if [ -f ".kilocode/rules/backups/kilo/mcp_settings.json" ]; then
+    rm -f .kilocode/mcp_settings.json 2>/dev/null || true
+    ln -sf "rules/backups/kilo/mcp_settings.json" .kilocode/mcp_settings.json
+    echo "✅ Kilo Code mcp_settings.json symlinked in /home/vscode"
+else
+    echo "⚠️  mcp_settings.json not found in mounted directory"
+fi
+
+# Return to project directory
+cd /workspaces/$PROJECT_NAME
+
+# LucasDB Health Check
+LUCASDB_LOCATION="${LUCASDB_LOCATION:-/workspaces/lang-db}"
+echo "🔍 Running LucasDB health check..."
+
+if [ -d "$LUCASDB_LOCATION" ]; then
+    echo "✅ LucasDB directory exists: $LUCASDB_LOCATION"
+    
+    # Check if database files are accessible
+    DB_FILE_COUNT=$(find "$LUCASDB_LOCATION" -name "*.db" -o -name "*.luc" -o -name "*lucas*" 2>/dev/null | wc -l | tr -d ' ')
+    if [ "$DB_FILE_COUNT" -gt 0 ]; then
+        echo "✅ LucasDB database files found: $DB_FILE_COUNT files"
+    else
+        echo "⚠️  No LucasDB database files found in $LUCASDB_LOCATION"
+        echo "   (This may be normal for a fresh setup)"
+    fi
+    
+    # Verify directory is readable
+    if [ -r "$LUCASDB_LOCATION" ]; then
+        echo "✅ LucasDB directory is readable"
+    else
+        echo "⚠️  LucasDB directory is not readable: $LUCASDB_LOCATION"
+    fi
+else
+    echo "⚠️  LucasDB directory not found: $LUCASDB_LOCATION"
+    echo "   The Kilo Code index will use default location"
+    echo "   To fix: Ensure /workspaces/lang-db is mounted or set LUCASDB_LOCATION env var"
 fi
 
 # Configure Git (for container environment)
@@ -381,7 +415,10 @@ echo "📝 Setting up environment variables..."
 cat > .env << 'EOF'
 APP_ENV=development
 TZ=UTC
+BEADS_OFFLINE=1
 EOF
+
+export BEADS_OFFLINE=1
 
 # Set execute permissions on scripts
 echo "⚡ Setting script permissions..."

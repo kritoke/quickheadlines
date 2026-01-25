@@ -1,16 +1,28 @@
 {
-  "name": "Dev Sandbox (crystal-elm): quickheadlines",
+  "name": "Dev Sandbox (crystal,elm,node): quickheadlines",
   "dockerComposeFile": "docker-compose.yml",
   "service": "app",
   "workspaceFolder": "/workspaces/quickheadlines",
+  "mounts": [ { "source": "/Users/kritoke/code/projects/crystal_lsp", "target": "/opt/crystal-lsp", "type": "bind", "isReadOnly": true } , 
+  { "source": "/Users/kritoke/code/thebrain", "target": "/workspaces/thebrain", "type": "bind" },
+  { "source": "/Users/kritoke/code/lang-db", "target": "/workspaces/lang-db", "type": "bind" },
+  { "source": "/Users/kritoke/.kilocode", "target": "/home/vscode/.kilocode", "type": "bind" },
+  { "source": "/Users/kritoke/code/projects/aiworkflow/docs", "target": "/home/vscode/.kilocode/rules", "type": "bind", "isReadOnly": true },
+  { "source": "/Users/kritoke/code/projects/aiworkflow/docs/memory_bank", "target": "/home/vscode/.kilocode/memory_bank", "type": "bind", "isReadOnly": true },
+  { "source": "/Users/kritoke/code/projects/aiworkflow/backups", "target": "/home/vscode/.kilocode/backups", "type": "bind", "isReadOnly": true }
+],
   "customizations": {
     "vscode": {
       "extensions": [
         "kilocode.kilo-code",
         "planet57.vscode-beads",
+        
         "crystal-lang-tools.crystal-lang",
-        "elmTooling.elm-ls-vscode",
+        "veelenga.crystal-ameba",
+        "elmtooling.elm-ls-vscode",
         "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode",
+        "redhat.vscode-yaml",
         "editorconfig.editorconfig",
         "streetsidesoftware.code-spell-checker"
       ],
@@ -19,16 +31,26 @@
         "beads.daemonMode": "auto",
         "beads.autoStartDaemon": false,
         "beads.noDaemonFlagPath": "/workspaces/quickheadlines/.beads/no-daemon",
+        "kilocode.index.lucasDbLocation": "/workspaces/lang-db",
         "kilocode.configPath": "/home/vscode/.kilocode",
         "kilocode.customModesPath": "/home/vscode/.kilocode/custom_modes.yaml",
         "kilocode.mcpSettingsPath": "/home/vscode/.kilocode/mcp_settings.json",
         "kilocode.rulesPath": "/home/vscode/.kilocode/rules",
         "kilocode.skillsPath": "/home/vscode/.kilocode/skills",
         "kilocode.memoryBankPath": "/home/vscode/.kilocode/memory_bank",
+        "kilocode.codebaseSearchPath": "/workspaces",
+        "kilocode.codebaseSearchEnabled": true,
+        "kilocode.codebaseSearchExcludePaths": ["/workspaces/lang-db"],
         "kilocode.customStoragePath": "/home/vscode/.kilocode-storage",
+        
         "crystal-lang.compiler": "crystal",
-        "crystal-lang.lsp.path": "/usr/bin/crystalline",
-        "elm.compiler": "/usr/local/bin/elm",
+        "crystal-lang.lsp.path": "/opt/crystal-lsp/bin/crystal_v2_lsp",
+        "elm.compiler": "/home/vscode/.npm-global/bin/elm",
+        "elmLS.elmPath": "/home/vscode/.npm-global/bin/elm",
+        "eslint.validate": ["javascript",
+        "typescript",
+        "javascriptreact",
+        "typescriptreact"],
         "editor.formatOnSave": true
       }
     }
@@ -37,14 +59,18 @@
   "features": {
     "ghcr.io/devcontainers/features/git:1": {},
     "ghcr.io/devcontainers/features/node:1": {},
-    "ghcr.io/devcontainers/features/docker-in-docker:2": {}
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {
+      "version": "latest",
+      "dockerDockerfilePath": "Dockerfile",
+      "dockerComposeFilePath": "docker-compose.yml"
+    }
   },
-  "forwardPorts": [
-    3000,
-    1234,
-    3001
-  ],
-  "postCreateCommand": "bash .devcontainer/setup-sandbox.sh && bash .devcontainer/setup-mcp-settings.sh",
+  "remoteEnv": {
+    "PATH": "/workspaces/quickheadlines/bin:${containerEnv:PATH}",
+    "TZ": "${containerEnv:TZ}"
+  },
+  "postCreateCommand": "bash .devcontainer/setup-sandbox.sh && bash .devcontainer/setup-mcp-settings.sh && bash .devcontainer/setup-skills.sh",
+  "forwardPorts": [3000, 1234, 3001],
   "portsAttributes": {
     "3000": {
       "label": "Beads Dashboard",
