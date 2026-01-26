@@ -20,17 +20,18 @@
       {
         devShells.default = pkgs.mkShell {
           buildInputs = with pkgs; [
+            # General depedencies
+            git
+            
             # 💎 Crystal Language & Web Dependencies
             crystal
             shards
-            crystal-analyzer
             pkg-config
             openssl
             sqlite
             libxml2
             libyaml
             libevent
-            libmagic
             zlib
             protobuf
 
@@ -83,6 +84,23 @@
             echo "💎 Crystal: $(crystal --version | head -n1)"
             echo "🛠️ KiloCode Rules: $KILOCODE_RULES_PATH"
             echo "📂 Linked Project: $LANG_DB_PATH"
+
+            # 1. Ensure the directory for the socket exists
+            mkdir -p /workspaces/quickheadlines/.beads
+
+            # 2. Check if the daemon is running; if not, start it
+            if ! bd daemon status >/dev/null 2>&1; then
+              echo "🤖 Starting Beads daemon..."
+              bd daemon start
+              
+              # Optional: wait a moment for the socket to initialize
+              sleep 1
+            fi
+
+            # 3. Set the environment variable for tools that look for it
+            export BD_SOCKET="/workspaces/quickheadlines/.beads/bd.sock"
+            
+            echo "✅ Beads environment active"
           '';
         };
       });

@@ -94,3 +94,6 @@ node_modules/
 .amazonq/
 .github/copilot/
 .kittify/.dashboard
+
+# Nix Related
+.direnv/
