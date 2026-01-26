@@ -80,6 +80,11 @@
               go install github.com/steveyegge/beads/cmd/bd@latest
             fi
 
+            if ! command -v spec-kitty &> /dev/null; then
+              echo "Installing spec-kitty-cli..."
+              pipx install spec-kitty-cli
+            fi
+
             echo "🚀 Environment Loaded Successfully!"
             echo "💎 Crystal: $(crystal --version | head -n1)"
             echo "🛠️ KiloCode Rules: $KILOCODE_RULES_PATH"
