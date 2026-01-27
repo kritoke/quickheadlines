@@ -1,6 +1,8 @@
 ---
 description: "WP01: Athena Migration & Cluster DTO"
-lane: "planned"
+lane: "doing"
+agent: "worker-coder"
+shell_pid: "86843"
 ---
 
 # WP01: Athena Migration & Cluster DTO
@@ -55,3 +57,7 @@ Isolate the `MinHash` and SQLite fetch logic into a standalone `ClusterService`.
 ### Step 5: Update application.cr
 - Register NewsController with Athena
 - Ensure proper route mounting
+
+## Activity Log
+
+- 2026-01-27T11:00:34Z – worker-coder – shell_pid=86843 – lane=doing – Started implementation via workflow command
