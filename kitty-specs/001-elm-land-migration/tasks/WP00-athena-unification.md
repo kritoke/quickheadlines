@@ -1,6 +1,6 @@
 ---
 description: "WP00: Athena Unification & Ghost Logic Audit"
-lane: "doing"
+lane: "for_review"
 agent: "worker-coder"
 ---
 
@@ -50,3 +50,7 @@ The application boots strictly via the Athena entry point, and all functional ro
 - Identify files in `views/` that are no longer needed
 - Identify files in `public/` that are for old backend only
 - Delete or archive unused files
+
+## Activity Log
+
+- 2026-01-27T10:52:50Z – worker-coder – lane=for_review – Ready for review: Athena unification complete, DatabaseService created with DI
