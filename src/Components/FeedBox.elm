@@ -2,16 +2,14 @@ module Components.FeedBox exposing (view)
 
 import Components.FeedBody as FeedBody
 import Components.FeedHeader as FeedHeader
-import Element exposing (..)
-import Element.Background as Background
-import Element.Border as Border
-import Element.Font as Font
+import Html exposing (Html)
+import Html.Attributes
 import Theme exposing (cardColor, getThemeColors)
 import Time exposing (Posix)
 import Types exposing (Feed, Theme)
 
 
-view : Int -> Posix -> Theme -> Feed -> Element msg
+view : Int -> Posix -> Theme -> Feed -> Html msg
 view windowWidth now theme feed =
     let
         boxHeight =
@@ -20,13 +18,16 @@ view windowWidth now theme feed =
         colors =
             getThemeColors theme
     in
-    column
-        [ width fill
-        , height boxHeight
-        , Border.rounded 12
-        , Background.color (cardColor theme)
-        , clip
-        , pointer
+    Html.div
+        [ Html.Attributes.class "feed-box"
+        , Html.Attributes.style "height" boxHeight
+        , Html.Attributes.style "border-radius" "0.75rem"
+        , Html.Attributes.style "background-color" (cardColor theme)
+        , Html.Attributes.style "overflow" "hidden"
+        , Html.Attributes.style "display" "flex"
+        , Html.Attributes.style "flex-direction" "column"
+        , Html.Attributes.style "align-items" "stretch"
+        , Html.Attributes.style "width" "100%"
         ]
         [ FeedHeader.view theme feed
         , FeedBody.view now feed.items
@@ -34,39 +35,37 @@ view windowWidth now theme feed =
             loadMoreButton feed.url feed.totalItemCount
 
           else
-            Element.none
+            Html.text ""
         ]
 
 
-feedBoxHeight : Int -> Element.Length
+feedBoxHeight : Int -> String
 feedBoxHeight windowWidth =
     if windowWidth >= 1024 then
-        px 384
+        "24rem"
 
     else if windowWidth >= 768 then
-        px 352
+        "22rem"
 
     else
-        shrink
+        "auto"
 
 
-loadMoreButton : String -> Int -> Element msg
+loadMoreButton : String -> Int -> Html msg
 loadMoreButton url count =
-    el
-        [ centerX
-        , padding 16
+    Html.div
+        [ Html.Attributes.style "display" "flex"
+        , Html.Attributes.style "justify-content" "center"
+        , Html.Attributes.style "padding" "1rem"
         ]
-        (el
-            [ Font.size 12
-            , Font.medium
-            , Font.color (rgb255 100 116 139)
-            , Background.color (rgb255 241 245 249)
-            , Border.rounded 6
-            , pointer
-            , mouseOver
-                [ Background.color (rgb255 226 232 240)
-                , Font.color (rgb255 30 41 59)
-                ]
+        [ Html.div
+            [ Html.Attributes.style "font-size" "0.75rem"
+            , Html.Attributes.style "font-weight" "500"
+            , Html.Attributes.style "color" "#64748b"
+            , Html.Attributes.style "background-color" "#f1f5f9"
+            , Html.Attributes.style "border-radius" "0.375rem"
+            , Html.Attributes.style "padding" "0.5rem 0.75rem"
+            , Html.Attributes.style "cursor" "pointer"
             ]
-            (text "Load More")
-        )
+            [ Html.text "Load More" ]
+        ]

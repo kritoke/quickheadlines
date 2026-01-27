@@ -1,73 +1,73 @@
 module Components.Header exposing (view)
 
-import Element exposing (..)
-import Element.Background as Background
-import Element.Border as Border
-import Element.Events as Events
-import Element.Font as Font
+import Html exposing (Html)
 import Html.Attributes
-import Theme exposing (ThemeColors, borderColor, getThemeColors, textColor)
+import Html.Events
+import Theme exposing (textColor)
 import Time exposing (Posix, Zone)
 import Types exposing (Theme(..))
 
 
-view : Theme -> Maybe Posix -> Zone -> msg -> Element msg
+view : Theme -> Maybe Posix -> Zone -> msg -> Html msg
 view theme lastUpdated timeZone onToggleMsg =
-    let
-        colors =
-            getThemeColors theme
-    in
-    row
-        [ width fill
-        , spacing 8
-        , paddingXY 0 12
-        , Border.widthEach { bottom = 1, top = 0, left = 0, right = 0 }
-        , Border.color colors.border
+    Html.div
+        [ Html.Attributes.style "display" "flex"
+        , Html.Attributes.style "width" "100%"
+        , Html.Attributes.style "gap" "0.5rem"
+        , Html.Attributes.style "padding-top" "0.75rem"
+        , Html.Attributes.style "padding-bottom" "0.75rem"
+        , Html.Attributes.style "border-bottom-width" "1px"
+        , Html.Attributes.style "border-top-width" "0px"
+        , Html.Attributes.style "border-left-width" "0px"
+        , Html.Attributes.style "border-right-width" "0px"
+        , Html.Attributes.style "border-style" "solid"
+        , Html.Attributes.style "border-color" (textColor theme)
         ]
         [ logoSection theme
         , rightSection theme lastUpdated timeZone onToggleMsg
         ]
 
 
-logoSection : Theme -> Element msg
+logoSection : Theme -> Html msg
 logoSection theme =
-    row [ spacing 12 ]
+    Html.div
+        [ Html.Attributes.style "display" "flex"
+        , Html.Attributes.style "gap" "0.75rem"
+        ]
         [ logoImage
-        , el
-            [ Font.size 24
-            , Font.bold
-            , Font.color (textColor theme)
+        , Html.span
+            [ Html.Attributes.style "font-size" "1.5rem"
+            , Html.Attributes.style "font-weight" "700"
+            , Html.Attributes.style "color" (textColor theme)
             ]
-            (text "QuickHeadlines")
+            [ Html.text "QuickHeadlines" ]
         ]
 
 
-logoImage : Element msg
+logoImage : Html msg
 logoImage =
-    link []
-        { url = "/"
-        , label =
-            el
-                [ width (px 32)
-                , height (px 32)
-                ]
-                (image [ width fill, height fill ]
-                    { src = "/favicon.png"
-                    , description = "QuickHeadlines Logo"
-                    }
-                )
-        }
+    Html.a
+        [ Html.Attributes.href "/" ]
+        [ Html.img
+            [ Html.Attributes.src "/favicon.png"
+            , Html.Attributes.alt "QuickHeadlines Logo"
+            , Html.Attributes.style "width" "32px"
+            , Html.Attributes.style "height" "32px"
+            ]
+            []
+        ]
 
 
-rightSection : Theme -> Maybe Posix -> Zone -> msg -> Element msg
+rightSection : Theme -> Maybe Posix -> Zone -> msg -> Html msg
 rightSection theme lastUpdated timeZone onToggleMsg =
-    row
-        [ spacing 3
-        , paddingXY 12 8
-        , Background.color (rgb255 241 245 249)
-        , Border.rounded 9999
-        , Border.width 1
-        , Border.color (rgb255 226 232 240)
+    Html.div
+        [ Html.Attributes.style "display" "flex"
+        , Html.Attributes.style "gap" "0.25rem"
+        , Html.Attributes.style "padding" "0.5rem 0.75rem"
+        , Html.Attributes.style "background-color" "#f1f5f9"
+        , Html.Attributes.style "border-radius" "9999px"
+        , Html.Attributes.style "border-width" "1px"
+        , Html.Attributes.style "border-color" "#e2e8f0"
         ]
         [ lastUpdatedTime theme lastUpdated timeZone
         , timelineLink theme
@@ -75,19 +75,19 @@ rightSection theme lastUpdated timeZone onToggleMsg =
         ]
 
 
-lastUpdatedTime : Theme -> Maybe Posix -> Zone -> Element msg
+lastUpdatedTime : Theme -> Maybe Posix -> Zone -> Html msg
 lastUpdatedTime theme lastUpdated timeZone =
     case lastUpdated of
         Just time ->
-            el
-                [ Font.size 14
-                , Font.medium
-                , Font.color (textColor theme)
+            Html.span
+                [ Html.Attributes.style "font-size" "0.875rem"
+                , Html.Attributes.style "font-weight" "500"
+                , Html.Attributes.style "color" (textColor theme)
                 ]
-                (text (formatTime time timeZone))
+                [ Html.text (formatTime time timeZone) ]
 
         Nothing ->
-            Element.none
+            Html.text ""
 
 
 formatTime : Posix -> Zone -> String
@@ -168,35 +168,38 @@ monthToString month =
             "December"
 
 
-timelineLink : Theme -> Element msg
+timelineLink : Theme -> Html msg
 timelineLink theme =
-    link
-        [ paddingXY 6 6
-        , Border.rounded 6
-        , mouseOver [ Background.color (rgb255 226 232 240) ]
-        , pointer
+    Html.a
+        [ Html.Attributes.href "/timeline"
+        , Html.Attributes.style "padding" "0.375rem"
+        , Html.Attributes.style "border-radius" "0.375rem"
+        , Html.Attributes.style "cursor" "pointer"
+        , Html.Attributes.style "display" "flex"
+        , Html.Attributes.style "align-items" "center"
+        , Html.Attributes.style "justify-content" "center"
         ]
-        { url = "/timeline"
-        , label =
-            el
-                [ width (px 20)
-                , height (px 20)
-                , Font.color (textColor theme)
-                ]
-                (text "🕐")
-        }
+        [ Html.span
+            [ Html.Attributes.style "width" "1.25rem"
+            , Html.Attributes.style "height" "1.25rem"
+            , Html.Attributes.style "color" (textColor theme)
+            ]
+            [ Html.text "🕐" ]
+        ]
 
 
-themeToggle : Theme -> msg -> Element msg
+themeToggle : Theme -> msg -> Html msg
 themeToggle theme onToggleMsg =
-    el
-        [ paddingXY 6 6
-        , Border.rounded 6
-        , mouseOver [ Background.color (rgb255 226 232 240) ]
-        , pointer
-        , Events.onClick onToggleMsg
+    Html.div
+        [ Html.Attributes.style "padding" "0.375rem"
+        , Html.Attributes.style "border-radius" "0.375rem"
+        , Html.Attributes.style "cursor" "pointer"
+        , Html.Attributes.style "display" "flex"
+        , Html.Attributes.style "align-items" "center"
+        , Html.Attributes.style "justify-content" "center"
+        , Html.Events.onClick onToggleMsg
         ]
-        (text
+        [ Html.text
             (case theme of
                 Light ->
                     "🌙"
@@ -204,4 +207,4 @@ themeToggle theme onToggleMsg =
                 Dark ->
                     "☀️"
             )
-        )
+        ]

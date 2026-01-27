@@ -5,6 +5,12 @@ lane: "planned"
 
 # WP01: Athena Migration & Cluster DTO
 
+## Constitutional Requirements
+> **Reference:** QuickHeadlines Constitution v1.1.0
+> - **Environment:** All commands MUST use `nix develop --command <command>`
+> - **DTOs:** Use strictly typed DTOs with `JSON::Serializable` for all API responses
+> - **Services:** Database logic must be encapsulated in Athena Services, not global variables
+
 ## Goal
 Move clustering logic from `src/quickheadlines.cr` into a structured API with Athena controllers and DTOs.
 
@@ -29,7 +35,7 @@ Isolate the `MinHash` and SQLite fetch logic into a standalone `ClusterService`.
 
 ### Step 1: Add Athena to shard.yml
 - Add athena dependency to `shard.yml`
-- Run `shards install`
+- Run `nix develop --command shards install`
 
 ### Step 2: Create NewsClusterDTO
 - Create `src/dtos/news_cluster_dto.cr`

@@ -1,63 +1,66 @@
 module Components.FeedBody exposing (view)
 
-import Element exposing (..)
-import Element.Border as Border
-import Element.Font as Font
+import Html exposing (Html)
 import Html.Attributes
 import Time exposing (Posix)
 import Types exposing (FeedItem)
 
 
-view : Posix -> List FeedItem -> Element msg
+view : Posix -> List FeedItem -> Html msg
 view now items =
     if List.isEmpty items then
-        el [ padding 20, Font.color (rgb255 148 163 184) ] (text "No items available")
+        Html.div
+            [ Html.Attributes.style "padding" "1.25rem"
+            , Html.Attributes.style "color" "#94a3b8"
+            ]
+            [ Html.text "No items available" ]
 
     else
-        column
-            [ width fill
-            , height fill
-            , spacing 0
-            , paddingXY 12 8
+        Html.div
+            [ Html.Attributes.class "feed-body"
+            , Html.Attributes.style "padding" "0.75rem"
+            , Html.Attributes.style "flex" "1 1 auto"
+            , Html.Attributes.style "min-height" "0"
+            , Html.Attributes.style "width" "100%"
+            , Html.Attributes.style "min-width" "0"
             ]
             (List.map (feedItemView now) items)
 
 
-feedItemView : Posix -> FeedItem -> Element msg
+feedItemView : Posix -> FeedItem -> Html msg
 feedItemView now item =
-    row
-        [ width fill
-        , spacing 8
-        , paddingXY 0 6
-        , htmlAttribute (Html.Attributes.style "list-style" "none")
+    Html.div
+        [ Html.Attributes.style "display" "flex"
+        , Html.Attributes.style "width" "100%"
+        , Html.Attributes.style "gap" "0.5rem"
+        , Html.Attributes.style "padding-top" "0.375rem"
+        , Html.Attributes.style "padding-bottom" "0.375rem"
+        , Html.Attributes.style "list-style" "none"
         ]
-        [ el
-            [ Font.size 14
-            , Font.color (rgb255 148 163 184)
-            , width (px 6)
-            , height (px 6)
-            , Border.width 2
-            , Border.color (rgb255 226 232 240)
-            , Border.rounded 3
-            , centerY
+        [ Html.div
+            [ Html.Attributes.style "width" "6px"
+            , Html.Attributes.style "height" "6px"
+            , Html.Attributes.style "border-width" "2px"
+            , Html.Attributes.style "border-color" "#e2e8f0"
+            , Html.Attributes.style "border-radius" "3px"
+            , Html.Attributes.style "flex-shrink" "0"
+            , Html.Attributes.style "align-self" "center"
             ]
-            Element.none
-        , link
-            [ width fill
-            , Font.size 14
-            , Font.color (rgb255 51 65 85)
-            , htmlAttribute (Html.Attributes.style "word-wrap" "break-word")
-            , htmlAttribute (Html.Attributes.style "line-height" "1.4")
-            , mouseOver [ Font.color (rgb255 37 99 235) ]
+            []
+        , Html.a
+            [ Html.Attributes.href item.link
+            , Html.Attributes.style "width" "100%"
+            , Html.Attributes.style "font-size" "0.875rem"
+            , Html.Attributes.style "color" "#334155"
+            , Html.Attributes.style "word-wrap" "break-word"
+            , Html.Attributes.style "line-height" "1.4"
             ]
-            { url = item.link
-            , label = text item.title
-            }
+            [ Html.text item.title ]
         , relativeTime now item.pubDate
         ]
 
 
-relativeTime : Posix -> Maybe Posix -> Element msg
+relativeTime : Posix -> Maybe Posix -> Html msg
 relativeTime now pubDate =
     case pubDate of
         Just timestamp ->
@@ -96,13 +99,13 @@ relativeTime now pubDate =
                     else
                         "now"
             in
-            el
-                [ Font.size 14
-                , Font.color (rgb255 148 163 184)
-                , Font.light
-                , htmlAttribute (Html.Attributes.style "white-space" "nowrap")
+            Html.span
+                [ Html.Attributes.style "font-size" "0.875rem"
+                , Html.Attributes.style "color" "#94a3b8"
+                , Html.Attributes.style "font-weight" "300"
+                , Html.Attributes.style "white-space" "nowrap"
                 ]
-                (text relativeStr)
+                [ Html.text relativeStr ]
 
         Nothing ->
-            Element.none
+            Html.text ""

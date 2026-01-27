@@ -1,89 +1,87 @@
 module Components.FeedHeader exposing (view)
 
-import Element exposing (..)
-import Element.Background as Background
-import Element.Border as Border
-import Element.Font as Font
+import Html exposing (Html)
 import Html.Attributes
 import Theme exposing (feedHeaderColor, feedHeaderTextColor, getThemeColors)
 import Types exposing (Feed, Theme(..))
 
 
-view : Theme -> Feed -> Element msg
+view : Theme -> Feed -> Html msg
 view theme feed =
     let
         colors =
             getThemeColors theme
     in
-    row
-        [ width fill
-        , padding 12
-        , Background.color (feedHeaderColor theme)
-        , Border.rounded 12
-        , spacing 12
+    Html.div
+        [ Html.Attributes.class "feed-header"
+        , Html.Attributes.style "padding" "0.5rem 0.75rem"
+        , Html.Attributes.style "background-color" (feedHeaderColor theme)
+        , Html.Attributes.style "border-radius" "0.75rem"
+        , Html.Attributes.style "margin-bottom" "0.4rem"
+        , Html.Attributes.style "flex" "0 0 auto"
+        , Html.Attributes.style "display" "flex"
+        , Html.Attributes.style "gap" "0.75rem"
+        , Html.Attributes.style "width" "100%"
         ]
         [ faviconView feed.favicon feed.faviconData
         , feedInfo theme feed
         ]
 
 
-faviconView : String -> String -> Element msg
+faviconView : String -> String -> Html msg
 faviconView faviconUrl faviconData =
-    el
-        [ width (px 24)
-        , height (px 24)
+    Html.div
+        [ Html.Attributes.style "width" "24px"
+        , Html.Attributes.style "height" "24px"
+        , Html.Attributes.style "flex-shrink" "0"
         ]
-        (if faviconUrl /= "" then
-            image [ width fill, height fill ]
-                { src = faviconUrl
-                , description = "Feed favicon"
-                }
-
-         else if faviconData /= "" then
-            el
-                [ width fill
-                , height fill
-                , Background.color (rgb255 200 200 200)
-                , Border.rounded 4
+        [ if faviconUrl /= "" then
+            Html.img
+                [ Html.Attributes.src faviconUrl
+                , Html.Attributes.alt "Feed favicon"
+                , Html.Attributes.style "width" "100%"
+                , Html.Attributes.style "height" "100%"
                 ]
-                Element.none
-
-         else
-            el
-                [ width fill
-                , height fill
-                , Background.color (rgb255 200 200 200)
-                , Border.rounded 4
-                ]
-                Element.none
-        )
-
-
-feedInfo : Theme -> Feed -> Element msg
-feedInfo theme feed =
-    column
-        [ width fill
-        , spacing 2
-        ]
-        [ link
-            [ Font.size 16
-            , Font.bold
-            , Font.color (feedHeaderTextColor theme)
-            , htmlAttribute (Html.Attributes.style "word-wrap" "break-word")
-            , htmlAttribute (Html.Attributes.style "line-height" "1.2")
-            , Font.underline
-            ]
-            { url = feed.siteLink
-            , label = text feed.title
-            }
-        , if feed.displayLink /= "" then
-            el
-                [ Font.size 12
-                , Font.color (feedHeaderTextColor theme)
-                , Element.alpha 0.7
-                ]
-                (text feed.displayLink)
+                []
 
           else
-            Element.none
+            Html.div
+                [ Html.Attributes.style "width" "100%"
+                , Html.Attributes.style "height" "100%"
+                , Html.Attributes.style "background-color" "#c8c8c8"
+                , Html.Attributes.style "border-radius" "0.25rem"
+                ]
+                []
+        ]
+
+
+feedInfo : Theme -> Feed -> Html msg
+feedInfo theme feed =
+    Html.div
+        [ Html.Attributes.style "display" "flex"
+        , Html.Attributes.style "flex-direction" "column"
+        , Html.Attributes.style "gap" "0.125rem"
+        , Html.Attributes.style "width" "100%"
+        ]
+        [ Html.a
+            [ Html.Attributes.href feed.siteLink
+            , Html.Attributes.class "feed-title-link"
+            , Html.Attributes.style "font-size" "1.1rem"
+            , Html.Attributes.style "font-weight" "700"
+            , Html.Attributes.style "color" (feedHeaderTextColor theme)
+            , Html.Attributes.style "line-height" "1.2"
+            , Html.Attributes.style "word-wrap" "break-word"
+            , Html.Attributes.style "text-decoration" "underline"
+            ]
+            [ Html.text feed.title ]
+        , if feed.displayLink /= "" then
+            Html.span
+                [ Html.Attributes.style "font-size" "0.75rem"
+                , Html.Attributes.style "color" (feedHeaderTextColor theme)
+                , Html.Attributes.style "opacity" "0.7"
+                ]
+                [ Html.text feed.displayLink ]
+
+          else
+            Html.text ""
         ]

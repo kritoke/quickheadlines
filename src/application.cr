@@ -20,13 +20,12 @@ require "./entities/feed"
 
 require "./services/clustering_service"
 require "./services/heat_map_service"
+require "./services/database_service"
 
 require "./repositories/story_repository"
 require "./repositories/feed_repository"
 require "./repositories/heat_map_repository"
 
-require "./controllers/story_controller"
-require "./controllers/feed_controller"
 require "./controllers/api_controller"
 
 require "./events/story_fetched_event"
@@ -53,6 +52,10 @@ begin
   end
 
   initial_config = config_result.config.as(Config)
+
+  # Initialize database service with dependency injection
+  db_service = DatabaseService.new(initial_config)
+  DatabaseService.instance = db_service
 
   # Load feed cache from disk (creates SQLite connection)
   FeedCache.instance = load_feed_cache(initial_config)

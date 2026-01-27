@@ -1,55 +1,53 @@
 module Components.TabBar exposing (view)
 
-import Element exposing (..)
-import Element.Background as Background
-import Element.Border as Border
-import Element.Events as Events
-import Element.Font as Font
-import Theme exposing (ThemeColors, getThemeColors, tabActiveBgColor, tabActiveTextColor, tabHoverBgColor, tabInactiveColor)
+import Html exposing (Html)
+import Html.Attributes
+import Html.Events
+import Theme exposing (getThemeColors, tabActiveBgColor, tabActiveTextColor, tabHoverBgColor, tabInactiveColor)
 import Types exposing (Tab, Theme(..))
 
 
-view : Theme -> List Tab -> String -> (String -> msg) -> Element msg
+view : Theme -> List Tab -> String -> (String -> msg) -> Html msg
 view theme tabs activeTab onTabClick =
-    row
-        [ width fill
-        , spacing 4
-        , paddingXY 0 4
-        , Border.widthEach { bottom = 1, top = 0, left = 0, right = 0 }
-        , Element.paddingEach { top = 0, right = 0, bottom = 4, left = 0 }
+    Html.div
+        [ Html.Attributes.class "tab-container"
         ]
         (List.map (tabButton theme activeTab onTabClick) tabs)
 
 
-tabButton : Theme -> String -> (String -> msg) -> Tab -> Element msg
+tabButton : Theme -> String -> (String -> msg) -> Tab -> Html msg
 tabButton theme activeTab onTabClick tab =
     let
         isActive =
             tab.name == activeTab
+
+        bgColor =
+            if isActive then
+                tabActiveBgColor theme
+            else
+                "transparent"
+
+        textColor =
+            if isActive then
+                tabActiveTextColor theme
+            else
+                tabInactiveColor theme
+
+        hoverBgColor =
+            if not isActive then
+                tabHoverBgColor theme
+            else
+                "transparent"
     in
-    el
-        [ if isActive then
-            Background.color (tabActiveBgColor theme)
-
-          else
-            Background.color (rgb255 0 0 0)
+    Html.div
+        [ Html.Attributes.class "tab-link"
         , if isActive then
-            Font.color (tabActiveTextColor theme)
-
+            Html.Attributes.class "active"
           else
-            Font.color (tabInactiveColor theme)
-        , Border.rounded 6
-        , paddingXY 8 6
-        , Font.medium
-        , Font.size 14
-        , pointer
-        , Events.onClick (onTabClick tab.name)
-        , mouseOver
-            [ if not isActive then
-                Background.color (tabHoverBgColor theme)
-
-              else
-                Background.color (rgb255 0 0 0)
-            ]
+            Html.Attributes.classList []
+        , Html.Attributes.style "background-color" bgColor
+        , Html.Attributes.style "color" textColor
+        , Html.Events.onClick (onTabClick tab.name)
+        , Html.Attributes.style "cursor" "pointer"
         ]
-        (text tab.name)
+        [ Html.text tab.name ]

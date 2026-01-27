@@ -1,6 +1,10 @@
 require "athena"
 
 class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
+  @db_service : DatabaseService
+
+  def initialize(@db_service : DatabaseService)
+  end
   # GET /api/feeds - Get feeds for a specific tab
   @[ARTA::Get(path: "/api/feeds")]
   def feeds(request : ATH::Request) : FeedsPageResponse

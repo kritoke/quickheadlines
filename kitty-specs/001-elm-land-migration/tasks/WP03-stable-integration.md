@@ -5,6 +5,10 @@ lane: "planned"
 
 # WP03: Stable Integration (The Clustered List)
 
+## Constitutional Requirements
+> **Reference:** QuickHeadlines Constitution v1.1.0
+> - **Styling:** ALL Elm Land UI MUST use `elm-ui` (`mdgriffith/elm-ui`). **Strictly Forbidden:** `Html`, `Html.Attributes`, `class` tags, and Tailwind/CSS frameworks.
+
 ## Goal
 Wire the existing SQLite data into the new Elm frontend and display clusters in a list.
 
@@ -27,28 +31,28 @@ The homepage displays your actual SQLite clusters in a stable Elm-ui list.
 
 ### Step 1: Create Api/News.elm
 - Create `ui/src/Api/News.elm`
-- Import Json.Decode
+- Import `Json.Decode`
 - Create decoder matching NewsClusterDTO structure:
   - id: Int
   - title: String
   - timestamp: String (ISO 8601 format)
   - source_count: Int
-- Create fetchClusters function using Http.get
+- Create fetchClusters function using `Http.get`
 
 ### Step 2: Update Home_ page
 - Modify `ui/src/Pages/Home_.elm`
-- Import Api.News
+- Import `Api.News`
 - Add clusters to the Page.Model
 - Add fetchClusters Msg variant
-- Call Api.News.fetchClusters in update
+- Call `Api.News.fetchClusters` in update
 
 ### Step 3: Render cluster list
-- Use Element.column to render vertical list
-- For each cluster, display title
-- Use Theme.metadataStyle for:
+- **Use `Element.column`** to render vertical list - NO `Html.div`, NO `Html.li`
+- For each cluster, display title using `Element.text`
+- Use `Theme.metadataStyle` for:
   - Source count (e.g., "3 sources")
   - Time ago (e.g., "2 hours ago")
-- Handle loading and error states
+- Handle loading and error states using `Element` primitives
 
 ### Step 4: Connect to Shared model
 - Update Shared.Model to include clusters
