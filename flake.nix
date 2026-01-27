@@ -1,5 +1,5 @@
 {
-  description = "Full Crystal & Beads Dev Environment with KiloCode Integration";
+  description = "Full Crystal 1.19.1 & Beads Dev Environment with KiloCode Integration";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
@@ -14,17 +14,30 @@
           config.allowUnfree = true;
         };
         
-        # User Home Directory (automatically detects based on your system)
         homeDir = builtins.getEnv "HOME";
+
+        # 💎 Official Crystal 1.19.1 Binary (Statically Linked for ARM64)
+        crystal_1_19 = pkgs.stdenv.mkDerivation rec {
+          pname = "crystal";
+          version = "1.19.1";
+
+          src = pkgs.fetchurl {
+            url = "https://github.com/crystal-lang/crystal/releases/download/${version}/crystal-${version}-1-linux-aarch64.tar.gz";
+            sha256 = "sha256-5L/JfRj6HAVd+Umy2MSunk6P5RfaLepTbP85kuw096M="; 
+          };
+
+          # We don't need patchelf for static binaries!
+          installPhase = ''
+            mkdir -p $out
+            cp -r ./* $out/
+          '';
+        };
       in
       {
         devShells.default = pkgs.mkShell {
           buildInputs = with pkgs; [
-            # General depedencies
-            git
-            
-            # 💎 Crystal Language & Web Dependencies
-            crystal
+            # 💎 Crystal 1.19.1 & Core Deps
+            crystal_1_19
             shards
             pkg-config
             openssl
@@ -34,19 +47,18 @@
             libevent
             zlib
             protobuf
-            # For libgc and general compilation:
             boehmgc
-            pkg-config
             pcre2
+            file
 
-            # 🟢 Node.js & Frontend (for beads-ui and carafe.cr)
+            # 🟢 Node & Frontend
             nodejs_22
-            playwright-driver.browsers # Native Nix browsers for Playwright
+            playwright-driver.browsers
             elmPackages.elm
             elmPackages.elm-format
             elmPackages.elm-test
 
-            # 🐹 Go & Python Tools
+            # 🐹 Go & Python
             go
             python3
             python3Packages.pip
@@ -58,92 +70,69 @@
             curl
             bashInteractive
             tzdata
-            docker-client # Matches your DOCKER_HOST setup
+            docker-client
           ];
 
           shellHook = ''
-            # --- Docker Compose Environment Equivalence ---
+            # --- Docker & Env ---
             export APP_ENV=development
             export TZ=America/Chicago
             
-            # --- Native KiloCode & Project Bindings ---
+            # --- Project Bindings ---
             export KILOCODE_PATH="${homeDir}/.kilocode"
             export LANG_DB_PATH="${homeDir}/code/lang-db"
             export THE_BRAIN_PATH="${homeDir}/code/thebrain"
 
             # --- Tooling Paths ---
-            # Ensures pipx, beads (bd), and local bin are priority
             export PATH="$PWD/bin:$HOME/.local/bin:$(go env GOPATH)/bin:$PATH"
             
-            # Playwright Configuration
+            # Playwright
             export PLAYWRIGHT_BROWSERS_PATH=${pkgs.playwright-driver.browsers}
             export PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS=true
 
-            # --- Logic for Beads (bd) and Spec-Kitty ---
+            # --- Beads (bd) & Spec-Kitty Logic ---
             if ! command -v bd &> /dev/null; then
-              echo "Installing beads (bd) to GOBIN..."
+              echo "Installing beads (bd)..."
               go install github.com/steveyegge/beads/cmd/bd@latest
             fi
 
-          # 1. Create a virtual environment for python tools if it doesn't exist
-          if [ ! -d ".venv" ]; then
-            python3 -m venv .venv
-          fi
-          source .venv/bin/activate
+            if [ ! -d ".venv" ]; then
+              python3 -m venv .venv
+            fi
+            source .venv/bin/activate
+            pip install -q spec-kitty-cli
 
-          # 2. Install/Update spec-kitty inside the venv
-          # This keeps it isolated from the system but accessible to the flake
-          pip install -q spec-kitty-cli
-
-          # 3. BRIDGE: Create the symlink so Kilo Code/Beads can find it
-          mkdir -p ~/.local/bin
-          ln -sf $(which spec-kitty) ~/.local/bin/spec-kitty
-
-          echo "✅ Spec Kitty bridged to ~/.local/bin/spec-kitty"
-          
-          # This tells the linker where to find libgc.so.1
-          export LD_LIBRARY_PATH="${pkgs.lib.makeLibraryPath [ pkgs.boehmgc pkgs.libevent ]}:$LD_LIBRARY_PATH"
-          
-          # Ensure pkg-config can find the .pc files for Crystal
-          export PKG_CONFIG_PATH="${pkgs.boehmgc.dev}/lib/pkgconfig:${pkgs.libevent.dev}/lib/pkgconfig"
-          
-          # Refresh our bridge links
-          mkdir -p ~/.local/bin
-          ln -sf $(which elm-format) ~/.local/bin/elm-format
-
-          echo "🚀 Environment Loaded Successfully!"
-          echo "💎 Crystal: $(crystal --version | head -n1)"
-          echo "🛠️ KiloCode Rules: $KILOCODE_RULES_PATH"
-          echo "📂 Linked Project: $LANG_DB_PATH"
-
-          # 1. Ensure the directory for the socket exists
-          mkdir -p /workspaces/quickheadlines/.beads
-
-          # 2. Check if the daemon is running; if not, start it
-          if ! bd daemon status >/dev/null 2>&1; then
-            echo "🤖 Starting Beads daemon..."
-            bd daemon start
+            # --- Bridges ---
+            mkdir -p ~/.local/bin
+            ln -sf $(which spec-kitty) ~/.local/bin/spec-kitty
+            ln -sf ${crystal_1_19}/bin/crystal ~/.local/bin/crystal
+            ln -sf ${crystal_1_19}/bin/shards ~/.local/bin/shards
+            ln -sf $(which elm-format) ~/.local/bin/elm-format
             
-            # Optional: wait a moment for the socket to initialize
-            sleep 1
-          fi
+            # --- Library Paths (libgc and libmagic fixes) ---
+            export LD_LIBRARY_PATH="${pkgs.lib.makeLibraryPath [ pkgs.boehmgc pkgs.libevent pkgs.libyaml pkgs.openssl pkgs.pcre2 pkgs.file ]}:$LD_LIBRARY_PATH"
+            export PKG_CONFIG_PATH="${pkgs.boehmgc.dev}/lib/pkgconfig:${pkgs.libevent.dev}/lib/pkgconfig:${pkgs.file.dev}/lib/pkgconfig"
 
-          # 3. Set the environment variable for tools that look for it
-          export BD_SOCKET="/workspaces/quickheadlines/.beads/bd.sock"
-          
-          echo "✅ Beads environment active"
+            # --- Beads Daemon Management (The 'bd' fixes) ---
+            mkdir -p /workspaces/quickheadlines/.beads
+            export BD_SOCKET="/workspaces/quickheadlines/.beads/bd.sock"
 
-          # Get the absolute paths for our tools
-          export CRYSTAL_BIN="$(which crystal)"
-          export SPEC_KITTY_BIN="$(which spec-kitty)"
-          
-          # Inject them into the environment variables the AI looks for
-          export PATH="$PATH:$(dirname $CRYSTAL_BIN):$(dirname $SPEC_KITTY_BIN)"
-          
-          # Restart the daemon so it inherits this new PATH
-          bd daemon stop >/dev/null 2>&1
-          bd daemon start
+            if ! bd daemon status >/dev/null 2>&1; then
+              echo "🤖 Starting Beads daemon..."
+              bd daemon start
+              sleep 1
+            fi
 
+            # --- AI Path Injection ---
+            export CRYSTAL_BIN="$(which crystal)"
+            export SPEC_KITTY_BIN="$(which spec-kitty)"
+            export PATH="$PATH:$(dirname $CRYSTAL_BIN):$(dirname $SPEC_KITTY_BIN)"
+
+            # Force daemon to pick up the new PATH
+            bd daemon stop >/dev/null 2>&1
+            bd daemon start
+
+            echo "🚀 Environment Ready! Crystal: $(crystal --version | head -n1)"
           '';
         };
       });
