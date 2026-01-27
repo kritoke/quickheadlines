@@ -1,6 +1,24 @@
 ---
-description: "WP02: Elm Land & Theme Oracle"
-lane: "planned"
+work_package_id: "WP02"
+subtasks:
+  - "T009"
+  - "T010"
+  - "T011"
+  - "T012"
+title: "WP02: Elm Land & Theme Oracle"
+phase: "Phase 3 - UI Framework Setup"
+lane: "doing"
+assignee: ""
+agent: "worker-coder"
+shell_pid: "104103"
+review_status: ""
+reviewed_by: ""
+history:
+  - timestamp: "2026-01-27T00:00:00Z"
+    lane: "planned"
+    agent: "system"
+    shell_pid: ""
+    action: "Prompt generated via /spec-kitty.tasks"
 ---
 
 # WP02: Elm Land & Theme Oracle
@@ -58,3 +76,7 @@ The project serves a dark-mode Elm shell instead of the old Slang dashboard.
 - **Use `Element.layout` with Theme styles** - NO `Html.div`, NO `Html.node`
 - Add header and footer placeholders using `Element.row` and `Element.column`
 - Set up main content area using `Element.el`
+
+## Activity Log
+
+- 2026-01-27T11:30:46Z – worker-coder – shell_pid=104103 – lane=doing – Started implementation via workflow command
