@@ -44,7 +44,8 @@
 
             # 🐹 Go & Python Tools
             go
-            (python3.withPackages (ps: with ps; [ pipx ]))
+            python3
+            python3Packages.pip
 
             # 🛠️ Standard Build Tools
             gnumake
@@ -80,10 +81,22 @@
               go install github.com/steveyegge/beads/cmd/bd@latest
             fi
 
-            if ! command -v spec-kitty &> /dev/null; then
-              echo "Installing spec-kitty-cli..."
-              pipx install spec-kitty-cli
-            fi
+          # 1. Create a virtual environment for python tools if it doesn't exist
+          if [ ! -d ".venv" ]; then
+            python3 -m venv .venv
+          fi
+          source .venv/bin/activate
+
+          # 2. Install/Update spec-kitty inside the venv
+          # This keeps it isolated from the system but accessible to the flake
+          pip install -q spec-kitty-cli
+
+          # 3. BRIDGE: Create the symlink so Kilo Code/Beads can find it
+          mkdir -p ~/.local/bin
+          ln -sf $(which spec-kitty) ~/.local/bin/spec-kitty
+
+          echo "✅ Spec Kitty bridged to ~/.local/bin/spec-kitty"
+            
 
             echo "🚀 Environment Loaded Successfully!"
             echo "💎 Crystal: $(crystal --version | head -n1)"
@@ -106,6 +119,18 @@
             export BD_SOCKET="/workspaces/quickheadlines/.beads/bd.sock"
             
             echo "✅ Beads environment active"
+
+            # Get the absolute paths for our tools
+            export CRYSTAL_BIN="$(which crystal)"
+            export SPEC_KITTY_BIN="$(which spec-kitty)"
+            
+            # Inject them into the environment variables the AI looks for
+            export PATH="$PATH:$(dirname $CRYSTAL_BIN):$(dirname $SPEC_KITTY_BIN)"
+            
+            # Restart the daemon so it inherits this new PATH
+            bd daemon stop >/dev/null 2>&1
+            bd daemon start
+
           '';
         };
       });
