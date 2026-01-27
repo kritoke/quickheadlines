@@ -1,6 +1,23 @@
 ---
-description: "WP03: Stable Integration (The Clustered List)"
-lane: "planned"
+work_package_id: "WP03"
+subtasks:
+  - "T013"
+  - "T014"
+  - "T015"
+title: "WP03: Stable Integration (The Clustered List)"
+phase: "Phase 4 - Data Integration"
+lane: "doing"
+assignee: ""
+agent: "opencode"
+shell_pid: "114051"
+review_status: ""
+reviewed_by: ""
+history:
+  - timestamp: "2026-01-27T00:00:00Z"
+    lane: "planned"
+    agent: "system"
+    shell_pid: ""
+    action: "Prompt generated via /spec-kitty.tasks"
 ---
 
 # WP03: Stable Integration (The Clustered List)
@@ -58,3 +75,7 @@ The homepage displays your actual SQLite clusters in a stable Elm-ui list.
 - Update Shared.Model to include clusters
 - Pass clusters to Home_ page
 - Ensure proper initialization
+
+## Activity Log
+
+- 2026-01-27T23:24:47Z – opencode – shell_pid=114051 – lane=doing – Started implementation via workflow command
