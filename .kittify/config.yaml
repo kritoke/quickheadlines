@@ -1,0 +1,7 @@
+agents:
+  available:
+  - kilocode
+  selection:
+    strategy: preferred
+    preferred_implementer:
+    preferred_reviewer:

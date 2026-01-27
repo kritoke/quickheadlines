@@ -97,3 +97,5 @@ node_modules/
 
 # Nix Related
 .direnv/
+
+spec-kitty
