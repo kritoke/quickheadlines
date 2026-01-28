@@ -13128,6 +13128,7 @@ var $author$project$Theme$cardColor = function (theme) {
 		return A3($mdgriffith$elm_ui$Element$rgb255, 255, 255, 255);
 	}
 };
+var $elm$html$Html$Attributes$attribute = $elm$virtual_dom$VirtualDom$attribute;
 var $author$project$Pages$Home_$faviconView = function (faviconUrl) {
 	return (faviconUrl !== '') ? A2(
 		$mdgriffith$elm_ui$Element$image,
@@ -13196,50 +13197,60 @@ var $elm$html$Html$Attributes$style = $elm$virtual_dom$VirtualDom$style;
 var $mdgriffith$elm_ui$Element$Font$underline = $mdgriffith$elm_ui$Internal$Model$htmlClass($mdgriffith$elm_ui$Internal$Style$classes.underline);
 var $author$project$Pages$Home_$feedHeader = F2(
 	function (theme, feed) {
-		var textStyle = function () {
-			var _v2 = feed.headerColor;
-			if (_v2.$ === 'Just') {
-				var color = _v2.a;
-				return $mdgriffith$elm_ui$Element$htmlAttribute(
-					A2($elm$html$Html$Attributes$style, 'color', 'white'));
+		var _v0 = function () {
+			var _v1 = feed.headerColor;
+			if (_v1.$ === 'Just') {
+				var color = _v1.a;
+				return _Utils_Tuple3(
+					$mdgriffith$elm_ui$Element$htmlAttribute(
+						A2($elm$html$Html$Attributes$style, 'background-color', color)),
+					$mdgriffith$elm_ui$Element$htmlAttribute(
+						A2($elm$html$Html$Attributes$style, 'color', 'white')),
+					_List_Nil);
 			} else {
-				if (theme.$ === 'Dark') {
-					return $mdgriffith$elm_ui$Element$Font$color(
-						A3($mdgriffith$elm_ui$Element$rgb255, 255, 255, 255));
-				} else {
-					return $mdgriffith$elm_ui$Element$Font$color(
-						A3($mdgriffith$elm_ui$Element$rgb255, 17, 24, 39));
-				}
+				return _Utils_Tuple3(
+					function () {
+						if (theme.$ === 'Dark') {
+							return $mdgriffith$elm_ui$Element$Background$color(
+								A3($mdgriffith$elm_ui$Element$rgb255, 30, 30, 30));
+						} else {
+							return $mdgriffith$elm_ui$Element$Background$color(
+								A3($mdgriffith$elm_ui$Element$rgb255, 243, 244, 246));
+						}
+					}(),
+					function () {
+						if (theme.$ === 'Dark') {
+							return $mdgriffith$elm_ui$Element$Font$color(
+								A3($mdgriffith$elm_ui$Element$rgb255, 255, 255, 255));
+						} else {
+							return $mdgriffith$elm_ui$Element$Font$color(
+								A3($mdgriffith$elm_ui$Element$rgb255, 17, 24, 39));
+						}
+					}(),
+					_List_fromArray(
+						[
+							$mdgriffith$elm_ui$Element$htmlAttribute(
+							A2($elm$html$Html$Attributes$attribute, 'data-use-adaptive-colors', 'true'))
+						]));
 			}
 		}();
-		var bgStyle = function () {
-			var _v0 = feed.headerColor;
-			if (_v0.$ === 'Just') {
-				var color = _v0.a;
-				return $mdgriffith$elm_ui$Element$htmlAttribute(
-					A2($elm$html$Html$Attributes$style, 'background-color', color));
-			} else {
-				if (theme.$ === 'Dark') {
-					return $mdgriffith$elm_ui$Element$Background$color(
-						A3($mdgriffith$elm_ui$Element$rgb255, 30, 30, 30));
-				} else {
-					return $mdgriffith$elm_ui$Element$Background$color(
-						A3($mdgriffith$elm_ui$Element$rgb255, 243, 244, 246));
-				}
-			}
-		}();
+		var bgStyle = _v0.a;
+		var textStyle = _v0.b;
+		var adaptiveAttrs = _v0.c;
 		return A2(
 			$mdgriffith$elm_ui$Element$row,
-			_List_fromArray(
-				[
-					$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill),
-					$mdgriffith$elm_ui$Element$spacing(12),
-					$mdgriffith$elm_ui$Element$htmlAttribute(
-					$elm$html$Html$Attributes$class('feed-header')),
-					$mdgriffith$elm_ui$Element$padding(8),
-					$mdgriffith$elm_ui$Element$Border$rounded(8),
-					bgStyle
-				]),
+			_Utils_ap(
+				_List_fromArray(
+					[
+						$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill),
+						$mdgriffith$elm_ui$Element$spacing(12),
+						$mdgriffith$elm_ui$Element$htmlAttribute(
+						$elm$html$Html$Attributes$class('feed-header')),
+						$mdgriffith$elm_ui$Element$padding(8),
+						$mdgriffith$elm_ui$Element$Border$rounded(8),
+						bgStyle
+					]),
+				adaptiveAttrs),
 			_List_fromArray(
 				[
 					$author$project$Pages$Home_$faviconView(feed.favicon),
