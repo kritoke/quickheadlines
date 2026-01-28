@@ -6072,10 +6072,6 @@ var $author$project$Api$FeedsResponse = F3(
 	function (tabs, activeTab, feeds) {
 		return {activeTab: activeTab, feeds: feeds, tabs: tabs};
 	});
-var $author$project$Api$Feed = F8(
-	function (tab, url, title, displayLink, siteLink, favicon, items, totalItemCount) {
-		return {displayLink: displayLink, favicon: favicon, items: items, siteLink: siteLink, tab: tab, title: title, totalItemCount: totalItemCount, url: url};
-	});
 var $author$project$Api$FeedItem = F3(
 	function (title, link, pubDate) {
 		return {link: link, pubDate: pubDate, title: title};
@@ -6108,21 +6104,59 @@ var $author$project$Api$feedItemDecoder = A4(
 		$elm$json$Json$Decode$nullable(
 			A2($elm$json$Json$Decode$map, $elm$time$Time$millisToPosix, $elm$json$Json$Decode$int))));
 var $elm$json$Json$Decode$list = _Json_decodeList;
-var $elm$json$Json$Decode$map8 = _Json_map8;
-var $author$project$Api$feedDecoder = A9(
-	$elm$json$Json$Decode$map8,
-	$author$project$Api$Feed,
-	A2($elm$json$Json$Decode$field, 'tab', $elm$json$Json$Decode$string),
-	A2($elm$json$Json$Decode$field, 'url', $elm$json$Json$Decode$string),
-	A2($elm$json$Json$Decode$field, 'title', $elm$json$Json$Decode$string),
-	A2($elm$json$Json$Decode$field, 'display_link', $elm$json$Json$Decode$string),
-	A2($elm$json$Json$Decode$field, 'site_link', $elm$json$Json$Decode$string),
-	A2($elm$json$Json$Decode$field, 'favicon', $elm$json$Json$Decode$string),
-	A2(
-		$elm$json$Json$Decode$field,
-		'items',
-		$elm$json$Json$Decode$list($author$project$Api$feedItemDecoder)),
-	A2($elm$json$Json$Decode$field, 'total_item_count', $elm$json$Json$Decode$int));
+var $author$project$Api$feedDecoder = A2(
+	$elm$json$Json$Decode$andThen,
+	function (tab) {
+		return A2(
+			$elm$json$Json$Decode$andThen,
+			function (url) {
+				return A2(
+					$elm$json$Json$Decode$andThen,
+					function (title) {
+						return A2(
+							$elm$json$Json$Decode$andThen,
+							function (displayLink) {
+								return A2(
+									$elm$json$Json$Decode$andThen,
+									function (siteLink) {
+										return A2(
+											$elm$json$Json$Decode$andThen,
+											function (favicon) {
+												return A2(
+													$elm$json$Json$Decode$andThen,
+													function (headerColor) {
+														return A2(
+															$elm$json$Json$Decode$andThen,
+															function (items) {
+																return A2(
+																	$elm$json$Json$Decode$andThen,
+																	function (totalItemCount) {
+																		return $elm$json$Json$Decode$succeed(
+																			{displayLink: displayLink, favicon: favicon, headerColor: headerColor, items: items, siteLink: siteLink, tab: tab, title: title, totalItemCount: totalItemCount, url: url});
+																	},
+																	A2($elm$json$Json$Decode$field, 'total_item_count', $elm$json$Json$Decode$int));
+															},
+															A2(
+																$elm$json$Json$Decode$field,
+																'items',
+																$elm$json$Json$Decode$list($author$project$Api$feedItemDecoder)));
+													},
+													A2(
+														$elm$json$Json$Decode$field,
+														'header_color',
+														$elm$json$Json$Decode$nullable($elm$json$Json$Decode$string)));
+											},
+											A2($elm$json$Json$Decode$field, 'favicon', $elm$json$Json$Decode$string));
+									},
+									A2($elm$json$Json$Decode$field, 'site_link', $elm$json$Json$Decode$string));
+							},
+							A2($elm$json$Json$Decode$field, 'display_link', $elm$json$Json$Decode$string));
+					},
+					A2($elm$json$Json$Decode$field, 'title', $elm$json$Json$Decode$string));
+			},
+			A2($elm$json$Json$Decode$field, 'url', $elm$json$Json$Decode$string));
+	},
+	A2($elm$json$Json$Decode$field, 'tab', $elm$json$Json$Decode$string));
 var $author$project$Api$Tab = function (name) {
 	return {name: name};
 };
@@ -13157,56 +13191,43 @@ var $mdgriffith$elm_ui$Element$link = F2(
 				_List_fromArray(
 					[label])));
 	});
-var $author$project$Theme$mutedColor = function (theme) {
-	if (theme.$ === 'Dark') {
-		return A3($mdgriffith$elm_ui$Element$rgb255, 148, 163, 184);
-	} else {
-		return A3($mdgriffith$elm_ui$Element$rgb255, 107, 114, 128);
-	}
-};
 var $elm$virtual_dom$VirtualDom$style = _VirtualDom_style;
 var $elm$html$Html$Attributes$style = $elm$virtual_dom$VirtualDom$style;
 var $mdgriffith$elm_ui$Element$Font$underline = $mdgriffith$elm_ui$Internal$Model$htmlClass($mdgriffith$elm_ui$Internal$Style$classes.underline);
-var $author$project$Pages$Home_$feedInfo = F2(
-	function (theme, feed) {
-		var txtColor = $author$project$Theme$textColor(theme);
-		var mutedTxt = $author$project$Theme$mutedColor(theme);
-		return A2(
-			$mdgriffith$elm_ui$Element$column,
-			_List_fromArray(
-				[
-					$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill),
-					$mdgriffith$elm_ui$Element$spacing(4)
-				]),
-			_List_fromArray(
-				[
-					A2(
-					$mdgriffith$elm_ui$Element$link,
-					_List_fromArray(
-						[
-							$mdgriffith$elm_ui$Element$Font$size(18),
-							$mdgriffith$elm_ui$Element$Font$bold,
-							$mdgriffith$elm_ui$Element$Font$color(txtColor),
-							$mdgriffith$elm_ui$Element$Font$underline,
-							$mdgriffith$elm_ui$Element$htmlAttribute(
-							A2($elm$html$Html$Attributes$style, 'word-wrap', 'break-word'))
-						]),
-					{
-						label: $mdgriffith$elm_ui$Element$text(feed.title),
-						url: feed.siteLink
-					}),
-					(feed.displayLink !== '') ? A2(
-					$mdgriffith$elm_ui$Element$el,
-					_List_fromArray(
-						[
-							$mdgriffith$elm_ui$Element$Font$size(12),
-							$mdgriffith$elm_ui$Element$Font$color(mutedTxt)
-						]),
-					$mdgriffith$elm_ui$Element$text(feed.displayLink)) : $mdgriffith$elm_ui$Element$none
-				]));
-	});
 var $author$project$Pages$Home_$feedHeader = F2(
 	function (theme, feed) {
+		var textStyle = function () {
+			var _v2 = feed.headerColor;
+			if (_v2.$ === 'Just') {
+				var color = _v2.a;
+				return $mdgriffith$elm_ui$Element$htmlAttribute(
+					A2($elm$html$Html$Attributes$style, 'color', 'white'));
+			} else {
+				if (theme.$ === 'Dark') {
+					return $mdgriffith$elm_ui$Element$Font$color(
+						A3($mdgriffith$elm_ui$Element$rgb255, 255, 255, 255));
+				} else {
+					return $mdgriffith$elm_ui$Element$Font$color(
+						A3($mdgriffith$elm_ui$Element$rgb255, 17, 24, 39));
+				}
+			}
+		}();
+		var bgStyle = function () {
+			var _v0 = feed.headerColor;
+			if (_v0.$ === 'Just') {
+				var color = _v0.a;
+				return $mdgriffith$elm_ui$Element$htmlAttribute(
+					A2($elm$html$Html$Attributes$style, 'background-color', color));
+			} else {
+				if (theme.$ === 'Dark') {
+					return $mdgriffith$elm_ui$Element$Background$color(
+						A3($mdgriffith$elm_ui$Element$rgb255, 30, 30, 30));
+				} else {
+					return $mdgriffith$elm_ui$Element$Background$color(
+						A3($mdgriffith$elm_ui$Element$rgb255, 243, 244, 246));
+				}
+			}
+		}();
 		return A2(
 			$mdgriffith$elm_ui$Element$row,
 			_List_fromArray(
@@ -13216,16 +13237,38 @@ var $author$project$Pages$Home_$feedHeader = F2(
 					$mdgriffith$elm_ui$Element$htmlAttribute(
 					$elm$html$Html$Attributes$class('feed-header')),
 					$mdgriffith$elm_ui$Element$padding(8),
-					$mdgriffith$elm_ui$Element$Border$rounded(8)
+					$mdgriffith$elm_ui$Element$Border$rounded(8),
+					bgStyle
 				]),
 			_List_fromArray(
 				[
 					$author$project$Pages$Home_$faviconView(feed.favicon),
-					A2($author$project$Pages$Home_$feedInfo, theme, feed)
+					A2(
+					$mdgriffith$elm_ui$Element$link,
+					_List_fromArray(
+						[
+							$mdgriffith$elm_ui$Element$Font$size(18),
+							$mdgriffith$elm_ui$Element$Font$bold,
+							textStyle,
+							$mdgriffith$elm_ui$Element$Font$underline,
+							$mdgriffith$elm_ui$Element$htmlAttribute(
+							A2($elm$html$Html$Attributes$style, 'word-wrap', 'break-word'))
+						]),
+					{
+						label: $mdgriffith$elm_ui$Element$text(feed.title),
+						url: feed.siteLink
+					})
 				]));
 	});
 var $mdgriffith$elm_ui$Internal$Model$Top = {$: 'Top'};
 var $mdgriffith$elm_ui$Element$alignTop = $mdgriffith$elm_ui$Internal$Model$AlignY($mdgriffith$elm_ui$Internal$Model$Top);
+var $author$project$Theme$mutedColor = function (theme) {
+	if (theme.$ === 'Dark') {
+		return A3($mdgriffith$elm_ui$Element$rgb255, 148, 163, 184);
+	} else {
+		return A3($mdgriffith$elm_ui$Element$rgb255, 107, 114, 128);
+	}
+};
 var $mdgriffith$elm_ui$Internal$Model$Paragraph = {$: 'Paragraph'};
 var $mdgriffith$elm_ui$Element$paragraph = F2(
 	function (attrs, children) {

@@ -23,6 +23,7 @@ type alias Feed =
     , displayLink : String
     , siteLink : String
     , favicon : String
+    , headerColor : Maybe String
     , items : List FeedItem
     , totalItemCount : Int
     }
@@ -57,15 +58,44 @@ type alias TimelineResponse =
 
 feedDecoder : Decoder Feed
 feedDecoder =
-    Decode.map8 Feed
-        (field "tab" string)
-        (field "url" string)
-        (field "title" string)
-        (field "display_link" string)
-        (field "site_link" string)
-        (field "favicon" string)
-        (field "items" (list feedItemDecoder))
-        (field "total_item_count" Decode.int)
+    Decode.field "tab" string
+        |> Decode.andThen (\tab ->
+            Decode.field "url" string
+                |> Decode.andThen (\url ->
+                    Decode.field "title" string
+                        |> Decode.andThen (\title ->
+                            Decode.field "display_link" string
+                                |> Decode.andThen (\displayLink ->
+                                    Decode.field "site_link" string
+                                        |> Decode.andThen (\siteLink ->
+                                            Decode.field "favicon" string
+                                                |> Decode.andThen (\favicon ->
+                                                    Decode.field "header_color" (nullable string)
+                                                        |> Decode.andThen (\headerColor ->
+                                                            Decode.field "items" (list feedItemDecoder)
+                                                                |> Decode.andThen (\items ->
+                                                                    Decode.field "total_item_count" Decode.int
+                                                                        |> Decode.andThen (\totalItemCount ->
+                                                                            Decode.succeed
+                                                                                { tab = tab
+                                                                                , url = url
+                                                                                , title = title
+                                                                                , displayLink = displayLink
+                                                                                , siteLink = siteLink
+                                                                                , favicon = favicon
+                                                                                , headerColor = headerColor
+                                                                                , items = items
+                                                                                , totalItemCount = totalItemCount
+                                                                                }
+                                                                        )
+                                                                )
+                                                        )
+                                                )
+                                        )
+                                )
+                        )
+                )
+        )
 
 
 feedItemDecoder : Decoder FeedItem
