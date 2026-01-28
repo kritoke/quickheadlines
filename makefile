@@ -40,8 +40,9 @@ ifeq ($(UNAME_M),aarch64)
 	ARCH_NAME = arm64
 endif
 
-# Crystal binary setup
-CRYSTAL_DIR = $(PWD)/bin/crystal-$(CRYSTAL_VERSION)-$(OS_NAME)-$(ARCH_NAME)
+# Crystal binary setup - use cache directory for persistence
+CACHE_DIR = $(HOME)/.cache/quickheadlines/crystal
+CRYSTAL_DIR = $(CACHE_DIR)/crystal-$(CRYSTAL_VERSION)-$(OS_NAME)-$(ARCH_NAME)
 ifeq ($(OS_NAME),linux)
 	CRYSTAL_TARBALL = crystal-$(CRYSTAL_VERSION)-1-$(OS_NAME)-$(ARCH_NAME).tar.gz
 	CRYSTAL_URL = https://github.com/crystal-lang/crystal/releases/download/$(CRYSTAL_VERSION)/$(CRYSTAL_TARBALL)
@@ -63,12 +64,13 @@ all: build
 # Download Crystal compiler from official site
 download-crystal:
 	@echo "Installing Crystal $(CRYSTAL_VERSION)..."
+	@mkdir -p $(CACHE_DIR)
 	@mkdir -p bin
 	@if [ ! -d "$(CRYSTAL_DIR)" ]; then \
-		cd bin && \
 		if [ "$(OS_NAME)" = "freebsd" ]; then \
 			echo "Building Crystal $(CRYSTAL_VERSION) from source on FreeBSD..."; \
 			echo "This may take 30-60 minutes..."; \
+			cd $(CACHE_DIR) && \
 			fetch https://github.com/crystal-lang/crystal/archive/$(CRYSTAL_VERSION).tar.gz || { \
 				echo "Error: Failed to download Crystal source"; \
 				exit 1; \
@@ -85,9 +87,9 @@ download-crystal:
 				echo "Error: Failed to build Crystal"; \
 				exit 1; \
 			}; \
-			rm -f crystal && ln -sf $(CRYSTAL_DIR)/.build/crystal crystal; \
 		else \
 			echo "Downloading $(CRYSTAL_URL)..."; \
+			cd $(CACHE_DIR) && \
 			curl -L -o $(CRYSTAL_TARBALL) $(CRYSTAL_URL) || { \
 				echo "Error: Failed to download Crystal tarball"; \
 				exit 1; \
@@ -97,11 +99,16 @@ download-crystal:
 				rm $(CRYSTAL_TARBALL); \
 				exit 1; \
 			} && \
-			rm $(CRYSTAL_TARBALL) && \
-			rm -f crystal && ln -sf $(CRYSTAL_DIR)/bin/crystal crystal; \
+			rm $(CRYSTAL_TARBALL); \
 		fi; \
 	fi
-	@echo "✓ Crystal $(CRYSTAL_VERSION) installed"
+	@rm -f bin/crystal
+	@if [ "$(OS_NAME)" = "freebsd" ]; then \
+		ln -sf $(CRYSTAL_DIR)/.build/crystal bin/crystal; \
+	else \
+		ln -sf $(CRYSTAL_DIR)/bin/crystal bin/crystal; \
+	fi
+	@echo "✓ Crystal $(CRYSTAL_VERSION) installed in $(CRYSTAL_DIR)"
 
 # Check for required dependencies
 check-deps:
