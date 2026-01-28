@@ -22,7 +22,7 @@
       if (typeof ColorThief === 'undefined') return;
       const colorThief = new ColorThief();
 
-      // Only target .feed-header elements (not timeline day headers)
+      // Only target .feed-header elements with data-use-adaptive-colors attribute
       document.querySelectorAll('.feed-header[data-use-adaptive-colors="true"]').forEach(header => {
         // Skip if already processed
         if (header.dataset.adaptive === 'true') return;
@@ -89,6 +89,13 @@
 
             if (feedUrl) {
               window.feedHeaderCache[feedUrl] = { bg: bgColor, text: textColor };
+
+              // Save extracted color to database
+              fetch('/api/header_color', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ feed_url: feedUrl, color: bgColor })
+              }).catch(e => {});
             }
 
             header.dataset.adaptive = 'true';

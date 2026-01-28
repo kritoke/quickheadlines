@@ -321,6 +321,47 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
     STATE.updated_at.to_unix_ms.to_s
   end
 
+  # POST /api/header_color - Save extracted header color from favicon
+  # Takes feed_url and color (hex format). Manual header_color in config takes priority.
+  @[ARTA::Post(path: "/api/header_color")]
+  def save_header_color(request : ATH::Request) : ATH::Response
+    body = JSON.parse(request.body.not_nil!.gets_to_end)
+
+    feed_url_raw = body["feed_url"]?
+    color_raw = body["color"]?
+
+    feed_url = feed_url_raw.is_a?(JSON::Any) ? feed_url_raw.as_s : nil
+    color = color_raw.is_a?(JSON::Any) ? color_raw.as_s : nil
+
+    if feed_url.nil? || color.nil?
+      return ATH::Response.new("Missing feed_url or color", 400)
+    end
+
+    # Check if this feed has a manual header_color in config (takes priority)
+    config = STATE.config
+    if config.nil?
+      return ATH::Response.new("Configuration not loaded", 500)
+    end
+
+    all_feeds = config.feeds + config.tabs.flat_map(&.feeds)
+    has_manual_color = all_feeds.any? do |feed|
+      feed.url == feed_url && !feed.header_color.nil? && feed.header_color != ""
+    end
+
+    if has_manual_color
+      # Manual config takes priority, don't override
+      return ATH::Response.new("Skipped: manual config exists", 200)
+    end
+
+    # Save extracted color to database
+    cache = FeedCache.instance
+    cache.update_header_color(feed_url, color)
+
+    ATH::Response.new("OK", 200)
+  rescue ex
+    ATH::Response.new(ex.message, 500)
+  end
+
   # Serve static files
   @[ARTA::Get(path: "/elm.js")]
   def elm_js(request : ATH::Request) : ATH::Response

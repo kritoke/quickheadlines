@@ -684,18 +684,34 @@ class FeedCache
           items << Item.new(title, link, pub_date, version)
         end
       end
+    end
 
-      FeedData.new(
-        result[:title],
-        result[:url],
-        result[:site_link],
-        result[:header_color],
-        items,
-        result[:etag],
-        result[:last_modified],
-        result[:favicon],
-        result[:favicon_data]
-      )
+    FeedData.new(
+      result[:title],
+      result[:url],
+      result[:site_link],
+      result[:header_color],
+      items,
+      result[:etag],
+      result[:last_modified],
+      result[:favicon],
+      result[:favicon_data]
+    )
+  end
+
+  # Update header_color for a feed (extracted from favicon via color-thief)
+  # Only updates if not already set manually
+  def update_header_color(feed_url : String, color : String)
+    @mutex.synchronize do
+      # First check if header_color is already set
+      existing = @db.query_one?("SELECT header_color FROM feeds WHERE url = ?", feed_url, as: {String?})
+
+      if existing.nil? || existing == ""
+        @db.exec("UPDATE feeds SET header_color = ? WHERE url = ?", color, feed_url)
+        STDERR.puts "[#{Time.local}] Saved extracted header color for #{feed_url}: #{color}"
+      else
+        STDERR.puts "[#{Time.local}] Skipped header color for #{feed_url}: already set to #{existing}"
+      end
     end
   end
 
