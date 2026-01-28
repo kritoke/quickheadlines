@@ -32,7 +32,7 @@
           header.style.backgroundColor = cached.bg;
           header.style.color = cached.text;
           if (link) {
-            link.style.color = cached.text;
+            link.style.setProperty('color', cached.text, 'important');
             link.style.textDecoration = 'none';
           }
           return;
@@ -79,7 +79,7 @@
             header.style.backgroundColor = bgColor;
             header.style.color = textColor;
             if (link) {
-              link.style.color = textColor;
+              link.style.setProperty('color', textColor, 'important');
               link.style.textDecoration = 'none';
             }
 
