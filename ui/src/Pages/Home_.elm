@@ -330,13 +330,7 @@ feedHeader theme feed =
         , Border.rounded 8
         ] ++ customColorAttrs)
         [ faviconView theme feed.favicon
-        , link
-            [ Font.size 18
-            , Font.bold
-            , Font.underline
-            , htmlAttribute (Html.Attributes.style "word-wrap" "break-word")
-            ]
-            { url = feed.siteLink, label = text feed.title }
+        , feedInfo theme feed
         ]
 
 
@@ -350,29 +344,31 @@ faviconView theme faviconUrl =
 
                 Light ->
                     rgb255 255 255 255
+
+        mutedTxt =
+            Theme.mutedColor theme
     in
     if faviconUrl /= "" then
-        image
-            [ width (px 24)
-            , height (px 24)
-            , Border.rounded 4
-            , Background.color bgColor
-            , Border.width 1
-            , Border.color (rgb255 0 0 0)
-            , htmlAttribute (Html.Attributes.style "opacity" "0.9")
+        row [ spacing 8 ]
+            [ image
+                [ width (px 24)
+                , height (px 24)
+                , Border.rounded 4
+                , Background.color bgColor
+                ]
+                { src = faviconUrl, description = "Feed favicon" }
             ]
-            { src = faviconUrl, description = "Feed favicon" }
 
     else
-        el
-            [ width (px 24)
-            , height (px 24)
-            , Background.color bgColor
-            , Border.rounded 4
-            , Border.width 1
-            , Border.color (rgb255 0 0 0)
-            ]
+        row [ spacing 8 ]
+            [ el
+                [ width (px 24)
+                , height (px 24)
+                , Background.color bgColor
+                , Border.rounded 4
+                ]
             Element.none
+        ]
 
 
 feedInfo : Theme -> Feed -> Element Msg
