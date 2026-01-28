@@ -65,17 +65,16 @@ check-deps:
 	}
 	@echo "✓ Crystal compiler: $$($(CRYSTAL) --version)"
 	@if [ "$(OS_NAME)" = "freebsd" ]; then \
-		command -v $(ELM) >/dev/null 2>&1 || { \
-			echo "❌ Error: Elm compiler not found"; \
+		if [ -f "public/elm.js" ]; then \
+			echo "✓ Using pre-compiled public/elm.js"; \
+		else \
+			echo "❌ Error: Elm compiler not found and public/elm.js missing"; \
 			echo ""; \
-			echo "Install Elm:"; \
-			echo "  FreeBSD: pkg install elm; npm install -g elm"; \
-			echo ""; \
-			echo "Note: On FreeBSD, elm.js is embedded at build time"; \
-			echo "      so Elm compiler is only needed during builds"; \
+			echo "On FreeBSD, you need either:"; \
+			echo "  1. The pre-compiled public/elm.js file (recommended)"; \
+			echo "  2. Elm compiler: pkg install elm; npm install -g elm"; \
 			exit 1; \
-		}; \
-		echo "✓ Elm compiler: $$($(ELM) --version)"; \
+		fi; \
 	fi
 	@if [ "$(OS_NAME)" = "linux" ]; then \
 		pkg-config --exists sqlite3 || { \
@@ -145,11 +144,23 @@ elm-install:
 # 1. Compile Elm to JavaScript
 elm-build:
 	@echo "Compiling Elm to JavaScript..."
-	@if [ ! -d "elm-stuff" ]; then \
-		echo "Running elm make to initialize elm-stuff..."; \
+	@if [ "$(OS_NAME)" = "freebsd" ]; then \
+		if [ -f "public/elm.js" ]; then \
+			echo "✓ Using pre-compiled public/elm.js (skipping Elm compilation)"; \
+		else \
+			echo "Error: public/elm.js not found and Elm compiler required"; \
+			exit 1; \
+		fi; \
+	else \
+		$(ELM) make src/Main.elm --output=public/elm.js; \
+		echo "✓ Elm compiled to public/elm.js ($(shell wc -c < public/elm.js 2>/dev/null || echo "0") bytes)"; \
 	fi
-	$(ELM) make src/Main.elm --output=public/elm.js
-	@echo "✓ Elm compiled to public/elm.js ($(shell wc -c < public/elm.js 2>/dev/null || echo "0") bytes)"
+
+# 1b. Compile Elm Land UI to JavaScript
+elm-land-build:
+	@echo "Compiling Elm Land UI..."
+	cd ui && $(ELM) make src/Main.elm --output=elm.js
+	@echo "✓ Elm Land compiled to ui/elm.js ($(shell wc -c < ui/elm.js 2>/dev/null || echo "0") bytes)"
 
 # --- Removed elm-embed target ---
 # Elm.js is now served directly from disk with GitHub fallback
@@ -196,7 +207,7 @@ build-release: check-deps elm-build
 	APP_ENV=production $(CRYSTAL) build --release --no-debug $(CRYSTAL_BUILD_OPTS) -Dversion=$(BUILD_REV) src/quickheadlines.cr -o bin/$(NAME)-$(BUILD_REV)-$(OS_NAME)-$(ARCH_NAME)
 
 # 7. Run in Development Mode
-run: check-deps elm-build
+run: check-deps elm-land-build
 	@echo "Starting server in development mode..."
 	APP_ENV=development $(CRYSTAL) run src/quickheadlines.cr -- config=feeds.yml
 
