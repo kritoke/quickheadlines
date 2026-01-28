@@ -1,4 +1,4 @@
-port module Application exposing (Flags, Model, Msg(..), init, update, view)
+port module Application exposing (Flags, Model, Msg(..), Page(..), init, update, view)
 
 import Browser
 import Browser.Navigation as Nav
@@ -48,6 +48,7 @@ type Msg
     | TimelineMsg Timeline.Msg
     | NavigateTo Page
     | SwitchTab String
+    | UrlChanged Url.Url
 
 
 init : Flags -> Url.Url -> Nav.Key -> ( Model, Cmd Msg )
@@ -69,7 +70,7 @@ init flags url key =
             Timeline.init shared
 
         page =
-            if url.path == "/timeline" then
+            if String.contains "/timeline" url.path then
                 Timeline
 
             else
@@ -142,6 +143,19 @@ update msg model =
             in
             ( { model | home = newHomeModel }
             , Cmd.map HomeMsg homeCmd
+            )
+
+        UrlChanged url ->
+            let
+                newPage =
+                    if String.contains "/timeline" url.path then
+                        Timeline
+
+                    else
+                        Home
+            in
+            ( { model | url = url, page = newPage }
+            , Cmd.none
             )
 
 

@@ -4582,11 +4582,12 @@ var _Bitwise_shiftRightZfBy = F2(function(offset, a)
 {
 	return a >>> offset;
 });
-var $author$project$Application$HomeMsg = function (a) {
-	return {$: 'HomeMsg', a: a};
+var $author$project$Application$Home = {$: 'Home'};
+var $author$project$Application$NavigateTo = function (a) {
+	return {$: 'NavigateTo', a: a};
 };
-var $author$project$Pages$Home_$SwitchTab = function (a) {
-	return {$: 'SwitchTab', a: a};
+var $author$project$Application$UrlChanged = function (a) {
+	return {$: 'UrlChanged', a: a};
 };
 var $elm$core$List$cons = _List_cons;
 var $elm$core$Elm$JsArray$foldr = _JsArray_foldr;
@@ -5380,7 +5381,9 @@ var $elm$core$Task$perform = F2(
 var $elm$browser$Browser$application = _Browser_application;
 var $elm$json$Json$Decode$bool = _Json_decodeBool;
 var $elm$json$Json$Decode$field = _Json_decodeField;
-var $author$project$Application$Home = {$: 'Home'};
+var $author$project$Application$HomeMsg = function (a) {
+	return {$: 'HomeMsg', a: a};
+};
 var $author$project$Application$Model = F6(
 	function (key, url, page, shared, home, timeline) {
 		return {home: home, key: key, page: page, shared: shared, timeline: timeline, url: url};
@@ -6395,7 +6398,7 @@ var $elm$time$Time$utc = A2($elm$time$Time$Zone, 0, _List_Nil);
 var $author$project$Application$init = F3(
 	function (flags, url, key) {
 		var zone = $elm$time$Time$utc;
-		var page = (url.path === '/timeline') ? $author$project$Application$Timeline : $author$project$Application$Home;
+		var page = A2($elm$core$String$contains, '/timeline', url.path) ? $author$project$Application$Timeline : $author$project$Application$Home;
 		var now = $elm$time$Time$millisToPosix(0);
 		var shared = A4($author$project$Shared$init, flags.width, flags.prefersDark, now, zone);
 		var _v0 = $author$project$Pages$Timeline$init(shared);
@@ -6417,6 +6420,9 @@ var $elm$core$Platform$Sub$batch = _Platform_batch;
 var $elm$core$Platform$Sub$none = $elm$core$Platform$Sub$batch(_List_Nil);
 var $author$project$Main$subscriptions = function (model) {
 	return $elm$core$Platform$Sub$none;
+};
+var $author$project$Pages$Home_$SwitchTab = function (a) {
+	return {$: 'SwitchTab', a: a};
 };
 var $elm$core$Platform$Cmd$none = $elm$core$Platform$Cmd$batch(_List_Nil);
 var $elm$browser$Browser$Navigation$pushUrl = _Browser_pushUrl;
@@ -6567,7 +6573,7 @@ var $author$project$Application$update = F2(
 						model,
 						{page: targetPage}),
 					cmd);
-			default:
+			case 'SwitchTab':
 				var tab = msg.a;
 				var _v5 = A3(
 					$author$project$Pages$Home_$update,
@@ -6581,11 +6587,16 @@ var $author$project$Application$update = F2(
 						model,
 						{home: newHomeModel}),
 					A2($elm$core$Platform$Cmd$map, $author$project$Application$HomeMsg, homeCmd));
+			default:
+				var url = msg.a;
+				var newPage = A2($elm$core$String$contains, '/timeline', url.path) ? $author$project$Application$Timeline : $author$project$Application$Home;
+				return _Utils_Tuple2(
+					_Utils_update(
+						model,
+						{page: newPage, url: url}),
+					$elm$core$Platform$Cmd$none);
 		}
 	});
-var $author$project$Application$NavigateTo = function (a) {
-	return {$: 'NavigateTo', a: a};
-};
 var $mdgriffith$elm_ui$Internal$Model$AlignX = function (a) {
 	return {$: 'AlignX', a: a};
 };
@@ -14095,13 +14106,9 @@ var $author$project$Application$view = function (model) {
 var $author$project$Main$main = $elm$browser$Browser$application(
 	{
 		init: $author$project$Application$init,
-		onUrlChange: function (_v0) {
-			return $author$project$Application$HomeMsg(
-				$author$project$Pages$Home_$SwitchTab('all'));
-		},
-		onUrlRequest: function (_v1) {
-			return $author$project$Application$HomeMsg(
-				$author$project$Pages$Home_$SwitchTab('all'));
+		onUrlChange: $author$project$Application$UrlChanged,
+		onUrlRequest: function (_v0) {
+			return $author$project$Application$NavigateTo($author$project$Application$Home);
 		},
 		subscriptions: $author$project$Main$subscriptions,
 		update: $author$project$Application$update,

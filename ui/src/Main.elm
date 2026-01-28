@@ -15,8 +15,8 @@ main =
         , view = Application.view
         , update = Application.update
         , subscriptions = subscriptions
-        , onUrlChange = \_ -> Application.HomeMsg (Pages.Home_.SwitchTab "all")
-        , onUrlRequest = \_ -> Application.HomeMsg (Pages.Home_.SwitchTab "all")
+        , onUrlChange = Application.UrlChanged
+        , onUrlRequest = \_ -> Application.NavigateTo Application.Home
         }
 
 
