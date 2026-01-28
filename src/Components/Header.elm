@@ -3,7 +3,7 @@ module Components.Header exposing (view)
 import Html exposing (Html)
 import Html.Attributes
 import Html.Events
-import Theme exposing (textColor)
+import Theme exposing (textColor, textColorString)
 import Time exposing (Posix, Zone)
 import Types exposing (Theme(..))
 
@@ -21,7 +21,7 @@ view theme lastUpdated timeZone onToggleMsg =
         , Html.Attributes.style "border-left-width" "0px"
         , Html.Attributes.style "border-right-width" "0px"
         , Html.Attributes.style "border-style" "solid"
-        , Html.Attributes.style "border-color" (textColor theme)
+        , Html.Attributes.style "border-color" (textColorString theme)
         ]
         [ logoSection theme
         , rightSection theme lastUpdated timeZone onToggleMsg
@@ -38,7 +38,7 @@ logoSection theme =
         , Html.span
             [ Html.Attributes.style "font-size" "1.5rem"
             , Html.Attributes.style "font-weight" "700"
-            , Html.Attributes.style "color" (textColor theme)
+            , Html.Attributes.style "color" (textColorString theme)
             ]
             [ Html.text "QuickHeadlines" ]
         ]
@@ -82,7 +82,7 @@ lastUpdatedTime theme lastUpdated timeZone =
             Html.span
                 [ Html.Attributes.style "font-size" "0.875rem"
                 , Html.Attributes.style "font-weight" "500"
-                , Html.Attributes.style "color" (textColor theme)
+                , Html.Attributes.style "color" (textColorString theme)
                 ]
                 [ Html.text (formatTime time timeZone) ]
 
@@ -182,7 +182,7 @@ timelineLink theme =
         [ Html.span
             [ Html.Attributes.style "width" "1.25rem"
             , Html.Attributes.style "height" "1.25rem"
-            , Html.Attributes.style "color" (textColor theme)
+            , Html.Attributes.style "color" (textColorString theme)
             ]
             [ Html.text "🕐" ]
         ]

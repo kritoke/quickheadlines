@@ -1,4 +1,4 @@
-module Api.News exposing (fetchClusters, Cluster)
+module Api.News exposing (Cluster, fetchClusters)
 
 import Http
 import Json.Decode exposing (Decoder, field, int, list, map4, string)
@@ -29,5 +29,9 @@ fetchClusters =
         }
 
 
-type Msg
-    = GotClusters (Result Http.Error (List Cluster))
+type alias Msg =
+    { gotClusters : Result Http.Error (List Cluster) }
+
+
+type alias GotClusters =
+    Result Http.Error (List Cluster)

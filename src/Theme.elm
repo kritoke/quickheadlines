@@ -2,18 +2,27 @@ module Theme exposing
     ( Theme
     , ThemeColors
     , borderColor
+    , borderColorString
     , cardColor
+    , cardColorString
     , feedHeaderColor
+    , feedHeaderColorString
     , feedHeaderTextColor
+    , feedHeaderTextColorString
     , getThemeColors
     , scrollShadowDark
     , scrollShadowLight
     , surfaceColor
     , tabActiveBgColor
+    , tabActiveBgColorString
     , tabActiveTextColor
+    , tabActiveTextColorString
     , tabHoverBgColor
+    , tabHoverBgColorString
     , tabInactiveColor
+    , tabInactiveColorString
     , textColor
+    , textColorString
     )
 
 import Element exposing (Color, rgb255, rgba255)
@@ -168,6 +177,16 @@ cardColor theme =
             cardDark
 
 
+cardColorString : Theme -> String
+cardColorString theme =
+    case theme of
+        Light ->
+            "rgb(255, 255, 255)"
+
+        Dark ->
+            "rgb(17, 24, 39)"
+
+
 borderColor : Theme -> Color
 borderColor theme =
     case theme of
@@ -176,6 +195,16 @@ borderColor theme =
 
         Dark ->
             borderDark
+
+
+borderColorString : Theme -> String
+borderColorString theme =
+    case theme of
+        Light ->
+            "rgb(229, 231, 235)"
+
+        Dark ->
+            "rgb(51, 65, 85)"
 
 
 textColor : Theme -> Color
@@ -188,6 +217,16 @@ textColor theme =
             textDark
 
 
+textColorString : Theme -> String
+textColorString theme =
+    case theme of
+        Light ->
+            "rgb(30, 41, 59)"
+
+        Dark ->
+            "rgb(226, 232, 240)"
+
+
 feedHeaderColor : Theme -> Color
 feedHeaderColor theme =
     case theme of
@@ -196,6 +235,16 @@ feedHeaderColor theme =
 
         Dark ->
             feedHeaderBgDark
+
+
+feedHeaderColorString : Theme -> String
+feedHeaderColorString theme =
+    case theme of
+        Light ->
+            "rgb(243, 244, 246)"
+
+        Dark ->
+            "rgb(49, 65, 85)"
 
 
 feedHeaderTextColor : Theme -> Color
@@ -208,6 +257,16 @@ feedHeaderTextColor theme =
             feedHeaderTextDark
 
 
+feedHeaderTextColorString : Theme -> String
+feedHeaderTextColorString theme =
+    case theme of
+        Light ->
+            "rgb(49, 65, 85)"
+
+        Dark ->
+            "rgb(255, 255, 255)"
+
+
 tabInactiveColor : Theme -> Color
 tabInactiveColor theme =
     case theme of
@@ -216,6 +275,16 @@ tabInactiveColor theme =
 
         Dark ->
             tabInactiveDark
+
+
+tabInactiveColorString : Theme -> String
+tabInactiveColorString theme =
+    case theme of
+        Light ->
+            "rgb(100, 116, 139)"
+
+        Dark ->
+            "rgb(100, 116, 139)"
 
 
 tabHoverBgColor : Theme -> Color
@@ -228,6 +297,16 @@ tabHoverBgColor theme =
             tabHoverBgDark
 
 
+tabHoverBgColorString : Theme -> String
+tabHoverBgColorString theme =
+    case theme of
+        Light ->
+            "rgb(241, 245, 249)"
+
+        Dark ->
+            "rgb(48, 88, 148)"
+
+
 tabActiveBgColor : Theme -> Color
 tabActiveBgColor theme =
     case theme of
@@ -238,6 +317,16 @@ tabActiveBgColor theme =
             tabActiveBgDark
 
 
+tabActiveBgColorString : Theme -> String
+tabActiveBgColorString theme =
+    case theme of
+        Light ->
+            "rgb(239, 246, 255)"
+
+        Dark ->
+            "rgb(48, 88, 148)"
+
+
 tabActiveTextColor : Theme -> Color
 tabActiveTextColor theme =
     case theme of
@@ -246,6 +335,16 @@ tabActiveTextColor theme =
 
         Dark ->
             tabActiveTextDark
+
+
+tabActiveTextColorString : Theme -> String
+tabActiveTextColorString theme =
+    case theme of
+        Light ->
+            "rgb(37, 99, 235)"
+
+        Dark ->
+            "rgb(96, 165, 250)"
 
 
 

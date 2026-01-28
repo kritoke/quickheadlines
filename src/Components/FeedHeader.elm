@@ -2,7 +2,7 @@ module Components.FeedHeader exposing (view)
 
 import Html exposing (Html)
 import Html.Attributes
-import Theme exposing (feedHeaderColor, feedHeaderTextColor, getThemeColors)
+import Theme exposing (feedHeaderColor, feedHeaderColorString, feedHeaderTextColor, feedHeaderTextColorString, getThemeColors)
 import Types exposing (Feed, Theme(..))
 
 
@@ -15,7 +15,7 @@ view theme feed =
     Html.div
         [ Html.Attributes.class "feed-header"
         , Html.Attributes.style "padding" "0.5rem 0.75rem"
-        , Html.Attributes.style "background-color" (feedHeaderColor theme)
+        , Html.Attributes.style "background-color" (feedHeaderColorString theme)
         , Html.Attributes.style "border-radius" "0.75rem"
         , Html.Attributes.style "margin-bottom" "0.4rem"
         , Html.Attributes.style "flex" "0 0 auto"
@@ -68,7 +68,7 @@ feedInfo theme feed =
             , Html.Attributes.class "feed-title-link"
             , Html.Attributes.style "font-size" "1.1rem"
             , Html.Attributes.style "font-weight" "700"
-            , Html.Attributes.style "color" (feedHeaderTextColor theme)
+            , Html.Attributes.style "color" (feedHeaderTextColorString theme)
             , Html.Attributes.style "line-height" "1.2"
             , Html.Attributes.style "word-wrap" "break-word"
             , Html.Attributes.style "text-decoration" "underline"
@@ -77,7 +77,7 @@ feedInfo theme feed =
         , if feed.displayLink /= "" then
             Html.span
                 [ Html.Attributes.style "font-size" "0.75rem"
-                , Html.Attributes.style "color" (feedHeaderTextColor theme)
+                , Html.Attributes.style "color" (feedHeaderTextColorString theme)
                 , Html.Attributes.style "opacity" "0.7"
                 ]
                 [ Html.text feed.displayLink ]

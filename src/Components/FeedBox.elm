@@ -4,7 +4,7 @@ import Components.FeedBody as FeedBody
 import Components.FeedHeader as FeedHeader
 import Html exposing (Html)
 import Html.Attributes
-import Theme exposing (cardColor, getThemeColors)
+import Theme exposing (cardColor, cardColorString, getThemeColors)
 import Time exposing (Posix)
 import Types exposing (Feed, Theme)
 
@@ -22,7 +22,7 @@ view windowWidth now theme feed =
         [ Html.Attributes.class "feed-box"
         , Html.Attributes.style "height" boxHeight
         , Html.Attributes.style "border-radius" "0.75rem"
-        , Html.Attributes.style "background-color" (cardColor theme)
+        , Html.Attributes.style "background-color" (cardColorString theme)
         , Html.Attributes.style "overflow" "hidden"
         , Html.Attributes.style "display" "flex"
         , Html.Attributes.style "flex-direction" "column"

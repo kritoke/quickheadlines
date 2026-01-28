@@ -3,7 +3,7 @@ module Components.TabBar exposing (view)
 import Html exposing (Html)
 import Html.Attributes
 import Html.Events
-import Theme exposing (getThemeColors, tabActiveBgColor, tabActiveTextColor, tabHoverBgColor, tabInactiveColor)
+import Theme exposing (getThemeColors, tabActiveBgColor, tabActiveBgColorString, tabActiveTextColor, tabActiveTextColorString, tabHoverBgColor, tabHoverBgColorString, tabInactiveColor, tabInactiveColorString)
 import Types exposing (Tab, Theme(..))
 
 
@@ -23,19 +23,19 @@ tabButton theme activeTab onTabClick tab =
 
         bgColor =
             if isActive then
-                tabActiveBgColor theme
+                tabActiveBgColorString theme
             else
                 "transparent"
 
         textColor =
             if isActive then
-                tabActiveTextColor theme
+                tabActiveTextColorString theme
             else
-                tabInactiveColor theme
+                tabInactiveColorString theme
 
         hoverBgColor =
             if not isActive then
-                tabHoverBgColor theme
+                tabHoverBgColorString theme
             else
                 "transparent"
     in

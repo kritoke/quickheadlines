@@ -1,22 +1,46 @@
 module Pages.Home_ exposing (Model, Msg(..), init, page, subscriptions, update, view)
 
-import Api.News exposing (Cluster, fetchClusters, GotClusters)
 import Components.FeedBody as FeedBody
 import Components.FeedBox as FeedBox
 import Components.Header as Header
 import Components.TabBar as TabBar
 import Decoders exposing (feedsPageDecoder)
 import Effect exposing (Effect)
-import Element exposing (Element, el, column, spacing, padding, rgb, rgb255, width, height, centerX, centerY)
 import Html exposing (Html)
 import Html.Attributes
+import Html.Events
 import Http
+import Json.Decode exposing (Decoder, field, int, list, map4, string)
 import Page exposing (Page)
 import Shared exposing (Shared)
-import Theme exposing (Theme, metadataStyle)
-import Time exposing (Posix, Zone, unixTimeToPosix, millisToPosix)
+import Time exposing (Posix, Zone, millisToPosix)
 import Types exposing (Feed, FeedItem, Tab, Theme(..))
 import View exposing (View)
+
+
+type alias Cluster =
+    { id : String
+    , title : String
+    , timestamp : String
+    , sourceCount : Int
+    }
+
+
+clusterDecoder : Decoder Cluster
+clusterDecoder =
+    map4 Cluster
+        (field "id" string)
+        (field "title" string)
+        (field "timestamp" string)
+        (field "source_count" int)
+
+
+fetchClustersCmd : Cmd Msg
+fetchClustersCmd =
+    Http.get
+        { url = "/api/clusters"
+        , expect = Http.expectJson GotClusters (list clusterDecoder)
+        }
 
 
 page : Shared -> Page Model Msg
@@ -50,7 +74,7 @@ init shared _ =
       }
     , Effect.batch
         [ Effect.sendCmd (fetchFeeds "all")
-        , Effect.sendCmd (fetchClusters)
+        , Effect.sendCmd fetchClustersCmd
         ]
     )
 
@@ -340,53 +364,42 @@ responsivePadding windowWidth =
 
 clusterList : Int -> Theme -> List Cluster -> Html Msg
 clusterList windowWidth theme clusters =
-    let
-        textColor =
-            case theme of
-                Light ->
-                    rgb 59 67 89
-
-                Dark ->
-                    rgb 226 232 240
-
-        metadataColor =
-            case theme of
-                Light ->
-                    rgb 106 115 125
-
-                Dark ->
-                    rgb 148 163 184
-    in
-    Element.column
-        [ Element.width Element.fill
-        , Element.spacing 0.5
-        , Element.spacingEach [ 0, 0.75, 0, 0 ]
+    Html.div
+        [ Html.Attributes.style "display" "flex"
+        , Html.Attributes.style "flex-direction" "column"
+        , Html.Attributes.style "width" "100%"
+        , Html.Attributes.style "gap" "0.5rem"
         ]
         (List.map
             (\cluster ->
-                Element.el
-                    [ Element.paddingXY 1.5 1
-                    , Element.width Element.fill
+                Html.div
+                    [ Html.Attributes.style "padding" "0.75rem 1rem"
+                    , Html.Attributes.style "width" "100%"
                     ]
-                    (Element.column
-                        [ Element.spacing 0.5
+                    [ Html.div
+                        [ Html.Attributes.style "display" "flex"
+                        , Html.Attributes.style "flex-direction" "column"
+                        , Html.Attributes.style "gap" "0.25rem"
                         ]
-                        [ Element.text cluster.title
-                            |> Element.el [ Element.width Element.fill ]
-                            |> Element.paddingEach { top = 0, right = 0, bottom = 0.5, left = 0 }
-                            |> Element.column [ Element.width Element.fill, Element.spacing 0.25 ]
-                            [ Element.el
-                                [ metadataStyle
+                        [ Html.text cluster.title
+                            |> (\x -> Html.div [ Html.Attributes.style "width" "100%", Html.Attributes.style "margin-bottom" "0.25rem" ] [ x ])
+                        , Html.div
+                            [ Html.Attributes.style "display" "flex"
+                            , Html.Attributes.style "gap" "0.5rem"
+                            ]
+                            [ Html.span
+                                [ Html.Attributes.style "font-size" "0.875rem"
+                                , Html.Attributes.style "color" "#6b7280"
                                 ]
-                                (String.fromInt cluster.sourceCount ++ " sources")
-                            , Element.el
-                                [ Element.width Element.fill, Element.centerX ]
-                                [ Element.text cluster.timestamp
-                                    |> Element.el [ metadataStyle ]
+                                [ Html.text (String.fromInt cluster.sourceCount ++ " sources") ]
+                            , Html.span
+                                [ Html.Attributes.style "font-size" "0.875rem"
+                                , Html.Attributes.style "color" "#6b7280"
                                 ]
+                                [ Html.text cluster.timestamp ]
                             ]
                         ]
-                    )
+                    ]
             )
             clusters
         )
