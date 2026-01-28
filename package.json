@@ -1,5 +1,6 @@
 {
-  "devDependencies": {
+  "devDependencies": {},
+  "optionalDependencies": {
     "jsdom": "^27.4.0",
     "playwright": "^1.58.0",
     "puppeteer": "^24.36.1"
