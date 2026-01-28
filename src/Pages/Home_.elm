@@ -1,18 +1,20 @@
 module Pages.Home_ exposing (Model, Msg(..), init, page, subscriptions, update, view)
 
+import Api.News exposing (Cluster, fetchClusters, GotClusters)
 import Components.FeedBody as FeedBody
 import Components.FeedBox as FeedBox
 import Components.Header as Header
 import Components.TabBar as TabBar
 import Decoders exposing (feedsPageDecoder)
 import Effect exposing (Effect)
+import Element exposing (Element, el, column, spacing, padding, rgb, rgb255, width, height, centerX, centerY)
 import Html exposing (Html)
 import Html.Attributes
 import Http
 import Page exposing (Page)
 import Shared exposing (Shared)
-import Theme exposing (getThemeColors)
-import Time exposing (Posix, Zone)
+import Theme exposing (Theme, metadataStyle)
+import Time exposing (Posix, Zone, unixTimeToPosix, millisToPosix)
 import Types exposing (Feed, FeedItem, Tab, Theme(..))
 import View exposing (View)
 
@@ -31,6 +33,7 @@ type alias Model =
     { activeTab : String
     , tabs : List Tab
     , feeds : List Feed
+    , clusters : List Cluster
     , loading : Bool
     , error : Maybe String
     }
@@ -41,17 +44,20 @@ init shared _ =
     ( { activeTab = "all"
       , tabs = []
       , feeds = []
+      , clusters = []
       , loading = True
       , error = Nothing
       }
     , Effect.batch
         [ Effect.sendCmd (fetchFeeds "all")
+        , Effect.sendCmd (fetchClusters)
         ]
     )
 
 
 type Msg
     = GotFeeds (Result Http.Error { tabs : List Tab, activeTab : String, feeds : List Feed })
+    | GotClusters (Result Http.Error (List Cluster))
     | SwitchTab String
     | LoadMore String Int
     | GotMoreItems String (Result Http.Error Feed)
@@ -73,6 +79,23 @@ update shared msg model =
             )
 
         GotFeeds (Err error) ->
+            ( { model
+                | loading = False
+                , error = Just (httpErrorToString error)
+              }
+            , Effect.none
+            )
+
+        GotClusters (Ok clusters) ->
+            ( { model
+                | clusters = clusters
+                , loading = False
+                , error = Nothing
+              }
+            , Effect.none
+            )
+
+        GotClusters (Err error) ->
             ( { model
                 | loading = False
                 , error = Just (httpErrorToString error)
@@ -147,7 +170,7 @@ view shared model =
                     errorView (Maybe.withDefault "" model.error)
 
                   else
-                    feedGrid shared.windowWidth shared.theme model.activeTab model.feeds
+                    clusterList shared.windowWidth shared.theme model.clusters
                 ]
             ]
         ]
@@ -313,6 +336,60 @@ responsivePadding windowWidth =
 
     else
         16
+
+
+clusterList : Int -> Theme -> List Cluster -> Html Msg
+clusterList windowWidth theme clusters =
+    let
+        textColor =
+            case theme of
+                Light ->
+                    rgb 59 67 89
+
+                Dark ->
+                    rgb 226 232 240
+
+        metadataColor =
+            case theme of
+                Light ->
+                    rgb 106 115 125
+
+                Dark ->
+                    rgb 148 163 184
+    in
+    Element.column
+        [ Element.width Element.fill
+        , Element.spacing 0.5
+        , Element.spacingEach [ 0, 0.75, 0, 0 ]
+        ]
+        (List.map
+            (\cluster ->
+                Element.el
+                    [ Element.paddingXY 1.5 1
+                    , Element.width Element.fill
+                    ]
+                    (Element.column
+                        [ Element.spacing 0.5
+                        ]
+                        [ Element.text cluster.title
+                            |> Element.el [ Element.width Element.fill ]
+                            |> Element.paddingEach { top = 0, right = 0, bottom = 0.5, left = 0 }
+                            |> Element.column [ Element.width Element.fill, Element.spacing 0.25 ]
+                            [ Element.el
+                                [ metadataStyle
+                                ]
+                                (String.fromInt cluster.sourceCount ++ " sources")
+                            , Element.el
+                                [ Element.width Element.fill, Element.centerX ]
+                                [ Element.text cluster.timestamp
+                                    |> Element.el [ metadataStyle ]
+                                ]
+                            ]
+                        ]
+                    )
+            )
+            clusters
+        )
 
 
 subscriptions : Model -> Sub Msg

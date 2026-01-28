@@ -5,6 +5,51 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
 
   def initialize(@db_service : DatabaseService)
   end
+
+  # GET /api/clusters - Get all clusters
+  @[ARTA::Get(path: "/api/clusters")]
+  def clusters : Array(Quickheadlines::DTOs::NewsClusterDTO)
+    cache = FeedCache.instance
+
+    # Get all clusters by finding unique cluster_ids
+    clusters_data = [] of {Int64, Int64, String, Time?, Int32}
+    cache.db.query("SELECT id, cluster_id FROM items WHERE cluster_id IS NOT NULL GROUP BY cluster_id ORDER BY cluster_id ASC") do |rows|
+      rows.each do
+        item_id = rows.read(Int64)
+        cluster_id = rows.read(Int64)
+
+        # Get the minimum item_id in the cluster (representative)
+        min_id = cache.db.query_one?("SELECT MIN(id) FROM items WHERE cluster_id = ?", cluster_id, as: {Int64})
+
+        if min_id
+          # Get item details for representative
+          item = cache.db.query_one?("SELECT title, pub_date FROM items WHERE id = ?", min_id, as: {String?, Time?})
+
+          if item
+            title, pub_date = item
+            cluster_size = cache.get_cluster_size(min_id)
+
+            clusters_data << {min_id, cluster_id, title, pub_date, cluster_size}
+          end
+        end
+      end
+    end
+
+    # Convert to DTOs
+    clusters_data.map do |cluster_entry|
+      cluster_id_str = cluster_entry[:cluster_id].to_s
+      title = cluster_entry[:title] || ""
+      timestamp = cluster_entry[:pub_date].try(&.to_iso8601) || Time.local.to_iso8601
+      source_count = cluster_entry[:cluster_size]
+
+      Quickheadlines::DTOs::NewsClusterDTO.new(
+        id: cluster_id_str,
+        title: title,
+        timestamp: timestamp,
+        source_count: source_count
+      )
+    end
+  end
   # GET /api/feeds - Get feeds for a specific tab
   @[ARTA::Get(path: "/api/feeds")]
   def feeds(request : ATH::Request) : FeedsPageResponse
