@@ -269,11 +269,11 @@ dayHeader zone now theme date =
                     formatDate zone date
     in
     el
-        [ Font.size 16
+        [ Font.size 20
         , Font.bold
         , Font.color txtColor
         , paddingEach { top = 24, bottom = 12, left = 0, right = 0 }
-        , htmlAttribute (Html.Attributes.class "timeline-day-header")
+        , htmlAttribute (Html.Attributes.attribute "data-timeline-header" "true")
         ]
         (text headerText)
 

@@ -14042,13 +14042,13 @@ var $author$project$Pages$Timeline$dayHeader = F4(
 			$mdgriffith$elm_ui$Element$el,
 			_List_fromArray(
 				[
-					$mdgriffith$elm_ui$Element$Font$size(16),
+					$mdgriffith$elm_ui$Element$Font$size(20),
 					$mdgriffith$elm_ui$Element$Font$bold,
 					$mdgriffith$elm_ui$Element$Font$color(txtColor),
 					$mdgriffith$elm_ui$Element$paddingEach(
 					{bottom: 12, left: 0, right: 0, top: 24}),
 					$mdgriffith$elm_ui$Element$htmlAttribute(
-					$elm$html$Html$Attributes$class('timeline-day-header'))
+					A2($elm$html$Html$Attributes$attribute, 'data-timeline-header', 'true'))
 				]),
 			$mdgriffith$elm_ui$Element$text(headerText));
 	});

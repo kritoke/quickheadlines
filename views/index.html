@@ -9,6 +9,15 @@
     body { margin: 0; padding: 0; }
     #app { width: 100vw; height: 100vh; }
     .feed-header { transition: background-color 0.3s ease, color 0.3s ease; }
+    [data-timeline-header="true"] {
+      background-color: transparent !important;
+      font-size: 20px !important;
+      font-weight: bold;
+    }
+    .feed-header a {
+      color: inherit !important;
+      text-decoration: underline;
+    }
   </style>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/color-thief/2.3.2/color-thief.umd.js"></script>
 </head>
