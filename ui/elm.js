@@ -14010,7 +14010,6 @@ var $author$project$Pages$Timeline$dayHeader = F4(
 		var nowYear = A2($elm$time$Time$toYear, zone, now);
 		var nowMonth = A2($elm$time$Time$toMonth, zone, now);
 		var nowDay = A2($elm$time$Time$toDay, zone, now);
-		var mutedTxt = $author$project$Theme$mutedColor(theme);
 		var dateYear = A2($elm$time$Time$toYear, zone, date);
 		var dateMonth = A2($elm$time$Time$toMonth, zone, date);
 		var dateDay = A2($elm$time$Time$toDay, zone, date);
@@ -14026,17 +14025,42 @@ var $author$project$Pages$Timeline$dayHeader = F4(
 				return (_Utils_eq(dateYear, yYear) && (_Utils_eq(dateMonth, yMonth) && _Utils_eq(dateDay, yDay))) ? 'Yesterday' : A2($author$project$Pages$Timeline$formatDate, zone, date);
 			}
 		}();
+		var _v0 = function () {
+			if (theme.$ === 'Dark') {
+				return _Utils_Tuple2(
+					A3($mdgriffith$elm_ui$Element$rgb255, 30, 39, 74),
+					A3($mdgriffith$elm_ui$Element$rgb255, 224, 231, 255));
+			} else {
+				return _Utils_Tuple2(
+					A3($mdgriffith$elm_ui$Element$rgb255, 226, 232, 240),
+					A3($mdgriffith$elm_ui$Element$rgb255, 30, 41, 59));
+			}
+		}();
+		var badgeBg = _v0.a;
+		var badgeText = _v0.b;
 		return A2(
-			$mdgriffith$elm_ui$Element$el,
+			$mdgriffith$elm_ui$Element$row,
 			_List_fromArray(
 				[
-					$mdgriffith$elm_ui$Element$Font$size(13),
-					$mdgriffith$elm_ui$Element$Font$medium,
-					$mdgriffith$elm_ui$Element$Font$color(mutedTxt),
+					$mdgriffith$elm_ui$Element$spacing(0),
 					$mdgriffith$elm_ui$Element$paddingEach(
-					{bottom: 4, left: 0, right: 0, top: 8})
+					{bottom: 16, left: 0, right: 0, top: 32})
 				]),
-			$mdgriffith$elm_ui$Element$text(headerText));
+			_List_fromArray(
+				[
+					A2(
+					$mdgriffith$elm_ui$Element$el,
+					_List_fromArray(
+						[
+							$mdgriffith$elm_ui$Element$Background$color(badgeBg),
+							$mdgriffith$elm_ui$Element$Font$color(badgeText),
+							$mdgriffith$elm_ui$Element$Font$size(16),
+							$mdgriffith$elm_ui$Element$Font$bold,
+							A2($mdgriffith$elm_ui$Element$paddingXY, 16, 8),
+							$mdgriffith$elm_ui$Element$Border$rounded(8)
+						]),
+					$mdgriffith$elm_ui$Element$text(headerText))
+				]));
 	});
 var $author$project$Pages$Timeline$relativeTime = F2(
 	function (now, maybePubDate) {

@@ -233,8 +233,17 @@ dayHeader zone now theme date =
         dateDay =
             toDay zone date
 
-        mutedTxt =
-            mutedColor theme
+        ( badgeBg, badgeText ) =
+            case theme of
+                Dark ->
+                    ( rgb255 30 39 74  -- indigo-900
+                    , rgb255 224 231 255  -- indigo-100
+                    )
+
+                Light ->
+                    ( rgb255 226 232 240  -- slate-200
+                    , rgb255 30 41 59  -- slate-800
+                    )
 
         headerText =
             if dateYear == nowYear && dateMonth == nowMonth && dateDay == nowDay then
@@ -263,13 +272,20 @@ dayHeader zone now theme date =
                 else
                     formatDate zone date
     in
-    el
-        [ Font.size 13
-        , Font.medium
-        , Font.color mutedTxt
-        , paddingEach { top = 8, bottom = 4, left = 0, right = 0 }
+    row
+        [ spacing 0
+        , paddingEach { top = 32, bottom = 16, left = 0, right = 0 }
         ]
-        (text headerText)
+        [ el
+            [ Background.color badgeBg
+            , Font.color badgeText
+            , Font.size 16
+            , Font.bold
+            , Element.paddingXY 16 8
+            , Border.rounded 8
+            ]
+            (text headerText)
+        ]
 
 
 formatDate : Zone -> Posix -> String
