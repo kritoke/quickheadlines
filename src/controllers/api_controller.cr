@@ -336,6 +336,8 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
   # Serve Elm Land UI
   @[ARTA::Get(path: "/ui")]
   @[ARTA::Get(path: "/ui/")]
+  @[ARTA::Get(path: "/ui/timeline")]
+  @[ARTA::Get(path: "/ui/timeline/")]
   def ui_index(request : ATH::Request) : ATH::Response
     html = File.read("./views/index.html")
     response = ATH::Response.new(html)
