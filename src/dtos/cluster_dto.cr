@@ -30,3 +30,19 @@ class Quickheadlines::DTOs::ClusterDTO
     )
   end
 end
+
+# Response wrapper for clusters endpoint
+@[ASRA::Name(strategy: :camelcase)]
+class Quickheadlines::DTOs::ClustersResponse
+  include ASR::Serializable
+
+  property clusters : Array(Quickheadlines::DTOs::ClusterDTO)
+
+  property total_count : Int32
+
+  def initialize(
+    @clusters : Array(Quickheadlines::DTOs::ClusterDTO),
+    @total_count : Int32 = 0,
+  )
+  end
+end

@@ -1,4 +1,4 @@
-module Api exposing (..)
+module Api exposing (getFeeds, getFeedMore, getVersion)
 
 import Decoders exposing (..)
 import Http
@@ -7,70 +7,33 @@ import Time exposing (Posix)
 import Types exposing (..)
 
 
-
--- Base URL for API
-
-
 baseUrl : String
 baseUrl =
     ""
 
 
-
--- Get feeds for a specific tab
-
-
-getFeeds : String -> Cmd Msg
-getFeeds tab =
+getFeeds : String -> (Result Http.Error { tabs : List Tab, activeTab : String, feeds : List Feed } -> Msg) -> Cmd Msg
+getFeeds tab expectMsg =
     Http.get
         { url = baseUrl ++ "/api/feeds?tab=" ++ tab
-        , expect = Http.expectJson (FeedsMsg << GotFeeds) feedsPageDecoder
+        , expect = Http.expectJson expectMsg feedsPageDecoder
         }
 
 
-
--- Get timeline items
-
-
-getTimelineItems : Int -> Int -> Cmd Msg
-getTimelineItems limit offset =
-    Http.get
-        { url = baseUrl ++ "/api/timeline?limit=" ++ String.fromInt limit ++ "&offset=" ++ String.fromInt offset
-        , expect = Http.expectJson (TimelineMsg << GotTimelineItems) timelinePageDecoder
-        }
-
-
-
--- Get more items for a specific feed
-
-
-getFeedMore : String -> Int -> Cmd Msg
-getFeedMore url offset =
+getFeedMore : String -> Int -> (Result Http.Error Feed -> Msg) -> Cmd Msg
+getFeedMore url offset expectMsg =
     Http.get
         { url = baseUrl ++ "/api/feed_more?url=" ++ url ++ "&limit=10&offset=" ++ String.fromInt offset
-        , expect = Http.expectJson (FeedsMsg << GotMoreItems url) feedDecoder
+        , expect = Http.expectJson expectMsg feedDecoder
         }
 
 
-
--- Get version for update checking
-
-
-getVersion : Cmd Msg
-getVersion =
+getVersion : (Result Http.Error Posix -> Msg) -> Cmd Msg
+getVersion expectMsg =
     Http.get
         { url = baseUrl ++ "/api/version"
-        , expect = Http.expectJson GotLastUpdated versionDecoder
+        , expect = Http.expectJson expectMsg versionDecoder
         }
-
-
-
--- Helper to map Http.Error to our custom error type
-
-
-type alias ApiError =
-    { message : String
-    }
 
 
 errorToString : Http.Error -> String

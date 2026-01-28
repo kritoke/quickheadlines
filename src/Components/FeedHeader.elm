@@ -1,87 +1,103 @@
 module Components.FeedHeader exposing (view)
 
-import Html exposing (Html)
+import Element exposing (..)
+import Element.Background as Background
+import Element.Border as Border
+import Element.Font as Font
 import Html.Attributes
-import Theme exposing (feedHeaderColor, feedHeaderTextColor, getThemeColors)
-import Types exposing (Feed, Theme(..))
+import Theme exposing (faviconPlaceholderColor)
+import Types exposing (Feed)
 
 
-view : Theme -> Feed -> Html msg
-view theme feed =
+view : Feed -> Element msg
+view feed =
     let
-        colors =
-            getThemeColors theme
+        headerBg =
+            case feed.headerColor of
+                Just colorStr ->
+                    -- Use the color from color thief
+                    let
+                        hexToRgb color =
+                            -- Parse hex color like "#3b82f6" or "3b82f6"
+                            let
+                                cleanHex =
+                                    if String.startsWith "#" color then
+                                        String.dropLeft 1 color
+
+                                    else
+                                        color
+
+                                r =
+                                    String.slice 0 2 cleanHex |> String.toIntMaybe |> Maybe.withDefault 243
+
+                                g =
+                                    String.slice 2 4 cleanHex |> String.toIntMaybe |> Maybe.withDefault 244
+
+                                b =
+                                    String.slice 4 6 cleanHex |> String.toIntMaybe |> Maybe.withDefault 246
+                            in
+                            rgb255 r g b
+                    in
+                    Background.color (hexToRgb colorStr)
+
+                Nothing ->
+                    Background.color (rgb255 243 244 246)
     in
-    Html.div
-        [ Html.Attributes.class "feed-header"
-        , Html.Attributes.style "padding" "0.5rem 0.75rem"
-        , Html.Attributes.style "background-color" (feedHeaderColor theme)
-        , Html.Attributes.style "border-radius" "0.75rem"
-        , Html.Attributes.style "margin-bottom" "0.4rem"
-        , Html.Attributes.style "flex" "0 0 auto"
-        , Html.Attributes.style "display" "flex"
-        , Html.Attributes.style "gap" "0.75rem"
-        , Html.Attributes.style "width" "100%"
+    row
+        [ padding 8
+        , paddingXY 12 8
+        , headerBg
+        , Border.rounded 12
+        , spacing 12
+        , width fill
         ]
         [ faviconView feed.favicon feed.faviconData
-        , feedInfo theme feed
+        , feedInfo feed
         ]
 
 
-faviconView : String -> String -> Html msg
+faviconView : String -> String -> Element msg
 faviconView faviconUrl faviconData =
-    Html.div
-        [ Html.Attributes.style "width" "24px"
-        , Html.Attributes.style "height" "24px"
-        , Html.Attributes.style "flex-shrink" "0"
-        ]
-        [ if faviconUrl /= "" then
-            Html.img
-                [ Html.Attributes.src faviconUrl
-                , Html.Attributes.alt "Feed favicon"
-                , Html.Attributes.style "width" "100%"
-                , Html.Attributes.style "height" "100%"
-                ]
-                []
-
-          else
-            Html.div
-                [ Html.Attributes.style "width" "100%"
-                , Html.Attributes.style "height" "100%"
-                , Html.Attributes.style "background-color" "#c8c8c8"
-                , Html.Attributes.style "border-radius" "0.25rem"
-                ]
-                []
-        ]
-
-
-feedInfo : Theme -> Feed -> Html msg
-feedInfo theme feed =
-    Html.div
-        [ Html.Attributes.style "display" "flex"
-        , Html.Attributes.style "flex-direction" "column"
-        , Html.Attributes.style "gap" "0.125rem"
-        , Html.Attributes.style "width" "100%"
-        ]
-        [ Html.a
-            [ Html.Attributes.href feed.siteLink
-            , Html.Attributes.class "feed-title-link"
-            , Html.Attributes.style "font-size" "1.1rem"
-            , Html.Attributes.style "font-weight" "700"
-            , Html.Attributes.style "color" (feedHeaderTextColor theme)
-            , Html.Attributes.style "line-height" "1.2"
-            , Html.Attributes.style "word-wrap" "break-word"
-            , Html.Attributes.style "text-decoration" "underline"
+    if faviconUrl /= "" then
+        image
+            [ width (px 24)
+            , height (px 24)
+            , Border.rounded 4
             ]
-            [ Html.text feed.title ]
+            { src = faviconUrl, description = "Feed favicon" }
+
+    else
+        el
+            [ width (px 24)
+            , height (px 24)
+            , Background.color (rgb255 200 200 200)
+            , Border.rounded 4
+            ]
+            none
+
+
+feedInfo : Feed -> Element msg
+feedInfo feed =
+    column
+        [ spacing 2
+        , width fill
+        ]
+        [ link
+            [ Font.size 18
+            , Font.bold
+            , Font.color (rgb255 31 41 55)
+            , Font.underline
+            , htmlAttribute (Html.Attributes.style "word-wrap" "break-word")
+            ]
+            { url = feed.siteLink, label = text feed.title }
         , if feed.displayLink /= "" then
-            Html.span
-                [ Html.Attributes.style "font-size" "0.75rem"
-                , Html.Attributes.style "color" (feedHeaderTextColor theme)
-                , Html.Attributes.style "opacity" "0.7"
+            el
+                [ Font.size 12
+                , Font.color (rgb255 107 114 128)
+                , alpha 0.8
                 ]
-                [ Html.text feed.displayLink ]
+                (text feed.displayLink)
 
           else
-            Html.text ""
+            none
         ]

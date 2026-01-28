@@ -1,18 +1,23 @@
-module Main exposing (main)
+port module Main exposing (main)
 
 import Browser
 import Browser.Navigation as Nav
-import Effect exposing (Effect, map)
+import AppEffect exposing (Effect(..))
 import Element exposing (Element)
-import Html
+import Html.Attributes
+import Html.Events
 import Pages.Home_ as Home
+import Pages.Timeline as Timeline
 import Page exposing (Page)
-import Shared exposing (Shared)
+import Shared exposing (Shared, Size)
+import Types exposing (Theme(..))
+import Task
+import Time
 import Url exposing (Url)
 import View exposing (View)
 
 
-main : Program () Model Msg
+main : Program { width : Int, height : Int, prefersDark : Bool } Model Msg
 main =
     Browser.application
         { init = init
@@ -34,6 +39,7 @@ type alias Model =
 
 type PageModel
     = Home Home.Model
+    | Timeline Timeline.Model
     | NotFound
 
 
@@ -42,13 +48,21 @@ type Msg
     | LinkClicked Browser.UrlRequest
     | SharedMsg Shared.Msg
     | HomeMsg Home.Msg
+    | TimelineMsg Timeline.Msg
 
 
-init : () -> Url -> Nav.Key -> ( Model, Cmd Msg )
-init _ url key =
+init : { width : Int, height : Int, prefersDark : Bool } -> Url -> Nav.Key -> ( Model, Cmd Msg )
+init flags url key =
     let
+        initialTheme =
+            if flags.prefersDark then
+                Types.Dark
+
+            else
+                Types.Light
+
         ( shared, sharedEffect ) =
-            Shared.init (Url.toString url) key
+            Shared.init (Url.toString url) key flags.width flags.height initialTheme
 
         ( pageModel, pageEffect ) =
             initPage url shared
@@ -59,13 +73,13 @@ init _ url key =
       , page = pageModel
       }
     , Cmd.batch
-        [ Effect.toCmd { key = key } (Effect.map SharedMsg sharedEffect)
-        , Effect.toCmd { key = key } pageEffect
+        [ AppEffect.toCmd { key = key } (AppEffect.map SharedMsg sharedEffect)
+        , AppEffect.toCmd { key = key } pageEffect
         ]
     )
 
 
-initPage : Url -> Shared -> ( PageModel, Effect Msg )
+initPage : Url -> Shared -> ( PageModel, AppEffect.Effect Msg )
 initPage url shared =
     if url.path == "/" then
         let
@@ -73,11 +87,20 @@ initPage url shared =
                 Home.init shared ()
         in
         ( Home homeModel
-        , Effect.map HomeMsg homeEffect
+        , AppEffect.map HomeMsg homeEffect
+        )
+
+    else if url.path == "/timeline" then
+        let
+            ( timelineModel, timelineEffect ) =
+                Timeline.init shared ()
+        in
+        ( Timeline timelineModel
+        , AppEffect.map TimelineMsg timelineEffect
         )
 
     else
-        ( NotFound, Effect.none )
+        ( NotFound, AppEffect.none )
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -89,7 +112,7 @@ update msg model =
                     initPage url model.shared
             in
             ( { model | url = url, page = pageModel }
-            , Effect.toCmd { key = model.key } pageEffect
+            , AppEffect.toCmd { key = model.key } pageEffect
             )
 
         LinkClicked urlRequest ->
@@ -106,19 +129,77 @@ update msg model =
                     Shared.update sharedMsg model.shared
             in
             ( { model | shared = shared }
-            , Effect.toCmd { key = model.key } (Effect.map SharedMsg sharedEffect)
+            , Cmd.map SharedMsg (AppEffect.toCmd { key = model.key } sharedEffect)
             )
 
         HomeMsg homeMsg ->
             case model.page of
                 Home homeModel ->
-                    let
-                        ( newHomeModel, homeEffect ) =
-                            Home.update model.shared homeMsg homeModel
-                    in
-                    ( { model | page = Home newHomeModel }
-                    , Effect.toCmd { key = model.key } (Effect.map HomeMsg homeEffect)
-                    )
+                    case homeMsg of
+                        Home.ToggleThemeRequested ->
+                            let
+                                ( shared, sharedEffect ) =
+                                    Shared.update Shared.ToggleTheme model.shared
+
+                                themeStr =
+                                    case shared.theme of
+                                        Types.Light ->
+                                            "light"
+
+                                        Types.Dark ->
+                                            "dark"
+                            in
+                            ( { model | shared = shared }
+                            , Cmd.batch
+                                [ Cmd.map SharedMsg (AppEffect.toCmd { key = model.key } sharedEffect)
+                                , saveTheme themeStr
+                                ]
+                            )
+
+                        _ ->
+                            let
+                                ( newHomeModel, homeEffect ) =
+                                    Home.update model.shared homeMsg homeModel
+                            in
+                            ( { model | page = Home newHomeModel }
+                            , Cmd.map HomeMsg (AppEffect.toCmd { key = model.key } homeEffect)
+                            )
+
+                _ ->
+                    ( model, Cmd.none )
+
+        TimelineMsg timelineMsg ->
+            case model.page of
+                Timeline timelineModel ->
+                    case timelineMsg of
+                        Timeline.ToggleThemeRequested ->
+                            let
+                                ( shared, sharedEffect ) =
+                                    Shared.update Shared.ToggleTheme model.shared
+
+                                themeStr =
+                                    case shared.theme of
+                                        Types.Light ->
+                                            "light"
+
+                                        Types.Dark ->
+                                            "dark"
+                            in
+                            ( { model | shared = shared }
+                            , Cmd.batch
+                                [ Cmd.map SharedMsg (AppEffect.toCmd { key = model.key } sharedEffect)
+                                , saveTheme themeStr
+                                ]
+                            )
+
+                        _ ->
+                            let
+                                ( newTimelineModel, timelineEffect ) =
+                                    Timeline.update model.shared timelineMsg timelineModel
+                            in
+                            ( { model | page = Timeline newTimelineModel }
+                            , Cmd.map TimelineMsg (AppEffect.toCmd { key = model.key } timelineEffect)
+                            )
 
                 _ ->
                     ( model, Cmd.none )
@@ -133,26 +214,48 @@ view model =
                     Home.view model.shared homeModel
                         |> View.map HomeMsg
 
+                Timeline timelineModel ->
+                    Timeline.view model.shared timelineModel
+                        |> View.map TimelineMsg
+
                 NotFound ->
                     { title = "Not Found"
-                    , body = [ Html.text "Page not found" ]
+                    , body = Element.text "Page not found"
                     }
     in
     { title = title
-    , body = body
+    , body =
+        [ Element.layout
+            [ Element.width Element.fill
+            , Element.height Element.fill
+            , Element.htmlAttribute (Html.Attributes.style "min-height" "100vh")
+            ]
+            body
+        ]
     }
 
 
 subscriptions : Model -> Sub Msg
 subscriptions model =
     Sub.batch
-        [ Shared.subscriptions model.shared
+        [ onResize (SharedMsg << Shared.WindowResized)
+        , Shared.subscriptions model.shared
             |> Sub.map SharedMsg
         , case model.page of
             Home homeModel ->
                 Home.subscriptions homeModel
                     |> Sub.map HomeMsg
 
+            Timeline timelineModel ->
+                Timeline.subscriptions model.shared timelineModel
+                    |> Sub.map TimelineMsg
+
             NotFound ->
                 Sub.none
         ]
+
+
+port onResize : (Size -> msg) -> Sub msg
+
+
+port saveTheme : String -> Cmd msg

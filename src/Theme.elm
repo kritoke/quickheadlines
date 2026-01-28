@@ -3,9 +3,16 @@ module Theme exposing
     , ThemeColors
     , borderColor
     , cardColor
+    , errorBgColor
+    , errorBorderColor
+    , errorTextColor
+    , faviconPlaceholderColor
     , feedHeaderColor
     , feedHeaderTextColor
     , getThemeColors
+    , loadMoreButtonColor
+    , loadMoreButtonHoverColor
+    , loadMoreButtonTextColor
     , scrollShadowDark
     , scrollShadowLight
     , surfaceColor
@@ -144,6 +151,76 @@ tabActiveTextDark =
     rgb255 96 165 250
 
 
+errorBgLight : Color
+errorBgLight =
+    rgb255 254 242 242
+
+
+errorBgDark : Color
+errorBgDark =
+    rgb255 127 29 29
+
+
+errorBorderLight : Color
+errorBorderLight =
+    rgb255 220 38 38
+
+
+errorBorderDark : Color
+errorBorderDark =
+    rgb255 239 68 68
+
+
+errorTextLight : Color
+errorTextLight =
+    rgb255 127 29 29
+
+
+errorTextDark : Color
+errorTextDark =
+    rgb255 254 202 202
+
+
+loadMoreButtonLight : Color
+loadMoreButtonLight =
+    rgb255 241 245 249
+
+
+loadMoreButtonDark : Color
+loadMoreButtonDark =
+    rgb255 55 65 81
+
+
+loadMoreButtonHoverLight : Color
+loadMoreButtonHoverLight =
+    rgb255 226 232 240
+
+
+loadMoreButtonHoverDark : Color
+loadMoreButtonHoverDark =
+    rgb255 75 85 99
+
+
+loadMoreButtonTextLight : Color
+loadMoreButtonTextLight =
+    rgb255 100 116 139
+
+
+loadMoreButtonTextDark : Color
+loadMoreButtonTextDark =
+    rgb255 203 213 225
+
+
+faviconPlaceholderLight : Color
+faviconPlaceholderLight =
+    rgb255 200 200 200
+
+
+faviconPlaceholderDark : Color
+faviconPlaceholderDark =
+    rgb255 75 85 99
+
+
 
 -- Theme-aware helpers
 
@@ -248,6 +325,76 @@ tabActiveTextColor theme =
             tabActiveTextDark
 
 
+errorBgColor : Theme -> Color
+errorBgColor theme =
+    case theme of
+        Light ->
+            errorBgLight
+
+        Dark ->
+            errorBgDark
+
+
+errorBorderColor : Theme -> Color
+errorBorderColor theme =
+    case theme of
+        Light ->
+            errorBorderLight
+
+        Dark ->
+            errorBorderDark
+
+
+errorTextColor : Theme -> Color
+errorTextColor theme =
+    case theme of
+        Light ->
+            errorTextLight
+
+        Dark ->
+            errorTextDark
+
+
+loadMoreButtonColor : Theme -> Color
+loadMoreButtonColor theme =
+    case theme of
+        Light ->
+            loadMoreButtonLight
+
+        Dark ->
+            loadMoreButtonDark
+
+
+loadMoreButtonHoverColor : Theme -> Color
+loadMoreButtonHoverColor theme =
+    case theme of
+        Light ->
+            loadMoreButtonHoverLight
+
+        Dark ->
+            loadMoreButtonHoverDark
+
+
+loadMoreButtonTextColor : Theme -> Color
+loadMoreButtonTextColor theme =
+    case theme of
+        Light ->
+            loadMoreButtonTextLight
+
+        Dark ->
+            loadMoreButtonTextDark
+
+
+faviconPlaceholderColor : Theme -> Color
+faviconPlaceholderColor theme =
+    case theme of
+        Light ->
+            faviconPlaceholderLight
+
+        Dark ->
+            faviconPlaceholderDark
+
+
 
 -- Scroll shadow gradient colors
 
@@ -278,6 +425,13 @@ type alias ThemeColors =
     , tabHoverBg : Color
     , tabActiveBg : Color
     , tabActiveText : Color
+    , errorBg : Color
+    , errorBorder : Color
+    , errorText : Color
+    , loadMoreButton : Color
+    , loadMoreButtonHover : Color
+    , loadMoreButtonText : Color
+    , faviconPlaceholder : Color
     }
 
 
@@ -300,6 +454,13 @@ getThemeColors theme =
             , tabHoverBg = tabHoverBgLight
             , tabActiveBg = tabActiveBgLight
             , tabActiveText = tabActiveTextLight
+            , errorBg = errorBgLight
+            , errorBorder = errorBorderLight
+            , errorText = errorTextLight
+            , loadMoreButton = loadMoreButtonLight
+            , loadMoreButtonHover = loadMoreButtonHoverLight
+            , loadMoreButtonText = loadMoreButtonTextLight
+            , faviconPlaceholder = faviconPlaceholderLight
             }
 
         Dark ->
@@ -314,4 +475,11 @@ getThemeColors theme =
             , tabHoverBg = tabHoverBgDark
             , tabActiveBg = tabActiveBgDark
             , tabActiveText = tabActiveTextDark
+            , errorBg = errorBgDark
+            , errorBorder = errorBorderDark
+            , errorText = errorTextDark
+            , loadMoreButton = loadMoreButtonDark
+            , loadMoreButtonHover = loadMoreButtonHoverDark
+            , loadMoreButtonText = loadMoreButtonTextDark
+            , faviconPlaceholder = faviconPlaceholderDark
             }

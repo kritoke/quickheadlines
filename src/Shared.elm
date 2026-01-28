@@ -1,7 +1,8 @@
-module Shared exposing (Msg(..), Shared, init, subscriptions, update)
+module Shared exposing (Msg(..), Shared, Size, init, subscriptions, update)
 
 import Browser.Navigation as Nav
-import Effect exposing (Effect)
+import AppEffect exposing (Effect(..))
+import Task
 import Time exposing (Posix, Zone)
 import Types exposing (Theme(..))
 
@@ -20,28 +21,39 @@ type alias Shared =
 
 type Msg
     = ToggleTheme
-    | WindowResized Int Int
+    | WindowResized Size
     | TimeZoneChanged Zone
     | Tick Posix
     | GotLastUpdated Posix
 
 
-init : String -> Nav.Key -> ( Shared, Effect Msg )
-init url key =
+type alias Size =
+    { width : Int, height : Int }
+
+
+init : String -> Nav.Key -> Int -> Int -> Types.Theme -> ( Shared, Effect Msg )
+init url key width height initialTheme =
     ( { key = key
       , url = url
-      , theme = Light
-      , windowWidth = 1024
-      , windowHeight = 768
+      , theme = initialTheme
+      , windowWidth = width
+      , windowHeight = height
       , lastUpdated = Nothing
       , now = Time.millisToPosix 0
       , timeZone = Time.utc
       }
-    , Effect.batch
-        [ Effect.gotTimeZone TimeZoneChanged
-        , Effect.gotTime Tick
-        ]
+    , AppEffect.sendCmd (Task.perform (gotTime >> mapToTick) Time.now)
     )
+
+
+gotTime : Posix -> Posix
+gotTime time =
+    time
+
+
+mapToTick : Posix -> Msg
+mapToTick time =
+    Tick time
 
 
 update : Msg -> Shared -> ( Shared, Effect Msg )
@@ -49,27 +61,27 @@ update msg shared =
     case msg of
         ToggleTheme ->
             ( { shared | theme = toggleTheme shared.theme }
-            , Effect.none
+            , AppEffect.none
             )
 
-        WindowResized width height ->
+        WindowResized { width, height } ->
             ( { shared | windowWidth = width, windowHeight = height }
-            , Effect.none
+            , AppEffect.none
             )
 
         TimeZoneChanged zone ->
             ( { shared | timeZone = zone }
-            , Effect.none
+            , AppEffect.none
             )
 
         Tick time ->
             ( { shared | now = time }
-            , Effect.gotTime Tick
+            , AppEffect.none
             )
 
         GotLastUpdated time ->
             ( { shared | lastUpdated = Just time }
-            , Effect.none
+            , AppEffect.none
             )
 
 
@@ -84,5 +96,5 @@ toggleTheme theme =
 
 
 subscriptions : Shared -> Sub Msg
-subscriptions _ =
-    Sub.none
+subscriptions shared =
+    Time.every 60000 (Tick)

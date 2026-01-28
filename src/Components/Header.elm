@@ -1,93 +1,113 @@
 module Components.Header exposing (view)
 
-import Html exposing (Html)
-import Html.Attributes
-import Html.Events
+import Element exposing (..)
+import Element.Background as Background
+import Element.Border as Border
+import Element.Font as Font
+import Element.Input as Input
 import Theme exposing (textColor)
 import Time exposing (Posix, Zone)
 import Types exposing (Theme(..))
 
 
-view : Theme -> Maybe Posix -> Zone -> msg -> Html msg
-view theme lastUpdated timeZone onToggleMsg =
-    Html.div
-        [ Html.Attributes.style "display" "flex"
-        , Html.Attributes.style "width" "100%"
-        , Html.Attributes.style "gap" "0.5rem"
-        , Html.Attributes.style "padding-top" "0.75rem"
-        , Html.Attributes.style "padding-bottom" "0.75rem"
-        , Html.Attributes.style "border-bottom-width" "1px"
-        , Html.Attributes.style "border-top-width" "0px"
-        , Html.Attributes.style "border-left-width" "0px"
-        , Html.Attributes.style "border-right-width" "0px"
-        , Html.Attributes.style "border-style" "solid"
-        , Html.Attributes.style "border-color" (textColor theme)
+view : Int -> Theme -> Maybe Posix -> Zone -> msg -> Element msg
+view windowWidth theme lastUpdated timeZone onToggleMsg =
+    let
+        isMobile =
+            windowWidth < 768
+
+        logoSize =
+            if isMobile then 18 else 24
+
+        logoImgSize =
+            if isMobile then 24 else 32
+
+        metaSize =
+            if isMobile then 11 else 14
+    in
+    row
+        [ width fill
+        , spacing 8
+        , paddingXY 0 (if isMobile then 8 else 12)
+        , Border.widthEach { top = 0, right = 0, bottom = 1, left = 0 }
+        , Border.color (textColor theme)
         ]
-        [ logoSection theme
-        , rightSection theme lastUpdated timeZone onToggleMsg
+        [ logoSection isMobile theme logoSize logoImgSize
+        , rightSection isMobile theme lastUpdated timeZone metaSize onToggleMsg
         ]
 
 
-logoSection : Theme -> Html msg
-logoSection theme =
-    Html.div
-        [ Html.Attributes.style "display" "flex"
-        , Html.Attributes.style "gap" "0.75rem"
+logoSection : Bool -> Theme -> Int -> Int -> Element msg
+logoSection isMobile theme logoSize logoImgSize =
+    row
+        [ spacing (if isMobile then 8 else 12)
         ]
-        [ logoImage
-        , Html.span
-            [ Html.Attributes.style "font-size" "1.5rem"
-            , Html.Attributes.style "font-weight" "700"
-            , Html.Attributes.style "color" (textColor theme)
+        [ logoImage logoImgSize
+        , el
+            [ Font.size logoSize
+            , Font.bold
+            , Font.color (textColor theme)
             ]
-            [ Html.text "QuickHeadlines" ]
+            (text "QuickHeadlines")
         ]
 
 
-logoImage : Html msg
-logoImage =
-    Html.a
-        [ Html.Attributes.href "/" ]
-        [ Html.img
-            [ Html.Attributes.src "/favicon.png"
-            , Html.Attributes.alt "QuickHeadlines Logo"
-            , Html.Attributes.style "width" "32px"
-            , Html.Attributes.style "height" "32px"
-            ]
-            []
+logoImage : Int -> Element msg
+logoImage size =
+    link []
+        { url = "/"
+        , label =
+            image
+                [ width (px size)
+                , height (px size)
+                ]
+                { src = "/favicon.png", description = "QuickHeadlines Logo" }
+        }
+
+
+rightSection : Bool -> Theme -> Maybe Posix -> Zone -> Int -> msg -> Element msg
+rightSection isMobile theme lastUpdated timeZone metaSize onToggleMsg =
+    let
+        bgCol =
+            if isMobile then
+                rgb255 241 245 249
+
+            else
+                rgb255 241 245 249
+
+        borderCol =
+            rgb255 226 232 240
+
+        paddingVal =
+            if isMobile then 4 else 8
+    in
+    row
+        [ spacing (if isMobile then 2 else 4)
+        , padding paddingVal
+        , Background.color bgCol
+        , Border.rounded 9999
+        , Border.width 1
+        , Border.color borderCol
+        ]
+        [ lastUpdatedTime isMobile theme lastUpdated timeZone metaSize
+        , timelineLink isMobile theme
+        , themeToggle isMobile theme onToggleMsg
         ]
 
 
-rightSection : Theme -> Maybe Posix -> Zone -> msg -> Html msg
-rightSection theme lastUpdated timeZone onToggleMsg =
-    Html.div
-        [ Html.Attributes.style "display" "flex"
-        , Html.Attributes.style "gap" "0.25rem"
-        , Html.Attributes.style "padding" "0.5rem 0.75rem"
-        , Html.Attributes.style "background-color" "#f1f5f9"
-        , Html.Attributes.style "border-radius" "9999px"
-        , Html.Attributes.style "border-width" "1px"
-        , Html.Attributes.style "border-color" "#e2e8f0"
-        ]
-        [ lastUpdatedTime theme lastUpdated timeZone
-        , timelineLink theme
-        , themeToggle theme onToggleMsg
-        ]
-
-
-lastUpdatedTime : Theme -> Maybe Posix -> Zone -> Html msg
-lastUpdatedTime theme lastUpdated timeZone =
+lastUpdatedTime : Bool -> Theme -> Maybe Posix -> Zone -> Int -> Element msg
+lastUpdatedTime isMobile theme lastUpdated timeZone fontSize =
     case lastUpdated of
         Just time ->
-            Html.span
-                [ Html.Attributes.style "font-size" "0.875rem"
-                , Html.Attributes.style "font-weight" "500"
-                , Html.Attributes.style "color" (textColor theme)
+            el
+                [ Font.size fontSize
+                , Font.medium
+                , Font.color (textColor theme)
                 ]
-                [ Html.text (formatTime time timeZone) ]
+                (text (formatTime time timeZone))
 
         Nothing ->
-            Html.text ""
+            none
 
 
 formatTime : Posix -> Zone -> String
@@ -125,7 +145,7 @@ formatTime time zone =
             else
                 hour
     in
-    month ++ " " ++ day ++ ", " ++ year ++ " at " ++ String.fromInt displayHour ++ ":" ++ minute ++ " " ++ ampm
+    month ++ " " ++ day ++ ", " ++ year
 
 
 monthToString : Time.Month -> String
@@ -168,43 +188,52 @@ monthToString month =
             "December"
 
 
-timelineLink : Theme -> Html msg
-timelineLink theme =
-    Html.a
-        [ Html.Attributes.href "/timeline"
-        , Html.Attributes.style "padding" "0.375rem"
-        , Html.Attributes.style "border-radius" "0.375rem"
-        , Html.Attributes.style "cursor" "pointer"
-        , Html.Attributes.style "display" "flex"
-        , Html.Attributes.style "align-items" "center"
-        , Html.Attributes.style "justify-content" "center"
+timelineLink : Bool -> Theme -> Element msg
+timelineLink isMobile theme =
+    let
+        iconSize =
+            if isMobile then 16 else 20
+    in
+    link
+        [ padding 6
+        , Border.rounded 6
+        , pointer
         ]
-        [ Html.span
-            [ Html.Attributes.style "width" "1.25rem"
-            , Html.Attributes.style "height" "1.25rem"
-            , Html.Attributes.style "color" (textColor theme)
-            ]
-            [ Html.text "🕐" ]
-        ]
+        { url = "/timeline"
+        , label =
+            el
+                [ width (px iconSize)
+                , height (px iconSize)
+                , Font.size iconSize
+                , Font.color (textColor theme)
+                , centerX
+                , centerY
+                ]
+                (text "🕐")
+        }
 
 
-themeToggle : Theme -> msg -> Html msg
-themeToggle theme onToggleMsg =
-    Html.div
-        [ Html.Attributes.style "padding" "0.375rem"
-        , Html.Attributes.style "border-radius" "0.375rem"
-        , Html.Attributes.style "cursor" "pointer"
-        , Html.Attributes.style "display" "flex"
-        , Html.Attributes.style "align-items" "center"
-        , Html.Attributes.style "justify-content" "center"
-        , Html.Events.onClick onToggleMsg
+themeToggle : Bool -> Theme -> msg -> Element msg
+themeToggle isMobile theme onToggleMsg =
+    let
+        iconSize =
+            if isMobile then 14 else 16
+    in
+    Input.button
+        [ padding 6
+        , Border.rounded 6
+        , pointer
         ]
-        [ Html.text
-            (case theme of
-                Light ->
-                    "🌙"
+        { onPress = Just onToggleMsg
+        , label =
+            el [ Font.size iconSize ]
+                (text
+                    (case theme of
+                        Light ->
+                            "🌙"
 
-                Dark ->
-                    "☀️"
-            )
-        ]
+                        Dark ->
+                            "☀️"
+                    )
+                )
+        }

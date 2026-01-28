@@ -3,8 +3,167 @@ require "athena"
 class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
   @db_service : DatabaseService
 
+  def self.new : self
+    new(DatabaseService.instance)
+  end
+
   def initialize(@db_service : DatabaseService)
   end
+
+  # GET /api/clusters - Get all clustered stories
+  @[ARTA::Get(path: "/api/clusters")]
+  def clusters(request : ATH::Request) : ClustersResponse
+    # Get clusters directly from the database
+    clusters = get_clusters_from_db(@db_service.db)
+
+    # Convert to ClusterResponse DTOs
+    cluster_responses = clusters.map do |cluster|
+      representative_response = StoryResponse.new(
+        id: cluster.representative.id,
+        title: cluster.representative.title,
+        link: cluster.representative.link,
+        pub_date: cluster.representative.pub_date.try(&.to_unix_ms),
+        feed_title: cluster.representative.feed_title,
+        feed_url: cluster.representative.feed_url,
+        feed_link: cluster.representative.feed_link,
+        favicon: cluster.representative.favicon,
+        favicon_data: cluster.representative.favicon_data,
+        header_color: cluster.representative.header_color
+      )
+
+      others_response = cluster.others.map do |story|
+        StoryResponse.new(
+          id: story.id,
+          title: story.title,
+          link: story.link,
+          pub_date: story.pub_date.try(&.to_unix_ms),
+          feed_title: story.feed_title,
+          feed_url: story.feed_url,
+          feed_link: story.feed_link,
+          favicon: story.favicon,
+          favicon_data: story.favicon_data,
+          header_color: story.header_color
+        )
+      end
+
+      ClusterResponse.new(
+        id: cluster.id,
+        representative: representative_response,
+        others: others_response,
+        cluster_size: cluster.size
+      )
+    end
+
+    ClustersResponse.new(
+      clusters: cluster_responses,
+      total_count: cluster_responses.size
+    )
+  end
+
+  private def get_clusters_from_db(db : DB::Database) : Array(Quickheadlines::Entities::Cluster)
+    clusters = [] of Quickheadlines::Entities::Cluster
+
+    # Query to get clusters and their items
+    query = <<-SQL
+      SELECT
+        c.id as cluster_id,
+        c.representative_id,
+        i.id as item_id,
+        i.title as item_title,
+        i.link as item_link,
+        i.pub_date as item_pub_date,
+        f.url as feed_url,
+        f.title as feed_title,
+        f.favicon,
+        f.header_color
+      FROM (
+        SELECT cluster_id as id, MIN(id) as representative_id
+        FROM items
+        WHERE cluster_id IS NOT NULL
+        GROUP BY cluster_id
+      ) c
+      JOIN items i ON i.cluster_id = c.id
+      JOIN feeds f ON i.feed_id = f.id
+      ORDER BY c.id, i.id ASC
+    SQL
+
+    # Group items by cluster
+    cluster_items = Hash(Int64, Array({id: Int64, title: String, link: String, pub_date: Time?, feed_url: String, feed_title: String, favicon: String?, header_color: String?})).new
+
+    db.query(query) do |rows|
+      rows.each do
+        cluster_id = rows.read(Int64)
+        representative_id = rows.read(Int64)
+        item_id = rows.read(Int64)
+        item_title = rows.read(String)
+        item_link = rows.read(String)
+        item_pub_date_str = rows.read(String?)
+        feed_url = rows.read(String)
+        feed_title = rows.read(String)
+        favicon = rows.read(String?)
+        header_color = rows.read(String?)
+
+        item_pub_date = item_pub_date_str.try { |str| Time.parse(str, "%Y-%m-%d %H:%M:%S", Time::Location::UTC) }
+
+        cluster_items[cluster_id] ||= [] of {id: Int64, title: String, link: String, pub_date: Time?, feed_url: String, feed_title: String, favicon: String?, header_color: String?}
+        cluster_items[cluster_id] << {
+          id: item_id,
+          title: item_title,
+          link: item_link,
+          pub_date: item_pub_date,
+          feed_url: feed_url,
+          feed_title: feed_title,
+          favicon: favicon,
+          header_color: header_color
+        }
+      end
+    end
+
+    # Convert to Cluster entities
+    cluster_items.each do |_cluster_id, items|
+      next if items.empty?
+
+      rep_data = items.first
+
+      representative = Quickheadlines::Entities::Story.new(
+        id: rep_data[:id].to_s,
+        title: rep_data[:title],
+        link: rep_data[:link],
+        pub_date: rep_data[:pub_date],
+        feed_title: rep_data[:feed_title],
+        feed_url: rep_data[:feed_url],
+        feed_link: "",
+        favicon: rep_data[:favicon],
+        favicon_data: rep_data[:favicon],
+        header_color: rep_data[:header_color]
+      )
+
+      others = items[1..].map do |item|
+        Quickheadlines::Entities::Story.new(
+          id: item[:id].to_s,
+          title: item[:title],
+          link: item[:link],
+          pub_date: item[:pub_date],
+          feed_title: item[:feed_title],
+          feed_url: item[:feed_url],
+          feed_link: "",
+          favicon: item[:favicon],
+          favicon_data: item[:favicon],
+          header_color: item[:header_color]
+        )
+      end
+
+      clusters << Quickheadlines::Entities::Cluster.new(
+        id: items.first[:id].to_s,
+        representative: representative,
+        others: others,
+        size: items.size
+      )
+    end
+
+    clusters
+  end
+
   # GET /api/feeds - Get feeds for a specific tab
   @[ARTA::Get(path: "/api/feeds")]
   def feeds(request : ATH::Request) : FeedsPageResponse
@@ -174,6 +333,17 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
     ATH::Response.new(ex.message, 404, HTTP::Headers{"content-type" => "text/plain"})
   end
 
+  @[ARTA::Get(path: "/simple.js")]
+  def simple_js(request : ATH::Request) : ATH::Response
+    content = File.read("./public/simple.js")
+    response = ATH::Response.new(content)
+    response.headers["content-type"] = "application/javascript; charset=utf-8"
+    response.headers["Cache-Control"] = "public, max-age=31536000"
+    response
+  rescue ex : Exception
+    ATH::Response.new(ex.message, 404, HTTP::Headers{"content-type" => "text/plain"})
+  end
+
   @[ARTA::Get(path: "/favicon.png")]
   def favicon_png(request : ATH::Request) : ATH::Response
     content = File.read("./assets/images/favicon.png")
@@ -206,6 +376,7 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
   @[ARTA::Get(path: "/timeline")]
   def index(request : ATH::Request) : ATH::Response
     # Generate HTML for the main page
+    cache_buster = Random::Secure.hex(8)
     # ameba:disable Style/HeredocIndent
     html = <<-HTML
         <!DOCTYPE html>
@@ -214,18 +385,220 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <title>#{STATE.config_title}</title>
-            <link rel="icon" type="image/png" href="/favicon.png">
-            <script src="/elm.js?v=#{STATE.updated_at.to_unix_ms}"></script>
+            <style>
+              * { box-sizing: border-box; }
+              body { margin: 0; padding: 0; }
+              .feed-body-scrollable {
+                scrollbar-width: thin;
+                scrollbar-color: rgba(0,0,0,0.2) transparent;
+              }
+              .feed-body-scrollable::-webkit-scrollbar {
+                width: 6px;
+              }
+              .feed-body-scrollable::-webkit-scrollbar-track {
+                background: transparent;
+              }
+              .feed-body-scrollable::-webkit-scrollbar-thumb {
+                background-color: rgba(0,0,0,0.2);
+                border-radius: 3px;
+              }
+              .feed-body-scrollable:hover::-webkit-scrollbar-thumb {
+                background-color: rgba(0,0,0,0.4);
+              }
+              a {
+                word-break: break-word !important;
+                overflow-wrap: break-word !important;
+              }
+              .elm-element {
+                min-width: 0;
+              }
+              p {
+                margin: 0;
+                word-break: break-word;
+                overflow-wrap: break-word;
+              }
+            </style>
           </head>
           <body>
             <div id="elm-app"></div>
+            <script src="/elm.js?cb=#{cache_buster}"></script>
             <script>
-              if (typeof Elm !== 'undefined' && Elm.Main) {
-                var app = Elm.Main.init({
-                  node: document.getElementById('elm-app')
-                });
+              (function() {
+                // Check for saved theme preference, or use browser preference
+                var savedTheme = localStorage.getItem('quickheadlines-theme');
+                var prefersDark = false;
+
+                if (savedTheme) {
+                  prefersDark = savedTheme === 'dark';
+                } else {
+                  prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+                }
+
+                var appElement = document.getElementById('elm-app');
+                if (!appElement) {
+                  console.error('elm-app element not found');
+                  return;
+                }
+                if (typeof Elm !== 'undefined' && Elm.Main) {
+                  try {
+                    var app = Elm.Main.init({
+                      node: appElement,
+                      flags: {
+                        width: window.innerWidth,
+                        height: window.innerHeight,
+                        prefersDark: prefersDark
+                      }
+                    });
+                    console.log('Elm initialized successfully:', app);
+
+                    // Listen for theme changes from Elm and save to localStorage
+                    if (app.ports && app.ports.saveTheme) {
+                      app.ports.saveTheme.subscribe(function(theme) {
+                        localStorage.setItem('quickheadlines-theme', theme);
+                        console.log('Theme saved:', theme);
+                      });
+                    }
+
+                    // Send window resize events to Elm
+                    window.addEventListener('resize', function() {
+                      if (app.ports && app.ports.onResize) {
+                        app.ports.onResize.send({ width: window.innerWidth, height: window.innerHeight });
+                      }
+                    });
+                  } catch(e) {
+                    console.error('Elm initialization error:', e);
+                    appElement.innerHTML = '<p style="color: red;">Error initializing Elm: ' + e.message + '</p>';
+                  }
+                } else {
+                  console.warn('Elm.Main not found');
+                  appElement.innerHTML = '<p>Loading application...</p>';
+                }
+              })();
+            </script>
+          </body>
+        </html>
+    HTML
+
+    response = ATH::Response.new(html)
+    response.headers["content-type"] = "text/html; charset=utf-8"
+    response
+  end
+
+  # Simple test page for debugging Elm command execution
+  @[ARTA::Get(path: "/simple-test")]
+  @[ARTA::Get(path: "/simple")]
+  def simple_test(request : ATH::Request) : ATH::Response
+    html = <<-HTML
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <meta charset="UTF-8">
+            <title>Simple Test - Debug Elm Commands</title>
+            <style>
+              body { font-family: monospace; padding: 20px; background: #1a1a1a; color: #eee; }
+              button { padding: 10px 20px; margin: 5px; cursor: pointer; background: #333; color: #fff; border: 1px solid #555; }
+              #log { background: #0a0a0a; padding: 10px; margin-top: 20px; max-height: 400px; overflow-y: auto; font-size: 12px; }
+              .log-entry { margin: 2px 0; padding: 2px 5px; }
+              .log-info { color: #88f; }
+              .log-success { color: #8f8; }
+              .log-error { color: #f88; }
+              #elm-app { background: #252525; padding: 20px; margin: 10px 0; border: 1px solid #444; }
+            </style>
+          </head>
+          <body>
+            <h1>Simple Elm Test</h1>
+            <p>Testing if Elm commands (Task.perform, Http.get) execute on init.</p>
+            <button onclick="location.reload()">Reload Page</button>
+            <button onclick="clearLog()">Clear Log</button>
+
+            <div id="elm-app"></div>
+
+            <h2>Console Log</h2>
+            <div id="log"></div>
+
+            <script src="/simple.js"></script>
+            <script>
+              function log(msg, type) {
+                var logDiv = document.getElementById('log');
+                var entry = document.createElement('div');
+                entry.className = 'log-entry ' + (type || 'log-info');
+                entry.textContent = '[' + new Date().toISOString().substr(11, 12) + '] ' + msg;
+                logDiv.appendChild(entry);
+                logDiv.scrollTop = logDiv.scrollHeight;
+                console.log('[' + type + ']', msg);
+              }
+
+              function clearLog() {
+                document.getElementById('log').innerHTML = '';
+              }
+
+              log('Page loaded', 'log-info');
+
+              // Intercept fetch to see HTTP requests
+              var originalFetch = window.fetch;
+              window.fetch = function() {
+                log('FETCH called: ' + arguments[0], 'log-success');
+                return originalFetch.apply(this, arguments);
+              };
+
+              // Intercept XMLHttpRequest
+              var originalXHR = window.XMLHttpRequest;
+              window.XMLHttpRequest = function() {
+                var xhr = new originalXHR();
+                var originalOpen = xhr.open.bind(xhr);
+                xhr.open = function(method, url) {
+                  log('XHR open: ' + method + ' ' + url, 'log-success');
+                  return originalOpen.apply(this, arguments);
+                };
+                return xhr;
+              };
+
+              log('Elm global:', typeof Elm, 'log-info');
+              log('Elm.SimpleTest:', Elm && Elm.SimpleTest, 'log-info');
+
+              if (typeof Elm !== 'undefined' && Elm.SimpleTest) {
+                log('Initializing Elm.SimpleTest...', 'log-info');
+                try {
+                  var startTime = performance.now();
+                  var app = Elm.SimpleTest.init({
+                    node: document.getElementById('elm-app')
+                  });
+                  var initTime = performance.now() - startTime;
+                  log('Elm initialized in ' + initTime.toFixed(2) + 'ms', 'log-success');
+                  log('App object:', JSON.stringify({
+                    ports: !!app.ports,
+                    model: !!app.model,
+                    subscriptions: !!app.subscriptions
+                  }), 'log-info');
+
+                  // Monitor for model changes
+                  if (app.ports && app.ports.outgoing) {
+                    log('Subscribing to outgoing port', 'log-info');
+                    app.ports.outgoing.subscribe(function(data) {
+                      log('Outgoing port message: ' + JSON.stringify(data), 'log-success');
+                    });
+                  }
+
+                  // Check after a delay if model changed
+                  setTimeout(function() {
+                    log('Checking for updates after 3 seconds...', 'log-info');
+                    var modelDiv = document.getElementById('elm-app');
+                    log('elm-app innerHTML length: ' + modelDiv.innerHTML.length, 'log-info');
+                    log('elm-app text content: ' + modelDiv.textContent.substring(0, 200), 'log-info');
+
+                    // Try to access the app's internal state
+                    if (app._callbacks && app._callbacks.update) {
+                      log('Update callbacks present', 'log-success');
+                    }
+                  }, 3000);
+
+                } catch(e) {
+                  log('Elm initialization error: ' + e.message, 'log-error');
+                  log('Stack: ' + e.stack, 'log-error');
+                }
               } else {
-                document.getElementById('elm-app').innerHTML = '<p>Loading application...</p>';
+                log('Elm.SimpleTest not found!', 'log-error');
+                log('Available in Elm:', Object.keys(Elm || {}), 'log-error');
               }
             </script>
           </body>
@@ -235,6 +608,17 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
     response = ATH::Response.new(html)
     response.headers["content-type"] = "text/html; charset=utf-8"
     response
+  end
+
+  # Vanilla JS test for XHR/Fetch
+  @[ARTA::Get(path: "/vanilla-test")]
+  def vanilla_test(request : ATH::Request) : ATH::Response
+    content = File.read("./public/vanilla-test.html")
+    response = ATH::Response.new(content)
+    response.headers["content-type"] = "text/html; charset=utf-8"
+    response
+  rescue ex : Exception
+    ATH::Response.new(ex.message, 404, HTTP::Headers{"content-type" => "text/plain"})
   end
 
   # Proxy images

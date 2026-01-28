@@ -161,6 +161,72 @@ class ApiErrorResponse
   end
 end
 
+# Story response for API (used in clusters)
+class StoryResponse
+  include JSON::Serializable
+
+  property id : String
+  property title : String
+  property link : String
+  property pub_date : Int64?
+  property feed_title : String
+  property feed_url : String
+  property feed_link : String
+
+  @[JSON::Field(emit_null: true)]
+  property favicon : String?
+
+  @[JSON::Field(emit_null: true)]
+  property favicon_data : String?
+
+  @[JSON::Field(emit_null: true)]
+  property header_color : String?
+
+  def initialize(
+    @id : String,
+    @title : String,
+    @link : String,
+    @pub_date : Int64? = nil,
+    @feed_title : String = "",
+    @feed_url : String = "",
+    @feed_link : String = "",
+    @favicon : String? = nil,
+    @favicon_data : String? = nil,
+    @header_color : String? = nil,
+  )
+  end
+end
+
+# Clusters response for API
+class ClustersResponse
+  include JSON::Serializable
+
+  property clusters : Array(ClusterResponse)
+  property total_count : Int32
+
+  def initialize(@clusters : Array(ClusterResponse), @total_count : Int32 = 0)
+  end
+end
+
+# Cluster response for API
+class ClusterResponse
+  include JSON::Serializable
+
+  property id : String
+  property representative : StoryResponse
+  property others : Array(StoryResponse)
+  property cluster_size : Int32
+
+  def initialize(
+    @id : String,
+    @representative : StoryResponse,
+    @others : Array(StoryResponse) = [] of StoryResponse,
+    @cluster_size : Int32 = 1,
+  )
+    @cluster_size = 1 + others.size
+  end
+end
+
 module Api
   # Convert FeedData to FeedResponse
   def self.feed_to_response(feed : FeedData, tab_name : String = "") : FeedResponse

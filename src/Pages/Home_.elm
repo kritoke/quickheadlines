@@ -1,17 +1,19 @@
 module Pages.Home_ exposing (Model, Msg(..), init, page, subscriptions, update, view)
 
-import Components.FeedBody as FeedBody
 import Components.FeedBox as FeedBox
 import Components.Header as Header
 import Components.TabBar as TabBar
 import Decoders exposing (feedsPageDecoder)
-import Effect exposing (Effect)
-import Html exposing (Html)
-import Html.Attributes
+import AppEffect exposing (Effect)
+import Element exposing (..)
+import Element.Background as Background
+import Element.Border as Border
+import Element.Font as Font
 import Http
 import Page exposing (Page)
 import Shared exposing (Shared)
-import Theme exposing (getThemeColors)
+import Task
+import Theme exposing (errorBgColor, errorBorderColor, errorTextColor, surfaceColor, textColor)
 import Time exposing (Posix, Zone)
 import Types exposing (Feed, FeedItem, Tab, Theme(..))
 import View exposing (View)
@@ -38,15 +40,19 @@ type alias Model =
 
 init : Shared -> () -> ( Model, Effect Msg )
 init shared _ =
+    let
+        _ = Debug.log "Home.init" "starting"
+    in
     ( { activeTab = "all"
       , tabs = []
       , feeds = []
       , loading = True
       , error = Nothing
       }
-    , Effect.batch
-        [ Effect.sendCmd (fetchFeeds "all")
-        ]
+    , AppEffect.sendCmd (Http.get
+        { url = "/api/feeds?tab=all"
+        , expect = Http.expectJson GotFeeds feedsPageDecoder
+        })
     )
 
 
@@ -69,7 +75,7 @@ update shared msg model =
                 , loading = False
                 , error = Nothing
               }
-            , Effect.none
+            , AppEffect.none
             )
 
         GotFeeds (Err error) ->
@@ -77,17 +83,17 @@ update shared msg model =
                 | loading = False
                 , error = Just (httpErrorToString error)
               }
-            , Effect.none
+            , AppEffect.none
             )
 
         SwitchTab tabName ->
             ( { model | activeTab = tabName, loading = True }
-            , Effect.sendCmd (fetchFeeds tabName)
+            , AppEffect.sendCmd (fetchFeeds tabName)
             )
 
         LoadMore url count ->
             ( model
-            , Effect.sendCmd (fetchMoreItems url count)
+            , AppEffect.sendCmd (fetchMoreItems url count)
             )
 
         GotMoreItems url (Ok feed) ->
@@ -103,17 +109,17 @@ update shared msg model =
                         )
                         model.feeds
               }
-            , Effect.none
+            , AppEffect.none
             )
 
         GotMoreItems _ (Err error) ->
             ( { model | error = Just (httpErrorToString error) }
-            , Effect.none
+            , AppEffect.none
             )
 
         ToggleThemeRequested ->
             ( model
-            , Effect.none
+            , AppEffect.sendMsg ToggleThemeRequested
             )
 
 
@@ -122,35 +128,35 @@ view shared model =
     let
         paddingValue =
             responsivePadding shared.windowWidth
+
+        content =
+            if model.loading then
+                loadingIndicator shared.theme
+
+            else if model.error /= Nothing then
+                errorView shared.theme (Maybe.withDefault "" model.error)
+
+            else
+                feedGrid shared.windowWidth shared.theme model.activeTab model.feeds shared.now
     in
     { title = "QuickHeadlines"
     , body =
-        [ Html.div
-            [ Html.Attributes.style "padding" (String.fromInt paddingValue ++ "px")
-            , Html.Attributes.style "min-height" "100vh"
-            , Html.Attributes.style "display" "flex"
-            , Html.Attributes.style "flex-direction" "column"
+        column
+            [ padding paddingValue
+            , height fill
+            , width fill
+            , Background.color (Theme.surfaceColor shared.theme)
             ]
-            [ Html.div
-                [ Html.Attributes.style "display" "flex"
-                , Html.Attributes.style "flex-direction" "column"
-                , Html.Attributes.style "height" "100%"
-                , Html.Attributes.style "width" "100%"
-                , Html.Attributes.style "gap" "1.25rem"
+            [ column
+                [ width fill
+                , height fill
+                , spacing 20
                 ]
-                [ Header.view shared.theme shared.lastUpdated shared.timeZone ToggleThemeRequested
+                [ Header.view shared.windowWidth shared.theme shared.lastUpdated shared.timeZone ToggleThemeRequested
                 , TabBar.view shared.theme model.tabs model.activeTab SwitchTab
-                , if model.loading then
-                    loadingIndicator
-
-                  else if model.error /= Nothing then
-                    errorView (Maybe.withDefault "" model.error)
-
-                  else
-                    feedGrid shared.windowWidth shared.theme model.activeTab model.feeds
+                , content
                 ]
             ]
-        ]
     }
 
 
@@ -189,36 +195,40 @@ httpErrorToString error =
             "Invalid response: " ++ message
 
 
-loadingIndicator : Html Msg
-loadingIndicator =
-    Html.div
-        [ Html.Attributes.style "display" "flex"
-        , Html.Attributes.style "justify-content" "center"
-        , Html.Attributes.style "align-items" "center"
-        , Html.Attributes.style "padding" "2.5rem"
+loadingIndicator : Theme -> Element msg
+loadingIndicator theme =
+    el
+        [ centerX
+        , centerY
+        , padding 40
+        , Font.size 16
+        , Font.color (Theme.textColor theme)
         ]
-        [ Html.text "Loading..."
+        (text "Loading...")
+
+
+errorView : Theme -> String -> Element msg
+errorView theme errorMessage =
+    row
+        [ centerX
+        , centerY
+        , padding 20
+        , Border.rounded 8
+        , Border.width 1
+        , Border.color (errorBorderColor theme)
+        , Background.color (errorBgColor theme)
+        , width fill
+        ]
+        [ el
+            [ Font.color (errorTextColor theme)
+            , centerX
+            ]
+            (text ("Error: " ++ errorMessage))
         ]
 
 
-errorView : String -> Html Msg
-errorView errorMessage =
-    Html.div
-        [ Html.Attributes.style "display" "flex"
-        , Html.Attributes.style "justify-content" "center"
-        , Html.Attributes.style "align-items" "center"
-        , Html.Attributes.style "padding" "1.25rem"
-        , Html.Attributes.style "border-radius" "0.5rem"
-        , Html.Attributes.style "border" "1px solid #dc2626"
-        , Html.Attributes.style "background-color" "#fef2f2"
-        , Html.Attributes.style "color" "#7f1d1d"
-        ]
-        [ Html.text ("Error: " ++ errorMessage)
-        ]
-
-
-feedGrid : Int -> Theme -> String -> List Feed -> Html Msg
-feedGrid windowWidth theme activeTab feeds =
+feedGrid : Int -> Theme -> String -> List Feed -> Posix -> Element Msg
+feedGrid windowWidth theme activeTab feeds now =
     let
         columnCount =
             if windowWidth >= 1024 then
@@ -232,24 +242,24 @@ feedGrid windowWidth theme activeTab feeds =
 
         gapValue =
             if windowWidth >= 1024 then
-                "1.5rem"
+                24
 
             else if windowWidth >= 768 then
-                "1.25rem"
+                20
 
             else
-                "1rem"
+                16
 
-        -- Use first tab if activeTab is empty, show all feeds for "all" tab
         effectiveTab =
             if activeTab == "" then
                 ""
+
             else if activeTab == "all" then
                 ""
+
             else
                 activeTab
 
-        -- Filter feeds by effectiveTab
         filteredFeeds =
             if effectiveTab == "" then
                 feeds
@@ -260,23 +270,19 @@ feedGrid windowWidth theme activeTab feeds =
         chunkedFeeds =
             chunkList columnCount filteredFeeds
     in
-    Html.div
-        [ Html.Attributes.style "display" "flex"
-        , Html.Attributes.style "flex-direction" "column"
-        , Html.Attributes.style "width" "100%"
-        , Html.Attributes.style "gap" gapValue
+    column
+        [ width fill
+        , spacing gapValue
         ]
         (List.map
             (\feedRow ->
-                Html.div
-                    [ Html.Attributes.style "display" "flex"
-                    , Html.Attributes.style "flex-direction" "row"
-                    , Html.Attributes.style "width" "100%"
-                    , Html.Attributes.style "gap" gapValue
+                row
+                    [ width fill
+                    , spacing gapValue
                     ]
                     (List.map
                         (\feed ->
-                            FeedBox.view windowWidth (Time.millisToPosix 0) theme feed
+                            FeedBox.view windowWidth now theme feed
                         )
                         feedRow
                     )

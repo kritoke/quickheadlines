@@ -1036,6 +1036,127 @@ class FeedCache
     @db
   end
 
+  # Get recent items for clustering (last N hours, limit max items)
+  def get_recent_items_for_clustering(hours_back : Int32 = 24, max_items : Int32 = 1000) : Array({id: Int64, title: String, link: String, pub_date: Time?, feed_url: String, feed_title: String, favicon: String?, header_color: String?})
+    @mutex.synchronize do
+      cutoff = (Time.utc - hours_back.hours).to_s("%Y-%m-%d %H:%M:%S")
+
+      items = [] of {id: Int64, title: String, link: String, pub_date: Time?, feed_url: String, feed_title: String, favicon: String?, header_color: String?}
+
+      query = <<-SQL
+        SELECT i.id, i.title, i.link, i.pub_date, f.url as feed_url, f.title as feed_title, f.favicon, f.header_color
+        FROM items i
+        JOIN feeds f ON i.feed_id = f.id
+        WHERE i.pub_date >= ?
+        ORDER BY i.pub_date DESC
+        LIMIT ?
+      SQL
+
+      @db.query(query, cutoff, max_items) do |rows|
+        rows.each do
+          id = rows.read(Int64)
+          title = rows.read(String)
+          link = rows.read(String)
+          pub_date_str = rows.read(String?)
+          feed_url = rows.read(String)
+          feed_title = rows.read(String)
+          favicon = rows.read(String?)
+          header_color = rows.read(String?)
+
+          pub_date = pub_date_str.try { |date_str| Time.parse(date_str, "%Y-%m-%d %H:%M:%S", Time::Location::UTC) }
+
+          items << {
+            id: id,
+            title: title,
+            link: link,
+            pub_date: pub_date,
+            feed_url: feed_url,
+            feed_title: feed_title,
+            favicon: favicon,
+            header_color: header_color
+          }
+        end
+      end
+
+      items
+    end
+  end
+
+  # Get all clusters with their items
+  def get_all_clusters : Array({id: Int64, representative_id: Int64, item_count: Int32})
+    @mutex.synchronize do
+      clusters = [] of {id: Int64, representative_id: Int64, item_count: Int32}
+
+      # Get all clusters (items that have a cluster_id)
+      query = <<-SQL
+        SELECT c.id, MIN(c.representative_id) as representative_id, COUNT(*) as item_count
+        FROM (
+          SELECT cluster_id as id, MIN(id) as representative_id
+          FROM items
+          WHERE cluster_id IS NOT NULL
+          GROUP BY cluster_id
+        ) c
+        JOIN items i ON i.cluster_id = c.id
+        GROUP BY c.id
+        ORDER BY MIN(i.pub_date) DESC
+      SQL
+
+      @db.query(query) do |rows|
+        rows.each do
+          cluster_id = rows.read(Int64)
+          representative_id = rows.read(Int64)
+          item_count = rows.read(Int64).to_i32
+          clusters << {id: cluster_id, representative_id: representative_id, item_count: item_count}
+        end
+      end
+
+      clusters
+    end
+  end
+
+  # Get items in a cluster
+  def get_cluster_items_full(cluster_id : Int64) : Array({id: Int64, title: String, link: String, pub_date: Time?, feed_url: String, feed_title: String, favicon: String?, header_color: String?})
+    @mutex.synchronize do
+      items = [] of {id: Int64, title: String, link: String, pub_date: Time?, feed_url: String, feed_title: String, favicon: String?, header_color: String?}
+
+      query = <<-SQL
+        SELECT i.id, i.title, i.link, i.pub_date, f.url as feed_url, f.title as feed_title, f.favicon, f.header_color
+        FROM items i
+        JOIN feeds f ON i.feed_id = f.id
+        WHERE i.cluster_id = ?
+        ORDER BY i.id ASC
+      SQL
+
+      @db.query(query, cluster_id) do |rows|
+        rows.each do
+          id = rows.read(Int64)
+          title = rows.read(String)
+          link = rows.read(String)
+          pub_date_str = rows.read(String?)
+          feed_url = rows.read(String)
+          feed_title = rows.read(String)
+          favicon = rows.read(String?)
+          header_color = rows.read(String?)
+
+          pub_date = pub_date_str.try { |date_str| Time.parse(date_str, "%Y-%m-%d %H:%M:%S", Time::Location::UTC) }
+
+          items << {
+            id: id,
+            title: title,
+            link: link,
+            pub_date: pub_date,
+            feed_url: feed_url,
+            feed_title: feed_title,
+            favicon: favicon,
+            header_color: header_color
+          }
+        end
+      end
+
+      items
+    end
+  end
+
   # Close database connection
   def close
     @mutex.synchronize do

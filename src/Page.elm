@@ -1,6 +1,6 @@
 module Page exposing (Page, new)
 
-import Effect exposing (Effect)
+import AppEffect exposing (Effect)
 import View exposing (View)
 
 
