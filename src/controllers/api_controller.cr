@@ -333,11 +333,11 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
     ATH::Response.new(ex.message, 404, HTTP::Headers{"content-type" => "text/plain"})
   end
 
-  # Serve Elm Land UI
-  @[ARTA::Get(path: "/ui")]
-  @[ARTA::Get(path: "/ui/")]
-  @[ARTA::Get(path: "/ui/timeline")]
-  @[ARTA::Get(path: "/ui/timeline/")]
+  # Serve Elm Land UI at root
+  @[ARTA::Get(path: "/")]
+  @[ARTA::Get(path: "/")]
+  @[ARTA::Get(path: "/timeline")]
+  @[ARTA::Get(path: "/timeline/")]
   def ui_index(request : ATH::Request) : ATH::Response
     html = File.read("./views/index.html")
     response = ATH::Response.new(html)
@@ -347,7 +347,7 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
     ATH::Response.new(ex.message, 404, HTTP::Headers{"content-type" => "text/plain"})
   end
 
-  @[ARTA::Get(path: "/ui/elm.js")]
+  @[ARTA::Get(path: "/elm.js")]
   def ui_elm_js(request : ATH::Request) : ATH::Response
     content = File.read("./ui/elm.js")
     response = ATH::Response.new(content)
@@ -394,18 +394,6 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
     response.headers["content-type"] = "image/x-icon"
     response.headers["Cache-Control"] = "public, max-age=31536000"
     response
-  end
-
-  # Redirect root to Elm Land UI
-  @[ARTA::Get(path: "/")]
-  def root_redirect(request : ATH::Request) : ATH::Response
-    ATH::Response.new("", 302, HTTP::Headers{"location" => "/ui"})
-  end
-
-  # Redirect old timeline to Elm Land timeline
-  @[ARTA::Get(path: "/timeline")]
-  def timeline_redirect(request : ATH::Request) : ATH::Response
-    ATH::Response.new("", 302, HTTP::Headers{"location" => "/ui/timeline"})
   end
 
   # Simple test page for debugging Elm command execution
