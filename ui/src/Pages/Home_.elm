@@ -310,11 +310,12 @@ feedCard now theme feed =
 feedHeader : Theme -> Feed -> Element Msg
 feedHeader theme feed =
     let
-        ( headerBg, headerText ) =
+        ( headerBg, headerText, adaptiveFlag ) =
             case feed.headerColor of
                 Just color ->
                     ( Element.htmlAttribute (Html.Attributes.style "background-color" color)
                     , Element.htmlAttribute (Html.Attributes.style "color" "white")
+                    , []
                     )
 
                 Nothing ->
@@ -330,18 +331,19 @@ feedHeader theme feed =
 
                         Light ->
                             Font.color (rgb255 17 24 39)
+                    , [ htmlAttribute (Html.Attributes.attribute "data-use-adaptive-colors" "true") ]
                     )
     in
     row
-        [ width fill
+        ([ width fill
         , spacing 8
         , htmlAttribute (Html.Attributes.class "feed-header")
         , padding 8
         , Border.rounded 8
         , headerBg
-        ]
+        ] ++ adaptiveFlag)
         [ faviconView theme feed.favicon
-        , column [ spacing 2 ]
+        , column [ spacing 2, htmlAttribute (Html.Attributes.style "flex" "1") ]
             [ link
                 [ Font.size 18
                 , Font.bold

@@ -13128,6 +13128,7 @@ var $author$project$Theme$cardColor = function (theme) {
 		return A3($mdgriffith$elm_ui$Element$rgb255, 255, 255, 255);
 	}
 };
+var $elm$html$Html$Attributes$attribute = $elm$virtual_dom$VirtualDom$attribute;
 var $author$project$Pages$Home_$faviconView = F2(
 	function (theme, faviconUrl) {
 		var bgColor = function () {
@@ -13217,13 +13218,14 @@ var $author$project$Pages$Home_$feedHeader = F2(
 			var _v1 = feed.headerColor;
 			if (_v1.$ === 'Just') {
 				var color = _v1.a;
-				return _Utils_Tuple2(
+				return _Utils_Tuple3(
 					$mdgriffith$elm_ui$Element$htmlAttribute(
 						A2($elm$html$Html$Attributes$style, 'background-color', color)),
 					$mdgriffith$elm_ui$Element$htmlAttribute(
-						A2($elm$html$Html$Attributes$style, 'color', 'white')));
+						A2($elm$html$Html$Attributes$style, 'color', 'white')),
+					_List_Nil);
 			} else {
-				return _Utils_Tuple2(
+				return _Utils_Tuple3(
 					function () {
 						if (theme.$ === 'Dark') {
 							return $mdgriffith$elm_ui$Element$Background$color(
@@ -13241,23 +13243,31 @@ var $author$project$Pages$Home_$feedHeader = F2(
 							return $mdgriffith$elm_ui$Element$Font$color(
 								A3($mdgriffith$elm_ui$Element$rgb255, 17, 24, 39));
 						}
-					}());
+					}(),
+					_List_fromArray(
+						[
+							$mdgriffith$elm_ui$Element$htmlAttribute(
+							A2($elm$html$Html$Attributes$attribute, 'data-use-adaptive-colors', 'true'))
+						]));
 			}
 		}();
 		var headerBg = _v0.a;
 		var headerText = _v0.b;
+		var adaptiveFlag = _v0.c;
 		return A2(
 			$mdgriffith$elm_ui$Element$row,
-			_List_fromArray(
-				[
-					$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill),
-					$mdgriffith$elm_ui$Element$spacing(8),
-					$mdgriffith$elm_ui$Element$htmlAttribute(
-					$elm$html$Html$Attributes$class('feed-header')),
-					$mdgriffith$elm_ui$Element$padding(8),
-					$mdgriffith$elm_ui$Element$Border$rounded(8),
-					headerBg
-				]),
+			_Utils_ap(
+				_List_fromArray(
+					[
+						$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill),
+						$mdgriffith$elm_ui$Element$spacing(8),
+						$mdgriffith$elm_ui$Element$htmlAttribute(
+						$elm$html$Html$Attributes$class('feed-header')),
+						$mdgriffith$elm_ui$Element$padding(8),
+						$mdgriffith$elm_ui$Element$Border$rounded(8),
+						headerBg
+					]),
+				adaptiveFlag),
 			_List_fromArray(
 				[
 					A2($author$project$Pages$Home_$faviconView, theme, feed.favicon),
@@ -13265,7 +13275,9 @@ var $author$project$Pages$Home_$feedHeader = F2(
 					$mdgriffith$elm_ui$Element$column,
 					_List_fromArray(
 						[
-							$mdgriffith$elm_ui$Element$spacing(2)
+							$mdgriffith$elm_ui$Element$spacing(2),
+							$mdgriffith$elm_ui$Element$htmlAttribute(
+							A2($elm$html$Html$Attributes$style, 'flex', '1'))
 						]),
 					_List_fromArray(
 						[
