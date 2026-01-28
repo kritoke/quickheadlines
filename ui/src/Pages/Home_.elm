@@ -344,31 +344,26 @@ faviconView theme faviconUrl =
 
                 Light ->
                     rgb255 255 255 255
-
-        mutedTxt =
-            Theme.mutedColor theme
     in
     if faviconUrl /= "" then
-        row [ spacing 8 ]
-            [ image
-                [ width (px 24)
-                , height (px 24)
-                , Border.rounded 4
-                , Background.color bgColor
-                ]
-                { src = faviconUrl, description = "Feed favicon" }
+        image
+            [ width (px 20)
+            , height (px 20)
+            , Border.rounded 4
+            , Background.color bgColor
+            , Element.padding 2
             ]
+            { src = faviconUrl, description = "Feed favicon" }
 
     else
-        row [ spacing 8 ]
-            [ el
-                [ width (px 24)
-                , height (px 24)
-                , Background.color bgColor
-                , Border.rounded 4
-                ]
+        el
+            [ width (px 20)
+            , height (px 20)
+            , Background.color bgColor
+            , Border.rounded 4
+            , Element.padding 2
+            ]
             Element.none
-        ]
 
 
 feedInfo : Theme -> Feed -> Element Msg
@@ -395,7 +390,7 @@ feedInfo theme feed =
         , if feed.displayLink /= "" then
             el
                 [ Font.size 12
-                , Font.color mutedTxt
+                , Font.color txtColor
                 ]
                 (text feed.displayLink)
 

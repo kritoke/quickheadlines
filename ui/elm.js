@@ -13129,16 +13129,8 @@ var $author$project$Theme$cardColor = function (theme) {
 	}
 };
 var $elm$html$Html$Attributes$attribute = $elm$virtual_dom$VirtualDom$attribute;
-var $author$project$Theme$mutedColor = function (theme) {
-	if (theme.$ === 'Dark') {
-		return A3($mdgriffith$elm_ui$Element$rgb255, 148, 163, 184);
-	} else {
-		return A3($mdgriffith$elm_ui$Element$rgb255, 107, 114, 128);
-	}
-};
 var $author$project$Pages$Home_$faviconView = F2(
 	function (theme, faviconUrl) {
-		var mutedTxt = $author$project$Theme$mutedColor(theme);
 		var bgColor = function () {
 			if (theme.$ === 'Dark') {
 				return A3($mdgriffith$elm_ui$Element$rgb255, 203, 213, 225);
@@ -13147,46 +13139,30 @@ var $author$project$Pages$Home_$faviconView = F2(
 			}
 		}();
 		return (faviconUrl !== '') ? A2(
-			$mdgriffith$elm_ui$Element$row,
+			$mdgriffith$elm_ui$Element$image,
 			_List_fromArray(
 				[
-					$mdgriffith$elm_ui$Element$spacing(8)
+					$mdgriffith$elm_ui$Element$width(
+					$mdgriffith$elm_ui$Element$px(20)),
+					$mdgriffith$elm_ui$Element$height(
+					$mdgriffith$elm_ui$Element$px(20)),
+					$mdgriffith$elm_ui$Element$Border$rounded(4),
+					$mdgriffith$elm_ui$Element$Background$color(bgColor),
+					$mdgriffith$elm_ui$Element$padding(2)
 				]),
+			{description: 'Feed favicon', src: faviconUrl}) : A2(
+			$mdgriffith$elm_ui$Element$el,
 			_List_fromArray(
 				[
-					A2(
-					$mdgriffith$elm_ui$Element$image,
-					_List_fromArray(
-						[
-							$mdgriffith$elm_ui$Element$width(
-							$mdgriffith$elm_ui$Element$px(24)),
-							$mdgriffith$elm_ui$Element$height(
-							$mdgriffith$elm_ui$Element$px(24)),
-							$mdgriffith$elm_ui$Element$Border$rounded(4),
-							$mdgriffith$elm_ui$Element$Background$color(bgColor)
-						]),
-					{description: 'Feed favicon', src: faviconUrl})
-				])) : A2(
-			$mdgriffith$elm_ui$Element$row,
-			_List_fromArray(
-				[
-					$mdgriffith$elm_ui$Element$spacing(8)
+					$mdgriffith$elm_ui$Element$width(
+					$mdgriffith$elm_ui$Element$px(20)),
+					$mdgriffith$elm_ui$Element$height(
+					$mdgriffith$elm_ui$Element$px(20)),
+					$mdgriffith$elm_ui$Element$Background$color(bgColor),
+					$mdgriffith$elm_ui$Element$Border$rounded(4),
+					$mdgriffith$elm_ui$Element$padding(2)
 				]),
-			_List_fromArray(
-				[
-					A2(
-					$mdgriffith$elm_ui$Element$el,
-					_List_fromArray(
-						[
-							$mdgriffith$elm_ui$Element$width(
-							$mdgriffith$elm_ui$Element$px(24)),
-							$mdgriffith$elm_ui$Element$height(
-							$mdgriffith$elm_ui$Element$px(24)),
-							$mdgriffith$elm_ui$Element$Background$color(bgColor),
-							$mdgriffith$elm_ui$Element$Border$rounded(4)
-						]),
-					$mdgriffith$elm_ui$Element$none)
-				]));
+			$mdgriffith$elm_ui$Element$none);
 	});
 var $mdgriffith$elm_ui$Element$htmlAttribute = $mdgriffith$elm_ui$Internal$Model$Attr;
 var $elm$html$Html$Attributes$href = function (url) {
@@ -13226,6 +13202,13 @@ var $mdgriffith$elm_ui$Element$link = F2(
 				_List_fromArray(
 					[label])));
 	});
+var $author$project$Theme$mutedColor = function (theme) {
+	if (theme.$ === 'Dark') {
+		return A3($mdgriffith$elm_ui$Element$rgb255, 148, 163, 184);
+	} else {
+		return A3($mdgriffith$elm_ui$Element$rgb255, 107, 114, 128);
+	}
+};
 var $elm$virtual_dom$VirtualDom$style = _VirtualDom_style;
 var $elm$html$Html$Attributes$style = $elm$virtual_dom$VirtualDom$style;
 var $mdgriffith$elm_ui$Element$Font$underline = $mdgriffith$elm_ui$Internal$Model$htmlClass($mdgriffith$elm_ui$Internal$Style$classes.underline);
@@ -13262,7 +13245,7 @@ var $author$project$Pages$Home_$feedInfo = F2(
 					_List_fromArray(
 						[
 							$mdgriffith$elm_ui$Element$Font$size(12),
-							$mdgriffith$elm_ui$Element$Font$color(mutedTxt)
+							$mdgriffith$elm_ui$Element$Font$color(txtColor)
 						]),
 					$mdgriffith$elm_ui$Element$text(feed.displayLink)) : $mdgriffith$elm_ui$Element$none
 				]));
@@ -14010,6 +13993,7 @@ var $author$project$Pages$Timeline$dayHeader = F4(
 		var nowYear = A2($elm$time$Time$toYear, zone, now);
 		var nowMonth = A2($elm$time$Time$toMonth, zone, now);
 		var nowDay = A2($elm$time$Time$toDay, zone, now);
+		var mutedTxt = $author$project$Theme$mutedColor(theme);
 		var dateYear = A2($elm$time$Time$toYear, zone, date);
 		var dateMonth = A2($elm$time$Time$toMonth, zone, date);
 		var dateDay = A2($elm$time$Time$toDay, zone, date);
@@ -14025,42 +14009,17 @@ var $author$project$Pages$Timeline$dayHeader = F4(
 				return (_Utils_eq(dateYear, yYear) && (_Utils_eq(dateMonth, yMonth) && _Utils_eq(dateDay, yDay))) ? 'Yesterday' : A2($author$project$Pages$Timeline$formatDate, zone, date);
 			}
 		}();
-		var _v0 = function () {
-			if (theme.$ === 'Dark') {
-				return _Utils_Tuple2(
-					A3($mdgriffith$elm_ui$Element$rgb255, 30, 39, 74),
-					A3($mdgriffith$elm_ui$Element$rgb255, 224, 231, 255));
-			} else {
-				return _Utils_Tuple2(
-					A3($mdgriffith$elm_ui$Element$rgb255, 226, 232, 240),
-					A3($mdgriffith$elm_ui$Element$rgb255, 30, 41, 59));
-			}
-		}();
-		var badgeBg = _v0.a;
-		var badgeText = _v0.b;
 		return A2(
-			$mdgriffith$elm_ui$Element$row,
+			$mdgriffith$elm_ui$Element$el,
 			_List_fromArray(
 				[
-					$mdgriffith$elm_ui$Element$spacing(0),
+					$mdgriffith$elm_ui$Element$Font$size(14),
+					$mdgriffith$elm_ui$Element$Font$bold,
+					$mdgriffith$elm_ui$Element$Font$color(mutedTxt),
 					$mdgriffith$elm_ui$Element$paddingEach(
-					{bottom: 16, left: 0, right: 0, top: 32})
+					{bottom: 12, left: 0, right: 0, top: 24})
 				]),
-			_List_fromArray(
-				[
-					A2(
-					$mdgriffith$elm_ui$Element$el,
-					_List_fromArray(
-						[
-							$mdgriffith$elm_ui$Element$Background$color(badgeBg),
-							$mdgriffith$elm_ui$Element$Font$color(badgeText),
-							$mdgriffith$elm_ui$Element$Font$size(16),
-							$mdgriffith$elm_ui$Element$Font$bold,
-							A2($mdgriffith$elm_ui$Element$paddingXY, 16, 8),
-							$mdgriffith$elm_ui$Element$Border$rounded(8)
-						]),
-					$mdgriffith$elm_ui$Element$text(headerText))
-				]));
+			$mdgriffith$elm_ui$Element$text(headerText));
 	});
 var $author$project$Pages$Timeline$relativeTime = F2(
 	function (now, maybePubDate) {
