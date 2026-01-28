@@ -396,117 +396,16 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
     response
   end
 
-  # Serve main HTML page
+  # Redirect root to Elm Land UI
   @[ARTA::Get(path: "/")]
+  def root_redirect(request : ATH::Request) : ATH::Response
+    ATH::Response.new("", 302, HTTP::Headers{"location" => "/ui"})
+  end
+
+  # Redirect old timeline to Elm Land timeline
   @[ARTA::Get(path: "/timeline")]
-  def index(request : ATH::Request) : ATH::Response
-    # Generate HTML for the main page
-    cache_buster = Random::Secure.hex(8)
-    # ameba:disable Style/HeredocIndent
-    html = <<-HTML
-        <!DOCTYPE html>
-        <html>
-          <head>
-            <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>#{STATE.config_title}</title>
-            <style>
-              * { box-sizing: border-box; }
-              body { margin: 0; padding: 0; }
-              .feed-body-scrollable {
-                scrollbar-width: thin;
-                scrollbar-color: rgba(0,0,0,0.2) transparent;
-              }
-              .feed-body-scrollable::-webkit-scrollbar {
-                width: 6px;
-              }
-              .feed-body-scrollable::-webkit-scrollbar-track {
-                background: transparent;
-              }
-              .feed-body-scrollable::-webkit-scrollbar-thumb {
-                background-color: rgba(0,0,0,0.2);
-                border-radius: 3px;
-              }
-              .feed-body-scrollable:hover::-webkit-scrollbar-thumb {
-                background-color: rgba(0,0,0,0.4);
-              }
-              a {
-                word-break: break-word !important;
-                overflow-wrap: break-word !important;
-              }
-              .elm-element {
-                min-width: 0;
-              }
-              p {
-                margin: 0;
-                word-break: break-word;
-                overflow-wrap: break-word;
-              }
-            </style>
-          </head>
-          <body>
-            <div id="elm-app"></div>
-            <script src="/elm.js?cb=#{cache_buster}"></script>
-            <script>
-              (function() {
-                // Check for saved theme preference, or use browser preference
-                var savedTheme = localStorage.getItem('quickheadlines-theme');
-                var prefersDark = false;
-
-                if (savedTheme) {
-                  prefersDark = savedTheme === 'dark';
-                } else {
-                  prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-                }
-
-                var appElement = document.getElementById('elm-app');
-                if (!appElement) {
-                  console.error('elm-app element not found');
-                  return;
-                }
-                if (typeof Elm !== 'undefined' && Elm.Main) {
-                  try {
-                    var app = Elm.Main.init({
-                      node: appElement,
-                      flags: {
-                        width: window.innerWidth,
-                        height: window.innerHeight,
-                        prefersDark: prefersDark
-                      }
-                    });
-                    console.log('Elm initialized successfully:', app);
-
-                    // Listen for theme changes from Elm and save to localStorage
-                    if (app.ports && app.ports.saveTheme) {
-                      app.ports.saveTheme.subscribe(function(theme) {
-                        localStorage.setItem('quickheadlines-theme', theme);
-                        console.log('Theme saved:', theme);
-                      });
-                    }
-
-                    // Send window resize events to Elm
-                    window.addEventListener('resize', function() {
-                      if (app.ports && app.ports.onResize) {
-                        app.ports.onResize.send({ width: window.innerWidth, height: window.innerHeight });
-                      }
-                    });
-                  } catch(e) {
-                    console.error('Elm initialization error:', e);
-                    appElement.innerHTML = '<p style="color: red;">Error initializing Elm: ' + e.message + '</p>';
-                  }
-                } else {
-                  console.warn('Elm.Main not found');
-                  appElement.innerHTML = '<p>Loading application...</p>';
-                }
-              })();
-            </script>
-          </body>
-        </html>
-    HTML
-
-    response = ATH::Response.new(html)
-    response.headers["content-type"] = "text/html; charset=utf-8"
-    response
+  def timeline_redirect(request : ATH::Request) : ATH::Response
+    ATH::Response.new("", 302, HTTP::Headers{"location" => "/ui/timeline"})
   end
 
   # Simple test page for debugging Elm command execution
