@@ -312,6 +312,9 @@ feedHeader theme feed =
     row
         [ width fill
         , spacing 12
+        , htmlAttribute (Html.Attributes.class "feed-header")
+        , padding 8
+        , Border.rounded 8
         ]
         [ faviconView feed.favicon
         , feedInfo theme feed

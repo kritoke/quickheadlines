@@ -2,7 +2,7 @@ port module Application exposing (Flags, Model, Msg(..), Page(..), init, update,
 
 import Browser
 import Browser.Navigation as Nav
-import Element exposing (Element, rgb255, text)
+import Element exposing (Element, rgb255, px, text)
 import Element.Background as Background
 import Element.Border as Border
 import Element.Font as Font
@@ -298,13 +298,22 @@ headerView model =
         [ Element.row
             [ Element.width Element.fill
             , Element.spacing 12
+            , Element.paddingEach { top = 0, bottom = 8, left = 0, right = 0 }
             ]
-            [ Element.el
-                [ Font.size (if isMobile then 18 else 28)
-                , Font.bold
-                , Font.color lumeOrange
+            [ Element.row [ Element.spacing 8, Element.centerY ]
+                [ Element.image
+                    [ Element.width (px 32)
+                    , Element.height (px 32)
+                    , Border.rounded 4
+                    ]
+                    { src = "/favicon.png", description = "QuickHeadlines Logo" }
+                , Element.el
+                    [ Font.size (if isMobile then 18 else 28)
+                    , Font.bold
+                    , Font.color lumeOrange
+                    ]
+                    (text "QuickHeadlines")
                 ]
-                (text "QuickHeadlines")
             , if isMobile then
                 Element.none
 
