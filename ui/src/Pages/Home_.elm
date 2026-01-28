@@ -310,11 +310,11 @@ feedCard now theme feed =
 feedHeader : Theme -> Feed -> Element Msg
 feedHeader theme feed =
     let
-        ( headerBg, headerText, adaptiveFlag ) =
+        ( headerBg, headerTextColor, adaptiveFlag ) =
             case feed.headerColor of
                 Just color ->
                     ( Element.htmlAttribute (Html.Attributes.style "background-color" color)
-                    , Element.htmlAttribute (Html.Attributes.style "color" "white")
+                    , color
                     , []
                     )
 
@@ -327,10 +327,10 @@ feedHeader theme feed =
                             Background.color (rgb255 243 244 246)
                     , case theme of
                         Dark ->
-                            Font.color (rgb255 255 255 255)
+                            "rgb(255, 255, 255)"
 
                         Light ->
-                            Font.color (rgb255 17 24 39)
+                            "rgb(17, 24, 39)"
                     , [ htmlAttribute (Html.Attributes.attribute "data-use-adaptive-colors" "true") ]
                     )
     in
@@ -347,7 +347,7 @@ feedHeader theme feed =
             [ link
                 [ Font.size 18
                 , Font.bold
-                , headerText
+                , Element.htmlAttribute (Html.Attributes.style "color" headerTextColor)
                 , Font.underline
                 , htmlAttribute (Html.Attributes.style "word-wrap" "break-word")
                 ]
@@ -355,7 +355,7 @@ feedHeader theme feed =
             , if feed.displayLink /= "" then
                 el
                     [ Font.size 12
-                    , headerText
+                    , Element.htmlAttribute (Html.Attributes.style "color" headerTextColor)
                     , htmlAttribute (Html.Attributes.style "opacity" "0.8")
                     ]
                     (text feed.displayLink)

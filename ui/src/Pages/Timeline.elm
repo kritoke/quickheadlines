@@ -233,8 +233,13 @@ dayHeader zone now theme date =
         dateDay =
             toDay zone date
 
-        mutedTxt =
-            mutedColor theme
+        txtColor =
+            case theme of
+                Dark ->
+                    rgb255 148 163 184
+
+                Light ->
+                    rgb255 107 114 128
 
         headerText =
             if dateYear == nowYear && dateMonth == nowMonth && dateDay == nowDay then
@@ -264,10 +269,11 @@ dayHeader zone now theme date =
                     formatDate zone date
     in
     el
-        [ Font.size 14
+        [ Font.size 16
         , Font.bold
-        , Font.color mutedTxt
+        , Font.color txtColor
         , paddingEach { top = 24, bottom = 12, left = 0, right = 0 }
+        , htmlAttribute (Html.Attributes.class "timeline-day-header")
         ]
         (text headerText)
 
