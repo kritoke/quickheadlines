@@ -2,11 +2,12 @@
 # Migrated from Crystal/Slang/Tailwind to Crystal/Elm with elm-ui
 
 NAME = quickheadlines
-CRYSTAL ?= crystal
+CRYSTAL ?= $(PWD)/bin/crystal
 ELM    ?= elm
 ELM_FORMAT ?= elm-format
 VERSION := $(shell grep '^version:' shard.yml | awk '{print $$2}')
 BUILD_REV ?= v$(VERSION)
+CRYSTAL_VERSION = 1.19.1
 
 # Detect system for platform-specific builds
 UNAME_S := $(shell uname -s)
@@ -39,30 +40,49 @@ ifeq ($(UNAME_M),aarch64)
 	ARCH_NAME = arm64
 endif
 
+# Crystal binary setup
+CRYSTAL_DIR = $(PWD)/bin/crystal-$(CRYSTAL_VERSION)-$(OS_NAME)-$(ARCH_NAME)
+ifeq ($(OS_NAME),linux)
+	CRYSTAL_TARBALL = crystal-$(CRYSTAL_VERSION)-1-$(OS_NAME)-$(ARCH_NAME).tar.gz
+	CRYSTAL_URL = https://github.com/crystal-lang/crystal/releases/download/$(CRYSTAL_VERSION)/$(CRYSTAL_TARBALL)
+else ifeq ($(OS_NAME),macos)
+	CRYSTAL_TARBALL = crystal-$(CRYSTAL_VERSION)-1-$(OS_NAME)-$(ARCH_NAME).tar.gz
+	CRYSTAL_URL = https://github.com/crystal-lang/crystal/releases/download/$(CRYSTAL_VERSION)/$(CRYSTAL_TARBALL)
+else
+	CRYSTAL_TARBALL = crystal-$(CRYSTAL_VERSION)-1-$(OS_NAME)-$(ARCH_NAME).tar.gz
+	CRYSTAL_URL = https://github.com/crystal-lang/crystal/releases/download/$(CRYSTAL_VERSION)/$(CRYSTAL_TARBALL)
+endif
+
 # Add Homebrew OpenSSL paths for macOS
 ifeq ($(OS_NAME),macos)
 	OPENSSL_PREFIX := $(shell brew --prefix openssl@3 2>/dev/null)
 	export PKG_CONFIG_PATH := $(OPENSSL_PREFIX)/lib/pkgconfig:$(PKG_CONFIG_PATH)
 endif
 
-.PHONY: all build run clean check-deps elm-install elm-build elm-format elm-validate test-frontend
+.PHONY: all build run clean check-deps elm-install elm-build elm-format elm-validate test-frontend download-crystal
 
 all: build
+
+# Download Crystal compiler from official site
+download-crystal:
+	@echo "Downloading Crystal $(CRYSTAL_VERSION)..."
+	@mkdir -p bin
+	@if [ ! -d "$(CRYSTAL_DIR)" ]; then \
+		echo "Downloading $(CRYSTAL_URL)..."; \
+		cd bin && curl -L -o $(CRYSTAL_TARBALL) $(CRYSTAL_URL) && \
+		tar xzf $(CRYSTAL_TARBALL) && \
+		rm $(CRYSTAL_TARBALL); \
+		rm -f crystal && ln -s $(CRYSTAL_DIR)/bin/crystal crystal; \
+	fi
+	@echo "✓ Crystal $(CRYSTAL_VERSION) downloaded to $(CRYSTAL_DIR)"
 
 # Check for required dependencies
 check-deps:
 	@echo "Checking dependencies..."
-	@command -v $(CRYSTAL) >/dev/null 2>&1 || { \
-		echo "❌ Error: Crystal compiler not found"; \
-		echo ""; \
-		echo "Install Crystal:"; \
-		echo "  macOS:   brew install crystal"; \
-		echo "  Ubuntu:  curl -fsSL https://crystal-lang.org/install.sh | sudo bash"; \
-		echo "  FreeBSD: pkg install crystal"; \
-		echo ""; \
-		echo "See https://crystal-lang.org/install/ for details"; \
-		exit 1; \
-	}
+	@if [ ! -x "$(CRYSTAL)" ]; then \
+		echo "Crystal compiler not found, downloading..."; \
+		$(MAKE) download-crystal; \
+	fi
 	@echo "✓ Crystal compiler: $$($(CRYSTAL) --version)"
 	@if [ "$(OS_NAME)" = "freebsd" ]; then \
 		if [ -f "public/elm.js" ]; then \
