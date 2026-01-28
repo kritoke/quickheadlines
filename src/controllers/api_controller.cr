@@ -321,20 +321,22 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
     STATE.updated_at.to_unix_ms.to_s
   end
 
-  # POST /api/header_color - Save extracted header color from favicon
-  # Takes feed_url and color (hex format). Manual header_color in config takes priority.
+  # POST /api/header_color - Save extracted header color and text color from favicon
+  # Takes feed_url, color (bg color), and text_color (text color). Manual header_color in config takes priority.
   @[ARTA::Post(path: "/api/header_color")]
   def save_header_color(request : ATH::Request) : ATH::Response
     body = JSON.parse(request.body.not_nil!.gets_to_end)
 
     feed_url_raw = body["feed_url"]?
     color_raw = body["color"]?
+    text_color_raw = body["text_color"]?
 
     feed_url = feed_url_raw.is_a?(JSON::Any) ? feed_url_raw.as_s : nil
     color = color_raw.is_a?(JSON::Any) ? color_raw.as_s : nil
+    text_color = text_color_raw.is_a?(JSON::Any) ? text_color_raw.as_s : nil
 
-    if feed_url.nil? || color.nil?
-      return ATH::Response.new("Missing feed_url or color", 400)
+    if feed_url.nil? || color.nil? || text_color.nil?
+      return ATH::Response.new("Missing feed_url, color, or text_color", 400)
     end
 
     # Check if this feed has a manual header_color in config (takes priority)
@@ -353,9 +355,9 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
       return ATH::Response.new("Skipped: manual config exists", 200)
     end
 
-    # Save extracted color to database
+    # Save extracted colors to database
     cache = FeedCache.instance
-    cache.update_header_color(feed_url, color)
+    cache.update_header_colors(feed_url, color, text_color)
 
     ATH::Response.new("OK", 200)
   rescue ex

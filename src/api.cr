@@ -20,6 +20,9 @@ class FeedResponse
   @[JSON::Field(emit_null: true)]
   property header_color : String?
 
+  @[JSON::Field(emit_null: true)]
+  property header_text_color : String?
+
   property tab : String
   property url : String
   property title : String
@@ -44,6 +47,7 @@ class FeedResponse
     @favicon : String? = nil,
     @favicon_data : String? = nil,
     @header_color : String? = nil,
+    @header_text_color : String? = nil,
     @items : Array(ItemResponse) = [] of ItemResponse,
     @total_item_count : Int32 = 0,
   )
@@ -92,6 +96,9 @@ class TimelineItemResponse
   property header_color : String?
 
   @[JSON::Field(emit_null: true)]
+  property header_text_color : String?
+
+  @[JSON::Field(emit_null: true)]
   property cluster_id : String?
 
   property? is_representative : Bool
@@ -110,6 +117,7 @@ class TimelineItemResponse
     @favicon : String? = nil,
     @favicon_data : String? = nil,
     @header_color : String? = nil,
+    @header_text_color : String? = nil,
     @cluster_id : String? = nil,
     @is_representative : Bool = false,
     @cluster_size : Int32? = nil,
@@ -248,6 +256,7 @@ module Api
       favicon: feed.favicon,
       favicon_data: feed.favicon_data,
       header_color: feed.header_color,
+      header_text_color: feed.header_text_color,
       items: items_response,
       total_item_count: feed.items.size.to_i32
     )
@@ -295,9 +304,10 @@ module Api
       favicon: item.favicon,
       favicon_data: item.favicon_data,
       header_color: item.header_color,
+      header_text_color: item.header_text_color,
       cluster_id: cluster_id_str,
       is_representative: is_representative,
-      cluster_size: cluster_size && cluster_size > 1 ? cluster_size : nil
+      cluster_size: cluster_size
     )
   end
 

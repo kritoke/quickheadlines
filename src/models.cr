@@ -1,5 +1,5 @@
-record Item, title : String, link : String, pub_date : Time?, version : String? = nil
-record TimelineItem, item : Item, feed_title : String, feed_url : String, feed_link : String, favicon : String?, favicon_data : String?, header_color : String?
+ record Item, title : String, link : String, pub_date : Time?, version : String? = nil
+ record TimelineItem, item : Item, feed_title : String, feed_url : String, feed_link : String, favicon : String?, favicon_data : String?, header_color : String?, header_text_color : String?
 
 # Extended TimelineItem with cluster information for story grouping
 record ClusteredTimelineItem,
@@ -10,6 +10,7 @@ record ClusteredTimelineItem,
   favicon : String?,
   favicon_data : String?,
   header_color : String?,
+  header_text_color : String?,
   cluster_id : Int64?,
   is_representative : Bool,
   cluster_size : Int32?
@@ -24,6 +25,7 @@ def to_clustered(item : TimelineItem, cluster_id : Int64?, is_representative : B
     item.favicon,
     item.favicon_data,
     item.header_color,
+    item.header_text_color,
     cluster_id,
     is_representative,
     cluster_size
@@ -35,9 +37,13 @@ record StoryGroup,
   representative : ClusteredTimelineItem,
   others : Array(ClusteredTimelineItem)
 
-record FeedData, title : String, url : String, site_link : String, header_color : String?, items : Array(Item), etag : String? = nil, last_modified : String? = nil, favicon : String? = nil, favicon_data : String? = nil do
+record FeedData, title : String, url : String, site_link : String, header_color : String?, header_text_color : String?, items : Array(Item), etag : String? = nil, last_modified : String? = nil, favicon : String? = nil, favicon_data : String? = nil do
   def display_header_color
     (header_color.try(&.strip).presence) || "transparent"
+  end
+
+  def display_header_text_color
+    header_text_color.try(&.strip).presence
   end
 
   def display_link
@@ -88,7 +94,8 @@ class AppState
           feed.site_link,
           feed.favicon,
           feed.favicon_data,
-          feed.header_color
+          feed.header_color,
+          feed.header_text_color
         )
       end
     end
@@ -104,13 +111,14 @@ class AppState
             feed.site_link,
             feed.favicon,
             feed.favicon_data,
-            feed.header_color
+            feed.header_color,
+            feed.header_text_color
           )
         end
       end
     end
 
-    # Sort by publication date (newest first), items without dates go to the end
+    # Sort by publication date (newest first), items without dates go to end
     items.sort! do |a, b|
       date_a = a.item.pub_date
       date_b = b.item.pub_date

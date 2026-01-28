@@ -370,7 +370,7 @@ private def handle_success_response(feed : Feed, response : HTTP::Client::Respon
     items = [Item.new("No items found (or unsupported format)", feed.url, nil)]
   end
 
-  FeedData.new(feed.title, feed.url, site_link, feed.header_color, items, etag, last_modified, favicon, favicon_data)
+  FeedData.new(feed.title, feed.url, site_link, feed.header_color, feed.header_text_color, items, etag, last_modified, favicon, favicon_data)
 end
 
 private def error_feed_data(feed : Feed, message : String) : FeedData
@@ -389,6 +389,7 @@ private def error_feed_data(feed : Feed, message : String) : FeedData
     feed.url,
     site_link,
     feed.header_color,
+    feed.header_text_color,
     [Item.new(message, feed.url, nil)],
     nil, # etag
     nil, # last_modified
@@ -556,6 +557,7 @@ private def get_cached_feed(feed : Feed, item_limit : Int32, previous_data : Fee
       cached.url,
       cached.site_link,
       cached.header_color,
+      cached.header_text_color,
       cached.items,
       cached.etag,
       cached.last_modified,

@@ -311,28 +311,49 @@ feedHeader : Theme -> Feed -> Element Msg
 feedHeader theme feed =
     let
         ( headerBg, headerTextColor, adaptiveFlag ) =
-            case feed.headerColor of
-                Just color ->
-                    ( Element.htmlAttribute (Html.Attributes.style "background-color" color)
-                    , color
-                    , []
-                    )
+            case feed.headerTextColor of
+                Just textColor ->
+                    case feed.headerColor of
+                        Just bgColor ->
+                            ( Element.htmlAttribute (Html.Attributes.style "background-color" bgColor)
+                            , textColor
+                            , []
+                            )
+
+                        Nothing ->
+                            ( case theme of
+                                Dark ->
+                                    Background.color (rgb255 30 30 30)
+
+                                Light ->
+                                    Background.color (rgb255 243 244 246)
+                            , textColor
+                            , []
+                            )
 
                 Nothing ->
-                    ( case theme of
-                        Dark ->
-                            Background.color (rgb255 30 30 30)
+                    case feed.headerColor of
+                        Just bgColor ->
+                            ( Element.htmlAttribute (Html.Attributes.style "background-color" bgColor)
+                            , bgColor  -- Use bgColor as text color (will be calculated by backend soon)
+                            , []
+                            )
 
-                        Light ->
-                            Background.color (rgb255 243 244 246)
-                    , case theme of
-                        Dark ->
-                            "rgb(255, 255, 255)"
+                        Nothing ->
+                            ( case theme of
+                                Dark ->
+                                    Background.color (rgb255 30 30 30)
 
-                        Light ->
-                            "rgb(17, 24, 39)"
-                    , [ htmlAttribute (Html.Attributes.attribute "data-use-adaptive-colors" "true") ]
-                    )
+                                Light ->
+                                    Background.color (rgb255 243 244 246)
+                            , case theme of
+                                Dark ->
+                                    "rgb(255, 255, 255)"
+
+                                Light ->
+                                    "rgb(17, 24, 39)"
+                            , [ htmlAttribute (Html.Attributes.attribute "data-use-adaptive-colors" "true") ]
+                            )
     in
     row
         ([ width fill
@@ -342,7 +363,7 @@ feedHeader theme feed =
         , Border.rounded 8
         , headerBg
         ] ++ adaptiveFlag)
-        [ faviconView theme feed.favicon
+        [ faviconView theme (Maybe.withDefault "" feed.favicon)
         , column [ spacing 2, htmlAttribute (Html.Attributes.style "flex" "1") ]
             [ link
                 [ Font.size 18

@@ -23,6 +23,7 @@ def fetch_sw_with_config(sw_config : SoftwareConfig, item_limit : Int32) : FeedD
     url: "software://releases",
     site_link: "https://github.com", # Default landing
     header_color: sw_config.header_color || "#24292e",
+    header_text_color: sw_config.header_text_color,
     items: items,
     favicon_data: CODE_ICON
   )

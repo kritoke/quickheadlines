@@ -6127,26 +6127,37 @@ var $author$project$Api$feedDecoder = A2(
 													function (headerColor) {
 														return A2(
 															$elm$json$Json$Decode$andThen,
-															function (items) {
+															function (headerTextColor) {
 																return A2(
 																	$elm$json$Json$Decode$andThen,
-																	function (totalItemCount) {
-																		return $elm$json$Json$Decode$succeed(
-																			{displayLink: displayLink, favicon: favicon, headerColor: headerColor, items: items, siteLink: siteLink, tab: tab, title: title, totalItemCount: totalItemCount, url: url});
+																	function (items) {
+																		return A2(
+																			$elm$json$Json$Decode$andThen,
+																			function (totalItemCount) {
+																				return $elm$json$Json$Decode$succeed(
+																					{displayLink: displayLink, favicon: favicon, headerColor: headerColor, headerTextColor: headerTextColor, items: items, siteLink: siteLink, tab: tab, title: title, totalItemCount: totalItemCount, url: url});
+																			},
+																			A2($elm$json$Json$Decode$field, 'total_item_count', $elm$json$Json$Decode$int));
 																	},
-																	A2($elm$json$Json$Decode$field, 'total_item_count', $elm$json$Json$Decode$int));
+																	A2(
+																		$elm$json$Json$Decode$field,
+																		'items',
+																		$elm$json$Json$Decode$list($author$project$Api$feedItemDecoder)));
 															},
 															A2(
 																$elm$json$Json$Decode$field,
-																'items',
-																$elm$json$Json$Decode$list($author$project$Api$feedItemDecoder)));
+																'header_text_color',
+																$elm$json$Json$Decode$nullable($elm$json$Json$Decode$string)));
 													},
 													A2(
 														$elm$json$Json$Decode$field,
 														'header_color',
 														$elm$json$Json$Decode$nullable($elm$json$Json$Decode$string)));
 											},
-											A2($elm$json$Json$Decode$field, 'favicon', $elm$json$Json$Decode$string));
+											A2(
+												$elm$json$Json$Decode$field,
+												'favicon',
+												$elm$json$Json$Decode$nullable($elm$json$Json$Decode$string)));
 									},
 									A2($elm$json$Json$Decode$field, 'site_link', $elm$json$Json$Decode$string));
 							},
@@ -6398,36 +6409,54 @@ var $author$project$Api$timelineItemDecoder = A2(
 											function (favicon) {
 												return A2(
 													$elm$json$Json$Decode$andThen,
-													function (clusterId) {
+													function (headerColor) {
 														return A2(
 															$elm$json$Json$Decode$andThen,
-															function (isRepresentative) {
+															function (headerTextColor) {
 																return A2(
 																	$elm$json$Json$Decode$andThen,
-																	function (clusterSize) {
-																		return $elm$json$Json$Decode$succeed(
-																			{
-																				clusterId: clusterId,
-																				clusterSize: A2($elm$core$Maybe$withDefault, 0, clusterSize),
-																				favicon: A2($elm$core$Maybe$withDefault, '', favicon),
-																				feedTitle: feedTitle,
-																				id: id,
-																				isRepresentative: isRepresentative,
-																				link: link,
-																				pubDate: pubDate,
-																				title: title
-																			});
+																	function (clusterId) {
+																		return A2(
+																			$elm$json$Json$Decode$andThen,
+																			function (isRepresentative) {
+																				return A2(
+																					$elm$json$Json$Decode$andThen,
+																					function (clusterSize) {
+																						return $elm$json$Json$Decode$succeed(
+																							{
+																								clusterId: clusterId,
+																								clusterSize: A2($elm$core$Maybe$withDefault, 0, clusterSize),
+																								favicon: favicon,
+																								feedTitle: feedTitle,
+																								headerColor: headerColor,
+																								headerTextColor: headerTextColor,
+																								id: id,
+																								isRepresentative: isRepresentative,
+																								link: link,
+																								pubDate: pubDate,
+																								title: title
+																							});
+																					},
+																					A2(
+																						$elm$json$Json$Decode$field,
+																						'cluster_size',
+																						$elm$json$Json$Decode$nullable($elm$json$Json$Decode$int)));
+																			},
+																			A2($elm$json$Json$Decode$field, 'is_representative', $elm$json$Json$Decode$bool));
 																	},
 																	A2(
 																		$elm$json$Json$Decode$field,
-																		'cluster_size',
-																		$elm$json$Json$Decode$nullable($elm$json$Json$Decode$int)));
+																		'cluster_id',
+																		$elm$json$Json$Decode$nullable($elm$json$Json$Decode$string)));
 															},
-															A2($elm$json$Json$Decode$field, 'is_representative', $elm$json$Json$Decode$bool));
+															A2(
+																$elm$json$Json$Decode$field,
+																'header_text_color',
+																$elm$json$Json$Decode$nullable($elm$json$Json$Decode$string)));
 													},
 													A2(
 														$elm$json$Json$Decode$field,
-														'cluster_id',
+														'header_color',
 														$elm$json$Json$Decode$nullable($elm$json$Json$Decode$string)));
 											},
 											A2(
@@ -13215,37 +13244,64 @@ var $mdgriffith$elm_ui$Element$Font$underline = $mdgriffith$elm_ui$Internal$Mode
 var $author$project$Pages$Home_$feedHeader = F2(
 	function (theme, feed) {
 		var _v0 = function () {
-			var _v1 = feed.headerColor;
+			var _v1 = feed.headerTextColor;
 			if (_v1.$ === 'Just') {
-				var color = _v1.a;
-				return _Utils_Tuple3(
-					$mdgriffith$elm_ui$Element$htmlAttribute(
-						A2($elm$html$Html$Attributes$style, 'background-color', color)),
-					color,
-					_List_Nil);
+				var textColor = _v1.a;
+				var _v2 = feed.headerColor;
+				if (_v2.$ === 'Just') {
+					var bgColor = _v2.a;
+					return _Utils_Tuple3(
+						$mdgriffith$elm_ui$Element$htmlAttribute(
+							A2($elm$html$Html$Attributes$style, 'background-color', bgColor)),
+						textColor,
+						_List_Nil);
+				} else {
+					return _Utils_Tuple3(
+						function () {
+							if (theme.$ === 'Dark') {
+								return $mdgriffith$elm_ui$Element$Background$color(
+									A3($mdgriffith$elm_ui$Element$rgb255, 30, 30, 30));
+							} else {
+								return $mdgriffith$elm_ui$Element$Background$color(
+									A3($mdgriffith$elm_ui$Element$rgb255, 243, 244, 246));
+							}
+						}(),
+						textColor,
+						_List_Nil);
+				}
 			} else {
-				return _Utils_Tuple3(
-					function () {
-						if (theme.$ === 'Dark') {
-							return $mdgriffith$elm_ui$Element$Background$color(
-								A3($mdgriffith$elm_ui$Element$rgb255, 30, 30, 30));
-						} else {
-							return $mdgriffith$elm_ui$Element$Background$color(
-								A3($mdgriffith$elm_ui$Element$rgb255, 243, 244, 246));
-						}
-					}(),
-					function () {
-						if (theme.$ === 'Dark') {
-							return 'rgb(255, 255, 255)';
-						} else {
-							return 'rgb(17, 24, 39)';
-						}
-					}(),
-					_List_fromArray(
-						[
-							$mdgriffith$elm_ui$Element$htmlAttribute(
-							A2($elm$html$Html$Attributes$attribute, 'data-use-adaptive-colors', 'true'))
-						]));
+				var _v4 = feed.headerColor;
+				if (_v4.$ === 'Just') {
+					var bgColor = _v4.a;
+					return _Utils_Tuple3(
+						$mdgriffith$elm_ui$Element$htmlAttribute(
+							A2($elm$html$Html$Attributes$style, 'background-color', bgColor)),
+						bgColor,
+						_List_Nil);
+				} else {
+					return _Utils_Tuple3(
+						function () {
+							if (theme.$ === 'Dark') {
+								return $mdgriffith$elm_ui$Element$Background$color(
+									A3($mdgriffith$elm_ui$Element$rgb255, 30, 30, 30));
+							} else {
+								return $mdgriffith$elm_ui$Element$Background$color(
+									A3($mdgriffith$elm_ui$Element$rgb255, 243, 244, 246));
+							}
+						}(),
+						function () {
+							if (theme.$ === 'Dark') {
+								return 'rgb(255, 255, 255)';
+							} else {
+								return 'rgb(17, 24, 39)';
+							}
+						}(),
+						_List_fromArray(
+							[
+								$mdgriffith$elm_ui$Element$htmlAttribute(
+								A2($elm$html$Html$Attributes$attribute, 'data-use-adaptive-colors', 'true'))
+							]));
+				}
 			}
 		}();
 		var headerBg = _v0.a;
@@ -13267,7 +13323,10 @@ var $author$project$Pages$Home_$feedHeader = F2(
 				adaptiveFlag),
 			_List_fromArray(
 				[
-					A2($author$project$Pages$Home_$faviconView, theme, feed.favicon),
+					A2(
+					$author$project$Pages$Home_$faviconView,
+					theme,
+					A2($elm$core$Maybe$withDefault, '', feed.favicon)),
 					A2(
 					$mdgriffith$elm_ui$Element$column,
 					_List_fromArray(
@@ -14101,17 +14160,25 @@ var $author$project$Pages$Timeline$timelineItem = F3(
 						]),
 					_List_fromArray(
 						[
-							(item.favicon !== '') ? A2(
-							$mdgriffith$elm_ui$Element$image,
-							_List_fromArray(
-								[
-									$mdgriffith$elm_ui$Element$width(
-									$mdgriffith$elm_ui$Element$px(16)),
-									$mdgriffith$elm_ui$Element$height(
-									$mdgriffith$elm_ui$Element$px(16)),
-									$mdgriffith$elm_ui$Element$Border$rounded(2)
-								]),
-							{description: item.feedTitle + ' favicon', src: item.favicon}) : $mdgriffith$elm_ui$Element$none,
+							A2(
+							$elm$core$Maybe$withDefault,
+							$mdgriffith$elm_ui$Element$none,
+							A2(
+								$elm$core$Maybe$map,
+								function (faviconUrl) {
+									return A2(
+										$mdgriffith$elm_ui$Element$image,
+										_List_fromArray(
+											[
+												$mdgriffith$elm_ui$Element$width(
+												$mdgriffith$elm_ui$Element$px(16)),
+												$mdgriffith$elm_ui$Element$height(
+												$mdgriffith$elm_ui$Element$px(16)),
+												$mdgriffith$elm_ui$Element$Border$rounded(2)
+											]),
+										{description: item.feedTitle + ' favicon', src: faviconUrl});
+								},
+								item.favicon)),
 							A2(
 							$mdgriffith$elm_ui$Element$el,
 							_List_fromArray(

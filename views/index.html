@@ -109,11 +109,11 @@
             if (feedUrl) {
               window.feedHeaderCache[feedUrl] = { bg: bgColor, text: textColor };
 
-              // Save extracted color to database
+              // Save extracted colors to database
               fetch('/api/header_color', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ feed_url: feedUrl, color: bgColor })
+                body: JSON.stringify({ feed_url: feedUrl, color: bgColor, text_color: textColor })
               }).catch(e => {});
             }
 

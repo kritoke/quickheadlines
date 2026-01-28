@@ -9,12 +9,13 @@ DEFAULT_CONFIG_CANDIDATES = [
   "config/feeds.yaml",
 ]
 
-struct Feed
-  include YAML::Serializable
+ struct Feed
+   include YAML::Serializable
 
-  property title : String
-  property url : String
-  property header_color : String?
+   property title : String
+   property url : String
+   property header_color : String?
+   property header_text_color : String?
 
   # Retry and timeout configuration
   property max_retries : Int32 = 3 # Number of retry attempts on failure
@@ -75,6 +76,7 @@ struct SoftwareConfig
   include YAML::Serializable
   property title : String = "Software Updates"
   property header_color : String?
+  property header_text_color : String?
   property repos : Array(String)
 end
 

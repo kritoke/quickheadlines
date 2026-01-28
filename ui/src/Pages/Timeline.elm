@@ -362,16 +362,17 @@ timelineItem now theme item =
             [ spacing 8
             , width fill
             ]
-            [ if item.favicon /= "" then
-                image
-                    [ width (px 16)
-                    , height (px 16)
-                    , Border.rounded 2
-                    ]
-                    { src = item.favicon, description = item.feedTitle ++ " favicon" }
-
-              else
-                Element.none
+            [ Maybe.map
+                (\faviconUrl ->
+                    image
+                        [ width (px 16)
+                        , height (px 16)
+                        , Border.rounded 2
+                        ]
+                        { src = faviconUrl, description = item.feedTitle ++ " favicon" }
+                )
+                item.favicon
+                |> Maybe.withDefault Element.none
             , el
                 [ Font.size 12
                 , Font.color mutedTxt
