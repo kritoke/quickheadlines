@@ -8,6 +8,8 @@
     * { box-sizing: border-box; }
     body { margin: 0; padding: 0; }
     #app { width: 100vw; height: 100vh; }
+    .feed-header { transition: background-color 0.3s, color 0.3s; }
+    .feed-header a { color: inherit !important; text-decoration: none !important; }
   </style>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/color-thief/2.3.2/color-thief.umd.js"></script>
 </head>
@@ -29,7 +31,10 @@
           const cached = window.feedHeaderCache[feedUrl];
           header.style.backgroundColor = cached.bg;
           header.style.color = cached.text;
-          if (link) link.style.color = cached.text;
+          if (link) {
+            link.style.color = cached.text;
+            link.style.textDecoration = 'none';
+          }
           return;
         }
 
@@ -73,7 +78,10 @@
 
             header.style.backgroundColor = bgColor;
             header.style.color = textColor;
-            if (link) link.style.color = textColor;
+            if (link) {
+              link.style.color = textColor;
+              link.style.textDecoration = 'none';
+            }
 
             if (feedUrl) {
               window.feedHeaderCache[feedUrl] = { bg: bgColor, text: textColor };
@@ -120,6 +128,13 @@
 
         // Extract colors after Elm renders
         setTimeout(window.extractHeaderColors, 500);
+        setTimeout(window.extractHeaderColors, 1500);
+
+        // Observe DOM for new feed headers (after tab switch, etc.)
+        const observer = new MutationObserver(() => {
+          window.extractHeaderColors();
+        });
+        observer.observe(document.body, { childList: true, subtree: true });
 
       } catch(e) {
         console.error('Elm init error:', e);
