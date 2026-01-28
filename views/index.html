@@ -21,7 +21,18 @@
       if (typeof ColorThief === 'undefined') return;
       const colorThief = new ColorThief();
 
-      document.querySelectorAll('.feed-header[data-use-adaptive-colors="true"]').forEach(header => {
+      document.querySelectorAll('.feed-header').forEach(header => {
+        // Skip if custom color is set
+        if (header.dataset.hasCustomColor === 'true') {
+          const bg = header.style.backgroundColor;
+          if (bg && bg !== 'transparent' && bg !== '' && bg !== 'rgba(0, 0, 0, 0)') {
+            return;
+          }
+        }
+
+        // Skip if already processed
+        if (header.dataset.adaptive === 'true') return;
+
         const link = header.querySelector('a');
         const feedUrl = link ? link.href : null;
 
@@ -33,10 +44,19 @@
             link.style.setProperty('color', cached.text, 'important');
             link.style.textDecoration = 'none';
           }
+          header.dataset.adaptive = 'true';
           return;
         }
 
+        // Search for image in header, then fallback to parent .feed-box
         let img = header.querySelector('img');
+        if (!img) {
+          const box = header.closest('.feed-box, [class*="feed"]');
+          if (box) {
+            img = box.querySelector('img');
+          }
+        }
+
         if (!img || !img.getAttribute('src')) return;
 
         const proxy = new Image();
@@ -84,6 +104,8 @@
             if (feedUrl) {
               window.feedHeaderCache[feedUrl] = { bg: bgColor, text: textColor };
             }
+
+            header.dataset.adaptive = 'true';
           } catch (e) {}
         };
       });
