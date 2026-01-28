@@ -9,108 +9,11 @@
     body { margin: 0; padding: 0; }
     #app { width: 100vw; height: 100vh; }
   </style>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/color-thief/2.3.2/color-thief.umd.js"></script>
 </head>
 <body>
   <div id="app"></div>
   <script src="/elm.js"></script>
   <script>
-    window.feedHeaderCache = window.feedHeaderCache || {};
-
-    window.extractHeaderColors = function() {
-      if (typeof ColorThief === 'undefined') return;
-      const colorThief = new ColorThief();
-
-      document.querySelectorAll('.feed-header').forEach(header => {
-        // Skip if custom color is set
-        if (header.dataset.hasCustomColor === 'true') {
-          const bg = header.style.backgroundColor;
-          if (bg && bg !== 'transparent' && bg !== '' && bg !== 'rgba(0, 0, 0, 0)') {
-            return;
-          }
-        }
-
-        // Skip if already processed
-        if (header.dataset.adaptive === 'true') return;
-
-        const link = header.querySelector('a');
-        const feedUrl = link ? link.href : null;
-
-        if (feedUrl && window.feedHeaderCache[feedUrl]) {
-          const cached = window.feedHeaderCache[feedUrl];
-          header.style.backgroundColor = cached.bg;
-          header.style.color = cached.text;
-          if (link) {
-            link.style.setProperty('color', cached.text, 'important');
-            link.style.textDecoration = 'none';
-          }
-          header.dataset.adaptive = 'true';
-          return;
-        }
-
-        // Search for image in header, then fallback to parent .feed-box
-        let img = header.querySelector('img');
-        if (!img) {
-          const box = header.closest('.feed-box, [class*="feed"]');
-          if (box) {
-            img = box.querySelector('img');
-          }
-        }
-
-        if (!img || !img.getAttribute('src')) return;
-
-        const proxy = new Image();
-        proxy.crossOrigin = 'Anonymous';
-        if (img.src.startsWith('data:') || img.src.startsWith('/favicons/')) {
-          proxy.src = img.src;
-        } else {
-          proxy.src = img.src;
-        }
-
-        proxy.onload = function() {
-          try {
-            const palette = colorThief.getPalette(proxy, 5);
-            if (!palette || !palette.length) return;
-
-            let color = palette[0];
-
-            const isGrayscale = (c) => {
-              const max = Math.max(c[0], c[1], c[2]);
-              const min = Math.min(c[0], c[1], c[2]);
-              return (max - min) < 30;
-            };
-
-            if (isGrayscale(color)) {
-              for (let i = 1; i < palette.length; i++) {
-                if (!isGrayscale(palette[i])) {
-                  color = palette[i];
-                  break;
-                }
-              }
-            }
-
-            const [r, g, b] = color;
-            const yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
-            const textColor = (yiq >= 128) ? '#1f2937' : '#ffffff';
-            const bgColor = 'rgb(' + r + ',' + g + ',' + b + ')';
-
-            header.style.backgroundColor = bgColor;
-            header.style.color = textColor;
-            if (link) {
-              link.style.setProperty('color', textColor, 'important');
-              link.style.textDecoration = 'none';
-            }
-
-            if (feedUrl) {
-              window.feedHeaderCache[feedUrl] = { bg: bgColor, text: textColor };
-            }
-
-            header.dataset.adaptive = 'true';
-          } catch (e) {}
-        };
-      });
-    };
-
     (function() {
       var appElement = document.getElementById('app');
       if (!appElement) {
@@ -145,16 +48,6 @@
         window.addEventListener('resize', function() {
           // Handle resize if needed
         });
-
-        // Extract colors after Elm renders
-        setTimeout(window.extractHeaderColors, 500);
-        setTimeout(window.extractHeaderColors, 1500);
-
-        // Observe DOM for new feed headers (after tab switch, etc.)
-        const observer = new MutationObserver(() => {
-          window.extractHeaderColors();
-        });
-        observer.observe(document.body, { childList: true, subtree: true });
 
       } catch(e) {
         console.error('Elm init error:', e);

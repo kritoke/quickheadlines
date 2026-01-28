@@ -310,27 +310,57 @@ feedCard now theme feed =
 feedHeader : Theme -> Feed -> Element Msg
 feedHeader theme feed =
     let
-        customColorAttrs =
+        ( headerBg, headerText ) =
             case feed.headerColor of
                 Just color ->
-                    [ htmlAttribute (Html.Attributes.attribute "data-has-custom-color" "true")
-                    , htmlAttribute (Html.Attributes.style "background-color" color)
-                    , htmlAttribute (Html.Attributes.style "color" "white")
-                    ]
+                    ( Element.htmlAttribute (Html.Attributes.style "background-color" color)
+                    , Element.htmlAttribute (Html.Attributes.style "color" "white")
+                    )
 
                 Nothing ->
-                    [ htmlAttribute (Html.Attributes.attribute "data-use-adaptive-colors" "true")
-                    ]
+                    ( case theme of
+                        Dark ->
+                            Background.color (rgb255 30 30 30)
+
+                        Light ->
+                            Background.color (rgb255 243 244 246)
+                    , case theme of
+                        Dark ->
+                            Font.color (rgb255 255 255 255)
+
+                        Light ->
+                            Font.color (rgb255 17 24 39)
+                    )
     in
     row
-        ([ width fill
-        , spacing 12
+        [ width fill
+        , spacing 8
         , htmlAttribute (Html.Attributes.class "feed-header")
         , padding 8
         , Border.rounded 8
-        ] ++ customColorAttrs)
+        , headerBg
+        ]
         [ faviconView theme feed.favicon
-        , feedInfo theme feed
+        , column [ spacing 2 ]
+            [ link
+                [ Font.size 18
+                , Font.bold
+                , headerText
+                , Font.underline
+                , htmlAttribute (Html.Attributes.style "word-wrap" "break-word")
+                ]
+                { url = feed.siteLink, label = text feed.title }
+            , if feed.displayLink /= "" then
+                el
+                    [ Font.size 12
+                    , headerText
+                    , htmlAttribute (Html.Attributes.style "opacity" "0.8")
+                    ]
+                    (text feed.displayLink)
+
+              else
+                Element.none
+            ]
         ]
 
 
@@ -346,14 +376,16 @@ faviconView theme faviconUrl =
                     rgb255 255 255 255
     in
     if faviconUrl /= "" then
-        image
+        el
             [ width (px 20)
             , height (px 20)
             , Border.rounded 4
             , Background.color bgColor
             , Element.padding 2
             ]
-            { src = faviconUrl, description = "Feed favicon" }
+            (image [ width fill, height fill ]
+                { src = faviconUrl, description = "Feed favicon" }
+            )
 
     else
         el
@@ -364,39 +396,6 @@ faviconView theme faviconUrl =
             , Element.padding 2
             ]
             Element.none
-
-
-feedInfo : Theme -> Feed -> Element Msg
-feedInfo theme feed =
-    let
-        txtColor =
-            textColor theme
-
-        mutedTxt =
-            Theme.mutedColor theme
-    in
-    column
-        [ width fill
-        , spacing 4
-        ]
-        [ link
-            [ Font.size 18
-            , Font.bold
-            , Font.color txtColor
-            , Font.underline
-            , htmlAttribute (Html.Attributes.style "word-wrap" "break-word")
-            ]
-            { url = feed.siteLink, label = text feed.title }
-        , if feed.displayLink /= "" then
-            el
-                [ Font.size 12
-                , Font.color txtColor
-                ]
-                (text feed.displayLink)
-
-          else
-            Element.none
-        ]
 
 
 feedItem : Time.Posix -> Theme -> FeedItem -> Element Msg

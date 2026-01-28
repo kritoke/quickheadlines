@@ -13128,7 +13128,6 @@ var $author$project$Theme$cardColor = function (theme) {
 		return A3($mdgriffith$elm_ui$Element$rgb255, 255, 255, 255);
 	}
 };
-var $elm$html$Html$Attributes$attribute = $elm$virtual_dom$VirtualDom$attribute;
 var $author$project$Pages$Home_$faviconView = F2(
 	function (theme, faviconUrl) {
 		var bgColor = function () {
@@ -13139,7 +13138,7 @@ var $author$project$Pages$Home_$faviconView = F2(
 			}
 		}();
 		return (faviconUrl !== '') ? A2(
-			$mdgriffith$elm_ui$Element$image,
+			$mdgriffith$elm_ui$Element$el,
 			_List_fromArray(
 				[
 					$mdgriffith$elm_ui$Element$width(
@@ -13150,7 +13149,14 @@ var $author$project$Pages$Home_$faviconView = F2(
 					$mdgriffith$elm_ui$Element$Background$color(bgColor),
 					$mdgriffith$elm_ui$Element$padding(2)
 				]),
-			{description: 'Feed favicon', src: faviconUrl}) : A2(
+			A2(
+				$mdgriffith$elm_ui$Element$image,
+				_List_fromArray(
+					[
+						$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill),
+						$mdgriffith$elm_ui$Element$height($mdgriffith$elm_ui$Element$fill)
+					]),
+				{description: 'Feed favicon', src: faviconUrl})) : A2(
 			$mdgriffith$elm_ui$Element$el,
 			_List_fromArray(
 				[
@@ -13202,6 +13208,97 @@ var $mdgriffith$elm_ui$Element$link = F2(
 				_List_fromArray(
 					[label])));
 	});
+var $elm$virtual_dom$VirtualDom$style = _VirtualDom_style;
+var $elm$html$Html$Attributes$style = $elm$virtual_dom$VirtualDom$style;
+var $mdgriffith$elm_ui$Element$Font$underline = $mdgriffith$elm_ui$Internal$Model$htmlClass($mdgriffith$elm_ui$Internal$Style$classes.underline);
+var $author$project$Pages$Home_$feedHeader = F2(
+	function (theme, feed) {
+		var _v0 = function () {
+			var _v1 = feed.headerColor;
+			if (_v1.$ === 'Just') {
+				var color = _v1.a;
+				return _Utils_Tuple2(
+					$mdgriffith$elm_ui$Element$htmlAttribute(
+						A2($elm$html$Html$Attributes$style, 'background-color', color)),
+					$mdgriffith$elm_ui$Element$htmlAttribute(
+						A2($elm$html$Html$Attributes$style, 'color', 'white')));
+			} else {
+				return _Utils_Tuple2(
+					function () {
+						if (theme.$ === 'Dark') {
+							return $mdgriffith$elm_ui$Element$Background$color(
+								A3($mdgriffith$elm_ui$Element$rgb255, 30, 30, 30));
+						} else {
+							return $mdgriffith$elm_ui$Element$Background$color(
+								A3($mdgriffith$elm_ui$Element$rgb255, 243, 244, 246));
+						}
+					}(),
+					function () {
+						if (theme.$ === 'Dark') {
+							return $mdgriffith$elm_ui$Element$Font$color(
+								A3($mdgriffith$elm_ui$Element$rgb255, 255, 255, 255));
+						} else {
+							return $mdgriffith$elm_ui$Element$Font$color(
+								A3($mdgriffith$elm_ui$Element$rgb255, 17, 24, 39));
+						}
+					}());
+			}
+		}();
+		var headerBg = _v0.a;
+		var headerText = _v0.b;
+		return A2(
+			$mdgriffith$elm_ui$Element$row,
+			_List_fromArray(
+				[
+					$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill),
+					$mdgriffith$elm_ui$Element$spacing(8),
+					$mdgriffith$elm_ui$Element$htmlAttribute(
+					$elm$html$Html$Attributes$class('feed-header')),
+					$mdgriffith$elm_ui$Element$padding(8),
+					$mdgriffith$elm_ui$Element$Border$rounded(8),
+					headerBg
+				]),
+			_List_fromArray(
+				[
+					A2($author$project$Pages$Home_$faviconView, theme, feed.favicon),
+					A2(
+					$mdgriffith$elm_ui$Element$column,
+					_List_fromArray(
+						[
+							$mdgriffith$elm_ui$Element$spacing(2)
+						]),
+					_List_fromArray(
+						[
+							A2(
+							$mdgriffith$elm_ui$Element$link,
+							_List_fromArray(
+								[
+									$mdgriffith$elm_ui$Element$Font$size(18),
+									$mdgriffith$elm_ui$Element$Font$bold,
+									headerText,
+									$mdgriffith$elm_ui$Element$Font$underline,
+									$mdgriffith$elm_ui$Element$htmlAttribute(
+									A2($elm$html$Html$Attributes$style, 'word-wrap', 'break-word'))
+								]),
+							{
+								label: $mdgriffith$elm_ui$Element$text(feed.title),
+								url: feed.siteLink
+							}),
+							(feed.displayLink !== '') ? A2(
+							$mdgriffith$elm_ui$Element$el,
+							_List_fromArray(
+								[
+									$mdgriffith$elm_ui$Element$Font$size(12),
+									headerText,
+									$mdgriffith$elm_ui$Element$htmlAttribute(
+									A2($elm$html$Html$Attributes$style, 'opacity', '0.8'))
+								]),
+							$mdgriffith$elm_ui$Element$text(feed.displayLink)) : $mdgriffith$elm_ui$Element$none
+						]))
+				]));
+	});
+var $mdgriffith$elm_ui$Internal$Model$Top = {$: 'Top'};
+var $mdgriffith$elm_ui$Element$alignTop = $mdgriffith$elm_ui$Internal$Model$AlignY($mdgriffith$elm_ui$Internal$Model$Top);
 var $author$project$Theme$mutedColor = function (theme) {
 	if (theme.$ === 'Dark') {
 		return A3($mdgriffith$elm_ui$Element$rgb255, 148, 163, 184);
@@ -13209,91 +13306,6 @@ var $author$project$Theme$mutedColor = function (theme) {
 		return A3($mdgriffith$elm_ui$Element$rgb255, 107, 114, 128);
 	}
 };
-var $elm$virtual_dom$VirtualDom$style = _VirtualDom_style;
-var $elm$html$Html$Attributes$style = $elm$virtual_dom$VirtualDom$style;
-var $mdgriffith$elm_ui$Element$Font$underline = $mdgriffith$elm_ui$Internal$Model$htmlClass($mdgriffith$elm_ui$Internal$Style$classes.underline);
-var $author$project$Pages$Home_$feedInfo = F2(
-	function (theme, feed) {
-		var txtColor = $author$project$Theme$textColor(theme);
-		var mutedTxt = $author$project$Theme$mutedColor(theme);
-		return A2(
-			$mdgriffith$elm_ui$Element$column,
-			_List_fromArray(
-				[
-					$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill),
-					$mdgriffith$elm_ui$Element$spacing(4)
-				]),
-			_List_fromArray(
-				[
-					A2(
-					$mdgriffith$elm_ui$Element$link,
-					_List_fromArray(
-						[
-							$mdgriffith$elm_ui$Element$Font$size(18),
-							$mdgriffith$elm_ui$Element$Font$bold,
-							$mdgriffith$elm_ui$Element$Font$color(txtColor),
-							$mdgriffith$elm_ui$Element$Font$underline,
-							$mdgriffith$elm_ui$Element$htmlAttribute(
-							A2($elm$html$Html$Attributes$style, 'word-wrap', 'break-word'))
-						]),
-					{
-						label: $mdgriffith$elm_ui$Element$text(feed.title),
-						url: feed.siteLink
-					}),
-					(feed.displayLink !== '') ? A2(
-					$mdgriffith$elm_ui$Element$el,
-					_List_fromArray(
-						[
-							$mdgriffith$elm_ui$Element$Font$size(12),
-							$mdgriffith$elm_ui$Element$Font$color(txtColor)
-						]),
-					$mdgriffith$elm_ui$Element$text(feed.displayLink)) : $mdgriffith$elm_ui$Element$none
-				]));
-	});
-var $author$project$Pages$Home_$feedHeader = F2(
-	function (theme, feed) {
-		var customColorAttrs = function () {
-			var _v0 = feed.headerColor;
-			if (_v0.$ === 'Just') {
-				var color = _v0.a;
-				return _List_fromArray(
-					[
-						$mdgriffith$elm_ui$Element$htmlAttribute(
-						A2($elm$html$Html$Attributes$attribute, 'data-has-custom-color', 'true')),
-						$mdgriffith$elm_ui$Element$htmlAttribute(
-						A2($elm$html$Html$Attributes$style, 'background-color', color)),
-						$mdgriffith$elm_ui$Element$htmlAttribute(
-						A2($elm$html$Html$Attributes$style, 'color', 'white'))
-					]);
-			} else {
-				return _List_fromArray(
-					[
-						$mdgriffith$elm_ui$Element$htmlAttribute(
-						A2($elm$html$Html$Attributes$attribute, 'data-use-adaptive-colors', 'true'))
-					]);
-			}
-		}();
-		return A2(
-			$mdgriffith$elm_ui$Element$row,
-			_Utils_ap(
-				_List_fromArray(
-					[
-						$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill),
-						$mdgriffith$elm_ui$Element$spacing(12),
-						$mdgriffith$elm_ui$Element$htmlAttribute(
-						$elm$html$Html$Attributes$class('feed-header')),
-						$mdgriffith$elm_ui$Element$padding(8),
-						$mdgriffith$elm_ui$Element$Border$rounded(8)
-					]),
-				customColorAttrs),
-			_List_fromArray(
-				[
-					A2($author$project$Pages$Home_$faviconView, theme, feed.favicon),
-					A2($author$project$Pages$Home_$feedInfo, theme, feed)
-				]));
-	});
-var $mdgriffith$elm_ui$Internal$Model$Top = {$: 'Top'};
-var $mdgriffith$elm_ui$Element$alignTop = $mdgriffith$elm_ui$Internal$Model$AlignY($mdgriffith$elm_ui$Internal$Model$Top);
 var $mdgriffith$elm_ui$Internal$Model$Paragraph = {$: 'Paragraph'};
 var $mdgriffith$elm_ui$Element$paragraph = F2(
 	function (attrs, children) {
