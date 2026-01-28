@@ -4582,10 +4582,6 @@ var _Bitwise_shiftRightZfBy = F2(function(offset, a)
 {
 	return a >>> offset;
 });
-var $author$project$Application$Home = {$: 'Home'};
-var $author$project$Application$NavigateTo = function (a) {
-	return {$: 'NavigateTo', a: a};
-};
 var $author$project$Application$UrlChanged = function (a) {
 	return {$: 'UrlChanged', a: a};
 };
@@ -5381,6 +5377,19 @@ var $elm$core$Task$perform = F2(
 var $elm$browser$Browser$application = _Browser_application;
 var $elm$json$Json$Decode$bool = _Json_decodeBool;
 var $elm$json$Json$Decode$field = _Json_decodeField;
+var $author$project$Application$Home = {$: 'Home'};
+var $author$project$Application$NavigateTo = function (a) {
+	return {$: 'NavigateTo', a: a};
+};
+var $author$project$Main$handleUrlRequest = function (urlRequest) {
+	if (urlRequest.$ === 'Internal') {
+		var url = urlRequest.a;
+		return $author$project$Application$UrlChanged(url);
+	} else {
+		var href = urlRequest.a;
+		return $author$project$Application$NavigateTo($author$project$Application$Home);
+	}
+};
 var $author$project$Application$HomeMsg = function (a) {
 	return {$: 'HomeMsg', a: a};
 };
@@ -6561,13 +6570,14 @@ var $author$project$Application$update = F2(
 					A2($elm$core$Platform$Cmd$map, $author$project$Application$TimelineMsg, timelineCmd));
 			case 'NavigateTo':
 				var targetPage = msg.a;
-				var cmd = function () {
+				var newPath = function () {
 					if (targetPage.$ === 'Home') {
-						return A2($elm$browser$Browser$Navigation$pushUrl, model.key, '/');
+						return '/';
 					} else {
-						return A2($elm$browser$Browser$Navigation$pushUrl, model.key, '/timeline');
+						return '/timeline';
 					}
 				}();
+				var cmd = A2($elm$browser$Browser$Navigation$pushUrl, model.key, newPath);
 				return _Utils_Tuple2(
 					_Utils_update(
 						model,
@@ -13831,7 +13841,11 @@ var $author$project$Pages$Timeline$timelineItem = F3(
 							A2(
 							$mdgriffith$elm_ui$Element$el,
 							_List_fromArray(
-								[$mdgriffith$elm_ui$Element$alignRight]),
+								[
+									$mdgriffith$elm_ui$Element$Font$size(12),
+									$mdgriffith$elm_ui$Element$Font$color(mutedTxt),
+									$mdgriffith$elm_ui$Element$alignRight
+								]),
 							$mdgriffith$elm_ui$Element$text(
 								A2($author$project$Pages$Timeline$relativeTime, now, item.pubDate)))
 						])),
@@ -14104,16 +14118,7 @@ var $author$project$Application$view = function (model) {
 	};
 };
 var $author$project$Main$main = $elm$browser$Browser$application(
-	{
-		init: $author$project$Application$init,
-		onUrlChange: $author$project$Application$UrlChanged,
-		onUrlRequest: function (_v0) {
-			return $author$project$Application$NavigateTo($author$project$Application$Home);
-		},
-		subscriptions: $author$project$Main$subscriptions,
-		update: $author$project$Application$update,
-		view: $author$project$Application$view
-	});
+	{init: $author$project$Application$init, onUrlChange: $author$project$Application$UrlChanged, onUrlRequest: $author$project$Main$handleUrlRequest, subscriptions: $author$project$Main$subscriptions, update: $author$project$Application$update, view: $author$project$Application$view});
 _Platform_export({'Main':{'init':$author$project$Main$main(
 	A2(
 		$elm$json$Json$Decode$andThen,

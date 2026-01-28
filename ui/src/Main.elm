@@ -2,7 +2,8 @@ port module Main exposing (main)
 
 import Application
 import Browser
-import Pages.Home_
+import Browser.Navigation as Nav
+import Url
 
 
 port saveTheme : String -> Cmd msg
@@ -16,8 +17,18 @@ main =
         , update = Application.update
         , subscriptions = subscriptions
         , onUrlChange = Application.UrlChanged
-        , onUrlRequest = \_ -> Application.NavigateTo Application.Home
+        , onUrlRequest = handleUrlRequest
         }
+
+
+handleUrlRequest : Browser.UrlRequest -> Application.Msg
+handleUrlRequest urlRequest =
+    case urlRequest of
+        Browser.Internal url ->
+            Application.UrlChanged url
+
+        Browser.External href ->
+            Application.NavigateTo Application.Home
 
 
 subscriptions : Application.Model -> Sub Application.Msg

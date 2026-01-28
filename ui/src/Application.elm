@@ -124,13 +124,16 @@ update msg model =
 
         NavigateTo targetPage ->
             let
-                cmd =
+                newPath =
                     case targetPage of
                         Home ->
-                            Nav.pushUrl model.key "/"
+                            "/"
 
                         Timeline ->
-                            Nav.pushUrl model.key "/timeline"
+                            "/timeline"
+
+                cmd =
+                    Nav.pushUrl model.key newPath
             in
             ( { model | page = targetPage }
             , cmd

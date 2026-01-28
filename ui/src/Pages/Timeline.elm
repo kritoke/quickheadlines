@@ -370,7 +370,12 @@ timelineItem now theme item =
                 , Font.color mutedTxt
                 ]
                 (text item.feedTitle)
-            , el [ alignRight ] (text (relativeTime now item.pubDate))
+            , el
+                [ Font.size 12
+                , Font.color mutedTxt
+                , alignRight
+                ]
+                (text (relativeTime now item.pubDate))
             ]
         , paragraph
             [ Font.size 15
