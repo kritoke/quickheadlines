@@ -1,4 +1,4 @@
-module Shared exposing (Model, Msg(..), Theme(..), init, update, themeToString)
+module Shared exposing (Model, Msg(..), Theme(..), init, update, themeToString, getHeight)
 
 import Time
 
@@ -19,6 +19,7 @@ type alias Model =
 type Msg
     = ToggleTheme
     | WindowResized Int Int
+    | SetTime Time.Posix
 
 
 init : Int -> Bool -> Time.Posix -> Time.Zone -> Model
@@ -52,6 +53,14 @@ update msg model =
 
         WindowResized width _ ->
             { model | windowWidth = width }
+
+        SetTime posix ->
+            { model | now = posix }
+
+
+getHeight : Time.Posix -> Maybe Int
+getHeight _ =
+    Nothing
 
 
 themeToString : Theme -> String

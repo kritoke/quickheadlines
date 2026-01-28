@@ -14,6 +14,7 @@ import Pages.Timeline as Timeline
 import Shared exposing (Model, Msg(..), Theme(..))
 import Theme exposing (lumeOrange, surfaceColor, textColor)
 import Time
+import Task
 import Url
 
 
@@ -49,19 +50,17 @@ type Msg
     | NavigateTo Page
     | SwitchTab String
     | UrlChanged Url.Url
+    | GotTime Time.Posix
 
 
 init : Flags -> Url.Url -> Nav.Key -> ( Model, Cmd Msg )
 init flags url key =
     let
-        now =
-            Time.millisToPosix 0
-
         zone =
             Time.utc
 
         shared =
-            Shared.init flags.width flags.prefersDark now zone
+            Shared.init flags.width flags.prefersDark (Time.millisToPosix 0) zone
 
         ( homeModel, homeCmd ) =
             Home.init shared
@@ -80,6 +79,7 @@ init flags url key =
     , Cmd.batch
         [ Cmd.map HomeMsg homeCmd
         , Cmd.map TimelineMsg timelineCmd
+        , Task.perform GotTime Time.now
         ]
     )
 
@@ -158,6 +158,18 @@ update msg model =
                         Home
             in
             ( { model | url = url, page = newPage }
+            , Cmd.none
+            )
+
+        GotTime posix ->
+            let
+                shared =
+                    model.shared
+
+                newShared =
+                    { shared | now = posix }
+            in
+            ( { model | shared = newShared }
             , Cmd.none
             )
 

@@ -376,6 +376,9 @@ feedItem now theme item =
     let
         txtColor =
             textColor theme
+
+        mutedTxt =
+            Theme.mutedColor theme
     in
     row
         [ width fill
@@ -405,7 +408,103 @@ feedItem now theme item =
                 ]
                 { url = item.link, label = text item.title }
             ]
+        , el
+            [ Font.size 12
+            , Font.color mutedTxt
+            , Element.alignTop
+            , paddingXY 0 2
+            ]
+            (text (relativeTime now item.pubDate))
         ]
+
+
+relativeTime : Time.Posix -> Maybe Time.Posix -> String
+relativeTime now maybePubDate =
+    case maybePubDate of
+        Nothing ->
+            ""
+
+        Just pubDate ->
+            let
+                nowMillis =
+                    Time.posixToMillis now
+
+                pubMillis =
+                    Time.posixToMillis pubDate
+
+                diffMillis =
+                    nowMillis - pubMillis
+
+                diffMinutes =
+                    diffMillis // 60000
+
+                diffHours =
+                    diffMinutes // 60
+
+                diffDays =
+                    diffHours // 24
+            in
+            if diffMinutes < 1 then
+                "now"
+
+            else if diffMinutes < 60 then
+                String.fromInt diffMinutes ++ "m"
+
+            else if diffHours < 24 then
+                String.fromInt diffHours ++ "h"
+
+            else if diffDays < 7 then
+                String.fromInt diffDays ++ "d"
+
+            else
+                let
+                    month =
+                        Time.toMonth Time.utc pubDate |> monthToString
+
+                    day =
+                        Time.toDay Time.utc pubDate |> String.fromInt
+                in
+                month ++ " " ++ day
+
+
+monthToString : Time.Month -> String
+monthToString month =
+    case month of
+        Time.Jan ->
+            "Jan"
+
+        Time.Feb ->
+            "Feb"
+
+        Time.Mar ->
+            "Mar"
+
+        Time.Apr ->
+            "Apr"
+
+        Time.May ->
+            "May"
+
+        Time.Jun ->
+            "Jun"
+
+        Time.Jul ->
+            "Jul"
+
+        Time.Aug ->
+            "Aug"
+
+        Time.Sep ->
+            "Sep"
+
+        Time.Oct ->
+            "Oct"
+
+        Time.Nov ->
+            "Nov"
+
+        Time.Dec ->
+            "Dec"
 
 
 subscriptions : Model -> Sub Msg

@@ -4548,6 +4548,52 @@ function _Http_track(router, xhr, tracker)
 }
 
 
+function _Time_now(millisToPosix)
+{
+	return _Scheduler_binding(function(callback)
+	{
+		callback(_Scheduler_succeed(millisToPosix(Date.now())));
+	});
+}
+
+var _Time_setInterval = F2(function(interval, task)
+{
+	return _Scheduler_binding(function(callback)
+	{
+		var id = setInterval(function() { _Scheduler_rawSpawn(task); }, interval);
+		return function() { clearInterval(id); };
+	});
+});
+
+function _Time_here()
+{
+	return _Scheduler_binding(function(callback)
+	{
+		callback(_Scheduler_succeed(
+			A2($elm$time$Time$customZone, -(new Date().getTimezoneOffset()), _List_Nil)
+		));
+	});
+}
+
+
+function _Time_getZoneName()
+{
+	return _Scheduler_binding(function(callback)
+	{
+		try
+		{
+			var name = $elm$time$Time$Name(Intl.DateTimeFormat().resolvedOptions().timeZone);
+		}
+		catch (e)
+		{
+			var name = $elm$time$Time$Offset(new Date().getTimezoneOffset());
+		}
+		callback(_Scheduler_succeed(name));
+	});
+}
+
+
+
 var _Bitwise_and = F2(function(a, b)
 {
 	return a & b;
@@ -5389,6 +5435,9 @@ var $author$project$Main$handleUrlRequest = function (urlRequest) {
 		var href = urlRequest.a;
 		return $author$project$Application$NavigateTo($author$project$Application$Home);
 	}
+};
+var $author$project$Application$GotTime = function (a) {
+	return {$: 'GotTime', a: a};
 };
 var $author$project$Application$HomeMsg = function (a) {
 	return {$: 'HomeMsg', a: a};
@@ -6399,17 +6448,29 @@ var $author$project$Shared$init = F4(
 		};
 	});
 var $elm$core$Platform$Cmd$map = _Platform_map;
+var $elm$time$Time$Name = function (a) {
+	return {$: 'Name', a: a};
+};
+var $elm$time$Time$Offset = function (a) {
+	return {$: 'Offset', a: a};
+};
 var $elm$time$Time$Zone = F2(
 	function (a, b) {
 		return {$: 'Zone', a: a, b: b};
 	});
+var $elm$time$Time$customZone = $elm$time$Time$Zone;
+var $elm$time$Time$now = _Time_now($elm$time$Time$millisToPosix);
 var $elm$time$Time$utc = A2($elm$time$Time$Zone, 0, _List_Nil);
 var $author$project$Application$init = F3(
 	function (flags, url, key) {
 		var zone = $elm$time$Time$utc;
+		var shared = A4(
+			$author$project$Shared$init,
+			flags.width,
+			flags.prefersDark,
+			$elm$time$Time$millisToPosix(0),
+			zone);
 		var page = A2($elm$core$String$contains, '/timeline', url.path) ? $author$project$Application$Timeline : $author$project$Application$Home;
-		var now = $elm$time$Time$millisToPosix(0);
-		var shared = A4($author$project$Shared$init, flags.width, flags.prefersDark, now, zone);
 		var _v0 = $author$project$Pages$Timeline$init(shared);
 		var timelineModel = _v0.a;
 		var timelineCmd = _v0.b;
@@ -6422,7 +6483,8 @@ var $author$project$Application$init = F3(
 				_List_fromArray(
 					[
 						A2($elm$core$Platform$Cmd$map, $author$project$Application$HomeMsg, homeCmd),
-						A2($elm$core$Platform$Cmd$map, $author$project$Application$TimelineMsg, timelineCmd)
+						A2($elm$core$Platform$Cmd$map, $author$project$Application$TimelineMsg, timelineCmd),
+						A2($elm$core$Task$perform, $author$project$Application$GotTime, $elm$time$Time$now)
 					])));
 	});
 var $elm$core$Platform$Sub$batch = _Platform_batch;
@@ -6510,23 +6572,29 @@ var $author$project$Pages$Timeline$update = F3(
 	});
 var $author$project$Shared$update = F2(
 	function (msg, model) {
-		if (msg.$ === 'ToggleTheme') {
-			var newTheme = function () {
-				var _v1 = model.theme;
-				if (_v1.$ === 'Dark') {
-					return $author$project$Shared$Light;
-				} else {
-					return $author$project$Shared$Dark;
-				}
-			}();
-			return _Utils_update(
-				model,
-				{theme: newTheme});
-		} else {
-			var width = msg.a;
-			return _Utils_update(
-				model,
-				{windowWidth: width});
+		switch (msg.$) {
+			case 'ToggleTheme':
+				var newTheme = function () {
+					var _v1 = model.theme;
+					if (_v1.$ === 'Dark') {
+						return $author$project$Shared$Light;
+					} else {
+						return $author$project$Shared$Dark;
+					}
+				}();
+				return _Utils_update(
+					model,
+					{theme: newTheme});
+			case 'WindowResized':
+				var width = msg.a;
+				return _Utils_update(
+					model,
+					{windowWidth: width});
+			default:
+				var posix = msg.a;
+				return _Utils_update(
+					model,
+					{now: posix});
 		}
 	});
 var $author$project$Application$update = F2(
@@ -6597,13 +6665,24 @@ var $author$project$Application$update = F2(
 						model,
 						{home: newHomeModel}),
 					A2($elm$core$Platform$Cmd$map, $author$project$Application$HomeMsg, homeCmd));
-			default:
+			case 'UrlChanged':
 				var url = msg.a;
 				var newPage = A2($elm$core$String$contains, '/timeline', url.path) ? $author$project$Application$Timeline : $author$project$Application$Home;
 				return _Utils_Tuple2(
 					_Utils_update(
 						model,
 						{page: newPage, url: url}),
+					$elm$core$Platform$Cmd$none);
+			default:
+				var posix = msg.a;
+				var shared = model.shared;
+				var newShared = _Utils_update(
+					shared,
+					{now: posix});
+				return _Utils_Tuple2(
+					_Utils_update(
+						model,
+						{shared: newShared}),
 					$elm$core$Platform$Cmd$none);
 		}
 	});
@@ -13110,9 +13189,180 @@ var $mdgriffith$elm_ui$Element$paragraph = F2(
 						attrs))),
 			$mdgriffith$elm_ui$Internal$Model$Unkeyed(children));
 	});
+var $author$project$Pages$Home_$monthToString = function (month) {
+	switch (month.$) {
+		case 'Jan':
+			return 'Jan';
+		case 'Feb':
+			return 'Feb';
+		case 'Mar':
+			return 'Mar';
+		case 'Apr':
+			return 'Apr';
+		case 'May':
+			return 'May';
+		case 'Jun':
+			return 'Jun';
+		case 'Jul':
+			return 'Jul';
+		case 'Aug':
+			return 'Aug';
+		case 'Sep':
+			return 'Sep';
+		case 'Oct':
+			return 'Oct';
+		case 'Nov':
+			return 'Nov';
+		default:
+			return 'Dec';
+	}
+};
+var $elm$time$Time$posixToMillis = function (_v0) {
+	var millis = _v0.a;
+	return millis;
+};
+var $elm$time$Time$flooredDiv = F2(
+	function (numerator, denominator) {
+		return $elm$core$Basics$floor(numerator / denominator);
+	});
+var $elm$time$Time$toAdjustedMinutesHelp = F3(
+	function (defaultOffset, posixMinutes, eras) {
+		toAdjustedMinutesHelp:
+		while (true) {
+			if (!eras.b) {
+				return posixMinutes + defaultOffset;
+			} else {
+				var era = eras.a;
+				var olderEras = eras.b;
+				if (_Utils_cmp(era.start, posixMinutes) < 0) {
+					return posixMinutes + era.offset;
+				} else {
+					var $temp$defaultOffset = defaultOffset,
+						$temp$posixMinutes = posixMinutes,
+						$temp$eras = olderEras;
+					defaultOffset = $temp$defaultOffset;
+					posixMinutes = $temp$posixMinutes;
+					eras = $temp$eras;
+					continue toAdjustedMinutesHelp;
+				}
+			}
+		}
+	});
+var $elm$time$Time$toAdjustedMinutes = F2(
+	function (_v0, time) {
+		var defaultOffset = _v0.a;
+		var eras = _v0.b;
+		return A3(
+			$elm$time$Time$toAdjustedMinutesHelp,
+			defaultOffset,
+			A2(
+				$elm$time$Time$flooredDiv,
+				$elm$time$Time$posixToMillis(time),
+				60000),
+			eras);
+	});
+var $elm$time$Time$toCivil = function (minutes) {
+	var rawDay = A2($elm$time$Time$flooredDiv, minutes, 60 * 24) + 719468;
+	var era = (((rawDay >= 0) ? rawDay : (rawDay - 146096)) / 146097) | 0;
+	var dayOfEra = rawDay - (era * 146097);
+	var yearOfEra = ((((dayOfEra - ((dayOfEra / 1460) | 0)) + ((dayOfEra / 36524) | 0)) - ((dayOfEra / 146096) | 0)) / 365) | 0;
+	var dayOfYear = dayOfEra - (((365 * yearOfEra) + ((yearOfEra / 4) | 0)) - ((yearOfEra / 100) | 0));
+	var mp = (((5 * dayOfYear) + 2) / 153) | 0;
+	var month = mp + ((mp < 10) ? 3 : (-9));
+	var year = yearOfEra + (era * 400);
+	return {
+		day: (dayOfYear - ((((153 * mp) + 2) / 5) | 0)) + 1,
+		month: month,
+		year: year + ((month <= 2) ? 1 : 0)
+	};
+};
+var $elm$time$Time$toDay = F2(
+	function (zone, time) {
+		return $elm$time$Time$toCivil(
+			A2($elm$time$Time$toAdjustedMinutes, zone, time)).day;
+	});
+var $elm$time$Time$Apr = {$: 'Apr'};
+var $elm$time$Time$Aug = {$: 'Aug'};
+var $elm$time$Time$Dec = {$: 'Dec'};
+var $elm$time$Time$Feb = {$: 'Feb'};
+var $elm$time$Time$Jan = {$: 'Jan'};
+var $elm$time$Time$Jul = {$: 'Jul'};
+var $elm$time$Time$Jun = {$: 'Jun'};
+var $elm$time$Time$Mar = {$: 'Mar'};
+var $elm$time$Time$May = {$: 'May'};
+var $elm$time$Time$Nov = {$: 'Nov'};
+var $elm$time$Time$Oct = {$: 'Oct'};
+var $elm$time$Time$Sep = {$: 'Sep'};
+var $elm$time$Time$toMonth = F2(
+	function (zone, time) {
+		var _v0 = $elm$time$Time$toCivil(
+			A2($elm$time$Time$toAdjustedMinutes, zone, time)).month;
+		switch (_v0) {
+			case 1:
+				return $elm$time$Time$Jan;
+			case 2:
+				return $elm$time$Time$Feb;
+			case 3:
+				return $elm$time$Time$Mar;
+			case 4:
+				return $elm$time$Time$Apr;
+			case 5:
+				return $elm$time$Time$May;
+			case 6:
+				return $elm$time$Time$Jun;
+			case 7:
+				return $elm$time$Time$Jul;
+			case 8:
+				return $elm$time$Time$Aug;
+			case 9:
+				return $elm$time$Time$Sep;
+			case 10:
+				return $elm$time$Time$Oct;
+			case 11:
+				return $elm$time$Time$Nov;
+			default:
+				return $elm$time$Time$Dec;
+		}
+	});
+var $author$project$Pages$Home_$relativeTime = F2(
+	function (now, maybePubDate) {
+		if (maybePubDate.$ === 'Nothing') {
+			return '';
+		} else {
+			var pubDate = maybePubDate.a;
+			var pubMillis = $elm$time$Time$posixToMillis(pubDate);
+			var nowMillis = $elm$time$Time$posixToMillis(now);
+			var diffMillis = nowMillis - pubMillis;
+			var diffMinutes = (diffMillis / 60000) | 0;
+			var diffHours = (diffMinutes / 60) | 0;
+			var diffDays = (diffHours / 24) | 0;
+			if (diffMinutes < 1) {
+				return 'now';
+			} else {
+				if (diffMinutes < 60) {
+					return $elm$core$String$fromInt(diffMinutes) + 'm';
+				} else {
+					if (diffHours < 24) {
+						return $elm$core$String$fromInt(diffHours) + 'h';
+					} else {
+						if (diffDays < 7) {
+							return $elm$core$String$fromInt(diffDays) + 'd';
+						} else {
+							var month = $author$project$Pages$Home_$monthToString(
+								A2($elm$time$Time$toMonth, $elm$time$Time$utc, pubDate));
+							var day = $elm$core$String$fromInt(
+								A2($elm$time$Time$toDay, $elm$time$Time$utc, pubDate));
+							return month + (' ' + day);
+						}
+					}
+				}
+			}
+		}
+	});
 var $author$project$Pages$Home_$feedItem = F3(
 	function (now, theme, item) {
 		var txtColor = $author$project$Theme$textColor(theme);
+		var mutedTxt = $author$project$Theme$mutedColor(theme);
 		return A2(
 			$mdgriffith$elm_ui$Element$row,
 			_List_fromArray(
@@ -13167,7 +13417,18 @@ var $author$project$Pages$Home_$feedItem = F3(
 								label: $mdgriffith$elm_ui$Element$text(item.title),
 								url: item.link
 							})
-						]))
+						])),
+					A2(
+					$mdgriffith$elm_ui$Element$el,
+					_List_fromArray(
+						[
+							$mdgriffith$elm_ui$Element$Font$size(12),
+							$mdgriffith$elm_ui$Element$Font$color(mutedTxt),
+							$mdgriffith$elm_ui$Element$alignTop,
+							A2($mdgriffith$elm_ui$Element$paddingXY, 0, 2)
+						]),
+					$mdgriffith$elm_ui$Element$text(
+						A2($author$project$Pages$Home_$relativeTime, now, item.pubDate)))
 				]));
 	});
 var $author$project$Theme$themeToColors = function (theme) {
@@ -13617,113 +13878,6 @@ var $author$project$Pages$Timeline$monthToString = function (month) {
 			return 'December';
 	}
 };
-var $elm$time$Time$flooredDiv = F2(
-	function (numerator, denominator) {
-		return $elm$core$Basics$floor(numerator / denominator);
-	});
-var $elm$time$Time$posixToMillis = function (_v0) {
-	var millis = _v0.a;
-	return millis;
-};
-var $elm$time$Time$toAdjustedMinutesHelp = F3(
-	function (defaultOffset, posixMinutes, eras) {
-		toAdjustedMinutesHelp:
-		while (true) {
-			if (!eras.b) {
-				return posixMinutes + defaultOffset;
-			} else {
-				var era = eras.a;
-				var olderEras = eras.b;
-				if (_Utils_cmp(era.start, posixMinutes) < 0) {
-					return posixMinutes + era.offset;
-				} else {
-					var $temp$defaultOffset = defaultOffset,
-						$temp$posixMinutes = posixMinutes,
-						$temp$eras = olderEras;
-					defaultOffset = $temp$defaultOffset;
-					posixMinutes = $temp$posixMinutes;
-					eras = $temp$eras;
-					continue toAdjustedMinutesHelp;
-				}
-			}
-		}
-	});
-var $elm$time$Time$toAdjustedMinutes = F2(
-	function (_v0, time) {
-		var defaultOffset = _v0.a;
-		var eras = _v0.b;
-		return A3(
-			$elm$time$Time$toAdjustedMinutesHelp,
-			defaultOffset,
-			A2(
-				$elm$time$Time$flooredDiv,
-				$elm$time$Time$posixToMillis(time),
-				60000),
-			eras);
-	});
-var $elm$time$Time$toCivil = function (minutes) {
-	var rawDay = A2($elm$time$Time$flooredDiv, minutes, 60 * 24) + 719468;
-	var era = (((rawDay >= 0) ? rawDay : (rawDay - 146096)) / 146097) | 0;
-	var dayOfEra = rawDay - (era * 146097);
-	var yearOfEra = ((((dayOfEra - ((dayOfEra / 1460) | 0)) + ((dayOfEra / 36524) | 0)) - ((dayOfEra / 146096) | 0)) / 365) | 0;
-	var dayOfYear = dayOfEra - (((365 * yearOfEra) + ((yearOfEra / 4) | 0)) - ((yearOfEra / 100) | 0));
-	var mp = (((5 * dayOfYear) + 2) / 153) | 0;
-	var month = mp + ((mp < 10) ? 3 : (-9));
-	var year = yearOfEra + (era * 400);
-	return {
-		day: (dayOfYear - ((((153 * mp) + 2) / 5) | 0)) + 1,
-		month: month,
-		year: year + ((month <= 2) ? 1 : 0)
-	};
-};
-var $elm$time$Time$toDay = F2(
-	function (zone, time) {
-		return $elm$time$Time$toCivil(
-			A2($elm$time$Time$toAdjustedMinutes, zone, time)).day;
-	});
-var $elm$time$Time$Apr = {$: 'Apr'};
-var $elm$time$Time$Aug = {$: 'Aug'};
-var $elm$time$Time$Dec = {$: 'Dec'};
-var $elm$time$Time$Feb = {$: 'Feb'};
-var $elm$time$Time$Jan = {$: 'Jan'};
-var $elm$time$Time$Jul = {$: 'Jul'};
-var $elm$time$Time$Jun = {$: 'Jun'};
-var $elm$time$Time$Mar = {$: 'Mar'};
-var $elm$time$Time$May = {$: 'May'};
-var $elm$time$Time$Nov = {$: 'Nov'};
-var $elm$time$Time$Oct = {$: 'Oct'};
-var $elm$time$Time$Sep = {$: 'Sep'};
-var $elm$time$Time$toMonth = F2(
-	function (zone, time) {
-		var _v0 = $elm$time$Time$toCivil(
-			A2($elm$time$Time$toAdjustedMinutes, zone, time)).month;
-		switch (_v0) {
-			case 1:
-				return $elm$time$Time$Jan;
-			case 2:
-				return $elm$time$Time$Feb;
-			case 3:
-				return $elm$time$Time$Mar;
-			case 4:
-				return $elm$time$Time$Apr;
-			case 5:
-				return $elm$time$Time$May;
-			case 6:
-				return $elm$time$Time$Jun;
-			case 7:
-				return $elm$time$Time$Jul;
-			case 8:
-				return $elm$time$Time$Aug;
-			case 9:
-				return $elm$time$Time$Sep;
-			case 10:
-				return $elm$time$Time$Oct;
-			case 11:
-				return $elm$time$Time$Nov;
-			default:
-				return $elm$time$Time$Dec;
-		}
-	});
 var $elm$time$Time$toYear = F2(
 	function (zone, time) {
 		return $elm$time$Time$toCivil(
