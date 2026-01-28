@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>QuickHeadlines</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; padding: 0; background-color: rgb(18, 18, 18); }
+    #app { width: 100vw; height: 100vh; }
+  </style>
+</head>
+<body>
+  <div id="app"></div>
+  <script src="/ui/elm.js"></script>
+  <script>
+    (function() {
+      var appElement = document.getElementById('app');
+      if (!appElement) {
+        console.error('app element not found');
+        return;
+      }
+
+      var savedTheme = localStorage.getItem('quickheadlines-theme');
+      var prefersDark = false;
+      if (savedTheme) {
+        prefersDark = savedTheme === 'dark';
+      } else {
+        prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+      }
+
+      try {
+        var app = Elm.Main.init({
+          node: appElement,
+          flags: {
+            width: window.innerWidth,
+            height: window.innerHeight,
+            prefersDark: prefersDark
+          }
+        });
+
+        if (app.ports && app.ports.saveTheme) {
+          app.ports.saveTheme.subscribe(function(theme) {
+            localStorage.setItem('quickheadlines-theme', theme);
+          });
+        }
+
+        window.addEventListener('resize', function() {
+          // Handle resize if needed
+        });
+      } catch(e) {
+        console.error('Elm init error:', e);
+        appElement.innerHTML = '<p style="color: red;">Error: ' + e.message + '</p>';
+      }
+    })();
+  </script>
+</body>
+</html>

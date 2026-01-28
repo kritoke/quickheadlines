@@ -333,6 +333,29 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
     ATH::Response.new(ex.message, 404, HTTP::Headers{"content-type" => "text/plain"})
   end
 
+  # Serve Elm Land UI
+  @[ARTA::Get(path: "/ui")]
+  @[ARTA::Get(path: "/ui/")]
+  def ui_index(request : ATH::Request) : ATH::Response
+    html = File.read("./views/index.html")
+    response = ATH::Response.new(html)
+    response.headers["content-type"] = "text/html; charset=utf-8"
+    response
+  rescue ex : Exception
+    ATH::Response.new(ex.message, 404, HTTP::Headers{"content-type" => "text/plain"})
+  end
+
+  @[ARTA::Get(path: "/ui/elm.js")]
+  def ui_elm_js(request : ATH::Request) : ATH::Response
+    content = File.read("./ui/elm.js")
+    response = ATH::Response.new(content)
+    response.headers["content-type"] = "application/javascript; charset=utf-8"
+    response.headers["Cache-Control"] = "public, max-age=31536000"
+    response
+  rescue ex : Exception
+    ATH::Response.new(ex.message, 404, HTTP::Headers{"content-type" => "text/plain"})
+  end
+
   @[ARTA::Get(path: "/simple.js")]
   def simple_js(request : ATH::Request) : ATH::Response
     content = File.read("./public/simple.js")
