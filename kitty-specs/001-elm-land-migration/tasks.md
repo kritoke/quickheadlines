@@ -1,5 +1,17 @@
 ---
+title: "Work Packages: Elm Land Migration"
 description: "Work package task list for Elm Land Migration"
+lane: "planned"
+agent: ""
+assignee: ""
+review_status: ""
+reviewed_by: ""
+history:
+  - timestamp: "2026-01-27T00:00:00Z"
+    lane: "planned"
+    agent: "system"
+    shell_pid: ""
+    action: "Task list created"
 ---
 
 # Work Packages: Elm Land Migration
@@ -77,9 +89,9 @@ description: "Work package task list for Elm Land Migration"
 **Prompt**: `tasks/WP03-stable-integration.md`
 
 ### Included Subtasks
-- [ ] T013 Create `ui/src/Api/News.elm` with decoder matching NewsClusterDTO
-- [ ] T014 Fetch clusters from Athena endpoint in `ui/src/Pages/Home_.elm`
-- [ ] T015 Render vertical list using Element.column with Theme.metadataStyle
+- [x] T013 Create `ui/src/Api/News.elm` with decoder matching NewsClusterDTO
+- [x] T014 Fetch clusters from Athena endpoint in `ui/src/Pages/Home_.elm`
+- [x] T015 Render vertical list using Element.column with Theme.metadataStyle
 
 ### Dependencies
 - Depends on WP02
