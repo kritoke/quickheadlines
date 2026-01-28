@@ -69,10 +69,25 @@ download-crystal:
 	@mkdir -p bin
 	@if [ ! -d "$(CRYSTAL_DIR)" ]; then \
 		echo "Downloading $(CRYSTAL_URL)..."; \
-		cd bin && curl -L -o $(CRYSTAL_TARBALL) $(CRYSTAL_URL) && \
-		tar xzf $(CRYSTAL_TARBALL) && \
-		rm $(CRYSTAL_TARBALL); \
-		rm -f crystal && ln -s $(CRYSTAL_DIR)/bin/crystal crystal; \
+		cd bin && \
+		if [ "$(OS_NAME)" = "freebsd" ]; then \
+			fetch -o $(CRYSTAL_TARBALL) $(CRYSTAL_URL) || { \
+				echo "Error: Failed to download Crystal tarball"; \
+				exit 1; \
+			}; \
+		else \
+			curl -L -o $(CRYSTAL_TARBALL) $(CRYSTAL_URL) || { \
+				echo "Error: Failed to download Crystal tarball"; \
+				exit 1; \
+			}; \
+		fi && \
+		tar xzf $(CRYSTAL_TARBALL) || { \
+			echo "Error: Failed to extract Crystal tarball"; \
+			rm $(CRYSTAL_TARBALL); \
+			exit 1; \
+		} && \
+		rm $(CRYSTAL_TARBALL) && \
+		rm -f crystal && ln -sf $(CRYSTAL_DIR)/bin/crystal crystal; \
 	fi
 	@echo "✓ Crystal $(CRYSTAL_VERSION) downloaded to $(CRYSTAL_DIR)"
 
