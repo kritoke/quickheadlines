@@ -354,7 +354,8 @@ feedHeader theme feed =
                 { url = feed.siteLink, label = text feed.title }
             , if feed.displayLink /= "" then
                 el
-                    [ Font.size 12
+                    [ htmlAttribute (Html.Attributes.attribute "data-display-link" "true")
+                    , Font.size 12
                     , Element.htmlAttribute (Html.Attributes.style "color" headerTextColor)
                     , htmlAttribute (Html.Attributes.style "opacity" "0.8")
                     ]

@@ -11,12 +11,22 @@
     .feed-header { transition: background-color 0.3s ease, color 0.3s ease; }
     [data-timeline-header="true"] {
       background-color: transparent !important;
-      font-size: 20px !important;
+      background: transparent !important;
+      font-size: 1.25rem !important; /* 20px equivalent */
       font-weight: bold;
+      -webkit-text-size-adjust: none;
+    }
+    [data-display-link="true"] {
+      color: inherit !important;
     }
     .feed-header a {
       color: inherit !important;
       text-decoration: underline;
+    }
+    @media only screen and (max-width: 768px) {
+      [data-timeline-header="true"] {
+        font-size: 1.125rem !important; /* 18px equivalent */
+      }
     }
   </style>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/color-thief/2.3.2/color-thief.umd.js"></script>

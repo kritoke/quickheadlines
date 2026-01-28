@@ -92,6 +92,7 @@ view shared model =
         , spacing 20
         , padding paddingValue
         , Background.color bg
+        , htmlAttribute (Html.Attributes.attribute "data-timeline-page" "true")
         ]
         [ el
             [ Font.size (if isMobile then 20 else 24)
@@ -269,7 +270,7 @@ dayHeader zone now theme date =
                     formatDate zone date
     in
     el
-        [ Font.size 20
+        [ Font.size 18
         , Font.bold
         , Font.color txtColor
         , paddingEach { top = 24, bottom = 12, left = 0, right = 0 }

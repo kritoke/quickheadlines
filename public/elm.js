@@ -13298,6 +13298,8 @@ var $author$project$Pages$Home_$feedHeader = F2(
 							$mdgriffith$elm_ui$Element$el,
 							_List_fromArray(
 								[
+									$mdgriffith$elm_ui$Element$htmlAttribute(
+									A2($elm$html$Html$Attributes$attribute, 'data-display-link', 'true')),
 									$mdgriffith$elm_ui$Element$Font$size(12),
 									$mdgriffith$elm_ui$Element$htmlAttribute(
 									A2($elm$html$Html$Attributes$style, 'color', headerTextColor)),
@@ -14042,7 +14044,7 @@ var $author$project$Pages$Timeline$dayHeader = F4(
 			$mdgriffith$elm_ui$Element$el,
 			_List_fromArray(
 				[
-					$mdgriffith$elm_ui$Element$Font$size(20),
+					$mdgriffith$elm_ui$Element$Font$size(18),
 					$mdgriffith$elm_ui$Element$Font$bold,
 					$mdgriffith$elm_ui$Element$Font$color(txtColor),
 					$mdgriffith$elm_ui$Element$paddingEach(
@@ -14318,7 +14320,9 @@ var $author$project$Pages$Timeline$view = F2(
 					$mdgriffith$elm_ui$Element$height($mdgriffith$elm_ui$Element$fill),
 					$mdgriffith$elm_ui$Element$spacing(20),
 					$mdgriffith$elm_ui$Element$padding(paddingValue),
-					$mdgriffith$elm_ui$Element$Background$color(bg)
+					$mdgriffith$elm_ui$Element$Background$color(bg),
+					$mdgriffith$elm_ui$Element$htmlAttribute(
+					A2($elm$html$Html$Attributes$attribute, 'data-timeline-page', 'true'))
 				]),
 			_List_fromArray(
 				[
