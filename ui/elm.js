@@ -13129,32 +13129,50 @@ var $author$project$Theme$cardColor = function (theme) {
 	}
 };
 var $elm$html$Html$Attributes$attribute = $elm$virtual_dom$VirtualDom$attribute;
-var $author$project$Pages$Home_$faviconView = function (faviconUrl) {
-	return (faviconUrl !== '') ? A2(
-		$mdgriffith$elm_ui$Element$image,
-		_List_fromArray(
-			[
-				$mdgriffith$elm_ui$Element$width(
-				$mdgriffith$elm_ui$Element$px(24)),
-				$mdgriffith$elm_ui$Element$height(
-				$mdgriffith$elm_ui$Element$px(24)),
-				$mdgriffith$elm_ui$Element$Border$rounded(4)
-			]),
-		{description: 'Feed favicon', src: faviconUrl}) : A2(
-		$mdgriffith$elm_ui$Element$el,
-		_List_fromArray(
-			[
-				$mdgriffith$elm_ui$Element$width(
-				$mdgriffith$elm_ui$Element$px(24)),
-				$mdgriffith$elm_ui$Element$height(
-				$mdgriffith$elm_ui$Element$px(24)),
-				$mdgriffith$elm_ui$Element$Background$color(
-				A3($mdgriffith$elm_ui$Element$rgb255, 200, 200, 200)),
-				$mdgriffith$elm_ui$Element$Border$rounded(4)
-			]),
-		$mdgriffith$elm_ui$Element$none);
-};
 var $mdgriffith$elm_ui$Element$htmlAttribute = $mdgriffith$elm_ui$Internal$Model$Attr;
+var $elm$virtual_dom$VirtualDom$style = _VirtualDom_style;
+var $elm$html$Html$Attributes$style = $elm$virtual_dom$VirtualDom$style;
+var $author$project$Pages$Home_$faviconView = F2(
+	function (theme, faviconUrl) {
+		var bgColor = function () {
+			if (theme.$ === 'Dark') {
+				return A3($mdgriffith$elm_ui$Element$rgb255, 203, 213, 225);
+			} else {
+				return A3($mdgriffith$elm_ui$Element$rgb255, 255, 255, 255);
+			}
+		}();
+		return (faviconUrl !== '') ? A2(
+			$mdgriffith$elm_ui$Element$image,
+			_List_fromArray(
+				[
+					$mdgriffith$elm_ui$Element$width(
+					$mdgriffith$elm_ui$Element$px(24)),
+					$mdgriffith$elm_ui$Element$height(
+					$mdgriffith$elm_ui$Element$px(24)),
+					$mdgriffith$elm_ui$Element$Border$rounded(4),
+					$mdgriffith$elm_ui$Element$Background$color(bgColor),
+					$mdgriffith$elm_ui$Element$Border$width(1),
+					$mdgriffith$elm_ui$Element$Border$color(
+					A3($mdgriffith$elm_ui$Element$rgb255, 0, 0, 0)),
+					$mdgriffith$elm_ui$Element$htmlAttribute(
+					A2($elm$html$Html$Attributes$style, 'opacity', '0.9'))
+				]),
+			{description: 'Feed favicon', src: faviconUrl}) : A2(
+			$mdgriffith$elm_ui$Element$el,
+			_List_fromArray(
+				[
+					$mdgriffith$elm_ui$Element$width(
+					$mdgriffith$elm_ui$Element$px(24)),
+					$mdgriffith$elm_ui$Element$height(
+					$mdgriffith$elm_ui$Element$px(24)),
+					$mdgriffith$elm_ui$Element$Background$color(bgColor),
+					$mdgriffith$elm_ui$Element$Border$rounded(4),
+					$mdgriffith$elm_ui$Element$Border$width(1),
+					$mdgriffith$elm_ui$Element$Border$color(
+					A3($mdgriffith$elm_ui$Element$rgb255, 0, 0, 0))
+				]),
+			$mdgriffith$elm_ui$Element$none);
+	});
 var $elm$html$Html$Attributes$href = function (url) {
 	return A2(
 		$elm$html$Html$Attributes$stringProperty,
@@ -13192,8 +13210,6 @@ var $mdgriffith$elm_ui$Element$link = F2(
 				_List_fromArray(
 					[label])));
 	});
-var $elm$virtual_dom$VirtualDom$style = _VirtualDom_style;
-var $elm$html$Html$Attributes$style = $elm$virtual_dom$VirtualDom$style;
 var $mdgriffith$elm_ui$Element$Font$underline = $mdgriffith$elm_ui$Internal$Model$htmlClass($mdgriffith$elm_ui$Internal$Style$classes.underline);
 var $author$project$Pages$Home_$feedHeader = F2(
 	function (theme, feed) {
@@ -13233,7 +13249,7 @@ var $author$project$Pages$Home_$feedHeader = F2(
 				customColorAttrs),
 			_List_fromArray(
 				[
-					$author$project$Pages$Home_$faviconView(feed.favicon),
+					A2($author$project$Pages$Home_$faviconView, theme, feed.favicon),
 					A2(
 					$mdgriffith$elm_ui$Element$link,
 					_List_fromArray(

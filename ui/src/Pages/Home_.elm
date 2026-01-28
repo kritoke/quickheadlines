@@ -329,7 +329,7 @@ feedHeader theme feed =
         , padding 8
         , Border.rounded 8
         ] ++ customColorAttrs)
-        [ faviconView feed.favicon
+        [ faviconView theme feed.favicon
         , link
             [ Font.size 18
             , Font.bold
@@ -340,13 +340,26 @@ feedHeader theme feed =
         ]
 
 
-faviconView : String -> Element Msg
-faviconView faviconUrl =
+faviconView : Theme -> String -> Element Msg
+faviconView theme faviconUrl =
+    let
+        bgColor =
+            case theme of
+                Dark ->
+                    rgb255 203 213 225
+
+                Light ->
+                    rgb255 255 255 255
+    in
     if faviconUrl /= "" then
         image
             [ width (px 24)
             , height (px 24)
             , Border.rounded 4
+            , Background.color bgColor
+            , Border.width 1
+            , Border.color (rgb255 0 0 0)
+            , htmlAttribute (Html.Attributes.style "opacity" "0.9")
             ]
             { src = faviconUrl, description = "Feed favicon" }
 
@@ -354,8 +367,10 @@ faviconView faviconUrl =
         el
             [ width (px 24)
             , height (px 24)
-            , Background.color (rgb255 200 200 200)
+            , Background.color bgColor
             , Border.rounded 4
+            , Border.width 1
+            , Border.color (rgb255 0 0 0)
             ]
             Element.none
 
