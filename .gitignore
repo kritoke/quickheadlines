@@ -97,5 +97,9 @@ node_modules/
 
 # Nix Related
 .direnv/
+.envrc.local
 
 spec-kitty
+
+#open code
+.opencode/

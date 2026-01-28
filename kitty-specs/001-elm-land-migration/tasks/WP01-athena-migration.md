@@ -1,8 +1,24 @@
 ---
-description: "WP01: Athena Migration & Cluster DTO"
+work_package_id: "WP01"
+subtasks:
+  - "T005"
+  - "T006"
+  - "T007"
+  - "T008"
+title: "WP01: Athena Migration & Cluster DTO"
+phase: "Phase 2 - API Structuring"
 lane: "doing"
+assignee: "worker-coder"
 agent: "worker-coder"
 shell_pid: "86843"
+review_status: ""
+reviewed_by: ""
+history:
+  - timestamp: "2026-01-27T00:00:00Z"
+    lane: "planned"
+    agent: "system"
+    shell_pid: ""
+    action: "Prompt generated via /spec-kitty.tasks"
 ---
 
 # WP01: Athena Migration & Cluster DTO

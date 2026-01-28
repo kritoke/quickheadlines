@@ -1,7 +1,24 @@
 ---
-description: "WP00: Athena Unification & Ghost Logic Audit"
+work_package_id: "WP00"
+subtasks:
+  - "T001"
+  - "T002"
+  - "T003"
+  - "T004"
+title: "WP00: Athena Unification & Ghost Logic Audit"
+phase: "Phase 1 - Foundation Cleanup"
 lane: "for_review"
+assignee: "worker-coder"
 agent: "worker-coder"
+shell_pid: ""
+review_status: ""
+reviewed_by: ""
+history:
+  - timestamp: "2026-01-27T00:00:00Z"
+    lane: "planned"
+    agent: "system"
+    shell_pid: ""
+    action: "Prompt generated via /spec-kitty.tasks"
 ---
 
 # WP00: Athena Unification & Ghost Logic Audit

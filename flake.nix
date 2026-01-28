@@ -57,6 +57,7 @@
             elmPackages.elm
             elmPackages.elm-format
             elmPackages.elm-test
+            jq
 
             # 🐹 Go & Python
             go
@@ -71,6 +72,9 @@
             bashInteractive
             tzdata
             docker-client
+          
+            # other ai tools
+            opencode
           ];
 
           shellHook = ''

@@ -1,3 +1,18 @@
+---
+title: "Specification: Migrating Elm UI to Elm Land"
+lane: "planned"
+agent: ""
+assignee: ""
+review_status: ""
+reviewed_by: ""
+history:
+  - timestamp: "2026-01-27T00:00:00Z"
+    lane: "planned"
+    agent: "system"
+    shell_pid: ""
+    action: "Specification created"
+---
+
 # Specification: Migrating Elm UI to Elm Land
 
 ## Context

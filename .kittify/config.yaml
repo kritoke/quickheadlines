@@ -1,6 +1,7 @@
 agents:
   available:
   - kilocode
+  - opencode
   selection:
     strategy: preferred
     preferred_implementer:

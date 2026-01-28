@@ -1,3 +1,18 @@
+---
+title: "Plan: Auth Implementation"
+lane: "planned"
+agent: ""
+assignee: ""
+review_status: ""
+reviewed_by: ""
+history:
+  - timestamp: "2026-01-27T00:00:00Z"
+    lane: "planned"
+    agent: "system"
+    shell_pid: ""
+    action: "Plan created"
+---
+
 # Plan: Auth Implementation
 
 - **Phase 1: Athena Preparation**
