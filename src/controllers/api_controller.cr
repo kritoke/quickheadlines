@@ -1,11 +1,6 @@
 require "athena"
 
 class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
-  @db_service : DatabaseService
-
-  def initialize(@db_service : DatabaseService)
-  end
-
   # GET /api/clusters - Get all clusters
   @[ARTA::Get(path: "/api/clusters")]
   def clusters : Array(Quickheadlines::DTOs::NewsClusterDTO)
@@ -29,7 +24,7 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
             title, pub_date = item
             cluster_size = cache.get_cluster_size(min_id)
 
-            clusters_data << {min_id, cluster_id, title, pub_date, cluster_size}
+            clusters_data << {min_id, cluster_id, title || "", pub_date, cluster_size}
           end
         end
       end
@@ -37,10 +32,10 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
 
     # Convert to DTOs
     clusters_data.map do |cluster_entry|
-      cluster_id_str = cluster_entry[:cluster_id].to_s
-      title = cluster_entry[:title] || ""
-      timestamp = cluster_entry[:pub_date].try(&.to_iso8601) || Time.local.to_iso8601
-      source_count = cluster_entry[:cluster_size]
+      cluster_id_str = cluster_entry[1].to_s
+      title = cluster_entry[2]
+      timestamp = cluster_entry[3].try(&.to_s("%YT%H:%-%m-%dM:%S")) || Time.local.to_s("%Y-%m-%dT%H:%M:%S")
+      source_count = cluster_entry[4]
 
       Quickheadlines::DTOs::NewsClusterDTO.new(
         id: cluster_id_str,

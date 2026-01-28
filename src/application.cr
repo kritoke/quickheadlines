@@ -34,6 +34,7 @@ require "./listeners/heat_map_listener"
 require "./dtos/story_dto"
 require "./dtos/cluster_dto"
 require "./dtos/feed_dto"
+require "./dtos/news_cluster_dto"
 
 # Initialize application state
 begin
