@@ -48,9 +48,6 @@ ifeq ($(OS_NAME),linux)
 else ifeq ($(OS_NAME),macos)
 	CRYSTAL_TARBALL = crystal-$(CRYSTAL_VERSION)-1-$(OS_NAME)-$(ARCH_NAME).tar.gz
 	CRYSTAL_URL = https://github.com/crystal-lang/crystal/releases/download/$(CRYSTAL_VERSION)/$(CRYSTAL_TARBALL)
-else
-	CRYSTAL_TARBALL = crystal-$(CRYSTAL_VERSION)-1-$(OS_NAME)-$(ARCH_NAME).tar.gz
-	CRYSTAL_URL = https://github.com/crystal-lang/crystal/releases/download/$(CRYSTAL_VERSION)/$(CRYSTAL_TARBALL)
 endif
 
 # Add Homebrew OpenSSL paths for macOS
@@ -65,31 +62,46 @@ all: build
 
 # Download Crystal compiler from official site
 download-crystal:
-	@echo "Downloading Crystal $(CRYSTAL_VERSION)..."
+	@echo "Installing Crystal $(CRYSTAL_VERSION)..."
 	@mkdir -p bin
 	@if [ ! -d "$(CRYSTAL_DIR)" ]; then \
-		echo "Downloading $(CRYSTAL_URL)..."; \
 		cd bin && \
 		if [ "$(OS_NAME)" = "freebsd" ]; then \
-			fetch -o $(CRYSTAL_TARBALL) $(CRYSTAL_URL) || { \
-				echo "Error: Failed to download Crystal tarball"; \
+			echo "Building Crystal $(CRYSTAL_VERSION) from source on FreeBSD..."; \
+			echo "This may take 30-60 minutes..."; \
+			fetch https://github.com/crystal-lang/crystal/archive/$(CRYSTAL_VERSION).tar.gz || { \
+				echo "Error: Failed to download Crystal source"; \
 				exit 1; \
 			}; \
+			tar xzf $(CRYSTAL_VERSION).tar.gz || { \
+				echo "Error: Failed to extract Crystal source"; \
+				rm $(CRYSTAL_VERSION).tar.gz; \
+				exit 1; \
+			}; \
+			rm $(CRYSTAL_VERSION).tar.gz; \
+			mv crystal-$(CRYSTAL_VERSION) $(CRYSTAL_DIR); \
+			cd $(CRYSTAL_DIR) && \
+			make deps && make clean && make crystal || { \
+				echo "Error: Failed to build Crystal"; \
+				exit 1; \
+			}; \
+			rm -f crystal && ln -sf $(CRYSTAL_DIR)/.build/crystal crystal; \
 		else \
+			echo "Downloading $(CRYSTAL_URL)..."; \
 			curl -L -o $(CRYSTAL_TARBALL) $(CRYSTAL_URL) || { \
 				echo "Error: Failed to download Crystal tarball"; \
 				exit 1; \
 			}; \
-		fi && \
-		tar xzf $(CRYSTAL_TARBALL) || { \
-			echo "Error: Failed to extract Crystal tarball"; \
-			rm $(CRYSTAL_TARBALL); \
-			exit 1; \
-		} && \
-		rm $(CRYSTAL_TARBALL) && \
-		rm -f crystal && ln -sf $(CRYSTAL_DIR)/bin/crystal crystal; \
+			tar xzf $(CRYSTAL_TARBALL) || { \
+				echo "Error: Failed to extract Crystal tarball"; \
+				rm $(CRYSTAL_TARBALL); \
+				exit 1; \
+			} && \
+			rm $(CRYSTAL_TARBALL) && \
+			rm -f crystal && ln -sf $(CRYSTAL_DIR)/bin/crystal crystal; \
+		fi; \
 	fi
-	@echo "✓ Crystal $(CRYSTAL_VERSION) downloaded to $(CRYSTAL_DIR)"
+	@echo "✓ Crystal $(CRYSTAL_VERSION) installed"
 
 # Check for required dependencies
 check-deps:
@@ -154,6 +166,45 @@ check-deps:
 			exit 1; \
 		}; \
 		echo "✓ OpenSSL found"; \
+	fi
+	@if [ "$(OS_NAME)" = "freebsd" ]; then \
+		echo "Checking Crystal build dependencies..."; \
+		pkg info -e git >/dev/null 2>&1 || { \
+			echo "❌ Error: git not found (required for Crystal build)"; \
+			echo ""; \
+			echo "Install git:"; \
+			echo "  FreeBSD: sudo pkg install git"; \
+			exit 1; \
+		}; \
+		pkg info -e gmake >/dev/null 2>&1 || { \
+			echo "❌ Error: gmake not found (required for Crystal build)"; \
+			echo ""; \
+			echo "Install gmake:"; \
+			echo "  FreeBSD: sudo pkg install gmake"; \
+			exit 1; \
+		}; \
+		pkg info -e libyaml >/dev/null 2>&1 || { \
+			echo "❌ Error: libyaml not found (required for Crystal build)"; \
+			echo ""; \
+			echo "Install libyaml:"; \
+			echo "  FreeBSD: sudo pkg install libyaml"; \
+			exit 1; \
+		}; \
+		pkg info -e llvm19 >/dev/null 2>&1 || pkg info -e llvm18 >/dev/null 2>&1 || pkg info -e llvm17 >/dev/null 2>&1 || { \
+			echo "❌ Error: llvm not found (required for Crystal build)"; \
+			echo ""; \
+			echo "Install llvm:"; \
+			echo "  FreeBSD: sudo pkg install llvm19"; \
+			exit 1; \
+		}; \
+		pkg info -e libevent >/dev/null 2>&1 || { \
+			echo "❌ Error: libevent not found (required for Crystal build)"; \
+			echo ""; \
+			echo "Install libevent:"; \
+			echo "  FreeBSD: sudo pkg install libevent"; \
+			exit 1; \
+		}; \
+		echo "✓ All Crystal build dependencies found"; \
 	fi
 	@echo ""
 
