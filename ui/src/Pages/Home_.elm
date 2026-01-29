@@ -95,6 +95,7 @@ view shared model =
         , spacing 20
         , padding paddingValue
         , Background.color bg
+        , htmlAttribute (Html.Attributes.attribute "data-page" "home")
         ]
         [ tabBar shared model
         , content shared model

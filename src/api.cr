@@ -236,31 +236,37 @@ class ClusterResponse
 end
 
 module Api
-  # Convert FeedData to FeedResponse
-  def self.feed_to_response(feed : FeedData, tab_name : String = "") : FeedResponse
-    items_response = feed.items.map do |item|
-      ItemResponse.new(
-        title: item.title,
-        link: item.link,
-        version: item.version,
-        pub_date: item.pub_date.try(&.to_unix_ms)
-      )
-    end
+   # Convert FeedData to FeedResponse
+   def self.feed_to_response(feed : FeedData, tab_name : String = "") : FeedResponse
+     # Load header colors from database to ensure we get the latest
+     cache = FeedCache.instance
+     colors = cache.get_header_colors(feed.url)
+     header_color = colors[:bg_color] || feed.header_color
+     header_text_color = colors[:text_color] || feed.header_text_color
+     
+     items_response = feed.items.map do |item|
+       ItemResponse.new(
+         title: item.title,
+         link: item.link,
+         version: item.version,
+         pub_date: item.pub_date.try(&.to_unix_ms)
+       )
+     end
 
-    FeedResponse.new(
-      tab: tab_name,
-      url: feed.url,
-      title: feed.title,
-      site_link: feed.site_link,
-      display_link: feed.display_link,
-      favicon: feed.favicon,
-      favicon_data: feed.favicon_data,
-      header_color: feed.header_color,
-      header_text_color: feed.header_text_color,
-      items: items_response,
-      total_item_count: feed.items.size.to_i32
-    )
-  end
+     FeedResponse.new(
+       tab: tab_name,
+       url: feed.url,
+       title: feed.title,
+       site_link: feed.site_link,
+       display_link: feed.display_link,
+       favicon: feed.favicon,
+       favicon_data: feed.favicon_data,
+       header_color: header_color,
+       header_text_color: header_text_color,
+       items: items_response,
+       total_item_count: feed.items.size.to_i32
+     )
+   end
 
   # Convert Tab to TabResponse
   def self.tab_to_response(tab : Tab, feeds : Array(FeedData), releases : Array(FeedData)) : TabResponse

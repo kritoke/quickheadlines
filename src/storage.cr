@@ -734,27 +734,28 @@ class FeedCache
         { header_color: row.read(String?), header_text_color: row.read(String?) }
       end
 
-      # If no existing row, insert new colors
       if existing.nil?
-        @db.exec("UPDATE feeds SET header_color = ?, header_text_color = ? WHERE url = ?", bg_color, text_color, feed_url)
-        STDERR.puts "[#{Time.local}] Saved extracted header colors for #{feed_url}: bg=#{bg_color}, text=#{text_color}"
-      else
-        should_update_bg = existing[:header_color].nil? || existing[:header_color] == ""
-        should_update_text = existing[:header_text_color].nil? || existing[:header_text_color] == ""
+        # Row doesn't exist - this shouldn't happen but handle it gracefully
+        STDERR.puts "[#{Time.local}] Warning: Feed #{feed_url} not found in database for color update"
+        return
+      end
 
-        if should_update_bg || should_update_text
-          updates = [] of String
-          values = [] of String
+      should_update_bg = existing[:header_color].nil? || existing[:header_color] == ""
+      should_update_text = existing[:header_text_color].nil? || existing[:header_text_color] == ""
 
-          if should_update_bg
-            updates << "header_color = ?"
-            values << bg_color
-          end
+      if should_update_bg || should_update_text
+        updates = [] of String
+        values = [] of String
 
-          if should_update_text
-            updates << "header_text_color = ?"
-            values << text_color
-          end
+        if should_update_bg
+          updates << "header_color = ?"
+          values << bg_color
+        end
+
+        if should_update_text
+          updates << "header_text_color = ?"
+          values << text_color
+        end
 
         unless updates.empty?
           query = "UPDATE feeds SET " + updates.join(", ") + " WHERE url = ?"
@@ -762,10 +763,19 @@ class FeedCache
           @db.exec(query, args: values)
           STDERR.puts "[#{Time.local}] Saved extracted header colors for #{feed_url}: bg=#{bg_color}, text=#{text_color}"
         end
-        else
-          STDERR.puts "[#{Time.local}] Skipped header colors for #{feed_url}: already set"
-        end
+      else
+        STDERR.puts "[#{Time.local}] Skipped header colors for #{feed_url}: already set"
       end
+    end
+  end
+
+  # Get header colors for a specific feed URL from the database
+  def get_header_colors(feed_url : String) : {bg_color: String?, text_color: String?}
+    @mutex.synchronize do
+      result = @db.query_one?("SELECT header_color, header_text_color FROM feeds WHERE url = ?", feed_url) do |row|
+        { bg_color: row.read(String?), text_color: row.read(String?) }
+      end
+      result || { bg_color: nil, text_color: nil }
     end
   end
 
