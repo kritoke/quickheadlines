@@ -41,17 +41,22 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 RUN mkdir -p /app/public/favicons
 
-# Copy everything to /srv (not affected by volume mount at /app)
+# Copy app to /srv (protected from volume mount)
 COPY --from=builder /app/server /srv/server
 COPY public/elm.js /srv/public/elm.js
 COPY ui/elm.js /srv/ui/elm.js
 COPY assets /srv/assets
 COPY views /srv/views
-COPY feeds.yml /srv/feeds.yml.default
+COPY feeds.yml /srv/feeds.yml
 
-# If volume has feeds.yml, use it; otherwise use default
-COPY --from=builder /app/feeds.yml /app/feeds.yml 2>/dev/null || \
-    cp /srv/feeds.yml.default /app/feeds.yml
+# Check if volume has feeds.yml, if not copy default from /srv
+RUN ls -la /app/ 2>/dev/null || echo "/app is empty or mounted" && \
+    if [ -f /app/feeds.yml ]; then \
+        echo "Using feeds.yml from volume mount"; \
+    else \
+        echo "No feeds.yml in /app, copying default"; \
+        cp /srv/feeds.yml /app/feeds.yml; \
+    fi
 
 ENV TZ=UTC
 ENV GC_MARKERS=1
