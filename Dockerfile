@@ -23,8 +23,21 @@ ENV CRYSTAL_WORKERS=4
 
 RUN APP_ENV=production crystal build --release --no-debug -Dversion=${BUILD_REV} src/quickheadlines.cr -o /app/server
 
-# Minimal runtime - avoid apt hangs
-FROM scratch
+# Minimal runtime with just what's needed
+FROM ubuntu:22.04-slim
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libmagic1 \
+    libxml2-dev \
+    libssl3 \
+    libyaml-0-2 \
+    libsqlite3-0 \
+    ca-certificates \
+    curl \
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean
+
+RUN mkdir -p /public/favicons
 
 COPY --from=builder /app/server /server
 COPY public/elm.js /public/elm.js
@@ -33,12 +46,7 @@ COPY assets /assets
 COPY views /views
 COPY feeds.yml /feeds.yml.default
 
-# Create favicons directory
-RUN mkdir -p /public/favicons
-
-# Copy default feeds.yml if not present
-COPY --from=builder /app/feeds.yml /feeds.yml 2>/dev/null || \
-    cp /feeds.yml.default /feeds.yml
+RUN if [ ! -f /feeds.yml ]; then cp /feeds.yml.default /feeds.yml; fi
 
 EXPOSE 8080
 
