@@ -6,7 +6,7 @@ CMD rm -rf /tmp/qh || true
 
 # 1. Install dependencies
 # Added libevent, libyaml, libmagic, and llvm15
-PKG crystal shards git openssl ca_root_nss node npm gmake curl sqlite3 llvm15 libevent libyaml libmagic
+PKG crystal shards git openssl ca_root_nss node npm gmake curl sqlite3 llvm15 libevent libyaml
 
 # Link SSL certs and LLVM-Config
 CMD ln -sf /usr/local/share/certs/ca-root-nss.crt /etc/ssl/cert.pem

@@ -357,12 +357,9 @@ help:
 		echo "✓ libmagic development files found"; \
 	fi
 	@if [ "$(OS_NAME)" = "freebsd" ]; then \
-		pkg info -e libmagic >/dev/null 2>&1 || { \
-			echo "❌ Error: libmagic (file command library) not found"; \
-			echo ""; \
-			echo "Install libmagic:"; \
-			echo "  FreeBSD: sudo pkg install libmagic"; \
-			exit 1; \
-		}; \
-		echo "✓ libmagic found"; \
-	fi
+        [ -f /usr/lib/libmagic.so ] || [ -f /usr/local/lib/libmagic.so ] || { \
+            echo "❌ Error: libmagic not found in /usr/lib or /usr/local/lib"; \
+            exit 1; \
+        }; \
+        echo "✓ libmagic found in base system"; \
+    fi
