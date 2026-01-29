@@ -49,7 +49,7 @@ history:
 
 ---
 
-## Work Package WP01: Athena Migration & Cluster DTO (Priority: P1) 📋 PENDING
+## Work Package WP01: Athena Migration & Cluster DTO (Priority: P1) 🔍 READY FOR REVIEW
 
 **Goal**: Create structured API for clustering logic
 **Independent Test**: GET /api/clusters returns JSON array of existing clusters
@@ -62,13 +62,14 @@ history:
 - [x] T008 Extract MinHash and SQLite fetch logic into `ClusterService` - Verified: clustering_service.cr exists
 
 ### Dependencies
-- Depends on WP00 - COMPLETED
+- Depends on WP00 - COMPLETED ✅
 
 ### Verification Results
 - ✅ All 58 Crystal spec tests pass
 - ✅ DTOs use ASRA::Name(strategy: :camelcase) for proper JSON serialization
 - ✅ API controller uses DTO.from_entity methods instead of manual response building
 - ✅ Serializer verification spec tests StoryResponse and ClusterResponse
+- ✅ Worktree synced and committed at be3d772
 
 ---
 
