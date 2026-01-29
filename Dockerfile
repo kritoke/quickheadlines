@@ -1,22 +1,21 @@
 # syntax=docker/dockerfile:1.4
 # --- Stage 1: Builder ---
-FROM 84codes/crystal:latest-ubuntu-22.04 AS builder
+# Use official Crystal image with multi-architecture support
+FROM crystallang/crystal:1.19.1 AS builder
 
 WORKDIR /app
 
-RUN echo 'DNS_SERVERS="8.8.8.8 8.8.4.4"' > /etc/resolv.conf && \
-    cat /etc/resolv.conf
+ENV DEBIAN_FRONTEND=noninteractive
 
-RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
-    --mount=type=cache,target=/var/lib/apt,sharing=locked \
-    apt-get -o Acquire::Retries=3 -o Acquire::Retry-Delay=5 update && \
-    apt-get -o Acquire::Retries=3 -o Acquire::Retry-Delay=5 install -y --no-install-recommends \
+RUN apt-get -o Acquire::Retries=3 update && \
+    apt-get -o Acquire::Retries=3 install -y --no-install-recommends \
     libmagic-dev \
     libxml2-dev \
     libssl-dev \
     libyaml-dev \
     libsqlite3-dev \
-    curl
+    curl && \
+    rm -rf /var/lib/apt/lists/*
 
 COPY shard.yml shard.lock ./
 RUN shards install --production
@@ -32,19 +31,18 @@ RUN echo "Build revision: ${BUILD_REV}" && \
 # --- Stage 2: Runner ---
 FROM ubuntu:22.04
 
-WORKDIR /app
+ENV DEBIAN_FRONTEND=noninteractive
 
-RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
-    --mount=type=cache,target=/var/lib/apt,sharing=locked \
-    apt-get -o Acquire::Retries=3 -o Acquire::Retry-Delay=5 update && \
-    apt-get -o Acquire::Retries=3 -o Acquire::Retry-Delay=5 install -y --no-install-recommends \
+RUN apt-get -o Acquire::Retries=3 update && \
+    apt-get -o Acquire::Retries=3 install -y --no-install-recommends \
     libmagic1 \
     libxml2-dev \
     libssl-dev \
     libyaml-dev \
     libsqlite3-dev \
     ca-certificates \
-    curl
+    curl && \
+    rm -rf /var/lib/apt/lists/*
 
 ENV TZ=UTC
 ENV GC_MARKERS=1
