@@ -1,16 +1,19 @@
+# syntax=docker/dockerfile:1.4
 # --- Stage 1: Builder ---
+# 84codes/crystal has excellent ARM64 support
 FROM 84codes/crystal:latest-ubuntu-22.04 AS builder
 
 WORKDIR /app
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    apt-get update && apt-get install -y --no-install-recommends \
     libmagic-dev \
     libxml2-dev \
     libssl-dev \
     libyaml-dev \
     libsqlite3-dev \
-    curl \
-    && rm -rf /var/lib/apt/lists/*
+    curl
 
 COPY shard.yml shard.lock ./
 RUN shards install --production
@@ -28,15 +31,16 @@ FROM ubuntu:22.04
 
 WORKDIR /app
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    apt-get update && apt-get install -y --no-install-recommends \
     libmagic1 \
     libxml2-dev \
     libssl-dev \
     libyaml-dev \
     libsqlite3-dev \
     ca-certificates \
-    curl \
-    && rm -rf /var/lib/apt/lists/*
+    curl
 
 ENV TZ=UTC
 ENV GC_MARKERS=1
