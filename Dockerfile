@@ -4,7 +4,6 @@ FROM 84codes/crystal:latest-ubuntu-22.04 AS builder
 WORKDIR /app
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    apt-utils \
     libmagic-dev \
     libxml2-dev \
     libssl-dev \
@@ -30,7 +29,6 @@ FROM ubuntu:22.04
 WORKDIR /app
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    apt-utils \
     libmagic1 \
     libxml2-dev \
     libssl-dev \
@@ -42,7 +40,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 RUN mkdir -p /app/public/favicons
 
-# Copy app files to /srv (not affected by volume mount at /app)
 COPY --from=builder /app/server /srv/
 COPY public/elm.js /srv/public/elm.js
 COPY ui/elm.js /srv/ui/elm.js
@@ -50,13 +47,9 @@ COPY assets /srv/assets
 COPY views /srv/views
 COPY feeds.yml /srv/feeds.yml.default
 
-# Use feeds.yml from /app if present, otherwise use default
-COPY --from=builder /app/feeds.yml /srv/feeds.yml 2>/dev/null || \
-    cp /srv/feeds.yml.default /srv/feeds.yml
-
-# Also copy feeds.yml to /app for editing (will be overwritten by volume mount if present)
-COPY --from=builder /app/feeds.yml /app/feeds.yml 2>/dev/null || \
-    cp /srv/feeds.yml.default /app/feeds.yml 2>/dev/null || true
+RUN if [ ! -f /app/feeds.yml ] && [ -f /srv/feeds.yml.default ]; then \
+        cp /srv/feeds.yml.default /app/feeds.yml; \
+    fi
 
 ENV TZ=UTC
 ENV GC_MARKERS=1
