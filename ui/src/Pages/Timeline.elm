@@ -68,10 +68,14 @@ update shared msg model =
                         )
                         Set.empty
                         clusters
+
+                -- Keep API order (items already sorted by pub_date DESC in backend)
+                sortedClusters =
+                    clusters
             in
             ( { model
                 | items = response.items
-                , clusters = clusters
+                , clusters = sortedClusters
                 , expandedClusters = expanded
                 , loading = False
                 , error = Nothing
@@ -214,18 +218,9 @@ type alias DayClusterGroup =
 groupClustersByDay : Zone -> Posix -> List Cluster -> List DayClusterGroup
 groupClustersByDay zone now clusters =
     let
+        -- Keep API order (items already sorted by pub_date DESC in backend)
         sortedClusters =
-            List.sortBy
-                (\cluster ->
-                    case cluster.representative.pubDate of
-                        Just pd ->
-                            Time.posixToMillis pd
-
-                        Nothing ->
-                            0
-                )
-                clusters
-                |> List.reverse
+            clusters
 
         groups =
             groupClustersByDayHelp zone [] sortedClusters
@@ -531,6 +526,10 @@ clusterItem now theme expandedClusters cluster =
 
 clusterOtherItem : Posix -> Theme -> Api.ClusterItem -> Element Msg
 clusterOtherItem now theme item =
+    let
+        txtColor =
+            textColor theme
+    in
     row
         [ width fill
         , spacing 6
@@ -555,7 +554,7 @@ clusterOtherItem now theme item =
             , htmlAttribute (Html.Attributes.style "line-height" "1.3")
             ]
             [ link
-                [ Font.color (textColor theme)
+                [ Font.color txtColor
                 , htmlAttribute (Html.Attributes.style "text-decoration" "none")
                 ]
                 { url = item.link, label = text item.title }

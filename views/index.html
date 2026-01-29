@@ -233,11 +233,12 @@
         if (app.ports && app.ports.onScroll) {
           var mainContent = document.getElementById('main-content');
           if (mainContent) {
-            mainContent.addEventListener('scroll', function() {
+            mainContent.addEventListener('scroll', function(e) {
               var scrollTop = mainContent.scrollTop;
               var scrollHeight = mainContent.scrollHeight;
               var clientHeight = mainContent.clientHeight;
-              var scrollPercentage = scrollTop / (scrollHeight - clientHeight);
+              var scrollPercentage = scrollHeight > clientHeight ? scrollTop / (scrollHeight - clientHeight) : 0;
+              console.log('Scroll event:', { scrollTop, scrollHeight, clientHeight, scrollPercentage, hasMore: typeof app.ports.loadMore !== 'undefined' });
               app.ports.onScroll.send(scrollPercentage);
             });
           }

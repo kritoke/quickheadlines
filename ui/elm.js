@@ -6794,11 +6794,12 @@ var $author$project$Pages$Timeline$update = F3(
 							}),
 						$elm$core$Set$empty,
 						clusters);
+					var sortedClusters = clusters;
 					return _Utils_Tuple2(
 						_Utils_update(
 							model,
 							{
-								clusters: clusters,
+								clusters: sortedClusters,
 								error: $elm$core$Maybe$Nothing,
 								expandedClusters: expanded,
 								hasMore: response.hasMore,
@@ -14319,6 +14320,7 @@ var $author$project$Pages$Timeline$ToggleCluster = function (a) {
 };
 var $author$project$Pages$Timeline$clusterOtherItem = F3(
 	function (now, theme, item) {
+		var txtColor = $author$project$Theme$textColor(theme);
 		return A2(
 			$mdgriffith$elm_ui$Element$row,
 			_List_fromArray(
@@ -14366,8 +14368,7 @@ var $author$project$Pages$Timeline$clusterOtherItem = F3(
 							$mdgriffith$elm_ui$Element$link,
 							_List_fromArray(
 								[
-									$mdgriffith$elm_ui$Element$Font$color(
-									$author$project$Theme$textColor(theme)),
+									$mdgriffith$elm_ui$Element$Font$color(txtColor),
 									$mdgriffith$elm_ui$Element$htmlAttribute(
 									A2($elm$html$Html$Attributes$style, 'text-decoration', 'none'))
 								]),
@@ -14744,22 +14745,9 @@ var $author$project$Pages$Timeline$groupClustersByDayHelp = F3(
 			}
 		}
 	});
-var $elm$core$List$sortBy = _List_sortBy;
 var $author$project$Pages$Timeline$groupClustersByDay = F3(
 	function (zone, now, clusters) {
-		var sortedClusters = $elm$core$List$reverse(
-			A2(
-				$elm$core$List$sortBy,
-				function (cluster) {
-					var _v1 = cluster.representative.pubDate;
-					if (_v1.$ === 'Just') {
-						var pd = _v1.a;
-						return $elm$time$Time$posixToMillis(pd);
-					} else {
-						return 0;
-					}
-				},
-				clusters));
+		var sortedClusters = clusters;
 		var groups = A3($author$project$Pages$Timeline$groupClustersByDayHelp, zone, _List_Nil, sortedClusters);
 		return A2(
 			$elm$core$List$map,
