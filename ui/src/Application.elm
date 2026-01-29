@@ -1,4 +1,4 @@
-port module Application exposing (Flags, Model, Msg(..), Page(..), init, update, view)
+module Application exposing (Flags, Model, Msg(..), Page(..), init, update, view, subscriptions)
 
 import Browser
 import Browser.Navigation as Nav
@@ -45,17 +45,6 @@ type alias Model =
     }
 
 
-type Msg
-    = SharedMsg Shared.Msg
-    | HomeMsg Home.Msg
-    | TimelineMsg Timeline.Msg
-    | NavigateTo Page
-    | NavigateExternal String
-    | GotTime Time.Posix
-    | SwitchTab String
-    | UrlChanged Url.Url
-
-
 init : Flags -> Url.Url -> Nav.Key -> ( Model, Cmd Msg )
 init flags url key =
     let
@@ -82,7 +71,6 @@ init flags url key =
     , Cmd.batch
         [ Cmd.map HomeMsg homeCmd
         , Cmd.map TimelineMsg timelineCmd
-        , Task.perform GotTime Time.now
         ]
     )
 
@@ -134,7 +122,6 @@ update msg model =
 
                         Timeline ->
                             "/timeline"
-
                 cmd =
                     Nav.pushUrl model.key newPath
             in
@@ -147,7 +134,7 @@ update msg model =
             , Nav.load href
             )
 
-         SwitchTab tab ->
+        SwitchTab tab ->
             let
                 ( newHomeModel, homeCmd ) =
                     Home.update model.shared (Home.SwitchTab tab) model.home
@@ -170,6 +157,16 @@ update msg model =
             )
 
         GotTime posix ->
+            let
+                shared =
+                    model.shared
+
+                newShared =
+                    { shared | now = posix }
+            in
+            ( { model | shared = newShared }
+            , Cmd.none
+            )
 
 
 view : Model -> Browser.Document Msg
@@ -200,170 +197,19 @@ view model =
                         timelineContent =
                             Timeline.view model.shared model.timeline
                     in
-                    ( "Timeline - QuickHeadlines"
+                    ( "Timeline"
                     , Element.map TimelineMsg timelineContent
                     )
     in
-    { title = title
-    , body =
-        [ Layout.layout
-            { theme = theme
-            , header = header
-            , footer = text "© 2024 QuickHeadlines"
-            , main = content
-            }
-            |> Element.layout []
-        ]
-    }
-
-
-headerView : Model -> Element Msg
-headerView model =
-    let
-        theme =
-            model.shared.theme
-
-        isMobile =
-            model.shared.windowWidth < 768
-
-        txtColor =
-            textColor theme
-
-        navBg =
-            Theme.surfaceColor theme
-
-        isActive pageName =
-            case ( pageName, model.page ) of
-                ( Home, Home ) ->
-                    True
-
-                ( Timeline, Timeline ) ->
-                    True
-
-                _ ->
-                    False
-
-        navButton pageName label =
-            let
-                active =
-                    isActive pageName
-
-                bg =
-                    if active then
-                        case theme of
-                            Dark ->
-                                rgb255 40 40 40
-
-                            Light ->
-                                rgb255 243 244 246
-
-                    else
-                        case theme of
-                            Dark ->
-                                rgb255 30 30 30
-
-                            Light ->
-                                rgb255 255 255 255
-
-                color =
-                    if active then
-                        lumeOrange
-
-                    else
-                        case theme of
-                            Dark ->
-                                rgb255 148 163 184
-
-                            Light ->
-                                rgb255 75 85 99
-            in
-            Input.button
-                [ Background.color bg
-                , Font.color color
-                , Font.size 14
-                , Font.medium
-                , Element.paddingXY 12 8
-                , Border.rounded 6
-                ]
-                { onPress = Just (NavigateTo pageName)
-                , label = text label
+    { document
+        = { title = title
+        , body =
+            Layout.layout
+                { theme = theme
+                , header = header
+                , footer = footerView model.shared
+                , main = mainView (title ++ " - QuickHeadlines")
                 }
-    in
-    Element.column
-        [ Element.width Element.fill
-        , Element.spacing 8
-        ]
-        [ Element.row
-            [ Element.width Element.fill
-            , Element.spacing 12
-            , Element.paddingEach { top = 0, bottom = 8, left = 0, right = 0 }
-            ]
-            [ Element.row [ Element.spacing 8, Element.centerY ]
-                [ Element.image
-                    [ Element.width (px 32)
-                    , Element.height (px 32)
-                    , Border.rounded 4
-                    ]
-                    { src = "/favicon.png", description = "QuickHeadlines Logo" }
-                , Element.el
-                    [ Font.size (if isMobile then 18 else 28)
-                    , Font.bold
-                    , Font.color lumeOrange
-                    ]
-                    (text "QuickHeadlines")
-                ]
-            , if isMobile then
-                Element.none
-
-              else
-                Element.row [ Element.spacing 8 ]
-                    [ navButton Home "Home"
-                    , navButton Timeline "Timeline"
-                    ]
-            , Element.el [ Element.alignRight ] (themeToggle model)
-            ]
-        , if isMobile then
-            Element.row [ Element.spacing 8 ]
-                [ navButton Home "Home"
-                , navButton Timeline "Timeline"
-                ]
-
-          else
-            Element.none
-        ]
-
-
-themeToggle : Model -> Element Msg
-themeToggle model =
-    let
-        theme =
-            model.shared.theme
-
-        label =
-            case model.shared.theme of
-                Dark ->
-                    "☀ Light"
-
-                Light ->
-                    "☾ Dark"
-
-        bg =
-            case theme of
-                Dark ->
-                    rgb255 40 40 40
-
-                Light ->
-                    rgb255 229 231 235
-    in
-    Input.button
-        [ Background.color bg
-        , Font.color lumeOrange
-        , Font.size 14
-        , Element.paddingXY 12 8
-        , Border.rounded 6
-        ]
-        { onPress = Just (SharedMsg ToggleTheme)
-        , label = Element.text label
         }
 
 
@@ -375,3 +221,15 @@ subscriptions model =
 
         _ ->
             Sub.none
+
+
+footerView : Model -> Element Msg
+footerView model =
+    row
+        [ width fill
+        , padding 16
+        , spacing 8
+        , Font.size 12
+        , Font.color (rgb255 150 150 150)
+        ]
+        [ Element.none ]
