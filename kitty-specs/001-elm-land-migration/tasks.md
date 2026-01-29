@@ -49,7 +49,7 @@ history:
 
 ---
 
-## Work Package WP01: Athena Migration & Cluster DTO (Priority: P1) 🔍 READY FOR REVIEW
+## Work Package WP01: Athena Migration & Cluster DTO (Priority: P1) ✅ COMPLETED
 
 **Goal**: Create structured API for clustering logic
 **Independent Test**: GET /api/clusters returns JSON array of existing clusters
@@ -69,11 +69,11 @@ history:
 - ✅ DTOs use ASRA::Name(strategy: :camelcase) for proper JSON serialization
 - ✅ API controller uses DTO.from_entity methods instead of manual response building
 - ✅ Serializer verification spec tests StoryResponse and ClusterResponse
-- ✅ Worktree synced and committed at d7d9a7d
+- ✅ Worktree synced and committed
 
 ---
 
-## Work Package WP02: Elm Land & Theme Oracle (Priority: P1) 🔍 READY FOR REVIEW
+## Work Package WP02: Elm Land & Theme Oracle (Priority: P1) ✅ COMPLETED
 
 **Goal**: Replace Slang views with Elm Land project
 **Independent Test**: Dark-mode Elm shell loads instead of old dashboard
@@ -93,7 +93,7 @@ history:
 - ✅ Theme.elm exports darkBg (18,18,18) and lumeOrange (255,165,0)
 - ✅ Layouts/Shared.elm uses Element.layout pattern
 - ✅ views/index.html is minimal HTML shell with #app div
-- ✅ Worktree synced and committed at d7d9a7d
+- ✅ Worktree synced
 
 ---
 
