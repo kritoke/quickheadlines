@@ -41,12 +41,17 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 RUN mkdir -p /app/public/favicons
 
-COPY --from=builder /app/server /app/server
-COPY public/elm.js /app/public/elm.js
-COPY ui/elm.js /app/ui/elm.js
-COPY assets /app/assets
-COPY views /app/views
-COPY feeds.yml /app/feeds.yml
+# Copy everything to /srv (not affected by volume mount at /app)
+COPY --from=builder /app/server /srv/server
+COPY public/elm.js /srv/public/elm.js
+COPY ui/elm.js /srv/ui/elm.js
+COPY assets /srv/assets
+COPY views /srv/views
+COPY feeds.yml /srv/feeds.yml.default
+
+# If volume has feeds.yml, use it; otherwise use default
+COPY --from=builder /app/feeds.yml /app/feeds.yml 2>/dev/null || \
+    cp /srv/feeds.yml.default /app/feeds.yml
 
 ENV TZ=UTC
 ENV GC_MARKERS=1
@@ -54,5 +59,5 @@ ENV GC_FREE_SPACE_DIVISOR=20
 
 EXPOSE 8080/tcp
 
-WORKDIR /app
-ENTRYPOINT ["./server", "--config=feeds.yml"]
+WORKDIR /srv
+ENTRYPOINT ["./server", "--config=/app/feeds.yml"]
