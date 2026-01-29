@@ -55,7 +55,9 @@ ENV GC_FREE_SPACE_DIVISOR=20
 
 COPY --from=builder /app/server .
 COPY public/elm.js ./public/elm.js
+COPY public/favicons ./public/favicons
 COPY assets ./assets
+COPY views ./views
 COPY feeds.yml ./feeds.yml
 
 EXPOSE 8080/tcp
