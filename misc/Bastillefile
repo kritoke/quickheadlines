@@ -1,46 +1,63 @@
-# Bastillefile for quickheadlines (LLVM & GMAKE Fix)
+# Bastillefile for quickheadlines (Cross-Platform Fixes)
 
 # 0. Clean up previous failed attempts
-CMD service quickheadlines stop || true
-CMD rm -rf /tmp/qh || true
+CMD service quickheadlines stop 2>/dev/null || true
+CMD rm -rf /tmp/qh 2>/dev/null || true
 
 # 1. Install dependencies
-# Added libevent, libyaml, libmagic, and llvm15
-PKG crystal shards git openssl ca_root_nss node npm gmake curl sqlite3 llvm15 libevent libyaml
+# Detect available LLVM version (libmagic is in FreeBSD base system)
+CMD for v in 19 18 17 15; do if pkg info -e llvm$$v >/dev/null 2>&1; then LLVM_PKG="llvm$$v"; break; fi; done && \
+    if [ -z "$$LLVM_PKG" ]; then LLVM_PKG="llvm19"; fi && \
+    echo "Using $$LLVM_PKG for LLVM" && \
+    pkg install -y crystal shards git openssl ca_root_nss node npm gmake curl sqlite3 $$LLVM_PKG libevent libyaml
 
-# Link SSL certs and LLVM-Config
-CMD ln -sf /usr/local/share/certs/ca-root-nss.crt /etc/ssl/cert.pem
-CMD ln -sf /usr/local/bin/llvm-config15 /usr/local/bin/llvm-config
+# Link LLVM-Config (auto-detect version)
+CMD for v in 19 18 17 15; do if [ -x "/usr/local/bin/llvm-config$$v" ]; then \
+        ln -sf /usr/local/bin/llvm-config$$v /usr/local/bin/llvm-config; \
+        echo "Linked llvm-config$$v"; \
+        break; \
+    fi; done
+
+# Link SSL certificates (handle different FreeBSD versions)
+CMD if [ -f /usr/local/share/certs/ca-root-nss.crt ]; then \
+        ln -sf /usr/local/share/certs/ca-root-nss.crt /etc/ssl/cert.pem 2>/dev/null || true; \
+    elif [ -f /etc/ssl/cert.pem ]; then \
+        echo "SSL cert already linked"; \
+    fi
 
 # 2. Create user and core directories
-CMD pw useradd qh -d /usr/local/share/quickheadlines -s /usr/sbin/nologin || true
+CMD pw useradd qh -d /usr/local/share/quickheadlines -s /usr/sbin/nologin 2>/dev/null || true
 CMD mkdir -p /usr/local/share/quickheadlines /var/cache/quickheadlines /home/qh/.cache/crystal
-CMD chown -R qh:qh /usr/local/share/quickheadlines /var/cache/quickheadlines /home/qh
+CMD chown -R qh:qh /usr/local/share/quickheadlines /var/cache/quickheadlines /home/qh 2>/dev/null || true
 
 # 3. Setup Persistent Crystal Cache
 FSTAB /usr/local/bastille/cache/crystal/quickheadlines /home/qh/.cache/crystal nullfs rw 0 0
 
 # 4. Clone and Prepare Environment
-CMD git clone https://github.com/kritoke/quickheadlines.git /tmp/qh
-CMD chown -R qh:qh /tmp/qh
-CMD sysrc quickheadlines_env="GC_MARKERS=1 GC_FREE_SPACE_DIVISOR=20 QUICKHEADLINES_CACHE_DIR=/var/cache/quickheadlines"
+CMD git clone https://github.com/kritoke/quickheadlines.git /tmp/qh 2>/dev/null || true
+CMD chown -R qh:qh /tmp/qh 2>/dev/null || true
+CMD sysrc quickheadlines_env="GC_MARKERS=1 GC_FREE_SPACE_DIVISOR=20 QUICKHEADLINES_CACHE_DIR=/var/cache/quickheadlines" 2>/dev/null || true
 
-# 5. Build with explicit GMAKE
-# We pass MAKE=gmake into the environment so sub-processes don't use BSD make
-CMD cd /tmp/qh && su qh -c "npm install @tailwindcss/cli tailwindcss"
-CMD cd /tmp/qh && su qh -c "shards install --production"
-CMD cd /tmp/qh && su qh -c "gmake build MAKE=gmake CRYSTAL=/usr/local/bin/crystal"
+# 5. Build with explicit GMAKE and auto-detected LLVM
+CMD for v in 19 18 17 15; do if [ -x "/usr/local/bin/llvm-config$$v" ]; then \
+        LLVM_CONFIG="/usr/local/bin/llvm-config$$v"; \
+        break; \
+    fi; done && \
+    cd /tmp/qh && \
+    su qh -c "npm install @tailwindcss/cli tailwindcss 2>/dev/null || true" && \
+    su qh -c "gmake shards install CRYSTAL=/usr/local/bin/crystal" && \
+    su qh -c "export MAKE=gmake LLVM_CONFIG=$$LLVM_CONFIG && gmake build CRYSTAL=/usr/local/bin/crystal"
 
 # 6. Install Binary and Config
-CMD cp /tmp/qh/bin/quickheadlines /usr/local/share/quickheadlines
+CMD cp /tmp/qh/bin/quickheadlines /usr/local/share/quickheadlines 2>/dev/null || true
 CMD [ ! -f /usr/local/share/quickheadlines/feeds.yml ] && cp /tmp/qh/feeds.yml /usr/local/share/quickheadlines/feeds.yml || true
-CMD chown qh:qh /usr/local/share/quickheadlines/quickheadlines /usr/local/share/quickheadlines/feeds.yml
+CMD chown qh:qh /usr/local/share/quickheadlines/quickheadlines /usr/local/share/quickheadlines/feeds.yml 2>/dev/null || true
 
 # 7. Setup Service
-CMD cp /tmp/qh/misc/quickheadlines /usr/local/etc/rc.d/quickheadlines
+CMD cp /tmp/qh/misc/quickheadlines /usr/local/etc/rc.d/quickheadlines 2>/dev/null || true
 SYSRC quickheadlines_enable="YES"
 CMD chmod +x /usr/local/etc/rc.d/quickheadlines
 
-# 8. Cleanup and Start
-CMD rm -rf /tmp/qh
+# 8. Wait for database readiness and start
+CMD sleep 2
 CMD service quickheadlines start

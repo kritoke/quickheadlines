@@ -61,6 +61,9 @@ endif
 
 all: build
 
+# Find available llvm-config on FreeBSD
+FIND_LLVM_CONFIG = $(shell for v in 19 18 17 15 14 13; do if [ -x "/usr/local/bin/llvm-config$$v" ]; then echo "llvm-config$$v"; break; fi; done)
+
 # Download Crystal compiler from official site
 download-crystal:
 	@echo "Installing Crystal $(CRYSTAL_VERSION)..."
@@ -70,20 +73,22 @@ download-crystal:
 		if [ "$(OS_NAME)" = "freebsd" ]; then \
 			echo "Building Crystal $(CRYSTAL_VERSION) from source on FreeBSD..."; \
 			echo "This may take 30-60 minutes..."; \
+			export MAKE=gmake; \
+			export LLVM_CONFIG="$(FIND_LLVM_CONFIG)"; \
 			cd $(CACHE_DIR) && \
-			fetch https://github.com/crystal-lang/crystal/archive/$(CRYSTAL_VERSION).tar.gz || { \
+			fetch https://github.com/crystal-lang/crystal/archive/$(CRYSTAL_VERSION).tar.gz 2>/dev/null || curl -L -o $(CRYSTAL_VERSION).tar.gz https://github.com/crystal-lang/crystal/archive/$(CRYSTAL_VERSION).tar.gz || { \
 				echo "Error: Failed to download Crystal source"; \
 				exit 1; \
 			}; \
 			tar xzf $(CRYSTAL_VERSION).tar.gz || { \
 				echo "Error: Failed to extract Crystal source"; \
-				rm $(CRYSTAL_VERSION).tar.gz; \
+				rm -f $(CRYSTAL_VERSION).tar.gz; \
 				exit 1; \
 			}; \
-			rm $(CRYSTAL_VERSION).tar.gz; \
+			rm -f $(CRYSTAL_VERSION).tar.gz; \
 			mv crystal-$(CRYSTAL_VERSION) $(CRYSTAL_DIR); \
 			cd $(CRYSTAL_DIR) && \
-			gmake deps && gmake clean && gmake crystal MAKE=gmake || { \
+			$(MAKE) deps && $(MAKE) clean && $(MAKE) crystal || { \
 				echo "Error: Failed to build Crystal"; \
 				exit 1; \
 			}; \
@@ -96,10 +101,10 @@ download-crystal:
 			}; \
 			tar xzf $(CRYSTAL_TARBALL) || { \
 				echo "Error: Failed to extract Crystal tarball"; \
-				rm $(CRYSTAL_TARBALL); \
+				rm -f $(CRYSTAL_TARBALL); \
 				exit 1; \
 			} && \
-			rm $(CRYSTAL_TARBALL); \
+			rm -f $(CRYSTAL_TARBALL); \
 		fi; \
 	fi
 	@rm -f bin/crystal
@@ -212,6 +217,42 @@ check-deps:
 			exit 1; \
 		}; \
 		echo "✓ All Crystal build dependencies found"; \
+	fi
+	@echo "Checking libmagic..."
+	@if [ "$(OS_NAME)" = "macos" ]; then \
+		if pkg-config --exists libmagic 2>/dev/null; then \
+			echo "✓ libmagic found"; \
+		elif [ -f "/usr/local/opt/libmagic/lib/libmagic.dylib" ]; then \
+			echo "✓ libmagic found"; \
+		else \
+			echo "❌ Error: libmagic not found"; \
+			echo ""; \
+			echo "Install libmagic:"; \
+			echo "  macOS: brew install libmagic"; \
+			exit 1; \
+		fi; \
+	elif [ "$(OS_NAME)" = "linux" ]; then \
+		if pkg-config --exists libmagic 2>/dev/null; then \
+			echo "✓ libmagic found"; \
+		else \
+			echo "❌ Error: libmagic not found"; \
+			echo ""; \
+			echo "Install libmagic:"; \
+			echo "  Ubuntu/Debian: sudo apt-get install libmagic-dev"; \
+			echo "  Fedora/RHEL:   sudo dnf install file-devel"; \
+			echo "  Arch:          sudo pacman -S file"; \
+			exit 1; \
+		fi; \
+	elif [ "$(OS_NAME)" = "freebsd" ]; then \
+		if [ -f /usr/lib/libmagic.so ] || [ -f /usr/local/lib/libmagic.so ] || [ -f /usr/lib/libmagic.a ] || [ -f /usr/local/lib/libmagic.a ]; then \
+			echo "✓ libmagic found in base system"; \
+		else \
+			echo "❌ Error: libmagic not found"; \
+			echo ""; \
+			echo "Install libmagic:"; \
+			echo "  FreeBSD: sudo pkg install libmagic"; \
+			exit 1; \
+		fi; \
 	fi
 	@echo ""
 
@@ -334,32 +375,22 @@ help:
 	@echo ""
 	@echo "Platform: $(OS_NAME)-$(ARCH_NAME)"
 	@echo "Version: $(BUILD_REV)"
-	@if [ "$(OS_NAME)" = "macos" ]; then \
-		pkg-config --exists libmagic || { \
-			echo "❌ Error: libmagic (file command library) not found"; \
-			echo ""; \
-			echo "Install libmagic:"; \
-			echo "  macOS: brew install libmagic"; \
-			exit 1; \
-		}; \
-		echo "✓ libmagic development files found"; \
-	fi
-	@if [ "$(OS_NAME)" = "linux" ]; then \
-		pkg-config --exists libmagic || { \
-			echo "❌ Error: libmagic (file command library) not found"; \
-			echo ""; \
-			echo "Install libmagic:"; \
-			echo "  Ubuntu/Debian: sudo apt-get install libmagic-dev"; \
-			echo "  Fedora/RHEL:   sudo dnf install file-devel"; \
-			echo "  Arch:          sudo pacman -S file"; \
-			exit 1; \
-		}; \
-		echo "✓ libmagic development files found"; \
-	fi
+	@echo ""
+	@echo "Required dependencies:"
+	@echo "  - Crystal $(CRYSTAL_VERSION)"
+	@echo "  - SQLite3"
+	@echo "  - OpenSSL"
+	@echo "  - libmagic"
 	@if [ "$(OS_NAME)" = "freebsd" ]; then \
-        [ -f /usr/lib/libmagic.so ] || [ -f /usr/local/lib/libmagic.so ] || { \
-            echo "❌ Error: libmagic not found in /usr/lib or /usr/local/lib"; \
-            exit 1; \
-        }; \
-        echo "✓ libmagic found in base system"; \
-    fi
+		echo ""; \
+		echo "FreeBSD-specific dependencies:"; \
+		echo "  - git, gmake, libyaml, libevent"; \
+		echo "  - LLVM ($(FIND_LLVM_CONFIG) detected)"; \
+	fi
+	@echo ""
+	@echo "Installation commands:"
+	@echo "  Ubuntu/Debian: sudo apt-get install crystal libsqlite3-dev libssl-dev libmagic-dev"
+	@echo "  Fedora/RHEL:   sudo dnf install crystal sqlite-devel openssl-devel file-devel"
+	@echo "  Arch:          sudo pacman -S crystal sqlite openssl libmagic"
+	@echo "  macOS:         brew install crystal openssl libmagic"
+	@echo "  FreeBSD:       sudo pkg install crystal sqlite3 openssl git gmake libyaml libevent llvm19 libmagic"
