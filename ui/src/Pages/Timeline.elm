@@ -126,13 +126,7 @@ update shared msg model =
 
         NearBottom nearBottom ->
             if nearBottom && model.hasMore && not model.loadingMore then
-                let
-                    ( newTimelineModel, timelineCmd ) =
-                        Timeline.update model.shared LoadMore timelineModel
-                in
-                ( { model | timeline = newTimelineModel }
-                , Cmd.map TimelineMsg timelineCmd
-                )
+                update shared LoadMore model
 
             else
                 ( model, Cmd.none )
@@ -224,6 +218,7 @@ view shared model =
                     , spacing 16
                     ]
                     (List.concatMap (dayClusterSection shared.zone shared.now theme model.expandedClusters) clustersByDay)
+                ]
         ]
 
 

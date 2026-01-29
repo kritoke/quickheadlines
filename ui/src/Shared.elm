@@ -1,4 +1,4 @@
-module Shared exposing (Model, Msg(..), Theme(..), init, update, themeToString, getHeight)
+module Shared exposing (Model, Msg(..), Theme(..), getHeight, init, themeToString, update)
 
 import Time
 

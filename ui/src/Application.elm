@@ -1,8 +1,8 @@
-module Application exposing (Flags, Model, Msg(..), Page(..), init, update, view, subscriptions)
+port module Application exposing (Flags, Model, Msg(..), Page(..), init, update, view, subscriptions)
 
 import Browser
 import Browser.Navigation as Nav
-import Element exposing (Element, rgb255, px, text)
+import Element exposing (Element, rgb255, px, text, fill, width, height, spacing, padding, row)
 import Element.Background as Background
 import Element.Border as Border
 import Element.Font as Font
@@ -10,7 +10,7 @@ import Element.Input as Input
 import Html exposing (Html)
 import Layouts.Shared as Layout
 import Pages.Home_ as Home
-import Pages.Timeline exposing (Msg(..))
+import Pages.Timeline as Timeline
 import Shared exposing (Model, Msg(..), Theme(..))
 import Theme exposing (lumeOrange, surfaceColor, textColor)
 import Time
@@ -33,6 +33,17 @@ type alias Flags =
 type Page
     = Home
     | Timeline
+
+
+type Msg
+    = SharedMsg Shared.Msg
+    | HomeMsg Home.Msg
+    | TimelineMsg Timeline.Msg
+    | NavigateTo Page
+    | NavigateExternal String
+    | SwitchTab String
+    | UrlChanged Url.Url
+    | GotTime Time.Posix
 
 
 type alias Model =
@@ -200,30 +211,24 @@ view model =
                     ( "Timeline"
                     , Element.map TimelineMsg timelineContent
                     )
-    in
-    { document
-        = { title = title
-        , body =
-            Layout.layout
-                { theme = theme
-                , header = header
-                , footer = footerView model.shared
-                , main = mainView (title ++ " - QuickHeadlines")
-                }
-        }
+     in
+     Browser.Document title
+         [ Layout.layout { theme = theme, header = header, footer = footerView model.shared, main = content }
+             |> Element.layout []
+         ]
 
 
 subscriptions : Model -> Sub Msg
 subscriptions model =
     case model.page of
         Timeline ->
-            onNearBottom Timeline.NearBottom
+            Sub.map TimelineMsg (Timeline.subscriptions model.timeline)
 
         _ ->
             Sub.none
 
 
-footerView : Model -> Element Msg
+footerView : Shared.Model -> Element Msg
 footerView model =
     row
         [ width fill
@@ -233,3 +238,107 @@ footerView model =
         , Font.color (rgb255 150 150 150)
         ]
         [ Element.none ]
+
+
+headerView : Model -> Element Msg
+headerView model =
+    let
+        theme =
+            model.shared.theme
+
+        bg =
+            case theme of
+                Shared.Dark ->
+                    rgb255 30 30 30
+
+                Shared.Light ->
+                    rgb255 243 244 246
+
+        txtColor =
+            case theme of
+                Shared.Dark ->
+                    rgb255 229 231 235
+
+                Shared.Light ->
+                    rgb255 17 24 39
+    in
+    Element.row
+        [ width fill
+        , padding 16
+        , Background.color bg
+        ]
+        [ Element.link
+            [ Font.color txtColor
+            , Font.size 24
+            , Font.bold
+            , Element.paddingXY 8 0
+            ]
+            { url = "/"
+            , label = text "QuickHeadlines"
+            }
+        , Element.row
+            [ spacing 8
+            , Element.alignRight
+            ]
+            [ Element.link
+                [ Font.color txtColor
+                , Font.size 16
+                , Element.paddingXY 12 8
+                ]
+                { url = "/"
+                , label = text "Home"
+                }
+            , Element.link
+                [ Font.color txtColor
+                , Font.size 16
+                , Element.paddingXY 12 8
+                ]
+                { url = "/timeline"
+                , label = text "Timeline"
+                }
+            , themeToggle model
+            ]
+        ]
+
+
+themeToggle : Model -> Element Msg
+themeToggle model =
+    let
+        theme =
+            model.shared.theme
+
+        label =
+            case model.shared.theme of
+                Shared.Dark ->
+                    "☀ Light"
+
+                Shared.Light ->
+                    "☾ Dark"
+
+        bg =
+            case theme of
+                Shared.Dark ->
+                    rgb255 40 40 40
+
+                Shared.Light ->
+                    rgb255 229 231 235
+    in
+    Input.button
+        [ Background.color bg
+        , Font.color lumeOrange
+        , Font.size 14
+        , Element.paddingXY 12 8
+        , Border.rounded 6
+        ]
+        { onPress = Just (SharedMsg ToggleTheme)
+        , label = Element.text label
+        }
+
+
+mainView : String -> Element Msg
+mainView title =
+    Element.el
+        [ width fill
+        , height fill
+        ]
+        (Element.text title)
