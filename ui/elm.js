@@ -13724,6 +13724,8 @@ var $author$project$Pages$Home_$feedItem = F3(
 						A2($author$project$Pages$Home_$relativeTime, now, item.pubDate)))
 				]));
 	});
+var $mdgriffith$elm_ui$Internal$Flag$overflow = $mdgriffith$elm_ui$Internal$Flag$flag(20);
+var $mdgriffith$elm_ui$Element$scrollbarY = A2($mdgriffith$elm_ui$Internal$Model$Class, $mdgriffith$elm_ui$Internal$Flag$overflow, $mdgriffith$elm_ui$Internal$Style$classes.scrollbarsY);
 var $author$project$Theme$themeToColors = function (theme) {
 	if (theme.$ === 'Dark') {
 		return {
@@ -13745,9 +13747,15 @@ var $author$project$Theme$themeToColors = function (theme) {
 		};
 	}
 };
-var $author$project$Pages$Home_$feedCard = F3(
-	function (now, theme, feed) {
+var $author$project$Pages$Home_$feedCard = F4(
+	function (now, theme, windowWidth, feed) {
 		var txtColor = $author$project$Theme$textColor(theme);
+		var scrollAttributes = (windowWidth >= 1024) ? _List_fromArray(
+			[
+				$mdgriffith$elm_ui$Element$scrollbarY,
+				$mdgriffith$elm_ui$Element$htmlAttribute(
+				A2($elm$html$Html$Attributes$style, 'max-height', '400px'))
+			]) : _List_Nil;
 		var colors = $author$project$Theme$themeToColors(theme);
 		var cardBg = $author$project$Theme$cardColor(theme);
 		var border = $author$project$Theme$borderColor(theme);
@@ -13769,16 +13777,18 @@ var $author$project$Pages$Home_$feedCard = F3(
 					A2($author$project$Pages$Home_$feedHeader, theme, feed),
 					A2(
 					$mdgriffith$elm_ui$Element$column,
-					_List_fromArray(
-						[
-							$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill),
-							$mdgriffith$elm_ui$Element$height($mdgriffith$elm_ui$Element$fill),
-							$mdgriffith$elm_ui$Element$spacing(6)
-						]),
+					_Utils_ap(
+						_List_fromArray(
+							[
+								$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill),
+								$mdgriffith$elm_ui$Element$height($mdgriffith$elm_ui$Element$fill),
+								$mdgriffith$elm_ui$Element$spacing(6)
+							]),
+						scrollAttributes),
 					A2(
 						$elm$core$List$map,
 						A2($author$project$Pages$Home_$feedItem, now, theme),
-						A2($elm$core$List$take, 5, feed.items)))
+						A2($elm$core$List$take, 20, feed.items)))
 				]));
 	});
 var $author$project$Pages$Home_$feedGrid = F2(
@@ -13805,7 +13815,7 @@ var $author$project$Pages$Home_$feedGrid = F2(
 							]),
 						A2(
 							$elm$core$List$map,
-							A2($author$project$Pages$Home_$feedCard, shared.now, theme),
+							A3($author$project$Pages$Home_$feedCard, shared.now, theme, shared.windowWidth),
 							feedRow));
 				},
 				A2($author$project$Pages$Home_$chunkList, columnCount, model.feeds)));

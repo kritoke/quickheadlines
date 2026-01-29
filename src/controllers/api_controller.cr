@@ -12,12 +12,12 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
 
   # GET /api/clusters - Get all clustered stories
   @[ARTA::Get(path: "/api/clusters")]
-  def clusters(request : ATH::Request) : ClustersResponse
+  def clusters(request : ATH::Request) : Quickheadlines::DTOs::ClustersResponse
     clusters = get_clusters_from_db(@db_service.db)
 
-    cluster_responses = clusters.map { |cluster| DTOs::ClusterResponse.from_entity(cluster) }
+    cluster_responses = clusters.map { |cluster| Quickheadlines::DTOs::ClusterResponse.from_entity(cluster) }
 
-    DTOs::ClustersResponse.new(
+    Quickheadlines::DTOs::ClustersResponse.new(
       clusters: cluster_responses,
       total_count: cluster_responses.size
     )

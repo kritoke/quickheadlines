@@ -251,7 +251,7 @@ feedGrid shared model =
                         [ width fill
                         , spacing gapValue
                         ]
-                        (List.map (feedCard shared.now theme) feedRow)
+                        (List.map (feedCard shared.now theme shared.windowWidth) feedRow)
                 )
         )
 
@@ -274,8 +274,8 @@ splitAt n list =
     ( List.take n list, List.drop n list )
 
 
-feedCard : Time.Posix -> Theme -> Feed -> Element Msg
-feedCard now theme feed =
+feedCard : Time.Posix -> Theme -> Int -> Feed -> Element Msg
+feedCard now theme windowWidth feed =
     let
         colors =
             themeToColors theme
@@ -288,6 +288,12 @@ feedCard now theme feed =
 
         txtColor =
             textColor theme
+
+        scrollAttributes =
+            if windowWidth >= 1024 then
+                [ scrollbarY, htmlAttribute (Html.Attributes.style "max-height" "400px") ]
+            else
+                []
     in
     column
         [ width fill
@@ -301,11 +307,11 @@ feedCard now theme feed =
         ]
         [ feedHeader theme feed
         , column
-            [ width fill
-            , height fill
-            , spacing 6
-            ]
-            (List.map (feedItem now theme) (List.take 5 feed.items))
+            ([ width fill
+             , height fill
+             , spacing 6
+             ] ++ scrollAttributes)
+            (List.map (feedItem now theme) (List.take 20 feed.items))
         ]
 
 
