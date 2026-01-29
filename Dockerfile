@@ -49,8 +49,13 @@ COPY assets /srv/assets
 COPY views /srv/views
 COPY feeds.yml /srv/feeds.yml.default
 
-# Symlink feeds.yml from /app so it can be edited via volume mount
-RUN ln -sf /app/feeds.yml /srv/feeds.yml
+# If /app/feeds.yml doesn't exist, copy the default from GitHub
+# Otherwise use the mounted version
+RUN if [ ! -f /app/feeds.yml ]; then \
+        echo "No feeds.yml found in /app, using default from GitHub"; \
+        cp /srv/feeds.yml.default /app/feeds.yml; \
+    fi && \
+    ln -sf /app/feeds.yml /srv/feeds.yml
 
 ENV TZ=UTC
 ENV GC_MARKERS=1
