@@ -1,10 +1,8 @@
 # --- Stage 1: Builder ---
-# Use the standard image (Ubuntu-based) which has excellent ARM64 support
 FROM 84codes/crystal:latest-ubuntu-22.04 AS builder
 
 WORKDIR /app
 
-# Install development headers
 RUN apt-get update && apt-get install -y --no-install-recommends \
     apt-utils \
     libmagic-dev \
@@ -15,27 +13,22 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libreadline-dev \
     curl
 
-# 1. Install dependencies
 COPY shard.yml shard.lock ./
 RUN shards install --production
 
-# 2. Copy source code
 COPY src ./src
 
 ARG BUILD_REV=unknown
 ENV CRYSTAL_WORKERS=4
 
-# 3. Build the binary
 RUN echo "Build revision: ${BUILD_REV}" && \
     APP_ENV=production crystal build --release --no-debug -Dversion=${BUILD_REV} src/quickheadlines.cr -o /app/server
 
 # --- Stage 2: Runner ---
-# Use Ubuntu to match the Builder's OS architecture
 FROM ubuntu:22.04
 
 WORKDIR /app
 
-# Install runtime libraries
 RUN apt-get update && apt-get install -y --no-install-recommends \
     apt-utils \
     libmagic1 \
@@ -49,23 +42,23 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 RUN mkdir -p /app/public/favicons
 
+# Copy app files to /srv (not affected by /app volume mount)
+COPY --from=builder /app/server /srv/
+COPY public/elm.js /srv/public/elm.js
+COPY assets /srv/assets
+COPY views /srv/views
+COPY feeds.yml /srv/feeds.yml.default
+
+# Symlink feeds.yml from /app so it can be edited via volume mount
+RUN ln -sf /app/feeds.yml /srv/feeds.yml
+
 ENV TZ=UTC
 ENV GC_MARKERS=1
 ENV GC_FREE_SPACE_DIVISOR=20
-
-COPY --from=builder /app/server .
-COPY public/elm.js ./public/elm.js
-COPY assets ./assets
-COPY views ./views
-COPY feeds.yml ./feeds.yml
-
-# Debug: list files to verify they exist
-RUN echo "=== /app ===" && ls -la /app/ && \
-    echo "=== /app/views ===" && ls -la /app/views/ && \
-    echo "=== /app/assets/images ===" && ls -la /app/assets/images/
 
 EXPOSE 8080/tcp
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 CMD curl -f http://localhost:8080/version || exit 1
 
+WORKDIR /srv
 ENTRYPOINT ["./server"]
