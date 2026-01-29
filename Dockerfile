@@ -6,6 +6,7 @@ WORKDIR /app
 
 # Install development headers
 RUN apt-get update && apt-get install -y --no-install-recommends \
+    apt-utils \
     libmagic-dev \
     libxml2-dev \
     libssl-dev \
@@ -36,6 +37,7 @@ WORKDIR /app
 
 # Install runtime libraries
 RUN apt-get update && apt-get install -y --no-install-recommends \
+    apt-utils \
     libmagic1 \
     libxml2-dev \
     libssl-dev \
