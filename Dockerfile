@@ -1,4 +1,4 @@
-# --- Stage 1: Builder ---
+# Multi-stage build - compile on builder, minimal runtime
 FROM 84codes/crystal:latest-ubuntu-22.04 AS builder
 
 WORKDIR /app
@@ -10,8 +10,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libyaml-dev \
     libsqlite3-dev \
     libreadline-dev \
-    curl && \
-    rm -rf /var/lib/apt/lists/*
+    curl \
+    && rm -rf /var/lib/apt/lists/*
 
 COPY shard.yml shard.lock ./
 RUN shards install --production
@@ -21,48 +21,25 @@ COPY src ./src
 ARG BUILD_REV=unknown
 ENV CRYSTAL_WORKERS=4
 
-RUN echo "Build revision: ${BUILD_REV}" && \
-    APP_ENV=production crystal build --release --no-debug -Dversion=${BUILD_REV} src/quickheadlines.cr -o /app/server
+RUN APP_ENV=production crystal build --release --no-debug -Dversion=${BUILD_REV} src/quickheadlines.cr -o /app/server
 
-# --- Stage 2: Runner ---
-FROM ubuntu:22.04
+# Minimal runtime - avoid apt hangs
+FROM scratch
 
-WORKDIR /app
+COPY --from=builder /app/server /server
+COPY public/elm.js /public/elm.js
+COPY ui/elm.js /ui/elm.js
+COPY assets /assets
+COPY views /views
+COPY feeds.yml /feeds.yml.default
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    libmagic1 \
-    libxml2-dev \
-    libssl-dev \
-    libyaml-dev \
-    libsqlite3-dev \
-    ca-certificates \
-    curl && \
-    rm -rf /var/lib/apt/lists/*
+# Create favicons directory
+RUN mkdir -p /public/favicons
 
-RUN mkdir -p /app/public/favicons
+# Copy default feeds.yml if not present
+COPY --from=builder /app/feeds.yml /feeds.yml 2>/dev/null || \
+    cp /feeds.yml.default /feeds.yml
 
-# Copy app to /srv (protected from volume mount)
-COPY --from=builder /app/server /srv/server
-COPY public/elm.js /srv/public/elm.js
-COPY ui/elm.js /srv/ui/elm.js
-COPY assets /srv/assets
-COPY views /srv/views
-COPY feeds.yml /srv/feeds.yml
+EXPOSE 8080
 
-# Check if volume has feeds.yml, if not copy default from /srv
-RUN ls -la /app/ 2>/dev/null || echo "/app is empty or mounted" && \
-    if [ -f /app/feeds.yml ]; then \
-        echo "Using feeds.yml from volume mount"; \
-    else \
-        echo "No feeds.yml in /app, copying default"; \
-        cp /srv/feeds.yml /app/feeds.yml; \
-    fi
-
-ENV TZ=UTC
-ENV GC_MARKERS=1
-ENV GC_FREE_SPACE_DIVISOR=20
-
-EXPOSE 8080/tcp
-
-WORKDIR /srv
-ENTRYPOINT ["./server", "--config=/app/feeds.yml"]
+ENTRYPOINT ["/server", "--config=/feeds.yml"]
