@@ -47,6 +47,7 @@ type Msg
     | LoadMore
     | ToggleCluster String
     | ToggleTheme
+    | NearBottom Bool
 
 
 update : Shared.Model -> Msg -> Model -> ( Model, Cmd Msg )
@@ -123,6 +124,19 @@ update shared msg model =
             , fetchTimeline 35 model.offset GotMoreTimeline
             )
 
+        NearBottom nearBottom ->
+            if nearBottom && model.hasMore && not model.loadingMore then
+                let
+                    ( newTimelineModel, timelineCmd ) =
+                        Timeline.update model.shared LoadMore timelineModel
+                in
+                ( { model | timeline = newTimelineModel }
+                , Cmd.map TimelineMsg timelineCmd
+                )
+
+            else
+                ( model, Cmd.none )
+
         ToggleCluster clusterId ->
             let
                 newExpanded =
@@ -198,14 +212,18 @@ view shared model =
                 , Font.size 16
                 , Font.color errorColor
                 ]
-                (text "Error loading timeline")
+                 (text "Error loading timeline")
 
           else
             column
                 [ width fill
-                , spacing 16
                 ]
-                (List.concatMap (dayClusterSection shared.zone shared.now theme model.expandedClusters) clustersByDay)
+                [ el [ htmlAttribute (Html.Attributes.id "scroll-sentinel") ] Element.none
+                , column
+                    [ width fill
+                    , spacing 16
+                    ]
+                    (List.concatMap (dayClusterSection shared.zone shared.now theme model.expandedClusters) clustersByDay)
         ]
 
 

@@ -83,14 +83,15 @@
       background-color: rgba(128, 128, 128, 0.3);
       border-radius: 4px;
     }
-  </style>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/color-thief/2.3.2/color-thief.umd.js"></script>
-</head>
-<body>
-  <div id="app">
-    <div style="display: flex; justify-content: center; align-items: center; height: 100vh; color: #f0f0f0; font-family: system-ui, sans-serif; font-size: 18px; background: #121212;">Loading QuickHeadlines...</div>
-  </div>
-  <script src="/elm.js"></script>
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/color-thief/2.3.2/color-thief.umd.js"></script>
+  </head>
+  <body>
+    <div id="app">
+      <div style="display: flex; justify-content: center; align-items: center; height: 100vh; color: #f0f0f0; font-family: system-ui, sans-serif; font-size: 18px; background: #121212;">Loading QuickHeadlines...</div>
+    </div>
+    <div id="scroll-sentinel" style="height: 1px;"></div>
+    <script src="/elm.js"></script>
   <script>
     window.feedHeaderCache = window.feedHeaderCache || {};
 
@@ -229,20 +230,27 @@
           });
         }
 
-        // Set up scroll tracking for infinite scroll
-        if (app.ports && app.ports.onScroll) {
-          var mainContent = document.getElementById('main-content');
-          if (mainContent) {
-            mainContent.addEventListener('scroll', function(e) {
-              var scrollTop = mainContent.scrollTop;
-              var scrollHeight = mainContent.scrollHeight;
-              var clientHeight = mainContent.clientHeight;
-              var scrollPercentage = scrollHeight > clientHeight ? scrollTop / (scrollHeight - clientHeight) : 0;
-              console.log('Scroll event:', { scrollTop, scrollHeight, clientHeight, scrollPercentage, hasMore: typeof app.ports.loadMore !== 'undefined' });
-              app.ports.onScroll.send(scrollPercentage);
-            });
-          }
-        }
+         // Set up IntersectionObserver for infinite scroll
+         if (app.ports && app.ports.onNearBottom) {
+           const sentinel = document.getElementById('scroll-sentinel');
+           if (sentinel) {
+             const observer = new IntersectionObserver((entries) => {
+               entries.forEach(entry => {
+                 if (entry.isIntersecting) {
+                   console.log('Near bottom detected');
+                   app.ports.onNearBottom.send(true);
+                 } else {
+                   app.ports.onNearBottom.send(false);
+                 }
+               });
+             }, { threshold: 0.1 });
+
+             observer.observe(sentinel);
+             console.log('IntersectionObserver set up for sentinel');
+           } else {
+             console.error('Sentinel element not found');
+           }
+         }
 
         window.addEventListener('resize', function() {
           // Handle resize if needed

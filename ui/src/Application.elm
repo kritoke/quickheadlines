@@ -10,7 +10,7 @@ import Element.Input as Input
 import Html exposing (Html)
 import Layouts.Shared as Layout
 import Pages.Home_ as Home
-import Pages.Timeline as Timeline
+import Pages.Timeline exposing (Msg(..))
 import Shared exposing (Model, Msg(..), Theme(..))
 import Theme exposing (lumeOrange, surfaceColor, textColor)
 import Time
@@ -20,8 +20,7 @@ import Url
 
 port saveTheme : String -> Cmd msg
 
-
-port onScroll : (Float -> msg) -> Sub msg
+port onNearBottom : (Bool -> msg) -> Sub msg
 
 
 type alias Flags =
@@ -52,10 +51,9 @@ type Msg
     | TimelineMsg Timeline.Msg
     | NavigateTo Page
     | NavigateExternal String
+    | GotTime Time.Posix
     | SwitchTab String
     | UrlChanged Url.Url
-    | GotTime Time.Posix
-    | Scroll Float
 
 
 init : Flags -> Url.Url -> Nav.Key -> ( Model, Cmd Msg )
@@ -149,7 +147,7 @@ update msg model =
             , Nav.load href
             )
 
-        SwitchTab tab ->
+         SwitchTab tab ->
             let
                 ( newHomeModel, homeCmd ) =
                     Home.update model.shared (Home.SwitchTab tab) model.home
@@ -172,39 +170,6 @@ update msg model =
             )
 
         GotTime posix ->
-            let
-                shared =
-                    model.shared
-
-                newShared =
-                    { shared | now = posix }
-            in
-            ( { model | shared = newShared }
-            , Cmd.none
-            )
-
-        Scroll scrollPercentage ->
-            let
-                timelineModel =
-                    model.timeline
-
-                -- Load more when user scrolls to 80% of the content
-                threshold = 0.8
-
-                shouldLoadMore =
-                    scrollPercentage > threshold && timelineModel.hasMore && not timelineModel.loadingMore
-            in
-            if shouldLoadMore then
-                let
-                    ( newTimelineModel, timelineCmd ) =
-                        Timeline.update model.shared Timeline.LoadMore timelineModel
-                in
-                ( { model | timeline = newTimelineModel }
-                , Cmd.map TimelineMsg timelineCmd
-                )
-
-            else
-                ( model, Cmd.none )
 
 
 view : Model -> Browser.Document Msg
@@ -404,4 +369,9 @@ themeToggle model =
 
 subscriptions : Model -> Sub Msg
 subscriptions model =
-    onScroll Scroll
+    case model.page of
+        Timeline ->
+            onNearBottom Timeline.NearBottom
+
+        _ ->
+            Sub.none
