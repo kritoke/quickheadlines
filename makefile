@@ -83,7 +83,7 @@ download-crystal:
 			rm $(CRYSTAL_VERSION).tar.gz; \
 			mv crystal-$(CRYSTAL_VERSION) $(CRYSTAL_DIR); \
 			cd $(CRYSTAL_DIR) && \
-			make deps && make clean && make crystal || { \
+			gmake deps && gmake clean && gmake crystal MAKE=gmake || { \
 				echo "Error: Failed to build Crystal"; \
 				exit 1; \
 			}; \
@@ -197,7 +197,7 @@ check-deps:
 			echo "  FreeBSD: sudo pkg install libyaml"; \
 			exit 1; \
 		}; \
-		pkg info -e llvm19 >/dev/null 2>&1 || pkg info -e llvm18 >/dev/null 2>&1 || pkg info -e llvm17 >/dev/null 2>&1 || { \
+		pkg info -e llvm19 >/dev/null 2>&1 || pkg info -e llvm18 >/dev/null 2>&1 || pkg info -e llvm17 >/dev/null 2>&1 || pkg info -e llvm15 >/dev/null 2>&1 || { \
 			echo "❌ Error: llvm not found (required for Crystal build)"; \
 			echo ""; \
 			echo "Install llvm:"; \

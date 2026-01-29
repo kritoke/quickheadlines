@@ -1,47 +1,46 @@
-# Bastillefile for quickheadlines (Persistence Optimized)
+# Bastillefile for quickheadlines (LLVM & GMAKE Fix)
 
-# 0. Stop existing service before rebuilding (prevents build failures)
+# 0. Clean up previous failed attempts
 CMD service quickheadlines stop || true
 CMD rm -rf /tmp/qh || true
 
 # 1. Install dependencies
-PKG crystal shards git openssl ca_root_nss node npm gmake curl sqlite3
+# Added libevent, libyaml, libmagic, and llvm15
+PKG crystal shards git openssl ca_root_nss node npm gmake curl sqlite3 llvm15 libevent libyaml libmagic
 
-# Ensure system-wide SSL certificates are linked
+# Link SSL certs and LLVM-Config
 CMD ln -sf /usr/local/share/certs/ca-root-nss.crt /etc/ssl/cert.pem
+CMD ln -sf /usr/local/bin/llvm-config15 /usr/local/bin/llvm-config
 
-# 2. Create the application directory
-CMD mkdir -p /usr/local/share/quickheadlines
+# 2. Create user and core directories
+CMD pw useradd qh -d /usr/local/share/quickheadlines -s /usr/sbin/nologin || true
+CMD mkdir -p /usr/local/share/quickheadlines /var/cache/quickheadlines /home/qh/.cache/crystal
+CMD chown -R qh:qh /usr/local/share/quickheadlines /var/cache/quickheadlines /home/qh
 
-# 3. Create cache directory and build the application
-CMD mkdir -p /var/cache/quickheadlines
-CMD sysrc quickheadlines_env="GC_MARKERS=1 GC_FREE_SPACE_DIVISOR=20 QUICKHEADLINES_CACHE_DIR=/var/cache/quickheadlines"
+# 3. Setup Persistent Crystal Cache
+FSTAB /usr/local/bastille/cache/crystal/quickheadlines /home/qh/.cache/crystal nullfs rw 0 0
+
+# 4. Clone and Prepare Environment
 CMD git clone https://github.com/kritoke/quickheadlines.git /tmp/qh
-CMD cd /tmp/qh && npm install @tailwindcss/cli tailwindcss && shards install --production
-CMD cd /tmp/qh && gmake build
+CMD chown -R qh:qh /tmp/qh
+CMD sysrc quickheadlines_env="GC_MARKERS=1 GC_FREE_SPACE_DIVISOR=20 QUICKHEADLINES_CACHE_DIR=/var/cache/quickheadlines"
+
+# 5. Build with explicit GMAKE
+# We pass MAKE=gmake into the environment so sub-processes don't use BSD make
+CMD cd /tmp/qh && su qh -c "npm install @tailwindcss/cli tailwindcss"
+CMD cd /tmp/qh && su qh -c "shards install --production"
+CMD cd /tmp/qh && su qh -c "gmake build MAKE=gmake" 
+
+# 6. Install Binary and Config
 CMD cp /tmp/qh/bin/quickheadlines /usr/local/share/quickheadlines
-
-# 4. Conditional Config Copy
-# Only copy feeds.yml if the file does NOT already exist in the target folder
 CMD [ ! -f /usr/local/share/quickheadlines/feeds.yml ] && cp /tmp/qh/feeds.yml /usr/local/share/quickheadlines/feeds.yml || true
+CMD chown qh:qh /usr/local/share/quickheadlines/quickheadlines /usr/local/share/quickheadlines/feeds.yml
 
-# 5. Setup Service (before cleanup)
+# 7. Setup Service
 CMD cp /tmp/qh/misc/quickheadlines /usr/local/etc/rc.d/quickheadlines
 SYSRC quickheadlines_enable="YES"
 CMD chmod +x /usr/local/etc/rc.d/quickheadlines
 
-# 6. Cleanup build files
+# 8. Cleanup and Start
 CMD rm -rf /tmp/qh
-
-# 7. Create user and set permissions
-CMD pw useradd qh -d /usr/local/share/quickheadlines -s /usr/sbin/nologin || true
-CMD chown -R qh:qh /usr/local/share/quickheadlines /var/cache/quickheadlines
-
-# 8. Start the service
 CMD service quickheadlines start
-
-# 9. Display service status and provide stop command info
-CMD echo "=== QuickHeadlines Service Started ==="
-CMD service quickheadlines status
-CMD echo ""
-CMD echo "To stop the service later, run: service quickheadlines stop"
