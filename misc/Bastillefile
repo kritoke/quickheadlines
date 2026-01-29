@@ -29,7 +29,7 @@ CMD sysrc quickheadlines_env="GC_MARKERS=1 GC_FREE_SPACE_DIVISOR=20 QUICKHEADLIN
 # We pass MAKE=gmake into the environment so sub-processes don't use BSD make
 CMD cd /tmp/qh && su qh -c "npm install @tailwindcss/cli tailwindcss"
 CMD cd /tmp/qh && su qh -c "shards install --production"
-CMD cd /tmp/qh && su qh -c "gmake build MAKE=gmake" 
+CMD cd /tmp/qh && su qh -c "gmake build MAKE=gmake CRYSTAL=/usr/local/bin/crystal"
 
 # 6. Install Binary and Config
 CMD cp /tmp/qh/bin/quickheadlines /usr/local/share/quickheadlines

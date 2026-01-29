@@ -2,7 +2,7 @@
 # Migrated from Crystal/Slang/Tailwind to Crystal/Elm with elm-ui
 
 NAME = quickheadlines
-CRYSTAL ?= $(PWD)/bin/crystal
+CRYSTAL ?= $(shell which crystal 2>/dev/null || echo $(PWD)/bin/crystal)
 ELM    ?= elm
 ELM_FORMAT ?= elm-format
 VERSION := $(shell grep '^version:' shard.yml | awk '{print $$2}')
