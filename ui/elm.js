@@ -6376,6 +6376,10 @@ var $author$project$Pages$Home_$init = function (shared) {
 var $author$project$Pages$Timeline$GotTimeline = function (a) {
 	return {$: 'GotTimeline', a: a};
 };
+var $elm$core$Set$Set_elm_builtin = function (a) {
+	return {$: 'Set_elm_builtin', a: a};
+};
+var $elm$core$Set$empty = $elm$core$Set$Set_elm_builtin($elm$core$Dict$empty);
 var $author$project$Api$TimelineResponse = F3(
 	function (items, hasMore, totalCount) {
 		return {hasMore: hasMore, items: items, totalCount: totalCount};
@@ -6496,16 +6500,17 @@ var $author$project$Api$fetchTimeline = F3(
 	});
 var $author$project$Pages$Timeline$init = function (shared) {
 	return _Utils_Tuple2(
-		{error: $elm$core$Maybe$Nothing, hasMore: true, items: _List_Nil, loading: true},
-		A3($author$project$Api$fetchTimeline, 50, 0, $author$project$Pages$Timeline$GotTimeline));
+		{clusters: _List_Nil, error: $elm$core$Maybe$Nothing, expandedClusters: $elm$core$Set$empty, hasMore: true, items: _List_Nil, loading: true, loadingMore: false, offset: 0},
+		A3($author$project$Api$fetchTimeline, 35, 0, $author$project$Pages$Timeline$GotTimeline));
 };
 var $author$project$Shared$Dark = {$: 'Dark'};
 var $author$project$Shared$Light = {$: 'Light'};
-var $author$project$Shared$init = F4(
-	function (width, prefersDark, now, zone) {
+var $author$project$Shared$init = F5(
+	function (width, height, prefersDark, now, zone) {
 		return {
 			now: now,
 			theme: prefersDark ? $author$project$Shared$Dark : $author$project$Shared$Light,
+			windowHeight: height,
 			windowWidth: width,
 			zone: zone
 		};
@@ -6527,9 +6532,10 @@ var $elm$time$Time$utc = A2($elm$time$Time$Zone, 0, _List_Nil);
 var $author$project$Application$init = F3(
 	function (flags, url, key) {
 		var zone = $elm$time$Time$utc;
-		var shared = A4(
+		var shared = A5(
 			$author$project$Shared$init,
 			flags.width,
+			flags.height,
 			flags.prefersDark,
 			$elm$time$Time$millisToPosix(0),
 			zone);
@@ -6555,11 +6561,13 @@ var $elm$core$Platform$Sub$none = $elm$core$Platform$Sub$batch(_List_Nil);
 var $author$project$Main$subscriptions = function (model) {
 	return $elm$core$Platform$Sub$none;
 };
+var $author$project$Pages$Timeline$LoadMore = {$: 'LoadMore'};
 var $author$project$Pages$Home_$SwitchTab = function (a) {
 	return {$: 'SwitchTab', a: a};
 };
 var $elm$browser$Browser$Navigation$load = _Browser_load;
 var $elm$core$Platform$Cmd$none = $elm$core$Platform$Cmd$batch(_List_Nil);
+var $elm$core$Basics$not = _Basics_not;
 var $elm$browser$Browser$Navigation$pushUrl = _Browser_pushUrl;
 var $elm$json$Json$Encode$string = _Json_wrap;
 var $author$project$Application$saveTheme = _Platform_outgoingPort('saveTheme', $elm$json$Json$Encode$string);
@@ -6610,28 +6618,244 @@ var $author$project$Pages$Home_$update = F3(
 				A2($author$project$Api$fetchFeeds, tab, $author$project$Pages$Home_$GotFeeds));
 		}
 	});
+var $author$project$Pages$Timeline$GotMoreTimeline = function (a) {
+	return {$: 'GotMoreTimeline', a: a};
+};
+var $elm$core$Basics$composeL = F3(
+	function (g, f, x) {
+		return g(
+			f(x));
+	});
+var $elm$core$List$filter = F2(
+	function (isGood, list) {
+		return A3(
+			$elm$core$List$foldr,
+			F2(
+				function (x, xs) {
+					return isGood(x) ? A2($elm$core$List$cons, x, xs) : xs;
+				}),
+			_List_Nil,
+			list);
+	});
+var $elm$core$Basics$neq = _Utils_notEqual;
+var $author$project$Api$toClusterItem = function (item) {
+	return {favicon: item.favicon, feedTitle: item.feedTitle, link: item.link, pubDate: item.pubDate, title: item.title};
+};
+var $elm$core$Debug$todo = _Debug_todo;
+var $author$project$Api$buildCluster = function (_v0) {
+	var clusterId = _v0.a;
+	var clusterItems = _v0.b;
+	var reps = A2(
+		$elm$core$List$filter,
+		function ($) {
+			return $.isRepresentative;
+		},
+		clusterItems);
+	var representative = function () {
+		if (reps.b) {
+			var rep = reps.a;
+			return rep;
+		} else {
+			if (clusterItems.b) {
+				var first = clusterItems.a;
+				return first;
+			} else {
+				return _Debug_todo(
+					'Api',
+					{
+						start: {line: 122, column: 29},
+						end: {line: 122, column: 39}
+					})('Empty cluster should not exist');
+			}
+		}
+	}();
+	var othersFiltered = A2(
+		$elm$core$List$filter,
+		A2(
+			$elm$core$Basics$composeL,
+			$elm$core$Basics$not,
+			function ($) {
+				return $.isRepresentative;
+			}),
+		clusterItems);
+	var others = A2(
+		$elm$core$List$filter,
+		function (item) {
+			return !_Utils_eq(item.id, representative.id);
+		},
+		othersFiltered);
+	return {
+		count: $elm$core$List$length(clusterItems),
+		id: clusterId,
+		others: A2($elm$core$List$map, $author$project$Api$toClusterItem, others),
+		representative: $author$project$Api$toClusterItem(representative)
+	};
+};
+var $elm$core$List$any = F2(
+	function (isOkay, list) {
+		any:
+		while (true) {
+			if (!list.b) {
+				return false;
+			} else {
+				var x = list.a;
+				var xs = list.b;
+				if (isOkay(x)) {
+					return true;
+				} else {
+					var $temp$isOkay = isOkay,
+						$temp$list = xs;
+					isOkay = $temp$isOkay;
+					list = $temp$list;
+					continue any;
+				}
+			}
+		}
+	});
+var $elm$core$List$member = F2(
+	function (x, xs) {
+		return A2(
+			$elm$core$List$any,
+			function (a) {
+				return _Utils_eq(a, x);
+			},
+			xs);
+	});
+var $author$project$Api$clusterItemsFromTimeline = function (items) {
+	var clusterIds = A2(
+		$elm$core$List$filterMap,
+		function ($) {
+			return $.clusterId;
+		},
+		items);
+	var uniqueClusterIds = A3(
+		$elm$core$List$foldr,
+		F2(
+			function (cid, acc) {
+				return A2($elm$core$List$member, cid, acc) ? acc : A2($elm$core$List$cons, cid, acc);
+			}),
+		_List_Nil,
+		clusterIds);
+	var grouped = A2(
+		$elm$core$List$map,
+		function (cid) {
+			return _Utils_Tuple2(
+				cid,
+				A2(
+					$elm$core$List$filter,
+					function (i) {
+						return _Utils_eq(
+							i.clusterId,
+							$elm$core$Maybe$Just(cid));
+					},
+					items));
+		},
+		uniqueClusterIds);
+	return A2($elm$core$List$map, $author$project$Api$buildCluster, grouped);
+};
+var $elm$core$Set$insert = F2(
+	function (key, _v0) {
+		var dict = _v0.a;
+		return $elm$core$Set$Set_elm_builtin(
+			A3($elm$core$Dict$insert, key, _Utils_Tuple0, dict));
+	});
+var $elm$core$Dict$member = F2(
+	function (key, dict) {
+		var _v0 = A2($elm$core$Dict$get, key, dict);
+		if (_v0.$ === 'Just') {
+			return true;
+		} else {
+			return false;
+		}
+	});
+var $elm$core$Set$member = F2(
+	function (key, _v0) {
+		var dict = _v0.a;
+		return A2($elm$core$Dict$member, key, dict);
+	});
+var $elm$core$Set$remove = F2(
+	function (key, _v0) {
+		var dict = _v0.a;
+		return $elm$core$Set$Set_elm_builtin(
+			A2($elm$core$Dict$remove, key, dict));
+	});
 var $author$project$Pages$Timeline$update = F3(
 	function (shared, msg, model) {
-		if (msg.$ === 'GotTimeline') {
-			if (msg.a.$ === 'Ok') {
-				var response = msg.a.a;
+		switch (msg.$) {
+			case 'GotTimeline':
+				if (msg.a.$ === 'Ok') {
+					var response = msg.a.a;
+					var clusters = $author$project$Api$clusterItemsFromTimeline(response.items);
+					var expanded = A3(
+						$elm$core$List$foldl,
+						F2(
+							function (cluster, acc) {
+								return (cluster.count > 1) ? A2($elm$core$Set$insert, cluster.id, acc) : acc;
+							}),
+						$elm$core$Set$empty,
+						clusters);
+					return _Utils_Tuple2(
+						_Utils_update(
+							model,
+							{
+								clusters: clusters,
+								error: $elm$core$Maybe$Nothing,
+								expandedClusters: expanded,
+								hasMore: response.hasMore,
+								items: response.items,
+								loading: false,
+								offset: $elm$core$List$length(response.items)
+							}),
+						$elm$core$Platform$Cmd$none);
+				} else {
+					return _Utils_Tuple2(
+						_Utils_update(
+							model,
+							{
+								error: $elm$core$Maybe$Just('Failed to load timeline'),
+								loading: false
+							}),
+						$elm$core$Platform$Cmd$none);
+				}
+			case 'GotMoreTimeline':
+				if (msg.a.$ === 'Ok') {
+					var response = msg.a.a;
+					var newItems = _Utils_ap(model.items, response.items);
+					var newClusters = $author$project$Api$clusterItemsFromTimeline(newItems);
+					return _Utils_Tuple2(
+						_Utils_update(
+							model,
+							{
+								clusters: newClusters,
+								hasMore: response.hasMore,
+								items: newItems,
+								loadingMore: false,
+								offset: model.offset + $elm$core$List$length(response.items)
+							}),
+						$elm$core$Platform$Cmd$none);
+				} else {
+					return _Utils_Tuple2(
+						_Utils_update(
+							model,
+							{loadingMore: false}),
+						$elm$core$Platform$Cmd$none);
+				}
+			case 'LoadMore':
 				return _Utils_Tuple2(
 					_Utils_update(
 						model,
-						{error: $elm$core$Maybe$Nothing, hasMore: response.hasMore, items: response.items, loading: false}),
-					$elm$core$Platform$Cmd$none);
-			} else {
+						{loadingMore: true}),
+					A3($author$project$Api$fetchTimeline, 35, model.offset, $author$project$Pages$Timeline$GotMoreTimeline));
+			case 'ToggleCluster':
+				var clusterId = msg.a;
+				var newExpanded = A2($elm$core$Set$member, clusterId, model.expandedClusters) ? A2($elm$core$Set$remove, clusterId, model.expandedClusters) : A2($elm$core$Set$insert, clusterId, model.expandedClusters);
 				return _Utils_Tuple2(
 					_Utils_update(
 						model,
-						{
-							error: $elm$core$Maybe$Just('Failed to load timeline'),
-							loading: false
-						}),
+						{expandedClusters: newExpanded}),
 					$elm$core$Platform$Cmd$none);
-			}
-		} else {
-			return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
+			default:
+				return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
 		}
 	});
 var $author$project$Shared$update = F2(
@@ -6651,9 +6875,10 @@ var $author$project$Shared$update = F2(
 					{theme: newTheme});
 			case 'WindowResized':
 				var width = msg.a;
+				var height = msg.b;
 				return _Utils_update(
 					model,
-					{windowWidth: width});
+					{windowHeight: height, windowWidth: width});
 			default:
 				var posix = msg.a;
 				return _Utils_update(
@@ -6742,7 +6967,7 @@ var $author$project$Application$update = F2(
 						model,
 						{page: newPage, url: url}),
 					$elm$core$Platform$Cmd$none);
-			default:
+			case 'GotTime':
 				var posix = msg.a;
 				var shared = model.shared;
 				var newShared = _Utils_update(
@@ -6753,6 +6978,23 @@ var $author$project$Application$update = F2(
 						model,
 						{shared: newShared}),
 					$elm$core$Platform$Cmd$none);
+			default:
+				var scrollPercentage = msg.a;
+				var timelineModel = model.timeline;
+				var threshold = 0.8;
+				var shouldLoadMore = (_Utils_cmp(scrollPercentage, threshold) > 0) && (timelineModel.hasMore && (!timelineModel.loadingMore));
+				if (shouldLoadMore) {
+					var _v6 = A3($author$project$Pages$Timeline$update, model.shared, $author$project$Pages$Timeline$LoadMore, timelineModel);
+					var newTimelineModel = _v6.a;
+					var timelineCmd = _v6.b;
+					return _Utils_Tuple2(
+						_Utils_update(
+							model,
+							{timeline: newTimelineModel}),
+						A2($elm$core$Platform$Cmd$map, $author$project$Application$TimelineMsg, timelineCmd));
+				} else {
+					return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
+				}
 		}
 	});
 var $author$project$Application$NavigateTo = function (a) {
@@ -6915,10 +7157,6 @@ var $elm$html$Html$Attributes$stringProperty = F2(
 	});
 var $elm$html$Html$Attributes$class = $elm$html$Html$Attributes$stringProperty('className');
 var $elm$html$Html$div = _VirtualDom_node('div');
-var $elm$core$Set$Set_elm_builtin = function (a) {
-	return {$: 'Set_elm_builtin', a: a};
-};
-var $elm$core$Set$empty = $elm$core$Set$Set_elm_builtin($elm$core$Dict$empty);
 var $mdgriffith$elm_ui$Internal$Model$lengthClassName = function (x) {
 	switch (x.$) {
 		case 'Px':
@@ -7068,26 +7306,6 @@ var $mdgriffith$elm_ui$Internal$Model$getStyleName = function (style) {
 				$mdgriffith$elm_ui$Internal$Model$transformClass(x));
 	}
 };
-var $elm$core$Set$insert = F2(
-	function (key, _v0) {
-		var dict = _v0.a;
-		return $elm$core$Set$Set_elm_builtin(
-			A3($elm$core$Dict$insert, key, _Utils_Tuple0, dict));
-	});
-var $elm$core$Dict$member = F2(
-	function (key, dict) {
-		var _v0 = A2($elm$core$Dict$get, key, dict);
-		if (_v0.$ === 'Just') {
-			return true;
-		} else {
-			return false;
-		}
-	});
-var $elm$core$Set$member = F2(
-	function (key, _v0) {
-		var dict = _v0.a;
-		return A2($elm$core$Dict$member, key, dict);
-	});
 var $mdgriffith$elm_ui$Internal$Model$reduceStyles = F2(
 	function (style, nevermind) {
 		var cache = nevermind.a;
@@ -9115,27 +9333,6 @@ var $mdgriffith$elm_ui$Internal$Model$staticRoot = A3(
 		[
 			$elm$virtual_dom$VirtualDom$text($mdgriffith$elm_ui$Internal$Style$rules)
 		]));
-var $elm$core$List$any = F2(
-	function (isOkay, list) {
-		any:
-		while (true) {
-			if (!list.b) {
-				return false;
-			} else {
-				var x = list.a;
-				var xs = list.b;
-				if (isOkay(x)) {
-					return true;
-				} else {
-					var $temp$isOkay = isOkay,
-						$temp$list = xs;
-					isOkay = $temp$isOkay;
-					list = $temp$list;
-					continue any;
-				}
-			}
-		}
-	});
 var $mdgriffith$elm_ui$Internal$Model$fontName = function (font) {
 	switch (font.$) {
 		case 'Serif':
@@ -9254,17 +9451,6 @@ var $mdgriffith$elm_ui$Internal$Model$adjust = F3(
 	function (size, height, vertical) {
 		return {height: height / size, size: size, vertical: vertical};
 	});
-var $elm$core$List$filter = F2(
-	function (isGood, list) {
-		return A3(
-			$elm$core$List$foldr,
-			F2(
-				function (x, xs) {
-					return isGood(x) ? A2($elm$core$List$cons, x, xs) : xs;
-				}),
-			_List_Nil,
-			list);
-	});
 var $elm$core$List$maximum = function (list) {
 	if (list.b) {
 		var x = list.a;
@@ -9285,7 +9471,6 @@ var $elm$core$List$minimum = function (list) {
 		return $elm$core$Maybe$Nothing;
 	}
 };
-var $elm$core$Basics$neq = _Utils_notEqual;
 var $mdgriffith$elm_ui$Internal$Model$convertAdjustment = function (adjustment) {
 	var lines = _List_fromArray(
 		[adjustment.capital, adjustment.baseline, adjustment.descender, adjustment.lowercase]);
@@ -10136,7 +10321,6 @@ var $elm$virtual_dom$VirtualDom$keyedNode = function (tag) {
 	return _VirtualDom_keyedNode(
 		_VirtualDom_noScript(tag));
 };
-var $elm$core$Basics$not = _Basics_not;
 var $elm$html$Html$p = _VirtualDom_node('p');
 var $elm$core$Bitwise$and = _Bitwise_and;
 var $mdgriffith$elm_ui$Internal$Flag$present = F2(
@@ -11957,11 +12141,6 @@ var $mdgriffith$elm_ui$Internal$Model$Height = function (a) {
 	return {$: 'Height', a: a};
 };
 var $mdgriffith$elm_ui$Element$height = $mdgriffith$elm_ui$Internal$Model$Height;
-var $elm$core$Basics$composeL = F3(
-	function (g, f, x) {
-		return g(
-			f(x));
-	});
 var $elm$virtual_dom$VirtualDom$Normal = function (a) {
 	return {$: 'Normal', a: a};
 };
@@ -12919,13 +13098,21 @@ var $author$project$Layouts$Shared$headerView = F2(
 			_List_fromArray(
 				[content]));
 	});
+var $mdgriffith$elm_ui$Element$htmlAttribute = $mdgriffith$elm_ui$Internal$Model$Attr;
+var $elm$html$Html$Attributes$id = $elm$html$Html$Attributes$stringProperty('id');
+var $elm$virtual_dom$VirtualDom$style = _VirtualDom_style;
+var $elm$html$Html$Attributes$style = $elm$virtual_dom$VirtualDom$style;
 var $author$project$Layouts$Shared$mainView = function (content) {
 	return A2(
 		$mdgriffith$elm_ui$Element$el,
 		_List_fromArray(
 			[
 				$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill),
-				$mdgriffith$elm_ui$Element$height($mdgriffith$elm_ui$Element$fill)
+				$mdgriffith$elm_ui$Element$height($mdgriffith$elm_ui$Element$fill),
+				$mdgriffith$elm_ui$Element$htmlAttribute(
+				A2($elm$html$Html$Attributes$style, 'overflow-y', 'auto')),
+				$mdgriffith$elm_ui$Element$htmlAttribute(
+				$elm$html$Html$Attributes$id('main-content'))
 			]),
 		content);
 };
@@ -13209,7 +13396,6 @@ var $author$project$Pages$Home_$faviconView = F2(
 				]),
 			$mdgriffith$elm_ui$Element$none);
 	});
-var $mdgriffith$elm_ui$Element$htmlAttribute = $mdgriffith$elm_ui$Internal$Model$Attr;
 var $elm$html$Html$Attributes$href = function (url) {
 	return A2(
 		$elm$html$Html$Attributes$stringProperty,
@@ -13274,8 +13460,6 @@ var $elm$core$String$replace = F3(
 			after,
 			A2($elm$core$String$split, before, string));
 	});
-var $elm$virtual_dom$VirtualDom$style = _VirtualDom_style;
-var $elm$html$Html$Attributes$style = $elm$virtual_dom$VirtualDom$style;
 var $mdgriffith$elm_ui$Element$Font$underline = $mdgriffith$elm_ui$Internal$Model$htmlClass($mdgriffith$elm_ui$Internal$Style$classes.underline);
 var $author$project$Pages$Home_$feedHeader = F2(
 	function (theme, feed) {
@@ -13724,8 +13908,6 @@ var $author$project$Pages$Home_$feedItem = F3(
 						A2($author$project$Pages$Home_$relativeTime, now, item.pubDate)))
 				]));
 	});
-var $mdgriffith$elm_ui$Internal$Flag$overflow = $mdgriffith$elm_ui$Internal$Flag$flag(20);
-var $mdgriffith$elm_ui$Element$scrollbarY = A2($mdgriffith$elm_ui$Internal$Model$Class, $mdgriffith$elm_ui$Internal$Flag$overflow, $mdgriffith$elm_ui$Internal$Style$classes.scrollbarsY);
 var $author$project$Theme$themeToColors = function (theme) {
 	if (theme.$ === 'Dark') {
 		return {
@@ -13752,9 +13934,16 @@ var $author$project$Pages$Home_$feedCard = F4(
 		var txtColor = $author$project$Theme$textColor(theme);
 		var scrollAttributes = (windowWidth >= 1024) ? _List_fromArray(
 			[
-				$mdgriffith$elm_ui$Element$scrollbarY,
 				$mdgriffith$elm_ui$Element$htmlAttribute(
-				A2($elm$html$Html$Attributes$style, 'max-height', '400px'))
+				A2($elm$html$Html$Attributes$style, 'max-height', '280px')),
+				$mdgriffith$elm_ui$Element$htmlAttribute(
+				A2($elm$html$Html$Attributes$style, 'overflow-y', 'auto')),
+				$mdgriffith$elm_ui$Element$htmlAttribute(
+				A2($elm$html$Html$Attributes$style, 'scrollbar-width', 'thin')),
+				$mdgriffith$elm_ui$Element$htmlAttribute(
+				A2($elm$html$Html$Attributes$style, 'scrollbar-color', 'transparent transparent')),
+				$mdgriffith$elm_ui$Element$htmlAttribute(
+				$elm$html$Html$Attributes$class('auto-hide-scroll'))
 			]) : _List_Nil;
 		var colors = $author$project$Theme$themeToColors(theme);
 		var cardBg = $author$project$Theme$cardColor(theme);
@@ -13770,7 +13959,7 @@ var $author$project$Pages$Home_$feedCard = F4(
 					$mdgriffith$elm_ui$Element$Border$width(1),
 					$mdgriffith$elm_ui$Element$Border$color(border),
 					$mdgriffith$elm_ui$Element$spacing(8),
-					$mdgriffith$elm_ui$Element$padding(16)
+					$mdgriffith$elm_ui$Element$padding(12)
 				]),
 			_List_fromArray(
 				[
@@ -13781,14 +13970,13 @@ var $author$project$Pages$Home_$feedCard = F4(
 						_List_fromArray(
 							[
 								$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill),
-								$mdgriffith$elm_ui$Element$height($mdgriffith$elm_ui$Element$fill),
-								$mdgriffith$elm_ui$Element$spacing(6)
+								$mdgriffith$elm_ui$Element$spacing(4)
 							]),
 						scrollAttributes),
 					A2(
 						$elm$core$List$map,
 						A2($author$project$Pages$Home_$feedItem, now, theme),
-						A2($elm$core$List$take, 20, feed.items)))
+						A2($elm$core$List$take, 15, feed.items)))
 				]));
 	});
 var $author$project$Pages$Home_$feedGrid = F2(
@@ -14126,6 +14314,70 @@ var $author$project$Pages$Home_$view = F2(
 					A2($author$project$Pages$Home_$content, shared, model)
 				]));
 	});
+var $author$project$Pages$Timeline$ToggleCluster = function (a) {
+	return {$: 'ToggleCluster', a: a};
+};
+var $author$project$Pages$Timeline$clusterOtherItem = F3(
+	function (now, theme, item) {
+		return A2(
+			$mdgriffith$elm_ui$Element$row,
+			_List_fromArray(
+				[
+					$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill),
+					$mdgriffith$elm_ui$Element$spacing(6),
+					$mdgriffith$elm_ui$Element$paddingEach(
+					{bottom: 3, left: 0, right: 0, top: 3})
+				]),
+			_List_fromArray(
+				[
+					A2(
+					$elm$core$Maybe$withDefault,
+					$mdgriffith$elm_ui$Element$none,
+					A2(
+						$elm$core$Maybe$map,
+						function (faviconUrl) {
+							return A2(
+								$mdgriffith$elm_ui$Element$image,
+								_List_fromArray(
+									[
+										$mdgriffith$elm_ui$Element$width(
+										$mdgriffith$elm_ui$Element$px(12)),
+										$mdgriffith$elm_ui$Element$height(
+										$mdgriffith$elm_ui$Element$px(12)),
+										$mdgriffith$elm_ui$Element$Border$rounded(1),
+										$mdgriffith$elm_ui$Element$alignTop,
+										A2($mdgriffith$elm_ui$Element$paddingXY, 0, 2)
+									]),
+								{description: 'favicon', src: faviconUrl});
+						},
+						item.favicon)),
+					A2(
+					$mdgriffith$elm_ui$Element$paragraph,
+					_List_fromArray(
+						[
+							$mdgriffith$elm_ui$Element$Font$size(12),
+							$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill),
+							$mdgriffith$elm_ui$Element$htmlAttribute(
+							A2($elm$html$Html$Attributes$style, 'line-height', '1.3'))
+						]),
+					_List_fromArray(
+						[
+							A2(
+							$mdgriffith$elm_ui$Element$link,
+							_List_fromArray(
+								[
+									$mdgriffith$elm_ui$Element$Font$color(
+									$author$project$Theme$textColor(theme)),
+									$mdgriffith$elm_ui$Element$htmlAttribute(
+									A2($elm$html$Html$Attributes$style, 'text-decoration', 'none'))
+								]),
+							{
+								label: $mdgriffith$elm_ui$Element$text(item.title),
+								url: item.link
+							})
+						]))
+				]));
+	});
 var $author$project$Pages$Timeline$monthToString = function (month) {
 	switch (month.$) {
 		case 'Jan':
@@ -14169,6 +14421,189 @@ var $author$project$Pages$Timeline$formatDate = F2(
 			A2($elm$time$Time$toDay, zone, date));
 		return month + (' ' + (day + (', ' + year)));
 	});
+var $author$project$Pages$Timeline$relativeTime = F2(
+	function (now, maybePubDate) {
+		if (maybePubDate.$ === 'Nothing') {
+			return '';
+		} else {
+			var pubDate = maybePubDate.a;
+			var pubMillis = $elm$time$Time$posixToMillis(pubDate);
+			var nowMillis = $elm$time$Time$posixToMillis(now);
+			var diffMillis = nowMillis - pubMillis;
+			var diffMinutes = (diffMillis / 60000) | 0;
+			var diffHours = (diffMinutes / 60) | 0;
+			var diffDays = (diffHours / 24) | 0;
+			return (diffMinutes < 1) ? 'now' : ((diffMinutes < 60) ? ($elm$core$String$fromInt(diffMinutes) + 'm') : ((diffHours < 24) ? ($elm$core$String$fromInt(diffHours) + 'h') : ((diffDays < 7) ? ($elm$core$String$fromInt(diffDays) + 'd') : A2(
+				$author$project$Pages$Timeline$formatDate,
+				$elm$time$Time$utc,
+				$elm$time$Time$millisToPosix(pubMillis)))));
+		}
+	});
+var $author$project$Pages$Timeline$clusterItem = F4(
+	function (now, theme, expandedClusters, cluster) {
+		var txtColor = $author$project$Theme$textColor(theme);
+		var mutedTxt = $author$project$Theme$mutedColor(theme);
+		var isExpanded = A2($elm$core$Set$member, cluster.id, expandedClusters);
+		var clusterCount = cluster.count;
+		var indicator = (clusterCount > 1) ? A2(
+			$mdgriffith$elm_ui$Element$el,
+			_List_fromArray(
+				[
+					$mdgriffith$elm_ui$Element$Font$size(14),
+					$mdgriffith$elm_ui$Element$Font$color($author$project$Theme$lumeOrange),
+					$mdgriffith$elm_ui$Element$Font$bold
+				]),
+			$mdgriffith$elm_ui$Element$text('↲')) : $mdgriffith$elm_ui$Element$none;
+		var cardBg = $author$project$Theme$cardColor(theme);
+		var border = $author$project$Theme$borderColor(theme);
+		return A2(
+			$mdgriffith$elm_ui$Element$column,
+			_List_fromArray(
+				[
+					$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill),
+					$mdgriffith$elm_ui$Element$spacing(4),
+					$mdgriffith$elm_ui$Element$padding(12),
+					$mdgriffith$elm_ui$Element$Background$color(cardBg),
+					$mdgriffith$elm_ui$Element$Border$rounded(8),
+					$mdgriffith$elm_ui$Element$Border$width(1),
+					$mdgriffith$elm_ui$Element$Border$color(border),
+					$mdgriffith$elm_ui$Element$htmlAttribute(
+					A2($elm$html$Html$Attributes$attribute, 'data-timeline-item', 'true'))
+				]),
+			_List_fromArray(
+				[
+					A2(
+					$mdgriffith$elm_ui$Element$row,
+					_List_fromArray(
+						[
+							$mdgriffith$elm_ui$Element$spacing(8),
+							$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill),
+							$mdgriffith$elm_ui$Element$alignTop
+						]),
+					_List_fromArray(
+						[
+							indicator,
+							A2(
+							$elm$core$Maybe$withDefault,
+							$mdgriffith$elm_ui$Element$none,
+							A2(
+								$elm$core$Maybe$map,
+								function (faviconUrl) {
+									return A2(
+										$mdgriffith$elm_ui$Element$image,
+										_List_fromArray(
+											[
+												$mdgriffith$elm_ui$Element$width(
+												$mdgriffith$elm_ui$Element$px(16)),
+												$mdgriffith$elm_ui$Element$height(
+												$mdgriffith$elm_ui$Element$px(16)),
+												$mdgriffith$elm_ui$Element$Border$rounded(2)
+											]),
+										{description: 'favicon', src: faviconUrl});
+								},
+								cluster.representative.favicon)),
+							A2(
+							$mdgriffith$elm_ui$Element$el,
+							_List_fromArray(
+								[
+									$mdgriffith$elm_ui$Element$Font$size(12),
+									$mdgriffith$elm_ui$Element$Font$color(mutedTxt),
+									$mdgriffith$elm_ui$Element$alignTop,
+									A2($mdgriffith$elm_ui$Element$paddingXY, 0, 2)
+								]),
+							$mdgriffith$elm_ui$Element$text(
+								A2($author$project$Pages$Timeline$relativeTime, now, cluster.representative.pubDate)))
+						])),
+					A2(
+					$mdgriffith$elm_ui$Element$paragraph,
+					_List_fromArray(
+						[
+							$mdgriffith$elm_ui$Element$Font$size(15),
+							$mdgriffith$elm_ui$Element$Font$color(txtColor),
+							$mdgriffith$elm_ui$Element$htmlAttribute(
+							A2($elm$html$Html$Attributes$style, 'word-break', 'break-word')),
+							$mdgriffith$elm_ui$Element$htmlAttribute(
+							A2($elm$html$Html$Attributes$style, 'overflow-wrap', 'break-word')),
+							$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill)
+						]),
+					_List_fromArray(
+						[
+							A2(
+							$mdgriffith$elm_ui$Element$link,
+							_List_fromArray(
+								[
+									$mdgriffith$elm_ui$Element$Font$color(txtColor),
+									$mdgriffith$elm_ui$Element$htmlAttribute(
+									A2($elm$html$Html$Attributes$style, 'text-decoration', 'none'))
+								]),
+							{
+								label: $mdgriffith$elm_ui$Element$text(cluster.representative.title),
+								url: cluster.representative.link
+							})
+						])),
+					((clusterCount > 1) && (!isExpanded)) ? A2(
+					$mdgriffith$elm_ui$Element$Input$button,
+					_List_fromArray(
+						[
+							$mdgriffith$elm_ui$Element$Font$size(12),
+							$mdgriffith$elm_ui$Element$Font$color($author$project$Theme$lumeOrange),
+							A2($mdgriffith$elm_ui$Element$paddingXY, 0, 4)
+						]),
+					{
+						label: $mdgriffith$elm_ui$Element$text(
+							'+' + ($elm$core$String$fromInt(clusterCount - 1) + ' more')),
+						onPress: $elm$core$Maybe$Just(
+							$author$project$Pages$Timeline$ToggleCluster(cluster.id))
+					}) : (((clusterCount > 1) && isExpanded) ? A2(
+					$mdgriffith$elm_ui$Element$column,
+					_List_fromArray(
+						[
+							$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill),
+							$mdgriffith$elm_ui$Element$spacing(4),
+							$mdgriffith$elm_ui$Element$paddingEach(
+							{bottom: 0, left: 0, right: 0, top: 8})
+						]),
+					_List_fromArray(
+						[
+							A2(
+							$mdgriffith$elm_ui$Element$row,
+							_List_fromArray(
+								[
+									$mdgriffith$elm_ui$Element$spacing(4),
+									$mdgriffith$elm_ui$Element$Font$size(12),
+									$mdgriffith$elm_ui$Element$Font$color(mutedTxt)
+								]),
+							_List_fromArray(
+								[
+									A2(
+									$mdgriffith$elm_ui$Element$Input$button,
+									_List_fromArray(
+										[
+											$mdgriffith$elm_ui$Element$Font$color($author$project$Theme$lumeOrange)
+										]),
+									{
+										label: $mdgriffith$elm_ui$Element$text('collapse'),
+										onPress: $elm$core$Maybe$Just(
+											$author$project$Pages$Timeline$ToggleCluster(cluster.id))
+									}),
+									$mdgriffith$elm_ui$Element$text(
+									'(' + ($elm$core$String$fromInt(clusterCount - 1) + ' more)'))
+								])),
+							A2(
+							$mdgriffith$elm_ui$Element$column,
+							_List_fromArray(
+								[
+									$mdgriffith$elm_ui$Element$spacing(6),
+									$mdgriffith$elm_ui$Element$paddingEach(
+									{bottom: 0, left: 16, right: 0, top: 6})
+								]),
+							A2(
+								$elm$core$List$map,
+								A2($author$project$Pages$Timeline$clusterOtherItem, now, theme),
+								cluster.others))
+						])) : $mdgriffith$elm_ui$Element$none)
+				]));
+	});
 var $author$project$Pages$Timeline$dayHeader = F4(
 	function (zone, now, theme, date) {
 		var txtColor = function () {
@@ -14210,154 +14645,31 @@ var $author$project$Pages$Timeline$dayHeader = F4(
 				]),
 			$mdgriffith$elm_ui$Element$text(headerText));
 	});
-var $author$project$Pages$Timeline$relativeTime = F2(
-	function (now, maybePubDate) {
-		if (maybePubDate.$ === 'Nothing') {
-			return '';
-		} else {
-			var pubDate = maybePubDate.a;
-			var pubMillis = $elm$time$Time$posixToMillis(pubDate);
-			var nowMillis = $elm$time$Time$posixToMillis(now);
-			var diffMillis = nowMillis - pubMillis;
-			var diffMinutes = (diffMillis / 60000) | 0;
-			var diffHours = (diffMinutes / 60) | 0;
-			var diffDays = (diffHours / 24) | 0;
-			return (diffMinutes < 1) ? 'now' : ((diffMinutes < 60) ? ($elm$core$String$fromInt(diffMinutes) + 'm') : ((diffHours < 24) ? ($elm$core$String$fromInt(diffHours) + 'h') : ((diffDays < 7) ? ($elm$core$String$fromInt(diffDays) + 'd') : A2(
-				$author$project$Pages$Timeline$formatDate,
-				$elm$time$Time$utc,
-				$elm$time$Time$millisToPosix(pubMillis)))));
-		}
+var $author$project$Pages$Timeline$dayClusterSection = F5(
+	function (zone, now, theme, expandedClusters, dayGroup) {
+		return _List_fromArray(
+			[
+				A4($author$project$Pages$Timeline$dayHeader, zone, now, theme, dayGroup.date),
+				A2(
+				$mdgriffith$elm_ui$Element$column,
+				_List_fromArray(
+					[
+						$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill),
+						$mdgriffith$elm_ui$Element$spacing(8)
+					]),
+				A2(
+					$elm$core$List$map,
+					A3($author$project$Pages$Timeline$clusterItem, now, theme, expandedClusters),
+					dayGroup.clusters))
+			]);
 	});
-var $author$project$Pages$Timeline$timelineItem = F3(
-	function (now, theme, item) {
-		var txtColor = $author$project$Theme$textColor(theme);
-		var mutedTxt = $author$project$Theme$mutedColor(theme);
-		var cardBg = $author$project$Theme$cardColor(theme);
-		var border = $author$project$Theme$borderColor(theme);
-		return A2(
-			$mdgriffith$elm_ui$Element$column,
-			_List_fromArray(
-				[
-					$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill),
-					$mdgriffith$elm_ui$Element$spacing(4),
-					$mdgriffith$elm_ui$Element$padding(12),
-					$mdgriffith$elm_ui$Element$Background$color(cardBg),
-					$mdgriffith$elm_ui$Element$Border$rounded(8),
-					$mdgriffith$elm_ui$Element$Border$width(1),
-					$mdgriffith$elm_ui$Element$Border$color(border),
-					$mdgriffith$elm_ui$Element$htmlAttribute(
-					A2($elm$html$Html$Attributes$attribute, 'data-timeline-item', 'true'))
-				]),
-			_List_fromArray(
-				[
-					A2(
-					$mdgriffith$elm_ui$Element$row,
-					_List_fromArray(
-						[
-							$mdgriffith$elm_ui$Element$spacing(8),
-							$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill)
-						]),
-					_List_fromArray(
-						[
-							A2(
-							$elm$core$Maybe$withDefault,
-							$mdgriffith$elm_ui$Element$none,
-							A2(
-								$elm$core$Maybe$map,
-								function (faviconUrl) {
-									return A2(
-										$mdgriffith$elm_ui$Element$image,
-										_List_fromArray(
-											[
-												$mdgriffith$elm_ui$Element$width(
-												$mdgriffith$elm_ui$Element$px(16)),
-												$mdgriffith$elm_ui$Element$height(
-												$mdgriffith$elm_ui$Element$px(16)),
-												$mdgriffith$elm_ui$Element$Border$rounded(2)
-											]),
-										{description: item.feedTitle + ' favicon', src: faviconUrl});
-								},
-								item.favicon)),
-							A2(
-							$mdgriffith$elm_ui$Element$el,
-							_List_fromArray(
-								[
-									$mdgriffith$elm_ui$Element$Font$size(12),
-									$mdgriffith$elm_ui$Element$Font$color(mutedTxt)
-								]),
-							$mdgriffith$elm_ui$Element$text(item.feedTitle)),
-							A2(
-							$mdgriffith$elm_ui$Element$el,
-							_List_fromArray(
-								[
-									$mdgriffith$elm_ui$Element$Font$size(12),
-									$mdgriffith$elm_ui$Element$Font$color(mutedTxt),
-									$mdgriffith$elm_ui$Element$alignRight
-								]),
-							$mdgriffith$elm_ui$Element$text(
-								A2($author$project$Pages$Timeline$relativeTime, now, item.pubDate)))
-						])),
-					A2(
-					$mdgriffith$elm_ui$Element$paragraph,
-					_List_fromArray(
-						[
-							$mdgriffith$elm_ui$Element$Font$size(15),
-							$mdgriffith$elm_ui$Element$Font$color(txtColor),
-							$mdgriffith$elm_ui$Element$htmlAttribute(
-							A2($elm$html$Html$Attributes$style, 'word-break', 'break-word')),
-							$mdgriffith$elm_ui$Element$htmlAttribute(
-							A2($elm$html$Html$Attributes$style, 'overflow-wrap', 'break-word')),
-							$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill)
-						]),
-					_List_fromArray(
-						[
-							A2(
-							$mdgriffith$elm_ui$Element$link,
-							_List_fromArray(
-								[
-									$mdgriffith$elm_ui$Element$Font$color(txtColor),
-									$mdgriffith$elm_ui$Element$htmlAttribute(
-									A2($elm$html$Html$Attributes$style, 'text-decoration', 'none'))
-								]),
-							{
-								label: $mdgriffith$elm_ui$Element$text(item.title),
-								url: item.link
-							})
-						]))
-				]));
-	});
-var $author$project$Pages$Timeline$daySection = F4(
-	function (zone, now, theme, dayGroup) {
-		return A2(
-			$mdgriffith$elm_ui$Element$column,
-			_List_fromArray(
-				[
-					$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill),
-					$mdgriffith$elm_ui$Element$spacing(12)
-				]),
-			_List_fromArray(
-				[
-					A4($author$project$Pages$Timeline$dayHeader, zone, now, theme, dayGroup.date),
-					A2(
-					$mdgriffith$elm_ui$Element$column,
-					_List_fromArray(
-						[
-							$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill),
-							$mdgriffith$elm_ui$Element$spacing(8)
-						]),
-					A2(
-						$elm$core$List$map,
-						A2($author$project$Pages$Timeline$timelineItem, now, theme),
-						dayGroup.items))
-				]));
-	});
-var $author$project$Pages$Timeline$getDateFromKey = F3(
-	function (zone, key, items) {
-		if (!items.b) {
+var $author$project$Pages$Timeline$getClusterDateFromKey = F3(
+	function (zone, key, clusters) {
+		if (!clusters.b) {
 			return $elm$time$Time$millisToPosix(0);
 		} else {
-			var first = items.a;
-			var _v1 = first.pubDate;
+			var first = clusters.a;
+			var _v1 = first.representative.pubDate;
 			if (_v1.$ === 'Just') {
 				var pd = _v1.a;
 				return pd;
@@ -14366,29 +14678,19 @@ var $author$project$Pages$Timeline$getDateFromKey = F3(
 			}
 		}
 	});
-var $author$project$Pages$Timeline$groupByDayHelp = F3(
-	function (zone, accum, items) {
-		groupByDayHelp:
+var $author$project$Pages$Timeline$groupClustersByDayHelp = F3(
+	function (zone, accum, clusters) {
+		groupClustersByDayHelp:
 		while (true) {
-			if (!items.b) {
-				return A2(
-					$elm$core$List$map,
-					function (_v1) {
-						var key = _v1.a;
-						var dayItems = _v1.b;
-						return {
-							date: A3($author$project$Pages$Timeline$getDateFromKey, zone, key, dayItems),
-							items: dayItems
-						};
-					},
-					accum);
+			if (!clusters.b) {
+				return accum;
 			} else {
-				var item = items.a;
-				var rest = items.b;
+				var cluster = clusters.a;
+				var rest = clusters.b;
 				var key = function () {
-					var _v4 = item.pubDate;
-					if (_v4.$ === 'Just') {
-						var pubDate = _v4.a;
+					var _v5 = cluster.representative.pubDate;
+					if (_v5.$ === 'Just') {
+						var pubDate = _v5.a;
 						return _Utils_Tuple3(
 							A2($elm$time$Time$toYear, zone, pubDate),
 							A2($elm$time$Time$toMonth, zone, pubDate),
@@ -14397,39 +14699,33 @@ var $author$project$Pages$Timeline$groupByDayHelp = F3(
 						return _Utils_Tuple3(0, $elm$time$Time$Jan, 0);
 					}
 				}();
-				if (accum.b) {
-					var _v3 = accum.a;
-					var k = _v3.a;
-					var groupItems = _v3.b;
-					var restAcc = accum.b;
-					if (_Utils_eq(k, key)) {
-						var $temp$zone = zone,
-							$temp$accum = A2(
-							$elm$core$List$cons,
-							_Utils_Tuple2(
-								k,
-								A2($elm$core$List$cons, item, groupItems)),
-							restAcc),
-							$temp$items = rest;
-						zone = $temp$zone;
-						accum = $temp$accum;
-						items = $temp$items;
-						continue groupByDayHelp;
-					} else {
-						var $temp$zone = zone,
-							$temp$accum = A2(
-							$elm$core$List$cons,
-							_Utils_Tuple2(
-								key,
-								_List_fromArray(
-									[item])),
-							accum),
-							$temp$items = rest;
-						zone = $temp$zone;
-						accum = $temp$accum;
-						items = $temp$items;
-						continue groupByDayHelp;
-					}
+				var existing = A2(
+					$elm$core$List$filter,
+					function (_v4) {
+						var k = _v4.a;
+						return _Utils_eq(k, key);
+					},
+					accum);
+				if (existing.b) {
+					var _v2 = existing.a;
+					var k = _v2.a;
+					var existingClusters = _v2.b;
+					var $temp$zone = zone,
+						$temp$accum = A2(
+						$elm$core$List$map,
+						function (_v3) {
+							var ak = _v3.a;
+							var ac = _v3.b;
+							return _Utils_eq(ak, key) ? _Utils_Tuple2(
+								ak,
+								A2($elm$core$List$cons, cluster, ac)) : _Utils_Tuple2(ak, ac);
+						},
+						accum),
+						$temp$clusters = rest;
+					zone = $temp$zone;
+					accum = $temp$accum;
+					clusters = $temp$clusters;
+					continue groupClustersByDayHelp;
 				} else {
 					var $temp$zone = zone,
 						$temp$accum = A2(
@@ -14437,37 +14733,44 @@ var $author$project$Pages$Timeline$groupByDayHelp = F3(
 						_Utils_Tuple2(
 							key,
 							_List_fromArray(
-								[item])),
+								[cluster])),
 						accum),
-						$temp$items = rest;
+						$temp$clusters = rest;
 					zone = $temp$zone;
 					accum = $temp$accum;
-					items = $temp$items;
-					continue groupByDayHelp;
+					clusters = $temp$clusters;
+					continue groupClustersByDayHelp;
 				}
 			}
 		}
 	});
 var $elm$core$List$sortBy = _List_sortBy;
-var $author$project$Pages$Timeline$groupByDay = F4(
-	function (zone, now, theme, items) {
-		var sortedItems = $elm$core$List$reverse(
+var $author$project$Pages$Timeline$groupClustersByDay = F3(
+	function (zone, now, clusters) {
+		var sortedClusters = $elm$core$List$reverse(
 			A2(
 				$elm$core$List$sortBy,
-				function (item) {
-					var _v0 = item.pubDate;
-					if (_v0.$ === 'Just') {
-						var pd = _v0.a;
+				function (cluster) {
+					var _v1 = cluster.representative.pubDate;
+					if (_v1.$ === 'Just') {
+						var pd = _v1.a;
 						return $elm$time$Time$posixToMillis(pd);
 					} else {
 						return 0;
 					}
 				},
-				items));
-		var groups = A3($author$project$Pages$Timeline$groupByDayHelp, zone, _List_Nil, sortedItems);
+				clusters));
+		var groups = A3($author$project$Pages$Timeline$groupClustersByDayHelp, zone, _List_Nil, sortedClusters);
 		return A2(
 			$elm$core$List$map,
-			A3($author$project$Pages$Timeline$daySection, zone, now, theme),
+			function (_v0) {
+				var key = _v0.a;
+				var dayClusters = _v0.b;
+				return {
+					clusters: dayClusters,
+					date: A3($author$project$Pages$Timeline$getClusterDateFromKey, zone, key, dayClusters)
+				};
+			},
 			groups);
 	});
 var $author$project$Pages$Timeline$view = F2(
@@ -14477,6 +14780,7 @@ var $author$project$Pages$Timeline$view = F2(
 		var mutedTxt = $author$project$Theme$mutedColor(theme);
 		var isMobile = shared.windowWidth < 768;
 		var paddingValue = isMobile ? 16 : 24;
+		var clustersByDay = A3($author$project$Pages$Timeline$groupClustersByDay, shared.zone, shared.now, model.clusters);
 		var bg = $author$project$Theme$surfaceColor(theme);
 		return A2(
 			$mdgriffith$elm_ui$Element$column,
@@ -14502,7 +14806,7 @@ var $author$project$Pages$Timeline$view = F2(
 							$mdgriffith$elm_ui$Element$Font$color(txtColor)
 						]),
 					$mdgriffith$elm_ui$Element$text('Timeline')),
-					(model.loading && $elm$core$List$isEmpty(model.items)) ? A2(
+					(model.loading && $elm$core$List$isEmpty(model.clusters)) ? A2(
 					$mdgriffith$elm_ui$Element$el,
 					_List_fromArray(
 						[
@@ -14527,7 +14831,10 @@ var $author$project$Pages$Timeline$view = F2(
 							$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill),
 							$mdgriffith$elm_ui$Element$spacing(16)
 						]),
-					A4($author$project$Pages$Timeline$groupByDay, shared.zone, shared.now, theme, model.items)))
+					A2(
+						$elm$core$List$concatMap,
+						A4($author$project$Pages$Timeline$dayClusterSection, shared.zone, shared.now, theme, model.expandedClusters),
+						clustersByDay)))
 				]));
 	});
 var $author$project$Application$view = function (model) {

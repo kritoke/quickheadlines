@@ -163,4 +163,75 @@ class DatabaseService
   def close
     @db.close
   end
+
+  # Get timeline items from the last N days with cluster information
+  def get_timeline_items(limit : Int32, offset : Int32, days_back : Int32 = 7) : Array({id: Int64, title: String, link: String, pub_date: Time?, feed_title: String, feed_url: String, feed_link: String, favicon: String?, header_color: String?, cluster_id: Int64?, is_representative: Bool, cluster_size: Int32})
+    items = [] of {id: Int64, title: String, link: String, pub_date: Time?, feed_title: String, feed_url: String, feed_link: String, favicon: String?, header_color: String?, cluster_id: Int64?, is_representative: Bool, cluster_size: Int32}
+
+    cutoff_date = Time.local - days_back.days
+
+    query = <<-SQL
+      SELECT
+        i.id,
+        i.title,
+        i.link,
+        i.pub_date,
+        f.title as feed_title,
+        f.url as feed_url,
+        f.site_link as feed_link,
+        f.favicon,
+        f.header_color,
+        i.cluster_id,
+        CASE WHEN i.id = (SELECT MIN(id) FROM items WHERE cluster_id = i.cluster_id AND cluster_id IS NOT NULL) THEN 1 ELSE 0 END as is_representative,
+        (SELECT COUNT(*) FROM items WHERE cluster_id = i.cluster_id AND cluster_id IS NOT NULL) as cluster_size
+      FROM items i
+      JOIN feeds f ON i.feed_id = f.id
+      WHERE i.pub_date >= ?
+      ORDER BY i.pub_date DESC
+      LIMIT ? OFFSET ?
+    SQL
+
+    @db.query(query, cutoff_date, limit, offset) do |rows|
+      rows.each do
+        id = rows.read(Int64)
+        title = rows.read(String)
+        link = rows.read(String)
+        pub_date_str = rows.read(String?)
+        feed_title = rows.read(String)
+        feed_url = rows.read(String)
+        feed_link = rows.read(String)
+        favicon = rows.read(String?)
+        header_color = rows.read(String?)
+        cluster_id = rows.read(Int64?)
+        is_representative = rows.read(Int32) == 1
+        cluster_size = rows.read(Int32)
+
+        pub_date = pub_date_str.try { |str| Time.parse(str, "%Y-%m-%d %H:%M:%S", Time::Location::UTC) }
+
+        items << {
+          id: id,
+          title: title,
+          link: link,
+          pub_date: pub_date,
+          feed_title: feed_title,
+          feed_url: feed_url,
+          feed_link: feed_link,
+          favicon: favicon,
+          header_color: header_color,
+          cluster_id: cluster_id,
+          is_representative: is_representative,
+          cluster_size: cluster_size
+        }
+      end
+    end
+
+    items
+  end
+
+  # Count total timeline items in date range
+  def count_timeline_items(days_back : Int32 = 7) : Int32
+    cutoff_date = Time.local - days_back.days
+
+    @db.query_one("SELECT COUNT(*) FROM items WHERE pub_date >= ?", cutoff_date, as: Int32)
+  end
 end

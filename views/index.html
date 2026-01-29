@@ -6,8 +6,8 @@
   <title>QuickHeadlines</title>
   <style>
     * { box-sizing: border-box; }
-    body { margin: 0; padding: 0; }
-    #app { width: 100vw; height: 100vh; }
+    body { margin: 0; padding: 0; background: #121212; }
+    #app { width: 100vw; min-height: 100vh; background: #121212; }
     .feed-header { transition: background-color 0.3s ease, color 0.3s ease; }
     [data-timeline-header="true"] {
       background-color: transparent !important;
@@ -46,11 +46,50 @@
         font-size: 1.125rem !important; /* 18px equivalent */
       }
     }
+    /* Auto-hide scrollbars */
+    .auto-hide-scroll {
+      scrollbar-width: thin;
+      scrollbar-color: rgba(128, 128, 128, 0.4) transparent;
+    }
+    .auto-hide-scroll::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    .auto-hide-scroll::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    .auto-hide-scroll::-webkit-scrollbar-thumb {
+      background-color: rgba(128, 128, 128, 0.4);
+      border-radius: 3px;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+    .auto-hide-scroll:hover::-webkit-scrollbar-thumb {
+      opacity: 1;
+    }
+    /* Main content scrollbar */
+    #main-content {
+      scrollbar-width: thin;
+      scrollbar-color: rgba(128, 128, 128, 0.3) transparent;
+    }
+    #main-content::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+    #main-content::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    #main-content::-webkit-scrollbar-thumb {
+      background-color: rgba(128, 128, 128, 0.3);
+      border-radius: 4px;
+    }
   </style>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/color-thief/2.3.2/color-thief.umd.js"></script>
 </head>
 <body>
-  <div id="app"></div>
+  <div id="app">
+    <div style="display: flex; justify-content: center; align-items: center; height: 100vh; color: #f0f0f0; font-family: system-ui, sans-serif; font-size: 18px; background: #121212;">Loading QuickHeadlines...</div>
+  </div>
   <script src="/elm.js"></script>
   <script>
     window.feedHeaderCache = window.feedHeaderCache || {};
@@ -173,6 +212,7 @@
       }
 
       try {
+        console.log('Initializing Elm...');
         var app = Elm.Main.init({
           node: appElement,
           flags: {
@@ -181,11 +221,26 @@
             prefersDark: prefersDark
           }
         });
+        console.log('Elm initialized successfully');
 
         if (app.ports && app.ports.saveTheme) {
           app.ports.saveTheme.subscribe(function(theme) {
             localStorage.setItem('quickheadlines-theme', theme);
           });
+        }
+
+        // Set up scroll tracking for infinite scroll
+        if (app.ports && app.ports.onScroll) {
+          var mainContent = document.getElementById('main-content');
+          if (mainContent) {
+            mainContent.addEventListener('scroll', function() {
+              var scrollTop = mainContent.scrollTop;
+              var scrollHeight = mainContent.scrollHeight;
+              var clientHeight = mainContent.clientHeight;
+              var scrollPercentage = scrollTop / (scrollHeight - clientHeight);
+              app.ports.onScroll.send(scrollPercentage);
+            });
+          }
         }
 
         window.addEventListener('resize', function() {

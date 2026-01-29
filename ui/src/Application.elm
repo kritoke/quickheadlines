@@ -21,6 +21,9 @@ import Url
 port saveTheme : String -> Cmd msg
 
 
+port onScroll : (Float -> msg) -> Sub msg
+
+
 type alias Flags =
     { width : Int
     , height : Int
@@ -52,6 +55,7 @@ type Msg
     | SwitchTab String
     | UrlChanged Url.Url
     | GotTime Time.Posix
+    | Scroll Float
 
 
 init : Flags -> Url.Url -> Nav.Key -> ( Model, Cmd Msg )
@@ -61,7 +65,7 @@ init flags url key =
             Time.utc
 
         shared =
-            Shared.init flags.width flags.prefersDark (Time.millisToPosix 0) zone
+            Shared.init flags.width flags.height flags.prefersDark (Time.millisToPosix 0) zone
 
         ( homeModel, homeCmd ) =
             Home.init shared
@@ -178,6 +182,29 @@ update msg model =
             ( { model | shared = newShared }
             , Cmd.none
             )
+
+        Scroll scrollPercentage ->
+            let
+                timelineModel =
+                    model.timeline
+
+                -- Load more when user scrolls to 80% of the content
+                threshold = 0.8
+
+                shouldLoadMore =
+                    scrollPercentage > threshold && timelineModel.hasMore && not timelineModel.loadingMore
+            in
+            if shouldLoadMore then
+                let
+                    ( newTimelineModel, timelineCmd ) =
+                        Timeline.update model.shared Timeline.LoadMore timelineModel
+                in
+                ( { model | timeline = newTimelineModel }
+                , Cmd.map TimelineMsg timelineCmd
+                )
+
+            else
+                ( model, Cmd.none )
 
 
 view : Model -> Browser.Document Msg
@@ -373,3 +400,8 @@ themeToggle model =
         { onPress = Just (SharedMsg ToggleTheme)
         , label = Element.text label
         }
+
+
+subscriptions : Model -> Sub Msg
+subscriptions model =
+    onScroll Scroll

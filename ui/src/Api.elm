@@ -1,4 +1,4 @@
-module Api exposing (FeedsResponse, Feed, FeedItem, Tab, TimelineItem, TimelineResponse, fetchFeeds, fetchTimeline)
+module Api exposing (Cluster, ClusterItem, FeedsResponse, Feed, FeedItem, Tab, TimelineItem, TimelineResponse, clusterItemsFromTimeline, fetchFeeds, fetchTimeline)
 
 import Http
 import Json.Decode as Decode exposing (Decoder, field, list, nullable, string, succeed)
@@ -55,6 +55,90 @@ type alias TimelineResponse =
     { items : List TimelineItem
     , hasMore : Bool
     , totalCount : Int
+    }
+
+
+type alias ClusterItem =
+    { title : String
+    , link : String
+    , pubDate : Maybe Time.Posix
+    , feedTitle : String
+    , favicon : Maybe String
+    }
+
+
+type alias Cluster =
+    { id : String
+    , representative : ClusterItem
+    , others : List ClusterItem
+    , count : Int
+    }
+
+
+clusterItemsFromTimeline : List TimelineItem -> List Cluster
+clusterItemsFromTimeline items =
+    let
+        clusterIds =
+            List.filterMap .clusterId items
+
+        uniqueClusterIds =
+            List.foldr
+                (\cid acc ->
+                    if List.member cid acc then
+                        acc
+
+                    else
+                        cid :: acc
+                )
+                []
+                clusterIds
+
+        grouped =
+            List.map (\cid -> ( cid, List.filter (\i -> i.clusterId == Just cid) items )) uniqueClusterIds
+    in
+    List.map buildCluster grouped
+
+
+buildCluster : ( String, List TimelineItem ) -> Cluster
+buildCluster ( clusterId, clusterItems ) =
+    let
+        reps =
+            List.filter .isRepresentative clusterItems
+
+        othersFiltered =
+            List.filter (not << .isRepresentative) clusterItems
+
+        representative =
+            case reps of
+                rep :: _ ->
+                    rep
+
+                [] ->
+                    case clusterItems of
+                        first :: _ ->
+                            first
+
+                        [] ->
+                            Debug.todo "Empty cluster should not exist"
+
+        -- Exclude representative from others to prevent duplication
+        others =
+            List.filter (\item -> item.id /= representative.id) othersFiltered
+    in
+    { id = clusterId
+    , representative = toClusterItem representative
+    , others = List.map toClusterItem others
+    , count = List.length clusterItems
+    }
+
+
+toClusterItem : TimelineItem -> ClusterItem
+toClusterItem item =
+    { title = item.title
+    , link = item.link
+    , pubDate = item.pubDate
+    , feedTitle = item.feedTitle
+    , favicon = item.favicon
     }
 
 

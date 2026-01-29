@@ -99,23 +99,25 @@ history:
 
 ## Work Package WP03: Stable Integration (The Clustered List) (Priority: P2) ✅ COMPLETED
 
-**Goal**: Wire SQLite data into new Elm frontend
-**Independent Test**: Homepage displays SQLite clusters in Elm-ui list
+**Goal**: Wire SQLite data into new Elm frontend with cluster grouping
+**Independent Test**: Timeline displays clusters with expandable favicon strip and ↲ indicator
 **Prompt**: `tasks/WP03-stable-integration.md`
 
 ### Included Subtasks
-- [x] T013 Create `ui/src/Api/News.elm` with decoder matching NewsClusterDTO - Verified: Api.elm exists with Feed and Timeline decoders
-- [x] T014 Fetch clusters from Athena endpoint in `ui/src/Pages/Home_.elm` - Verified: fetchFeeds calls /api/feeds endpoint
-- [x] T015 Render vertical list using Element.column with Theme.metadataStyle - Verified: feedGrid uses Element.column, feedItem uses metadataStyle
+- [x] T013 Create `ui/src/Api/News.elm` with decoder matching NewsClusterDTO - Done: Added `Cluster`, `ClusterItem` types and `clusterItemsFromTimeline` helper to Api.elm
+- [x] T014 Fetch clusters from Athena endpoint in `ui/src/Pages/Home_.elm` - Done: Timeline.elm groups items by cluster using backend cluster metadata (clusterId, isRepresentative, clusterSize)
+- [x] T015 Render vertical list using Element.column with Theme.metadataStyle - Done: Timeline.elm renders clusters with Element.column, expandable favicon strip, and ↲ indicator
 
 ### Dependencies
 - Depends on WP02
 
 ### Verification Results
-- ✅ Api.elm defines FeedsResponse, Feed, FeedItem types with decoders
-- ✅ fetchFeeds hits /api/feeds?tab= and expects proper JSON response
-- ✅ Home_.elm renders feeds in Element.column (feedGrid → chunkList → Element.row → feedCard)
-- ✅ Timeline.elm renders items with Element.column
+- ✅ Api.elm defines Cluster, ClusterItem types with clusterItemsFromTimeline helper
+- ✅ Timeline.elm groups items by cluster using backend cluster metadata
+- ✅ Clusters display with ↲ indicator for items with clusterSize > 1
+- ✅ Expandable favicon strip shows all cluster members when expanded
+- ✅ Each cluster member shows feed favicon, title, headline link, and timestamp
+- ✅ Timeline groups clusters by day with "Today/Yesterday/Date" headers
 
 ---
 

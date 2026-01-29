@@ -1,38 +1,51 @@
 module Pages.Timeline exposing (Model, Msg(..), init, update, view, subscriptions)
 
-import Api exposing (TimelineItem, fetchTimeline)
+import Api exposing (Cluster, TimelineItem, clusterItemsFromTimeline, fetchTimeline)
 import Element exposing (..)
 import Element.Background as Background
 import Element.Border as Border
 import Element.Font as Font
+import Element.Input as Input
 import Html.Attributes
 import Http
+import Set exposing (Set)
 import Shared exposing (Model, Msg(..), Theme(..))
-import Theme exposing (cardColor, errorColor, surfaceColor, textColor, mutedColor, borderColor)
+import Theme exposing (cardColor, errorColor, surfaceColor, textColor, mutedColor, borderColor, lumeOrange)
 import Time exposing (Posix, toDay, toMonth, toYear, Zone)
 
 
 type alias Model =
     { items : List TimelineItem
+    , clusters : List Cluster
+    , expandedClusters : Set String
     , loading : Bool
+    , loadingMore : Bool
     , error : Maybe String
     , hasMore : Bool
+    , offset : Int
     }
 
 
 init : Shared.Model -> ( Model, Cmd Msg )
 init shared =
     ( { items = []
+      , clusters = []
+      , expandedClusters = Set.empty  -- Will expand clusters with count > 1 on first view
       , loading = True
+      , loadingMore = False
       , error = Nothing
       , hasMore = True
+      , offset = 0
       }
-    , fetchTimeline 50 0 GotTimeline
+    , fetchTimeline 35 0 GotTimeline
     )
 
 
 type Msg
     = GotTimeline (Result Http.Error Api.TimelineResponse)
+    | GotMoreTimeline (Result Http.Error Api.TimelineResponse)
+    | LoadMore
+    | ToggleCluster String
     | ToggleTheme
 
 
@@ -40,11 +53,30 @@ update : Shared.Model -> Msg -> Model -> ( Model, Cmd Msg )
 update shared msg model =
     case msg of
         GotTimeline (Ok response) ->
+            let
+                clusters =
+                    clusterItemsFromTimeline response.items
+
+                -- Auto-expand clusters with more than 1 item
+                expanded =
+                    List.foldl
+                        (\cluster acc ->
+                            if cluster.count > 1 then
+                                Set.insert cluster.id acc
+                            else
+                                acc
+                        )
+                        Set.empty
+                        clusters
+            in
             ( { model
                 | items = response.items
+                , clusters = clusters
+                , expandedClusters = expanded
                 , loading = False
                 , error = Nothing
                 , hasMore = response.hasMore
+                , offset = List.length response.items
               }
             , Cmd.none
             )
@@ -54,6 +86,49 @@ update shared msg model =
                 | loading = False
                 , error = Just "Failed to load timeline"
               }
+            , Cmd.none
+            )
+
+        GotMoreTimeline (Ok response) ->
+            let
+                newItems =
+                    model.items ++ response.items
+
+                newClusters =
+                    clusterItemsFromTimeline newItems
+            in
+            ( { model
+                | items = newItems
+                , clusters = newClusters
+                , loadingMore = False
+                , hasMore = response.hasMore
+                , offset = model.offset + List.length response.items
+              }
+            , Cmd.none
+            )
+
+        GotMoreTimeline (Err _) ->
+            ( { model
+                | loadingMore = False
+              }
+            , Cmd.none
+            )
+
+        LoadMore ->
+            ( { model | loadingMore = True }
+            , fetchTimeline 35 model.offset GotMoreTimeline
+            )
+
+        ToggleCluster clusterId ->
+            let
+                newExpanded =
+                    if Set.member clusterId model.expandedClusters then
+                        Set.remove clusterId model.expandedClusters
+
+                    else
+                        Set.insert clusterId model.expandedClusters
+            in
+            ( { model | expandedClusters = newExpanded }
             , Cmd.none
             )
 
@@ -85,6 +160,9 @@ view shared model =
 
         mutedTxt =
             mutedColor theme
+
+        clustersByDay =
+            groupClustersByDay shared.zone shared.now model.clusters
     in
     column
         [ width fill
@@ -100,7 +178,7 @@ view shared model =
             , Font.color txtColor
             ]
             (text "Timeline")
-        , if model.loading && List.isEmpty model.items then
+        , if model.loading && List.isEmpty model.clusters then
             el
                 [ centerX
                 , centerY
@@ -123,74 +201,73 @@ view shared model =
                 [ width fill
                 , spacing 16
                 ]
-                (groupByDay shared.zone shared.now theme model.items)
+                (List.concatMap (dayClusterSection shared.zone shared.now theme model.expandedClusters) clustersByDay)
         ]
 
 
-type alias DayGroup =
+type alias DayClusterGroup =
     { date : Posix
-    , items : List TimelineItem
+    , clusters : List Cluster
     }
 
 
-groupByDay : Zone -> Posix -> Theme -> List TimelineItem -> List (Element Msg)
-groupByDay zone now theme items =
+groupClustersByDay : Zone -> Posix -> List Cluster -> List DayClusterGroup
+groupClustersByDay zone now clusters =
     let
-        sortedItems =
+        sortedClusters =
             List.sortBy
-                (\item ->
-                    case item.pubDate of
+                (\cluster ->
+                    case cluster.representative.pubDate of
                         Just pd ->
                             Time.posixToMillis pd
 
                         Nothing ->
                             0
                 )
-                items
+                clusters
                 |> List.reverse
 
         groups =
-            groupByDayHelp zone [] sortedItems
+            groupClustersByDayHelp zone [] sortedClusters
     in
-    List.map (daySection zone now theme) groups
+    List.map (\( key, dayClusters ) -> { date = getClusterDateFromKey zone key dayClusters, clusters = dayClusters }) groups
 
 
-groupByDayHelp : Zone -> List ( ( Int, Time.Month, Int ), List TimelineItem ) -> List TimelineItem -> List DayGroup
-groupByDayHelp zone accum items =
-    case items of
+groupClustersByDayHelp : Zone -> List ( ( Int, Time.Month, Int ), List Cluster ) -> List Cluster -> List ( ( Int, Time.Month, Int ), List Cluster )
+groupClustersByDayHelp zone accum clusters =
+    case clusters of
         [] ->
-            List.map (\( key, dayItems ) -> { date = getDateFromKey zone key dayItems, items = dayItems }) accum
+            accum
 
-        item :: rest ->
+        cluster :: rest ->
             let
                 key =
-                    case item.pubDate of
+                    case cluster.representative.pubDate of
                         Just pubDate ->
                             ( toYear zone pubDate, toMonth zone pubDate, toDay zone pubDate )
 
                         Nothing ->
                             ( 0, Time.Jan, 0 )
-            in
-            case accum of
-                (k, groupItems) :: restAcc ->
-                    if k == key then
-                        groupByDayHelp zone ((k, item :: groupItems) :: restAcc) rest
 
-                    else
-                        groupByDayHelp zone ((key, [ item ]) :: accum) rest
+                existing =
+                    List.filter (\( k, _ ) -> k == key) accum
+            in
+            case existing of
+                ( k, existingClusters ) :: _ ->
+                    groupClustersByDayHelp zone (List.map (\( ak, ac ) -> if ak == key then ( ak, cluster :: ac ) else ( ak, ac )) accum) rest
 
                 [] ->
-                    groupByDayHelp zone ((key, [ item ]) :: accum) rest
+                    groupClustersByDayHelp zone (( key, [ cluster ] ) :: accum) rest
 
 
-getDateFromKey : Zone -> ( Int, Time.Month, Int ) -> List TimelineItem -> Posix
-getDateFromKey zone key items =
-    case items of
+getClusterDateFromKey : Zone -> ( Int, Time.Month, Int ) -> List Cluster -> Posix
+getClusterDateFromKey zone key clusters =
+    case clusters of
         [] ->
             Time.millisToPosix 0
 
         first :: _ ->
-            case first.pubDate of
+            case first.representative.pubDate of
                 Just pd ->
                     pd
 
@@ -198,19 +275,15 @@ getDateFromKey zone key items =
                     Time.millisToPosix 0
 
 
-daySection : Zone -> Posix -> Theme -> DayGroup -> Element Msg
-daySection zone now theme dayGroup =
-    column
+dayClusterSection : Zone -> Posix -> Theme -> Set String -> DayClusterGroup -> List (Element Msg)
+dayClusterSection zone now theme expandedClusters dayGroup =
+    [ dayHeader zone now theme dayGroup.date
+    , column
         [ width fill
-        , spacing 12
+        , spacing 8
         ]
-        [ dayHeader zone now theme dayGroup.date
-        , column
-            [ width fill
-            , spacing 8
-            ]
-            (List.map (timelineItem now theme) dayGroup.items)
-        ]
+        (List.map (clusterItem now theme expandedClusters) dayGroup.clusters)
+    ]
 
 
 dayHeader : Zone -> Posix -> Theme -> Posix -> Element Msg
@@ -334,8 +407,8 @@ monthToString month =
             "December"
 
 
-timelineItem : Posix -> Theme -> TimelineItem -> Element Msg
-timelineItem now theme item =
+clusterItem : Posix -> Theme -> Set String -> Cluster -> Element Msg
+clusterItem now theme expandedClusters cluster =
     let
         txtColor =
             textColor theme
@@ -348,6 +421,24 @@ timelineItem now theme item =
 
         border =
             borderColor theme
+
+        isExpanded =
+            Set.member cluster.id expandedClusters
+
+        clusterCount =
+            cluster.count
+
+        indicator =
+            if clusterCount > 1 then
+                el
+                    [ Font.size 14
+                    , Font.color lumeOrange
+                    , Font.bold
+                    ]
+                    (text "↲")
+
+            else
+                Element.none
     in
     column
         [ width fill
@@ -362,29 +453,27 @@ timelineItem now theme item =
         [ row
             [ spacing 8
             , width fill
+            , Element.alignTop
             ]
-            [ Maybe.map
+            [ indicator
+            , Maybe.map
                 (\faviconUrl ->
                     image
                         [ width (px 16)
                         , height (px 16)
                         , Border.rounded 2
                         ]
-                        { src = faviconUrl, description = item.feedTitle ++ " favicon" }
+                        { src = faviconUrl, description = "favicon" }
                 )
-                item.favicon
+                cluster.representative.favicon
                 |> Maybe.withDefault Element.none
             , el
                 [ Font.size 12
                 , Font.color mutedTxt
+                , Element.alignTop
+                , Element.paddingXY 0 2
                 ]
-                (text item.feedTitle)
-            , el
-                [ Font.size 12
-                , Font.color mutedTxt
-                , alignRight
-                ]
-                (text (relativeTime now item.pubDate))
+                (text (relativeTime now cluster.representative.pubDate))
             ]
         , paragraph
             [ Font.size 15
@@ -395,6 +484,78 @@ timelineItem now theme item =
             ]
             [ link
                 [ Font.color txtColor
+                , htmlAttribute (Html.Attributes.style "text-decoration" "none")
+                ]
+                { url = cluster.representative.link, label = text cluster.representative.title }
+            ]
+        , if clusterCount > 1 && not isExpanded then
+            Input.button
+                [ Font.size 12
+                , Font.color lumeOrange
+                , paddingXY 0 4
+                ]
+                { onPress = Just (ToggleCluster cluster.id)
+                , label = text ("+" ++ String.fromInt (clusterCount - 1) ++ " more")
+                }
+
+          else if clusterCount > 1 && isExpanded then
+            column
+                [ width fill
+                , spacing 4
+                , paddingEach { top = 8, bottom = 0, left = 0, right = 0 }
+                ]
+                [ row
+                    [ spacing 4
+                    , Font.size 12
+                    , Font.color mutedTxt
+                    ]
+                    [ Input.button
+                        [ Font.color lumeOrange
+                        ]
+                        { onPress = Just (ToggleCluster cluster.id)
+                        , label = text "collapse"
+                        }
+                    , text ("(" ++ String.fromInt (clusterCount - 1) ++ " more)")
+                    ]
+                , column
+                    [ spacing 6
+                    , paddingEach { top = 6, bottom = 0, left = 16, right = 0 }
+                    ]
+                    (List.map (clusterOtherItem now theme) cluster.others)
+                ]
+
+          else
+            Element.none
+        ]
+
+
+clusterOtherItem : Posix -> Theme -> Api.ClusterItem -> Element Msg
+clusterOtherItem now theme item =
+    row
+        [ width fill
+        , spacing 6
+        , paddingEach { top = 3, bottom = 3, left = 0, right = 0 }
+        ]
+        [ Maybe.map
+            (\faviconUrl ->
+                image
+                    [ width (px 12)
+                    , height (px 12)
+                    , Border.rounded 1
+                    , Element.alignTop
+                    , Element.paddingXY 0 2
+                    ]
+                    { src = faviconUrl, description = "favicon" }
+            )
+            item.favicon
+            |> Maybe.withDefault Element.none
+        , paragraph
+            [ Font.size 12
+            , Element.width fill
+            , htmlAttribute (Html.Attributes.style "line-height" "1.3")
+            ]
+            [ link
+                [ Font.color (textColor theme)
                 , htmlAttribute (Html.Attributes.style "text-decoration" "none")
                 ]
                 { url = item.link, label = text item.title }

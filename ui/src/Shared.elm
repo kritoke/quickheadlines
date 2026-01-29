@@ -11,6 +11,7 @@ type Theme
 type alias Model =
     { theme : Theme
     , windowWidth : Int
+    , windowHeight : Int
     , now : Time.Posix
     , zone : Time.Zone
     }
@@ -22,8 +23,8 @@ type Msg
     | SetTime Time.Posix
 
 
-init : Int -> Bool -> Time.Posix -> Time.Zone -> Model
-init width prefersDark now zone =
+init : Int -> Int -> Bool -> Time.Posix -> Time.Zone -> Model
+init width height prefersDark now zone =
     { theme =
         if prefersDark then
             Dark
@@ -31,6 +32,7 @@ init width prefersDark now zone =
         else
             Light
     , windowWidth = width
+    , windowHeight = height
     , now = now
     , zone = zone
     }
@@ -51,8 +53,8 @@ update msg model =
             in
             { model | theme = newTheme }
 
-        WindowResized width _ ->
-            { model | windowWidth = width }
+        WindowResized width height ->
+            { model | windowWidth = width, windowHeight = height }
 
         SetTime posix ->
             { model | now = posix }

@@ -1,9 +1,10 @@
 module Layouts.Shared exposing (layout)
 
-import Element exposing (Attribute, Element, column, el, fill, height, padding, rgb255, row, spacing, width)
+import Element exposing (Attribute, Element, column, el, fill, height, htmlAttribute, padding, rgb255, row, spacing, width)
 import Element.Background as Background
 import Element.Border as Border
 import Element.Font as Font
+import Html.Attributes
 import Shared exposing (Theme(..))
 import Theme exposing (darkBg, surfaceColor)
 
@@ -60,6 +61,8 @@ mainView content =
     el
         [ width fill
         , height fill
+        , htmlAttribute (Html.Attributes.style "overflow-y" "auto")
+        , htmlAttribute (Html.Attributes.id "main-content")
         ]
         content
 

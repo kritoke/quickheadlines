@@ -248,27 +248,38 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
   # GET /api/timeline - Get timeline items
   @[ARTA::Get(path: "/api/timeline")]
   def timeline(request : ATH::Request) : TimelinePageResponse
-    limit = request.query_params["limit"]?.try(&.to_i?) || 100
+    limit = request.query_params["limit"]?.try(&.to_i?) || 35
     offset = request.query_params["offset"]?.try(&.to_i?) || 0
+    days = request.query_params["days"]?.try(&.to_i?) || 7
 
-    # Get all timeline items
-    all_items = STATE.all_timeline_items
+    # Query database directly for items from the last N days
+    db_items = @db_service.get_timeline_items(limit, offset, days)
 
-    total_count = all_items.size
-    max_index = Math.min(offset + limit, total_count)
-    raw_items = all_items[offset...max_index]
-
-    # Convert to timeline item responses
-    items_response = raw_items.map do |item|
-      Api.timeline_item_to_response(item)
-    end
-
+    total_count = @db_service.count_timeline_items(days)
     has_more = offset + limit < total_count
+
+    items_response = db_items.map do |item|
+      TimelineItemResponse.new(
+        id: item[:id].to_s,
+        title: item[:title],
+        link: item[:link],
+        pub_date: item[:pub_date].try(&.to_unix_ms),
+        feed_title: item[:feed_title],
+        feed_url: item[:feed_url],
+        feed_link: item[:feed_link],
+        favicon: item[:favicon],
+        header_color: item[:header_color],
+        header_text_color: nil,
+        cluster_id: item[:cluster_id].try(&.to_s),
+        is_representative: item[:is_representative],
+        cluster_size: item[:cluster_size]
+      )
+    end
 
     TimelinePageResponse.new(
       items: items_response,
       has_more: has_more,
-      total_count: total_count.to_i32
+      total_count: total_count
     )
   end
 
@@ -611,5 +622,51 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
     else
       ATH::Response.new("Favicon not found", 404, HTTP::Headers{"content-type" => "text/plain"})
     end
+  end
+
+  # POST /api/run-clustering - Manually trigger clustering on all uncategorized items
+  @[ARTA::Post(path: "/api/run-clustering")]
+  def run_clustering : ATH::Response
+    spawn do
+      begin
+        STDERR.puts "[#{Time.local}] Starting manual clustering..."
+
+        cache = FeedCache.instance
+        db = cache.db
+
+        uncategorized_items = [] of {id: Int64, title: String, link: String, pub_date: Time?}
+        db.query("SELECT id, title, link, pub_date FROM items WHERE cluster_id IS NULL OR cluster_id = id ORDER BY pub_date DESC LIMIT 500") do |rows|
+          rows.each do
+            id = rows.read(Int64)
+            title = rows.read(String)
+            link = rows.read(String)
+            pub_date_str = rows.read(String?)
+            pub_date = pub_date_str.try { |str| Time.parse(str, "%Y-%m-%d %H:%M:%S", Time::Location::UTC) }
+            uncategorized_items << {id: id, title: title, link: link, pub_date: pub_date}
+          end
+        end
+
+        STDERR.puts "[#{Time.local}] Found #{uncategorized_items.size} uncategorized items"
+
+        clustered_count = 0
+        uncategorized_items.each do |item|
+          if item[:title].empty?
+            next
+          end
+          result = compute_cluster_for_item(item[:id], item[:title])
+          clustered_count += 1
+          if clustered_count % 50 == 0
+            STDERR.puts "[#{Time.local}] Processed #{clustered_count} items..."
+          end
+        end
+
+        STDERR.puts "[#{Time.local}] Clustering complete: #{clustered_count} items processed"
+      rescue ex
+        STDERR.puts "[#{Time.local}] Clustering error: #{ex.message}"
+        STDERR.puts ex.backtrace.join("\n")
+      end
+    end
+
+    ATH::Response.new("Clustering started in background", 202, HTTP::Headers{"content-type" => "text/plain"})
   end
 end

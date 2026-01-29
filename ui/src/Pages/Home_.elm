@@ -291,7 +291,12 @@ feedCard now theme windowWidth feed =
 
         scrollAttributes =
             if windowWidth >= 1024 then
-                [ scrollbarY, htmlAttribute (Html.Attributes.style "max-height" "400px") ]
+                [ htmlAttribute (Html.Attributes.style "max-height" "280px")
+                , htmlAttribute (Html.Attributes.style "overflow-y" "auto")
+                , htmlAttribute (Html.Attributes.style "scrollbar-width" "thin")
+                , htmlAttribute (Html.Attributes.style "scrollbar-color" "transparent transparent")
+                , htmlAttribute (Html.Attributes.class "auto-hide-scroll")
+                ]
             else
                 []
     in
@@ -303,15 +308,14 @@ feedCard now theme windowWidth feed =
         , Border.width 1
         , Border.color border
         , spacing 8
-        , padding 16
+        , padding 12
         ]
         [ feedHeader theme feed
         , column
             ([ width fill
-             , height fill
-             , spacing 6
+             , spacing 4
              ] ++ scrollAttributes)
-            (List.map (feedItem now theme) (List.take 20 feed.items))
+            (List.map (feedItem now theme) (List.take 15 feed.items))
         ]
 
 

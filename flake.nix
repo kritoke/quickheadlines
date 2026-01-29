@@ -26,28 +26,28 @@
         default = pkgs.mkShell {
           buildInputs = with pkgs; [
             crystal_1_19
-            shards pkg-config openssl sqlite libxml2 libyaml 
-            libevent zlib pcre2 gmp boehmgc file nodejs_22 
-            elmPackages.elm elmPackages.elm-format playwright-driver.browsers
-            git curl gnumake gcc 
+            shards pkg-config openssl sqlite libxml2 libyaml
+            libevent zlib pcre2 gmp boehmgc file
+            elmPackages.elm elmPackages.elm-format
+            git curl gnumake gcc
           ];
 
           shellHook = ''
-            # 1. Library Path Fixes
             export LD_LIBRARY_PATH="${pkgs.lib.makeLibraryPath [ pkgs.boehmgc pkgs.libevent pkgs.openssl pkgs.file pkgs.pcre2 pkgs.gmp ]}:$LD_LIBRARY_PATH"
-            export PLAYWRIGHT_BROWSERS_PATH=${pkgs.playwright-driver.browsers}
-            
-            # 2. Bridge to home bin for VS Code & KiloCode
+
             mkdir -p ~/.local/bin
             ln -sf ${crystal_1_19}/bin/crystal ~/.local/bin/crystal
             ln -sf ${crystal_1_19}/bin/shards ~/.local/bin/shards
 
-            # 3. Load Hub/Workflow Logic
+            export PATH="$PWD/bin:$PATH"
+            export HUB_ROOT="/workspaces"
+            export PATH="$PATH:$HUB_ROOT/aiworkflow/bin:$HOME/go/bin:$HOME/.local/bin"
+            export BD_SOCKET="/workspaces/.beads.sock"
+            export SSH_AUTH_SOCK="/workspaces/.ssh-auth.sock"
+
             [ -f "/workspaces/aiworkflow/bin/env.sh" ] && source /workspaces/aiworkflow/bin/env.sh
-            
+
             export APP_ENV=development
-            export BD_SOCKET="/workspaces/quickheadlines/.beads/bd.sock"
-            
             echo "🚀 Quickheadlines Loaded with Crystal 1.19.1"
           '';
         };
