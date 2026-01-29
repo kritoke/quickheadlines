@@ -137,31 +137,16 @@
         if (!img) return;
         if (!imgSrc) return;
 
-        const proxy = new Image();
-        proxy.crossOrigin = 'Anonymous';
-        proxy.src = imgSrc;
+        // Create a temporary image to extract colors from
+        const tempImg = new Image();
+        tempImg.crossOrigin = 'Anonymous';
+        tempImg.src = imgSrc;
 
-        proxy.onload = function() {
+        tempImg.onload = function() {
           try {
-            const palette = colorThief.getPalette(proxy, 5);
-            if (!palette || !palette.length) return;
-
-            let color = palette[0];
-
-            const isGrayscale = (c) => {
-              const max = Math.max(c[0], c[1], c[2]);
-              const min = Math.min(c[0], c[1], c[2]);
-              return (max - min) < 30;
-            };
-
-            if (isGrayscale(color)) {
-              for (let i = 1; i < palette.length; i++) {
-                if (!isGrayscale(palette[i])) {
-                  color = palette[i];
-                  break;
-                }
-              }
-            }
+            // Use getColor for single dominant color (works better with small images)
+            const color = colorThief.getColor(tempImg);
+            if (!color || !color.length) return;
 
             const [r, g, b] = color;
             const yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
@@ -188,6 +173,16 @@
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ feed_url: feedUrl, color: bgColor, text_color: textColor })
+              }).catch(e => {});
+            }
+
+            header.dataset.adaptive = 'true';
+          } catch (e) {
+            // Silently fail - color extraction is optional
+          }
+        };
+      });
+    };
               }).catch(e => {});
             }
 
@@ -260,10 +255,15 @@
         setTimeout(window.extractHeaderColors, 500);
         setTimeout(window.extractHeaderColors, 1500);
 
+        // Debounce color extraction for better performance
+        let colorExtractTimeout = null;
+        const debouncedExtract = () => {
+          if (colorExtractTimeout) clearTimeout(colorExtractTimeout);
+          colorExtractTimeout = setTimeout(window.extractHeaderColors, 300);
+        };
+
         // Observe DOM for new feed headers (after tab switch, etc.)
-        const observer = new MutationObserver(() => {
-          window.extractHeaderColors();
-        });
+        const observer = new MutationObserver(debouncedExtract);
         observer.observe(document.body, { childList: true, subtree: true });
 
       } catch(e) {
