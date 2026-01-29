@@ -12,9 +12,28 @@
     [data-timeline-header="true"] {
       background-color: transparent !important;
       background: transparent !important;
+      color: inherit !important;
       font-size: 1.25rem !important; /* 20px equivalent */
       font-weight: bold;
       -webkit-text-size-adjust: none;
+    }
+    [data-timeline-page="true"] [data-adaptive]:not(.feed-header) {
+      background-color: transparent !important;
+      background: transparent !important;
+      color: inherit !important;
+    }
+    [data-timeline-page="true"] [data-adaptive]:not(.feed-header) a {
+      color: inherit !important;
+      text-decoration: underline !important;
+    }
+    [data-timeline-item="true"] {
+      background-color: transparent !important;
+      background: transparent !important;
+      color: inherit !important;
+    }
+    [data-timeline-item="true"] a {
+      color: inherit !important;
+      text-decoration: underline !important;
     }
     [data-display-link="true"] {
       color: inherit !important;
@@ -41,10 +60,20 @@
       if (typeof ColorThief === 'undefined') return;
       const colorThief = new ColorThief();
 
-      // Only target .feed-header elements with data-use-adaptive-colors attribute
       document.querySelectorAll('.feed-header[data-use-adaptive-colors="true"]').forEach(header => {
         // Skip if already processed
         if (header.dataset.adaptive === 'true') return;
+
+        // Skip timeline headers explicitly - they should never be colored
+        if (header.dataset.timelineHeader === 'true') {
+          header.dataset.adaptive = 'true';
+          return;
+        }
+
+        // Ensure element has .feed-header class (defense in depth)
+        if (!header.classList.contains('feed-header')) {
+          return;
+        }
 
         // Use favicon src as cache key (more reliable than URL matching)
         const img = header.querySelector('img');

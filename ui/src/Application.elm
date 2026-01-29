@@ -48,6 +48,7 @@ type Msg
     | HomeMsg Home.Msg
     | TimelineMsg Timeline.Msg
     | NavigateTo Page
+    | NavigateExternal String
     | SwitchTab String
     | UrlChanged Url.Url
     | GotTime Time.Posix
@@ -137,6 +138,11 @@ update msg model =
             in
             ( { model | page = targetPage }
             , cmd
+            )
+
+        NavigateExternal href ->
+            ( model
+            , Nav.load href
             )
 
         SwitchTab tab ->

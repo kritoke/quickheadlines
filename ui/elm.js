@@ -5423,9 +5423,8 @@ var $elm$core$Task$perform = F2(
 var $elm$browser$Browser$application = _Browser_application;
 var $elm$json$Json$Decode$bool = _Json_decodeBool;
 var $elm$json$Json$Decode$field = _Json_decodeField;
-var $author$project$Application$Home = {$: 'Home'};
-var $author$project$Application$NavigateTo = function (a) {
-	return {$: 'NavigateTo', a: a};
+var $author$project$Application$NavigateExternal = function (a) {
+	return {$: 'NavigateExternal', a: a};
 };
 var $author$project$Main$handleUrlRequest = function (urlRequest) {
 	if (urlRequest.$ === 'Internal') {
@@ -5433,12 +5432,13 @@ var $author$project$Main$handleUrlRequest = function (urlRequest) {
 		return $author$project$Application$UrlChanged(url);
 	} else {
 		var href = urlRequest.a;
-		return $author$project$Application$NavigateTo($author$project$Application$Home);
+		return $author$project$Application$NavigateExternal(href);
 	}
 };
 var $author$project$Application$GotTime = function (a) {
 	return {$: 'GotTime', a: a};
 };
+var $author$project$Application$Home = {$: 'Home'};
 var $author$project$Application$HomeMsg = function (a) {
 	return {$: 'HomeMsg', a: a};
 };
@@ -6558,6 +6558,7 @@ var $author$project$Main$subscriptions = function (model) {
 var $author$project$Pages$Home_$SwitchTab = function (a) {
 	return {$: 'SwitchTab', a: a};
 };
+var $elm$browser$Browser$Navigation$load = _Browser_load;
 var $elm$core$Platform$Cmd$none = $elm$core$Platform$Cmd$batch(_List_Nil);
 var $elm$browser$Browser$Navigation$pushUrl = _Browser_pushUrl;
 var $elm$json$Json$Encode$string = _Json_wrap;
@@ -6714,6 +6715,11 @@ var $author$project$Application$update = F2(
 						model,
 						{page: targetPage}),
 					cmd);
+			case 'NavigateExternal':
+				var href = msg.a;
+				return _Utils_Tuple2(
+					model,
+					$elm$browser$Browser$Navigation$load(href));
 			case 'SwitchTab':
 				var tab = msg.a;
 				var _v5 = A3(
@@ -6749,6 +6755,9 @@ var $author$project$Application$update = F2(
 					$elm$core$Platform$Cmd$none);
 		}
 	});
+var $author$project$Application$NavigateTo = function (a) {
+	return {$: 'NavigateTo', a: a};
+};
 var $mdgriffith$elm_ui$Internal$Model$AlignX = function (a) {
 	return {$: 'AlignX', a: a};
 };
@@ -14225,7 +14234,9 @@ var $author$project$Pages$Timeline$timelineItem = F3(
 					$mdgriffith$elm_ui$Element$Background$color(cardBg),
 					$mdgriffith$elm_ui$Element$Border$rounded(8),
 					$mdgriffith$elm_ui$Element$Border$width(1),
-					$mdgriffith$elm_ui$Element$Border$color(border)
+					$mdgriffith$elm_ui$Element$Border$color(border),
+					$mdgriffith$elm_ui$Element$htmlAttribute(
+					A2($elm$html$Html$Attributes$attribute, 'data-timeline-item', 'true'))
 				]),
 			_List_fromArray(
 				[

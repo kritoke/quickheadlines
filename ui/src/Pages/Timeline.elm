@@ -357,6 +357,7 @@ timelineItem now theme item =
         , Border.rounded 8
         , Border.width 1
         , Border.color border
+        , htmlAttribute (Html.Attributes.attribute "data-timeline-item" "true")
         ]
         [ row
             [ spacing 8

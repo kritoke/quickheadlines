@@ -28,7 +28,7 @@ handleUrlRequest urlRequest =
             Application.UrlChanged url
 
         Browser.External href ->
-            Application.NavigateTo Application.Home
+            Application.NavigateExternal href
 
 
 subscriptions : Application.Model -> Sub Application.Msg
