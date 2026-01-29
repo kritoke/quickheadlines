@@ -42,20 +42,21 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 RUN mkdir -p /app/public/favicons
 
-# Copy app files to /srv (not affected by /app volume mount)
+# Copy app files to /srv (not affected by volume mount at /app)
 COPY --from=builder /app/server /srv/
 COPY public/elm.js /srv/public/elm.js
+COPY ui/elm.js /srv/ui/elm.js
 COPY assets /srv/assets
 COPY views /srv/views
 COPY feeds.yml /srv/feeds.yml.default
 
-# If /app/feeds.yml doesn't exist, copy the default from GitHub
-# Otherwise use the mounted version
-RUN if [ ! -f /app/feeds.yml ]; then \
-        echo "No feeds.yml found in /app, using default from GitHub"; \
-        cp /srv/feeds.yml.default /app/feeds.yml; \
-    fi && \
-    ln -sf /app/feeds.yml /srv/feeds.yml
+# Use feeds.yml from /app if present, otherwise use default
+COPY --from=builder /app/feeds.yml /srv/feeds.yml 2>/dev/null || \
+    cp /srv/feeds.yml.default /srv/feeds.yml
+
+# Also copy feeds.yml to /app for editing (will be overwritten by volume mount if present)
+COPY --from=builder /app/feeds.yml /app/feeds.yml 2>/dev/null || \
+    cp /srv/feeds.yml.default /app/feeds.yml 2>/dev/null || true
 
 ENV TZ=UTC
 ENV GC_MARKERS=1
@@ -63,7 +64,5 @@ ENV GC_FREE_SPACE_DIVISOR=20
 
 EXPOSE 8080/tcp
 
-HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 CMD curl -f http://localhost:8080/version || exit 1
-
 WORKDIR /srv
-ENTRYPOINT ["./server"]
+ENTRYPOINT ["./server", "--config=/app/feeds.yml"]
