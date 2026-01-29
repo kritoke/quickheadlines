@@ -1,4 +1,4 @@
-# Multi-stage build - compile on builder, minimal runtime
+# Multi-stage build
 FROM 84codes/crystal:latest-ubuntu-22.04 AS builder
 
 WORKDIR /app
@@ -23,19 +23,21 @@ ENV CRYSTAL_WORKERS=4
 
 RUN APP_ENV=production crystal build --release --no-debug -Dversion=${BUILD_REV} src/quickheadlines.cr -o /app/server
 
-# Minimal runtime with just what's needed
-FROM ubuntu:22.04-slim
+# Runtime with all required libraries
+FROM ubuntu:22.04
+
+WORKDIR /app
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libmagic1 \
     libxml2-dev \
-    libssl3 \
-    libyaml-0-2 \
-    libsqlite3-0 \
+    libssl-dev \
+    libyaml-dev \
+    libsqlite3-dev \
+    libreadline8 \
     ca-certificates \
     curl \
-    && rm -rf /var/lib/apt/lists/* \
-    && apt-get clean
+    && rm -rf /var/lib/apt/lists/*
 
 RUN mkdir -p /public/favicons
 
