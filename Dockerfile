@@ -23,18 +23,16 @@ ENV CRYSTAL_WORKERS=4
 
 RUN APP_ENV=production crystal build --release --no-debug -Dversion=${BUILD_REV} src/quickheadlines.cr -o /app/server
 
-# Runtime with all required libraries
-FROM ubuntu:22.04
-
-WORKDIR /app
+# Runtime
+FROM debian:stable-slim
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libmagic1 \
     libxml2-dev \
     libssl-dev \
-    libyaml-dev \
-    libsqlite3-dev \
-    libreadline8 \
+    libyaml-0-2 \
+    libsqlite3-0 \
+    libreadline9 \
     ca-certificates \
     curl \
     && rm -rf /var/lib/apt/lists/*
