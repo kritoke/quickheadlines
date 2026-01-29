@@ -1,7 +1,7 @@
 require "athena"
 
 @[ASRA::Name(strategy: :camelcase)]
-class Quickheadlines::DTOs::StoryDTO
+class Quickheadlines::DTOs::StoryResponse
   include ASR::Serializable
 
   property id : String
@@ -38,7 +38,7 @@ class Quickheadlines::DTOs::StoryDTO
   )
   end
 
-  def self.from_entity(story : Quickheadlines::Entities::Story) : Quickheadlines::DTOs::StoryDTO
+  def self.from_entity(story : Quickheadlines::Entities::Story) : Quickheadlines::DTOs::StoryResponse
     new(
       id: story.id,
       title: story.title,

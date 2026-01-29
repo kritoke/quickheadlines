@@ -13,48 +13,11 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
   # GET /api/clusters - Get all clustered stories
   @[ARTA::Get(path: "/api/clusters")]
   def clusters(request : ATH::Request) : ClustersResponse
-    # Get clusters directly from the database
     clusters = get_clusters_from_db(@db_service.db)
 
-    # Convert to ClusterResponse DTOs
-    cluster_responses = clusters.map do |cluster|
-      representative_response = StoryResponse.new(
-        id: cluster.representative.id,
-        title: cluster.representative.title,
-        link: cluster.representative.link,
-        pub_date: cluster.representative.pub_date.try(&.to_unix_ms),
-        feed_title: cluster.representative.feed_title,
-        feed_url: cluster.representative.feed_url,
-        feed_link: cluster.representative.feed_link,
-        favicon: cluster.representative.favicon,
-        favicon_data: cluster.representative.favicon_data,
-        header_color: cluster.representative.header_color
-      )
+    cluster_responses = clusters.map { |cluster| DTOs::ClusterResponse.from_entity(cluster) }
 
-      others_response = cluster.others.map do |story|
-        StoryResponse.new(
-          id: story.id,
-          title: story.title,
-          link: story.link,
-          pub_date: story.pub_date.try(&.to_unix_ms),
-          feed_title: story.feed_title,
-          feed_url: story.feed_url,
-          feed_link: story.feed_link,
-          favicon: story.favicon,
-          favicon_data: story.favicon_data,
-          header_color: story.header_color
-        )
-      end
-
-      ClusterResponse.new(
-        id: cluster.id,
-        representative: representative_response,
-        others: others_response,
-        cluster_size: cluster.size
-      )
-    end
-
-    ClustersResponse.new(
+    DTOs::ClustersResponse.new(
       clusters: cluster_responses,
       total_count: cluster_responses.size
     )
