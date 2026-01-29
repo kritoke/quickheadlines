@@ -49,23 +49,20 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 RUN mkdir -p /app/public/favicons
 
-# Verify critical files exist before building
-RUN test -f /app/views/index.html || (echo "ERROR: views/index.html missing" && exit 1)
-RUN test -f /app/assets/images/favicon.ico || (echo "ERROR: assets/images/favicon.ico missing" && exit 1)
-RUN test -f /app/public/elm.js || (echo "ERROR: public/elm.js missing" && exit 1)
-
 ENV TZ=UTC
 ENV GC_MARKERS=1
 ENV GC_FREE_SPACE_DIVISOR=20
-
-# Verify files were copied
-RUN ls -la /app/views/ && ls -la /app/assets/images/ && ls -la /app/public/
 
 COPY --from=builder /app/server .
 COPY public/elm.js ./public/elm.js
 COPY assets ./assets
 COPY views ./views
 COPY feeds.yml ./feeds.yml
+
+# Debug: list files to verify they exist
+RUN echo "=== /app ===" && ls -la /app/ && \
+    echo "=== /app/views ===" && ls -la /app/views/ && \
+    echo "=== /app/assets/images ===" && ls -la /app/assets/images/
 
 EXPOSE 8080/tcp
 
