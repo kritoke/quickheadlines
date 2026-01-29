@@ -1,10 +1,6 @@
-@import "tailwindcss";
-@source "../../src/**/*.slang";
+/* QuickHeadlines Custom CSS - No Tailwind dependency */
 
-/* Enable class-based dark mode for Tailwind v4 */
-@variant dark (&:where(.dark, .dark *));
-
-@theme {
+:root {
   --color-surface: #1f2937;
   --color-surface-light: #f9fafb;
   --color-surface-dark: #111827;
@@ -12,6 +8,14 @@
   --color-card-light: #ffffff;
   --color-border-subtle: #334155;
   --color-border-light: #e5e7eb;
+}
+
+/* Dark mode */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-card: #111827;
+    --color-card-light: #1f2937;
+  }
 }
 
 /* Cards */
@@ -124,9 +128,9 @@
   color: inherit;
 }
 
-/* Use the dark variant for the feed box background */
-.feed-box {
-  @variant dark {
+/* Dark mode feed box background */
+@media (prefers-color-scheme: dark) {
+  .feed-box {
     background-color: var(--color-card, #111827);
   }
 }
@@ -144,7 +148,11 @@
   margin-bottom: 1.5rem;
   padding-bottom: 0.25rem;
   border-bottom: 1px solid var(--color-border-light);
-  @variant dark { border-bottom-color: var(--color-border-subtle); }
+}
+@media (prefers-color-scheme: dark) {
+  .tab-container {
+    border-bottom-color: var(--color-border-subtle);
+  }
 }
 
 .tab-link {
@@ -158,13 +166,22 @@
 .tab-link:hover {
   background-color: #f1f5f9;
   color: #1e293b;
-  @variant dark { background-color: #1e293b; color: #e2e8f0; }
 }
 
 .tab-link.active {
   background-color: #eff6ff;
   color: #2563eb;
-  @variant dark { background-color: #1e3a5f; color: #60a5fa; }
+}
+
+@media (prefers-color-scheme: dark) {
+  .tab-link:hover {
+    background-color: #1e293b;
+    color: #e2e8f0;
+  }
+  .tab-link.active {
+    background-color: #1e3a5f;
+    color: #60a5fa;
+  }
 }
 
 /* Cluster Expand/Collapse */
