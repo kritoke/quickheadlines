@@ -15,7 +15,10 @@ jobs:
         with:
           crystal_version: latest
 
-      - name: Install dependencies
+      - name: Install system dependencies
+        run: sudo apt-get install -y libsqlite3-dev libssl-dev libmagic-dev
+
+      - name: Install shards
         run: shards install
 
       - name: Run Crystal tests
@@ -31,6 +34,9 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
+
+      - name: Install system dependencies
+        run: sudo apt-get install -y libsqlite3-dev libssl-dev libmagic-dev
 
       - name: Install Playwright
         run: npm install

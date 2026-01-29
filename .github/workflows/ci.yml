@@ -24,7 +24,7 @@ jobs:
       - name: Install system dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y libsqlite3-dev libssl-dev pkg-config
+          sudo apt-get install -y libsqlite3-dev libssl-dev libmagic-dev pkg-config
 
       - name: Update pkg-config path
         run: |
@@ -62,8 +62,8 @@ jobs:
         with:
           crystal: latest
 
-      - name: Install OpenSSL
-        run: brew install openssl@3
+      - name: Install OpenSSL and libmagic
+        run: brew install openssl@3 libmagic
 
       - name: Install shards
         run: shards install
