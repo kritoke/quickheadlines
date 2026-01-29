@@ -1,0 +1,62 @@
+name: Tests
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  crystal-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Crystal
+        uses: crystal-lang/setup-crystal@v2
+        with:
+          crystal_version: latest
+
+      - name: Install dependencies
+        run: shards install
+
+      - name: Run Crystal tests
+        run: crystal spec spec/header_colors_spec.cr spec/api_controller_header_color_spec.cr
+
+  playwright-tests:
+    runs-on: ubuntu-latest
+    needs: crystal-tests
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Playwright
+        run: npm install
+
+      - name: Build Elm
+        run: |
+          npm install -g elm
+          cd ui && rm -f elm.js && elm make src/Main.elm --output=elm.js
+
+      - name: Build Crystal binary
+        uses: crystal-lang/setup-crystal@v2
+        with:
+          crystal_version: latest
+        run: shards install && crystal build --release --no-debug src/quickheadlines.cr -o bin/quickheadlines
+
+      - name: Start app
+        run: |
+          ./bin/quickheadlines &
+          sleep 10
+
+      - name: Run Playwright tests
+        run: npx playwright test ui/tests/ --reporter=list
+
+      - name: Collect artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/

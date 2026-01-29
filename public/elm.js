@@ -13238,6 +13238,33 @@ var $mdgriffith$elm_ui$Element$link = F2(
 				_List_fromArray(
 					[label])));
 	});
+var $elm$core$Maybe$map3 = F4(
+	function (func, ma, mb, mc) {
+		if (ma.$ === 'Nothing') {
+			return $elm$core$Maybe$Nothing;
+		} else {
+			var a = ma.a;
+			if (mb.$ === 'Nothing') {
+				return $elm$core$Maybe$Nothing;
+			} else {
+				var b = mb.a;
+				if (mc.$ === 'Nothing') {
+					return $elm$core$Maybe$Nothing;
+				} else {
+					var c = mc.a;
+					return $elm$core$Maybe$Just(
+						A3(func, a, b, c));
+				}
+			}
+		}
+	});
+var $elm$core$String$replace = F3(
+	function (before, after, string) {
+		return A2(
+			$elm$core$String$join,
+			after,
+			A2($elm$core$String$split, before, string));
+	});
 var $elm$virtual_dom$VirtualDom$style = _VirtualDom_style;
 var $elm$html$Html$Attributes$style = $elm$virtual_dom$VirtualDom$style;
 var $mdgriffith$elm_ui$Element$Font$underline = $mdgriffith$elm_ui$Internal$Model$htmlClass($mdgriffith$elm_ui$Internal$Style$classes.underline);
@@ -13273,10 +13300,59 @@ var $author$project$Pages$Home_$feedHeader = F2(
 				var _v4 = feed.headerColor;
 				if (_v4.$ === 'Just') {
 					var bgColor = _v4.a;
+					var parseRgb = function (str) {
+						var clean = A3(
+							$elm$core$String$replace,
+							' ',
+							'',
+							A3(
+								$elm$core$String$replace,
+								')',
+								'',
+								A3($elm$core$String$replace, 'rgb(', '', str)));
+						var parts = A2($elm$core$String$split, ',', clean);
+						if (((parts.b && parts.b.b) && parts.b.b.b) && (!parts.b.b.b.b)) {
+							var r = parts.a;
+							var _v9 = parts.b;
+							var g = _v9.a;
+							var _v10 = _v9.b;
+							var b = _v10.a;
+							return A4(
+								$elm$core$Maybe$map3,
+								F3(
+									function (ri, gi, bi) {
+										return _Utils_Tuple3(ri, gi, bi);
+									}),
+								$elm$core$String$toInt(r),
+								$elm$core$String$toInt(g),
+								$elm$core$String$toInt(b));
+						} else {
+							return $elm$core$Maybe$Nothing;
+						}
+					};
+					var luminance = function (rgb) {
+						var r = rgb.a;
+						var g = rgb.b;
+						var b = rgb.c;
+						return (((r * 299) + (g * 587)) + (b * 114)) / 1000;
+					};
+					var calculatedTextColor = function () {
+						var _v5 = parseRgb(bgColor);
+						if (_v5.$ === 'Just') {
+							var rgb = _v5.a;
+							return (luminance(rgb) >= 128) ? 'rgb(17, 24, 39)' : 'rgb(255, 255, 255)';
+						} else {
+							if (theme.$ === 'Dark') {
+								return 'rgb(255, 255, 255)';
+							} else {
+								return 'rgb(17, 24, 39)';
+							}
+						}
+					}();
 					return _Utils_Tuple3(
 						$mdgriffith$elm_ui$Element$htmlAttribute(
 							A2($elm$html$Html$Attributes$style, 'background-color', bgColor)),
-						bgColor,
+						calculatedTextColor,
 						_List_Nil);
 				} else {
 					return _Utils_Tuple3(
@@ -13671,6 +13747,7 @@ var $author$project$Pages$Home_$feedCard = F3(
 			_List_fromArray(
 				[
 					$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill),
+					$mdgriffith$elm_ui$Element$height($mdgriffith$elm_ui$Element$fill),
 					$mdgriffith$elm_ui$Element$Background$color(cardBg),
 					$mdgriffith$elm_ui$Element$Border$rounded(12),
 					$mdgriffith$elm_ui$Element$Border$width(1),
@@ -13686,6 +13763,7 @@ var $author$project$Pages$Home_$feedCard = F3(
 					_List_fromArray(
 						[
 							$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill),
+							$mdgriffith$elm_ui$Element$height($mdgriffith$elm_ui$Element$fill),
 							$mdgriffith$elm_ui$Element$spacing(6)
 						]),
 					A2(

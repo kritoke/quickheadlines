@@ -446,6 +446,7 @@ module Api
           favicon: data.favicon,
           favicon_data: data.favicon_data,
           header_color: data.header_color,
+          header_text_color: data.header_text_color,
           items: items_response,
           total_item_count: trimmed_items.size.to_i32
         )

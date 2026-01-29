@@ -291,6 +291,7 @@ feedCard now theme feed =
     in
     column
         [ width fill
+        , height fill
         , Background.color cardBg
         , Border.rounded 12
         , Border.width 1
@@ -301,6 +302,7 @@ feedCard now theme feed =
         [ feedHeader theme feed
         , column
             [ width fill
+            , height fill
             , spacing 6
             ]
             (List.map (feedItem now theme) (List.take 5 feed.items))
@@ -334,8 +336,40 @@ feedHeader theme feed =
                 Nothing ->
                     case feed.headerColor of
                         Just bgColor ->
+                            let
+                                luminance rgb =
+                                    case rgb of
+                                        (r, g, b) ->
+                                            ((toFloat r * 299) + (toFloat g * 587) + (toFloat b * 114)) / 1000
+                                
+                                parseRgb str =
+                                    let
+                                        clean = String.replace "rgb(" "" str |> String.replace ")" "" |> String.replace " " ""
+                                        parts = String.split "," clean
+                                    in
+                                    case parts of
+                                        r :: g :: b :: [] ->
+                                            Maybe.map3 (\ri gi bi -> (ri, gi, bi))
+                                                (String.toInt r)
+                                                (String.toInt g)
+                                                (String.toInt b)
+                                        _ ->
+                                            Nothing
+                                
+                                calculatedTextColor =
+                                    case parseRgb bgColor of
+                                        Just rgb ->
+                                            if luminance rgb >= 128 then
+                                                "rgb(17, 24, 39)"
+                                            else
+                                                "rgb(255, 255, 255)"
+                                        Nothing ->
+                                            case theme of
+                                                Dark -> "rgb(255, 255, 255)"
+                                                Light -> "rgb(17, 24, 39)"
+                            in
                             ( Element.htmlAttribute (Html.Attributes.style "background-color" bgColor)
-                            , bgColor  -- Use bgColor as text color (will be calculated by backend soon)
+                            , calculatedTextColor
                             , []
                             )
 

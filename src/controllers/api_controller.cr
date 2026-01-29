@@ -402,29 +402,32 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
 
   @[ARTA::Get(path: "/favicon.png")]
   def favicon_png(request : ATH::Request) : ATH::Response
-    content = File.read("./assets/images/favicon.png")
-    response = ATH::Response.new(content)
-    response.headers["content-type"] = "image/png"
-    response.headers["Cache-Control"] = "public, max-age=31536000"
-    response
+      content = File.read("./assets/images/favicon.png")
+      response = ATH::Response.new(content)
+      response.headers["content-type"] = "image/png"
+      response.headers["Cache-Control"] = "public, max-age=31536000"
+      response.headers["Access-Control-Allow-Origin"] = "*"
+      response
   end
 
   @[ARTA::Get(path: "/favicon.svg")]
   def favicon_svg(request : ATH::Request) : ATH::Response
-    content = File.read("./assets/images/favicon.svg")
-    response = ATH::Response.new(content)
-    response.headers["content-type"] = "image/svg+xml"
-    response.headers["Cache-Control"] = "public, max-age=31536000"
-    response
+      content = File.read("./assets/images/favicon.svg")
+      response = ATH::Response.new(content)
+      response.headers["content-type"] = "image/svg+xml"
+      response.headers["Cache-Control"] = "public, max-age=31536000"
+      response.headers["Access-Control-Allow-Origin"] = "*"
+      response
   end
 
   @[ARTA::Get(path: "/favicon.ico")]
   def favicon_ico(request : ATH::Request) : ATH::Response
-    content = File.read("./assets/images/favicon.ico")
-    response = ATH::Response.new(content)
-    response.headers["content-type"] = "image/x-icon"
-    response.headers["Cache-Control"] = "public, max-age=31536000"
-    response
+      content = File.read("./assets/images/favicon.ico")
+      response = ATH::Response.new(content)
+      response.headers["content-type"] = "image/x-icon"
+      response.headers["Cache-Control"] = "public, max-age=31536000"
+      response.headers["Access-Control-Allow-Origin"] = "*"
+      response
   end
 
   # Simple test page for debugging Elm command execution
@@ -639,6 +642,8 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
       response = ATH::Response.new(content)
       response.headers["content-type"] = content_type
       response.headers["Cache-Control"] = "public, max-age=31536000"
+      # Allow cross-origin access for ColorThief canvas extraction
+      response.headers["Access-Control-Allow-Origin"] = "*"
       response
     else
       ATH::Response.new("Favicon not found", 404, HTTP::Headers{"content-type" => "text/plain"})

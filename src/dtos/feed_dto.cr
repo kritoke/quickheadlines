@@ -14,6 +14,8 @@ class Quickheadlines::DTOs::FeedDTO
 
   property header_color : String?
 
+  property header_text_color : String?
+
   property favicon : String?
 
   property favicon_data : String?
@@ -24,6 +26,7 @@ class Quickheadlines::DTOs::FeedDTO
     @url : String,
     @site_link : String = "",
     @header_color : String? = nil,
+    @header_text_color : String? = nil,
     @favicon : String? = nil,
     @favicon_data : String? = nil,
   )
@@ -36,6 +39,7 @@ class Quickheadlines::DTOs::FeedDTO
       url: feed.url,
       site_link: feed.site_link,
       header_color: feed.header_color,
+      header_text_color: feed.header_text_color,
       favicon: feed.favicon,
       favicon_data: feed.favicon_data
     )

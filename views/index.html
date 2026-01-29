@@ -46,13 +46,17 @@
         // Skip if already processed
         if (header.dataset.adaptive === 'true') return;
 
-        const link = header.querySelector('a');
-        const feedUrl = link ? link.href : null;
+        // Use favicon src as cache key (more reliable than URL matching)
+        const img = header.querySelector('img');
+        const imgSrc = img ? img.getAttribute('src') : null;
+        const faviconKey = imgSrc || 'default';
 
-        if (feedUrl && window.feedHeaderCache[feedUrl]) {
-          const cached = window.feedHeaderCache[feedUrl];
+        // Check cache by favicon path
+        if (window.feedHeaderCache[faviconKey]) {
+          const cached = window.feedHeaderCache[faviconKey];
           header.style.backgroundColor = cached.bg;
           header.style.color = cached.text;
+          const link = header.querySelector('a');
           if (link) {
             link.style.setProperty('color', cached.text, 'important');
             link.style.textDecoration = 'none';
@@ -62,10 +66,7 @@
         }
 
         // Search for image in the header row
-        let img = header.querySelector('img');
         if (!img) return;
-
-        const imgSrc = img.getAttribute('src');
         if (!imgSrc) return;
 
         const proxy = new Image();
@@ -98,6 +99,7 @@
             const yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
             const textColor = (yiq >= 128) ? '#1f2937' : '#ffffff';
             const bgColor = 'rgb(' + r + ',' + g + ',' + b + ')';
+            const link = header.querySelector('a');
 
             header.style.backgroundColor = bgColor;
             header.style.color = textColor;
@@ -106,10 +108,14 @@
               link.style.textDecoration = 'none';
             }
 
-            if (feedUrl) {
-              window.feedHeaderCache[feedUrl] = { bg: bgColor, text: textColor };
+            // Store by favicon key for reliable cache lookup
+            if (faviconKey) {
+              window.feedHeaderCache[faviconKey] = { bg: bgColor, text: textColor };
+            }
 
-              // Save extracted colors to database
+            // Save extracted colors to database using feed URL if available
+            const feedUrl = link ? link.href : null;
+            if (feedUrl) {
               fetch('/api/header_color', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },

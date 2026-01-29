@@ -147,6 +147,7 @@ def create_schema(db : DB::Database, db_path : String)
       title TEXT NOT NULL,
       site_link TEXT,
       header_color TEXT,
+      header_text_color TEXT,
       etag TEXT,
       last_modified TEXT,
       favicon TEXT,
@@ -160,6 +161,14 @@ def create_schema(db : DB::Database, db_path : String)
   begin
     db.exec("ALTER TABLE feeds ADD COLUMN favicon_data TEXT")
     STDERR.puts "[Cache] Added favicon_data column to existing database"
+  rescue ex : SQLite3::Exception
+    # Column already exists, ignore error
+  end
+
+  # Migration: Add header_text_color column if it doesn't exist (for existing databases)
+  begin
+    db.exec("ALTER TABLE feeds ADD COLUMN header_text_color TEXT")
+    STDERR.puts "[Cache] Added header_text_color column to existing database"
   rescue ex : SQLite3::Exception
     # Column already exists, ignore error
   end
@@ -444,13 +453,18 @@ class FeedCache
 
           # Preserve existing header_color unless explicitly set in feed_data
           existing_color = @db.query_one?("SELECT header_color FROM feeds WHERE id = ?", feed_id, as: {String?})
-          header_color_to_save = feed_data.header_color.not_nil!.presence || existing_color
+          existing_text_color = @db.query_one?("SELECT header_text_color FROM feeds WHERE id = ?", feed_id, as: {String?})
+
+          # Use new color if provided, otherwise keep existing
+          header_color_to_save = (feed_data.header_color.nil? || feed_data.header_color.try(&.empty?) == true) ? existing_color : feed_data.header_color
+          header_text_color_to_save = (feed_data.header_text_color.nil? || feed_data.header_text_color.try(&.empty?) == true) ? existing_text_color : feed_data.header_text_color
 
           @db.exec(
-            "UPDATE feeds SET title = ?, site_link = ?, header_color = ?, etag = ?, last_modified = ?, favicon = ?, favicon_data = ?, last_fetched = ? WHERE id = ?",
+            "UPDATE feeds SET title = ?, site_link = ?, header_color = ?, header_text_color = ?, etag = ?, last_modified = ?, favicon = ?, favicon_data = ?, last_fetched = ? WHERE id = ?",
             feed_data.title,
             feed_data.site_link,
             header_color_to_save,
+            header_text_color_to_save,
             feed_data.etag,
             feed_data.last_modified,
             feed_data.favicon,
@@ -489,11 +503,12 @@ class FeedCache
         else
           # Insert new feed
           @db.exec(
-            "INSERT INTO feeds (url, title, site_link, header_color, etag, last_modified, favicon, favicon_data, last_fetched) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            "INSERT INTO feeds (url, title, site_link, header_color, header_text_color, etag, last_modified, favicon, favicon_data, last_fetched) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
             feed_data.url,
             feed_data.title,
             feed_data.site_link,
             feed_data.header_color,
+            feed_data.header_text_color,
             feed_data.etag,
             feed_data.last_modified,
             feed_data.favicon,

@@ -6127,26 +6127,37 @@ var $author$project$Api$feedDecoder = A2(
 													function (headerColor) {
 														return A2(
 															$elm$json$Json$Decode$andThen,
-															function (items) {
+															function (headerTextColor) {
 																return A2(
 																	$elm$json$Json$Decode$andThen,
-																	function (totalItemCount) {
-																		return $elm$json$Json$Decode$succeed(
-																			{displayLink: displayLink, favicon: favicon, headerColor: headerColor, items: items, siteLink: siteLink, tab: tab, title: title, totalItemCount: totalItemCount, url: url});
+																	function (items) {
+																		return A2(
+																			$elm$json$Json$Decode$andThen,
+																			function (totalItemCount) {
+																				return $elm$json$Json$Decode$succeed(
+																					{displayLink: displayLink, favicon: favicon, headerColor: headerColor, headerTextColor: headerTextColor, items: items, siteLink: siteLink, tab: tab, title: title, totalItemCount: totalItemCount, url: url});
+																			},
+																			A2($elm$json$Json$Decode$field, 'total_item_count', $elm$json$Json$Decode$int));
 																	},
-																	A2($elm$json$Json$Decode$field, 'total_item_count', $elm$json$Json$Decode$int));
+																	A2(
+																		$elm$json$Json$Decode$field,
+																		'items',
+																		$elm$json$Json$Decode$list($author$project$Api$feedItemDecoder)));
 															},
 															A2(
 																$elm$json$Json$Decode$field,
-																'items',
-																$elm$json$Json$Decode$list($author$project$Api$feedItemDecoder)));
+																'header_text_color',
+																$elm$json$Json$Decode$nullable($elm$json$Json$Decode$string)));
 													},
 													A2(
 														$elm$json$Json$Decode$field,
 														'header_color',
 														$elm$json$Json$Decode$nullable($elm$json$Json$Decode$string)));
 											},
-											A2($elm$json$Json$Decode$field, 'favicon', $elm$json$Json$Decode$string));
+											A2(
+												$elm$json$Json$Decode$field,
+												'favicon',
+												$elm$json$Json$Decode$nullable($elm$json$Json$Decode$string)));
 									},
 									A2($elm$json$Json$Decode$field, 'site_link', $elm$json$Json$Decode$string));
 							},
@@ -6398,36 +6409,54 @@ var $author$project$Api$timelineItemDecoder = A2(
 											function (favicon) {
 												return A2(
 													$elm$json$Json$Decode$andThen,
-													function (clusterId) {
+													function (headerColor) {
 														return A2(
 															$elm$json$Json$Decode$andThen,
-															function (isRepresentative) {
+															function (headerTextColor) {
 																return A2(
 																	$elm$json$Json$Decode$andThen,
-																	function (clusterSize) {
-																		return $elm$json$Json$Decode$succeed(
-																			{
-																				clusterId: clusterId,
-																				clusterSize: A2($elm$core$Maybe$withDefault, 0, clusterSize),
-																				favicon: A2($elm$core$Maybe$withDefault, '', favicon),
-																				feedTitle: feedTitle,
-																				id: id,
-																				isRepresentative: isRepresentative,
-																				link: link,
-																				pubDate: pubDate,
-																				title: title
-																			});
+																	function (clusterId) {
+																		return A2(
+																			$elm$json$Json$Decode$andThen,
+																			function (isRepresentative) {
+																				return A2(
+																					$elm$json$Json$Decode$andThen,
+																					function (clusterSize) {
+																						return $elm$json$Json$Decode$succeed(
+																							{
+																								clusterId: clusterId,
+																								clusterSize: A2($elm$core$Maybe$withDefault, 0, clusterSize),
+																								favicon: favicon,
+																								feedTitle: feedTitle,
+																								headerColor: headerColor,
+																								headerTextColor: headerTextColor,
+																								id: id,
+																								isRepresentative: isRepresentative,
+																								link: link,
+																								pubDate: pubDate,
+																								title: title
+																							});
+																					},
+																					A2(
+																						$elm$json$Json$Decode$field,
+																						'cluster_size',
+																						$elm$json$Json$Decode$nullable($elm$json$Json$Decode$int)));
+																			},
+																			A2($elm$json$Json$Decode$field, 'is_representative', $elm$json$Json$Decode$bool));
 																	},
 																	A2(
 																		$elm$json$Json$Decode$field,
-																		'cluster_size',
-																		$elm$json$Json$Decode$nullable($elm$json$Json$Decode$int)));
+																		'cluster_id',
+																		$elm$json$Json$Decode$nullable($elm$json$Json$Decode$string)));
 															},
-															A2($elm$json$Json$Decode$field, 'is_representative', $elm$json$Json$Decode$bool));
+															A2(
+																$elm$json$Json$Decode$field,
+																'header_text_color',
+																$elm$json$Json$Decode$nullable($elm$json$Json$Decode$string)));
 													},
 													A2(
 														$elm$json$Json$Decode$field,
-														'cluster_id',
+														'header_color',
 														$elm$json$Json$Decode$nullable($elm$json$Json$Decode$string)));
 											},
 											A2(
@@ -13209,50 +13238,150 @@ var $mdgriffith$elm_ui$Element$link = F2(
 				_List_fromArray(
 					[label])));
 	});
+var $elm$core$Maybe$map3 = F4(
+	function (func, ma, mb, mc) {
+		if (ma.$ === 'Nothing') {
+			return $elm$core$Maybe$Nothing;
+		} else {
+			var a = ma.a;
+			if (mb.$ === 'Nothing') {
+				return $elm$core$Maybe$Nothing;
+			} else {
+				var b = mb.a;
+				if (mc.$ === 'Nothing') {
+					return $elm$core$Maybe$Nothing;
+				} else {
+					var c = mc.a;
+					return $elm$core$Maybe$Just(
+						A3(func, a, b, c));
+				}
+			}
+		}
+	});
+var $elm$core$String$replace = F3(
+	function (before, after, string) {
+		return A2(
+			$elm$core$String$join,
+			after,
+			A2($elm$core$String$split, before, string));
+	});
 var $elm$virtual_dom$VirtualDom$style = _VirtualDom_style;
 var $elm$html$Html$Attributes$style = $elm$virtual_dom$VirtualDom$style;
 var $mdgriffith$elm_ui$Element$Font$underline = $mdgriffith$elm_ui$Internal$Model$htmlClass($mdgriffith$elm_ui$Internal$Style$classes.underline);
 var $author$project$Pages$Home_$feedHeader = F2(
 	function (theme, feed) {
 		var _v0 = function () {
-			var _v1 = feed.headerColor;
+			var _v1 = feed.headerTextColor;
 			if (_v1.$ === 'Just') {
-				var color = _v1.a;
-				return _Utils_Tuple3(
-					$mdgriffith$elm_ui$Element$htmlAttribute(
-						A2($elm$html$Html$Attributes$style, 'background-color', color)),
-					$mdgriffith$elm_ui$Element$htmlAttribute(
-						A2($elm$html$Html$Attributes$style, 'color', 'white')),
-					_List_Nil);
+				var textColor = _v1.a;
+				var _v2 = feed.headerColor;
+				if (_v2.$ === 'Just') {
+					var bgColor = _v2.a;
+					return _Utils_Tuple3(
+						$mdgriffith$elm_ui$Element$htmlAttribute(
+							A2($elm$html$Html$Attributes$style, 'background-color', bgColor)),
+						textColor,
+						_List_Nil);
+				} else {
+					return _Utils_Tuple3(
+						function () {
+							if (theme.$ === 'Dark') {
+								return $mdgriffith$elm_ui$Element$Background$color(
+									A3($mdgriffith$elm_ui$Element$rgb255, 30, 30, 30));
+							} else {
+								return $mdgriffith$elm_ui$Element$Background$color(
+									A3($mdgriffith$elm_ui$Element$rgb255, 243, 244, 246));
+							}
+						}(),
+						textColor,
+						_List_Nil);
+				}
 			} else {
-				return _Utils_Tuple3(
-					function () {
-						if (theme.$ === 'Dark') {
-							return $mdgriffith$elm_ui$Element$Background$color(
-								A3($mdgriffith$elm_ui$Element$rgb255, 30, 30, 30));
+				var _v4 = feed.headerColor;
+				if (_v4.$ === 'Just') {
+					var bgColor = _v4.a;
+					var parseRgb = function (str) {
+						var clean = A3(
+							$elm$core$String$replace,
+							' ',
+							'',
+							A3(
+								$elm$core$String$replace,
+								')',
+								'',
+								A3($elm$core$String$replace, 'rgb(', '', str)));
+						var parts = A2($elm$core$String$split, ',', clean);
+						if (((parts.b && parts.b.b) && parts.b.b.b) && (!parts.b.b.b.b)) {
+							var r = parts.a;
+							var _v9 = parts.b;
+							var g = _v9.a;
+							var _v10 = _v9.b;
+							var b = _v10.a;
+							return A4(
+								$elm$core$Maybe$map3,
+								F3(
+									function (ri, gi, bi) {
+										return _Utils_Tuple3(ri, gi, bi);
+									}),
+								$elm$core$String$toInt(r),
+								$elm$core$String$toInt(g),
+								$elm$core$String$toInt(b));
 						} else {
-							return $mdgriffith$elm_ui$Element$Background$color(
-								A3($mdgriffith$elm_ui$Element$rgb255, 243, 244, 246));
+							return $elm$core$Maybe$Nothing;
 						}
-					}(),
-					function () {
-						if (theme.$ === 'Dark') {
-							return $mdgriffith$elm_ui$Element$Font$color(
-								A3($mdgriffith$elm_ui$Element$rgb255, 255, 255, 255));
+					};
+					var luminance = function (rgb) {
+						var r = rgb.a;
+						var g = rgb.b;
+						var b = rgb.c;
+						return (((r * 299) + (g * 587)) + (b * 114)) / 1000;
+					};
+					var calculatedTextColor = function () {
+						var _v5 = parseRgb(bgColor);
+						if (_v5.$ === 'Just') {
+							var rgb = _v5.a;
+							return (luminance(rgb) >= 128) ? 'rgb(17, 24, 39)' : 'rgb(255, 255, 255)';
 						} else {
-							return $mdgriffith$elm_ui$Element$Font$color(
-								A3($mdgriffith$elm_ui$Element$rgb255, 17, 24, 39));
+							if (theme.$ === 'Dark') {
+								return 'rgb(255, 255, 255)';
+							} else {
+								return 'rgb(17, 24, 39)';
+							}
 						}
-					}(),
-					_List_fromArray(
-						[
-							$mdgriffith$elm_ui$Element$htmlAttribute(
-							A2($elm$html$Html$Attributes$attribute, 'data-use-adaptive-colors', 'true'))
-						]));
+					}();
+					return _Utils_Tuple3(
+						$mdgriffith$elm_ui$Element$htmlAttribute(
+							A2($elm$html$Html$Attributes$style, 'background-color', bgColor)),
+						calculatedTextColor,
+						_List_Nil);
+				} else {
+					return _Utils_Tuple3(
+						function () {
+							if (theme.$ === 'Dark') {
+								return $mdgriffith$elm_ui$Element$Background$color(
+									A3($mdgriffith$elm_ui$Element$rgb255, 30, 30, 30));
+							} else {
+								return $mdgriffith$elm_ui$Element$Background$color(
+									A3($mdgriffith$elm_ui$Element$rgb255, 243, 244, 246));
+							}
+						}(),
+						function () {
+							if (theme.$ === 'Dark') {
+								return 'rgb(255, 255, 255)';
+							} else {
+								return 'rgb(17, 24, 39)';
+							}
+						}(),
+						_List_fromArray(
+							[
+								$mdgriffith$elm_ui$Element$htmlAttribute(
+								A2($elm$html$Html$Attributes$attribute, 'data-use-adaptive-colors', 'true'))
+							]));
+				}
 			}
 		}();
 		var headerBg = _v0.a;
-		var headerText = _v0.b;
+		var headerTextColor = _v0.b;
 		var adaptiveFlag = _v0.c;
 		return A2(
 			$mdgriffith$elm_ui$Element$row,
@@ -13270,7 +13399,10 @@ var $author$project$Pages$Home_$feedHeader = F2(
 				adaptiveFlag),
 			_List_fromArray(
 				[
-					A2($author$project$Pages$Home_$faviconView, theme, feed.favicon),
+					A2(
+					$author$project$Pages$Home_$faviconView,
+					theme,
+					A2($elm$core$Maybe$withDefault, '', feed.favicon)),
 					A2(
 					$mdgriffith$elm_ui$Element$column,
 					_List_fromArray(
@@ -13287,7 +13419,8 @@ var $author$project$Pages$Home_$feedHeader = F2(
 								[
 									$mdgriffith$elm_ui$Element$Font$size(18),
 									$mdgriffith$elm_ui$Element$Font$bold,
-									headerText,
+									$mdgriffith$elm_ui$Element$htmlAttribute(
+									A2($elm$html$Html$Attributes$style, 'color', headerTextColor)),
 									$mdgriffith$elm_ui$Element$Font$underline,
 									$mdgriffith$elm_ui$Element$htmlAttribute(
 									A2($elm$html$Html$Attributes$style, 'word-wrap', 'break-word'))
@@ -13300,8 +13433,11 @@ var $author$project$Pages$Home_$feedHeader = F2(
 							$mdgriffith$elm_ui$Element$el,
 							_List_fromArray(
 								[
+									$mdgriffith$elm_ui$Element$htmlAttribute(
+									A2($elm$html$Html$Attributes$attribute, 'data-display-link', 'true')),
 									$mdgriffith$elm_ui$Element$Font$size(12),
-									headerText,
+									$mdgriffith$elm_ui$Element$htmlAttribute(
+									A2($elm$html$Html$Attributes$style, 'color', headerTextColor)),
 									$mdgriffith$elm_ui$Element$htmlAttribute(
 									A2($elm$html$Html$Attributes$style, 'opacity', '0.8'))
 								]),
@@ -13611,6 +13747,7 @@ var $author$project$Pages$Home_$feedCard = F3(
 			_List_fromArray(
 				[
 					$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill),
+					$mdgriffith$elm_ui$Element$height($mdgriffith$elm_ui$Element$fill),
 					$mdgriffith$elm_ui$Element$Background$color(cardBg),
 					$mdgriffith$elm_ui$Element$Border$rounded(12),
 					$mdgriffith$elm_ui$Element$Border$width(1),
@@ -13626,6 +13763,7 @@ var $author$project$Pages$Home_$feedCard = F3(
 					_List_fromArray(
 						[
 							$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill),
+							$mdgriffith$elm_ui$Element$height($mdgriffith$elm_ui$Element$fill),
 							$mdgriffith$elm_ui$Element$spacing(6)
 						]),
 					A2(
@@ -14014,10 +14152,16 @@ var $author$project$Pages$Timeline$formatDate = F2(
 	});
 var $author$project$Pages$Timeline$dayHeader = F4(
 	function (zone, now, theme, date) {
+		var txtColor = function () {
+			if (theme.$ === 'Dark') {
+				return A3($mdgriffith$elm_ui$Element$rgb255, 148, 163, 184);
+			} else {
+				return A3($mdgriffith$elm_ui$Element$rgb255, 107, 114, 128);
+			}
+		}();
 		var nowYear = A2($elm$time$Time$toYear, zone, now);
 		var nowMonth = A2($elm$time$Time$toMonth, zone, now);
 		var nowDay = A2($elm$time$Time$toDay, zone, now);
-		var mutedTxt = $author$project$Theme$mutedColor(theme);
 		var dateYear = A2($elm$time$Time$toYear, zone, date);
 		var dateMonth = A2($elm$time$Time$toMonth, zone, date);
 		var dateDay = A2($elm$time$Time$toDay, zone, date);
@@ -14037,11 +14181,13 @@ var $author$project$Pages$Timeline$dayHeader = F4(
 			$mdgriffith$elm_ui$Element$el,
 			_List_fromArray(
 				[
-					$mdgriffith$elm_ui$Element$Font$size(14),
+					$mdgriffith$elm_ui$Element$Font$size(18),
 					$mdgriffith$elm_ui$Element$Font$bold,
-					$mdgriffith$elm_ui$Element$Font$color(mutedTxt),
+					$mdgriffith$elm_ui$Element$Font$color(txtColor),
 					$mdgriffith$elm_ui$Element$paddingEach(
-					{bottom: 12, left: 0, right: 0, top: 24})
+					{bottom: 12, left: 0, right: 0, top: 24}),
+					$mdgriffith$elm_ui$Element$htmlAttribute(
+					A2($elm$html$Html$Attributes$attribute, 'data-timeline-header', 'true'))
 				]),
 			$mdgriffith$elm_ui$Element$text(headerText));
 	});
@@ -14092,17 +14238,25 @@ var $author$project$Pages$Timeline$timelineItem = F3(
 						]),
 					_List_fromArray(
 						[
-							(item.favicon !== '') ? A2(
-							$mdgriffith$elm_ui$Element$image,
-							_List_fromArray(
-								[
-									$mdgriffith$elm_ui$Element$width(
-									$mdgriffith$elm_ui$Element$px(16)),
-									$mdgriffith$elm_ui$Element$height(
-									$mdgriffith$elm_ui$Element$px(16)),
-									$mdgriffith$elm_ui$Element$Border$rounded(2)
-								]),
-							{description: item.feedTitle + ' favicon', src: item.favicon}) : $mdgriffith$elm_ui$Element$none,
+							A2(
+							$elm$core$Maybe$withDefault,
+							$mdgriffith$elm_ui$Element$none,
+							A2(
+								$elm$core$Maybe$map,
+								function (faviconUrl) {
+									return A2(
+										$mdgriffith$elm_ui$Element$image,
+										_List_fromArray(
+											[
+												$mdgriffith$elm_ui$Element$width(
+												$mdgriffith$elm_ui$Element$px(16)),
+												$mdgriffith$elm_ui$Element$height(
+												$mdgriffith$elm_ui$Element$px(16)),
+												$mdgriffith$elm_ui$Element$Border$rounded(2)
+											]),
+										{description: item.feedTitle + ' favicon', src: faviconUrl});
+								},
+								item.favicon)),
 							A2(
 							$mdgriffith$elm_ui$Element$el,
 							_List_fromArray(
@@ -14311,7 +14465,9 @@ var $author$project$Pages$Timeline$view = F2(
 					$mdgriffith$elm_ui$Element$height($mdgriffith$elm_ui$Element$fill),
 					$mdgriffith$elm_ui$Element$spacing(20),
 					$mdgriffith$elm_ui$Element$padding(paddingValue),
-					$mdgriffith$elm_ui$Element$Background$color(bg)
+					$mdgriffith$elm_ui$Element$Background$color(bg),
+					$mdgriffith$elm_ui$Element$htmlAttribute(
+					A2($elm$html$Html$Attributes$attribute, 'data-timeline-page', 'true'))
 				]),
 			_List_fromArray(
 				[
