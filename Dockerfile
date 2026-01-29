@@ -54,8 +54,8 @@ COPY --from=builder /app/server .
 COPY public/elm.js ./public/elm.js
 COPY feeds.yml ./feeds.yml
 
-EXPOSE 3030/tcp
+EXPOSE 8080/tcp
 
-HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 CMD curl -f http://localhost:3030/version || exit 1
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 CMD curl -f http://localhost:8080/version || exit 1
 
 ENTRYPOINT ["./server"]
