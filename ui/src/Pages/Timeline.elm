@@ -212,12 +212,12 @@ view shared model =
             column
                 [ width fill
                 ]
-                [ el [ htmlAttribute (Html.Attributes.id "scroll-sentinel") ] Element.none
-                , column
+                [ column
                     [ width fill
                     , spacing 16
                     ]
                     (List.concatMap (dayClusterSection shared.zone shared.now theme model.expandedClusters) clustersByDay)
+                , el [ htmlAttribute (Html.Attributes.id "scroll-sentinel") ] Element.none
                 ]
         ]
 

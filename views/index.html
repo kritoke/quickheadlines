@@ -211,52 +211,65 @@
         });
         console.log('Elm initialized successfully');
 
-        if (app.ports && app.ports.saveTheme) {
-          app.ports.saveTheme.subscribe(function(theme) {
-            localStorage.setItem('quickheadlines-theme', theme);
-          });
-        }
-
-         // Set up IntersectionObserver for infinite scroll
-         if (app.ports && app.ports.onNearBottom) {
-           const sentinel = document.getElementById('scroll-sentinel');
-           if (sentinel) {
-             const observer = new IntersectionObserver((entries) => {
-               entries.forEach(entry => {
-                 if (entry.isIntersecting) {
-                   console.log('Near bottom detected');
-                   app.ports.onNearBottom.send(true);
-                 } else {
-                   app.ports.onNearBottom.send(false);
-                 }
-               });
-             }, { threshold: 0.1 });
-
-             observer.observe(sentinel);
-             console.log('IntersectionObserver set up for sentinel');
-           } else {
-             console.error('Sentinel element not found');
-           }
+         if (app.ports && app.ports.saveTheme) {
+           app.ports.saveTheme.subscribe(function(theme) {
+             localStorage.setItem('quickheadlines-theme', theme);
+           });
          }
 
-        window.addEventListener('resize', function() {
-          // Handle resize if needed
-        });
+         window.addEventListener('resize', function() {
+           // Handle resize if needed
+         });
 
-        // Extract colors after Elm renders
-        setTimeout(window.extractHeaderColors, 500);
-        setTimeout(window.extractHeaderColors, 1500);
+         // Extract colors after Elm renders
+         setTimeout(window.extractHeaderColors, 500);
+         setTimeout(window.extractHeaderColors, 1500);
 
-        // Debounce color extraction for better performance
-        let colorExtractTimeout = null;
-        const debouncedExtract = () => {
-          if (colorExtractTimeout) clearTimeout(colorExtractTimeout);
-          colorExtractTimeout = setTimeout(window.extractHeaderColors, 300);
-        };
+         // Set up single MutationObserver for both color extraction and sentinel observation
+         let sentinelObserver = null;
+         
+         const observeSentinel = () => {
+           if (app.ports && app.ports.onNearBottom) {
+             const sentinel = document.getElementById('scroll-sentinel');
+             if (sentinel && !sentinelObserver) {
+               sentinelObserver = new IntersectionObserver((entries) => {
+                 entries.forEach(entry => {
+                   if (entry.isIntersecting) {
+                     console.log('Near bottom detected');
+                     app.ports.onNearBottom.send(true);
+                   } else {
+                     console.log('No longer near bottom');
+                     app.ports.onNearBottom.send(false);
+                   }
+                 });
+               }, { threshold: 0.1 });
 
-        // Observe DOM for new feed headers (after tab switch, etc.)
-        const observer = new MutationObserver(debouncedExtract);
-        observer.observe(document.body, { childList: true, subtree: true });
+               sentinelObserver.observe(sentinel);
+               console.log('IntersectionObserver set up for sentinel');
+             } else if (!sentinel && sentinelObserver) {
+               sentinelObserver.disconnect();
+               sentinelObserver = null;
+             }
+           }
+         };
+
+         // Debounce function for mutations
+         let mutationTimeout = null;
+         const debouncedMutation = () => {
+           if (mutationTimeout) clearTimeout(mutationTimeout);
+           mutationTimeout = setTimeout(() => {
+             window.extractHeaderColors();
+             observeSentinel();
+           }, 300);
+         };
+
+         // Single mutation observer for both color extraction and sentinel
+         const mutationObserver = new MutationObserver(debouncedMutation);
+         mutationObserver.observe(document.body, { childList: true, subtree: true });
+
+         // Try to observe sentinel immediately
+         observeSentinel();
+
 
       } catch(e) {
         console.error('Elm init error:', e);

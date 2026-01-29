@@ -222,7 +222,10 @@ subscriptions : Model -> Sub Msg
 subscriptions model =
     case model.page of
         Timeline ->
-            Sub.map TimelineMsg (Timeline.subscriptions model.timeline)
+            Sub.batch
+                [ Sub.map TimelineMsg (Timeline.subscriptions model.timeline)
+                , Sub.map TimelineMsg (onNearBottom Timeline.NearBottom)
+                ]
 
         _ ->
             Sub.none
