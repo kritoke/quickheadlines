@@ -11,6 +11,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libssl-dev \
     libyaml-dev \
     libsqlite3-dev \
+    libreadline-dev \
     curl
 
 # 1. Install dependencies
