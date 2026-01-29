@@ -5,9 +5,6 @@
 *.dwarf
 .editorconfig
 .DS_Store
-tailwindcss
-assets/css/production.css
-assets/css/development.css
 
 # Compiled binary and database (generated at runtime)
 quickheadlines
