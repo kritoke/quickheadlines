@@ -47,7 +47,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-RUN mkdir -p /app/public
+RUN mkdir -p /app/public/favicons
 
 ENV TZ=UTC
 ENV GC_MARKERS=1
@@ -55,7 +55,6 @@ ENV GC_FREE_SPACE_DIVISOR=20
 
 COPY --from=builder /app/server .
 COPY public/elm.js ./public/elm.js
-COPY public/favicons ./public/favicons
 COPY assets ./assets
 COPY views ./views
 COPY feeds.yml ./feeds.yml
