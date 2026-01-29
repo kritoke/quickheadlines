@@ -1,13 +1,16 @@
 # syntax=docker/dockerfile:1.4
 # --- Stage 1: Builder ---
-# 84codes/crystal has excellent ARM64 support
 FROM 84codes/crystal:latest-ubuntu-22.04 AS builder
 
 WORKDIR /app
 
+RUN echo 'DNS_SERVERS="8.8.8.8 8.8.4.4"' > /etc/resolv.conf && \
+    cat /etc/resolv.conf
+
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,target=/var/lib/apt,sharing=locked \
-    apt-get update && apt-get install -y --no-install-recommends \
+    apt-get -o Acquire::Retries=3 -o Acquire::Retry-Delay=5 update && \
+    apt-get -o Acquire::Retries=3 -o Acquire::Retry-Delay=5 install -y --no-install-recommends \
     libmagic-dev \
     libxml2-dev \
     libssl-dev \
@@ -33,7 +36,8 @@ WORKDIR /app
 
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,target=/var/lib/apt,sharing=locked \
-    apt-get update && apt-get install -y --no-install-recommends \
+    apt-get -o Acquire::Retries=3 -o Acquire::Retry-Delay=5 update && \
+    apt-get -o Acquire::Retries=3 -o Acquire::Retry-Delay=5 install -y --no-install-recommends \
     libmagic1 \
     libxml2-dev \
     libssl-dev \
