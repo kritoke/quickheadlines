@@ -1,21 +1,22 @@
 # syntax=docker/dockerfile:1.4
 # --- Stage 1: Builder ---
-# Use official Crystal image with multi-architecture support
-FROM crystallang/crystal:1.19.1 AS builder
+FROM ubuntu:22.04 AS builder
 
 WORKDIR /app
 
 ENV DEBIAN_FRONTEND=noninteractive
 
-RUN apt-get -o Acquire::Retries=3 update && \
-    apt-get -o Acquire::Retries=3 install -y --no-install-recommends \
+RUN sed -i 's|archive.ubuntu.com|ports.ubuntu.com|g' /etc/apt/sources.list 2>/dev/null || true
+RUN apt-get -o Acquire::Retries=3 update 2>&1 | head -20 || true
+
+RUN apt-get -o Acquire::Retries=3 install -y --no-install-recommends \
+    crystal \
     libmagic-dev \
     libxml2-dev \
     libssl-dev \
     libyaml-dev \
     libsqlite3-dev \
-    curl && \
-    rm -rf /var/lib/apt/lists/*
+    curl 2>&1 | tail -20
 
 COPY shard.yml shard.lock ./
 RUN shards install --production
@@ -33,8 +34,9 @@ FROM ubuntu:22.04
 
 ENV DEBIAN_FRONTEND=noninteractive
 
-RUN apt-get -o Acquire::Retries=3 update && \
-    apt-get -o Acquire::Retries=3 install -y --no-install-recommends \
+RUN sed -i 's|archive.ubuntu.com|ports.ubuntu.com|g' /etc/apt/sources.list 2>/dev/null || true
+
+RUN apt-get -o Acquire::Retries=3 install -y --no-install-recommends \
     libmagic1 \
     libxml2-dev \
     libssl-dev \
