@@ -88,42 +88,30 @@
   min-height: 0;
   width: 100%;
   min-width: 0;
-  scrollbar-width: none;            /* Firefox */
+  scrollbar-width: none;
 }
 
-.dark .feed-box .feed-body {
-  /* Keep hidden by default */
-}
-
-.feed-box .feed-body:hover {
-  scrollbar-width: thin;
-  scrollbar-color: rgba(0, 0, 0, 0.4) transparent; /* Firefox light mode */
-}
-
-:where(.dark, .dark *) .feed-box .feed-body:hover {
-  scrollbar-color: rgba(255, 255, 255, 0.4) transparent; /* Firefox dark mode */
-}
-
-/* WebKit (Safari/Chrome) Scrollbar Styling */
 .feed-box .feed-body::-webkit-scrollbar {
-  width: 8px;
+  width: 4px;
+  height: 4px;
 }
 
 .feed-box .feed-body::-webkit-scrollbar-track {
-  background: transparent !important;
+  background: transparent;
 }
 
 .feed-box .feed-body::-webkit-scrollbar-thumb {
-  background-color: transparent; 
-  border-radius: 10px;
+  background-color: transparent;
+  border-radius: 4px;
+  transition: background-color 0.2s ease;
 }
 
-.feed-box .feed-body:hover::-webkit-scrollbar-thumb {
-  background-color: rgba(0, 0, 0, 0.3); /* Visible gray for light mode */
+.feed-box .feed-body::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(0, 0, 0, 0.3);
 }
 
-:where(.dark, .dark *) .feed-box .feed-body:hover::-webkit-scrollbar-thumb {
-  background-color: rgba(255, 255, 255, 0.3); /* Visible gray for dark mode */
+:where(.dark, .dark *) .feed-box .feed-body::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(255, 255, 255, 0.3);
 }
 
 .feed-box .feed-body ul,
