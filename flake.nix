@@ -3,6 +3,7 @@
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+    openspec.url = "github:Fission-AI/OpenSpec";
   };
 
   outputs = { self, nixpkgs, openspec }:
