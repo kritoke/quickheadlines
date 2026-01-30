@@ -1013,7 +1013,7 @@ class FeedCache
           next
         end
 
-        parsed = nil of Time?
+        parsed = nil.as(Time?)
 
         # Try a few common formats. If parsing fails, skip the row.
         begin
