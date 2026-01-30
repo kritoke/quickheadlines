@@ -238,17 +238,20 @@
          setTimeout(window.extractHeaderColors, 1500);
 
          // Set up single MutationObserver for both color extraction and sentinel observation
-         let sentinelObserver = null;
-         
-         const observeSentinel = () => {
+          let sentinelObserver = null;
+          let observerRetries = 0;
+          const maxRetries = 50; // Retry for up to 5 seconds (50 * 100ms)
+          
+          const observeSentinel = () => {
             if (app.ports && app.ports.onNearBottom) {
               const sentinel = document.getElementById('scroll-sentinel');
-              console.log('Checking sentinel:', { exists: !!sentinel, sentinelObserver: !!sentinelObserver });
+              console.log('Checking sentinel (attempt ' + (observerRetries + 1) + '):', { exists: !!sentinel, sentinelObserver: !!sentinelObserver });
               if (sentinel && !sentinelObserver) {
                 console.log('Setting up IntersectionObserver for sentinel');
+                // Use rootMargin to trigger observer when element is within 500px of viewport bottom
                 sentinelObserver = new IntersectionObserver((entries) => {
                   entries.forEach(entry => {
-                    console.log('Intersection event:', { isIntersecting: entry.isIntersecting });
+                    console.log('Intersection event:', { isIntersecting: entry.isIntersecting, target: entry.target.id, ratio: entry.intersectionRatio });
                     if (entry.isIntersecting) {
                       console.log('Near bottom detected - sending true');
                       app.ports.onNearBottom.send(true);
@@ -257,13 +260,19 @@
                       app.ports.onNearBottom.send(false);
                     }
                   });
-                 }, { threshold: 0 });
+                 }, { threshold: 0, rootMargin: '500px' });
 
                 sentinelObserver.observe(sentinel);
-                console.log('IntersectionObserver set up for sentinel');
+                const rect = sentinel.getBoundingClientRect();
+                console.log('IntersectionObserver set up for sentinel, position:', { top: rect.top, bottom: rect.bottom, height: rect.height, viewportHeight: window.innerHeight });
+                observerRetries = 0;
               } else if (!sentinel && sentinelObserver) {
                 sentinelObserver.disconnect();
                 sentinelObserver = null;
+              } else if (!sentinel && !sentinelObserver && observerRetries < maxRetries) {
+                observerRetries++;
+                console.log('Sentinel not found, retrying in 100ms...');
+                setTimeout(observeSentinel, 100);
               }
             }
           };
@@ -282,8 +291,8 @@
          const mutationObserver = new MutationObserver(debouncedMutation);
          mutationObserver.observe(document.body, { childList: true, subtree: true });
 
-         // Try to observe sentinel immediately
-         observeSentinel();
+          // Try to observe sentinel immediately
+          observeSentinel();
 
 
       } catch(e) {
