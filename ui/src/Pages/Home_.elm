@@ -1,6 +1,6 @@
 module Pages.Home_ exposing (Model, Msg(..), init, update, view, subscriptions)
 
-import Api exposing (Feed, FeedItem, fetchFeeds)
+import Api exposing (Feed, FeedItem, fetchFeeds, sortFeedItems)
 import Element exposing (..)
 import Element.Background as Background
 import Element.Border as Border
@@ -316,7 +316,7 @@ feedCard now theme windowWidth feed =
             ([ width fill
              , spacing 4
              ] ++ scrollAttributes)
-            (List.map (feedItem now theme) (List.take 15 feed.items))
+            (List.map (feedItem now theme feed.title) (List.take 15 (sortFeedItems feed.items)))
         ]
 
 
@@ -467,8 +467,8 @@ faviconView theme faviconUrl =
             Element.none
 
 
-feedItem : Time.Posix -> Theme -> FeedItem -> Element Msg
-feedItem now theme item =
+feedItem : Time.Posix -> Theme -> String -> FeedItem -> Element Msg
+feedItem now theme feedTitle item =
     let
         txtColor =
             textColor theme
@@ -498,11 +498,14 @@ feedItem now theme item =
             , htmlAttribute (Html.Attributes.style "overflow-wrap" "break-word")
             , htmlAttribute (Html.Attributes.style "line-height" "1.4")
             ]
-            [ link
-                [ Font.color txtColor
-                , htmlAttribute (Html.Attributes.style "text-decoration" "none")
+            [ row [ spacing 6 ]
+                [ el [ Font.size 13, Font.color mutedTxt, centerY ] (text (feedTitle ++ " · "))
+                , link
+                    [ Font.color txtColor
+                    , htmlAttribute (Html.Attributes.style "text-decoration" "none")
+                    ]
+                    { url = item.link, label = text item.title }
                 ]
-                { url = item.link, label = text item.title }
             ]
         , el
             [ Font.size 12
