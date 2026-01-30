@@ -567,7 +567,7 @@ clusterItem zone now theme expandedClusters cluster =
                 , spacing 8
                 , Element.alignTop
                 ]
-                [ el [ Element.htmlAttribute (Html.Attributes.style "display" "flex"), Element.htmlAttribute (Html.Attributes.style "align-items" "center") ] [ faviconImg ]
+                [ el [ Element.htmlAttribute (Html.Attributes.style "display" "flex"), Element.htmlAttribute (Html.Attributes.style "align-items" "center") ] faviconImg
                 , paragraph
                     [ Font.size 16
                     , Font.color txtColor
