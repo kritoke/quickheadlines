@@ -294,7 +294,7 @@ elm-build:
 elm-land-build:
 	@echo "Compiling Elm Land UI..."
 	cd ui && $(ELM) make src/Main.elm --output=elm.js
-	@echo "✓ Elm Land compiled to ui/elm.js ($(shell wc -c < ui/elm.js 2>/dev/null || echo "0") bytes)"
+	@echo "✓ Elm Land compiled to public/elm.js ($(shell wc -c < public/elm.js 2>/dev/null || echo "0") bytes)"
 
 # --- Removed elm-embed target ---
 # Elm.js is now served directly from disk with GitHub fallback

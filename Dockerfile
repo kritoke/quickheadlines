@@ -43,7 +43,6 @@ WORKDIR /
 
 COPY --from=builder /app/server /server
 COPY public/elm.js /public/elm.js
-COPY ui/elm.js /ui/elm.js
 COPY assets /assets
 COPY views /views
 COPY feeds.yml /feeds.yml.default
