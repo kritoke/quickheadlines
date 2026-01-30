@@ -220,15 +220,19 @@ view model =
 
 subscriptions : Model -> Sub Msg
 subscriptions model =
-    case model.page of
-        Timeline ->
-            Sub.batch
-                [ Sub.map TimelineMsg (Timeline.subscriptions model.timeline)
-                , Sub.map TimelineMsg (onNearBottom Timeline.NearBottom)
-                ]
+    Sub.batch
+        [ -- Update time every second for relative time display
+          Time.every 1000 GotTime
+        , case model.page of
+            Timeline ->
+                Sub.batch
+                    [ Sub.map TimelineMsg (Timeline.subscriptions model.timeline)
+                    , Sub.map TimelineMsg (onNearBottom Timeline.NearBottom)
+                    ]
 
-        _ ->
-            Sub.none
+            _ ->
+                Sub.none
+        ]
 
 
 footerView : Shared.Model -> Element Msg

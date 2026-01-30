@@ -14700,14 +14700,6 @@ var $author$project$Pages$Timeline$view = F2(
 					_List_fromArray(
 						[
 							A2(
-							$mdgriffith$elm_ui$Element$el,
-							_List_fromArray(
-								[
-									$mdgriffith$elm_ui$Element$htmlAttribute(
-									$elm$html$Html$Attributes$id('scroll-sentinel'))
-								]),
-							$mdgriffith$elm_ui$Element$none),
-							A2(
 							$mdgriffith$elm_ui$Element$column,
 							_List_fromArray(
 								[
@@ -14717,7 +14709,15 @@ var $author$project$Pages$Timeline$view = F2(
 							A2(
 								$elm$core$List$concatMap,
 								A4($author$project$Pages$Timeline$dayClusterSection, shared.zone, shared.now, theme, model.expandedClusters),
-								clustersByDay))
+								clustersByDay)),
+							A2(
+							$mdgriffith$elm_ui$Element$el,
+							_List_fromArray(
+								[
+									$mdgriffith$elm_ui$Element$htmlAttribute(
+									$elm$html$Html$Attributes$id('scroll-sentinel'))
+								]),
+							$mdgriffith$elm_ui$Element$none)
 						])))
 				]));
 	});
