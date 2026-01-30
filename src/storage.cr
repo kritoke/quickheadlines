@@ -982,6 +982,85 @@ class FeedCache
     end
   end
 
+  # Normalize pub_date values stored in the database.
+  #
+  # - Parses non-standard timestamp strings and rewrites them to
+  #   the canonical UTC format "%Y-%m-%d %H:%M:%S".
+  # - Leaves NULL pub_date values untouched (they are handled via
+  #   COALESCE in queries so they sort last).
+  #
+  # This is safe to run repeatedly and is useful for fixing legacy
+  # or imported feeds that stored dates in various formats.
+  def normalize_pub_dates
+    @mutex.synchronize do
+      STDERR.puts "[#{Time.local}] Normalizing pub_date values..."
+
+      # Collect id + pub_date values to process
+      rows = [] of {Int64, String?}
+      @db.query("SELECT id, pub_date FROM items WHERE pub_date IS NOT NULL") do |r|
+        r.each do
+          rows << { r.read(Int64), r.read(String?) }
+        end
+      end
+
+      updated = 0
+      rows.each do |id, raw|
+        next if raw.nil?
+        str = raw.not_nil!
+
+        # If already in canonical form, skip quickly
+        if str =~ /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/
+          next
+        end
+
+        parsed = nil of Time?
+
+        # Try a few common formats. If parsing fails, skip the row.
+        begin
+          begin
+            parsed = Time.parse(str, "%Y-%m-%d %H:%M:%S", Time::Location::UTC)
+          rescue
+          end
+
+          if !parsed
+            begin
+              parsed = Time.parse(str, "%Y-%m-%dT%H:%M:%S%z", Time::Location::UTC)
+            rescue
+            end
+          end
+
+          if !parsed
+            begin
+              parsed = Time.parse(str, "%Y-%m-%dT%H:%M:%SZ", Time::Location::UTC)
+            rescue
+            end
+          end
+
+          if !parsed
+            begin
+              parsed = Time.parse(str, "%a, %d %b %Y %H:%M:%S %z", Time::Location::UTC)
+            rescue
+            end
+          end
+        rescue
+          parsed = nil
+        end
+
+        if parsed
+          formatted = parsed.utc.to_s("%Y-%m-%d %H:%M:%S")
+          if formatted != str
+            @db.exec("UPDATE items SET pub_date = ? WHERE id = ?", formatted, id)
+            updated += 1
+          end
+        end
+      end
+
+      STDERR.puts "[#{Time.local}] Normalized #{updated} pub_date rows"
+    end
+  rescue ex
+    STDERR.puts "[#{Time.local}] Error normalizing pub_date: #{ex.message}"
+  end
+
   # ============================================
   # Story Grouping / Clustering Methods
   # ============================================
