@@ -1,4 +1,4 @@
-module Pages.Timeline exposing (Model, Msg(..), init, update, view, subscriptions)
+module Pages.Timeline exposing (Model, Msg(..), init, subscriptions, update, view)
 
 import Api exposing (Cluster, TimelineItem, clusterItemsFromTimeline, fetchTimeline)
 import Element exposing (..)
@@ -6,12 +6,12 @@ import Element.Background as Background
 import Element.Border as Border
 import Element.Font as Font
 import Element.Input as Input
-import Set exposing (Set)
 import Html.Attributes
 import Http
+import Set exposing (Set)
 import Shared exposing (Model, Msg(..), Theme(..))
-import Theme exposing (cardColor, errorColor, surfaceColor, textColor, mutedColor, borderColor, lumeOrange)
-import Time exposing (Posix, toDay, toMonth, toYear, Zone)
+import Theme exposing (borderColor, cardColor, errorColor, lumeOrange, mutedColor, surfaceColor, textColor)
+import Time exposing (Posix, Zone, toDay, toMonth, toYear)
 
 
 type alias Model =
@@ -57,6 +57,7 @@ update shared msg model =
             let
                 clusters =
                     clusterItemsFromTimeline response.items
+
                 -- Keep API order (items already sorted by pub_date DESC in backend)
                 sortedClusters =
                     clusters
@@ -162,20 +163,25 @@ view shared model =
         clustersByDay =
             groupClustersByDay shared.zone shared.now model.clusters
     in
-
-     column
-         [ width (fill |> maximum 1200)
-         , centerX
-         , height fill
-         , spacing 20
-         , padding paddingValue
-         , paddingXY paddingValue 60
-         , Background.color bg
-         , htmlAttribute (Html.Attributes.attribute "data-timeline-page" "true")
-         , htmlAttribute (Html.Attributes.class "auto-hide-scroll")
-         ]
+    column
+        [ width (fill |> maximum 1200)
+        , centerX
+        , height fill
+        , spacing 20
+        , padding paddingValue
+        , paddingXY paddingValue 60
+        , Background.color bg
+        , htmlAttribute (Html.Attributes.attribute "data-timeline-page" "true")
+        , htmlAttribute (Html.Attributes.class "auto-hide-scroll")
+        ]
         [ el
-            [ Font.size (if isMobile then 20 else 24)
+            [ Font.size
+                (if isMobile then
+                    20
+
+                 else
+                    24
+                )
             , Font.bold
             , Font.color txtColor
             ]
@@ -196,7 +202,7 @@ view shared model =
                 , Font.size 16
                 , Font.color errorColor
                 ]
-                 (text "Error loading timeline")
+                (text "Error loading timeline")
 
           else
             column
@@ -207,7 +213,7 @@ view shared model =
                     , spacing 16
                     ]
                     (List.concatMap (dayClusterSection shared.zone shared.now theme model.expandedClusters) clustersByDay)
-                 , el [ htmlAttribute (Html.Attributes.id "scroll-sentinel"), height (px 1), width fill ] (text "")
+                , el [ htmlAttribute (Html.Attributes.id "scroll-sentinel"), height (px 1), width fill ] (text "")
                 ]
         ]
 
@@ -252,7 +258,18 @@ groupClustersByDayHelp zone accum clusters =
             in
             case existing of
                 ( k, existingClusters ) :: _ ->
-                    groupClustersByDayHelp zone (List.map (\( ak, ac ) -> if ak == key then ( ak, cluster :: ac ) else ( ak, ac )) accum) rest
+                    groupClustersByDayHelp zone
+                        (List.map
+                            (\( ak, ac ) ->
+                                if ak == key then
+                                    ( ak, cluster :: ac )
+
+                                else
+                                    ( ak, ac )
+                            )
+                            accum
+                        )
+                        rest
 
                 [] ->
                     groupClustersByDayHelp zone (( key, [ cluster ] ) :: accum) rest
@@ -309,19 +326,23 @@ dayHeader zone now theme date =
         badgeBg =
             case theme of
                 Dark ->
-                    rgb255 49 46 129 -- Indigo 900
+                    rgb255 49 46 129
 
+                -- Indigo 900
                 Light ->
-                    rgb255 226 232 240 -- Slate 200
+                    rgb255 226 232 240
 
+        -- Slate 200
         badgeTxt =
             case theme of
                 Dark ->
-                    rgb255 224 242 254 -- Indigo 100
+                    rgb255 224 242 254
 
+                -- Indigo 100
                 Light ->
-                    rgb255 30 41 59 -- Slate 800
+                    rgb255 30 41 59
 
+        -- Slate 800
         headerText =
             if dateYear == nowYear && dateMonth == nowMonth && dateDay == nowDay then
                 "Today"
@@ -396,7 +417,8 @@ formatTime zone date =
 
         hour12 =
             let
-                h = modBy 12 hour
+                h =
+                    modBy 12 hour
             in
             if h == 0 then
                 12
@@ -480,19 +502,23 @@ clusterItem zone now theme expandedClusters cluster =
         timeBg =
             case theme of
                 Dark ->
-                    rgb255 31 41 55 -- Slate 800
+                    rgb255 31 41 55
 
+                -- Slate 800
                 Light ->
-                    rgb255 241 245 249 -- Slate 100
+                    rgb255 241 245 249
 
+        -- Slate 100
         timeTxt =
             case theme of
                 Dark ->
-                    rgb255 203 213 225 -- Slate 300
+                    rgb255 203 213 225
 
+                -- Slate 300
                 Light ->
-                    rgb255 51 65 85 -- Slate 700
+                    rgb255 51 65 85
 
+        -- Slate 700
         faviconImg =
             Maybe.map
                 (\faviconUrl ->
@@ -536,7 +562,7 @@ clusterItem zone now theme expandedClusters cluster =
                 , Font.center
                 ]
                 (text timeStr)
-        , row
+            , row
                 [ width fill
                 , spacing 8
                 , Element.alignTop
@@ -560,7 +586,15 @@ clusterItem zone now theme expandedClusters cluster =
                         , Font.semiBold
                         ]
                         { url = cluster.representative.link, label = text cluster.representative.title }
-                    , el [ paddingXY 8 4 ] (text (if cluster.count > 1 then ("↩ " ++ String.fromInt cluster.count) else ""))
+                    , el [ paddingXY 8 4 ]
+                        (text
+                            (if cluster.count > 1 then
+                                "↩ " ++ String.fromInt cluster.count
+
+                             else
+                                ""
+                            )
+                        )
                     ]
                 ]
             ]
@@ -594,53 +628,53 @@ clusterItem zone now theme expandedClusters cluster =
 
 clusterOtherItem : Posix -> Theme -> Api.ClusterItem -> Element Msg
 clusterOtherItem now theme item =
-     let
-         txtColor =
-             textColor theme
+    let
+        txtColor =
+            textColor theme
 
-         mutedTxt =
-             mutedColor theme
+        mutedTxt =
+            mutedColor theme
 
-         border =
-             borderColor theme
-     in
-     row
-         [ width fill
-         , spacing 8
-         , paddingEach { top = 4, bottom = 4, left = 0, right = 0 }
-         ]
-         [ Maybe.map
-             (\faviconUrl ->
-                 image
-                     [ width (px 12)
-                     , height (px 12)
-                     , Border.rounded 1
-                     , Background.color (rgb255 255 255 255)
-                     , padding 2
-                     ]
-                     { src = faviconUrl, description = "" }
-             )
-             item.favicon
-             |> Maybe.withDefault Element.none
-          , paragraph
-              [ Font.size 14
-              , Font.color txtColor
-              , Element.width fill
-              , htmlAttribute (Html.Attributes.style "line-height" "1.4")
-              , spacing 8
-              ]
-              [ el [ Font.size 12, Font.color mutedTxt ] (text item.feedTitle)
-              , el [ Font.size 12, Font.color mutedTxt, paddingXY 4 0 ] (text "•")
-              , link
-                  [ htmlAttribute (Html.Attributes.style "text-decoration" "none")
-                  , htmlAttribute (Html.Attributes.style "color" "inherit")
-                  , htmlAttribute (Html.Attributes.attribute "data-display-link" "true")
-                  , mouseOver [ Font.color (rgb255 37 99 235) ]
-                  , Font.medium
-                  ]
-                  { url = item.link, label = text item.title }
-              ]
-         ]
+        border =
+            borderColor theme
+    in
+    row
+        [ width fill
+        , spacing 8
+        , paddingEach { top = 4, bottom = 4, left = 0, right = 0 }
+        ]
+        [ Maybe.map
+            (\faviconUrl ->
+                image
+                    [ width (px 12)
+                    , height (px 12)
+                    , Border.rounded 1
+                    , Background.color (rgb255 255 255 255)
+                    , padding 2
+                    ]
+                    { src = faviconUrl, description = "" }
+            )
+            item.favicon
+            |> Maybe.withDefault Element.none
+        , paragraph
+            [ Font.size 14
+            , Font.color txtColor
+            , Element.width fill
+            , htmlAttribute (Html.Attributes.style "line-height" "1.4")
+            , spacing 8
+            ]
+            [ el [ Font.size 12, Font.color mutedTxt ] (text item.feedTitle)
+            , el [ Font.size 12, Font.color mutedTxt, paddingXY 4 0 ] (text "•")
+            , link
+                [ htmlAttribute (Html.Attributes.style "text-decoration" "none")
+                , htmlAttribute (Html.Attributes.style "color" "inherit")
+                , htmlAttribute (Html.Attributes.attribute "data-display-link" "true")
+                , mouseOver [ Font.color (rgb255 37 99 235) ]
+                , Font.medium
+                ]
+                { url = item.link, label = text item.title }
+            ]
+        ]
 
 
 relativeTime : Time.Posix -> Time.Zone -> Maybe Time.Posix -> String
