@@ -400,12 +400,14 @@ formatTime zone date =
 
         year =
             toYear zone date |> String.fromInt
+        totalSeconds =
+            Time.posixToMillis date // 1000
 
         hours =
-            Time.posixToMillis date // 1000 // 3600 % 24
+            Basics.modBy 24 (totalSeconds // 3600)
 
         minutes =
-            (Time.posixToMillis date // 1000 // 60) % 60
+            Basics.modBy 60 (totalSeconds // 60)
 
         hh = if hours < 10 then "0" ++ String.fromInt hours else String.fromInt hours
         mm = if minutes < 10 then "0" ++ String.fromInt minutes else String.fromInt minutes
@@ -455,45 +457,45 @@ monthToString month =
 
 clusterItem : Time.Zone -> Time.Posix -> Theme -> Set String -> Cluster -> Element Msg
 clusterItem zone now theme expandedClusters cluster =
-     let
-          txtColor =
-              textColor theme
+    let
+        txtColor =
+            textColor theme
 
-          mutedTxt =
-              mutedColor theme
+        mutedTxt =
+            mutedColor theme
 
-          border =
-              borderColor theme
+        border =
+            borderColor theme
 
-          isExpanded =
-              Set.member cluster.id expandedClusters
+        isExpanded =
+            Set.member cluster.id expandedClusters
 
-          clusterCount =
-              cluster.count
+        clusterCount =
+            cluster.count
 
-           -- Use the actual timestamp for the timeline view column, but keep relative times
-           -- for feedboxes elsewhere. The timeline should show the absolute time.
-           timeStr =
-               case cluster.representative.pubDate of
-                   Just pd ->
-                       formatTime zone pd
+        -- Use the actual timestamp for the timeline view column, but keep relative times
+        -- for feedboxes elsewhere. The timeline should show the absolute time.
+        timeStr =
+            case cluster.representative.pubDate of
+                Just pd ->
+                    formatTime zone pd
 
-                   Nothing ->
-                       "unknown"
+                Nothing ->
+                    "unknown"
 
-          faviconImg =
-              Maybe.map
-                  (\faviconUrl ->
-                      image
-                          [ width (px 12)
-                          , height (px 12)
-                          , Border.rounded 1
-                          ]
-                          { src = faviconUrl, description = "favicon" }
-                  )
-                  cluster.representative.favicon
-                  |> Maybe.withDefault Element.none
-      in
+        faviconImg =
+            Maybe.map
+                (\faviconUrl ->
+                    image
+                        [ width (px 12)
+                        , height (px 12)
+                        , Border.rounded 1
+                        ]
+                        { src = faviconUrl, description = "favicon" }
+                )
+                cluster.representative.favicon
+                |> Maybe.withDefault Element.none
+    in
       column
          [ width fill
          ]
