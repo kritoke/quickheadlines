@@ -220,14 +220,15 @@
 
       try {
          console.log('Initializing Elm...');
-         var app = Elm.Main.init({
-           node: appElement,
-           flags: {
-             width: window.innerWidth,
-             height: window.innerHeight,
-             prefersDark: prefersDark
-           }
-         });
+          var app = Elm.Main.init({
+            node: appElement,
+            flags: {
+              width: window.innerWidth,
+              height: window.innerHeight,
+              prefersDark: prefersDark,
+              timestamp: Date.now()
+            }
+          });
          console.log('Elm initialized successfully');
 
           if (app.ports && app.ports.saveTheme) {

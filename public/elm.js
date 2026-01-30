@@ -6537,7 +6537,7 @@ var $author$project$Application$init = F3(
 			flags.width,
 			flags.height,
 			flags.prefersDark,
-			$elm$time$Time$millisToPosix(0),
+			$elm$time$Time$millisToPosix(flags.timestamp * 1000),
 			zone);
 		var page = A2($elm$core$String$contains, '/timeline', url.path) ? $author$project$Application$Timeline : $author$project$Application$Home;
 		var _v0 = $author$project$Pages$Timeline$init(shared);
@@ -14890,15 +14890,20 @@ _Platform_export({'Main':{'init':$author$project$Main$main(
 		function (width) {
 			return A2(
 				$elm$json$Json$Decode$andThen,
-				function (prefersDark) {
+				function (timestamp) {
 					return A2(
 						$elm$json$Json$Decode$andThen,
-						function (height) {
-							return $elm$json$Json$Decode$succeed(
-								{height: height, prefersDark: prefersDark, width: width});
+						function (prefersDark) {
+							return A2(
+								$elm$json$Json$Decode$andThen,
+								function (height) {
+									return $elm$json$Json$Decode$succeed(
+										{height: height, prefersDark: prefersDark, timestamp: timestamp, width: width});
+								},
+								A2($elm$json$Json$Decode$field, 'height', $elm$json$Json$Decode$int));
 						},
-						A2($elm$json$Json$Decode$field, 'height', $elm$json$Json$Decode$int));
+						A2($elm$json$Json$Decode$field, 'prefersDark', $elm$json$Json$Decode$bool));
 				},
-				A2($elm$json$Json$Decode$field, 'prefersDark', $elm$json$Json$Decode$bool));
+				A2($elm$json$Json$Decode$field, 'timestamp', $elm$json$Json$Decode$int));
 		},
 		A2($elm$json$Json$Decode$field, 'width', $elm$json$Json$Decode$int)))(0)}});}(this));

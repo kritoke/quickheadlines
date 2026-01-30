@@ -30,6 +30,7 @@ type alias Flags =
     { width : Int
     , height : Int
     , prefersDark : Bool
+    , timestamp : Int
     }
 
 
@@ -66,7 +67,7 @@ init flags url key =
             Time.utc
 
         shared =
-            Shared.init flags.width flags.height flags.prefersDark (Time.millisToPosix 0) zone
+            Shared.init flags.width flags.height flags.prefersDark (Time.millisToPosix (flags.timestamp * 1000)) zone
 
         ( homeModel, homeCmd ) =
             Home.init shared
