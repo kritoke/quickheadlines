@@ -1,0 +1,24 @@
+# openspec/config.yaml
+project_name: quickheadlines
+schema: spec-driven
+
+# 🔗 LINK TO THE HUB
+context:
+  - "Global Constitution: /workspaces/aiworkflow/openspec/specs/00_global_constitution.md"
+  - "Infrastructure Spec: /workspaces/aiworkflow/openspec/specs/01_playwright_nix.md"
+
+# 🛠️ PROJECT RULES
+rules:
+  proposal:
+    - "Verify the change adheres to the Athena DTO standards in openspec/specs/00_constitution.md"
+    - "Check change against openspec/specs/00_constitution.md"
+    - "Cross-reference with Global Constitution for FreeBSD/Nix compatibility."
+    - "Check for 'REF-PROTECT' tags in src/models."
+  apply:
+    - "Run 'nix develop --command crystal spec' after changes."
+    - "Verify 'nix develop --command elm-land build' if frontend is touched."
+
+# 🤖 TOOLING
+tools:
+  - opencode
+  - cursor

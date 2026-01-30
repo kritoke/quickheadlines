@@ -5,7 +5,7 @@
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
   };
 
-  outputs = { self, nixpkgs }:
+  outputs = { self, nixpkgs, openspec }:
     let
       system = "aarch64-linux";
       pkgs = nixpkgs.legacyPackages.${system};
@@ -30,6 +30,7 @@
             libevent zlib pcre2 gmp boehmgc file
             elmPackages.elm elmPackages.elm-format
             git curl gnumake gcc
+            openspec.packages.${system}.default
           ];
 
           shellHook = ''
@@ -42,13 +43,20 @@
             export PATH="$PWD/bin:$PATH"
             export HUB_ROOT="/workspaces"
             export PATH="$PATH:$HUB_ROOT/aiworkflow/bin:$HOME/go/bin:$HOME/.local/bin"
-            export BD_SOCKET="/workspaces/.beads.sock"
             export SSH_AUTH_SOCK="/workspaces/.ssh-auth.sock"
 
-            [ -f "/workspaces/aiworkflow/bin/env.sh" ] && source /workspaces/aiworkflow/bin/env.sh
+            # [ -f "/workspaces/aiworkflow/bin/env.sh" ] && source /workspaces/aiworkflow/bin/env.sh
 
             export APP_ENV=development
             echo "🚀 Quickheadlines Loaded with Crystal 1.19.1"
+
+            # 3. Add the alias to prevent the 'directory collision' error
+            alias openspec='command openspec'
+            
+            # 4. Explicitly export the path to ensure AI tools find it
+            export PATH="${openspec.packages.${system}.default}/bin:$PATH"
+            
+            echo "🚀 Quickheadlines DevShell Active | OpenSpec $(openspec --version)"
           '';
         };
       };
