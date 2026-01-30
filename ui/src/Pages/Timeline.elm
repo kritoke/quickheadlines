@@ -149,7 +149,7 @@ view shared model =
                 16
 
             else
-                120
+                40
 
         bg =
             surfaceColor theme
@@ -174,6 +174,18 @@ view shared model =
         , htmlAttribute (Html.Attributes.attribute "data-timeline-page" "true")
         , htmlAttribute (Html.Attributes.class "auto-hide-scroll")
         ]
+
+
+-- Helper to render a favicon at a consistent size and alignment
+viewIcon : String -> String -> Element msg
+viewIcon url siteName =
+    image
+        [ width (px 16)
+        , height (px 16)
+        , Border.rounded 2
+        , centerY
+        ]
+        { src = url, description = siteName }
         [ el
             [ Font.size
                 (if isMobile then
@@ -522,15 +534,7 @@ clusterItem zone now theme expandedClusters cluster =
         faviconImg =
             Maybe.map
                 (\faviconUrl ->
-                    image
-                        [ width (px 12)
-                        , height (px 12)
-                        , Border.rounded 1
-                        , Element.alignTop
-                        , Background.color (rgb255 255 255 255)
-                        , padding 2
-                        ]
-                        { src = faviconUrl, description = "" }
+                        viewIcon faviconUrl cluster.representative.feedTitle
                 )
                 cluster.representative.favicon
                 |> Maybe.withDefault Element.none
@@ -555,7 +559,7 @@ clusterItem zone now theme expandedClusters cluster =
                 , Font.size 12
                 , Font.color timeTxt
                 , Font.family [ Font.monospace ]
-                , Element.alignTop
+                , centerY
                 , paddingXY 8 4
                 , Background.color timeBg
                 , Border.rounded 6
@@ -565,38 +569,36 @@ clusterItem zone now theme expandedClusters cluster =
             , row
                 [ width fill
                 , spacing 8
-                , Element.alignTop
+                , centerY
+                , Font.size 15
+                , Font.color txtColor
+                , htmlAttribute (Html.Attributes.style "word-break" "break-word")
+                , htmlAttribute (Html.Attributes.style "overflow-wrap" "break-word")
                 ]
-                [ paragraph
-                    [ Font.size 15
-                    , Font.color txtColor
-                    , htmlAttribute (Html.Attributes.style "word-break" "break-word")
-                    , htmlAttribute (Html.Attributes.style "overflow-wrap" "break-word")
-                    , width fill
-                    , spacing 8
+                [ -- group favicon + feed title together so they never stack
+                  row [ spacing 8, centerY, htmlAttribute (Html.Attributes.style "white-space" "nowrap") ]
+                      [ el [ centerY, paddingXY 0 4 ] faviconImg
+                      , el [ Font.size 13, Font.color mutedTxt ] (text cluster.representative.feedTitle)
+                      , el [ Font.size 13, Font.color mutedTxt, paddingXY 4 0 ] (text "•")
+                      ]
+                , link
+                    [ Font.size 13
+                    , htmlAttribute (Html.Attributes.style "text-decoration" "none")
+                    , htmlAttribute (Html.Attributes.style "color" "inherit")
+                    , htmlAttribute (Html.Attributes.attribute "data-display-link" "true")
+                    , mouseOver [ Font.color (rgb255 37 99 235) ]
+                    , Font.semiBold
                     ]
-                    [ el [ Element.htmlAttribute (Html.Attributes.style "display" "flex;align-items:center"), paddingXY 0 6 ] faviconImg
-                    , el [ Font.size 13, Font.color mutedTxt ] (text cluster.representative.feedTitle)
-                    , el [ Font.size 13, Font.color mutedTxt, paddingXY 4 0 ] (text "•")
-                    , link
-                        [ Font.size 13
-                        , htmlAttribute (Html.Attributes.style "text-decoration" "none")
-                        , htmlAttribute (Html.Attributes.style "color" "inherit")
-                        , htmlAttribute (Html.Attributes.attribute "data-display-link" "true")
-                        , mouseOver [ Font.color (rgb255 37 99 235) ]
-                        , Font.semiBold
-                        ]
-                        { url = cluster.representative.link, label = text cluster.representative.title }
-                    , el [ paddingXY 8 4 ]
-                        (text
-                            (if cluster.count > 1 then
-                                "↩ " ++ String.fromInt cluster.count
+                    { url = cluster.representative.link, label = text cluster.representative.title }
+                , el [ paddingXY 8 4 ]
+                    (text
+                        (if cluster.count > 1 then
+                            "↩ " ++ String.fromInt cluster.count
 
-                             else
-                                ""
-                            )
+                         else
+                            ""
                         )
-                    ]
+                    )
                 ]
             ]
         , if clusterCount > 1 then
@@ -651,17 +653,10 @@ clusterOtherItem now theme item =
             , htmlAttribute (Html.Attributes.style "line-height" "1.4")
             , spacing 8
             ]
-            [ el [ Element.htmlAttribute (Html.Attributes.style "display:flex;align-items:center"), paddingXY 0 6 ]
+            [ el [ centerY, paddingXY 0 4 ]
                 (Maybe.map
                     (\faviconUrl ->
-                        image
-                            [ width (px 12)
-                            , height (px 12)
-                            , Border.rounded 1
-                            , Background.color (rgb255 255 255 255)
-                            , padding 2
-                            ]
-                            { src = faviconUrl, description = "" }
+                        viewIcon faviconUrl item.feedTitle
                     )
                     item.favicon
                     |> Maybe.withDefault Element.none
