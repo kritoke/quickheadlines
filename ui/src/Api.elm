@@ -78,24 +78,32 @@ type alias Cluster =
 
 clusterItemsFromTimeline : List TimelineItem -> List Cluster
 clusterItemsFromTimeline items =
+    -- Build groups while preserving the original item order.
+    -- Items without a cluster_id become their own single-item group (using the item's id as key).
     let
-        clusterIds =
-            List.filterMap .clusterId items
+        addItem acc item =
+            let
+                key =
+                    case item.clusterId of
+                        Just cid ->
+                            cid
 
-        uniqueClusterIds =
-            List.foldr
-                (\cid acc ->
-                    if List.member cid acc then
-                        acc
+                        Nothing ->
+                            -- Use the item id as a unique cluster key for unclustered items
+                            item.id
 
-                    else
-                        cid :: acc
-                )
-                []
-                clusterIds
+                existing = List.filter (\(k, _) -> k == key) acc
+            in
+            case existing of
+                [] ->
+                    -- Append new group at the end to preserve order
+                    acc ++ [ ( key, [ item ] ) ]
 
-        grouped =
-            List.map (\cid -> ( cid, List.filter (\i -> i.clusterId == Just cid) items )) uniqueClusterIds
+                _ ->
+                    -- Add item to existing group's end
+                    List.map (\(k, v) -> if k == key then ( k, v ++ [ item ] ) else ( k, v )) acc
+
+        grouped = List.foldl addItem [] items
     in
     List.map buildCluster grouped
 
