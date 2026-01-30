@@ -217,7 +217,7 @@ view shared model =
                     , spacing 16
                     ]
                     (List.concatMap (dayClusterSection shared.zone shared.now theme model.expandedClusters) clustersByDay)
-                , el [ htmlAttribute (Html.Attributes.id "scroll-sentinel") ] Element.none
+                , el [ htmlAttribute (Html.Attributes.id "scroll-sentinel"), height (px 1) ] Element.none
                 ]
         ]
 
@@ -290,7 +290,7 @@ dayClusterSection zone now theme expandedClusters dayGroup =
         [ width fill
         , spacing 8
         ]
-        (List.map (clusterItem now theme expandedClusters) dayGroup.clusters)
+        (List.map (clusterItem zone now theme expandedClusters) dayGroup.clusters)
     ]
 
 
@@ -415,8 +415,8 @@ monthToString month =
             "December"
 
 
-clusterItem : Posix -> Theme -> Set String -> Cluster -> Element Msg
-clusterItem now theme expandedClusters cluster =
+clusterItem : Time.Zone -> Time.Posix -> Theme -> Set String -> Cluster -> Element Msg
+clusterItem zone now theme expandedClusters cluster =
     let
         txtColor =
             textColor theme
@@ -481,7 +481,7 @@ clusterItem now theme expandedClusters cluster =
                 , Element.alignTop
                 , Element.paddingXY 0 2
                 ]
-                (text (relativeTime now cluster.representative.pubDate))
+                (text (relativeTime zone now cluster.representative.pubDate))
             ]
         , paragraph
             [ Font.size 15
@@ -575,11 +575,11 @@ clusterOtherItem now theme item =
         ]
 
 
-relativeTime : Posix -> Maybe Posix -> String
-relativeTime now maybePubDate =
+relativeTime : Time.Zone -> Time.Posix -> Maybe Time.Posix -> String
+relativeTime zone now maybePubDate =
     case maybePubDate of
         Nothing ->
-            ""
+            "unknown"
 
         Just pubDate ->
             let
@@ -602,7 +602,7 @@ relativeTime now maybePubDate =
                     diffHours // 24
             in
             if diffMinutes < 1 then
-                "now"
+                "0m"
 
             else if diffMinutes < 60 then
                 String.fromInt diffMinutes ++ "m"
@@ -614,7 +614,7 @@ relativeTime now maybePubDate =
                 String.fromInt diffDays ++ "d"
 
             else
-                formatDate Time.utc (Time.millisToPosix pubMillis)
+                formatDate zone (Time.millisToPosix pubMillis)
 
 
 subscriptions : Model -> Sub Msg
