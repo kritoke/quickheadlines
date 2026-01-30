@@ -567,19 +567,20 @@ clusterItem zone now theme expandedClusters cluster =
                 , spacing 8
                 , Element.alignTop
                 ]
-                [ el [ Element.htmlAttribute (Html.Attributes.style "display" "flex"), Element.htmlAttribute (Html.Attributes.style "align-items" "center") ] faviconImg
-                , paragraph
-                    [ Font.size 16
+                [ paragraph
+                    [ Font.size 15
                     , Font.color txtColor
                     , htmlAttribute (Html.Attributes.style "word-break" "break-word")
                     , htmlAttribute (Html.Attributes.style "overflow-wrap" "break-word")
                     , width fill
                     , spacing 8
                     ]
-                    [ el [ Font.size 14, Font.color mutedTxt ] (text cluster.representative.feedTitle)
-                    , el [ Font.size 14, Font.color mutedTxt, paddingXY 4 0 ] (text "•")
+                    [ el [ Element.htmlAttribute (Html.Attributes.style "display" "flex;align-items:center"), paddingXY 0 6 ] faviconImg
+                    , el [ Font.size 13, Font.color mutedTxt ] (text cluster.representative.feedTitle)
+                    , el [ Font.size 13, Font.color mutedTxt, paddingXY 4 0 ] (text "•")
                     , link
-                        [ htmlAttribute (Html.Attributes.style "text-decoration" "none")
+                        [ Font.size 13
+                        , htmlAttribute (Html.Attributes.style "text-decoration" "none")
                         , htmlAttribute (Html.Attributes.style "color" "inherit")
                         , htmlAttribute (Html.Attributes.attribute "data-display-link" "true")
                         , mouseOver [ Font.color (rgb255 37 99 235) ]
@@ -643,30 +644,33 @@ clusterOtherItem now theme item =
         , spacing 8
         , paddingEach { top = 4, bottom = 4, left = 0, right = 0 }
         ]
-        [ Maybe.map
-            (\faviconUrl ->
-                image
-                    [ width (px 12)
-                    , height (px 12)
-                    , Border.rounded 1
-                    , Background.color (rgb255 255 255 255)
-                    , padding 2
-                    ]
-                    { src = faviconUrl, description = "" }
-            )
-            item.favicon
-            |> Maybe.withDefault Element.none
-        , paragraph
+        [ paragraph
             [ Font.size 14
             , Font.color txtColor
             , Element.width fill
             , htmlAttribute (Html.Attributes.style "line-height" "1.4")
             , spacing 8
             ]
-            [ el [ Font.size 12, Font.color mutedTxt ] (text item.feedTitle)
+            [ el [ Element.htmlAttribute (Html.Attributes.style "display:flex;align-items:center"), paddingXY 0 6 ]
+                (Maybe.map
+                    (\faviconUrl ->
+                        image
+                            [ width (px 12)
+                            , height (px 12)
+                            , Border.rounded 1
+                            , Background.color (rgb255 255 255 255)
+                            , padding 2
+                            ]
+                            { src = faviconUrl, description = "" }
+                    )
+                    item.favicon
+                    |> Maybe.withDefault Element.none
+                )
+            , el [ Font.size 12, Font.color mutedTxt ] (text item.feedTitle)
             , el [ Font.size 12, Font.color mutedTxt, paddingXY 4 0 ] (text "•")
             , link
-                [ htmlAttribute (Html.Attributes.style "text-decoration" "none")
+                [ Font.size 13
+                , htmlAttribute (Html.Attributes.style "text-decoration" "none")
                 , htmlAttribute (Html.Attributes.style "color" "inherit")
                 , htmlAttribute (Html.Attributes.attribute "data-display-link" "true")
                 , mouseOver [ Font.color (rgb255 37 99 235) ]

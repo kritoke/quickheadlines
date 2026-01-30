@@ -13886,8 +13886,8 @@ var $author$project$Theme$textColor = function (theme) {
 		return A3($mdgriffith$elm_ui$Element$rgb255, 17, 24, 39);
 	}
 };
-var $author$project$Pages$Home_$feedItem = F4(
-	function (now, theme, feedTitle, item) {
+var $author$project$Pages$Home_$feedItem = F3(
+	function (now, theme, item) {
 		var txtColor = $author$project$Theme$textColor(theme);
 		var mutedTxt = $author$project$Theme$mutedColor(theme);
 		return A2(
@@ -13933,35 +13933,17 @@ var $author$project$Pages$Home_$feedItem = F4(
 					_List_fromArray(
 						[
 							A2(
-							$mdgriffith$elm_ui$Element$row,
+							$mdgriffith$elm_ui$Element$link,
 							_List_fromArray(
 								[
-									$mdgriffith$elm_ui$Element$spacing(6)
+									$mdgriffith$elm_ui$Element$Font$color(txtColor),
+									$mdgriffith$elm_ui$Element$htmlAttribute(
+									A2($elm$html$Html$Attributes$style, 'text-decoration', 'none'))
 								]),
-							_List_fromArray(
-								[
-									A2(
-									$mdgriffith$elm_ui$Element$el,
-									_List_fromArray(
-										[
-											$mdgriffith$elm_ui$Element$Font$size(13),
-											$mdgriffith$elm_ui$Element$Font$color(mutedTxt),
-											$mdgriffith$elm_ui$Element$centerY
-										]),
-									$mdgriffith$elm_ui$Element$text(feedTitle + ' · ')),
-									A2(
-									$mdgriffith$elm_ui$Element$link,
-									_List_fromArray(
-										[
-											$mdgriffith$elm_ui$Element$Font$color(txtColor),
-											$mdgriffith$elm_ui$Element$htmlAttribute(
-											A2($elm$html$Html$Attributes$style, 'text-decoration', 'none'))
-										]),
-									{
-										label: $mdgriffith$elm_ui$Element$text(item.title),
-										url: item.link
-									})
-								]))
+							{
+								label: $mdgriffith$elm_ui$Element$text(item.title),
+								url: item.link
+							})
 						])),
 					A2(
 					$mdgriffith$elm_ui$Element$el,
@@ -14070,7 +14052,7 @@ var $author$project$Pages$Home_$feedCard = F4(
 						scrollAttributes),
 					A2(
 						$elm$core$List$map,
-						A3($author$project$Pages$Home_$feedItem, now, theme, feed.title),
+						A2($author$project$Pages$Home_$feedItem, now, theme),
 						A2(
 							$elm$core$List$take,
 							15,
