@@ -14326,7 +14326,11 @@ var $author$project$Pages$Timeline$clusterOtherItem = F3(
 								[
 									$mdgriffith$elm_ui$Element$Font$color(txtColor),
 									$mdgriffith$elm_ui$Element$htmlAttribute(
-									A2($elm$html$Html$Attributes$style, 'text-decoration', 'none'))
+									A2($elm$html$Html$Attributes$style, 'text-decoration', 'none')),
+									$mdgriffith$elm_ui$Element$htmlAttribute(
+									A2($elm$html$Html$Attributes$style, 'color', 'inherit')),
+									$mdgriffith$elm_ui$Element$htmlAttribute(
+									A2($elm$html$Html$Attributes$attribute, 'data-display-link', 'true'))
 								]),
 							{
 								label: $mdgriffith$elm_ui$Element$text(item.title),
@@ -14491,7 +14495,11 @@ var $author$project$Pages$Timeline$clusterItem = F5(
 								[
 									$mdgriffith$elm_ui$Element$Font$color(txtColor),
 									$mdgriffith$elm_ui$Element$htmlAttribute(
-									A2($elm$html$Html$Attributes$style, 'text-decoration', 'none'))
+									A2($elm$html$Html$Attributes$style, 'text-decoration', 'none')),
+									$mdgriffith$elm_ui$Element$htmlAttribute(
+									A2($elm$html$Html$Attributes$style, 'color', 'inherit')),
+									$mdgriffith$elm_ui$Element$htmlAttribute(
+									A2($elm$html$Html$Attributes$attribute, 'data-display-link', 'true'))
 								]),
 							{
 								label: $mdgriffith$elm_ui$Element$text(cluster.representative.title),

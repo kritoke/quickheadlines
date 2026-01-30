@@ -490,13 +490,15 @@ clusterItem zone now theme expandedClusters cluster =
             , htmlAttribute (Html.Attributes.style "word-break" "break-word")
             , htmlAttribute (Html.Attributes.style "overflow-wrap" "break-word")
             , width fill
-            ]
-            [ link
-                [ Font.color txtColor
-                , htmlAttribute (Html.Attributes.style "text-decoration" "none")
-                ]
-                { url = cluster.representative.link, label = text cluster.representative.title }
-            ]
+             ]
+             [ link
+                 [ Font.color txtColor
+                 , htmlAttribute (Html.Attributes.style "text-decoration" "none")
+                 , htmlAttribute (Html.Attributes.style "color" "inherit")
+                 , htmlAttribute (Html.Attributes.attribute "data-display-link" "true")
+                 ]
+                 { url = cluster.representative.link, label = text cluster.representative.title }
+             ]
         , if clusterCount > 1 && not isExpanded then
             Input.button
                 [ Font.size 12
@@ -562,17 +564,19 @@ clusterOtherItem now theme item =
             )
             item.favicon
             |> Maybe.withDefault Element.none
-        , paragraph
-            [ Font.size 12
-            , Element.width fill
-            , htmlAttribute (Html.Attributes.style "line-height" "1.3")
-            ]
-            [ link
-                [ Font.color txtColor
-                , htmlAttribute (Html.Attributes.style "text-decoration" "none")
-                ]
-                { url = item.link, label = text item.title }
-            ]
+         , paragraph
+             [ Font.size 12
+             , Element.width fill
+             , htmlAttribute (Html.Attributes.style "line-height" "1.3")
+             ]
+             [ link
+                 [ Font.color txtColor
+                 , htmlAttribute (Html.Attributes.style "text-decoration" "none")
+                 , htmlAttribute (Html.Attributes.style "color" "inherit")
+                 , htmlAttribute (Html.Attributes.attribute "data-display-link" "true")
+                 ]
+                 { url = item.link, label = text item.title }
+             ]
         ]
 
 
