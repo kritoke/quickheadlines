@@ -8,6 +8,7 @@ import Element.Border as Border
 import Element.Font as Font
 import Element.Input as Input
 import Html exposing (Html)
+import Html.Attributes
 import Layouts.Shared as Layout
 import Pages.Home_ as Home
 import Pages.Timeline as Timeline
@@ -326,13 +327,21 @@ themeToggle model =
         theme =
             model.shared.theme
 
+        icon =
+            case model.shared.theme of
+                Shared.Dark ->
+                    "☀"
+
+                Shared.Light ->
+                    "☾"
+
         label =
             case model.shared.theme of
                 Shared.Dark ->
-                    "☀ Light"
+                    "Switch to Light"
 
                 Shared.Light ->
-                    "☾ Dark"
+                    "Switch to Dark"
 
         bg =
             case theme of
@@ -345,12 +354,13 @@ themeToggle model =
     Input.button
         [ Background.color bg
         , Font.color lumeOrange
-        , Font.size 14
-        , Element.paddingXY 12 8
+        , Font.size 16
+        , Element.paddingXY 10 8
         , Border.rounded 6
+        , Element.htmlAttribute (Html.Attributes.title label)
         ]
         { onPress = Just (SharedMsg ToggleTheme)
-        , label = Element.text label
+        , label = Element.text icon
         }
 
 

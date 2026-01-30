@@ -12530,14 +12530,24 @@ var $mdgriffith$elm_ui$Element$Input$button = F2(
 				_List_fromArray(
 					[label])));
 	});
+var $mdgriffith$elm_ui$Element$htmlAttribute = $mdgriffith$elm_ui$Internal$Model$Attr;
+var $elm$html$Html$Attributes$title = $elm$html$Html$Attributes$stringProperty('title');
 var $author$project$Application$themeToggle = function (model) {
 	var theme = model.shared.theme;
 	var label = function () {
+		var _v2 = model.shared.theme;
+		if (_v2.$ === 'Dark') {
+			return 'Switch to Light';
+		} else {
+			return 'Switch to Dark';
+		}
+	}();
+	var icon = function () {
 		var _v1 = model.shared.theme;
 		if (_v1.$ === 'Dark') {
-			return '☀ Light';
+			return '☀';
 		} else {
-			return '☾ Dark';
+			return '☾';
 		}
 	}();
 	var bg = function () {
@@ -12553,12 +12563,14 @@ var $author$project$Application$themeToggle = function (model) {
 			[
 				$mdgriffith$elm_ui$Element$Background$color(bg),
 				$mdgriffith$elm_ui$Element$Font$color($author$project$Theme$lumeOrange),
-				$mdgriffith$elm_ui$Element$Font$size(14),
-				A2($mdgriffith$elm_ui$Element$paddingXY, 12, 8),
-				$mdgriffith$elm_ui$Element$Border$rounded(6)
+				$mdgriffith$elm_ui$Element$Font$size(16),
+				A2($mdgriffith$elm_ui$Element$paddingXY, 10, 8),
+				$mdgriffith$elm_ui$Element$Border$rounded(6),
+				$mdgriffith$elm_ui$Element$htmlAttribute(
+				$elm$html$Html$Attributes$title(label))
 			]),
 		{
-			label: $mdgriffith$elm_ui$Element$text(label),
+			label: $mdgriffith$elm_ui$Element$text(icon),
 			onPress: $elm$core$Maybe$Just(
 				$author$project$Application$SharedMsg($author$project$Shared$ToggleTheme))
 		});
@@ -13049,7 +13061,6 @@ var $mdgriffith$elm_ui$Element$el = F2(
 				_List_fromArray(
 					[child])));
 	});
-var $mdgriffith$elm_ui$Element$htmlAttribute = $mdgriffith$elm_ui$Internal$Model$Attr;
 var $elm$html$Html$Attributes$id = $elm$html$Html$Attributes$stringProperty('id');
 var $elm$virtual_dom$VirtualDom$style = _VirtualDom_style;
 var $elm$html$Html$Attributes$style = $elm$virtual_dom$VirtualDom$style;
