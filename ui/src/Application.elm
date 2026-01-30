@@ -80,7 +80,8 @@ init flags url key =
     in
     ( Model key url page shared homeModel timelineModel
     , Cmd.batch
-        [ Cmd.map HomeMsg homeCmd
+        [ Task.perform GotTime Time.now
+        , Cmd.map HomeMsg homeCmd
         , Cmd.map TimelineMsg timelineCmd
         ]
     )

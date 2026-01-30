@@ -31,9 +31,22 @@
       color: inherit !important;
     }
     [data-timeline-item="true"] a {
-      color: inherit !important;
-      text-decoration: underline !important;
-    }
+       color: inherit !important;
+       text-decoration: underline !important;
+     }
+     /* Ensure links in timeline are visible - override any default browser styles */
+     [data-timeline-page="true"] a {
+       color: inherit !important;
+     }
+     [data-timeline-page="true"] a:visited {
+       color: inherit !important;
+     }
+     [data-timeline-page="true"] a:hover {
+       color: inherit !important;
+     }
+     [data-timeline-page="true"] a:active {
+       color: inherit !important;
+     }
     [data-display-link="true"] {
       color: inherit !important;
     }

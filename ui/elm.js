@@ -14301,10 +14301,10 @@ var $author$project$Pages$Timeline$formatDate = F2(
 			A2($elm$time$Time$toDay, zone, date));
 		return month + (' ' + (day + (', ' + year)));
 	});
-var $author$project$Pages$Timeline$relativeTime = F2(
-	function (now, maybePubDate) {
+var $author$project$Pages$Timeline$relativeTime = F3(
+	function (zone, now, maybePubDate) {
 		if (maybePubDate.$ === 'Nothing') {
-			return '';
+			return 'unknown';
 		} else {
 			var pubDate = maybePubDate.a;
 			var pubMillis = $elm$time$Time$posixToMillis(pubDate);
@@ -14313,14 +14313,14 @@ var $author$project$Pages$Timeline$relativeTime = F2(
 			var diffMinutes = (diffMillis / 60000) | 0;
 			var diffHours = (diffMinutes / 60) | 0;
 			var diffDays = (diffHours / 24) | 0;
-			return (diffMinutes < 1) ? 'now' : ((diffMinutes < 60) ? ($elm$core$String$fromInt(diffMinutes) + 'm') : ((diffHours < 24) ? ($elm$core$String$fromInt(diffHours) + 'h') : ((diffDays < 7) ? ($elm$core$String$fromInt(diffDays) + 'd') : A2(
+			return (diffMinutes < 1) ? '0m' : ((diffMinutes < 60) ? ($elm$core$String$fromInt(diffMinutes) + 'm') : ((diffHours < 24) ? ($elm$core$String$fromInt(diffHours) + 'h') : ((diffDays < 7) ? ($elm$core$String$fromInt(diffDays) + 'd') : A2(
 				$author$project$Pages$Timeline$formatDate,
-				$elm$time$Time$utc,
+				zone,
 				$elm$time$Time$millisToPosix(pubMillis)))));
 		}
 	});
-var $author$project$Pages$Timeline$clusterItem = F4(
-	function (now, theme, expandedClusters, cluster) {
+var $author$project$Pages$Timeline$clusterItem = F5(
+	function (zone, now, theme, expandedClusters, cluster) {
 		var txtColor = $author$project$Theme$textColor(theme);
 		var mutedTxt = $author$project$Theme$mutedColor(theme);
 		var isExpanded = A2($elm$core$Set$member, cluster.id, expandedClusters);
@@ -14392,7 +14392,7 @@ var $author$project$Pages$Timeline$clusterItem = F4(
 									A2($mdgriffith$elm_ui$Element$paddingXY, 0, 2)
 								]),
 							$mdgriffith$elm_ui$Element$text(
-								A2($author$project$Pages$Timeline$relativeTime, now, cluster.representative.pubDate)))
+								A3($author$project$Pages$Timeline$relativeTime, zone, now, cluster.representative.pubDate)))
 						])),
 					A2(
 					$mdgriffith$elm_ui$Element$paragraph,
@@ -14539,7 +14539,7 @@ var $author$project$Pages$Timeline$dayClusterSection = F5(
 					]),
 				A2(
 					$elm$core$List$map,
-					A3($author$project$Pages$Timeline$clusterItem, now, theme, expandedClusters),
+					A4($author$project$Pages$Timeline$clusterItem, zone, now, theme, expandedClusters),
 					dayGroup.clusters))
 			]);
 	});
@@ -14715,7 +14715,9 @@ var $author$project$Pages$Timeline$view = F2(
 							_List_fromArray(
 								[
 									$mdgriffith$elm_ui$Element$htmlAttribute(
-									$elm$html$Html$Attributes$id('scroll-sentinel'))
+									$elm$html$Html$Attributes$id('scroll-sentinel')),
+									$mdgriffith$elm_ui$Element$height(
+									$mdgriffith$elm_ui$Element$px(1))
 								]),
 							$mdgriffith$elm_ui$Element$none)
 						])))

@@ -481,7 +481,7 @@ clusterItem zone now theme expandedClusters cluster =
                 , Element.alignTop
                 , Element.paddingXY 0 2
                 ]
-                (text (relativeTime zone now cluster.representative.pubDate))
+                (text (relativeTime now zone cluster.representative.pubDate))
             ]
         , paragraph
             [ Font.size 15
@@ -575,8 +575,8 @@ clusterOtherItem now theme item =
         ]
 
 
-relativeTime : Time.Zone -> Time.Posix -> Maybe Time.Posix -> String
-relativeTime zone now maybePubDate =
+relativeTime : Time.Posix -> Time.Zone -> Maybe Time.Posix -> String
+relativeTime now zone maybePubDate =
     case maybePubDate of
         Nothing ->
             "unknown"
