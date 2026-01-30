@@ -64,6 +64,29 @@ begin
   # Initialize favicon storage directory
   FaviconStorage.init
 
+  # Ensure Elm JS bundles are in sync to avoid serving the wrong file
+  begin
+    public_path = "./public/elm.js"
+    ui_path = "./ui/elm.js"
+
+    if File.exists?(public_path)
+      public_content = File.read(public_path)
+
+      if File.exists?(ui_path)
+        ui_content = File.read(ui_path)
+        if public_content != ui_content
+          STDERR.puts "[WARN] Detected mismatch between public/elm.js and ui/elm.js — syncing ui/elm.js from public/elm.js"
+          File.write(ui_path, public_content)
+        end
+      else
+        STDERR.puts "[INFO] ui/elm.js not present — creating from public/elm.js to avoid stale bundles being served"
+        File.write(ui_path, public_content)
+      end
+    end
+  rescue ex
+    STDERR.puts "[WARN] Failed to sync elm.js files: #{ex.message}"
+  end
+
   # Clear in-memory favicon cache to prevent stale base64 data from previous runs
   FAVICON_CACHE.clear
 

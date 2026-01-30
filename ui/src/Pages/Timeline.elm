@@ -389,6 +389,30 @@ formatDate zone date =
     month ++ " " ++ day ++ ", " ++ year
 
 
+formatTime : Zone -> Posix -> String
+formatTime zone date =
+    let
+        month =
+            toMonth zone date |> monthToString
+
+        day =
+            toDay zone date |> String.fromInt
+
+        year =
+            toYear zone date |> String.fromInt
+
+        hours =
+            Time.posixToMillis date // 1000 // 3600 % 24
+
+        minutes =
+            (Time.posixToMillis date // 1000 // 60) % 60
+
+        hh = if hours < 10 then "0" ++ String.fromInt hours else String.fromInt hours
+        mm = if minutes < 10 then "0" ++ String.fromInt minutes else String.fromInt minutes
+    in
+    month ++ " " ++ day ++ ", " ++ year ++ " " ++ hh ++ ":" ++ mm
+
+
 monthToString : Time.Month -> String
 monthToString month =
     case month of
@@ -447,8 +471,15 @@ clusterItem zone now theme expandedClusters cluster =
           clusterCount =
               cluster.count
 
-          timeStr =
-              relativeTime now zone cluster.representative.pubDate
+           -- Use the actual timestamp for the timeline view column, but keep relative times
+           -- for feedboxes elsewhere. The timeline should show the absolute time.
+           timeStr =
+               case cluster.representative.pubDate of
+                   Just pd ->
+                       formatTime zone pd
+
+                   Nothing ->
+                       "unknown"
 
           faviconImg =
               Maybe.map
