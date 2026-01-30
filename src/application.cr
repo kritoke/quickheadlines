@@ -59,6 +59,13 @@ begin
 
   # Load feed cache from disk (creates SQLite connection)
   FeedCache.instance = load_feed_cache(initial_config)
+  # Normalize any non-canonical pub_date values on startup to fix legacy or
+  # mixed-format timestamps. This runs once at startup to fix stored data.
+  begin
+    FeedCache.instance.normalize_pub_dates
+  rescue ex
+    STDERR.puts "[#{Time.local}] Warning: normalize_pub_dates failed on startup: #{ex.message}"
+  end
   STDERR.puts "[#{Time.local}] Loaded #{FeedCache.instance.size} feeds from cache"
 
   # Initialize favicon storage directory
@@ -66,7 +73,7 @@ begin
 
   # We only serve the canonical built bundle at public/elm.js. Do not rely on ui/elm.js.
   # In production we should fail fast if the bundle is missing to avoid serving broken UI.
-  if ENV['APP_ENV'] == 'production' && !File.exists?('./public/elm.js')
+  if ENV["APP_ENV"] == "production" && !File.exists?("./public/elm.js")
     STDERR.puts "[ERROR] public/elm.js missing - build the frontend and include public/elm.js before starting in production"
     exit 1
   end
