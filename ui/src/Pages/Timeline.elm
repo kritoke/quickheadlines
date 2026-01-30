@@ -286,13 +286,13 @@ getClusterDateFromKey zone key clusters =
 
 dayClusterSection : Zone -> Posix -> Theme -> Set String -> DayClusterGroup -> List (Element Msg)
 dayClusterSection zone now theme expandedClusters dayGroup =
-    [ dayHeader zone now theme dayGroup.date
-    , column
-        [ width fill
-        , spacing 8
-        ]
-        (List.map (clusterItem zone now theme expandedClusters) dayGroup.clusters)
-    ]
+     [ dayHeader zone now theme dayGroup.date
+     , column
+         [ width fill
+         , spacing 10
+         ]
+         (List.map (clusterItem zone now theme expandedClusters) dayGroup.clusters)
+     ]
 
 
 dayHeader : Zone -> Posix -> Theme -> Posix -> Element Msg
@@ -419,163 +419,196 @@ monthToString month =
 clusterItem : Time.Zone -> Time.Posix -> Theme -> Set String -> Cluster -> Element Msg
 clusterItem zone now theme expandedClusters cluster =
      let
+          txtColor =
+              textColor theme
+
+          mutedTxt =
+              mutedColor theme
+
+          cardBg =
+              cardColor theme
+
+          border =
+              borderColor theme
+
+          isExpanded =
+              Set.member cluster.id expandedClusters
+
+          clusterCount =
+              cluster.count
+
+          indicator =
+              if clusterCount > 1 && not isExpanded then
+                  el
+                      [ Font.size 13
+                      , Font.color lumeOrange
+                      , Font.bold
+                      ]
+                      (text "↲")
+
+              else
+                  Element.none
+      in
+      column
+         [ width fill
+         , spacing 8
+         , padding 14
+         , Background.color cardBg
+         , Border.rounded 6
+         , Border.width 1
+         , Border.color border
+         , Border.shadow { offset = (0, 1), blur = 2, size = 0, color = Element.rgba 0 0 0 0.05 }
+         , htmlAttribute (Html.Attributes.attribute "data-timeline-item" "true")
+         ]
+         [ row
+             [ spacing 10
+             , width fill
+             , Element.alignTop
+             ]
+             [ Maybe.map
+                 (\faviconUrl ->
+                     image
+                         [ width (px 18)
+                         , height (px 18)
+                         , Border.rounded 3
+                         ]
+                         { src = faviconUrl, description = "favicon" }
+                 )
+                 cluster.representative.favicon
+                 |> Maybe.withDefault Element.none
+             , column
+                 [ width fill
+                 , spacing 2
+                 ]
+                 [ row
+                     [ width fill
+                     , spacing 8
+                     ]
+                     [ el
+                         [ Font.size 11
+                         , Font.color mutedTxt
+                         ]
+                         (text (relativeTime now zone cluster.representative.pubDate))
+                     , if clusterCount > 1 && not isExpanded then
+                         el
+                             [ Font.size 11
+                             , Font.bold
+                             , Font.color lumeOrange
+                             ]
+                             (text (String.fromInt clusterCount ++ " sources"))
+
+                       else
+                         Element.none
+                     ]
+                 ]
+             , indicator
+             ]
+         , paragraph
+             [ Font.size 14
+             , Font.color txtColor
+             , Font.semiBold
+             , htmlAttribute (Html.Attributes.style "word-break" "break-word")
+             , htmlAttribute (Html.Attributes.style "overflow-wrap" "break-word")
+             , width fill
+             , spacing 0
+              ]
+              [ link
+                  [ htmlAttribute (Html.Attributes.style "text-decoration" "none")
+                  , htmlAttribute (Html.Attributes.style "color" "inherit")
+                  , htmlAttribute (Html.Attributes.attribute "data-display-link" "true")
+                  ]
+                  { url = cluster.representative.link, label = text cluster.representative.title }
+              ]
+         , if clusterCount > 1 && not isExpanded then
+             Input.button
+                 [ Font.size 12
+                 , Font.color lumeOrange
+                 , paddingXY 0 6
+                 , Font.semiBold
+                 ]
+                 { onPress = Just (ToggleCluster cluster.id)
+                 , label = text ("→ View all " ++ String.fromInt clusterCount ++ " sources")
+                 }
+
+           else if clusterCount > 1 && isExpanded then
+             column
+                 [ width fill
+                 , spacing 8
+                 , paddingEach { top = 4, bottom = 0, left = 0, right = 0 }
+                 ]
+                 [ row
+                     [ spacing 6
+                     , Font.size 11
+                     , Font.color mutedTxt
+                     ]
+                     [ Input.button
+                         [ Font.color lumeOrange
+                         , Font.semiBold
+                         ]
+                         { onPress = Just (ToggleCluster cluster.id)
+                         , label = text "↓ Collapse"
+                         }
+                     ]
+                 , column
+                     [ spacing 8
+                     , paddingEach { top = 4, bottom = 0, left = 0, right = 0 }
+                     , Border.widthEach { top = 1, right = 0, bottom = 0, left = 0 }
+                     , Border.color border
+                     , paddingEach { top = 8, bottom = 0, left = 0, right = 0 }
+                     ]
+                     (List.map (clusterOtherItem now theme) cluster.others)
+                 ]
+
+           else
+             Element.none
+         ]
+
+
+clusterOtherItem : Posix -> Theme -> Api.ClusterItem -> Element Msg
+clusterOtherItem now theme item =
+     let
          txtColor =
              textColor theme
 
          mutedTxt =
              mutedColor theme
-
-         cardBg =
-             cardColor theme
-
-         border =
-             borderColor theme
-
-         isExpanded =
-             Set.member cluster.id expandedClusters
-
-         clusterCount =
-             cluster.count
-
-         indicator =
-             if clusterCount > 1 && not isExpanded then
-                 el
-                     [ Font.size 14
-                     , Font.color lumeOrange
-                     , Font.bold
-                     ]
-                     (text "↲")
-
-             else
-                 Element.none
      in
-     column
-        [ width fill
-        , spacing 4
-        , padding 12
-        , Background.color cardBg
-        , Border.rounded 8
-        , Border.width 1
-        , Border.color border
-        , htmlAttribute (Html.Attributes.attribute "data-timeline-item" "true")
-        ]
-        [ row
-            [ spacing 8
-            , width fill
-            , Element.alignTop
-            ]
-            [ indicator
-            , Maybe.map
-                (\faviconUrl ->
-                    image
-                        [ width (px 16)
-                        , height (px 16)
-                        , Border.rounded 2
-                        ]
-                        { src = faviconUrl, description = "favicon" }
-                )
-                cluster.representative.favicon
-                |> Maybe.withDefault Element.none
-            , el
-                [ Font.size 12
-                , Font.color mutedTxt
-                , Element.alignTop
-                , Element.paddingXY 0 2
-                ]
-                (text (relativeTime now zone cluster.representative.pubDate))
-            ]
-        , paragraph
-            [ Font.size 15
-            , Font.color txtColor
-            , htmlAttribute (Html.Attributes.style "word-break" "break-word")
-            , htmlAttribute (Html.Attributes.style "overflow-wrap" "break-word")
-            , width fill
-             ]
-             [ link
-                 [ htmlAttribute (Html.Attributes.style "text-decoration" "none")
-                 , htmlAttribute (Html.Attributes.style "color" "inherit")
-                 , htmlAttribute (Html.Attributes.attribute "data-display-link" "true")
-                 ]
-                 { url = cluster.representative.link, label = text cluster.representative.title }
-             ]
-        , if clusterCount > 1 && not isExpanded then
-            Input.button
-                [ Font.size 12
-                , Font.color lumeOrange
-                , paddingXY 0 4
-                ]
-                { onPress = Just (ToggleCluster cluster.id)
-                , label = text ("+" ++ String.fromInt (clusterCount - 1) ++ " more")
-                }
-
-          else if clusterCount > 1 && isExpanded then
-            column
-                [ width fill
-                , spacing 4
-                , paddingEach { top = 8, bottom = 0, left = 0, right = 0 }
-                ]
-                [ row
-                    [ spacing 4
-                    , Font.size 12
-                    , Font.color mutedTxt
-                    ]
-                    [ Input.button
-                        [ Font.color lumeOrange
-                        ]
-                        { onPress = Just (ToggleCluster cluster.id)
-                        , label = text "collapse"
-                        }
-                    , text ("(" ++ String.fromInt (clusterCount - 1) ++ " more)")
-                    ]
-                , column
-                    [ spacing 6
-                    , paddingEach { top = 6, bottom = 0, left = 16, right = 0 }
-                    ]
-                    (List.map (clusterOtherItem now theme) cluster.others)
-                ]
-
-          else
-            Element.none
-        ]
-
-
-clusterOtherItem : Posix -> Theme -> Api.ClusterItem -> Element Msg
-clusterOtherItem now theme item =
-    let
-        txtColor =
-            textColor theme
-    in
-    row
-        [ width fill
-        , spacing 6
-        , paddingEach { top = 3, bottom = 3, left = 0, right = 0 }
-        ]
-        [ Maybe.map
-            (\faviconUrl ->
-                image
-                    [ width (px 12)
-                    , height (px 12)
-                    , Border.rounded 1
-                    , Element.alignTop
-                    , Element.paddingXY 0 2
-                    ]
-                    { src = faviconUrl, description = "favicon" }
-            )
-            item.favicon
-            |> Maybe.withDefault Element.none
-         , paragraph
-             [ Font.size 12
-             , Element.width fill
-             , htmlAttribute (Html.Attributes.style "line-height" "1.3")
-             ]
-             [ link
-                 [ htmlAttribute (Html.Attributes.style "text-decoration" "none")
-                 , htmlAttribute (Html.Attributes.style "color" "inherit")
-                 , htmlAttribute (Html.Attributes.attribute "data-display-link" "true")
-                 ]
-                 { url = item.link, label = text item.title }
-             ]
-        ]
+     row
+         [ width fill
+         , spacing 8
+         , paddingEach { top = 6, bottom = 6, left = 0, right = 0 }
+         ]
+         [ Maybe.map
+             (\faviconUrl ->
+                 image
+                     [ width (px 14)
+                     , height (px 14)
+                     , Border.rounded 2
+                     , Element.alignTop
+                     ]
+                     { src = faviconUrl, description = "favicon" }
+             )
+             item.favicon
+             |> Maybe.withDefault Element.none
+          , column
+              [ width fill
+              , spacing 2
+              ]
+              [ paragraph
+                  [ Font.size 13
+                  , Font.color txtColor
+                  , Element.width fill
+                  , htmlAttribute (Html.Attributes.style "line-height" "1.4")
+                  ]
+                  [ link
+                      [ htmlAttribute (Html.Attributes.style "text-decoration" "none")
+                      , htmlAttribute (Html.Attributes.style "color" "inherit")
+                      , htmlAttribute (Html.Attributes.attribute "data-display-link" "true")
+                      ]
+                      { url = item.link, label = text item.title }
+                  ]
+              ]
+         ]
 
 
 relativeTime : Time.Posix -> Time.Zone -> Maybe Time.Posix -> String
