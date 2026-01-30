@@ -309,11 +309,66 @@
           observeSentinel();
 
 
-      } catch(e) {
-        console.error('Elm init error:', e);
-        appElement.innerHTML = '<p style="color: red;">Error: ' + e.message + '</p>';
-      }
-    })();
+       } catch(e) {
+         console.error('Elm init error:', e);
+         appElement.innerHTML = '<p style="color: red;">Error: ' + e.message + '</p>';
+       }
+       
+       // Add favicon fallback handling
+       setTimeout(function() {
+         document.querySelectorAll('img[src*="favicons"], img[alt*="favicon"], img[alt*="Feed favicon"]').forEach(function(img) {
+           if (img.src && img.src !== '') {
+             img.onerror = function() {
+               // Try to extract domain from the image src or nearby text
+               var src = img.getAttribute('src');
+               var fallbackDomain = '';
+               
+               // Try to find a feed link nearby to extract domain
+               var parent = img.closest('[data-feed-url]');
+               if (parent) {
+                 fallbackDomain = parent.getAttribute('data-feed-url');
+               }
+               
+               if (!fallbackDomain && src) {
+                 // Try to extract domain from current src
+                 try {
+                   var url = new URL(src);
+                   fallbackDomain = url.hostname || '';
+                 } catch (e) {}
+               }
+               
+               // Use Google favicon service as fallback
+               if (fallbackDomain) {
+                 img.src = 'https://www.google.com/s2/favicons?domain=' + encodeURIComponent(fallbackDomain) + '&sz=64';
+               } else {
+                 // Last resort: use a generic favicon placeholder
+                 img.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"%3E%3Ccircle cx="8" cy="8" r="7" fill="%23ccc"/%3E%3C/svg%3E';
+               }
+             };
+           }
+         });
+       }, 500);
+       
+       // Also add mutation observer to handle dynamically added images
+       var faviconObserver = new MutationObserver(function(mutations) {
+         mutations.forEach(function(mutation) {
+           if (mutation.addedNodes.length) {
+             mutation.addedNodes.forEach(function(node) {
+               if (node.nodeType === 1) { // Element node
+                 var images = node.querySelectorAll ? node.querySelectorAll('img[src*="favicons"], img[alt*="favicon"], img[alt*="Feed favicon"]') : [];
+                 images.forEach(function(img) {
+                   if (img.onerror === null) {
+                     img.onerror = arguments.callee;
+                   }
+                 });
+               }
+             });
+           }
+         });
+       });
+       
+       faviconObserver.observe(appElement, { childList: true, subtree: true });
+     })();
   </script>
 </body>
 </html>

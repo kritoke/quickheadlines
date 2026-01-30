@@ -69,27 +69,27 @@ update shared msg model =
 
 view : Shared.Model -> Model -> Element Msg
 view shared model =
-    let
-        theme =
-            shared.theme
+     let
+         theme =
+             shared.theme
 
-        colors =
-            themeToColors theme
+         colors =
+             themeToColors theme
 
-        bg =
-            surfaceColor theme
+         bg =
+             surfaceColor theme
 
-        isMobile =
-            shared.windowWidth < 768
+         isMobile =
+             shared.windowWidth < 768
 
-        paddingValue =
-            if isMobile then
-                16
+         paddingValue =
+             if isMobile then
+                 16
 
-            else
-                24
-    in
-    column
+             else
+                 96
+     in
+     column
         [ width fill
         , height fill
         , spacing 20

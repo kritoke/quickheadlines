@@ -14251,7 +14251,7 @@ var $author$project$Pages$Home_$view = F2(
 	function (shared, model) {
 		var theme = shared.theme;
 		var isMobile = shared.windowWidth < 768;
-		var paddingValue = isMobile ? 16 : 24;
+		var paddingValue = isMobile ? 16 : 96;
 		var colors = $author$project$Theme$themeToColors(theme);
 		var bg = $author$project$Theme$surfaceColor(theme);
 		return A2(
@@ -14325,7 +14325,6 @@ var $author$project$Pages$Timeline$clusterOtherItem = F3(
 							$mdgriffith$elm_ui$Element$link,
 							_List_fromArray(
 								[
-									$mdgriffith$elm_ui$Element$Font$color(txtColor),
 									$mdgriffith$elm_ui$Element$htmlAttribute(
 									A2($elm$html$Html$Attributes$style, 'text-decoration', 'none')),
 									$mdgriffith$elm_ui$Element$htmlAttribute(
@@ -14494,7 +14493,6 @@ var $author$project$Pages$Timeline$clusterItem = F5(
 							$mdgriffith$elm_ui$Element$link,
 							_List_fromArray(
 								[
-									$mdgriffith$elm_ui$Element$Font$color(txtColor),
 									$mdgriffith$elm_ui$Element$htmlAttribute(
 									A2($elm$html$Html$Attributes$style, 'text-decoration', 'none')),
 									$mdgriffith$elm_ui$Element$htmlAttribute(

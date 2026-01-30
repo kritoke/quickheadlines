@@ -492,8 +492,7 @@ clusterItem zone now theme expandedClusters cluster =
             , width fill
              ]
              [ link
-                 [ Font.color txtColor
-                 , htmlAttribute (Html.Attributes.style "text-decoration" "none")
+                 [ htmlAttribute (Html.Attributes.style "text-decoration" "none")
                  , htmlAttribute (Html.Attributes.style "color" "inherit")
                  , htmlAttribute (Html.Attributes.attribute "data-display-link" "true")
                  ]
@@ -570,8 +569,7 @@ clusterOtherItem now theme item =
              , htmlAttribute (Html.Attributes.style "line-height" "1.3")
              ]
              [ link
-                 [ Font.color txtColor
-                 , htmlAttribute (Html.Attributes.style "text-decoration" "none")
+                 [ htmlAttribute (Html.Attributes.style "text-decoration" "none")
                  , htmlAttribute (Html.Attributes.style "color" "inherit")
                  , htmlAttribute (Html.Attributes.attribute "data-display-link" "true")
                  ]
