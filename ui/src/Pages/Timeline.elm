@@ -418,38 +418,38 @@ monthToString month =
 
 clusterItem : Time.Zone -> Time.Posix -> Theme -> Set String -> Cluster -> Element Msg
 clusterItem zone now theme expandedClusters cluster =
-    let
-        txtColor =
-            textColor theme
+     let
+         txtColor =
+             textColor theme
 
-        mutedTxt =
-            mutedColor theme
+         mutedTxt =
+             mutedColor theme
 
-        cardBg =
-            cardColor theme
+         cardBg =
+             cardColor theme
 
-        border =
-            borderColor theme
+         border =
+             borderColor theme
 
-        isExpanded =
-            Set.member cluster.id expandedClusters
+         isExpanded =
+             Set.member cluster.id expandedClusters
 
-        clusterCount =
-            cluster.count
+         clusterCount =
+             cluster.count
 
-        indicator =
-            if clusterCount > 1 then
-                el
-                    [ Font.size 14
-                    , Font.color lumeOrange
-                    , Font.bold
-                    ]
-                    (text "↲")
+         indicator =
+             if clusterCount > 1 && not isExpanded then
+                 el
+                     [ Font.size 14
+                     , Font.color lumeOrange
+                     , Font.bold
+                     ]
+                     (text "↲")
 
-            else
-                Element.none
-    in
-    column
+             else
+                 Element.none
+     in
+     column
         [ width fill
         , spacing 4
         , padding 12

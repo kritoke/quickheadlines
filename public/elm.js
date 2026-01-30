@@ -14407,7 +14407,7 @@ var $author$project$Pages$Timeline$clusterItem = F5(
 		var mutedTxt = $author$project$Theme$mutedColor(theme);
 		var isExpanded = A2($elm$core$Set$member, cluster.id, expandedClusters);
 		var clusterCount = cluster.count;
-		var indicator = (clusterCount > 1) ? A2(
+		var indicator = ((clusterCount > 1) && (!isExpanded)) ? A2(
 			$mdgriffith$elm_ui$Element$el,
 			_List_fromArray(
 				[
