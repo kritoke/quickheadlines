@@ -282,12 +282,16 @@ headerView model =
          [ Element.row
              [ spacing 12
              ]
-             [ Element.image
-                 [ Element.width (px 32)
-                 , Element.height (px 32)
-                 , Border.rounded 4
-                 ]
-                 { src = "/logo.svg", description = "QuickHeadlines Logo" }
+              [ Element.image
+                  [ Element.width (px 24)
+                  , Element.height (px 24)
+                  , Border.rounded 4
+                  -- Ensure SVG scales and stays vertically centered next to the title
+                  , Element.htmlAttribute (Html.Attributes.style "object-fit" "contain")
+                  , Element.htmlAttribute (Html.Attributes.style "max-height" "28px")
+                  , Element.htmlAttribute (Html.Attributes.style "vertical-align" "middle")
+                  ]
+                  { src = "/logo.svg", description = "QuickHeadlines Logo" }
              , Element.link
                  [ Font.color lumeOrange
                  , Font.size 24

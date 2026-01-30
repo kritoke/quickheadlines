@@ -54,6 +54,8 @@ Download the associated binary for your operating system from the Releases page.
 - **OpenSSL** development libraries
 - **Node.js/npm** (for Tailwind CSS CLI during build)
 
+Note: The frontend bundle `public/elm.js` is required for builds on systems without Elm (notably FreeBSD). The Makefile will use a precompiled `public/elm.js` if present; otherwise it will attempt to run the Elm compiler. For CI and FreeBSD releases we recommend committing `public/elm.js` to the repo or generating it as part of your release process.
+
 The Makefile will automatically check for these dependencies and provide installation instructions if any are missing.
 
 ### Platform-Specific Setup
@@ -119,10 +121,12 @@ make build
 # Install Crystal and dependencies
 pkg install crystal shards sqlite3 openssl node npm gmake
 
-# Clone and build
-git clone https://github.com/kritoke/quickheadlines.git
-cd quickheadlines
-gmake build
+ # Clone and build
+ git clone https://github.com/kritoke/quickheadlines.git
+ cd quickheadlines
+ gmake build
+
+ On FreeBSD, if you cannot compile Elm locally, provide a precompiled `public/elm.js` in the repository before running `gmake build`.
 ```
 
 #### FreeBSD Jail Deployment (Bastille)
