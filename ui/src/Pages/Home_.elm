@@ -316,7 +316,7 @@ feedCard now theme windowWidth feed =
             ([ width fill
              , spacing 4
              ] ++ scrollAttributes)
-            (List.map (feedItem now theme feed.title) (List.take 15 (sortFeedItems feed.items)))
+            (List.map (feedItem now theme) (List.take 15 (sortFeedItems feed.items)))
         ]
 
 
@@ -467,8 +467,8 @@ faviconView theme faviconUrl =
             Element.none
 
 
-feedItem : Time.Posix -> Theme -> String -> FeedItem -> Element Msg
-feedItem now theme feedTitle item =
+feedItem : Time.Posix -> Theme -> FeedItem -> Element Msg
+feedItem now theme item =
     let
         txtColor =
             textColor theme
@@ -498,14 +498,11 @@ feedItem now theme feedTitle item =
             , htmlAttribute (Html.Attributes.style "overflow-wrap" "break-word")
             , htmlAttribute (Html.Attributes.style "line-height" "1.4")
             ]
-            [ row [ spacing 6 ]
-                [ el [ Font.size 13, Font.color mutedTxt, centerY ] (text (feedTitle ++ " · "))
-                , link
-                    [ Font.color txtColor
-                    , htmlAttribute (Html.Attributes.style "text-decoration" "none")
-                    ]
-                    { url = item.link, label = text item.title }
+            [ link
+                [ Font.color txtColor
+                , htmlAttribute (Html.Attributes.style "text-decoration" "none")
                 ]
+                { url = item.link, label = text item.title }
             ]
         , el
             [ Font.size 12
