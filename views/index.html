@@ -241,29 +241,32 @@
          let sentinelObserver = null;
          
          const observeSentinel = () => {
-           if (app.ports && app.ports.onNearBottom) {
-             const sentinel = document.getElementById('scroll-sentinel');
-             if (sentinel && !sentinelObserver) {
-               sentinelObserver = new IntersectionObserver((entries) => {
-                 entries.forEach(entry => {
-                   if (entry.isIntersecting) {
-                     console.log('Near bottom detected');
-                     app.ports.onNearBottom.send(true);
-                   } else {
-                     console.log('No longer near bottom');
-                     app.ports.onNearBottom.send(false);
-                   }
-                 });
-                }, { threshold: 0 });
+            if (app.ports && app.ports.onNearBottom) {
+              const sentinel = document.getElementById('scroll-sentinel');
+              console.log('Checking sentinel:', { exists: !!sentinel, sentinelObserver: !!sentinelObserver });
+              if (sentinel && !sentinelObserver) {
+                console.log('Setting up IntersectionObserver for sentinel');
+                sentinelObserver = new IntersectionObserver((entries) => {
+                  entries.forEach(entry => {
+                    console.log('Intersection event:', { isIntersecting: entry.isIntersecting });
+                    if (entry.isIntersecting) {
+                      console.log('Near bottom detected - sending true');
+                      app.ports.onNearBottom.send(true);
+                    } else {
+                      console.log('No longer near bottom - sending false');
+                      app.ports.onNearBottom.send(false);
+                    }
+                  });
+                 }, { threshold: 0 });
 
-               sentinelObserver.observe(sentinel);
-               console.log('IntersectionObserver set up for sentinel');
-             } else if (!sentinel && sentinelObserver) {
-               sentinelObserver.disconnect();
-               sentinelObserver = null;
-             }
-           }
-         };
+                sentinelObserver.observe(sentinel);
+                console.log('IntersectionObserver set up for sentinel');
+              } else if (!sentinel && sentinelObserver) {
+                sentinelObserver.disconnect();
+                sentinelObserver = null;
+              }
+            }
+          };
 
          // Debounce function for mutations
          let mutationTimeout = null;

@@ -4548,6 +4548,52 @@ function _Http_track(router, xhr, tracker)
 }
 
 
+function _Time_now(millisToPosix)
+{
+	return _Scheduler_binding(function(callback)
+	{
+		callback(_Scheduler_succeed(millisToPosix(Date.now())));
+	});
+}
+
+var _Time_setInterval = F2(function(interval, task)
+{
+	return _Scheduler_binding(function(callback)
+	{
+		var id = setInterval(function() { _Scheduler_rawSpawn(task); }, interval);
+		return function() { clearInterval(id); };
+	});
+});
+
+function _Time_here()
+{
+	return _Scheduler_binding(function(callback)
+	{
+		callback(_Scheduler_succeed(
+			A2($elm$time$Time$customZone, -(new Date().getTimezoneOffset()), _List_Nil)
+		));
+	});
+}
+
+
+function _Time_getZoneName()
+{
+	return _Scheduler_binding(function(callback)
+	{
+		try
+		{
+			var name = $elm$time$Time$Name(Intl.DateTimeFormat().resolvedOptions().timeZone);
+		}
+		catch (e)
+		{
+			var name = $elm$time$Time$Offset(new Date().getTimezoneOffset());
+		}
+		callback(_Scheduler_succeed(name));
+	});
+}
+
+
+
 var _Bitwise_and = F2(function(a, b)
 {
 	return a & b;
@@ -5388,6 +5434,9 @@ var $author$project$Main$handleUrlRequest = function (urlRequest) {
 		var href = urlRequest.a;
 		return $author$project$Application$NavigateExternal(href);
 	}
+};
+var $author$project$Application$GotTime = function (a) {
+	return {$: 'GotTime', a: a};
 };
 var $author$project$Application$Home = {$: 'Home'};
 var $author$project$Application$HomeMsg = function (a) {
@@ -6467,10 +6516,18 @@ var $author$project$Shared$init = F5(
 		};
 	});
 var $elm$core$Platform$Cmd$map = _Platform_map;
+var $elm$time$Time$Name = function (a) {
+	return {$: 'Name', a: a};
+};
+var $elm$time$Time$Offset = function (a) {
+	return {$: 'Offset', a: a};
+};
 var $elm$time$Time$Zone = F2(
 	function (a, b) {
 		return {$: 'Zone', a: a, b: b};
 	});
+var $elm$time$Time$customZone = $elm$time$Time$Zone;
+var $elm$time$Time$now = _Time_now($elm$time$Time$millisToPosix);
 var $elm$time$Time$utc = A2($elm$time$Time$Zone, 0, _List_Nil);
 var $author$project$Application$init = F3(
 	function (flags, url, key) {
@@ -6494,6 +6551,7 @@ var $author$project$Application$init = F3(
 			$elm$core$Platform$Cmd$batch(
 				_List_fromArray(
 					[
+						A2($elm$core$Task$perform, $author$project$Application$GotTime, $elm$time$Time$now),
 						A2($elm$core$Platform$Cmd$map, $author$project$Application$HomeMsg, homeCmd),
 						A2($elm$core$Platform$Cmd$map, $author$project$Application$TimelineMsg, timelineCmd)
 					])));
@@ -14302,7 +14360,7 @@ var $author$project$Pages$Timeline$formatDate = F2(
 		return month + (' ' + (day + (', ' + year)));
 	});
 var $author$project$Pages$Timeline$relativeTime = F3(
-	function (zone, now, maybePubDate) {
+	function (now, zone, maybePubDate) {
 		if (maybePubDate.$ === 'Nothing') {
 			return 'unknown';
 		} else {
@@ -14392,7 +14450,7 @@ var $author$project$Pages$Timeline$clusterItem = F5(
 									A2($mdgriffith$elm_ui$Element$paddingXY, 0, 2)
 								]),
 							$mdgriffith$elm_ui$Element$text(
-								A3($author$project$Pages$Timeline$relativeTime, zone, now, cluster.representative.pubDate)))
+								A3($author$project$Pages$Timeline$relativeTime, now, zone, cluster.representative.pubDate)))
 						])),
 					A2(
 					$mdgriffith$elm_ui$Element$paragraph,
@@ -14627,7 +14685,8 @@ var $author$project$Pages$Timeline$groupClustersByDayHelp = F3(
 var $author$project$Pages$Timeline$groupClustersByDay = F3(
 	function (zone, now, clusters) {
 		var sortedClusters = clusters;
-		var groups = A3($author$project$Pages$Timeline$groupClustersByDayHelp, zone, _List_Nil, sortedClusters);
+		var groups = $elm$core$List$reverse(
+			A3($author$project$Pages$Timeline$groupClustersByDayHelp, zone, _List_Nil, sortedClusters));
 		return A2(
 			$elm$core$List$map,
 			function (_v0) {
@@ -14717,9 +14776,10 @@ var $author$project$Pages$Timeline$view = F2(
 									$mdgriffith$elm_ui$Element$htmlAttribute(
 									$elm$html$Html$Attributes$id('scroll-sentinel')),
 									$mdgriffith$elm_ui$Element$height(
-									$mdgriffith$elm_ui$Element$px(1))
+									$mdgriffith$elm_ui$Element$px(1)),
+									$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill)
 								]),
-							$mdgriffith$elm_ui$Element$none)
+							$mdgriffith$elm_ui$Element$text(''))
 						])))
 				]));
 	});

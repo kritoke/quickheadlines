@@ -150,40 +150,41 @@ update shared msg model =
 
 view : Shared.Model -> Model -> Element Msg
 view shared model =
-    let
-        theme =
-            shared.theme
+     let
+         theme =
+             shared.theme
 
-        isMobile =
-            shared.windowWidth < 768
+         isMobile =
+             shared.windowWidth < 768
 
-        paddingValue =
-            if isMobile then
-                16
+         paddingValue =
+             if isMobile then
+                 16
 
-            else
-                24
+             else
+                 96
 
-        bg =
-            surfaceColor theme
+         bg =
+             surfaceColor theme
 
-        txtColor =
-            textColor theme
+         txtColor =
+             textColor theme
 
-        mutedTxt =
-            mutedColor theme
+         mutedTxt =
+             mutedColor theme
 
-        clustersByDay =
-            groupClustersByDay shared.zone shared.now model.clusters
-    in
-    column
-        [ width fill
-        , height fill
-        , spacing 20
-        , padding paddingValue
-        , Background.color bg
-        , htmlAttribute (Html.Attributes.attribute "data-timeline-page" "true")
-        ]
+         clustersByDay =
+             groupClustersByDay shared.zone shared.now model.clusters
+     in
+     column
+         [ width fill
+         , height fill
+         , spacing 20
+         , padding paddingValue
+         , Background.color bg
+         , htmlAttribute (Html.Attributes.attribute "data-timeline-page" "true")
+         , htmlAttribute (Html.Attributes.class "auto-hide-scroll")
+         ]
         [ el
             [ Font.size (if isMobile then 20 else 24)
             , Font.bold
@@ -217,7 +218,7 @@ view shared model =
                     , spacing 16
                     ]
                     (List.concatMap (dayClusterSection shared.zone shared.now theme model.expandedClusters) clustersByDay)
-                , el [ htmlAttribute (Html.Attributes.id "scroll-sentinel"), height (px 1) ] Element.none
+                 , el [ htmlAttribute (Html.Attributes.id "scroll-sentinel"), height (px 1), width fill ] (text "")
                 ]
         ]
 
@@ -236,7 +237,7 @@ groupClustersByDay zone now clusters =
             clusters
 
         groups =
-            groupClustersByDayHelp zone [] sortedClusters
+            groupClustersByDayHelp zone [] sortedClusters |> List.reverse
     in
     List.map (\( key, dayClusters ) -> { date = getClusterDateFromKey zone key dayClusters, clusters = dayClusters }) groups
 

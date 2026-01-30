@@ -269,44 +269,53 @@ headerView model =
 
                 Shared.Light ->
                     rgb255 17 24 39
-    in
-    Element.row
-        [ width fill
-        , padding 16
-        , Background.color bg
-        ]
-        [ Element.link
-            [ Font.color txtColor
-            , Font.size 24
-            , Font.bold
-            , Element.paddingXY 8 0
-            ]
-            { url = "/"
-            , label = text "QuickHeadlines"
-            }
-        , Element.row
-            [ spacing 8
-            , Element.alignRight
-            ]
-            [ Element.link
-                [ Font.color txtColor
-                , Font.size 16
-                , Element.paddingXY 12 8
-                ]
-                { url = "/"
-                , label = text "Home"
-                }
-            , Element.link
-                [ Font.color txtColor
-                , Font.size 16
-                , Element.paddingXY 12 8
-                ]
-                { url = "/timeline"
-                , label = text "Timeline"
-                }
-            , themeToggle model
-            ]
-        ]
+     in
+     Element.row
+         [ width fill
+         , padding 16
+         , Background.color bg
+         ]
+         [ Element.row
+             [ spacing 12
+             ]
+             [ Element.image
+                 [ Element.width (px 32)
+                 , Element.height (px 32)
+                 , Border.rounded 4
+                 ]
+                 { src = "/logo.svg", description = "QuickHeadlines Logo" }
+             , Element.link
+                 [ Font.color lumeOrange
+                 , Font.size 24
+                 , Font.bold
+                 ]
+                 { url = "/"
+                 , label = text "QuickHeadlines"
+                 }
+             ]
+         , Element.row
+             [ spacing 8
+             , Element.alignRight
+             ]
+             [ Element.link
+                 [ Font.color txtColor
+                 , Font.size 16
+                 , Element.paddingXY 12 8
+                 ]
+                 { url = "/"
+                 , label = text "Home"
+                 }
+             , Element.link
+                 [ Font.color txtColor
+                 , Font.size 16
+                 , Element.paddingXY 12 8
+                 ]
+                 { url = "/timeline"
+                 , label = text "Timeline"
+                 }
+             , themeToggle model
+             ]
+         ]
 
 
 themeToggle : Model -> Element Msg
