@@ -1047,7 +1047,7 @@ class FeedCache
         end
 
         if parsed
-          formatted = parsed.utc.to_s("%Y-%m-%d %H:%M:%S")
+          formatted = parsed.to_s("%Y-%m-%d %H:%M:%S")
           if formatted != str
             @db.exec("UPDATE items SET pub_date = ? WHERE id = ?", formatted, id)
             updated += 1
