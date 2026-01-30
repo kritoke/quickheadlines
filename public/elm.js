@@ -14745,8 +14745,7 @@ var $author$project$Pages$Timeline$groupClustersByDayHelp = F3(
 var $author$project$Pages$Timeline$groupClustersByDay = F3(
 	function (zone, now, clusters) {
 		var sortedClusters = clusters;
-		var groups = $elm$core$List$reverse(
-			A3($author$project$Pages$Timeline$groupClustersByDayHelp, zone, _List_Nil, sortedClusters));
+		var groups = A3($author$project$Pages$Timeline$groupClustersByDayHelp, zone, _List_Nil, sortedClusters);
 		return A2(
 			$elm$core$List$map,
 			function (_v0) {

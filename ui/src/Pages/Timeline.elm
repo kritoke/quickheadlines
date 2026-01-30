@@ -237,7 +237,7 @@ groupClustersByDay zone now clusters =
             clusters
 
         groups =
-            groupClustersByDayHelp zone [] sortedClusters |> List.reverse
+            groupClustersByDayHelp zone [] sortedClusters
     in
     List.map (\( key, dayClusters ) -> { date = getClusterDateFromKey zone key dayClusters, clusters = dayClusters }) groups
 
