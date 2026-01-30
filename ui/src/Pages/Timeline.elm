@@ -96,8 +96,12 @@ update shared msg model =
 
         GotMoreTimeline (Ok response) ->
             let
+                -- Merge and defensively re-sort the combined item list so that
+                -- newly-loaded pages can't accidentally insert newer items after
+                -- older items (defense-in-depth). Api.sortTimelineItems enforces
+                -- newest->oldest ordering.
                 newItems =
-                    model.items ++ response.items
+                    Api.sortTimelineItems (model.items ++ response.items)
 
                 newClusters =
                     clusterItemsFromTimeline newItems
@@ -400,14 +404,12 @@ formatTime zone date =
 
         year =
             toYear zone date |> String.fromInt
-        totalSeconds =
-            Time.posixToMillis date // 1000
-
+        -- Use timezone-aware helpers to extract hour/minute
         hours =
-            Basics.modBy 24 (totalSeconds // 3600)
+            Time.toHour zone date
 
         minutes =
-            Basics.modBy 60 (totalSeconds // 60)
+            Time.toMinute zone date
 
         hh = if hours < 10 then "0" ++ String.fromInt hours else String.fromInt hours
         mm = if minutes < 10 then "0" ++ String.fromInt minutes else String.fromInt minutes

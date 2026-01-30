@@ -1,4 +1,4 @@
-module Api exposing (Cluster, ClusterItem, Feed, FeedItem, FeedsResponse, Tab, TimelineItem, TimelineResponse, clusterItemsFromTimeline, fetchFeeds, fetchTimeline)
+module Api exposing (Cluster, ClusterItem, Feed, FeedItem, FeedsResponse, Tab, TimelineItem, TimelineResponse, clusterItemsFromTimeline, sortTimelineItems, fetchFeeds, fetchTimeline)
 
 import Http
 import Json.Decode as Decode exposing (Decoder, field, list, nullable, string, succeed)
@@ -81,6 +81,21 @@ clusterItemsFromTimeline items =
     -- Build groups while preserving the original item order.
     -- Items without a cluster_id become their own single-item group (using the item's id as key).
     let
+        -- Defensive sort: ensure items are ordered newest -> oldest by pubDate before grouping.
+        comparePub a b =
+            case (a.pubDate, b.pubDate) of
+                (Nothing, Nothing) -> Basics.compare 0 0
+                (Nothing, _) -> Basics.GT
+                (_, Nothing) -> Basics.LT
+                (Just pa, Just pb) ->
+                    let
+                        ma = Time.posixToMillis pa
+                        mb = Time.posixToMillis pb
+                    in
+                    Basics.compare mb ma
+
+        sortedItems = List.sortWith comparePub items
+
         addItem acc item =
             let
                 key =
@@ -103,9 +118,29 @@ clusterItemsFromTimeline items =
                     -- Add item to existing group's end
                     List.map (\(k, v) -> if k == key then ( k, v ++ [ item ] ) else ( k, v )) acc
 
-        grouped = List.foldl addItem [] items
+        grouped = List.foldl addItem [] sortedItems
     in
     List.map buildCluster grouped
+
+
+{-| sortTimelineItems
+
+    Defensive helper to ensure a list of TimelineItem is ordered newest -> oldest
+    by pubDate. The UI uses this when merging pages to avoid ordering regressions.
+-}
+sortTimelineItems : List TimelineItem -> List TimelineItem
+sortTimelineItems items =
+    let
+        comparePub a b =
+            case (a.pubDate, b.pubDate) of
+                (Nothing, Nothing) -> Basics.compare 0 0
+                (Nothing, _) -> Basics.GT
+                (_, Nothing) -> Basics.LT
+                (Just pa, Just pb) ->
+                    -- Compare milliseconds descending (newest first)
+                    Basics.compare (Time.posixToMillis pb) (Time.posixToMillis pa)
+    in
+    List.sortWith comparePub items
 
 
 buildCluster : ( String, List TimelineItem ) -> Cluster

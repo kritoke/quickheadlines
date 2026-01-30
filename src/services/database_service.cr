@@ -170,6 +170,9 @@ class DatabaseService
 
     cutoff_date = Time.local - days_back.days
 
+    # Order rows deterministically: prefer pub_date (newest first), but
+    # coalesce NULL pub_date to the epoch so they sort last. Use id as a
+    # tiebreaker to ensure stable ordering when pub_date values are equal.
     query = <<-SQL
       SELECT
         i.id,
@@ -187,7 +190,7 @@ class DatabaseService
       FROM items i
       JOIN feeds f ON i.feed_id = f.id
       WHERE i.pub_date >= ?
-      ORDER BY i.pub_date DESC
+      ORDER BY COALESCE(i.pub_date, '1970-01-01 00:00:00') DESC, i.id DESC
       LIMIT ? OFFSET ?
     SQL
 
