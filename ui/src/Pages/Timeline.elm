@@ -6,6 +6,7 @@ import Element.Background as Background
 import Element.Border as Border
 import Element.Font as Font
 import Element.Input as Input
+import Set exposing (Set)
 import Html.Attributes
 import Http
 import Shared exposing (Model, Msg(..), Theme(..))
@@ -16,6 +17,7 @@ import Time exposing (Posix, toDay, toMonth, toYear, Zone)
 type alias Model =
     { items : List TimelineItem
     , clusters : List Cluster
+    , expandedClusters : Set String
     , loading : Bool
     , loadingMore : Bool
     , error : Maybe String
@@ -28,6 +30,7 @@ init : Shared.Model -> ( Model, Cmd Msg )
 init shared =
     ( { items = []
       , clusters = []
+      , expandedClusters = Set.empty
       , loading = True
       , loadingMore = False
       , error = Nothing
@@ -42,6 +45,7 @@ type Msg
     = GotTimeline (Result Http.Error Api.TimelineResponse)
     | GotMoreTimeline (Result Http.Error Api.TimelineResponse)
     | LoadMore
+    | ToggleCluster String
     | ToggleTheme
     | NearBottom Bool
 
@@ -53,7 +57,7 @@ update shared msg model =
             let
                 clusters =
                     clusterItemsFromTimeline response.items
-
+                -- Keep API order (items already sorted by pub_date DESC in backend)
                 sortedClusters =
                     clusters
             in
@@ -113,44 +117,59 @@ update shared msg model =
             else
                 ( model, Cmd.none )
 
+        ToggleCluster clusterId ->
+            let
+                newExpanded =
+                    if Set.member clusterId model.expandedClusters then
+                        Set.remove clusterId model.expandedClusters
+
+                    else
+                        Set.insert clusterId model.expandedClusters
+            in
+            ( { model | expandedClusters = newExpanded }
+            , Cmd.none
+            )
+
         ToggleTheme ->
             ( model, Cmd.none )
 
 
 view : Shared.Model -> Model -> Element Msg
 view shared model =
-     let
-         theme =
-             shared.theme
+    let
+        theme =
+            shared.theme
 
-         isMobile =
-             shared.windowWidth < 768
+        isMobile =
+            shared.windowWidth < 768
 
-         paddingValue =
-             if isMobile then
-                 16
+        paddingValue =
+            if isMobile then
+                16
 
-             else
-                 96
+            else
+                120
 
-         bg =
-             surfaceColor theme
+        bg =
+            surfaceColor theme
 
-         txtColor =
-             textColor theme
+        txtColor =
+            textColor theme
 
-         mutedTxt =
-             mutedColor theme
+        mutedTxt =
+            mutedColor theme
 
-         clustersByDay =
-             groupClustersByDay shared.zone shared.now model.clusters
-     in
+        clustersByDay =
+            groupClustersByDay shared.zone shared.now model.clusters
+    in
+
      column
-         [ width fill
+         [ width (fill |> maximum 1200)
+         , centerX
          , height fill
          , spacing 20
          , padding paddingValue
-         , paddingXY paddingValue 40
+         , paddingXY paddingValue 60
          , Background.color bg
          , htmlAttribute (Html.Attributes.attribute "data-timeline-page" "true")
          , htmlAttribute (Html.Attributes.class "auto-hide-scroll")
@@ -187,7 +206,7 @@ view shared model =
                     [ width fill
                     , spacing 16
                     ]
-                    (List.concatMap (dayClusterSection shared.zone shared.now theme) clustersByDay)
+                    (List.concatMap (dayClusterSection shared.zone shared.now theme model.expandedClusters) clustersByDay)
                  , el [ htmlAttribute (Html.Attributes.id "scroll-sentinel"), height (px 1), width fill ] (text "")
                 ]
         ]
@@ -254,15 +273,15 @@ getClusterDateFromKey zone key clusters =
                     Time.millisToPosix 0
 
 
-dayClusterSection : Zone -> Posix -> Theme -> DayClusterGroup -> List (Element Msg)
-dayClusterSection zone now theme dayGroup =
+dayClusterSection : Zone -> Posix -> Theme -> Set String -> DayClusterGroup -> List (Element Msg)
+dayClusterSection zone now theme expandedClusters dayGroup =
     [ dayHeader zone now theme dayGroup.date
     , column
         [ width fill
         , spacing 0
         , paddingEach { top = 16, bottom = 32, left = 0, right = 0 }
         ]
-        (List.map (clusterItem zone now theme) dayGroup.clusters)
+        (List.map (clusterItem zone now theme expandedClusters) dayGroup.clusters)
     ]
 
 
@@ -435,8 +454,8 @@ monthToString month =
             "December"
 
 
-clusterItem : Time.Zone -> Time.Posix -> Theme -> Cluster -> Element Msg
-clusterItem zone now theme cluster =
+clusterItem : Time.Zone -> Time.Posix -> Theme -> Set String -> Cluster -> Element Msg
+clusterItem zone now theme expandedClusters cluster =
     let
         txtColor =
             textColor theme
@@ -490,6 +509,10 @@ clusterItem zone now theme cluster =
                 cluster.representative.favicon
                 |> Maybe.withDefault Element.none
     in
+    let
+        isExpanded =
+            Set.member cluster.id expandedClusters
+    in
     column
         [ width fill
         ]
@@ -513,60 +536,56 @@ clusterItem zone now theme cluster =
                 , Font.center
                 ]
                 (text timeStr)
-            , row
+        , row
                 [ width fill
-                , spacing 6
+                , spacing 8
                 , Element.alignTop
                 ]
-                [ column
-                    [ width fill
-                    , spacing 4
+                [ el [ Element.htmlAttribute (Html.Attributes.style "display" "flex"), Element.htmlAttribute (Html.Attributes.style "align-items" "center") ] [ faviconImg ]
+                , paragraph
+                    [ Font.size 16
+                    , Font.color txtColor
+                    , htmlAttribute (Html.Attributes.style "word-break" "break-word")
+                    , htmlAttribute (Html.Attributes.style "overflow-wrap" "break-word")
+                    , width fill
+                    , spacing 8
                     ]
-                    [ row
-                        [ spacing 6
-                        , width fill
+                    [ el [ Font.size 14, Font.color mutedTxt ] (text cluster.representative.feedTitle)
+                    , el [ Font.size 14, Font.color mutedTxt, paddingXY 4 0 ] (text "•")
+                    , link
+                        [ htmlAttribute (Html.Attributes.style "text-decoration" "none")
+                        , htmlAttribute (Html.Attributes.style "color" "inherit")
+                        , htmlAttribute (Html.Attributes.attribute "data-display-link" "true")
+                        , mouseOver [ Font.color (rgb255 37 99 235) ]
+                        , Font.semiBold
                         ]
-                        [ faviconImg
-                        , el [ Font.size 12, Font.color mutedTxt ] (text cluster.representative.feedTitle)
-                        , el [ Font.size 11, Font.color mutedTxt ] (text "•")
-                        , paragraph
-                            [ Font.size 14
-                            , Font.color txtColor
-                            , Font.semiBold
-                            , htmlAttribute (Html.Attributes.style "word-break" "break-word")
-                            , htmlAttribute (Html.Attributes.style "overflow-wrap" "break-word")
-                            , width fill
-                            ]
-                            [ link
-                                [ htmlAttribute (Html.Attributes.style "text-decoration" "none")
-                                , htmlAttribute (Html.Attributes.style "color" "inherit")
-                                , htmlAttribute (Html.Attributes.attribute "data-display-link" "true")
-                                , mouseOver [ Font.color (rgb255 37 99 235) ]
-                                ]
-                                { url = cluster.representative.link, label = text cluster.representative.title }
-                            ]
-                        ]
-                    , if clusterCount > 1 then
-                        el
-                            [ Font.size 11
-                            , Font.color lumeOrange
-                            , Font.semiBold
-                            , paddingEach { top = 2, bottom = 0, left = 0, right = 0 }
-                            ]
-                            (text (String.fromInt clusterCount ++ " sources"))
-
-                      else
-                        Element.none
+                        { url = cluster.representative.link, label = text cluster.representative.title }
+                    , el [ paddingXY 8 4 ] (text (if cluster.count > 1 then ("↩ " ++ String.fromInt cluster.count) else ""))
                     ]
                 ]
             ]
         , if clusterCount > 1 then
-            column
-                [ width fill
-                , spacing 0
-                , paddingEach { top = 0, bottom = 0, left = 82, right = 0 }
-                ]
-                (List.map (clusterOtherItem now theme) cluster.others)
+            if isExpanded then
+                column
+                    [ width fill
+                    , spacing 4
+                    , paddingEach { top = 8, bottom = 12, left = 97, right = 0 }
+                    ]
+                    (List.map (\it -> clusterOtherItem now theme it) cluster.others)
+
+            else
+                -- Collapsed view: show a single collapsed header row with clickable button
+                Input.button
+                    [ width fill
+                    , htmlAttribute (Html.Attributes.style "background" "transparent")
+                    , htmlAttribute (Html.Attributes.style "border" "none")
+                    , htmlAttribute (Html.Attributes.style "text-align" "left")
+                    , htmlAttribute (Html.Attributes.style "cursor" "pointer")
+                    , paddingEach { top = 8, bottom = 12, left = 97, right = 0 }
+                    ]
+                    { onPress = Just (ToggleCluster cluster.id)
+                    , label = Element.text ("Show " ++ String.fromInt cluster.count ++ " related")
+                    }
 
           else
             Element.none
@@ -587,10 +606,8 @@ clusterOtherItem now theme item =
      in
      row
          [ width fill
-         , spacing 6
-         , paddingEach { top = 8, bottom = 8, left = 0, right = 0 }
-         , Border.widthEach { top = 0, right = 0, bottom = 1, left = 0 }
-         , Border.color border
+         , spacing 8
+         , paddingEach { top = 4, bottom = 4, left = 0, right = 0 }
          ]
          [ Maybe.map
              (\faviconUrl ->
@@ -598,23 +615,28 @@ clusterOtherItem now theme item =
                      [ width (px 12)
                      , height (px 12)
                      , Border.rounded 1
+                     , Background.color (rgb255 255 255 255)
+                     , padding 2
                      ]
-                     { src = faviconUrl, description = "favicon" }
+                     { src = faviconUrl, description = "" }
              )
              item.favicon
              |> Maybe.withDefault Element.none
-          , el [ Font.size 11, Font.color mutedTxt ] (text "•")
           , paragraph
-              [ Font.size 13
+              [ Font.size 14
               , Font.color txtColor
-              , Font.medium
               , Element.width fill
               , htmlAttribute (Html.Attributes.style "line-height" "1.4")
+              , spacing 8
               ]
-              [ link
+              [ el [ Font.size 12, Font.color mutedTxt ] (text item.feedTitle)
+              , el [ Font.size 12, Font.color mutedTxt, paddingXY 4 0 ] (text "•")
+              , link
                   [ htmlAttribute (Html.Attributes.style "text-decoration" "none")
                   , htmlAttribute (Html.Attributes.style "color" "inherit")
                   , htmlAttribute (Html.Attributes.attribute "data-display-link" "true")
+                  , mouseOver [ Font.color (rgb255 37 99 235) ]
+                  , Font.medium
                   ]
                   { url = item.link, label = text item.title }
               ]
