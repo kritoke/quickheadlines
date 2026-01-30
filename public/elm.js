@@ -6568,6 +6568,7 @@ var $elm$browser$Browser$Navigation$load = _Browser_load;
 var $elm$core$Platform$Cmd$none = $elm$core$Platform$Cmd$batch(_List_Nil);
 var $elm$browser$Browser$Navigation$pushUrl = _Browser_pushUrl;
 var $elm$json$Json$Encode$string = _Json_wrap;
+var $author$project$Application$saveCurrentPage = _Platform_outgoingPort('saveCurrentPage', $elm$json$Json$Encode$string);
 var $author$project$Application$saveTheme = _Platform_outgoingPort('saveTheme', $elm$json$Json$Encode$string);
 var $author$project$Shared$themeToString = function (theme) {
 	if (theme.$ === 'Dark') {
@@ -6983,7 +6984,7 @@ var $author$project$Application$update = F2(
 					_Utils_update(
 						model,
 						{page: newPage, url: url}),
-					$elm$core$Platform$Cmd$none);
+					$author$project$Application$saveCurrentPage(url.path));
 			default:
 				var posix = msg.a;
 				var shared = model.shared;

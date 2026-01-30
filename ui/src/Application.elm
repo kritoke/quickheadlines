@@ -20,6 +20,8 @@ import Url
 
 port saveTheme : String -> Cmd msg
 
+port saveCurrentPage : String -> Cmd msg
+
 port onNearBottom : (Bool -> msg) -> Sub msg
 
 
@@ -165,7 +167,7 @@ update msg model =
                         Home
             in
             ( { model | url = url, page = newPage }
-            , Cmd.none
+            , saveCurrentPage url.path
             )
 
         GotTime posix ->

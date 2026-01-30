@@ -210,24 +210,38 @@
       } else {
         prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
       }
+      
+      // Check if we should restore a previously saved page
+      var savedPage = localStorage.getItem('quickheadlines-page');
+      if (savedPage && savedPage !== window.location.pathname) {
+        console.log('Restoring saved page:', savedPage);
+        window.history.replaceState(null, '', savedPage);
+      }
 
       try {
-        console.log('Initializing Elm...');
-        var app = Elm.Main.init({
-          node: appElement,
-          flags: {
-            width: window.innerWidth,
-            height: window.innerHeight,
-            prefersDark: prefersDark
-          }
-        });
-        console.log('Elm initialized successfully');
+         console.log('Initializing Elm...');
+         var app = Elm.Main.init({
+           node: appElement,
+           flags: {
+             width: window.innerWidth,
+             height: window.innerHeight,
+             prefersDark: prefersDark
+           }
+         });
+         console.log('Elm initialized successfully');
 
-         if (app.ports && app.ports.saveTheme) {
-           app.ports.saveTheme.subscribe(function(theme) {
-             localStorage.setItem('quickheadlines-theme', theme);
-           });
-         }
+          if (app.ports && app.ports.saveTheme) {
+            app.ports.saveTheme.subscribe(function(theme) {
+              localStorage.setItem('quickheadlines-theme', theme);
+            });
+          }
+          
+          if (app.ports && app.ports.saveCurrentPage) {
+            app.ports.saveCurrentPage.subscribe(function(page) {
+              console.log('Saving current page:', page);
+              localStorage.setItem('quickheadlines-page', page);
+            });
+          }
 
          window.addEventListener('resize', function() {
            // Handle resize if needed
