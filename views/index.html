@@ -103,7 +103,7 @@
     <div id="app">
       <div style="display: flex; justify-content: center; align-items: center; height: 100vh; color: #f0f0f0; font-family: system-ui, sans-serif; font-size: 18px; background: #121212;">Loading QuickHeadlines...</div>
     </div>
-    <script src="/elm.js"></script>
+    <script>document.write('<script src="/elm.js?v=' + Date.now() + '"><\/script>');</script>
   <script>
     window.feedHeaderCache = window.feedHeaderCache || {};
 
