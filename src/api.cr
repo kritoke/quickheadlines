@@ -475,6 +475,15 @@ module Api
     # Get all timeline items
     all_items = STATE.all_timeline_items
 
+    # Ensure timeline items are strictly sorted by publication date (newest first).
+    # This re-sorting guards against any upstream ordering issues and ensures the
+    # UI always receives items in descending pub_date order.
+    all_items.sort! do |a, b|
+      da = a.item.pub_date ? a.item.pub_date.to_unix_ms : 0_i64
+      db = b.item.pub_date ? b.item.pub_date.to_unix_ms : 0_i64
+      db <=> da
+    end
+
     total_count = all_items.size
     max_index = Math.min(offset + limit, total_count)
     raw_items = all_items[offset...max_index]
