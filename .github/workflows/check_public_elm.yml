@@ -1,0 +1,23 @@
+name: Check public/elm.js
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  check-elm:
+    runs-on: ubuntu-latest
+    name: Verify public/elm.js exists
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify public/elm.js
+        run: |
+          echo "Checking for public/elm.js..."
+          if [ ! -f public/elm.js ]; then
+            echo "Error: public/elm.js not found."
+            echo "Either commit a precompiled public/elm.js (recommended for FreeBSD/CI) or run 'make elm-build' to build it locally.";
+            exit 1
+          fi
+          echo "public/elm.js found ($(wc -c < public/elm.js) bytes)"
