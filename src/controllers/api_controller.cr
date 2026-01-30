@@ -341,7 +341,12 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
   # Serve static files
   @[ARTA::Get(path: "/elm.js")]
   def elm_js(request : ATH::Request) : ATH::Response
-    content = File.read("./ui/elm.js")
+    # Prefer the built bundle in public/, fall back to ui/ for legacy setups
+    if File.exists?("./public/elm.js")
+      content = File.read("./public/elm.js")
+    else
+      content = File.read("./ui/elm.js")
+    end
     response = ATH::Response.new(content)
     response.headers["content-type"] = "application/javascript; charset=utf-8"
     response.headers["Cache-Control"] = "public, max-age=31536000"
