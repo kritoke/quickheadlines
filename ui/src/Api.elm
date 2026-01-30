@@ -78,47 +78,46 @@ type alias Cluster =
 
 clusterItemsFromTimeline : List TimelineItem -> List Cluster
 clusterItemsFromTimeline items =
-    -- Build groups while preserving the original item order.
-    -- Items without a cluster_id become their own single-item group (using the item's id as key).
     let
-        -- Defensive sort: ensure items are ordered newest -> oldest by pubDate before grouping.
-        comparePub a b =
-            case (a.pubDate, b.pubDate) of
-                (Nothing, Nothing) -> Basics.compare 0 0
-                (Nothing, _) -> Basics.GT
-                (_, Nothing) -> Basics.LT
-                (Just pa, Just pb) ->
+        sortedItems =
+            List.sortWith
+                (\a b ->
+                    case (a.pubDate, b.pubDate) of
+                        (Nothing, Nothing) -> EQ
+                        (Nothing, _) -> GT
+                        (_, Nothing) -> LT
+                        (Just pa, Just pb) ->
+                            compare (Time.posixToMillis pb) (Time.posixToMillis pa)
+                )
+                items
+
+        grouped =
+            List.foldl
+                (\item acc ->
                     let
-                        ma = Time.posixToMillis pa
-                        mb = Time.posixToMillis pb
+                        key =
+                            Maybe.withDefault item.id item.clusterId
+
+                        existing =
+                            List.filter (\(k, _) -> k == key) acc
                     in
-                    Basics.compare mb ma
+                    case existing of
+                        [] ->
+                            acc ++ [ ( key, [ item ] ) ]
 
-        sortedItems = List.sortWith comparePub items
+                        _ ->
+                            List.map
+                                (\(k, v) ->
+                                    if k == key then
+                                        ( k, v ++ [ item ] )
 
-        addItem acc item =
-            let
-                key =
-                    case item.clusterId of
-                        Just cid ->
-                            cid
-
-                        Nothing ->
-                            -- Use the item id as a unique cluster key for unclustered items
-                            item.id
-
-                existing = List.filter (\(k, _) -> k == key) acc
-            in
-            case existing of
-                [] ->
-                    -- Append new group at the end to preserve order
-                    acc ++ [ ( key, [ item ] ) ]
-
-                _ ->
-                    -- Add item to existing group's end
-                    List.map (\(k, v) -> if k == key then ( k, v ++ [ item ] ) else ( k, v )) acc
-
-        grouped = List.foldl addItem [] sortedItems
+                                    else
+                                        ( k, v )
+                                )
+                                acc
+                )
+                []
+                sortedItems
     in
     List.map buildCluster grouped
 

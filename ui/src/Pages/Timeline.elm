@@ -8,7 +8,6 @@ import Element.Font as Font
 import Element.Input as Input
 import Html.Attributes
 import Http
-import Set exposing (Set)
 import Shared exposing (Model, Msg(..), Theme(..))
 import Theme exposing (cardColor, errorColor, surfaceColor, textColor, mutedColor, borderColor, lumeOrange)
 import Time exposing (Posix, toDay, toMonth, toYear, Zone)
@@ -17,7 +16,6 @@ import Time exposing (Posix, toDay, toMonth, toYear, Zone)
 type alias Model =
     { items : List TimelineItem
     , clusters : List Cluster
-    , expandedClusters : Set String
     , loading : Bool
     , loadingMore : Bool
     , error : Maybe String
@@ -30,7 +28,6 @@ init : Shared.Model -> ( Model, Cmd Msg )
 init shared =
     ( { items = []
       , clusters = []
-      , expandedClusters = Set.empty  -- Will expand clusters with count > 1 on first view
       , loading = True
       , loadingMore = False
       , error = Nothing
@@ -45,7 +42,6 @@ type Msg
     = GotTimeline (Result Http.Error Api.TimelineResponse)
     | GotMoreTimeline (Result Http.Error Api.TimelineResponse)
     | LoadMore
-    | ToggleCluster String
     | ToggleTheme
     | NearBottom Bool
 
@@ -58,26 +54,12 @@ update shared msg model =
                 clusters =
                     clusterItemsFromTimeline response.items
 
-                -- Auto-expand clusters with more than 1 item
-                expanded =
-                    List.foldl
-                        (\cluster acc ->
-                            if cluster.count > 1 then
-                                Set.insert cluster.id acc
-                            else
-                                acc
-                        )
-                        Set.empty
-                        clusters
-
-                -- Keep API order (items already sorted by pub_date DESC in backend)
                 sortedClusters =
                     clusters
             in
             ( { model
                 | items = response.items
                 , clusters = sortedClusters
-                , expandedClusters = expanded
                 , loading = False
                 , error = Nothing
                 , hasMore = response.hasMore
@@ -96,10 +78,6 @@ update shared msg model =
 
         GotMoreTimeline (Ok response) ->
             let
-                -- Merge and defensively re-sort the combined item list so that
-                -- newly-loaded pages can't accidentally insert newer items after
-                -- older items (defense-in-depth). Api.sortTimelineItems enforces
-                -- newest->oldest ordering.
                 newItems =
                     Api.sortTimelineItems (model.items ++ response.items)
 
@@ -134,19 +112,6 @@ update shared msg model =
 
             else
                 ( model, Cmd.none )
-
-        ToggleCluster clusterId ->
-            let
-                newExpanded =
-                    if Set.member clusterId model.expandedClusters then
-                        Set.remove clusterId model.expandedClusters
-
-                    else
-                        Set.insert clusterId model.expandedClusters
-            in
-            ( { model | expandedClusters = newExpanded }
-            , Cmd.none
-            )
 
         ToggleTheme ->
             ( model, Cmd.none )
@@ -185,6 +150,7 @@ view shared model =
          , height fill
          , spacing 20
          , padding paddingValue
+         , paddingXY paddingValue 40
          , Background.color bg
          , htmlAttribute (Html.Attributes.attribute "data-timeline-page" "true")
          , htmlAttribute (Html.Attributes.class "auto-hide-scroll")
@@ -221,7 +187,7 @@ view shared model =
                     [ width fill
                     , spacing 16
                     ]
-                    (List.concatMap (dayClusterSection shared.zone shared.now theme model.expandedClusters) clustersByDay)
+                    (List.concatMap (dayClusterSection shared.zone shared.now theme) clustersByDay)
                  , el [ htmlAttribute (Html.Attributes.id "scroll-sentinel"), height (px 1), width fill ] (text "")
                 ]
         ]
@@ -288,15 +254,15 @@ getClusterDateFromKey zone key clusters =
                     Time.millisToPosix 0
 
 
-dayClusterSection : Zone -> Posix -> Theme -> Set String -> DayClusterGroup -> List (Element Msg)
-dayClusterSection zone now theme expandedClusters dayGroup =
+dayClusterSection : Zone -> Posix -> Theme -> DayClusterGroup -> List (Element Msg)
+dayClusterSection zone now theme dayGroup =
     [ dayHeader zone now theme dayGroup.date
     , column
         [ width fill
         , spacing 0
-        , paddingEach { top = 24, bottom = 24, left = 0, right = 0 }
+        , paddingEach { top = 16, bottom = 32, left = 0, right = 0 }
         ]
-        (List.map (clusterItem zone now theme expandedClusters) dayGroup.clusters)
+        (List.map (clusterItem zone now theme) dayGroup.clusters)
     ]
 
 
@@ -324,18 +290,18 @@ dayHeader zone now theme date =
         badgeBg =
             case theme of
                 Dark ->
-                    rgb255 79 70 229
+                    rgb255 49 46 129 -- Indigo 900
 
                 Light ->
-                    rgb255 226 232 240
+                    rgb255 226 232 240 -- Slate 200
 
         badgeTxt =
             case theme of
                 Dark ->
-                    rgb255 224 242 254
+                    rgb255 224 242 254 -- Indigo 100
 
                 Light ->
-                    rgb255 30 41 59
+                    rgb255 30 41 59 -- Slate 800
 
         headerText =
             if dateYear == nowYear && dateMonth == nowMonth && dateDay == nowDay then
@@ -396,25 +362,37 @@ formatDate zone date =
 formatTime : Zone -> Posix -> String
 formatTime zone date =
     let
-        month =
-            toMonth zone date |> monthToString
-
-        day =
-            toDay zone date |> String.fromInt
-
-        year =
-            toYear zone date |> String.fromInt
-        -- Use timezone-aware helpers to extract hour/minute
-        hours =
+        hour =
             Time.toHour zone date
 
-        minutes =
+        minute =
             Time.toMinute zone date
 
-        hh = if hours < 10 then "0" ++ String.fromInt hours else String.fromInt hours
-        mm = if minutes < 10 then "0" ++ String.fromInt minutes else String.fromInt minutes
+        period =
+            if hour < 12 then
+                "am"
+
+            else
+                "pm"
+
+        hour12 =
+            let
+                h = modBy 12 hour
+            in
+            if h == 0 then
+                12
+
+            else
+                h
+
+        mm =
+            if minute < 10 then
+                "0" ++ String.fromInt minute
+
+            else
+                String.fromInt minute
     in
-    month ++ " " ++ day ++ ", " ++ year ++ " " ++ hh ++ ":" ++ mm
+    String.fromInt hour12 ++ ":" ++ mm ++ " " ++ period
 
 
 monthToString : Time.Month -> String
@@ -457,8 +435,8 @@ monthToString month =
             "December"
 
 
-clusterItem : Time.Zone -> Time.Posix -> Theme -> Set String -> Cluster -> Element Msg
-clusterItem zone now theme expandedClusters cluster =
+clusterItem : Time.Zone -> Time.Posix -> Theme -> Cluster -> Element Msg
+clusterItem zone now theme cluster =
     let
         txtColor =
             textColor theme
@@ -469,21 +447,32 @@ clusterItem zone now theme expandedClusters cluster =
         border =
             borderColor theme
 
-        isExpanded =
-            Set.member cluster.id expandedClusters
-
         clusterCount =
             cluster.count
 
-        -- Use the actual timestamp for the timeline view column, but keep relative times
-        -- for feedboxes elsewhere. The timeline should show the absolute time.
         timeStr =
             case cluster.representative.pubDate of
                 Just pd ->
                     formatTime zone pd
 
                 Nothing ->
-                    "unknown"
+                    "???"
+
+        timeBg =
+            case theme of
+                Dark ->
+                    rgb255 31 41 55 -- Slate 800
+
+                Light ->
+                    rgb255 241 245 249 -- Slate 100
+
+        timeTxt =
+            case theme of
+                Dark ->
+                    rgb255 203 213 225 -- Slate 300
+
+                Light ->
+                    rgb255 51 65 85 -- Slate 700
 
         faviconImg =
             Maybe.map
@@ -492,83 +481,96 @@ clusterItem zone now theme expandedClusters cluster =
                         [ width (px 12)
                         , height (px 12)
                         , Border.rounded 1
+                        , Element.alignTop
+                        , Background.color (rgb255 255 255 255)
+                        , padding 2
                         ]
-                        { src = faviconUrl, description = "favicon" }
+                        { src = faviconUrl, description = "" }
                 )
                 cluster.representative.favicon
                 |> Maybe.withDefault Element.none
     in
-      column
-         [ width fill
-         ]
-         [ row
-             [ width fill
-             , spacing 12
-             , paddingEach { top = 8, bottom = 8, left = 0, right = 0 }
-             , Border.widthEach { top = 0, right = 0, bottom = 1, left = 0 }
-             , Border.color border
-             , htmlAttribute (Html.Attributes.attribute "data-timeline-item" "true")
-             ]
-             [ el
-                 [ width (px 60)
-                 , Font.size 12
-                 , Font.color mutedTxt
-                 , Font.family [ Font.monospace ]
-                 , Element.alignTop
-                 , paddingEach { top = 1, bottom = 0, left = 0, right = 0 }
-                 ]
-                 (text timeStr)
-             , row
-                 [ width fill
-                 , spacing 6
-                 , Element.alignTop
-                 ]
-                 [ faviconImg
-                 , el [ Font.size 11, Font.color mutedTxt ] (text "•")
-                 , column
-                     [ width fill
-                     , spacing 0
-                     ]
-                     [ paragraph
-                         [ Font.size 13
-                         , Font.color txtColor
-                         , Font.medium
-                         , htmlAttribute (Html.Attributes.style "word-break" "break-word")
-                         , htmlAttribute (Html.Attributes.style "overflow-wrap" "break-word")
-                         , width fill
-                         , spacing 0
-                         ]
-                         [ link
-                             [ htmlAttribute (Html.Attributes.style "text-decoration" "none")
-                             , htmlAttribute (Html.Attributes.style "color" "inherit")
-                             , htmlAttribute (Html.Attributes.attribute "data-display-link" "true")
-                             ]
-                             { url = cluster.representative.link, label = text cluster.representative.title }
-                         ]
-                     , if clusterCount > 1 then
-                         el
-                             [ Font.size 11
-                             , Font.color lumeOrange
-                             , Font.semiBold
-                             ]
-                             (text (String.fromInt clusterCount ++ " sources"))
+    column
+        [ width fill
+        ]
+        [ row
+            [ width fill
+            , spacing 12
+            , paddingEach { top = 8, bottom = 8, left = 0, right = 0 }
+            , Border.widthEach { top = 0, right = 0, bottom = 1, left = 0 }
+            , Border.color border
+            , htmlAttribute (Html.Attributes.attribute "data-timeline-item" "true")
+            ]
+            [ el
+                [ width (px 85)
+                , Font.size 12
+                , Font.color timeTxt
+                , Font.family [ Font.monospace ]
+                , Element.alignTop
+                , paddingXY 8 4
+                , Background.color timeBg
+                , Border.rounded 6
+                , Font.center
+                ]
+                (text timeStr)
+            , row
+                [ width fill
+                , spacing 6
+                , Element.alignTop
+                ]
+                [ column
+                    [ width fill
+                    , spacing 4
+                    ]
+                    [ row
+                        [ spacing 6
+                        , width fill
+                        ]
+                        [ faviconImg
+                        , el [ Font.size 12, Font.color mutedTxt ] (text cluster.representative.feedTitle)
+                        , el [ Font.size 11, Font.color mutedTxt ] (text "•")
+                        , paragraph
+                            [ Font.size 14
+                            , Font.color txtColor
+                            , Font.semiBold
+                            , htmlAttribute (Html.Attributes.style "word-break" "break-word")
+                            , htmlAttribute (Html.Attributes.style "overflow-wrap" "break-word")
+                            , width fill
+                            ]
+                            [ link
+                                [ htmlAttribute (Html.Attributes.style "text-decoration" "none")
+                                , htmlAttribute (Html.Attributes.style "color" "inherit")
+                                , htmlAttribute (Html.Attributes.attribute "data-display-link" "true")
+                                , mouseOver [ Font.color (rgb255 37 99 235) ]
+                                ]
+                                { url = cluster.representative.link, label = text cluster.representative.title }
+                            ]
+                        ]
+                    , if clusterCount > 1 then
+                        el
+                            [ Font.size 11
+                            , Font.color lumeOrange
+                            , Font.semiBold
+                            , paddingEach { top = 2, bottom = 0, left = 0, right = 0 }
+                            ]
+                            (text (String.fromInt clusterCount ++ " sources"))
 
-                       else
-                         Element.none
-                     ]
-                 ]
-             ]
-         , if clusterCount > 1 && isExpanded then
-             column
-                 [ width fill
-                 , spacing 0
-                 , paddingEach { top = 0, bottom = 0, left = 72, right = 0 }
-                 ]
-                 (List.map (clusterOtherItem now theme) cluster.others)
+                      else
+                        Element.none
+                    ]
+                ]
+            ]
+        , if clusterCount > 1 then
+            column
+                [ width fill
+                , spacing 0
+                , paddingEach { top = 0, bottom = 0, left = 82, right = 0 }
+                ]
+                (List.map (clusterOtherItem now theme) cluster.others)
 
-           else
-             Element.none
-         ]
+          else
+            Element.none
+        ]
 
 
 clusterOtherItem : Posix -> Theme -> Api.ClusterItem -> Element Msg
