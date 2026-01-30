@@ -349,7 +349,13 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
     content = File.read(public_path)
     response = ATH::Response.new(content)
     response.headers["content-type"] = "application/javascript; charset=utf-8"
-    response.headers["Cache-Control"] = "public, max-age=31536000"
+    if ENV["APP_ENV"]? == "development"
+      response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+      response.headers["Pragma"] = "no-cache"
+      response.headers["Expires"] = "0"
+    else
+      response.headers["Cache-Control"] = "public, max-age=31536000"
+    end
     response
   rescue ex : Exception
     ATH::Response.new(ex.message, 404, HTTP::Headers{"content-type" => "text/plain"})
@@ -533,6 +539,36 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
     response = ATH::Response.new(html)
     response.headers["content-type"] = "text/html; charset=utf-8"
     response
+  end
+
+  # Serve logo (used in header). Prefer public/logo.svg, fall back to assets/images/logo.svg
+  @[ARTA::Get(path: "/logo.svg")]
+  def logo_svg(request : ATH::Request) : ATH::Response
+    public_path = "./public/logo.svg"
+    alt_path = "./assets/images/logo.svg"
+
+    # Prefer the asset version (canonical) if present; otherwise fall back to public.
+    if File.exists?(alt_path) && File.exists?(public_path)
+      # Choose the larger file (likely the full logo) to avoid serving a small placeholder
+      path = File.size(alt_path) >= File.size(public_path) ? alt_path : public_path
+    elsif File.exists?(alt_path)
+      path = alt_path
+    else
+      path = public_path
+    end
+
+    unless File.exists?(path)
+      return ATH::Response.new("logo.svg not found", 404, HTTP::Headers{"content-type" => "text/plain"})
+    end
+
+    content = File.read(path)
+    response = ATH::Response.new(content)
+    response.headers["content-type"] = "image/svg+xml"
+    response.headers["Cache-Control"] = "public, max-age=31536000"
+    response.headers["Access-Control-Allow-Origin"] = "*"
+    response
+  rescue ex : Exception
+    ATH::Response.new(ex.message, 404, HTTP::Headers{"content-type" => "text/plain"})
   end
 
   # Vanilla JS test for XHR/Fetch
