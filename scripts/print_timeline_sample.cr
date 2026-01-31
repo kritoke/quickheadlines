@@ -22,7 +22,7 @@ puts "Timeline sample (first #{max} items):"
   title = it["title"].is_a?(JSON::Any) ? it["title"].as_s : it["title"].to_s
   feed_title = it["feed_title"].is_a?(JSON::Any) ? it["feed_title"].as_s : it["feed_title"].to_s
   favicon = it["favicon"].is_a?(JSON::Any) ? it["favicon"].as_s : (it["favicon"] ? it["favicon"].to_s : "(nil)")
-  puts "- #{i+1}) title: #{title}"
+  puts "- #{i + 1}) title: #{title}"
   puts "     feed: #{feed_title}"
   puts "     favicon: #{favicon}"
 end

@@ -46,7 +46,7 @@ class Quickheadlines::Services::ClusteringService
       JOIN items i ON i.cluster_id = c.id
       JOIN feeds f ON i.feed_id = f.id
       ORDER BY c.id, i.id ASC
-    SQL
+      SQL
 
     # Group items by cluster
     cluster_items = Hash(Int64, Array({id: Int64, title: String, link: String, pub_date: Time?, feed_url: String, feed_title: String, favicon: String?, header_color: String?})).new
@@ -68,14 +68,14 @@ class Quickheadlines::Services::ClusteringService
 
         cluster_items[cluster_id] ||= [] of {id: Int64, title: String, link: String, pub_date: Time?, feed_url: String, feed_title: String, favicon: String?, header_color: String?}
         cluster_items[cluster_id] << {
-          id: item_id,
-          title: item_title,
-          link: item_link,
-          pub_date: item_pub_date,
-          feed_url: feed_url,
-          feed_title: feed_title,
-          favicon: favicon,
-          header_color: header_color
+          id:           item_id,
+          title:        item_title,
+          link:         item_link,
+          pub_date:     item_pub_date,
+          feed_url:     feed_url,
+          feed_title:   feed_title,
+          favicon:      favicon,
+          header_color: header_color,
         }
       end
     end

@@ -192,7 +192,7 @@ class DatabaseService
       WHERE i.pub_date >= ?
       ORDER BY COALESCE(i.pub_date, '1970-01-01 00:00:00') DESC, i.id DESC
       LIMIT ? OFFSET ?
-    SQL
+      SQL
 
     @db.query(query, cutoff_date, limit, offset) do |rows|
       rows.each do
@@ -212,18 +212,18 @@ class DatabaseService
         pub_date = pub_date_str.try { |str| Time.parse(str, "%Y-%m-%d %H:%M:%S", Time::Location::UTC) }
 
         items << {
-          id: id,
-          title: title,
-          link: link,
-          pub_date: pub_date,
-          feed_title: feed_title,
-          feed_url: feed_url,
-          feed_link: feed_link,
-          favicon: favicon,
-          header_color: header_color,
-          cluster_id: cluster_id,
+          id:                id,
+          title:             title,
+          link:              link,
+          pub_date:          pub_date,
+          feed_title:        feed_title,
+          feed_url:          feed_url,
+          feed_link:         feed_link,
+          favicon:           favicon,
+          header_color:      header_color,
+          cluster_id:        cluster_id,
           is_representative: is_representative,
-          cluster_size: cluster_size
+          cluster_size:      cluster_size,
         }
       end
     end

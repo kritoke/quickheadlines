@@ -392,7 +392,6 @@ def repopulate_database(config : Config?, cache : FeedCache?, restore_config : F
   end
 
   feeds_to_restore = all_feeds.size
-  # ameba:disable Lint/UselessAssign
   items_to_restore = 0
 
   # Check if we have a fetcher available (this would be called from quickheadlines.cr)
@@ -565,15 +564,15 @@ class FeedCache
     feed_data = @mutex.synchronize do
       result = @db.query_one?("SELECT title, url, site_link, header_color, header_text_color, etag, last_modified, favicon, favicon_data FROM feeds WHERE url = ?", url) do |row|
         {
-          title:            row.read(String),
-          url:              row.read(String),
-          site_link:        row.read(String),
-          header_color:     row.read(String?),
+          title:             row.read(String),
+          url:               row.read(String),
+          site_link:         row.read(String),
+          header_color:      row.read(String?),
           header_text_color: row.read(String?),
-          etag:             row.read(String?),
+          etag:              row.read(String?),
           last_modified:     row.read(String?),
-          favicon:          row.read(String?),
-          favicon_data:     row.read(String?),
+          favicon:           row.read(String?),
+          favicon_data:      row.read(String?),
         }
       end
 
@@ -588,15 +587,15 @@ class FeedCache
         if favicon = result[:favicon]
           if favicon.starts_with?("/favicons/")
             result = {
-              title:            result[:title],
-              url:              result[:url],
-              site_link:        result[:site_link],
-              header_color:     result[:header_color],
+              title:             result[:title],
+              url:               result[:url],
+              site_link:         result[:site_link],
+              header_color:      result[:header_color],
               header_text_color: result[:header_text_color],
-              etag:             result[:etag],
+              etag:              result[:etag],
               last_modified:     result[:last_modified],
-              favicon:          result[:favicon],
-              favicon_data:     favicon,
+              favicon:           result[:favicon],
+              favicon_data:      favicon,
             }
           end
         end
@@ -655,15 +654,15 @@ class FeedCache
       # Get feed metadata
       result = @db.query_one?("SELECT title, url, site_link, header_color, header_text_color, etag, last_modified, favicon, favicon_data FROM feeds WHERE url = ?", url) do |row|
         {
-          title:            row.read(String),
-          url:              row.read(String),
-          site_link:        row.read(String),
-          header_color:     row.read(String?),
+          title:             row.read(String),
+          url:               row.read(String),
+          site_link:         row.read(String),
+          header_color:      row.read(String?),
           header_text_color: row.read(String?),
-          etag:             row.read(String?),
+          etag:              row.read(String?),
           last_modified:     row.read(String?),
-          favicon:          row.read(String?),
-          favicon_data:     row.read(String?),
+          favicon:           row.read(String?),
+          favicon_data:      row.read(String?),
         }
       end
 
@@ -674,15 +673,15 @@ class FeedCache
         if favicon = result[:favicon]
           if favicon.starts_with?("/favicons/")
             result = {
-              title:            result[:title],
-              url:              result[:url],
-              site_link:        result[:site_link],
-              header_color:     result[:header_color],
+              title:             result[:title],
+              url:               result[:url],
+              site_link:         result[:site_link],
+              header_color:      result[:header_color],
               header_text_color: result[:header_text_color],
-              etag:             result[:etag],
+              etag:              result[:etag],
               last_modified:     result[:last_modified],
-              favicon:          result[:favicon],
-              favicon_data:     favicon,
+              favicon:           result[:favicon],
+              favicon_data:      favicon,
             }
           end
         end
@@ -731,7 +730,7 @@ class FeedCache
     @mutex.synchronize do
       # First check if header_color is already set
       existing = @db.query_one?("SELECT header_color, header_text_color FROM feeds WHERE url = ?", feed_url) do |row|
-        { header_color: row.read(String?), header_text_color: row.read(String?) }
+        {header_color: row.read(String?), header_text_color: row.read(String?)}
       end
 
       if existing.nil?
@@ -773,9 +772,9 @@ class FeedCache
   def get_header_colors(feed_url : String) : {bg_color: String?, text_color: String?}
     @mutex.synchronize do
       result = @db.query_one?("SELECT header_color, header_text_color FROM feeds WHERE url = ?", feed_url) do |row|
-        { bg_color: row.read(String?), text_color: row.read(String?) }
+        {bg_color: row.read(String?), text_color: row.read(String?)}
       end
-      result || { bg_color: nil, text_color: nil }
+      result || {bg_color: nil, text_color: nil}
     end
   end
 
@@ -999,7 +998,7 @@ class FeedCache
       rows = [] of {Int64, String?}
       @db.query("SELECT id, pub_date FROM items WHERE pub_date IS NOT NULL") do |r|
         r.each do
-          rows << { r.read(Int64), r.read(String?) }
+          rows << {r.read(Int64), r.read(String?)}
         end
       end
 
@@ -1209,7 +1208,7 @@ class FeedCache
         WHERE i.pub_date >= ?
         ORDER BY i.pub_date DESC
         LIMIT ?
-      SQL
+        SQL
 
       @db.query(query, cutoff, max_items) do |rows|
         rows.each do
@@ -1225,14 +1224,14 @@ class FeedCache
           pub_date = pub_date_str.try { |date_str| Time.parse(date_str, "%Y-%m-%d %H:%M:%S", Time::Location::UTC) }
 
           items << {
-            id: id,
-            title: title,
-            link: link,
-            pub_date: pub_date,
-            feed_url: feed_url,
-            feed_title: feed_title,
-            favicon: favicon,
-            header_color: header_color
+            id:           id,
+            title:        title,
+            link:         link,
+            pub_date:     pub_date,
+            feed_url:     feed_url,
+            feed_title:   feed_title,
+            favicon:      favicon,
+            header_color: header_color,
           }
         end
       end
@@ -1258,7 +1257,7 @@ class FeedCache
         JOIN items i ON i.cluster_id = c.id
         GROUP BY c.id
         ORDER BY MIN(i.pub_date) DESC
-      SQL
+        SQL
 
       @db.query(query) do |rows|
         rows.each do
@@ -1284,7 +1283,7 @@ class FeedCache
         JOIN feeds f ON i.feed_id = f.id
         WHERE i.cluster_id = ?
         ORDER BY i.id ASC
-      SQL
+        SQL
 
       @db.query(query, cluster_id) do |rows|
         rows.each do
@@ -1300,14 +1299,14 @@ class FeedCache
           pub_date = pub_date_str.try { |date_str| Time.parse(date_str, "%Y-%m-%d %H:%M:%S", Time::Location::UTC) }
 
           items << {
-            id: id,
-            title: title,
-            link: link,
-            pub_date: pub_date,
-            feed_url: feed_url,
-            feed_title: feed_title,
-            favicon: favicon,
-            header_color: header_color
+            id:           id,
+            title:        title,
+            link:         link,
+            pub_date:     pub_date,
+            feed_url:     feed_url,
+            feed_title:   feed_title,
+            favicon:      favicon,
+            header_color: header_color,
           }
         end
       end
@@ -1327,15 +1326,15 @@ class FeedCache
   private def get_without_lock(url : String) : FeedData?
     result = @db.query_one?("SELECT title, url, site_link, header_color, header_text_color, etag, last_modified, favicon, favicon_data FROM feeds WHERE url = ?", url) do |row|
       {
-        title:            row.read(String),
-        url:              row.read(String),
-        site_link:        row.read(String),
-        header_color:     row.read(String?),
+        title:             row.read(String),
+        url:               row.read(String),
+        site_link:         row.read(String),
+        header_color:      row.read(String?),
         header_text_color: row.read(String?),
-        etag:             row.read(String?),
+        etag:              row.read(String?),
         last_modified:     row.read(String?),
-        favicon:          row.read(String?),
-        favicon_data:     row.read(String?),
+        favicon:           row.read(String?),
+        favicon_data:      row.read(String?),
       }
     end
 
@@ -1346,15 +1345,15 @@ class FeedCache
       if favicon = result[:favicon]
         if favicon.starts_with?("/favicons/")
           result = {
-            title:            result[:title],
-            url:              result[:url],
-            site_link:        result[:site_link],
-            header_color:     result[:header_color],
+            title:             result[:title],
+            url:               result[:url],
+            site_link:         result[:site_link],
+            header_color:      result[:header_color],
             header_text_color: result[:header_text_color],
-            etag:             result[:etag],
+            etag:              result[:etag],
             last_modified:     result[:last_modified],
-            favicon:          result[:favicon],
-            favicon_data:     favicon,
+            favicon:           result[:favicon],
+            favicon_data:      favicon,
           }
         end
       end

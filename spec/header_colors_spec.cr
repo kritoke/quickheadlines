@@ -5,7 +5,7 @@ describe "Header Colors" do
     describe "update_header_colors" do
       it "saves bg and text colors for feed with existing colors" do
         cache = FeedCache.new(nil)
-        
+
         # First add a feed with items (required for add to work)
         test_feed = FeedData.new(
           title: "Test Feed",
@@ -20,10 +20,10 @@ describe "Header Colors" do
           favicon_data: nil
         )
         cache.add(test_feed)
-        
+
         # Update colors
         cache.update_header_colors("https://test.com/feed.xml", "rgb(200,200,200)", "#ffffff")
-        
+
         # Verify via get
         feed = cache.get("https://test.com/feed.xml")
         feed.should_not be_nil
@@ -31,7 +31,7 @@ describe "Header Colors" do
         feed.not_nil!.header_text_color.should eq("#ffffff")
       end
     end
-    
+
     describe "FeedData display_header_color" do
       it "returns color when header_color is set" do
         feed = FeedData.new(
@@ -44,7 +44,7 @@ describe "Header Colors" do
         )
         feed.display_header_color.should eq("rgb(100,150,200)")
       end
-      
+
       it "returns transparent when header_color is nil" do
         feed = FeedData.new(
           title: "Test",
@@ -56,7 +56,7 @@ describe "Header Colors" do
         )
         feed.display_header_color.should eq("transparent")
       end
-      
+
       it "returns transparent when header_color is empty" do
         feed = FeedData.new(
           title: "Test",
@@ -69,7 +69,7 @@ describe "Header Colors" do
         feed.display_header_color.should eq("transparent")
       end
     end
-    
+
     describe "FeedData display_header_text_color" do
       it "returns color when header_text_color is set" do
         feed = FeedData.new(
@@ -82,7 +82,7 @@ describe "Header Colors" do
         )
         feed.display_header_text_color.should eq("#ffffff")
       end
-      
+
       it "returns nil when header_text_color is nil" do
         feed = FeedData.new(
           title: "Test",

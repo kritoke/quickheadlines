@@ -48,7 +48,7 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
       JOIN items i ON i.cluster_id = c.id
       JOIN feeds f ON i.feed_id = f.id
       ORDER BY c.id, i.id ASC
-    SQL
+      SQL
 
     # Group items by cluster
     cluster_items = Hash(Int64, Array({id: Int64, title: String, link: String, pub_date: Time?, feed_url: String, feed_title: String, favicon: String?, header_color: String?})).new
@@ -70,14 +70,14 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
 
         cluster_items[cluster_id] ||= [] of {id: Int64, title: String, link: String, pub_date: Time?, feed_url: String, feed_title: String, favicon: String?, header_color: String?}
         cluster_items[cluster_id] << {
-          id: item_id,
-          title: item_title,
-          link: item_link,
-          pub_date: item_pub_date,
-          feed_url: feed_url,
-          feed_title: feed_title,
-          favicon: favicon,
-          header_color: header_color
+          id:           item_id,
+          title:        item_title,
+          link:         item_link,
+          pub_date:     item_pub_date,
+          feed_url:     feed_url,
+          feed_title:   feed_title,
+          favicon:      favicon,
+          header_color: header_color,
         }
       end
     end
@@ -387,32 +387,32 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
 
   @[ARTA::Get(path: "/favicon.png")]
   def favicon_png(request : ATH::Request) : ATH::Response
-      content = File.read("./assets/images/favicon.png")
-      response = ATH::Response.new(content)
-      response.headers["content-type"] = "image/png"
-      response.headers["Cache-Control"] = "public, max-age=31536000"
-      response.headers["Access-Control-Allow-Origin"] = "*"
-      response
+    content = File.read("./assets/images/favicon.png")
+    response = ATH::Response.new(content)
+    response.headers["content-type"] = "image/png"
+    response.headers["Cache-Control"] = "public, max-age=31536000"
+    response.headers["Access-Control-Allow-Origin"] = "*"
+    response
   end
 
   @[ARTA::Get(path: "/favicon.svg")]
   def favicon_svg(request : ATH::Request) : ATH::Response
-      content = File.read("./assets/images/favicon.svg")
-      response = ATH::Response.new(content)
-      response.headers["content-type"] = "image/svg+xml"
-      response.headers["Cache-Control"] = "public, max-age=31536000"
-      response.headers["Access-Control-Allow-Origin"] = "*"
-      response
+    content = File.read("./assets/images/favicon.svg")
+    response = ATH::Response.new(content)
+    response.headers["content-type"] = "image/svg+xml"
+    response.headers["Cache-Control"] = "public, max-age=31536000"
+    response.headers["Access-Control-Allow-Origin"] = "*"
+    response
   end
 
   @[ARTA::Get(path: "/favicon.ico")]
   def favicon_ico(request : ATH::Request) : ATH::Response
-      content = File.read("./assets/images/favicon.ico")
-      response = ATH::Response.new(content)
-      response.headers["content-type"] = "image/x-icon"
-      response.headers["Cache-Control"] = "public, max-age=31536000"
-      response.headers["Access-Control-Allow-Origin"] = "*"
-      response
+    content = File.read("./assets/images/favicon.ico")
+    response = ATH::Response.new(content)
+    response.headers["content-type"] = "image/x-icon"
+    response.headers["Cache-Control"] = "public, max-age=31536000"
+    response.headers["Access-Control-Allow-Origin"] = "*"
+    response
   end
 
   # Simple test page for debugging Elm command execution
@@ -420,121 +420,121 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
   @[ARTA::Get(path: "/simple")]
   def simple_test(request : ATH::Request) : ATH::Response
     html = <<-HTML
-        <!DOCTYPE html>
-        <html>
-          <head>
-            <meta charset="UTF-8">
-            <title>Simple Test - Debug Elm Commands</title>
-            <style>
-              body { font-family: monospace; padding: 20px; background: #1a1a1a; color: #eee; }
-              button { padding: 10px 20px; margin: 5px; cursor: pointer; background: #333; color: #fff; border: 1px solid #555; }
-              #log { background: #0a0a0a; padding: 10px; margin-top: 20px; max-height: 400px; overflow-y: auto; font-size: 12px; }
-              .log-entry { margin: 2px 0; padding: 2px 5px; }
-              .log-info { color: #88f; }
-              .log-success { color: #8f8; }
-              .log-error { color: #f88; }
-              #elm-app { background: #252525; padding: 20px; margin: 10px 0; border: 1px solid #444; }
-            </style>
-          </head>
-          <body>
-            <h1>Simple Elm Test</h1>
-            <p>Testing if Elm commands (Task.perform, Http.get) execute on init.</p>
-            <button onclick="location.reload()">Reload Page</button>
-            <button onclick="clearLog()">Clear Log</button>
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="UTF-8">
+          <title>Simple Test - Debug Elm Commands</title>
+          <style>
+            body { font-family: monospace; padding: 20px; background: #1a1a1a; color: #eee; }
+            button { padding: 10px 20px; margin: 5px; cursor: pointer; background: #333; color: #fff; border: 1px solid #555; }
+            #log { background: #0a0a0a; padding: 10px; margin-top: 20px; max-height: 400px; overflow-y: auto; font-size: 12px; }
+            .log-entry { margin: 2px 0; padding: 2px 5px; }
+            .log-info { color: #88f; }
+            .log-success { color: #8f8; }
+            .log-error { color: #f88; }
+            #elm-app { background: #252525; padding: 20px; margin: 10px 0; border: 1px solid #444; }
+          </style>
+        </head>
+        <body>
+          <h1>Simple Elm Test</h1>
+          <p>Testing if Elm commands (Task.perform, Http.get) execute on init.</p>
+          <button onclick="location.reload()">Reload Page</button>
+          <button onclick="clearLog()">Clear Log</button>
 
-            <div id="elm-app"></div>
+          <div id="elm-app"></div>
 
-            <h2>Console Log</h2>
-            <div id="log"></div>
+          <h2>Console Log</h2>
+          <div id="log"></div>
 
-            <script src="/simple.js"></script>
-            <script>
-              function log(msg, type) {
-                var logDiv = document.getElementById('log');
-                var entry = document.createElement('div');
-                entry.className = 'log-entry ' + (type || 'log-info');
-                entry.textContent = '[' + new Date().toISOString().substr(11, 12) + '] ' + msg;
-                logDiv.appendChild(entry);
-                logDiv.scrollTop = logDiv.scrollHeight;
-                console.log('[' + type + ']', msg);
-              }
+          <script src="/simple.js"></script>
+          <script>
+            function log(msg, type) {
+              var logDiv = document.getElementById('log');
+              var entry = document.createElement('div');
+              entry.className = 'log-entry ' + (type || 'log-info');
+              entry.textContent = '[' + new Date().toISOString().substr(11, 12) + '] ' + msg;
+              logDiv.appendChild(entry);
+              logDiv.scrollTop = logDiv.scrollHeight;
+              console.log('[' + type + ']', msg);
+            }
 
-              function clearLog() {
-                document.getElementById('log').innerHTML = '';
-              }
+            function clearLog() {
+              document.getElementById('log').innerHTML = '';
+            }
 
-              log('Page loaded', 'log-info');
+            log('Page loaded', 'log-info');
 
-              // Intercept fetch to see HTTP requests
-              var originalFetch = window.fetch;
-              window.fetch = function() {
-                log('FETCH called: ' + arguments[0], 'log-success');
-                return originalFetch.apply(this, arguments);
+            // Intercept fetch to see HTTP requests
+            var originalFetch = window.fetch;
+            window.fetch = function() {
+              log('FETCH called: ' + arguments[0], 'log-success');
+              return originalFetch.apply(this, arguments);
+            };
+
+            // Intercept XMLHttpRequest
+            var originalXHR = window.XMLHttpRequest;
+            window.XMLHttpRequest = function() {
+              var xhr = new originalXHR();
+              var originalOpen = xhr.open.bind(xhr);
+              xhr.open = function(method, url) {
+                log('XHR open: ' + method + ' ' + url, 'log-success');
+                return originalOpen.apply(this, arguments);
               };
+              return xhr;
+            };
 
-              // Intercept XMLHttpRequest
-              var originalXHR = window.XMLHttpRequest;
-              window.XMLHttpRequest = function() {
-                var xhr = new originalXHR();
-                var originalOpen = xhr.open.bind(xhr);
-                xhr.open = function(method, url) {
-                  log('XHR open: ' + method + ' ' + url, 'log-success');
-                  return originalOpen.apply(this, arguments);
-                };
-                return xhr;
-              };
+            log('Elm global:', typeof Elm, 'log-info');
+            log('Elm.SimpleTest:', Elm && Elm.SimpleTest, 'log-info');
 
-              log('Elm global:', typeof Elm, 'log-info');
-              log('Elm.SimpleTest:', Elm && Elm.SimpleTest, 'log-info');
+            if (typeof Elm !== 'undefined' && Elm.SimpleTest) {
+              log('Initializing Elm.SimpleTest...', 'log-info');
+              try {
+                var startTime = performance.now();
+                var app = Elm.SimpleTest.init({
+                  node: document.getElementById('elm-app')
+                });
+                var initTime = performance.now() - startTime;
+                log('Elm initialized in ' + initTime.toFixed(2) + 'ms', 'log-success');
+                log('App object:', JSON.stringify({
+                  ports: !!app.ports,
+                  model: !!app.model,
+                  subscriptions: !!app.subscriptions
+                }), 'log-info');
 
-              if (typeof Elm !== 'undefined' && Elm.SimpleTest) {
-                log('Initializing Elm.SimpleTest...', 'log-info');
-                try {
-                  var startTime = performance.now();
-                  var app = Elm.SimpleTest.init({
-                    node: document.getElementById('elm-app')
+                // Monitor for model changes
+                if (app.ports && app.ports.outgoing) {
+                  log('Subscribing to outgoing port', 'log-info');
+                  app.ports.outgoing.subscribe(function(data) {
+                    log('Outgoing port message: ' + JSON.stringify(data), 'log-success');
                   });
-                  var initTime = performance.now() - startTime;
-                  log('Elm initialized in ' + initTime.toFixed(2) + 'ms', 'log-success');
-                  log('App object:', JSON.stringify({
-                    ports: !!app.ports,
-                    model: !!app.model,
-                    subscriptions: !!app.subscriptions
-                  }), 'log-info');
-
-                  // Monitor for model changes
-                  if (app.ports && app.ports.outgoing) {
-                    log('Subscribing to outgoing port', 'log-info');
-                    app.ports.outgoing.subscribe(function(data) {
-                      log('Outgoing port message: ' + JSON.stringify(data), 'log-success');
-                    });
-                  }
-
-                  // Check after a delay if model changed
-                  setTimeout(function() {
-                    log('Checking for updates after 3 seconds...', 'log-info');
-                    var modelDiv = document.getElementById('elm-app');
-                    log('elm-app innerHTML length: ' + modelDiv.innerHTML.length, 'log-info');
-                    log('elm-app text content: ' + modelDiv.textContent.substring(0, 200), 'log-info');
-
-                    // Try to access the app's internal state
-                    if (app._callbacks && app._callbacks.update) {
-                      log('Update callbacks present', 'log-success');
-                    }
-                  }, 3000);
-
-                } catch(e) {
-                  log('Elm initialization error: ' + e.message, 'log-error');
-                  log('Stack: ' + e.stack, 'log-error');
                 }
-              } else {
-                log('Elm.SimpleTest not found!', 'log-error');
-                log('Available in Elm:', Object.keys(Elm || {}), 'log-error');
+
+                // Check after a delay if model changed
+                setTimeout(function() {
+                  log('Checking for updates after 3 seconds...', 'log-info');
+                  var modelDiv = document.getElementById('elm-app');
+                  log('elm-app innerHTML length: ' + modelDiv.innerHTML.length, 'log-info');
+                  log('elm-app text content: ' + modelDiv.textContent.substring(0, 200), 'log-info');
+
+                  // Try to access the app's internal state
+                  if (app._callbacks && app._callbacks.update) {
+                    log('Update callbacks present', 'log-success');
+                  }
+                }, 3000);
+
+              } catch(e) {
+                log('Elm initialization error: ' + e.message, 'log-error');
+                log('Stack: ' + e.stack, 'log-error');
               }
-            </script>
-          </body>
-        </html>
-    HTML
+            } else {
+              log('Elm.SimpleTest not found!', 'log-error');
+              log('Available in Elm:', Object.keys(Elm || {}), 'log-error');
+            }
+          </script>
+        </body>
+      </html>
+      HTML
 
     response = ATH::Response.new(html)
     response.headers["content-type"] = "text/html; charset=utf-8"

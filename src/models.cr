@@ -1,5 +1,5 @@
- record Item, title : String, link : String, pub_date : Time?, version : String? = nil
- record TimelineItem, item : Item, feed_title : String, feed_url : String, feed_link : String, favicon : String?, favicon_data : String?, header_color : String?, header_text_color : String?
+record Item, title : String, link : String, pub_date : Time?, version : String? = nil
+record TimelineItem, item : Item, feed_title : String, feed_url : String, feed_link : String, favicon : String?, favicon_data : String?, header_color : String?, header_text_color : String?
 
 # Extended TimelineItem with cluster information for story grouping
 record ClusteredTimelineItem,

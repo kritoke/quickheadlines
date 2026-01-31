@@ -18,7 +18,7 @@ end
 first = feeds[0]
 
 def maybe_str(a)
-  return nil if a.nil?
+  return if a.nil?
   if a.is_a?(JSON::Any)
     begin
       a.as_s
@@ -53,11 +53,11 @@ items_to_show.each_with_index do |it, i|
   link = maybe_str(it["link"]) || "(nil)"
   pub = it["pub_date"]
   pub_s = if pub.nil?
-    "(nil)"
-  else
-    maybe_str(pub) || "(nil)"
-  end
-  puts "  #{i+1}) title: #{title}"
+            "(nil)"
+          else
+            maybe_str(pub) || "(nil)"
+          end
+  puts "  #{i + 1}) title: #{title}"
   puts "     link: #{link}"
   puts "     pub_date(ms): #{pub_s}"
 end

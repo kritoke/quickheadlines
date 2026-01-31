@@ -31,6 +31,7 @@
 
 ## 4. Definition of Done (Verification)
 * **Testing:** A change is only complete when it passes:
-  1. `nix develop --command crystal spec`
-  2. `nix develop --command elm-land build`
+  1. `nix develop . --command crystal spec`
+  2. `nix develop . --command ameba`
+  3. `nix develop . --command elm-land build`
 * **Archival:** The final step of any task is `/opsx:archive` to merge the change into the permanent specs.
