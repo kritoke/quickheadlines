@@ -12,6 +12,7 @@ import Set exposing (Set)
 import Shared exposing (Model, Msg(..), Theme(..))
 import Theme exposing (borderColor, cardColor, errorColor, lumeOrange, mutedColor, surfaceColor, textColor)
 import Time exposing (Posix, Zone, toDay, toMonth, toYear)
+import Pages.ViewIcon exposing (viewIcon)
 
 
 type alias Model =
@@ -174,18 +175,6 @@ view shared model =
         , htmlAttribute (Html.Attributes.attribute "data-timeline-page" "true")
         , htmlAttribute (Html.Attributes.class "auto-hide-scroll")
         ]
-
-
--- Helper to render a favicon at a consistent size and alignment
-viewIcon : String -> String -> Element msg
-viewIcon url siteName =
-    image
-        [ width (px 16)
-        , height (px 16)
-        , Border.rounded 2
-        , centerY
-        ]
-        { src = url, description = siteName }
         [ el
             [ Font.size
                 (if isMobile then
