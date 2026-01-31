@@ -1,4 +1,4 @@
-module Api exposing (Cluster, ClusterItem, Feed, FeedItem, FeedsResponse, Tab, TimelineItem, TimelineResponse, clusterItemsFromTimeline, sortTimelineItems, fetchFeeds, fetchTimeline)
+module Api exposing (Cluster, ClusterItem, Feed, FeedItem, FeedsResponse, Tab, TimelineItem, TimelineResponse, clusterItemsFromTimeline, sortTimelineItems, sortFeedItems, fetchFeeds, fetchTimeline)
 
 import Http
 import Json.Decode as Decode exposing (Decoder, field, list, nullable, string, succeed)
@@ -140,6 +140,48 @@ sortTimelineItems items =
                     Basics.compare (Time.posixToMillis pb) (Time.posixToMillis pa)
     in
     List.sortWith comparePub items
+
+
+{-| sortFeedItems
+
+    Ensure feed items are ordered newest -> oldest by pubDate. Used by the
+    Home view when merging or displaying feed items inside feed cards.
+ -}
+sortFeedItems : List FeedItem -> List FeedItem
+sortFeedItems items =
+    let
+        comparePub a b =
+            let
+                ma =
+                    case a.pubDate of
+                        Nothing ->
+                            -1
+
+                        Just p ->
+                            Time.posixToMillis p
+
+                mb =
+                    case b.pubDate of
+                        Nothing ->
+                            -1
+
+                        Just p ->
+                            Time.posixToMillis p
+
+                tcmp =
+                    Basics.compare mb ma
+            in
+            if tcmp /= EQ then
+                tcmp
+
+            else
+                -- deterministic fallback using link
+                Basics.compare b.link a.link
+
+        sorted =
+            List.sortWith comparePub items
+    in
+    sorted
 
 
 buildCluster : ( String, List TimelineItem ) -> Cluster
