@@ -1,59 +1,56 @@
+
 module ThemeTypography exposing (..)
 
+import Element exposing (Attribute)
 import Element.Font as Font
 
 
 {-|
   Centralized typography helpers.
   Replace scattered `Font.size N` with these named helpers so desktop scaling is consistent.
--}
-
-type alias Attr = Font.Attribute
+ -}
 
 
-title : Attr
+title : Attribute msg
 title =
     Font.size 24
 
 
-subtitle : Attr
+subtitle : Attribute msg
 subtitle =
     Font.size 20
 
 
-body : Attr
+body : Attribute msg
 body =
     Font.size 16
 
 
-small : Attr
+small : Attribute msg
 small =
     Font.size 12
 
 
-meta : Attr
+meta : Attribute msg
 meta =
     Font.size 11
 
 
-button : Attr
+button : Attribute msg
 button =
     Font.size 15
 
 
-size18 : Attr
+size18 : Attribute msg
 size18 =
     Font.size 18
 
 
-size14 : Attr
+size14 : Attribute msg
 size14 =
     Font.size 14
 
 
-size13 : Attr
+size13 : Attribute msg
 size13 =
     Font.size 13
-
-
-end

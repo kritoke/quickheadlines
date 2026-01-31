@@ -10,6 +10,7 @@ import Html.Attributes
 import Http
 import Shared exposing (Model, Msg(..), Theme(..))
 import Theme exposing (cardColor, errorColor, surfaceColor, tabActiveBg, tabActiveText, tabHoverBg, tabInactiveText, textColor, themeToColors)
+import ThemeTypography as Ty
 import Time
 
 

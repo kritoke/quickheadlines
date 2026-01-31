@@ -14,6 +14,7 @@ import Pages.Home_ as Home
 import Pages.Timeline as Timeline
 import Shared exposing (Model, Msg(..), Theme(..))
 import Theme exposing (lumeOrange, surfaceColor, textColor)
+import ThemeTypography as Ty
 import Time
 import Task
 import Url

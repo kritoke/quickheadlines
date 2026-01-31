@@ -12683,6 +12683,7 @@ var $author$project$Application$SharedMsg = function (a) {
 	return {$: 'SharedMsg', a: a};
 };
 var $author$project$Shared$ToggleTheme = {$: 'ToggleTheme'};
+var $author$project$ThemeTypography$body = $mdgriffith$elm_ui$Element$Font$size(16);
 var $mdgriffith$elm_ui$Internal$Model$Button = {$: 'Button'};
 var $elm$json$Json$Encode$bool = _Json_wrap;
 var $elm$html$Html$Attributes$boolProperty = F2(
@@ -12851,7 +12852,7 @@ var $author$project$Application$themeToggle = function (model) {
 			[
 				$mdgriffith$elm_ui$Element$Background$color(bg),
 				$mdgriffith$elm_ui$Element$Font$color($author$project$Theme$lumeOrange),
-				$mdgriffith$elm_ui$Element$Font$size(16),
+				$author$project$ThemeTypography$body,
 				A2($mdgriffith$elm_ui$Element$paddingXY, 10, 8),
 				$mdgriffith$elm_ui$Element$Border$rounded(6),
 				$mdgriffith$elm_ui$Element$htmlAttribute(
@@ -13297,6 +13298,7 @@ var $mdgriffith$elm_ui$Element$column = F2(
 						attrs))),
 			$mdgriffith$elm_ui$Internal$Model$Unkeyed(children));
 	});
+var $author$project$ThemeTypography$small = $mdgriffith$elm_ui$Element$Font$size(12);
 var $author$project$Layouts$Shared$footerView = function (content) {
 	return A2(
 		$mdgriffith$elm_ui$Element$row,
@@ -13305,7 +13307,7 @@ var $author$project$Layouts$Shared$footerView = function (content) {
 				$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill),
 				$mdgriffith$elm_ui$Element$padding(16),
 				$mdgriffith$elm_ui$Element$spacing(8),
-				$mdgriffith$elm_ui$Element$Font$size(12),
+				$author$project$ThemeTypography$small,
 				$mdgriffith$elm_ui$Element$Font$color(
 				A3($mdgriffith$elm_ui$Element$rgb255, 150, 150, 150))
 			]),
@@ -13622,6 +13624,7 @@ var $elm$core$String$replace = F3(
 			after,
 			A2($elm$core$String$split, before, string));
 	});
+var $author$project$ThemeTypography$size13 = $mdgriffith$elm_ui$Element$Font$size(13);
 var $mdgriffith$elm_ui$Element$Font$underline = $mdgriffith$elm_ui$Internal$Model$htmlClass($mdgriffith$elm_ui$Internal$Style$classes.underline);
 var $author$project$Pages$Home_$feedHeader = F2(
 	function (theme, feed) {
@@ -13797,7 +13800,7 @@ var $author$project$Pages$Home_$feedHeader = F2(
 								[
 									$mdgriffith$elm_ui$Element$htmlAttribute(
 									A2($elm$html$Html$Attributes$attribute, 'data-display-link', 'true')),
-									$mdgriffith$elm_ui$Element$Font$size(13),
+									$author$project$ThemeTypography$size13,
 									function () {
 									if (headerTextColor === '') {
 										return $mdgriffith$elm_ui$Element$htmlAttribute(
@@ -14043,7 +14046,7 @@ var $author$project$Pages$Home_$feedItem = F3(
 					_List_fromArray(
 						[
 							$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill),
-							$mdgriffith$elm_ui$Element$Font$size(13),
+							$author$project$ThemeTypography$size13,
 							$mdgriffith$elm_ui$Element$Font$color(txtColor),
 							$mdgriffith$elm_ui$Element$htmlAttribute(
 							A2($elm$html$Html$Attributes$style, 'word-break', 'break-word')),
@@ -14071,7 +14074,7 @@ var $author$project$Pages$Home_$feedItem = F3(
 					$mdgriffith$elm_ui$Element$el,
 					_List_fromArray(
 						[
-							$mdgriffith$elm_ui$Element$Font$size(12),
+							$author$project$ThemeTypography$small,
 							$mdgriffith$elm_ui$Element$Font$color(mutedTxt),
 							$mdgriffith$elm_ui$Element$alignTop,
 							A2($mdgriffith$elm_ui$Element$paddingXY, 0, 2)
@@ -14210,6 +14213,7 @@ var $author$project$Pages$Home_$feedGrid = F2(
 				},
 				A2($author$project$Pages$Home_$chunkList, columnCount, model.feeds)));
 	});
+var $author$project$ThemeTypography$size18 = $mdgriffith$elm_ui$Element$Font$size(18);
 var $author$project$Pages$Home_$content = F2(
 	function (shared, model) {
 		var theme = shared.theme;
@@ -14220,7 +14224,7 @@ var $author$project$Pages$Home_$content = F2(
 				[
 					$mdgriffith$elm_ui$Element$centerX,
 					$mdgriffith$elm_ui$Element$centerY,
-					$mdgriffith$elm_ui$Element$Font$size(18),
+					$author$project$ThemeTypography$size18,
 					$mdgriffith$elm_ui$Element$Font$color(muted)
 				]),
 			$mdgriffith$elm_ui$Element$text('Loading...')) : ((!_Utils_eq(model.error, $elm$core$Maybe$Nothing)) ? A2(
@@ -14229,11 +14233,12 @@ var $author$project$Pages$Home_$content = F2(
 				[
 					$mdgriffith$elm_ui$Element$centerX,
 					$mdgriffith$elm_ui$Element$centerY,
-					$mdgriffith$elm_ui$Element$Font$size(18),
+					$author$project$ThemeTypography$size18,
 					$mdgriffith$elm_ui$Element$Font$color($author$project$Theme$errorColor)
 				]),
 			$mdgriffith$elm_ui$Element$text('Error loading feeds')) : A2($author$project$Pages$Home_$feedGrid, shared, model));
 	});
+var $author$project$ThemeTypography$button = $mdgriffith$elm_ui$Element$Font$size(15);
 var $mdgriffith$elm_ui$Element$Font$medium = A2($mdgriffith$elm_ui$Internal$Model$Class, $mdgriffith$elm_ui$Internal$Flag$fontWeight, $mdgriffith$elm_ui$Internal$Style$classes.textMedium);
 var $author$project$Theme$tabActiveBg = function (theme) {
 	if (theme.$ === 'Dark') {
@@ -14252,7 +14257,7 @@ var $author$project$Pages$Home_$allTab = function (shared) {
 			[
 				A2($mdgriffith$elm_ui$Element$paddingXY, 12, 6),
 				$mdgriffith$elm_ui$Element$Border$rounded(6),
-				$mdgriffith$elm_ui$Element$Font$size(15),
+				$author$project$ThemeTypography$button,
 				$mdgriffith$elm_ui$Element$Font$medium,
 				$mdgriffith$elm_ui$Element$Font$color($author$project$Theme$tabActiveText),
 				$mdgriffith$elm_ui$Element$Background$color(
@@ -14286,7 +14291,7 @@ var $author$project$Pages$Home_$tabButton = F3(
 				[
 					A2($mdgriffith$elm_ui$Element$paddingXY, 12, 6),
 					$mdgriffith$elm_ui$Element$Border$rounded(6),
-					$mdgriffith$elm_ui$Element$Font$size(15),
+					$author$project$ThemeTypography$button,
 					$mdgriffith$elm_ui$Element$Font$medium,
 					$mdgriffith$elm_ui$Element$Font$color(txtColor),
 					$mdgriffith$elm_ui$Element$Background$color(bg)
@@ -14524,6 +14529,7 @@ var $author$project$Pages$Timeline$ToggleCluster = function (a) {
 };
 var $mdgriffith$elm_ui$Internal$Flag$fontAlignment = $mdgriffith$elm_ui$Internal$Flag$flag(12);
 var $mdgriffith$elm_ui$Element$Font$center = A2($mdgriffith$elm_ui$Internal$Model$Class, $mdgriffith$elm_ui$Internal$Flag$fontAlignment, $mdgriffith$elm_ui$Internal$Style$classes.textCenter);
+var $author$project$ThemeTypography$meta = $mdgriffith$elm_ui$Element$Font$size(11);
 var $author$project$Pages$ViewIcon$viewIcon = F2(
 	function (url, siteName) {
 		var iconUrl = ($elm$core$String$isEmpty(url) || (url === 'null')) ? ('https://www.google.com/s2/favicons?sz=32&domain_url=' + siteName) : url;
@@ -14578,7 +14584,7 @@ var $author$project$Pages$Timeline$clusterOtherItem = F3(
 					$mdgriffith$elm_ui$Element$el,
 					_List_fromArray(
 						[
-							$mdgriffith$elm_ui$Element$Font$size(11),
+							$author$project$ThemeTypography$meta,
 							$mdgriffith$elm_ui$Element$Font$color(mutedTxt),
 							$mdgriffith$elm_ui$Element$centerY,
 							function () {
@@ -14596,7 +14602,7 @@ var $author$project$Pages$Timeline$clusterOtherItem = F3(
 					$mdgriffith$elm_ui$Element$el,
 					_List_fromArray(
 						[
-							$mdgriffith$elm_ui$Element$Font$size(11),
+							$author$project$ThemeTypography$meta,
 							$mdgriffith$elm_ui$Element$Font$color(mutedTxt),
 							A2($mdgriffith$elm_ui$Element$paddingXY, 4, 0),
 							$mdgriffith$elm_ui$Element$centerY
@@ -14746,7 +14752,7 @@ var $author$project$Pages$Timeline$clusterItem = F5(
 								[
 									$mdgriffith$elm_ui$Element$width(
 									$mdgriffith$elm_ui$Element$px(85)),
-									$mdgriffith$elm_ui$Element$Font$size(11),
+									$author$project$ThemeTypography$meta,
 									$mdgriffith$elm_ui$Element$Font$color(timeTxt),
 									$mdgriffith$elm_ui$Element$Font$family(
 									_List_fromArray(
@@ -14775,7 +14781,7 @@ var $author$project$Pages$Timeline$clusterItem = F5(
 										[
 											$mdgriffith$elm_ui$Element$spacing(8),
 											$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill),
-											$mdgriffith$elm_ui$Element$Font$size(13)
+											$author$project$ThemeTypography$size13
 										]),
 									_List_fromArray(
 										[
@@ -15098,6 +15104,8 @@ var $mdgriffith$elm_ui$Element$maximum = F2(
 	function (i, l) {
 		return A2($mdgriffith$elm_ui$Internal$Model$Max, i, l);
 	});
+var $author$project$ThemeTypography$subtitle = $mdgriffith$elm_ui$Element$Font$size(20);
+var $author$project$ThemeTypography$title = $mdgriffith$elm_ui$Element$Font$size(24);
 var $author$project$Pages$Timeline$view = F2(
 	function (shared, model) {
 		var theme = shared.theme;
@@ -15130,8 +15138,7 @@ var $author$project$Pages$Timeline$view = F2(
 					$mdgriffith$elm_ui$Element$el,
 					_List_fromArray(
 						[
-							$mdgriffith$elm_ui$Element$Font$size(
-							isMobile ? 20 : 24),
+							isMobile ? $author$project$ThemeTypography$subtitle : $author$project$ThemeTypography$title,
 							$mdgriffith$elm_ui$Element$Font$bold,
 							$mdgriffith$elm_ui$Element$Font$color(txtColor)
 						]),
@@ -15142,7 +15149,7 @@ var $author$project$Pages$Timeline$view = F2(
 						[
 							$mdgriffith$elm_ui$Element$centerX,
 							$mdgriffith$elm_ui$Element$centerY,
-							$mdgriffith$elm_ui$Element$Font$size(16),
+							$author$project$ThemeTypography$body,
 							$mdgriffith$elm_ui$Element$Font$color(mutedTxt)
 						]),
 					$mdgriffith$elm_ui$Element$text('Loading...')) : ((!_Utils_eq(model.error, $elm$core$Maybe$Nothing)) ? A2(
@@ -15151,7 +15158,7 @@ var $author$project$Pages$Timeline$view = F2(
 						[
 							$mdgriffith$elm_ui$Element$centerX,
 							$mdgriffith$elm_ui$Element$centerY,
-							$mdgriffith$elm_ui$Element$Font$size(16),
+							$author$project$ThemeTypography$body,
 							$mdgriffith$elm_ui$Element$Font$color($author$project$Theme$errorColor)
 						]),
 					$mdgriffith$elm_ui$Element$text('Error loading timeline')) : A2(

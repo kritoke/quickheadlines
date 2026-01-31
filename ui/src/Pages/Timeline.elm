@@ -11,6 +11,7 @@ import Http
 import Set exposing (Set)
 import Shared exposing (Model, Msg(..), Theme(..))
 import Theme exposing (borderColor, cardColor, errorColor, lumeOrange, mutedColor, surfaceColor, textColor)
+import ThemeTypography as Ty
 import Time exposing (Posix, Zone, toDay, toMonth, toYear)
 import Pages.ViewIcon exposing (viewIcon)
 
