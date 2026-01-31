@@ -274,14 +274,16 @@ headerView model =
                 Shared.Light ->
                     rgb255 17 24 39
      in
-     Element.row
-         [ width fill
-         , padding 16
-         , Background.color bg
-         ]
-         [ Element.row
-             [ spacing 12
+         Element.wrappedRow
+             [ width fill
+             , padding 16
+             , Background.color bg
              ]
+             [ Element.row
+                 [ spacing 12
+                 , Element.alignTop
+                 ]
+
               [ Element.image
                   [ Element.width (px 24)
                   , Element.height (px 24)

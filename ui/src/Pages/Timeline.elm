@@ -538,6 +538,7 @@ clusterItem zone now theme expandedClusters cluster =
         [ row
             [ width fill
             , spacing 12
+            , alignTop
             , paddingEach { top = 8, bottom = 8, left = 0, right = 0 }
             , Border.widthEach { top = 0, right = 0, bottom = 1, left = 0 }
             , Border.color border
@@ -548,47 +549,48 @@ clusterItem zone now theme expandedClusters cluster =
                 , Font.size 12
                 , Font.color timeTxt
                 , Font.family [ Font.monospace ]
-                , centerY
+                , alignTop
                 , paddingXY 8 4
                 , Background.color timeBg
                 , Border.rounded 6
                 , Font.center
+                , moveDown 2
                 ]
                 (text timeStr)
-            , row
+            , column
                 [ width fill
                 , spacing 8
                 , alignTop
-                , Font.size 15
                 , Font.color txtColor
-                , htmlAttribute (Html.Attributes.style "word-break" "break-word")
-                , htmlAttribute (Html.Attributes.style "overflow-wrap" "break-word")
                 ]
                 [ -- group favicon + feed title together so they never stack
                   row [ spacing 8, alignTop, htmlAttribute (Html.Attributes.style "white-space" "nowrap") ]
-                      [ el [ alignTop, paddingXY 0 2 ] faviconImg
+                      [ el [ alignTop ] faviconImg
                       , el [ Font.size 13, Font.color mutedTxt ] (text cluster.representative.feedTitle)
                       , el [ Font.size 13, Font.color mutedTxt, paddingXY 4 0 ] (text "•")
                       ]
-                , link
-                    [ Font.size 13
-                    , htmlAttribute (Html.Attributes.style "text-decoration" "none")
-                    , htmlAttribute (Html.Attributes.style "color" "inherit")
-                    , htmlAttribute (Html.Attributes.attribute "data-display-link" "true")
-                    , mouseOver [ Font.color (rgb255 37 99 235) ]
-                    , Font.semiBold
-                    ]
-                    { url = cluster.representative.link, label = text cluster.representative.title }
-                , el [ paddingXY 8 4 ]
-                    (text
-                        (if cluster.count > 1 then
-                            "↩ " ++ String.fromInt cluster.count
+                , paragraph [ width fill, spacing 8 ]
+                    [ link
+                        [ Font.size 13
+                        , htmlAttribute (Html.Attributes.style "text-decoration" "none")
+                        , htmlAttribute (Html.Attributes.style "color" "inherit")
+                        , htmlAttribute (Html.Attributes.attribute "data-display-link" "true")
+                        , mouseOver [ Font.color (rgb255 37 99 235) ]
+                        , Font.semiBold
+                        ]
+                        { url = cluster.representative.link, label = text cluster.representative.title }
+                    , el [ paddingXY 8 0 ]
+                        (text
+                            (if cluster.count > 1 then
+                                "↩ " ++ String.fromInt cluster.count
 
-                         else
-                            ""
+                             else
+                                ""
+                            )
                         )
-                    )
+                    ]
                 ]
+
             ]
         , if clusterCount > 1 then
             if isExpanded then
