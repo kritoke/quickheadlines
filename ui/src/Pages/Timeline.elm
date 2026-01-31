@@ -539,7 +539,7 @@ clusterItem zone now theme expandedClusters cluster =
             [ width fill
             , spacing 12
             , alignTop
-            , paddingEach { top = 8, bottom = 8, left = 0, right = 0 }
+            , paddingEach { top = 4, bottom = 4, left = 0, right = 0 }
             , Border.widthEach { top = 0, right = 0, bottom = 1, left = 0 }
             , Border.color border
             , htmlAttribute (Html.Attributes.attribute "data-timeline-item" "true")
@@ -554,41 +554,39 @@ clusterItem zone now theme expandedClusters cluster =
                 , Background.color timeBg
                 , Border.rounded 6
                 , Font.center
-                , moveDown 2
                 ]
                 (text timeStr)
             , column
                 [ width fill
-                , spacing 8
+                , spacing 0
                 , alignTop
                 , Font.color txtColor
                 ]
                 [ -- group favicon + feed title together so they never stack
-                  row [ spacing 8, alignTop, htmlAttribute (Html.Attributes.style "white-space" "nowrap") ]
-                      [ el [ alignTop ] faviconImg
-                      , el [ Font.size 11, Font.color mutedTxt ] (text cluster.representative.feedTitle)
-                      , el [ Font.size 11, Font.color mutedTxt, paddingXY 4 0 ] (text "•")
-                      ]
-                , paragraph [ width fill, spacing 8 ]
-                    [ link
-                        [ Font.size 11
-                        , htmlAttribute (Html.Attributes.style "text-decoration" "none")
-                        , htmlAttribute (Html.Attributes.style "color" "inherit")
-                        , htmlAttribute (Html.Attributes.attribute "data-display-link" "true")
-                        , mouseOver [ Font.color (rgb255 37 99 235) ]
-                        , Font.semiBold
-                        ]
-                        { url = cluster.representative.link, label = text cluster.representative.title }
-                    , el [ paddingXY 8 0 ]
-                        (text
-                            (if cluster.count > 1 then
-                                "↩ " ++ String.fromInt cluster.count
+                  row [ spacing 8, centerY, htmlAttribute (Html.Attributes.style "white-space" "nowrap") ]
+                      [ el [ centerY ] faviconImg
+                      , el [ Font.size 11, Font.color mutedTxt, centerY ] (text cluster.representative.feedTitle)
+                      , el [ Font.size 11, Font.color mutedTxt, paddingXY 4 0, centerY ] (text "•")
+                      , link
+                          [ Font.size 11
+                          , htmlAttribute (Html.Attributes.style "text-decoration" "none")
+                          , htmlAttribute (Html.Attributes.style "color" "inherit")
+                          , htmlAttribute (Html.Attributes.attribute "data-display-link" "true")
+                          , mouseOver [ Font.color (rgb255 37 99 235) ]
+                          , Font.semiBold
+                          , centerY
+                          ]
+                          { url = cluster.representative.link, label = text cluster.representative.title }
+                      , el [ paddingXY 8 0, Font.size 11, centerY ]
+                          (text
+                              (if cluster.count > 1 then
+                                  "↩ " ++ String.fromInt cluster.count
 
-                             else
-                                ""
-                            )
-                        )
-                    ]
+                               else
+                                  ""
+                              )
+                          )
+                      ]
                 ]
 
             ]
@@ -628,9 +626,6 @@ clusterOtherItem now theme item =
         mutedTxt =
             mutedColor theme
 
-        border =
-            borderColor theme
-
         faviconImg =
             Maybe.map
                 (\faviconUrl ->
@@ -643,27 +638,21 @@ clusterOtherItem now theme item =
         [ width fill
         , spacing 8
         , paddingEach { top = 4, bottom = 4, left = 0, right = 0 }
+        , centerY
         ]
-        [ paragraph
-            [ Font.size 14
-            , Font.color txtColor
-            , Element.width fill
-            , htmlAttribute (Html.Attributes.style "line-height" "1.4")
-            , spacing 8
+        [ el [ centerY ] faviconImg
+        , el [ Font.size 11, Font.color mutedTxt, centerY ] (text item.feedTitle)
+        , el [ Font.size 11, Font.color mutedTxt, paddingXY 4 0, centerY ] (text "•")
+        , link
+            [ Font.size 11
+            , htmlAttribute (Html.Attributes.style "text-decoration" "none")
+            , htmlAttribute (Html.Attributes.style "color" "inherit")
+            , htmlAttribute (Html.Attributes.attribute "data-display-link" "true")
+            , mouseOver [ Font.color (rgb255 37 99 235) ]
+            , Font.medium
+            , centerY
             ]
-            [ el [ alignTop, moveDown 1 ] faviconImg
-            , el [ Font.size 11, Font.color mutedTxt ] (text item.feedTitle)
-            , el [ Font.size 11, Font.color mutedTxt, paddingXY 4 0 ] (text "•")
-            , link
-                [ Font.size 11
-                , htmlAttribute (Html.Attributes.style "text-decoration" "none")
-                , htmlAttribute (Html.Attributes.style "color" "inherit")
-                , htmlAttribute (Html.Attributes.attribute "data-display-link" "true")
-                , mouseOver [ Font.color (rgb255 37 99 235) ]
-                , Font.medium
-                ]
-                { url = item.link, label = text item.title }
-            ]
+            { url = item.link, label = text item.title }
         ]
 
 

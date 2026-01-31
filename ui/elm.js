@@ -12295,17 +12295,17 @@ var $mdgriffith$elm_ui$Internal$Model$AlignX = function (a) {
 };
 var $mdgriffith$elm_ui$Internal$Model$Right = {$: 'Right'};
 var $mdgriffith$elm_ui$Element$alignRight = $mdgriffith$elm_ui$Internal$Model$AlignX($mdgriffith$elm_ui$Internal$Model$Right);
-var $mdgriffith$elm_ui$Internal$Model$AlignY = function (a) {
-	return {$: 'AlignY', a: a};
-};
-var $mdgriffith$elm_ui$Internal$Model$Top = {$: 'Top'};
-var $mdgriffith$elm_ui$Element$alignTop = $mdgriffith$elm_ui$Internal$Model$AlignY($mdgriffith$elm_ui$Internal$Model$Top);
 var $mdgriffith$elm_ui$Internal$Model$Class = F2(
 	function (a, b) {
 		return {$: 'Class', a: a, b: b};
 	});
 var $mdgriffith$elm_ui$Internal$Flag$fontWeight = $mdgriffith$elm_ui$Internal$Flag$flag(13);
 var $mdgriffith$elm_ui$Element$Font$bold = A2($mdgriffith$elm_ui$Internal$Model$Class, $mdgriffith$elm_ui$Internal$Flag$fontWeight, $mdgriffith$elm_ui$Internal$Style$classes.bold);
+var $mdgriffith$elm_ui$Internal$Model$AlignY = function (a) {
+	return {$: 'AlignY', a: a};
+};
+var $mdgriffith$elm_ui$Internal$Model$CenterY = {$: 'CenterY'};
+var $mdgriffith$elm_ui$Element$centerY = $mdgriffith$elm_ui$Internal$Model$AlignY($mdgriffith$elm_ui$Internal$Model$CenterY);
 var $mdgriffith$elm_ui$Internal$Flag$bgColor = $mdgriffith$elm_ui$Internal$Flag$flag(8);
 var $mdgriffith$elm_ui$Element$Background$color = function (clr) {
 	return A2(
@@ -12858,7 +12858,8 @@ var $author$project$Application$headerView = function (model) {
 			[
 				$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill),
 				$mdgriffith$elm_ui$Element$padding(16),
-				$mdgriffith$elm_ui$Element$Background$color(bg)
+				$mdgriffith$elm_ui$Element$Background$color(bg),
+				$mdgriffith$elm_ui$Element$spacing(16)
 			]),
 		_List_fromArray(
 			[
@@ -12867,7 +12868,7 @@ var $author$project$Application$headerView = function (model) {
 				_List_fromArray(
 					[
 						$mdgriffith$elm_ui$Element$spacing(12),
-						$mdgriffith$elm_ui$Element$alignTop
+						$mdgriffith$elm_ui$Element$centerY
 					]),
 				_List_fromArray(
 					[
@@ -12881,11 +12882,7 @@ var $author$project$Application$headerView = function (model) {
 								$mdgriffith$elm_ui$Element$px(24)),
 								$mdgriffith$elm_ui$Element$Border$rounded(4),
 								$mdgriffith$elm_ui$Element$htmlAttribute(
-								A2($elm$html$Html$Attributes$style, 'object-fit', 'contain')),
-								$mdgriffith$elm_ui$Element$htmlAttribute(
-								A2($elm$html$Html$Attributes$style, 'max-height', '28px')),
-								$mdgriffith$elm_ui$Element$htmlAttribute(
-								A2($elm$html$Html$Attributes$style, 'vertical-align', 'middle'))
+								A2($elm$html$Html$Attributes$style, 'object-fit', 'contain'))
 							]),
 						{description: 'QuickHeadlines Logo', src: '/logo.svg'}),
 						A2(
@@ -12894,7 +12891,8 @@ var $author$project$Application$headerView = function (model) {
 							[
 								$mdgriffith$elm_ui$Element$Font$color($author$project$Theme$lumeOrange),
 								$mdgriffith$elm_ui$Element$Font$size(24),
-								$mdgriffith$elm_ui$Element$Font$bold
+								$mdgriffith$elm_ui$Element$Font$bold,
+								$mdgriffith$elm_ui$Element$centerY
 							]),
 						{
 							label: $mdgriffith$elm_ui$Element$text('QuickHeadlines'),
@@ -12906,7 +12904,8 @@ var $author$project$Application$headerView = function (model) {
 				_List_fromArray(
 					[
 						$mdgriffith$elm_ui$Element$spacing(8),
-						$mdgriffith$elm_ui$Element$alignRight
+						$mdgriffith$elm_ui$Element$alignRight,
+						$mdgriffith$elm_ui$Element$centerY
 					]),
 				_List_fromArray(
 					[
@@ -12916,7 +12915,8 @@ var $author$project$Application$headerView = function (model) {
 							[
 								$mdgriffith$elm_ui$Element$Font$color(txtColor),
 								$mdgriffith$elm_ui$Element$Font$size(16),
-								A2($mdgriffith$elm_ui$Element$paddingXY, 12, 8)
+								A2($mdgriffith$elm_ui$Element$paddingXY, 12, 8),
+								$mdgriffith$elm_ui$Element$centerY
 							]),
 						{
 							label: $mdgriffith$elm_ui$Element$text('Home'),
@@ -12928,7 +12928,8 @@ var $author$project$Application$headerView = function (model) {
 							[
 								$mdgriffith$elm_ui$Element$Font$color(txtColor),
 								$mdgriffith$elm_ui$Element$Font$size(16),
-								A2($mdgriffith$elm_ui$Element$paddingXY, 12, 8)
+								A2($mdgriffith$elm_ui$Element$paddingXY, 12, 8),
+								$mdgriffith$elm_ui$Element$centerY
 							]),
 						{
 							label: $mdgriffith$elm_ui$Element$text('Timeline'),
@@ -13400,8 +13401,6 @@ var $mdgriffith$elm_ui$Element$map = $mdgriffith$elm_ui$Internal$Model$map;
 var $elm$html$Html$Attributes$attribute = $elm$virtual_dom$VirtualDom$attribute;
 var $mdgriffith$elm_ui$Internal$Model$CenterX = {$: 'CenterX'};
 var $mdgriffith$elm_ui$Element$centerX = $mdgriffith$elm_ui$Internal$Model$AlignX($mdgriffith$elm_ui$Internal$Model$CenterX);
-var $mdgriffith$elm_ui$Internal$Model$CenterY = {$: 'CenterY'};
-var $mdgriffith$elm_ui$Element$centerY = $mdgriffith$elm_ui$Internal$Model$AlignY($mdgriffith$elm_ui$Internal$Model$CenterY);
 var $author$project$Theme$errorColor = A3($mdgriffith$elm_ui$Element$rgb255, 239, 68, 68);
 var $elm$core$List$drop = F2(
 	function (n, list) {
@@ -13831,6 +13830,8 @@ var $author$project$Pages$Home_$feedHeader = F2(
 						]))
 				]));
 	});
+var $mdgriffith$elm_ui$Internal$Model$Top = {$: 'Top'};
+var $mdgriffith$elm_ui$Element$alignTop = $mdgriffith$elm_ui$Internal$Model$AlignY($mdgriffith$elm_ui$Internal$Model$Top);
 var $author$project$Theme$mutedColor = function (theme) {
 	if (theme.$ === 'Dark') {
 		return A3($mdgriffith$elm_ui$Element$rgb255, 148, 163, 184);
@@ -14484,16 +14485,6 @@ var $mdgriffith$elm_ui$Element$mouseOver = function (decs) {
 			$mdgriffith$elm_ui$Internal$Model$Hover,
 			$mdgriffith$elm_ui$Internal$Model$unwrapDecorations(decs)));
 };
-var $mdgriffith$elm_ui$Internal$Model$MoveY = function (a) {
-	return {$: 'MoveY', a: a};
-};
-var $mdgriffith$elm_ui$Internal$Flag$moveY = $mdgriffith$elm_ui$Internal$Flag$flag(26);
-var $mdgriffith$elm_ui$Element$moveDown = function (y) {
-	return A2(
-		$mdgriffith$elm_ui$Internal$Model$TransformComponent,
-		$mdgriffith$elm_ui$Internal$Flag$moveY,
-		$mdgriffith$elm_ui$Internal$Model$MoveY(y));
-};
 var $author$project$Pages$ViewIcon$viewIcon = F2(
 	function (url, siteName) {
 		return A2(
@@ -14505,8 +14496,7 @@ var $author$project$Pages$ViewIcon$viewIcon = F2(
 					$mdgriffith$elm_ui$Element$height(
 					$mdgriffith$elm_ui$Element$px(14)),
 					$mdgriffith$elm_ui$Element$Border$rounded(2),
-					$mdgriffith$elm_ui$Element$alignTop,
-					$mdgriffith$elm_ui$Element$moveDown(2)
+					$mdgriffith$elm_ui$Element$centerY
 				]),
 			{description: siteName, src: url});
 	});
@@ -14523,7 +14513,6 @@ var $author$project$Pages$Timeline$clusterOtherItem = F3(
 					return A2($author$project$Pages$ViewIcon$viewIcon, faviconUrl, item.feedTitle);
 				},
 				item.favicon));
-		var border = $author$project$Theme$borderColor(theme);
 		return A2(
 			$mdgriffith$elm_ui$Element$row,
 			_List_fromArray(
@@ -14531,72 +14520,59 @@ var $author$project$Pages$Timeline$clusterOtherItem = F3(
 					$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill),
 					$mdgriffith$elm_ui$Element$spacing(8),
 					$mdgriffith$elm_ui$Element$paddingEach(
-					{bottom: 4, left: 0, right: 0, top: 4})
+					{bottom: 4, left: 0, right: 0, top: 4}),
+					$mdgriffith$elm_ui$Element$centerY
 				]),
 			_List_fromArray(
 				[
 					A2(
-					$mdgriffith$elm_ui$Element$paragraph,
+					$mdgriffith$elm_ui$Element$el,
+					_List_fromArray(
+						[$mdgriffith$elm_ui$Element$centerY]),
+					faviconImg),
+					A2(
+					$mdgriffith$elm_ui$Element$el,
 					_List_fromArray(
 						[
-							$mdgriffith$elm_ui$Element$Font$size(14),
-							$mdgriffith$elm_ui$Element$Font$color(txtColor),
-							$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill),
-							$mdgriffith$elm_ui$Element$htmlAttribute(
-							A2($elm$html$Html$Attributes$style, 'line-height', '1.4')),
-							$mdgriffith$elm_ui$Element$spacing(8)
+							$mdgriffith$elm_ui$Element$Font$size(11),
+							$mdgriffith$elm_ui$Element$Font$color(mutedTxt),
+							$mdgriffith$elm_ui$Element$centerY
 						]),
+					$mdgriffith$elm_ui$Element$text(item.feedTitle)),
+					A2(
+					$mdgriffith$elm_ui$Element$el,
 					_List_fromArray(
 						[
-							A2(
-							$mdgriffith$elm_ui$Element$el,
+							$mdgriffith$elm_ui$Element$Font$size(11),
+							$mdgriffith$elm_ui$Element$Font$color(mutedTxt),
+							A2($mdgriffith$elm_ui$Element$paddingXY, 4, 0),
+							$mdgriffith$elm_ui$Element$centerY
+						]),
+					$mdgriffith$elm_ui$Element$text('•')),
+					A2(
+					$mdgriffith$elm_ui$Element$link,
+					_List_fromArray(
+						[
+							$mdgriffith$elm_ui$Element$Font$size(11),
+							$mdgriffith$elm_ui$Element$htmlAttribute(
+							A2($elm$html$Html$Attributes$style, 'text-decoration', 'none')),
+							$mdgriffith$elm_ui$Element$htmlAttribute(
+							A2($elm$html$Html$Attributes$style, 'color', 'inherit')),
+							$mdgriffith$elm_ui$Element$htmlAttribute(
+							A2($elm$html$Html$Attributes$attribute, 'data-display-link', 'true')),
+							$mdgriffith$elm_ui$Element$mouseOver(
 							_List_fromArray(
 								[
-									$mdgriffith$elm_ui$Element$alignTop,
-									$mdgriffith$elm_ui$Element$moveDown(1)
-								]),
-							faviconImg),
-							A2(
-							$mdgriffith$elm_ui$Element$el,
-							_List_fromArray(
-								[
-									$mdgriffith$elm_ui$Element$Font$size(11),
-									$mdgriffith$elm_ui$Element$Font$color(mutedTxt)
-								]),
-							$mdgriffith$elm_ui$Element$text(item.feedTitle)),
-							A2(
-							$mdgriffith$elm_ui$Element$el,
-							_List_fromArray(
-								[
-									$mdgriffith$elm_ui$Element$Font$size(11),
-									$mdgriffith$elm_ui$Element$Font$color(mutedTxt),
-									A2($mdgriffith$elm_ui$Element$paddingXY, 4, 0)
-								]),
-							$mdgriffith$elm_ui$Element$text('•')),
-							A2(
-							$mdgriffith$elm_ui$Element$link,
-							_List_fromArray(
-								[
-									$mdgriffith$elm_ui$Element$Font$size(11),
-									$mdgriffith$elm_ui$Element$htmlAttribute(
-									A2($elm$html$Html$Attributes$style, 'text-decoration', 'none')),
-									$mdgriffith$elm_ui$Element$htmlAttribute(
-									A2($elm$html$Html$Attributes$style, 'color', 'inherit')),
-									$mdgriffith$elm_ui$Element$htmlAttribute(
-									A2($elm$html$Html$Attributes$attribute, 'data-display-link', 'true')),
-									$mdgriffith$elm_ui$Element$mouseOver(
-									_List_fromArray(
-										[
-											$mdgriffith$elm_ui$Element$Font$color(
-											A3($mdgriffith$elm_ui$Element$rgb255, 37, 99, 235))
-										])),
-									$mdgriffith$elm_ui$Element$Font$medium
-								]),
-							{
-								label: $mdgriffith$elm_ui$Element$text(item.title),
-								url: item.link
-							})
-						]))
+									$mdgriffith$elm_ui$Element$Font$color(
+									A3($mdgriffith$elm_ui$Element$rgb255, 37, 99, 235))
+								])),
+							$mdgriffith$elm_ui$Element$Font$medium,
+							$mdgriffith$elm_ui$Element$centerY
+						]),
+					{
+						label: $mdgriffith$elm_ui$Element$text(item.title),
+						url: item.link
+					})
 				]));
 	});
 var $mdgriffith$elm_ui$Element$Font$family = function (families) {
@@ -14696,7 +14672,7 @@ var $author$project$Pages$Timeline$clusterItem = F5(
 							$mdgriffith$elm_ui$Element$spacing(12),
 							$mdgriffith$elm_ui$Element$alignTop,
 							$mdgriffith$elm_ui$Element$paddingEach(
-							{bottom: 8, left: 0, right: 0, top: 8}),
+							{bottom: 4, left: 0, right: 0, top: 4}),
 							$mdgriffith$elm_ui$Element$Border$widthEach(
 							{bottom: 1, left: 0, right: 0, top: 0}),
 							$mdgriffith$elm_ui$Element$Border$color(border),
@@ -14720,8 +14696,7 @@ var $author$project$Pages$Timeline$clusterItem = F5(
 									A2($mdgriffith$elm_ui$Element$paddingXY, 8, 4),
 									$mdgriffith$elm_ui$Element$Background$color(timeBg),
 									$mdgriffith$elm_ui$Element$Border$rounded(6),
-									$mdgriffith$elm_ui$Element$Font$center,
-									$mdgriffith$elm_ui$Element$moveDown(2)
+									$mdgriffith$elm_ui$Element$Font$center
 								]),
 							$mdgriffith$elm_ui$Element$text(timeStr)),
 							A2(
@@ -14729,7 +14704,7 @@ var $author$project$Pages$Timeline$clusterItem = F5(
 							_List_fromArray(
 								[
 									$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill),
-									$mdgriffith$elm_ui$Element$spacing(8),
+									$mdgriffith$elm_ui$Element$spacing(0),
 									$mdgriffith$elm_ui$Element$alignTop,
 									$mdgriffith$elm_ui$Element$Font$color(txtColor)
 								]),
@@ -14740,7 +14715,7 @@ var $author$project$Pages$Timeline$clusterItem = F5(
 									_List_fromArray(
 										[
 											$mdgriffith$elm_ui$Element$spacing(8),
-											$mdgriffith$elm_ui$Element$alignTop,
+											$mdgriffith$elm_ui$Element$centerY,
 											$mdgriffith$elm_ui$Element$htmlAttribute(
 											A2($elm$html$Html$Attributes$style, 'white-space', 'nowrap'))
 										]),
@@ -14749,14 +14724,15 @@ var $author$project$Pages$Timeline$clusterItem = F5(
 											A2(
 											$mdgriffith$elm_ui$Element$el,
 											_List_fromArray(
-												[$mdgriffith$elm_ui$Element$alignTop]),
+												[$mdgriffith$elm_ui$Element$centerY]),
 											faviconImg),
 											A2(
 											$mdgriffith$elm_ui$Element$el,
 											_List_fromArray(
 												[
 													$mdgriffith$elm_ui$Element$Font$size(11),
-													$mdgriffith$elm_ui$Element$Font$color(mutedTxt)
+													$mdgriffith$elm_ui$Element$Font$color(mutedTxt),
+													$mdgriffith$elm_ui$Element$centerY
 												]),
 											$mdgriffith$elm_ui$Element$text(cluster.representative.feedTitle)),
 											A2(
@@ -14765,19 +14741,10 @@ var $author$project$Pages$Timeline$clusterItem = F5(
 												[
 													$mdgriffith$elm_ui$Element$Font$size(11),
 													$mdgriffith$elm_ui$Element$Font$color(mutedTxt),
-													A2($mdgriffith$elm_ui$Element$paddingXY, 4, 0)
+													A2($mdgriffith$elm_ui$Element$paddingXY, 4, 0),
+													$mdgriffith$elm_ui$Element$centerY
 												]),
-											$mdgriffith$elm_ui$Element$text('•'))
-										])),
-									A2(
-									$mdgriffith$elm_ui$Element$paragraph,
-									_List_fromArray(
-										[
-											$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill),
-											$mdgriffith$elm_ui$Element$spacing(8)
-										]),
-									_List_fromArray(
-										[
+											$mdgriffith$elm_ui$Element$text('•')),
 											A2(
 											$mdgriffith$elm_ui$Element$link,
 											_List_fromArray(
@@ -14795,7 +14762,8 @@ var $author$project$Pages$Timeline$clusterItem = F5(
 															$mdgriffith$elm_ui$Element$Font$color(
 															A3($mdgriffith$elm_ui$Element$rgb255, 37, 99, 235))
 														])),
-													$mdgriffith$elm_ui$Element$Font$semiBold
+													$mdgriffith$elm_ui$Element$Font$semiBold,
+													$mdgriffith$elm_ui$Element$centerY
 												]),
 											{
 												label: $mdgriffith$elm_ui$Element$text(cluster.representative.title),
@@ -14805,7 +14773,9 @@ var $author$project$Pages$Timeline$clusterItem = F5(
 											$mdgriffith$elm_ui$Element$el,
 											_List_fromArray(
 												[
-													A2($mdgriffith$elm_ui$Element$paddingXY, 8, 0)
+													A2($mdgriffith$elm_ui$Element$paddingXY, 8, 0),
+													$mdgriffith$elm_ui$Element$Font$size(11),
+													$mdgriffith$elm_ui$Element$centerY
 												]),
 											$mdgriffith$elm_ui$Element$text(
 												(cluster.count > 1) ? ('↩ ' + $elm$core$String$fromInt(cluster.count)) : ''))

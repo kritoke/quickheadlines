@@ -2,7 +2,7 @@ port module Application exposing (Flags, Model, Msg(..), Page(..), init, update,
 
 import Browser
 import Browser.Navigation as Nav
-import Element exposing (Element, rgb255, px, text, fill, width, height, spacing, padding, row)
+import Element exposing (Element, rgb255, px, text, fill, width, height, spacing, padding, row, centerY, centerX, alignTop, alignRight, moveDown)
 import Element.Background as Background
 import Element.Border as Border
 import Element.Font as Font
@@ -274,58 +274,60 @@ headerView model =
                 Shared.Light ->
                     rgb255 17 24 39
      in
-         Element.wrappedRow
-             [ width fill
-             , padding 16
-             , Background.color bg
-             ]
-             [ Element.row
-                 [ spacing 12
-                 , Element.alignTop
-                 ]
-
-              [ Element.image
-                  [ Element.width (px 24)
-                  , Element.height (px 24)
-                  , Border.rounded 4
-                  -- Ensure SVG scales and stays vertically centered next to the title
-                  , Element.htmlAttribute (Html.Attributes.style "object-fit" "contain")
-                  , Element.htmlAttribute (Html.Attributes.style "max-height" "28px")
-                  , Element.htmlAttribute (Html.Attributes.style "vertical-align" "middle")
+          Element.wrappedRow
+              [ width fill
+              , padding 16
+              , Background.color bg
+              , spacing 16
+              ]
+              [ Element.row
+                  [ spacing 12
+                  , centerY
                   ]
-                  { src = "/logo.svg", description = "QuickHeadlines Logo" }
-             , Element.link
-                 [ Font.color lumeOrange
-                 , Font.size 24
-                 , Font.bold
-                 ]
-                 { url = "/"
-                 , label = text "QuickHeadlines"
-                 }
-             ]
-         , Element.row
-             [ spacing 8
-             , Element.alignRight
-             ]
-             [ Element.link
-                 [ Font.color txtColor
-                 , Font.size 16
-                 , Element.paddingXY 12 8
-                 ]
-                 { url = "/"
-                 , label = text "Home"
-                 }
-             , Element.link
-                 [ Font.color txtColor
-                 , Font.size 16
-                 , Element.paddingXY 12 8
-                 ]
-                 { url = "/timeline"
-                 , label = text "Timeline"
-                 }
-             , themeToggle model
-             ]
-         ]
+                  [ Element.image
+                      [ Element.width (px 24)
+                      , Element.height (px 24)
+                      , Border.rounded 4
+                      , Element.htmlAttribute (Html.Attributes.style "object-fit" "contain")
+                      ]
+                      { src = "/logo.svg", description = "QuickHeadlines Logo" }
+                  , Element.link
+                      [ Font.color lumeOrange
+                      , Font.size 24
+                      , Font.bold
+                      , centerY
+                      ]
+                      { url = "/"
+                      , label = text "QuickHeadlines"
+                      }
+                  ]
+              , Element.row
+                  [ spacing 8
+                  , Element.alignRight
+                  , centerY
+                  ]
+                  [ Element.link
+                      [ Font.color txtColor
+                      , Font.size 16
+                      , Element.paddingXY 12 8
+                      , centerY
+                      ]
+                      { url = "/"
+                      , label = text "Home"
+                      }
+                  , Element.link
+                      [ Font.color txtColor
+                      , Font.size 16
+                      , Element.paddingXY 12 8
+                      , centerY
+                      ]
+                      { url = "/timeline"
+                      , label = text "Timeline"
+                      }
+                  , themeToggle model
+                  ]
+              ]
+
 
 
 themeToggle : Model -> Element Msg

@@ -6,8 +6,8 @@
 
 ## 2. Testing
 
-- [ ] 2.1 Add visual snapshot tests for the timeline at 320px and 1280px widths.
-- [ ] 2.2 Run `nix develop --command elm-land build` and verify snapshots match.
+- [x] 2.1 Add visual snapshot tests for the timeline at 320px and 1280px widths.
+- [x] 2.2 Run `nix develop --command elm-land build` and verify snapshots match.
 
 ## 3. QA & Rollout
 
