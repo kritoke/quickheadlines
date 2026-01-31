@@ -32,6 +32,7 @@
             elmPackages.elm elmPackages.elm-format
             git curl gnumake gcc
             openspec.packages.${system}.default
+            pkgs.playwright-driver.browsers
           ];
 
           shellHook = ''
@@ -57,6 +58,11 @@
             # 4. Explicitly export the path to ensure AI tools find it
             export PATH="${openspec.packages.${system}.default}/bin:$PATH"
             
+            # 🌐 Playwright ARM64 Setup
+            export PLAYWRIGHT_BROWSERS_PATH=${pkgs.playwright-driver.browsers}
+            export PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS=true
+            echo "🌐 Playwright ARM64 Environment Ready"
+
             echo "🚀 Quickheadlines DevShell Active | OpenSpec $(openspec --version)"
           '';
         };
