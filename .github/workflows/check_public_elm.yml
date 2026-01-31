@@ -21,3 +21,7 @@ jobs:
             exit 1
           fi
           echo "public/elm.js found ($(wc -c < public/elm.js) bytes)"
+      - name: Validate no stray Elm bundles
+        run: |
+          chmod +x ./scripts/validate_elm_bundles.sh
+          ./scripts/validate_elm_bundles.sh
