@@ -14512,6 +14512,7 @@ var $mdgriffith$elm_ui$Internal$Flag$fontAlignment = $mdgriffith$elm_ui$Internal
 var $mdgriffith$elm_ui$Element$Font$center = A2($mdgriffith$elm_ui$Internal$Model$Class, $mdgriffith$elm_ui$Internal$Flag$fontAlignment, $mdgriffith$elm_ui$Internal$Style$classes.textCenter);
 var $author$project$Pages$ViewIcon$viewIcon = F2(
 	function (url, siteName) {
+		var iconUrl = ($elm$core$String$isEmpty(url) || (url === 'null')) ? ('https://www.google.com/s2/favicons?sz=32&domain_url=' + siteName) : url;
 		return A2(
 			$mdgriffith$elm_ui$Element$image,
 			_List_fromArray(
@@ -14523,7 +14524,7 @@ var $author$project$Pages$ViewIcon$viewIcon = F2(
 					$mdgriffith$elm_ui$Element$Border$rounded(2),
 					$mdgriffith$elm_ui$Element$centerY
 				]),
-			{description: siteName, src: url});
+			{description: siteName, src: iconUrl});
 	});
 var $author$project$Pages$Timeline$clusterOtherItem = F3(
 	function (now, theme, item) {
@@ -14589,15 +14590,13 @@ var $author$project$Pages$Timeline$clusterOtherItem = F3(
 							$mdgriffith$elm_ui$Element$Font$size(11),
 							$mdgriffith$elm_ui$Element$htmlAttribute(
 							A2($elm$html$Html$Attributes$style, 'text-decoration', 'none')),
-							$mdgriffith$elm_ui$Element$htmlAttribute(
-							A2($elm$html$Html$Attributes$style, 'color', 'inherit')),
+							$mdgriffith$elm_ui$Element$Font$color(txtColor),
 							$mdgriffith$elm_ui$Element$htmlAttribute(
 							A2($elm$html$Html$Attributes$attribute, 'data-display-link', 'true')),
 							$mdgriffith$elm_ui$Element$mouseOver(
 							_List_fromArray(
 								[
-									$mdgriffith$elm_ui$Element$Font$color(
-									A3($mdgriffith$elm_ui$Element$rgb255, 37, 99, 235))
+									$mdgriffith$elm_ui$Element$Font$color($author$project$Theme$lumeOrange)
 								])),
 							$mdgriffith$elm_ui$Element$Font$medium,
 							$mdgriffith$elm_ui$Element$htmlAttribute(

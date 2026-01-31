@@ -642,9 +642,9 @@ clusterOtherItem now theme item =
         , link
             [ Font.size 11
             , htmlAttribute (Html.Attributes.style "text-decoration" "none")
-            , htmlAttribute (Html.Attributes.style "color" "inherit")
+            , Font.color txtColor
             , htmlAttribute (Html.Attributes.attribute "data-display-link" "true")
-            , mouseOver [ Font.color (rgb255 37 99 235) ]
+            , mouseOver [ Font.color lumeOrange ]
             , Font.medium
             , htmlAttribute (Html.Attributes.style "display" "inline")
             ]
