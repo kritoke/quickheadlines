@@ -566,12 +566,12 @@ clusterItem zone now theme expandedClusters cluster =
                 [ -- group favicon + feed title together so they never stack
                   row [ spacing 8, alignTop, htmlAttribute (Html.Attributes.style "white-space" "nowrap") ]
                       [ el [ alignTop ] faviconImg
-                      , el [ Font.size 13, Font.color mutedTxt ] (text cluster.representative.feedTitle)
-                      , el [ Font.size 13, Font.color mutedTxt, paddingXY 4 0 ] (text "•")
+                      , el [ Font.size 11, Font.color mutedTxt ] (text cluster.representative.feedTitle)
+                      , el [ Font.size 11, Font.color mutedTxt, paddingXY 4 0 ] (text "•")
                       ]
                 , paragraph [ width fill, spacing 8 ]
                     [ link
-                        [ Font.size 13
+                        [ Font.size 11
                         , htmlAttribute (Html.Attributes.style "text-decoration" "none")
                         , htmlAttribute (Html.Attributes.style "color" "inherit")
                         , htmlAttribute (Html.Attributes.attribute "data-display-link" "true")
@@ -620,7 +620,6 @@ clusterItem zone now theme expandedClusters cluster =
         ]
 
 
-clusterOtherItem : Posix -> Theme -> Api.ClusterItem -> Element Msg
 clusterOtherItem now theme item =
     let
         txtColor =
@@ -631,6 +630,14 @@ clusterOtherItem now theme item =
 
         border =
             borderColor theme
+
+        faviconImg =
+            Maybe.map
+                (\faviconUrl ->
+                    viewIcon faviconUrl item.feedTitle
+                )
+                item.favicon
+                |> Maybe.withDefault Element.none
     in
     row
         [ width fill
@@ -644,18 +651,11 @@ clusterOtherItem now theme item =
             , htmlAttribute (Html.Attributes.style "line-height" "1.4")
             , spacing 8
             ]
-            [ el [ centerY, paddingXY 0 4 ]
-                (Maybe.map
-                    (\faviconUrl ->
-                        viewIcon faviconUrl item.feedTitle
-                    )
-                    item.favicon
-                    |> Maybe.withDefault Element.none
-                )
-            , el [ Font.size 12, Font.color mutedTxt ] (text item.feedTitle)
-            , el [ Font.size 12, Font.color mutedTxt, paddingXY 4 0 ] (text "•")
+            [ el [ alignTop, moveDown 1 ] faviconImg
+            , el [ Font.size 11, Font.color mutedTxt ] (text item.feedTitle)
+            , el [ Font.size 11, Font.color mutedTxt, paddingXY 4 0 ] (text "•")
             , link
-                [ Font.size 13
+                [ Font.size 11
                 , htmlAttribute (Html.Attributes.style "text-decoration" "none")
                 , htmlAttribute (Html.Attributes.style "color" "inherit")
                 , htmlAttribute (Html.Attributes.attribute "data-display-link" "true")

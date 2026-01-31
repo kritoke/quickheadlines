@@ -14514,6 +14514,15 @@ var $author$project$Pages$Timeline$clusterOtherItem = F3(
 	function (now, theme, item) {
 		var txtColor = $author$project$Theme$textColor(theme);
 		var mutedTxt = $author$project$Theme$mutedColor(theme);
+		var faviconImg = A2(
+			$elm$core$Maybe$withDefault,
+			$mdgriffith$elm_ui$Element$none,
+			A2(
+				$elm$core$Maybe$map,
+				function (faviconUrl) {
+					return A2($author$project$Pages$ViewIcon$viewIcon, faviconUrl, item.feedTitle);
+				},
+				item.favicon));
 		var border = $author$project$Theme$borderColor(theme);
 		return A2(
 			$mdgriffith$elm_ui$Element$row,
@@ -14543,23 +14552,15 @@ var $author$project$Pages$Timeline$clusterOtherItem = F3(
 							$mdgriffith$elm_ui$Element$el,
 							_List_fromArray(
 								[
-									$mdgriffith$elm_ui$Element$centerY,
-									A2($mdgriffith$elm_ui$Element$paddingXY, 0, 4)
+									$mdgriffith$elm_ui$Element$alignTop,
+									$mdgriffith$elm_ui$Element$moveDown(1)
 								]),
-							A2(
-								$elm$core$Maybe$withDefault,
-								$mdgriffith$elm_ui$Element$none,
-								A2(
-									$elm$core$Maybe$map,
-									function (faviconUrl) {
-										return A2($author$project$Pages$ViewIcon$viewIcon, faviconUrl, item.feedTitle);
-									},
-									item.favicon))),
+							faviconImg),
 							A2(
 							$mdgriffith$elm_ui$Element$el,
 							_List_fromArray(
 								[
-									$mdgriffith$elm_ui$Element$Font$size(12),
+									$mdgriffith$elm_ui$Element$Font$size(11),
 									$mdgriffith$elm_ui$Element$Font$color(mutedTxt)
 								]),
 							$mdgriffith$elm_ui$Element$text(item.feedTitle)),
@@ -14567,7 +14568,7 @@ var $author$project$Pages$Timeline$clusterOtherItem = F3(
 							$mdgriffith$elm_ui$Element$el,
 							_List_fromArray(
 								[
-									$mdgriffith$elm_ui$Element$Font$size(12),
+									$mdgriffith$elm_ui$Element$Font$size(11),
 									$mdgriffith$elm_ui$Element$Font$color(mutedTxt),
 									A2($mdgriffith$elm_ui$Element$paddingXY, 4, 0)
 								]),
@@ -14576,7 +14577,7 @@ var $author$project$Pages$Timeline$clusterOtherItem = F3(
 							$mdgriffith$elm_ui$Element$link,
 							_List_fromArray(
 								[
-									$mdgriffith$elm_ui$Element$Font$size(13),
+									$mdgriffith$elm_ui$Element$Font$size(11),
 									$mdgriffith$elm_ui$Element$htmlAttribute(
 									A2($elm$html$Html$Attributes$style, 'text-decoration', 'none')),
 									$mdgriffith$elm_ui$Element$htmlAttribute(
@@ -14754,7 +14755,7 @@ var $author$project$Pages$Timeline$clusterItem = F5(
 											$mdgriffith$elm_ui$Element$el,
 											_List_fromArray(
 												[
-													$mdgriffith$elm_ui$Element$Font$size(13),
+													$mdgriffith$elm_ui$Element$Font$size(11),
 													$mdgriffith$elm_ui$Element$Font$color(mutedTxt)
 												]),
 											$mdgriffith$elm_ui$Element$text(cluster.representative.feedTitle)),
@@ -14762,7 +14763,7 @@ var $author$project$Pages$Timeline$clusterItem = F5(
 											$mdgriffith$elm_ui$Element$el,
 											_List_fromArray(
 												[
-													$mdgriffith$elm_ui$Element$Font$size(13),
+													$mdgriffith$elm_ui$Element$Font$size(11),
 													$mdgriffith$elm_ui$Element$Font$color(mutedTxt),
 													A2($mdgriffith$elm_ui$Element$paddingXY, 4, 0)
 												]),
@@ -14781,7 +14782,7 @@ var $author$project$Pages$Timeline$clusterItem = F5(
 											$mdgriffith$elm_ui$Element$link,
 											_List_fromArray(
 												[
-													$mdgriffith$elm_ui$Element$Font$size(13),
+													$mdgriffith$elm_ui$Element$Font$size(11),
 													$mdgriffith$elm_ui$Element$htmlAttribute(
 													A2($elm$html$Html$Attributes$style, 'text-decoration', 'none')),
 													$mdgriffith$elm_ui$Element$htmlAttribute(
