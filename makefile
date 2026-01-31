@@ -293,7 +293,7 @@ elm-build:
 # 1b. Compile Elm Land UI to JavaScript
 elm-land-build:
 	@echo "Compiling Elm Land UI..."
-	cd ui && $(ELM) make src/Main.elm --output=elm.js
+	cd ui && $(ELM) make src/Main.elm --output=../public/elm.js
 	@echo "✓ Elm Land compiled to public/elm.js ($(shell wc -c < public/elm.js 2>/dev/null || echo "0") bytes)"
 
 # --- Removed elm-embed target ---

@@ -492,11 +492,11 @@ feedItem now theme item =
             Element.none
         , paragraph
             [ Element.width fill
-            , Font.size 14
+            , Font.size 11
             , Font.color txtColor
             , htmlAttribute (Html.Attributes.style "word-break" "break-word")
             , htmlAttribute (Html.Attributes.style "overflow-wrap" "break-word")
-            , htmlAttribute (Html.Attributes.style "line-height" "1.4")
+            , htmlAttribute (Html.Attributes.style "line-height" "1.3")
             ]
             [ link
                 [ Font.color txtColor
@@ -505,7 +505,7 @@ feedItem now theme item =
                 { url = item.link, label = text item.title }
             ]
         , el
-            [ Font.size 12
+            [ Font.size 11
             , Font.color mutedTxt
             , Element.alignTop
             , paddingXY 0 2

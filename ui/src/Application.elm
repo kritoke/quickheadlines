@@ -2,7 +2,7 @@ port module Application exposing (Flags, Model, Msg(..), Page(..), init, update,
 
 import Browser
 import Browser.Navigation as Nav
-import Element exposing (Element, rgb255, px, text, fill, width, height, spacing, padding, row, centerY, centerX, alignTop, alignRight, moveDown)
+import Element exposing (Element, rgb255, px, text, fill, width, height, spacing, padding, paddingXY, paddingEach, row, centerY, centerX, alignTop, alignRight, moveDown)
 import Element.Background as Background
 import Element.Border as Border
 import Element.Font as Font
@@ -259,79 +259,85 @@ headerView model =
             model.shared.theme
 
         bg =
-            case theme of
-                Shared.Dark ->
-                    rgb255 30 30 30
-
-                Shared.Light ->
-                    rgb255 243 244 246
+            surfaceColor theme
 
         txtColor =
-            case theme of
-                Shared.Dark ->
-                    rgb255 229 231 235
+            textColor theme
 
-                Shared.Light ->
-                    rgb255 17 24 39
-     in
-          Element.row
-              [ width fill
-              , padding 16
-              , Background.color bg
-              , spacing 16
-              ]
-              [ Element.row
-                  [ spacing 12
-                  , centerY
-                  ]
-                  [ Element.image
-                      [ Element.width (px 24)
-                      , Element.height (px 24)
-                      , Border.rounded 4
-                      , Element.htmlAttribute (Html.Attributes.style "object-fit" "contain")
-                      ]
-                      { src = "/logo.svg", description = "QuickHeadlines Logo" }
-                  , if model.shared.windowWidth < 450 then
-                        Element.none
+        border =
+            Theme.borderColor theme
 
-                    else
-                        Element.link
-                            [ Font.color lumeOrange
-                            , Font.size 24
-                            , Font.bold
-                            , centerY
-                            ]
-                            { url = "/"
-                            , label = text "QuickHeadlines"
-                            }
-                  ]
-              , Element.row
-                  [ spacing 4
-                  , Element.alignRight
-                  , centerY
-                  ]
-                  [ Element.link
-                      [ Font.color txtColor
-                      , Font.size 16
-                      , Element.paddingXY 8 8
-                      , centerY
-                      ]
-                      { url = "/"
-                      , label = text "🏠"
-                      }
-                  , Element.link
-                      [ Font.color txtColor
-                      , Font.size 16
-                      , Element.paddingXY 8 8
-                      , centerY
-                      ]
-                      { url = "/timeline"
-                      , label = text "🕒"
-                      }
-                  , themeToggle model
-                  ]
-              ]
+        -- Helper for active links
+        navLink label target =
+            let
+                isActive =
+                    model.page == target
 
+                targetPath =
+                    case target of
+                        Home ->
+                            "/"
+
+                        Timeline ->
+                            "/timeline"
+            in
+            Element.link
+                [ Font.size 11
+                , Font.bold
+                , Font.color
+                    (if isActive then
+                        lumeOrange
+
+                     else
+                        txtColor
+                    )
+                , paddingXY 12 8
+                , Border.widthEach { bottom = if isActive then 2 else 0, left = 0, right = 0, top = 0 }
+                , Border.color lumeOrange
+                , Element.mouseOver [ Font.color lumeOrange ]
+                , centerY
+                ]
+                { url = targetPath
+                , label = text label
+                }
+    in
+    Element.row
+        [ width fill
+        , paddingEach { left = 20, right = 40, top = 4, bottom = 4 }
+        , Background.color bg
+        , Border.widthEach { bottom = 1, left = 0, right = 0, top = 0 }
+        , Border.color border
+        , spacing 24
+        ]
+        [ -- Brand Section
+          Element.link [ centerY ]
+            { url = "/"
+            , label =
+                Element.row [ spacing 8 ]
+                    [ Element.image
+                        [ Element.width (px 16)
+                        , Element.height (px 16)
+                        , Border.rounded 2
+                        ]
+                        { src = "/logo.svg", description = "" }
+                    , Element.el
+                        [ Font.size 12
+                        , Font.bold
+                        , Font.color txtColor
+                        , Font.letterSpacing 0.5
+                        , centerY
+                        ]
+                        (text "QUICKHEADLINES")
+                    ]
+            }
+        , -- Navigation Section
+          Element.row [ spacing 0, centerY, height fill ]
+            [ navLink "HOME" Home
+            , navLink "TIMELINE" Timeline
+            ]
+        , -- Actions Section
+          Element.el [ alignRight, centerY ] (themeToggle model)
+        ]
 
 
 themeToggle : Model -> Element Msg

@@ -235,7 +235,7 @@ groupClustersByDay zone now clusters =
         groups =
             groupClustersByDayHelp zone [] sortedClusters
     in
-    List.map (\( key, dayClusters ) -> { date = getClusterDateFromKey zone key dayClusters, clusters = dayClusters }) groups
+    List.map (\( key, dayClusters ) -> { date = getClusterDateFromKey zone key dayClusters, clusters = dayClusters }) (List.reverse groups)
 
 
 groupClustersByDayHelp : Zone -> List ( ( Int, Time.Month, Int ), List Cluster ) -> List Cluster -> List ( ( Int, Time.Month, Int ), List Cluster )
@@ -520,13 +520,16 @@ clusterItem zone now theme expandedClusters cluster =
                     rgb255 51 65 85
 
         -- Slate 700
+        clusterBg =
+            case theme of
+                Dark ->
+                    rgb255 31 41 55
+
+                Light ->
+                    rgb255 248 250 252
+
         faviconImg =
-            Maybe.map
-                (\faviconUrl ->
-                        viewIcon faviconUrl cluster.representative.feedTitle
-                )
-                cluster.representative.favicon
-                |> Maybe.withDefault Element.none
+            Pages.ViewIcon.viewIcon (Maybe.withDefault "" cluster.representative.favicon) cluster.representative.feedTitle
     in
     let
         isExpanded =
@@ -534,25 +537,34 @@ clusterItem zone now theme expandedClusters cluster =
     in
     column
         [ width fill
+        , paddingEach { top = 4, bottom = 4, left = 0, right = 0 }
+        , Border.widthEach { bottom = 1, left = 0, right = 0, top = 0 }
+        , Border.color border
+        , Background.color
+            (if isExpanded then
+                clusterBg
+
+             else
+                rgba 0 0 0 0
+            )
+        , Border.rounded 8
         ]
         [ row
             [ width fill
             , spacing 12
             , alignTop
-            , paddingEach { top = 4, bottom = 4, left = 0, right = 0 }
-            , Border.widthEach { top = 0, right = 0, bottom = 1, left = 0 }
-            , Border.color border
+            , paddingEach { top = 8, bottom = 8, left = 8, right = 8 }
             , htmlAttribute (Html.Attributes.attribute "data-timeline-item" "true")
             ]
             [ el
                 [ width (px 85)
-                , Font.size 12
+                , Font.size 11
                 , Font.color timeTxt
                 , Font.family [ Font.monospace ]
                 , alignTop
-                , paddingXY 8 4
+                , paddingXY 6 3
                 , Background.color timeBg
-                , Border.rounded 6
+                , Border.rounded 4
                 , Font.center
                 ]
                 (text timeStr)
@@ -563,56 +575,42 @@ clusterItem zone now theme expandedClusters cluster =
                 , Font.color txtColor
                 ]
                 [ -- group favicon + feed title + title together so they wrap naturally
-                  paragraph [ spacing 8, width fill ]
-                      [ el [ centerY, paddingEach { top = 0, right = 8, bottom = 0, left = 0 }, htmlAttribute (Html.Attributes.style "display" "inline-flex") ] faviconImg
-                      , el [ Font.size 11, Font.color mutedTxt, centerY, htmlAttribute (Html.Attributes.style "display" "inline") ] (text cluster.representative.feedTitle)
-                      , el [ Font.size 11, Font.color mutedTxt, paddingXY 4 0, centerY, htmlAttribute (Html.Attributes.style "display" "inline") ] (text "•")
+                  paragraph [ spacing 8, width fill, Font.size 11 ]
+                      [ el [ centerY, paddingEach { top = 0, right = 6, bottom = 0, left = 0 }, htmlAttribute (Html.Attributes.style "display" "inline-flex") ] faviconImg
+                      , el [ Font.color mutedTxt, centerY, htmlAttribute (Html.Attributes.style "display" "inline") ] (text cluster.representative.feedTitle)
+                      , el [ Font.color mutedTxt, paddingXY 4 0, centerY, htmlAttribute (Html.Attributes.style "display" "inline") ] (text "•")
                       , link
-                          [ Font.size 11
-                          , htmlAttribute (Html.Attributes.style "text-decoration" "none")
+                          [ htmlAttribute (Html.Attributes.style "text-decoration" "none")
                           , htmlAttribute (Html.Attributes.style "color" "inherit")
                           , htmlAttribute (Html.Attributes.attribute "data-display-link" "true")
-                          , mouseOver [ Font.color (rgb255 37 99 235) ]
+                          , mouseOver [ Font.color lumeOrange ]
                           , Font.semiBold
                           , htmlAttribute (Html.Attributes.style "display" "inline")
                           ]
                           { url = cluster.representative.link, label = text cluster.representative.title }
-                      , el [ paddingXY 8 0, Font.size 11, centerY, htmlAttribute (Html.Attributes.style "display" "inline") ]
-                          (text
-                              (if cluster.count > 1 then
-                                  " ↩ " ++ String.fromInt cluster.count
-
-                               else
-                                  ""
-                              )
-                          )
+                      , if cluster.count > 1 then
+                            Input.button
+                                [ paddingEach { top = 0, right = 0, bottom = 0, left = 8 }
+                                , Font.color (if isExpanded then lumeOrange else mutedTxt)
+                                , mouseOver [ Font.color lumeOrange ]
+                                , htmlAttribute (Html.Attributes.style "display" "inline-flex")
+                                , centerY
+                                ]
+                                { onPress = Just (ToggleCluster cluster.id)
+                                , label = text (" ↩ " ++ String.fromInt cluster.count)
+                                }
+                        else
+                            Element.none
                       ]
                 ]
-
             ]
-        , if clusterCount > 1 then
-            if isExpanded then
-                column
-                    [ width fill
-                    , spacing 4
-                    , paddingEach { top = 8, bottom = 12, left = 97, right = 0 }
-                    ]
-                    (List.map (\it -> clusterOtherItem now theme it) cluster.others)
-
-            else
-                -- Collapsed view: show a single collapsed header row with clickable button
-                Input.button
-                    [ width fill
-                    , htmlAttribute (Html.Attributes.style "background" "transparent")
-                    , htmlAttribute (Html.Attributes.style "border" "none")
-                    , htmlAttribute (Html.Attributes.style "text-align" "left")
-                    , htmlAttribute (Html.Attributes.style "cursor" "pointer")
-                    , paddingEach { top = 8, bottom = 12, left = 97, right = 0 }
-                    ]
-                    { onPress = Just (ToggleCluster cluster.id)
-                    , label = Element.text ("Show " ++ String.fromInt cluster.count ++ " related")
-                    }
-
+        , if clusterCount > 1 && isExpanded then
+            column
+                [ width fill
+                , spacing 8
+                , paddingEach { top = 0, bottom = 12, left = 105, right = 8 }
+                ]
+                (List.map (\it -> clusterOtherItem now theme it) cluster.others)
           else
             Element.none
         ]
