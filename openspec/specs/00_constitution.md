@@ -34,4 +34,9 @@
   1. `nix develop . --command crystal spec`
   2. `nix develop . --command ameba`
   3. `nix develop . --command elm-land build`
-* **Archival:** The final step of any task is `/opsx:archive` to merge the change into the permanent specs.
+* **Archival:** Use `/opsx:archive <name>` for all completed changes to merge them into the permanent specs.
+* **Landing the Plane (Session Completion):** 
+  1. **Sync:** Run `git pull --rebase`.
+  2. **Push:** Execute `git push` and verify `git status` shows "up to date with origin".
+  3. **Cleanup:** Clear any stashes or temporary local branches.
+  4. **Handoff:** Provide a summary of work completed and context for the next session.
