@@ -19,5 +19,6 @@ viewIcon url siteName =
         , Border.rounded 3
         , centerY
         , Element.padding 2
+        , htmlAttribute (Html.Attributes.class "qh-favicon")
         ]
         { src = iconUrl, description = siteName }
