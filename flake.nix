@@ -41,10 +41,13 @@
             mkdir -p ~/.local/bin
             ln -sf ${crystal_1_19}/bin/crystal ~/.local/bin/crystal
             ln -sf ${crystal_1_19}/bin/shards ~/.local/bin/shards
+            ln -sf ${openspec.packages.${system}.default}/bin/openspec ~/.local/bin/openspec
 
-            export PATH="$PWD/bin:$PATH"
+            # Ensure the openspec package's bin directory is first on PATH so the
+            # binary is resolvable in all subsequent shell commands.
+            export PATH="${openspec.packages.${system}.default}/bin:$HOME/.local/bin:$PWD/bin:$PATH"
             export HUB_ROOT="/workspaces"
-            export PATH="$PATH:$HUB_ROOT/aiworkflow/bin:$HOME/go/bin:$HOME/.local/bin"
+            export PATH="$PATH:$HUB_ROOT/aiworkflow/bin:$HOME/go/bin"
             export SSH_AUTH_SOCK="/workspaces/.ssh-auth.sock"
 
             # [ -f "/workspaces/aiworkflow/bin/env.sh" ] && source /workspaces/aiworkflow/bin/env.sh
@@ -52,18 +55,21 @@
             export APP_ENV=development
             echo "🚀 Quickheadlines Loaded with Crystal 1.19.1"
 
-            # 3. Add the alias to prevent the 'directory collision' error
-            alias openspec='command openspec'
-            
-            # 4. Explicitly export the path to ensure AI tools find it
-            export PATH="${openspec.packages.${system}.default}/bin:$PATH"
+            # Avoid creating aliases that interfere with command lookup; rely on PATH
+            export OPEN_SPEC_PROJECT_DIR="$PWD"
             
             # 🌐 Playwright ARM64 Setup
             export PLAYWRIGHT_BROWSERS_PATH=${pkgs.playwright-driver.browsers}
             export PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS=true
             echo "🌐 Playwright ARM64 Environment Ready"
 
-            echo "🚀 Quickheadlines DevShell Active | OpenSpec $(openspec --version)"
+            # Guarded check for OpenSpec so shell initialization doesn't fail if
+            # the binary is not present or PATH isn't set yet.
+            if command -v openspec >/dev/null 2>&1; then
+              echo "🚀 Quickheadlines DevShell Active | OpenSpec $(openspec --version)"
+            else
+              echo "🚀 Quickheadlines DevShell Active | OpenSpec (not found on PATH)"
+            fi
           '';
         };
       };
