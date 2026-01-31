@@ -274,7 +274,7 @@ headerView model =
                 Shared.Light ->
                     rgb255 17 24 39
      in
-          Element.wrappedRow
+          Element.row
               [ width fill
               , padding 16
               , Background.color bg
@@ -291,38 +291,42 @@ headerView model =
                       , Element.htmlAttribute (Html.Attributes.style "object-fit" "contain")
                       ]
                       { src = "/logo.svg", description = "QuickHeadlines Logo" }
-                  , Element.link
-                      [ Font.color lumeOrange
-                      , Font.size 24
-                      , Font.bold
-                      , centerY
-                      ]
-                      { url = "/"
-                      , label = text "QuickHeadlines"
-                      }
+                  , if model.shared.windowWidth < 450 then
+                        Element.none
+
+                    else
+                        Element.link
+                            [ Font.color lumeOrange
+                            , Font.size 24
+                            , Font.bold
+                            , centerY
+                            ]
+                            { url = "/"
+                            , label = text "QuickHeadlines"
+                            }
                   ]
               , Element.row
-                  [ spacing 8
+                  [ spacing 4
                   , Element.alignRight
                   , centerY
                   ]
                   [ Element.link
                       [ Font.color txtColor
                       , Font.size 16
-                      , Element.paddingXY 12 8
+                      , Element.paddingXY 8 8
                       , centerY
                       ]
                       { url = "/"
-                      , label = text "Home"
+                      , label = text "🏠"
                       }
                   , Element.link
                       [ Font.color txtColor
                       , Font.size 16
-                      , Element.paddingXY 12 8
+                      , Element.paddingXY 8 8
                       , centerY
                       ]
                       { url = "/timeline"
-                      , label = text "Timeline"
+                      , label = text "🕒"
                       }
                   , themeToggle model
                   ]
