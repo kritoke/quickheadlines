@@ -14483,6 +14483,16 @@ var $mdgriffith$elm_ui$Element$mouseOver = function (decs) {
 			$mdgriffith$elm_ui$Internal$Model$Hover,
 			$mdgriffith$elm_ui$Internal$Model$unwrapDecorations(decs)));
 };
+var $mdgriffith$elm_ui$Internal$Model$MoveY = function (a) {
+	return {$: 'MoveY', a: a};
+};
+var $mdgriffith$elm_ui$Internal$Flag$moveY = $mdgriffith$elm_ui$Internal$Flag$flag(26);
+var $mdgriffith$elm_ui$Element$moveDown = function (y) {
+	return A2(
+		$mdgriffith$elm_ui$Internal$Model$TransformComponent,
+		$mdgriffith$elm_ui$Internal$Flag$moveY,
+		$mdgriffith$elm_ui$Internal$Model$MoveY(y));
+};
 var $author$project$Pages$ViewIcon$viewIcon = F2(
 	function (url, siteName) {
 		return A2(
@@ -14490,11 +14500,12 @@ var $author$project$Pages$ViewIcon$viewIcon = F2(
 			_List_fromArray(
 				[
 					$mdgriffith$elm_ui$Element$width(
-					$mdgriffith$elm_ui$Element$px(16)),
+					$mdgriffith$elm_ui$Element$px(14)),
 					$mdgriffith$elm_ui$Element$height(
-					$mdgriffith$elm_ui$Element$px(16)),
+					$mdgriffith$elm_ui$Element$px(14)),
 					$mdgriffith$elm_ui$Element$Border$rounded(2),
-					$mdgriffith$elm_ui$Element$centerY
+					$mdgriffith$elm_ui$Element$alignTop,
+					$mdgriffith$elm_ui$Element$moveDown(2)
 				]),
 			{description: siteName, src: url});
 	});
@@ -14715,7 +14726,7 @@ var $author$project$Pages$Timeline$clusterItem = F5(
 								[
 									$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill),
 									$mdgriffith$elm_ui$Element$spacing(8),
-									$mdgriffith$elm_ui$Element$centerY,
+									$mdgriffith$elm_ui$Element$alignTop,
 									$mdgriffith$elm_ui$Element$Font$size(15),
 									$mdgriffith$elm_ui$Element$Font$color(txtColor),
 									$mdgriffith$elm_ui$Element$htmlAttribute(
@@ -14730,7 +14741,7 @@ var $author$project$Pages$Timeline$clusterItem = F5(
 									_List_fromArray(
 										[
 											$mdgriffith$elm_ui$Element$spacing(8),
-											$mdgriffith$elm_ui$Element$centerY,
+											$mdgriffith$elm_ui$Element$alignTop,
 											$mdgriffith$elm_ui$Element$htmlAttribute(
 											A2($elm$html$Html$Attributes$style, 'white-space', 'nowrap'))
 										]),
@@ -14740,8 +14751,8 @@ var $author$project$Pages$Timeline$clusterItem = F5(
 											$mdgriffith$elm_ui$Element$el,
 											_List_fromArray(
 												[
-													$mdgriffith$elm_ui$Element$centerY,
-													A2($mdgriffith$elm_ui$Element$paddingXY, 0, 4)
+													$mdgriffith$elm_ui$Element$alignTop,
+													A2($mdgriffith$elm_ui$Element$paddingXY, 0, 2)
 												]),
 											faviconImg),
 											A2(

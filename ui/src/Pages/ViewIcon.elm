@@ -6,9 +6,10 @@ import Element.Border as Border
 viewIcon : String -> String -> Element msg
 viewIcon url siteName =
     image
-        [ width (px 16)
-        , height (px 16)
+        [ width (px 14)
+        , height (px 14)
         , Border.rounded 2
-        , centerY
+        , alignTop
+        , moveDown 2
         ]
         { src = url, description = siteName }

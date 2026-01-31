@@ -558,15 +558,15 @@ clusterItem zone now theme expandedClusters cluster =
             , row
                 [ width fill
                 , spacing 8
-                , centerY
+                , alignTop
                 , Font.size 15
                 , Font.color txtColor
                 , htmlAttribute (Html.Attributes.style "word-break" "break-word")
                 , htmlAttribute (Html.Attributes.style "overflow-wrap" "break-word")
                 ]
                 [ -- group favicon + feed title together so they never stack
-                  row [ spacing 8, centerY, htmlAttribute (Html.Attributes.style "white-space" "nowrap") ]
-                      [ el [ centerY, paddingXY 0 4 ] faviconImg
+                  row [ spacing 8, alignTop, htmlAttribute (Html.Attributes.style "white-space" "nowrap") ]
+                      [ el [ alignTop, paddingXY 0 2 ] faviconImg
                       , el [ Font.size 13, Font.color mutedTxt ] (text cluster.representative.feedTitle)
                       , el [ Font.size 13, Font.color mutedTxt, paddingXY 4 0 ] (text "•")
                       ]
