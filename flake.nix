@@ -27,6 +27,7 @@
         default = pkgs.mkShell {
           buildInputs = with pkgs; [
             crystal_1_19
+            bash
             shards pkg-config openssl sqlite libxml2 libyaml
             libevent zlib pcre2 gmp boehmgc file
             elmPackages.elm elmPackages.elm-format

@@ -2,7 +2,7 @@ port module Application exposing (Flags, Model, Msg(..), Page(..), init, update,
 
 import Browser
 import Browser.Navigation as Nav
-import Element exposing (Element, rgb255, px, text, fill, width, height, spacing, padding, paddingXY, paddingEach, row, centerY, centerX, alignTop, alignRight, moveDown)
+import Element exposing (Element, rgb255, px, text, fill, width, height, spacing, padding, paddingXY, paddingEach, row, centerY, centerX, alignTop, alignRight, moveDown, htmlAttribute)
 import Element.Background as Background
 import Element.Border as Border
 import Element.Font as Font
@@ -282,7 +282,7 @@ headerView model =
                             "/timeline"
             in
             Element.link
-                [ Font.size 11
+                [ Font.size 13
                 , Font.bold
                 , Font.color
                     (if isActive then
@@ -320,14 +320,14 @@ headerView model =
                         , Border.rounded 2
                         ]
                         { src = "/logo.svg", description = "" }
-                    , Element.el
-                        [ Font.size 12
-                        , Font.bold
-                        , Font.color txtColor
-                        , Font.letterSpacing 0.5
-                        , centerY
-                        ]
-                        (text "QUICKHEADLINES")
+                , Element.el
+                    [ Font.size 16
+                    , Font.bold
+                    , Font.color txtColor
+                    , Font.letterSpacing 0.5
+                    , centerY
+                    ]
+                    (text "QUICKHEADLINES")
                     ]
             }
         , -- Navigation Section
@@ -376,7 +376,7 @@ themeToggle model =
         , Font.size 16
         , Element.paddingXY 10 8
         , Border.rounded 6
-        , Element.htmlAttribute (Html.Attributes.title label)
+        , htmlAttribute (Html.Attributes.title label)
         ]
         { onPress = Just (SharedMsg ToggleTheme)
         , label = Element.text icon

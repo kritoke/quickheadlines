@@ -1,6 +1,8 @@
 /* QuickHeadlines Custom CSS - No Tailwind dependency */
 
 :root {
+  /* Set sensible desktop base font-size so Elm Element font values feel natural */
+  font-size: 16px;
   --color-surface: #1f2937;
   --color-surface-light: #f9fafb;
   --color-surface-dark: #111827;
@@ -71,12 +73,15 @@
 @media (min-width: 1024px) { .feed-box { height: 24rem; } }
 
 .feed-box .feed-header {
-  padding: 0.5rem 0.75rem;
+  padding: 0.75rem 0.75rem;
   background-color: #f3f4f6;
   border-radius: 0.75rem;
   margin-bottom: 0.4rem;
   transition: background-color 0.4s ease, color 0.4s ease;
   flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  min-height: 44px; /* ensure touch target on mobile */
 }
 
 :where(.dark, .dark *) .feed-box .feed-header {

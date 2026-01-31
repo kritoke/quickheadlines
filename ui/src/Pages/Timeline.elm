@@ -530,6 +530,9 @@ clusterItem zone now theme expandedClusters cluster =
 
         faviconImg =
             Pages.ViewIcon.viewIcon (Maybe.withDefault "" cluster.representative.favicon) cluster.representative.feedTitle
+
+        headerTextColor =
+            Maybe.withDefault "" cluster.representative.headerTextColor
     in
     let
         isExpanded =
@@ -568,41 +571,43 @@ clusterItem zone now theme expandedClusters cluster =
                 , Font.center
                 ]
                 (text timeStr)
-            , column
-                [ width fill
-                , spacing 0
-                , alignTop
-                , Font.color txtColor
-                ]
-                [ -- group favicon + feed title + title together so they wrap naturally
-                  paragraph [ spacing 8, width fill, Font.size 11 ]
-                      [ el [ centerY, paddingEach { top = 0, right = 6, bottom = 0, left = 0 }, htmlAttribute (Html.Attributes.style "display" "inline-flex") ] faviconImg
-                      , el [ Font.color mutedTxt, centerY, htmlAttribute (Html.Attributes.style "display" "inline") ] (text cluster.representative.feedTitle)
-                      , el [ Font.color mutedTxt, paddingXY 4 0, centerY, htmlAttribute (Html.Attributes.style "display" "inline") ] (text "•")
-                      , link
-                          [ htmlAttribute (Html.Attributes.style "text-decoration" "none")
-                          , htmlAttribute (Html.Attributes.style "color" "inherit")
-                          , htmlAttribute (Html.Attributes.attribute "data-display-link" "true")
-                          , mouseOver [ Font.color lumeOrange ]
-                          , Font.semiBold
-                          , htmlAttribute (Html.Attributes.style "display" "inline")
-                          ]
-                          { url = cluster.representative.link, label = text cluster.representative.title }
-                      , if cluster.count > 1 then
-                            Input.button
-                                [ paddingEach { top = 0, right = 0, bottom = 0, left = 8 }
-                                , Font.color (if isExpanded then lumeOrange else mutedTxt)
-                                , mouseOver [ Font.color lumeOrange ]
-                                , htmlAttribute (Html.Attributes.style "display" "inline-flex")
-                                , centerY
-                                ]
-                                { onPress = Just (ToggleCluster cluster.id)
-                                , label = text (" ↩ " ++ String.fromInt cluster.count)
-                                }
-                        else
-                            Element.none
+        , column
+            [ width fill
+            , spacing 0
+            , alignTop
+            , Font.color txtColor
+            ]
+            [ -- group favicon + feed title + title together so they wrap naturally
+              paragraph [ spacing 8, width fill, Font.size 13 ]
+                  [ el [ centerY, paddingEach { top = 0, right = 6, bottom = 0, left = 0 } ] faviconImg
+                   , el [ Font.color mutedTxt, centerY, Font.size 12
+                        , (case headerTextColor of
+                            "" -> htmlAttribute (Html.Attributes.style "color" "var(--header-text-color)")
+                            _ -> htmlAttribute (Html.Attributes.style "color" headerTextColor))
+                       ] (text cluster.representative.feedTitle)
+                  , el [ Font.color mutedTxt, paddingXY 4 0, centerY ] (text "•")
+                  , link
+                      [ htmlAttribute (Html.Attributes.attribute "data-display-link" "true")
+                      , mouseOver [ Font.color lumeOrange ]
+                      , Font.semiBold
+                      , htmlAttribute (Html.Attributes.style "display" "inline")
                       ]
-                ]
+                      { url = cluster.representative.link, label = text cluster.representative.title }
+                  , if cluster.count > 1 then
+                        Input.button
+                            [ paddingEach { top = 0, right = 0, bottom = 0, left = 8 }
+                            , Font.color (if isExpanded then lumeOrange else mutedTxt)
+                            , mouseOver [ Font.color lumeOrange ]
+                            , htmlAttribute (Html.Attributes.style "display" "inline-flex")
+                            , centerY
+                            ]
+                            { onPress = Just (ToggleCluster cluster.id)
+                            , label = text (" ↩ " ++ String.fromInt cluster.count)
+                            }
+                      else
+                          Element.none
+                  ]
+            ]
             ]
         , if clusterCount > 1 && isExpanded then
             column
@@ -624,6 +629,9 @@ clusterOtherItem now theme item =
         mutedTxt =
             mutedColor theme
 
+        itemHeaderColor =
+            Maybe.withDefault "" item.headerTextColor
+
         faviconImg =
             Maybe.map
                 (\faviconUrl ->
@@ -636,12 +644,15 @@ clusterOtherItem now theme item =
         [ width fill
         , paddingEach { top = 4, bottom = 4, left = 0, right = 0 }
         ]
-        [ el [ centerY, paddingEach { top = 0, right = 8, bottom = 0, left = 0 }, htmlAttribute (Html.Attributes.style "display" "inline-flex") ] faviconImg
-        , el [ Font.size 11, Font.color mutedTxt, centerY, htmlAttribute (Html.Attributes.style "display" "inline") ] (text item.feedTitle)
-        , el [ Font.size 11, Font.color mutedTxt, paddingXY 4 0, centerY, htmlAttribute (Html.Attributes.style "display" "inline") ] (text "•")
+        [ el [ centerY, paddingEach { top = 0, right = 8, bottom = 0, left = 0 } ] faviconImg
+        , el [ Font.size 11, Font.color mutedTxt, centerY
+             , (case itemHeaderColor of
+                 "" -> htmlAttribute (Html.Attributes.style "color" "var(--header-text-color)")
+                 _ -> htmlAttribute (Html.Attributes.style "color" itemHeaderColor))
+          ] (text item.feedTitle)
+        , el [ Font.size 11, Font.color mutedTxt, paddingXY 4 0, centerY ] (text "•")
         , link
             [ Font.size 11
-            , htmlAttribute (Html.Attributes.style "text-decoration" "none")
             , Font.color txtColor
             , htmlAttribute (Html.Attributes.attribute "data-display-link" "true")
             , mouseOver [ Font.color lumeOrange ]

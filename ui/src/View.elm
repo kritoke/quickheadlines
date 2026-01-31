@@ -1,9 +1,9 @@
 module View exposing (View)
 
-import Html exposing (Html)
+import Element exposing (Element)
 
 
 type alias View msg =
     { title : String
-    , body : List (Html msg)
+    , body : List (Element msg)
     }

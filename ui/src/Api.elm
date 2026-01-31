@@ -65,6 +65,8 @@ type alias ClusterItem =
     , pubDate : Maybe Time.Posix
     , feedTitle : String
     , favicon : Maybe String
+    , headerColor : Maybe String
+    , headerTextColor : Maybe String
     }
 
 
@@ -224,6 +226,8 @@ toClusterItem item =
     , pubDate = item.pubDate
     , feedTitle = item.feedTitle
     , favicon = item.favicon
+    , headerColor = item.headerColor
+    , headerTextColor = item.headerTextColor
     }
 
 

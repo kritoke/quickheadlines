@@ -139,6 +139,6 @@ tabInactiveText theme =
 
 metadataStyle : Theme -> List (Attribute msg)
 metadataStyle theme =
-    [ Font.size 12
+    [ Font.size 14
     , Font.color (mutedColor theme)
     ]

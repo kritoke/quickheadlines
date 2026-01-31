@@ -14,9 +14,10 @@ viewIcon url siteName =
                 url
     in
     image
-        [ width (px 14)
-        , height (px 14)
-        , Border.rounded 2
+        [ width (px 18)
+        , height (px 18)
+        , Border.rounded 3
         , centerY
+        , Element.padding 2
         ]
         { src = iconUrl, description = siteName }

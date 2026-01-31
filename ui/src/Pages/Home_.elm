@@ -140,7 +140,7 @@ allTab shared =
     el
         [ paddingXY 12 6
         , Border.rounded 6
-        , Font.size 13
+        , Font.size 15
         , Font.medium
         , Font.color tabActiveText
         , Background.color (tabActiveBg theme)
@@ -174,7 +174,7 @@ tabButton shared activeTab tab =
     Input.button
         [ paddingXY 12 6
         , Border.rounded 6
-        , Font.size 13
+        , Font.size 15
         , Font.medium
         , Font.color txtColor
         , Background.color bg
@@ -197,7 +197,7 @@ content shared model =
         el
             [ centerX
             , centerY
-            , Font.size 16
+            , Font.size 18
             , Font.color muted
             ]
             (text "Loading...")
@@ -206,7 +206,7 @@ content shared model =
         el
             [ centerX
             , centerY
-            , Font.size 16
+            , Font.size 18
             , Font.color errorColor
             ]
             (text "Error loading feeds")
@@ -414,8 +414,8 @@ feedHeader theme feed =
                 [ Font.size 18
                 , Font.bold
                 , (case headerTextColor of
-                    "" -> Html.Attributes.attribute "style" "color: var(--header-text-color)"
-                    _ -> Html.Attributes.style "color" headerTextColor)
+                    "" -> htmlAttribute (Html.Attributes.style "color" "var(--header-text-color)")
+                    _ -> htmlAttribute (Html.Attributes.style "color" headerTextColor))
                 , Font.underline
                 , htmlAttribute (Html.Attributes.style "word-wrap" "break-word")
                 ]
@@ -423,10 +423,10 @@ feedHeader theme feed =
             , if feed.displayLink /= "" then
                 el
                     [ htmlAttribute (Html.Attributes.attribute "data-display-link" "true")
-                    , Font.size 12
+                    , Font.size 13
                     , (case headerTextColor of
-                        "" -> Html.Attributes.attribute "style" "color: var(--header-text-color)"
-                        _ -> Html.Attributes.style "color" headerTextColor)
+                        "" -> htmlAttribute (Html.Attributes.style "color" "var(--header-text-color)")
+                        _ -> htmlAttribute (Html.Attributes.style "color" headerTextColor))
                     , htmlAttribute (Html.Attributes.style "opacity" "0.8")
                     ]
                     (text feed.displayLink)
@@ -496,7 +496,7 @@ feedItem now theme item =
             Element.none
         , paragraph
             [ Element.width fill
-            , Font.size 11
+            , Font.size 13
             , Font.color txtColor
             , htmlAttribute (Html.Attributes.style "word-break" "break-word")
             , htmlAttribute (Html.Attributes.style "overflow-wrap" "break-word")
@@ -509,7 +509,7 @@ feedItem now theme item =
                 { url = item.link, label = text item.title }
             ]
         , el
-            [ Font.size 11
+            [ Font.size 12
             , Font.color mutedTxt
             , Element.alignTop
             , paddingXY 0 2
