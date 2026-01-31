@@ -14,6 +14,7 @@ import Theme exposing (borderColor, cardColor, errorColor, lumeOrange, mutedColo
 import ThemeTypography as Ty
 import Time exposing (Posix, Zone, toDay, toMonth, toYear)
 import Pages.ViewIcon exposing (viewIcon)
+import Responsive exposing (Breakpoint, breakpointFromWidth, isMobile, isVeryNarrow, horizontalPadding, verticalPadding, containerMaxWidth, timelineTimeColumnWidth, timelineClusterPadding)
 
 
 type alias Model =
@@ -143,31 +144,14 @@ view shared model =
         theme =
             shared.theme
 
-        isMobile =
-            shared.windowWidth < 768
-
-        isVeryNarrow =
-            shared.windowWidth < 480
+        breakpoint =
+            Responsive.breakpointFromWidth shared.windowWidth
 
         horizontalPadding =
-            if isVeryNarrow then
-                8
-
-            else if isMobile then
-                16
-
-            else
-                40
+            Responsive.horizontalPadding breakpoint
 
         verticalPadding =
-            if isVeryNarrow then
-                8
-
-            else if isMobile then
-                16
-
-            else
-                60
+            Responsive.verticalPadding breakpoint
 
         bg =
             surfaceColor theme
@@ -186,13 +170,13 @@ view shared model =
         , centerX
         , height fill
         , spacing 20
-        , paddingEach { top = verticalPadding, bottom = verticalPadding, left = horizontalPadding, right = horizontalPadding }
+        , paddingXY horizontalPadding verticalPadding
         , Background.color bg
         , htmlAttribute (Html.Attributes.attribute "data-timeline-page" "true")
         , htmlAttribute (Html.Attributes.class "auto-hide-scroll")
         ]
         [ el
-        [ (if isMobile then Ty.subtitle else Ty.title)
+        [ (if Responsive.isMobile breakpoint then Ty.subtitle else Ty.title)
             , Font.bold
             , Font.color txtColor
             ]
@@ -223,7 +207,7 @@ view shared model =
                     [ width fill
                     , spacing 16
                     ]
-                    (List.concatMap (dayClusterSection isVeryNarrow shared.zone shared.now theme model.expandedClusters) clustersByDay)
+                    (List.concatMap (dayClusterSection breakpoint shared.zone shared.now theme model.expandedClusters) clustersByDay)
                 , el [ htmlAttribute (Html.Attributes.id "scroll-sentinel"), height (px 1), width fill ] (text "")
                 ]
         ]
@@ -301,15 +285,15 @@ getClusterDateFromKey zone key clusters =
                     Time.millisToPosix 0
 
 
-dayClusterSection : Bool -> Zone -> Posix -> Theme -> Set String -> DayClusterGroup -> List (Element Msg)
-dayClusterSection isVeryNarrow zone now theme expandedClusters dayGroup =
+dayClusterSection : Responsive.Breakpoint -> Zone -> Posix -> Theme -> Set String -> DayClusterGroup -> List (Element Msg)
+dayClusterSection breakpoint zone now theme expandedClusters dayGroup =
     [ dayHeader zone now theme dayGroup.date
     , column
         [ width fill
         , spacing 0
         , paddingEach { top = 16, bottom = 32, left = 0, right = 0 }
         ]
-        (List.map (clusterItem isVeryNarrow zone now theme expandedClusters) dayGroup.clusters)
+        (List.map (clusterItem breakpoint zone now theme expandedClusters) dayGroup.clusters)
     ]
 
 
@@ -487,8 +471,8 @@ monthToString month =
             "December"
 
 
-clusterItem : Bool -> Time.Zone -> Time.Posix -> Theme -> Set String -> Cluster -> Element Msg
-clusterItem isVeryNarrow zone now theme expandedClusters cluster =
+clusterItem : Responsive.Breakpoint -> Time.Zone -> Time.Posix -> Theme -> Set String -> Cluster -> Element Msg
+clusterItem breakpoint zone now theme expandedClusters cluster =
     let
         txtColor =
             textColor theme
@@ -570,7 +554,7 @@ clusterItem isVeryNarrow zone now theme expandedClusters cluster =
             , htmlAttribute (Html.Attributes.attribute "data-timeline-item" "true")
             ]
              [ el
-                 [ width (px (if isVeryNarrow then 60 else 85))
+                  [ width (px (Responsive.timelineTimeColumnWidth breakpoint))
                  , Ty.meta
                  , Font.color timeTxt
                  , Font.family [ Font.monospace ]
@@ -623,7 +607,7 @@ clusterItem isVeryNarrow zone now theme expandedClusters cluster =
              column
                  [ width fill
                  , spacing 8
-                 , paddingEach { top = 0, bottom = 12, left = (if isVeryNarrow then 70 else 105), right = 8 }
+                  , paddingEach { top = 0, bottom = 12, left = (Responsive.timelineClusterPadding breakpoint), right = 8 }
                  ]
                  (List.map (\it -> clusterOtherItem now theme it) cluster.others)
           else

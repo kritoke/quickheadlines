@@ -13378,6 +13378,13 @@ var $author$project$Layouts$Shared$layout = function (_v0) {
 };
 var $mdgriffith$elm_ui$Element$map = $mdgriffith$elm_ui$Internal$Model$map;
 var $elm$html$Html$Attributes$attribute = $elm$virtual_dom$VirtualDom$attribute;
+var $author$project$Responsive$DesktopBreakpoint = {$: 'DesktopBreakpoint'};
+var $author$project$Responsive$MobileBreakpoint = {$: 'MobileBreakpoint'};
+var $author$project$Responsive$TabletBreakpoint = {$: 'TabletBreakpoint'};
+var $author$project$Responsive$VeryNarrowBreakpoint = {$: 'VeryNarrowBreakpoint'};
+var $author$project$Responsive$breakpointFromWidth = function (width) {
+	return (width < 480) ? $author$project$Responsive$VeryNarrowBreakpoint : ((width < 768) ? $author$project$Responsive$MobileBreakpoint : ((width < 1024) ? $author$project$Responsive$TabletBreakpoint : $author$project$Responsive$DesktopBreakpoint));
+};
 var $mdgriffith$elm_ui$Internal$Model$CenterX = {$: 'CenterX'};
 var $mdgriffith$elm_ui$Element$centerX = $mdgriffith$elm_ui$Internal$Model$AlignX($mdgriffith$elm_ui$Internal$Model$CenterX);
 var $author$project$Theme$errorColor = A3($mdgriffith$elm_ui$Element$rgb255, 239, 68, 68);
@@ -14132,21 +14139,27 @@ var $author$project$Theme$themeToColors = function (theme) {
 	}
 };
 var $author$project$Pages$Home_$feedCard = F4(
-	function (now, theme, windowWidth, feed) {
+	function (now, theme, breakpoint, feed) {
 		var txtColor = $author$project$Theme$textColor(theme);
-		var scrollAttributes = (windowWidth >= 1024) ? _List_fromArray(
-			[
-				$mdgriffith$elm_ui$Element$htmlAttribute(
-				A2($elm$html$Html$Attributes$style, 'max-height', '280px')),
-				$mdgriffith$elm_ui$Element$htmlAttribute(
-				A2($elm$html$Html$Attributes$style, 'overflow-y', 'auto')),
-				$mdgriffith$elm_ui$Element$htmlAttribute(
-				A2($elm$html$Html$Attributes$style, 'scrollbar-width', 'thin')),
-				$mdgriffith$elm_ui$Element$htmlAttribute(
-				A2($elm$html$Html$Attributes$style, 'scrollbar-color', 'transparent transparent')),
-				$mdgriffith$elm_ui$Element$htmlAttribute(
-				$elm$html$Html$Attributes$class('auto-hide-scroll'))
-			]) : _List_Nil;
+		var scrollAttributes = function () {
+			if (breakpoint.$ === 'DesktopBreakpoint') {
+				return _List_fromArray(
+					[
+						$mdgriffith$elm_ui$Element$htmlAttribute(
+						A2($elm$html$Html$Attributes$style, 'max-height', '280px')),
+						$mdgriffith$elm_ui$Element$htmlAttribute(
+						A2($elm$html$Html$Attributes$style, 'overflow-y', 'auto')),
+						$mdgriffith$elm_ui$Element$htmlAttribute(
+						A2($elm$html$Html$Attributes$style, 'scrollbar-width', 'thin')),
+						$mdgriffith$elm_ui$Element$htmlAttribute(
+						A2($elm$html$Html$Attributes$style, 'scrollbar-color', 'transparent transparent')),
+						$mdgriffith$elm_ui$Element$htmlAttribute(
+						$elm$html$Html$Attributes$class('auto-hide-scroll'))
+					]);
+			} else {
+				return _List_Nil;
+			}
+		}();
 		var colors = $author$project$Theme$themeToColors(theme);
 		var cardBg = $author$project$Theme$cardColor(theme);
 		var border = $author$project$Theme$borderColor(theme);
@@ -14187,8 +14200,31 @@ var $author$project$Pages$Home_$feedCard = F4(
 var $author$project$Pages$Home_$feedGrid = F2(
 	function (shared, model) {
 		var theme = shared.theme;
-		var gapValue = (shared.windowWidth >= 1024) ? 24 : ((shared.windowWidth >= 768) ? 20 : 16);
-		var columnCount = (shared.windowWidth >= 1024) ? 3 : ((shared.windowWidth >= 768) ? 2 : 1);
+		var breakpoint = $author$project$Responsive$breakpointFromWidth(shared.windowWidth);
+		var columnCount = function () {
+			switch (breakpoint.$) {
+				case 'VeryNarrowBreakpoint':
+					return 1;
+				case 'MobileBreakpoint':
+					return 1;
+				case 'TabletBreakpoint':
+					return 2;
+				default:
+					return 3;
+			}
+		}();
+		var gapValue = function () {
+			switch (breakpoint.$) {
+				case 'VeryNarrowBreakpoint':
+					return 16;
+				case 'MobileBreakpoint':
+					return 16;
+				case 'TabletBreakpoint':
+					return 20;
+				default:
+					return 24;
+			}
+		}();
 		return A2(
 			$mdgriffith$elm_ui$Element$column,
 			_List_fromArray(
@@ -14208,7 +14244,7 @@ var $author$project$Pages$Home_$feedGrid = F2(
 							]),
 						A2(
 							$elm$core$List$map,
-							A3($author$project$Pages$Home_$feedCard, shared.now, theme, shared.windowWidth),
+							A3($author$project$Pages$Home_$feedCard, shared.now, theme, breakpoint),
 							feedRow));
 				},
 				A2($author$project$Pages$Home_$chunkList, columnCount, model.feeds)));
@@ -14499,12 +14535,24 @@ var $author$project$Pages$Home_$tabBar = F2(
 						model.tabs)));
 		}
 	});
+var $author$project$Responsive$uniformPadding = function (breakpoint) {
+	switch (breakpoint.$) {
+		case 'VeryNarrowBreakpoint':
+			return 8;
+		case 'MobileBreakpoint':
+			return 16;
+		case 'TabletBreakpoint':
+			return 32;
+		default:
+			return 96;
+	}
+};
 var $author$project$Pages$Home_$view = F2(
 	function (shared, model) {
 		var theme = shared.theme;
-		var isMobile = shared.windowWidth < 768;
-		var paddingValue = isMobile ? 16 : 96;
 		var colors = $author$project$Theme$themeToColors(theme);
+		var breakpoint = $author$project$Responsive$breakpointFromWidth(shared.windowWidth);
+		var pad = $author$project$Responsive$uniformPadding(breakpoint);
 		var bg = $author$project$Theme$surfaceColor(theme);
 		return A2(
 			$mdgriffith$elm_ui$Element$column,
@@ -14513,7 +14561,7 @@ var $author$project$Pages$Home_$view = F2(
 					$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill),
 					$mdgriffith$elm_ui$Element$height($mdgriffith$elm_ui$Element$fill),
 					$mdgriffith$elm_ui$Element$spacing(20),
-					$mdgriffith$elm_ui$Element$padding(paddingValue),
+					$mdgriffith$elm_ui$Element$padding(pad),
 					$mdgriffith$elm_ui$Element$Background$color(bg),
 					$mdgriffith$elm_ui$Element$htmlAttribute(
 					A2($elm$html$Html$Attributes$attribute, 'data-page', 'home'))
@@ -14676,8 +14724,21 @@ var $mdgriffith$elm_ui$Internal$Model$Monospace = {$: 'Monospace'};
 var $mdgriffith$elm_ui$Element$Font$monospace = $mdgriffith$elm_ui$Internal$Model$Monospace;
 var $mdgriffith$elm_ui$Element$rgba = $mdgriffith$elm_ui$Internal$Model$Rgba;
 var $mdgriffith$elm_ui$Element$Font$semiBold = A2($mdgriffith$elm_ui$Internal$Model$Class, $mdgriffith$elm_ui$Internal$Flag$fontWeight, $mdgriffith$elm_ui$Internal$Style$classes.textSemiBold);
+var $author$project$Responsive$isVeryNarrow = function (breakpoint) {
+	if (breakpoint.$ === 'VeryNarrowBreakpoint') {
+		return true;
+	} else {
+		return false;
+	}
+};
+var $author$project$Responsive$timelineClusterPadding = function (breakpoint) {
+	return $author$project$Responsive$isVeryNarrow(breakpoint) ? 70 : 105;
+};
+var $author$project$Responsive$timelineTimeColumnWidth = function (breakpoint) {
+	return $author$project$Responsive$isVeryNarrow(breakpoint) ? 60 : 85;
+};
 var $author$project$Pages$Timeline$clusterItem = F6(
-	function (isVeryNarrow, zone, now, theme, expandedClusters, cluster) {
+	function (breakpoint, zone, now, theme, expandedClusters, cluster) {
 		var txtColor = $author$project$Theme$textColor(theme);
 		var timeTxt = function () {
 			if (theme.$ === 'Dark') {
@@ -14754,7 +14815,7 @@ var $author$project$Pages$Timeline$clusterItem = F6(
 								[
 									$mdgriffith$elm_ui$Element$width(
 									$mdgriffith$elm_ui$Element$px(
-										isVeryNarrow ? 60 : 85)),
+										$author$project$Responsive$timelineTimeColumnWidth(breakpoint))),
 									$author$project$ThemeTypography$meta,
 									$mdgriffith$elm_ui$Element$Font$color(timeTxt),
 									$mdgriffith$elm_ui$Element$Font$family(
@@ -14878,7 +14939,7 @@ var $author$project$Pages$Timeline$clusterItem = F6(
 							$mdgriffith$elm_ui$Element$paddingEach(
 							{
 								bottom: 12,
-								left: isVeryNarrow ? 70 : 105,
+								left: $author$project$Responsive$timelineClusterPadding(breakpoint),
 								right: 8,
 								top: 0
 							})
@@ -14988,7 +15049,7 @@ var $author$project$Pages$Timeline$dayHeader = F4(
 			$mdgriffith$elm_ui$Element$text(headerText));
 	});
 var $author$project$Pages$Timeline$dayClusterSection = F6(
-	function (isVeryNarrow, zone, now, theme, expandedClusters, dayGroup) {
+	function (breakpoint, zone, now, theme, expandedClusters, dayGroup) {
 		return _List_fromArray(
 			[
 				A4($author$project$Pages$Timeline$dayHeader, zone, now, theme, dayGroup.date),
@@ -15003,7 +15064,7 @@ var $author$project$Pages$Timeline$dayClusterSection = F6(
 					]),
 				A2(
 					$elm$core$List$map,
-					A5($author$project$Pages$Timeline$clusterItem, isVeryNarrow, zone, now, theme, expandedClusters),
+					A5($author$project$Pages$Timeline$clusterItem, breakpoint, zone, now, theme, expandedClusters),
 					dayGroup.clusters))
 			]);
 	});
@@ -15104,6 +15165,30 @@ var $author$project$Pages$Timeline$groupClustersByDay = F3(
 			},
 			$elm$core$List$reverse(groups));
 	});
+var $author$project$Responsive$horizontalPadding = function (breakpoint) {
+	switch (breakpoint.$) {
+		case 'VeryNarrowBreakpoint':
+			return 8;
+		case 'MobileBreakpoint':
+			return 16;
+		case 'TabletBreakpoint':
+			return 32;
+		default:
+			return 40;
+	}
+};
+var $author$project$Responsive$isMobile = function (breakpoint) {
+	switch (breakpoint.$) {
+		case 'VeryNarrowBreakpoint':
+			return true;
+		case 'MobileBreakpoint':
+			return true;
+		case 'TabletBreakpoint':
+			return false;
+		default:
+			return false;
+	}
+};
 var $mdgriffith$elm_ui$Internal$Model$Max = F2(
 	function (a, b) {
 		return {$: 'Max', a: a, b: b};
@@ -15114,16 +15199,27 @@ var $mdgriffith$elm_ui$Element$maximum = F2(
 	});
 var $author$project$ThemeTypography$subtitle = $mdgriffith$elm_ui$Element$Font$size(20);
 var $author$project$ThemeTypography$title = $mdgriffith$elm_ui$Element$Font$size(24);
+var $author$project$Responsive$verticalPadding = function (breakpoint) {
+	switch (breakpoint.$) {
+		case 'VeryNarrowBreakpoint':
+			return 8;
+		case 'MobileBreakpoint':
+			return 16;
+		case 'TabletBreakpoint':
+			return 32;
+		default:
+			return 60;
+	}
+};
 var $author$project$Pages$Timeline$view = F2(
 	function (shared, model) {
 		var theme = shared.theme;
 		var txtColor = $author$project$Theme$textColor(theme);
 		var mutedTxt = $author$project$Theme$mutedColor(theme);
-		var isVeryNarrow = shared.windowWidth < 480;
-		var isMobile = shared.windowWidth < 768;
-		var verticalPadding = isVeryNarrow ? 8 : (isMobile ? 16 : 60);
-		var horizontalPadding = isVeryNarrow ? 8 : (isMobile ? 16 : 40);
 		var clustersByDay = A3($author$project$Pages$Timeline$groupClustersByDay, shared.zone, shared.now, model.clusters);
+		var breakpoint = $author$project$Responsive$breakpointFromWidth(shared.windowWidth);
+		var horizontalPadding = $author$project$Responsive$horizontalPadding(breakpoint);
+		var verticalPadding = $author$project$Responsive$verticalPadding(breakpoint);
 		var bg = $author$project$Theme$surfaceColor(theme);
 		return A2(
 			$mdgriffith$elm_ui$Element$column,
@@ -15134,8 +15230,7 @@ var $author$project$Pages$Timeline$view = F2(
 					$mdgriffith$elm_ui$Element$centerX,
 					$mdgriffith$elm_ui$Element$height($mdgriffith$elm_ui$Element$fill),
 					$mdgriffith$elm_ui$Element$spacing(20),
-					$mdgriffith$elm_ui$Element$paddingEach(
-					{bottom: verticalPadding, left: horizontalPadding, right: horizontalPadding, top: verticalPadding}),
+					A2($mdgriffith$elm_ui$Element$paddingXY, horizontalPadding, verticalPadding),
 					$mdgriffith$elm_ui$Element$Background$color(bg),
 					$mdgriffith$elm_ui$Element$htmlAttribute(
 					A2($elm$html$Html$Attributes$attribute, 'data-timeline-page', 'true')),
@@ -15148,7 +15243,7 @@ var $author$project$Pages$Timeline$view = F2(
 					$mdgriffith$elm_ui$Element$el,
 					_List_fromArray(
 						[
-							isMobile ? $author$project$ThemeTypography$subtitle : $author$project$ThemeTypography$title,
+							$author$project$Responsive$isMobile(breakpoint) ? $author$project$ThemeTypography$subtitle : $author$project$ThemeTypography$title,
 							$mdgriffith$elm_ui$Element$Font$bold,
 							$mdgriffith$elm_ui$Element$Font$color(txtColor)
 						]),
@@ -15188,7 +15283,7 @@ var $author$project$Pages$Timeline$view = F2(
 								]),
 							A2(
 								$elm$core$List$concatMap,
-								A5($author$project$Pages$Timeline$dayClusterSection, isVeryNarrow, shared.zone, shared.now, theme, model.expandedClusters),
+								A5($author$project$Pages$Timeline$dayClusterSection, breakpoint, shared.zone, shared.now, theme, model.expandedClusters),
 								clustersByDay)),
 							A2(
 							$mdgriffith$elm_ui$Element$el,
