@@ -322,7 +322,7 @@ headerView model =
                         ]
                         { src = "/logo.svg", description = "" }
                 , Element.el
-                    [ Font.size 16
+                    [ Ty.body
                     , Font.bold
                     , Font.color txtColor
                     , Font.letterSpacing 0.5
