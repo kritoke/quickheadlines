@@ -3,16 +3,18 @@ port module Application exposing (Flags, Model, Msg(..), Page(..), init, update,
 import Browser
 import Browser.Events
 import Browser.Navigation as Nav
-import Element exposing (Element, rgb255, px, text, fill, width, height, spacing, padding, paddingXY, paddingEach, row, centerY, centerX, alignTop, alignRight, moveDown, htmlAttribute)
+import Element exposing (Element, rgb255, px, text, fill, width, height, spacing, padding, paddingXY, paddingEach, row, centerY, centerX, alignTop, alignRight, moveDown, htmlAttribute, el, clip)
 import Element.Background as Background
 import Element.Border as Border
 import Element.Font as Font
 import Element.Input as Input
 import Html exposing (Html)
 import Html.Attributes
+import Html.Attributes as HA
 import Layouts.Shared as Layout
 import Pages.Home_ as Home
 import Pages.Timeline as Timeline
+import Responsive exposing (Breakpoint(..), breakpointFromWidth)
 import Shared exposing (Model, Msg(..), Theme(..))
 import Theme exposing (lumeOrange, surfaceColor, textColor)
 import ThemeTypography as Ty
@@ -220,7 +222,7 @@ view model =
                     )
      in
      Browser.Document title
-         [ Layout.layout { theme = theme, header = header, footer = footerView model.shared, main = content }
+          [ Layout.layout { theme = theme, windowWidth = model.shared.windowWidth, header = header, footer = footerView model.shared, main = content }
              |> Element.layout []
          ]
 
@@ -271,8 +273,8 @@ headerView model =
         border =
             Theme.borderColor theme
 
-        -- Helper for active links
-        navLink label target =
+        -- Helper for active link icons
+        navLink iconPath target =
             let
                 isActive =
                     model.page == target
@@ -284,34 +286,38 @@ headerView model =
 
                         Timeline ->
                             "/timeline"
-            in
-            Element.link
-                [ Font.size 13
-                , Font.bold
-                , Font.color
-                    (if isActive then
-                        lumeOrange
 
-                     else
-                        txtColor
-                    )
-                , paddingXY 12 8
+                iconHtml =
+                    Html.img
+                        [ HA.src iconPath
+                        , HA.style "width" "24px"
+                        , HA.style "height" "24px"
+                        ]
+                        []
+            in
+            Element.el
+                [ Element.padding 8
                 , Border.widthEach { bottom = if isActive then 2 else 0, left = 0, right = 0, top = 0 }
                 , Border.color lumeOrange
                 , Element.mouseOver [ Font.color lumeOrange ]
                 , centerY
+                , htmlAttribute (HA.style "display" "flex")
+                , htmlAttribute (HA.style "align-items" "center")
+                , htmlAttribute (HA.style "justify-content" "center")
                 ]
-                { url = targetPath
-                , label = text label
-                }
+                (Element.link []
+                    { url = targetPath
+                    , label = el [ htmlAttribute (HA.style "display" "flex") ] (Element.html iconHtml)
+                    }
+                )
     in
     Element.row
         [ width fill
-        , paddingEach { left = 20, right = 40, top = 4, bottom = 4 }
+        , paddingEach { left = 16, right = 40, top = 4, bottom = 4 }
         , Background.color bg
         , Border.widthEach { bottom = 1, left = 0, right = 0, top = 0 }
         , Border.color border
-        , spacing 24
+        , spacing 8
         ]
         [ -- Brand Section
           Element.link [ centerY ]
@@ -336,8 +342,8 @@ headerView model =
             }
         , -- Navigation Section
             Element.row [ spacing 0, centerY, height fill ]
-            [ navLink "HOME" Home
-            , navLink "TIMELINE" Timeline
+            [ navLink "/home-icon.svg" Home
+            , navLink "/timeline-icon.svg" Timeline
             ]
         , -- Actions Section
           Element.el [ alignRight, centerY ] (themeToggle model)
@@ -350,21 +356,19 @@ themeToggle model =
         theme =
             model.shared.theme
 
-        icon =
-            case model.shared.theme of
-                Shared.Dark ->
-                    "☀"
+        breakpoint =
+            Responsive.breakpointFromWidth model.shared.windowWidth
 
-                Shared.Light ->
-                    "☾"
+        iconPadding =
+            case breakpoint of
+                VeryNarrowBreakpoint ->
+                    4
 
-        label =
-            case model.shared.theme of
-                Shared.Dark ->
-                    "Switch to Light"
+                MobileBreakpoint ->
+                    6
 
-                Shared.Light ->
-                    "Switch to Dark"
+                _ ->
+                    10
 
         bg =
             case theme of
@@ -373,17 +377,46 @@ themeToggle model =
 
                 Shared.Light ->
                     rgb255 229 231 235
+
+        label =
+            case theme of
+                Shared.Dark ->
+                    "Switch to Light"
+
+                Shared.Light ->
+                    "Switch to Dark"
+
+        iconHtml =
+            case theme of
+                Shared.Dark ->
+                    Html.img
+                        [ HA.src "/sun-icon.svg"
+                        , HA.style "width" "20px"
+                        , HA.style "height" "20px"
+                        ]
+                        []
+
+                Shared.Light ->
+                    Html.img
+                        [ HA.src "/moon-icon.svg"
+                        , HA.style "width" "20px"
+                        , HA.style "height" "20px"
+                        ]
+                        []
     in
     Input.button
         [ Background.color bg
-        , Font.color lumeOrange
-        , Ty.body
-        , Element.paddingXY 10 8
+        , Element.padding iconPadding
         , Border.rounded 6
-        , htmlAttribute (Html.Attributes.title label)
+        , htmlAttribute (HA.title label)
+        , htmlAttribute (HA.style "display" "flex")
+        , htmlAttribute (HA.style "align-items" "center")
+        , htmlAttribute (HA.style "justify-content" "center")
+        , htmlAttribute (HA.style "min-width" "36px")
+        , htmlAttribute (HA.style "min-height" "36px")
         ]
         { onPress = Just (SharedMsg ToggleTheme)
-        , label = Element.text icon
+        , label = el [ htmlAttribute (HA.style "display" "flex") ] (Element.html iconHtml)
         }
 
 

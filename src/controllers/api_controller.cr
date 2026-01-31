@@ -438,6 +438,46 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
     response
   end
 
+  @[ARTA::Get(path: "/sun-icon.svg")]
+  def sun_icon_svg(request : ATH::Request) : ATH::Response
+    content = File.read("./assets/images/sun-icon.svg")
+    response = ATH::Response.new(content)
+    response.headers["content-type"] = "image/svg+xml"
+    response.headers["Cache-Control"] = "public, max-age=31536000"
+    response.headers["Access-Control-Allow-Origin"] = "*"
+    response
+  end
+
+  @[ARTA::Get(path: "/moon-icon.svg")]
+  def moon_icon_svg(request : ATH::Request) : ATH::Response
+    content = File.read("./assets/images/moon-icon.svg")
+    response = ATH::Response.new(content)
+    response.headers["content-type"] = "image/svg+xml"
+    response.headers["Cache-Control"] = "public, max-age=31536000"
+    response.headers["Access-Control-Allow-Origin"] = "*"
+    response
+  end
+
+  @[ARTA::Get(path: "/home-icon.svg")]
+  def home_icon_svg(request : ATH::Request) : ATH::Response
+    content = File.read("./assets/images/home-icon.svg")
+    response = ATH::Response.new(content)
+    response.headers["content-type"] = "image/svg+xml"
+    response.headers["Cache-Control"] = "public, max-age=31536000"
+    response.headers["Access-Control-Allow-Origin"] = "*"
+    response
+  end
+
+  @[ARTA::Get(path: "/timeline-icon.svg")]
+  def timeline_icon_svg(request : ATH::Request) : ATH::Response
+    content = File.read("./assets/images/timeline-icon.svg")
+    response = ATH::Response.new(content)
+    response.headers["content-type"] = "image/svg+xml"
+    response.headers["Cache-Control"] = "public, max-age=31536000"
+    response.headers["Access-Control-Allow-Origin"] = "*"
+    response
+  end
+
   # Simple test page for debugging Elm command execution
   @[ARTA::Get(path: "/simple-test")]
   @[ARTA::Get(path: "/simple")]
