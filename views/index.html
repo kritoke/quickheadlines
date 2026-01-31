@@ -96,6 +96,28 @@
       background-color: rgba(128, 128, 128, 0.3);
       border-radius: 4px;
     }
+    /* Desktop-only overrides to normalize Elm-generated font-size classes */
+    @media (min-width: 768px) {
+      body .font-size-11 { font-size: 14px !important; }
+      body .font-size-12 { font-size: 15px !important; }
+      body .font-size-13 { font-size: 16px !important; }
+      body .font-size-14 { font-size: 17px !important; }
+      body .font-size-15 { font-size: 18px !important; }
+      body .font-size-16 { font-size: 18px !important; }
+      body .font-size-18 { font-size: 20px !important; }
+      body .font-size-20 { font-size: 22px !important; }
+
+      /* Favicon helper to ensure consistent sizing and vertical alignment on desktop */
+      body .qh-favicon {
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        width: 18px !important;
+        height: 18px !important;
+        margin-right: 8px !important;
+        vertical-align: middle !important;
+      }
+    }
     </style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/color-thief/2.3.2/color-thief.umd.js"></script>
   </head>

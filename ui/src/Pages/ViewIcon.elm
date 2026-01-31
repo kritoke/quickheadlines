@@ -2,6 +2,7 @@ module Pages.ViewIcon exposing (viewIcon)
 
 import Element exposing (..)
 import Element.Border as Border
+import Html.Attributes
 
 viewIcon : String -> String -> Element msg
 viewIcon url siteName =

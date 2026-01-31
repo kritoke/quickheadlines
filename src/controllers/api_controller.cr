@@ -361,6 +361,29 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
     ATH::Response.new(ex.message, 404, HTTP::Headers{"content-type" => "text/plain"})
   end
 
+  # Serve Elm bundle at /public/elm.js (canonical path)
+  @[ARTA::Get(path: "/public/elm.js")]
+  def public_elm_js(request : ATH::Request) : ATH::Response
+    public_path = "./public/elm.js"
+    unless File.exists?(public_path)
+      return ATH::Response.new("public/elm.js not found - run 'make elm-build' first", 404, HTTP::Headers{"content-type" => "text/plain; charset=utf-8"})
+    end
+
+    content = File.read(public_path)
+    response = ATH::Response.new(content)
+    response.headers["content-type"] = "application/javascript; charset=utf-8"
+    if ENV["APP_ENV"]? == "development"
+      response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+      response.headers["Pragma"] = "no-cache"
+      response.headers["Expires"] = "0"
+    else
+      response.headers["Cache-Control"] = "public, max-age=31536000"
+    end
+    response
+  rescue ex : Exception
+    ATH::Response.new(ex.message, 404, HTTP::Headers{"content-type" => "text/plain"})
+  end
+
   # Serve Elm Land UI at root
   @[ARTA::Get(path: "/")]
   @[ARTA::Get(path: "/timeline")]

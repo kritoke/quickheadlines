@@ -12295,6 +12295,7 @@ var $mdgriffith$elm_ui$Internal$Model$AlignX = function (a) {
 };
 var $mdgriffith$elm_ui$Internal$Model$Right = {$: 'Right'};
 var $mdgriffith$elm_ui$Element$alignRight = $mdgriffith$elm_ui$Internal$Model$AlignX($mdgriffith$elm_ui$Internal$Model$Right);
+var $author$project$ThemeTypography$body = $mdgriffith$elm_ui$Element$Font$size(16);
 var $mdgriffith$elm_ui$Internal$Model$Class = F2(
 	function (a, b) {
 		return {$: 'Class', a: a, b: b};
@@ -12683,7 +12684,6 @@ var $author$project$Application$SharedMsg = function (a) {
 	return {$: 'SharedMsg', a: a};
 };
 var $author$project$Shared$ToggleTheme = {$: 'ToggleTheme'};
-var $author$project$ThemeTypography$body = $mdgriffith$elm_ui$Element$Font$size(16);
 var $mdgriffith$elm_ui$Internal$Model$Button = {$: 'Button'};
 var $elm$json$Json$Encode$bool = _Json_wrap;
 var $elm$html$Html$Attributes$boolProperty = F2(
@@ -12996,7 +12996,7 @@ var $author$project$Application$headerView = function (model) {
 								$mdgriffith$elm_ui$Element$el,
 								_List_fromArray(
 									[
-										$mdgriffith$elm_ui$Element$Font$size(16),
+										$author$project$ThemeTypography$body,
 										$mdgriffith$elm_ui$Element$Font$bold,
 										$mdgriffith$elm_ui$Element$Font$color(txtColor),
 										$mdgriffith$elm_ui$Element$Font$letterSpacing(0.5),
@@ -14543,7 +14543,9 @@ var $author$project$Pages$ViewIcon$viewIcon = F2(
 					$mdgriffith$elm_ui$Element$px(18)),
 					$mdgriffith$elm_ui$Element$Border$rounded(3),
 					$mdgriffith$elm_ui$Element$centerY,
-					$mdgriffith$elm_ui$Element$padding(2)
+					$mdgriffith$elm_ui$Element$padding(2),
+					$mdgriffith$elm_ui$Element$htmlAttribute(
+					$elm$html$Html$Attributes$class('qh-favicon'))
 				]),
 			{description: siteName, src: iconUrl});
 	});
