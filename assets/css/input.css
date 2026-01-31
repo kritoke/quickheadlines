@@ -8,6 +8,9 @@
   --color-card-light: #ffffff;
   --color-border-subtle: #334155;
   --color-border-light: #e5e7eb;
+  /* UI variables for headers and feed titles */
+  --feed-title-color: #0f172a; /* dark-gray fallback for light mode */
+  --header-text-color: #0f172a;
 }
 
 /* Dark mode */
@@ -15,6 +18,9 @@
   :root {
     --color-card: #111827;
     --color-card-light: #1f2937;
+    /* Override feed/header colors in dark mode */
+    --feed-title-color: #e5e7eb; /* light-gray for titles in dark mode */
+    --header-text-color: #e5e7eb;
   }
 }
 
@@ -83,6 +89,8 @@
   line-height: 1.2;
   font-weight: 700;
   text-shadow: 0 1px 1px rgba(0, 0, 0, 0.05);
+  /* Use canonical variable for title color so themes control it */
+  color: var(--feed-title-color, inherit);
 }
 
 .feed-box .feed-body {

@@ -413,7 +413,9 @@ feedHeader theme feed =
             [ link
                 [ Font.size 18
                 , Font.bold
-                , Element.htmlAttribute (Html.Attributes.style "color" headerTextColor)
+                , (case headerTextColor of
+                    "" -> Html.Attributes.attribute "style" "color: var(--header-text-color)"
+                    _ -> Html.Attributes.style "color" headerTextColor)
                 , Font.underline
                 , htmlAttribute (Html.Attributes.style "word-wrap" "break-word")
                 ]
@@ -422,7 +424,9 @@ feedHeader theme feed =
                 el
                     [ htmlAttribute (Html.Attributes.attribute "data-display-link" "true")
                     , Font.size 12
-                    , Element.htmlAttribute (Html.Attributes.style "color" headerTextColor)
+                    , (case headerTextColor of
+                        "" -> Html.Attributes.attribute "style" "color: var(--header-text-color)"
+                        _ -> Html.Attributes.style "color" headerTextColor)
                     , htmlAttribute (Html.Attributes.style "opacity" "0.8")
                     ]
                     (text feed.displayLink)
