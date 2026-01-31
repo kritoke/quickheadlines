@@ -47,6 +47,8 @@ tabs:
         url: "https://www.jumpsec.com/feed/"
       - title: "CISO"
         url: "https://www.csoonline.com/feed/"
+        header_color: "#c41230"
+        header_text_color: "#ffffff"
       - title: "Huntress Labs"
         url: "https://www.huntress.com/blog/rss.xml"
       - title: "WeLiveSecurity"
@@ -99,6 +101,8 @@ tabs:
         url: "https://freecodecamp.org/news/rss"
       - title: "A List Apart"
         url: "https://alistapart.com/main/feed"
+        header_color: "#222222"
+        header_text_color: "#ffffff"
       - title: "Scott Hanselman's Blog"
         url: "https://feeds.hanselman.com/ScottHanselman"
     software_releases:
