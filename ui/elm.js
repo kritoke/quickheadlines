@@ -6664,8 +6664,8 @@ var $author$project$Api$buildCluster = function (_v0) {
 				return _Debug_todo(
 					'Api',
 					{
-						start: {line: 223, column: 29},
-						end: {line: 223, column: 39}
+						start: {line: 207, column: 29},
+						end: {line: 207, column: 39}
 					})('Empty cluster should not exist');
 			}
 		}
@@ -6795,72 +6795,34 @@ var $elm$core$Set$remove = F2(
 		return $elm$core$Set$Set_elm_builtin(
 			A2($elm$core$Dict$remove, key, dict));
 	});
-var $elm$core$List$any = F2(
-	function (isOkay, list) {
-		any:
-		while (true) {
-			if (!list.b) {
-				return false;
-			} else {
-				var x = list.a;
-				var xs = list.b;
-				if (isOkay(x)) {
-					return true;
-				} else {
-					var $temp$isOkay = isOkay,
-						$temp$list = xs;
-					isOkay = $temp$isOkay;
-					list = $temp$list;
-					continue any;
-				}
-			}
-		}
-	});
-var $elm$core$Basics$negate = function (n) {
-	return -n;
-};
 var $author$project$Api$sortTimelineItems = function (items) {
 	var comparePub = F2(
 		function (a, b) {
-			var mb = function () {
-				var _v1 = b.pubDate;
-				if (_v1.$ === 'Nothing') {
-					return -1;
+			var _v0 = _Utils_Tuple2(a.pubDate, b.pubDate);
+			if (_v0.a.$ === 'Nothing') {
+				if (_v0.b.$ === 'Nothing') {
+					var _v1 = _v0.a;
+					var _v2 = _v0.b;
+					return A2($elm$core$Basics$compare, 0, 0);
 				} else {
-					var p = _v1.a;
-					return $elm$time$Time$posixToMillis(p);
+					var _v3 = _v0.a;
+					return $elm$core$Basics$GT;
 				}
-			}();
-			var ma = function () {
-				var _v0 = a.pubDate;
-				if (_v0.$ === 'Nothing') {
-					return -1;
+			} else {
+				if (_v0.b.$ === 'Nothing') {
+					var _v4 = _v0.b;
+					return $elm$core$Basics$LT;
 				} else {
-					var p = _v0.a;
-					return $elm$time$Time$posixToMillis(p);
+					var pa = _v0.a.a;
+					var pb = _v0.b.a;
+					return A2(
+						$elm$core$Basics$compare,
+						$elm$time$Time$posixToMillis(pb),
+						$elm$time$Time$posixToMillis(pa));
 				}
-			}();
-			var tcmp = A2($elm$core$Basics$compare, mb, ma);
-			return (!_Utils_eq(tcmp, $elm$core$Basics$EQ)) ? tcmp : A2($elm$core$Basics$compare, b.id, a.id);
+			}
 		});
-	var sorted = A2($elm$core$List$sortWith, comparePub, items);
-	var unique = A3(
-		$elm$core$List$foldl,
-		F2(
-			function (item, acc) {
-				return A2(
-					$elm$core$List$any,
-					function (x) {
-						return _Utils_eq(x.id, item.id);
-					},
-					acc) ? acc : _Utils_ap(
-					acc,
-					_List_fromArray(
-						[item]));
-			}),
-		_List_Nil,
-		sorted);
-	return unique;
+	return A2($elm$core$List$sortWith, comparePub, items);
 };
 var $author$project$Pages$Timeline$update = F3(
 	function (shared, msg, model) {
@@ -9441,6 +9403,27 @@ var $mdgriffith$elm_ui$Internal$Model$staticRoot = A3(
 		[
 			$elm$virtual_dom$VirtualDom$text($mdgriffith$elm_ui$Internal$Style$rules)
 		]));
+var $elm$core$List$any = F2(
+	function (isOkay, list) {
+		any:
+		while (true) {
+			if (!list.b) {
+				return false;
+			} else {
+				var x = list.a;
+				var xs = list.b;
+				if (isOkay(x)) {
+					return true;
+				} else {
+					var $temp$isOkay = isOkay,
+						$temp$list = xs;
+					isOkay = $temp$isOkay;
+					list = $temp$list;
+					continue any;
+				}
+			}
+		}
+	});
 var $mdgriffith$elm_ui$Internal$Model$fontName = function (font) {
 	switch (font.$) {
 		case 'Serif':
@@ -9487,6 +9470,9 @@ var $elm$core$Basics$min = F2(
 	function (x, y) {
 		return (_Utils_cmp(x, y) < 0) ? x : y;
 	});
+var $elm$core$Basics$negate = function (n) {
+	return -n;
+};
 var $mdgriffith$elm_ui$Internal$Model$renderProps = F3(
 	function (force, _v0, existing) {
 		var key = _v0.a;
@@ -12315,11 +12301,6 @@ var $mdgriffith$elm_ui$Internal$Model$Class = F2(
 	});
 var $mdgriffith$elm_ui$Internal$Flag$fontWeight = $mdgriffith$elm_ui$Internal$Flag$flag(13);
 var $mdgriffith$elm_ui$Element$Font$bold = A2($mdgriffith$elm_ui$Internal$Model$Class, $mdgriffith$elm_ui$Internal$Flag$fontWeight, $mdgriffith$elm_ui$Internal$Style$classes.bold);
-var $mdgriffith$elm_ui$Internal$Model$AlignY = function (a) {
-	return {$: 'AlignY', a: a};
-};
-var $mdgriffith$elm_ui$Internal$Model$CenterY = {$: 'CenterY'};
-var $mdgriffith$elm_ui$Element$centerY = $mdgriffith$elm_ui$Internal$Model$AlignY($mdgriffith$elm_ui$Internal$Model$CenterY);
 var $mdgriffith$elm_ui$Internal$Flag$bgColor = $mdgriffith$elm_ui$Internal$Flag$flag(8);
 var $mdgriffith$elm_ui$Element$Background$color = function (clr) {
 	return A2(
@@ -12654,45 +12635,6 @@ var $author$project$Application$themeToggle = function (model) {
 		});
 };
 var $author$project$Application$headerView = function (model) {
-	var titleElement = A2(
-		$mdgriffith$elm_ui$Element$row,
-		_List_fromArray(
-			[
-				$mdgriffith$elm_ui$Element$spacing(12),
-				$mdgriffith$elm_ui$Element$centerY
-			]),
-		_List_fromArray(
-			[
-				A2(
-				$mdgriffith$elm_ui$Element$image,
-				_List_fromArray(
-					[
-						$mdgriffith$elm_ui$Element$width(
-						$mdgriffith$elm_ui$Element$px(28)),
-						$mdgriffith$elm_ui$Element$height(
-						$mdgriffith$elm_ui$Element$px(28)),
-						$mdgriffith$elm_ui$Element$Border$rounded(4),
-						$mdgriffith$elm_ui$Element$htmlAttribute(
-						A2($elm$html$Html$Attributes$style, 'object-fit', 'contain')),
-						$mdgriffith$elm_ui$Element$htmlAttribute(
-						A2($elm$html$Html$Attributes$style, 'max-height', '32px')),
-						$mdgriffith$elm_ui$Element$htmlAttribute(
-						A2($elm$html$Html$Attributes$style, 'vertical-align', 'middle'))
-					]),
-				{description: 'QuickHeadlines Logo', src: '/logo.svg'}),
-				A2(
-				$mdgriffith$elm_ui$Element$link,
-				_List_fromArray(
-					[
-						$mdgriffith$elm_ui$Element$Font$color($author$project$Theme$lumeOrange),
-						$mdgriffith$elm_ui$Element$Font$size(20),
-						$mdgriffith$elm_ui$Element$Font$bold
-					]),
-				{
-					label: $mdgriffith$elm_ui$Element$text('QuickHeadlines'),
-					url: '/'
-				})
-			]));
 	var theme = model.shared.theme;
 	var txtColor = function () {
 		if (theme.$ === 'Dark') {
@@ -12701,80 +12643,6 @@ var $author$project$Application$headerView = function (model) {
 			return A3($mdgriffith$elm_ui$Element$rgb255, 17, 24, 39);
 		}
 	}();
-	var isMobile = model.shared.windowWidth < 480;
-	var navLinks = isMobile ? A2(
-		$mdgriffith$elm_ui$Element$row,
-		_List_fromArray(
-			[
-				$mdgriffith$elm_ui$Element$spacing(8),
-				$mdgriffith$elm_ui$Element$alignRight
-			]),
-		_List_fromArray(
-			[
-				A2(
-				$mdgriffith$elm_ui$Element$link,
-				_List_fromArray(
-					[
-						$mdgriffith$elm_ui$Element$Font$color(txtColor),
-						$mdgriffith$elm_ui$Element$Font$size(16),
-						A2($mdgriffith$elm_ui$Element$paddingXY, 10, 6),
-						$mdgriffith$elm_ui$Element$htmlAttribute(
-						$elm$html$Html$Attributes$title('Home'))
-					]),
-				{
-					label: $mdgriffith$elm_ui$Element$text('🏠'),
-					url: '/'
-				}),
-				A2(
-				$mdgriffith$elm_ui$Element$link,
-				_List_fromArray(
-					[
-						$mdgriffith$elm_ui$Element$Font$color(txtColor),
-						$mdgriffith$elm_ui$Element$Font$size(16),
-						A2($mdgriffith$elm_ui$Element$paddingXY, 10, 6),
-						$mdgriffith$elm_ui$Element$htmlAttribute(
-						$elm$html$Html$Attributes$title('Timeline'))
-					]),
-				{
-					label: $mdgriffith$elm_ui$Element$text('🕒'),
-					url: '/timeline'
-				}),
-				$author$project$Application$themeToggle(model)
-			])) : A2(
-		$mdgriffith$elm_ui$Element$row,
-		_List_fromArray(
-			[
-				$mdgriffith$elm_ui$Element$spacing(8),
-				$mdgriffith$elm_ui$Element$alignRight
-			]),
-		_List_fromArray(
-			[
-				A2(
-				$mdgriffith$elm_ui$Element$link,
-				_List_fromArray(
-					[
-						$mdgriffith$elm_ui$Element$Font$color(txtColor),
-						$mdgriffith$elm_ui$Element$Font$size(16),
-						A2($mdgriffith$elm_ui$Element$paddingXY, 12, 8)
-					]),
-				{
-					label: $mdgriffith$elm_ui$Element$text('Home'),
-					url: '/'
-				}),
-				A2(
-				$mdgriffith$elm_ui$Element$link,
-				_List_fromArray(
-					[
-						$mdgriffith$elm_ui$Element$Font$color(txtColor),
-						$mdgriffith$elm_ui$Element$Font$size(16),
-						A2($mdgriffith$elm_ui$Element$paddingXY, 12, 8)
-					]),
-				{
-					label: $mdgriffith$elm_ui$Element$text('Timeline'),
-					url: '/timeline'
-				}),
-				$author$project$Application$themeToggle(model)
-			]));
 	var bg = function () {
 		if (theme.$ === 'Dark') {
 			return A3($mdgriffith$elm_ui$Element$rgb255, 30, 30, 30);
@@ -12787,12 +12655,85 @@ var $author$project$Application$headerView = function (model) {
 		_List_fromArray(
 			[
 				$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill),
-				$mdgriffith$elm_ui$Element$padding(12),
-				$mdgriffith$elm_ui$Element$Background$color(bg),
-				$mdgriffith$elm_ui$Element$centerY
+				$mdgriffith$elm_ui$Element$padding(16),
+				$mdgriffith$elm_ui$Element$Background$color(bg)
 			]),
 		_List_fromArray(
-			[titleElement, navLinks]));
+			[
+				A2(
+				$mdgriffith$elm_ui$Element$row,
+				_List_fromArray(
+					[
+						$mdgriffith$elm_ui$Element$spacing(12)
+					]),
+				_List_fromArray(
+					[
+						A2(
+						$mdgriffith$elm_ui$Element$image,
+						_List_fromArray(
+							[
+								$mdgriffith$elm_ui$Element$width(
+								$mdgriffith$elm_ui$Element$px(24)),
+								$mdgriffith$elm_ui$Element$height(
+								$mdgriffith$elm_ui$Element$px(24)),
+								$mdgriffith$elm_ui$Element$Border$rounded(4),
+								$mdgriffith$elm_ui$Element$htmlAttribute(
+								A2($elm$html$Html$Attributes$style, 'object-fit', 'contain')),
+								$mdgriffith$elm_ui$Element$htmlAttribute(
+								A2($elm$html$Html$Attributes$style, 'max-height', '28px')),
+								$mdgriffith$elm_ui$Element$htmlAttribute(
+								A2($elm$html$Html$Attributes$style, 'vertical-align', 'middle'))
+							]),
+						{description: 'QuickHeadlines Logo', src: '/logo.svg'}),
+						A2(
+						$mdgriffith$elm_ui$Element$link,
+						_List_fromArray(
+							[
+								$mdgriffith$elm_ui$Element$Font$color($author$project$Theme$lumeOrange),
+								$mdgriffith$elm_ui$Element$Font$size(24),
+								$mdgriffith$elm_ui$Element$Font$bold
+							]),
+						{
+							label: $mdgriffith$elm_ui$Element$text('QuickHeadlines'),
+							url: '/'
+						})
+					])),
+				A2(
+				$mdgriffith$elm_ui$Element$row,
+				_List_fromArray(
+					[
+						$mdgriffith$elm_ui$Element$spacing(8),
+						$mdgriffith$elm_ui$Element$alignRight
+					]),
+				_List_fromArray(
+					[
+						A2(
+						$mdgriffith$elm_ui$Element$link,
+						_List_fromArray(
+							[
+								$mdgriffith$elm_ui$Element$Font$color(txtColor),
+								$mdgriffith$elm_ui$Element$Font$size(16),
+								A2($mdgriffith$elm_ui$Element$paddingXY, 12, 8)
+							]),
+						{
+							label: $mdgriffith$elm_ui$Element$text('Home'),
+							url: '/'
+						}),
+						A2(
+						$mdgriffith$elm_ui$Element$link,
+						_List_fromArray(
+							[
+								$mdgriffith$elm_ui$Element$Font$color(txtColor),
+								$mdgriffith$elm_ui$Element$Font$size(16),
+								A2($mdgriffith$elm_ui$Element$paddingXY, 12, 8)
+							]),
+						{
+							label: $mdgriffith$elm_ui$Element$text('Timeline'),
+							url: '/timeline'
+						}),
+						$author$project$Application$themeToggle(model)
+					]))
+			]));
 };
 var $mdgriffith$elm_ui$Internal$Model$OnlyDynamic = F2(
 	function (a, b) {
@@ -13256,6 +13197,11 @@ var $mdgriffith$elm_ui$Element$map = $mdgriffith$elm_ui$Internal$Model$map;
 var $elm$html$Html$Attributes$attribute = $elm$virtual_dom$VirtualDom$attribute;
 var $mdgriffith$elm_ui$Internal$Model$CenterX = {$: 'CenterX'};
 var $mdgriffith$elm_ui$Element$centerX = $mdgriffith$elm_ui$Internal$Model$AlignX($mdgriffith$elm_ui$Internal$Model$CenterX);
+var $mdgriffith$elm_ui$Internal$Model$AlignY = function (a) {
+	return {$: 'AlignY', a: a};
+};
+var $mdgriffith$elm_ui$Internal$Model$CenterY = {$: 'CenterY'};
+var $mdgriffith$elm_ui$Element$centerY = $mdgriffith$elm_ui$Internal$Model$AlignY($mdgriffith$elm_ui$Internal$Model$CenterY);
 var $author$project$Theme$errorColor = A3($mdgriffith$elm_ui$Element$rgb255, 239, 68, 68);
 var $elm$core$List$drop = F2(
 	function (n, list) {
@@ -14537,6 +14483,21 @@ var $mdgriffith$elm_ui$Element$mouseOver = function (decs) {
 			$mdgriffith$elm_ui$Internal$Model$Hover,
 			$mdgriffith$elm_ui$Internal$Model$unwrapDecorations(decs)));
 };
+var $author$project$Pages$ViewIcon$viewIcon = F2(
+	function (url, siteName) {
+		return A2(
+			$mdgriffith$elm_ui$Element$image,
+			_List_fromArray(
+				[
+					$mdgriffith$elm_ui$Element$width(
+					$mdgriffith$elm_ui$Element$px(16)),
+					$mdgriffith$elm_ui$Element$height(
+					$mdgriffith$elm_ui$Element$px(16)),
+					$mdgriffith$elm_ui$Element$Border$rounded(2),
+					$mdgriffith$elm_ui$Element$centerY
+				]),
+			{description: siteName, src: url});
+	});
 var $author$project$Pages$Timeline$clusterOtherItem = F3(
 	function (now, theme, item) {
 		var txtColor = $author$project$Theme$textColor(theme);
@@ -14554,28 +14515,6 @@ var $author$project$Pages$Timeline$clusterOtherItem = F3(
 			_List_fromArray(
 				[
 					A2(
-					$elm$core$Maybe$withDefault,
-					$mdgriffith$elm_ui$Element$none,
-					A2(
-						$elm$core$Maybe$map,
-						function (faviconUrl) {
-							return A2(
-								$mdgriffith$elm_ui$Element$image,
-								_List_fromArray(
-									[
-										$mdgriffith$elm_ui$Element$width(
-										$mdgriffith$elm_ui$Element$px(12)),
-										$mdgriffith$elm_ui$Element$height(
-										$mdgriffith$elm_ui$Element$px(12)),
-										$mdgriffith$elm_ui$Element$Border$rounded(1),
-										$mdgriffith$elm_ui$Element$Background$color(
-										A3($mdgriffith$elm_ui$Element$rgb255, 255, 255, 255)),
-										$mdgriffith$elm_ui$Element$padding(2)
-									]),
-								{description: '', src: faviconUrl});
-						},
-						item.favicon)),
-					A2(
 					$mdgriffith$elm_ui$Element$paragraph,
 					_List_fromArray(
 						[
@@ -14588,6 +14527,22 @@ var $author$project$Pages$Timeline$clusterOtherItem = F3(
 						]),
 					_List_fromArray(
 						[
+							A2(
+							$mdgriffith$elm_ui$Element$el,
+							_List_fromArray(
+								[
+									$mdgriffith$elm_ui$Element$centerY,
+									A2($mdgriffith$elm_ui$Element$paddingXY, 0, 4)
+								]),
+							A2(
+								$elm$core$Maybe$withDefault,
+								$mdgriffith$elm_ui$Element$none,
+								A2(
+									$elm$core$Maybe$map,
+									function (faviconUrl) {
+										return A2($author$project$Pages$ViewIcon$viewIcon, faviconUrl, item.feedTitle);
+									},
+									item.favicon))),
 							A2(
 							$mdgriffith$elm_ui$Element$el,
 							_List_fromArray(
@@ -14609,6 +14564,7 @@ var $author$project$Pages$Timeline$clusterOtherItem = F3(
 							$mdgriffith$elm_ui$Element$link,
 							_List_fromArray(
 								[
+									$mdgriffith$elm_ui$Element$Font$size(13),
 									$mdgriffith$elm_ui$Element$htmlAttribute(
 									A2($elm$html$Html$Attributes$style, 'text-decoration', 'none')),
 									$mdgriffith$elm_ui$Element$htmlAttribute(
@@ -14705,21 +14661,7 @@ var $author$project$Pages$Timeline$clusterItem = F5(
 			A2(
 				$elm$core$Maybe$map,
 				function (faviconUrl) {
-					return A2(
-						$mdgriffith$elm_ui$Element$image,
-						_List_fromArray(
-							[
-								$mdgriffith$elm_ui$Element$width(
-								$mdgriffith$elm_ui$Element$px(12)),
-								$mdgriffith$elm_ui$Element$height(
-								$mdgriffith$elm_ui$Element$px(12)),
-								$mdgriffith$elm_ui$Element$Border$rounded(1),
-								$mdgriffith$elm_ui$Element$alignTop,
-								$mdgriffith$elm_ui$Element$Background$color(
-								A3($mdgriffith$elm_ui$Element$rgb255, 255, 255, 255)),
-								$mdgriffith$elm_ui$Element$padding(2)
-							]),
-						{description: '', src: faviconUrl});
+					return A2($author$project$Pages$ViewIcon$viewIcon, faviconUrl, cluster.representative.feedTitle);
 				},
 				cluster.representative.favicon));
 		var clusterCount = cluster.count;
@@ -14760,7 +14702,7 @@ var $author$project$Pages$Timeline$clusterItem = F5(
 									$mdgriffith$elm_ui$Element$Font$family(
 									_List_fromArray(
 										[$mdgriffith$elm_ui$Element$Font$monospace])),
-									$mdgriffith$elm_ui$Element$alignTop,
+									$mdgriffith$elm_ui$Element$centerY,
 									A2($mdgriffith$elm_ui$Element$paddingXY, 8, 4),
 									$mdgriffith$elm_ui$Element$Background$color(timeBg),
 									$mdgriffith$elm_ui$Element$Border$rounded(6),
@@ -14773,32 +14715,24 @@ var $author$project$Pages$Timeline$clusterItem = F5(
 								[
 									$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill),
 									$mdgriffith$elm_ui$Element$spacing(8),
-									$mdgriffith$elm_ui$Element$alignTop
+									$mdgriffith$elm_ui$Element$centerY,
+									$mdgriffith$elm_ui$Element$Font$size(15),
+									$mdgriffith$elm_ui$Element$Font$color(txtColor),
+									$mdgriffith$elm_ui$Element$htmlAttribute(
+									A2($elm$html$Html$Attributes$style, 'word-break', 'break-word')),
+									$mdgriffith$elm_ui$Element$htmlAttribute(
+									A2($elm$html$Html$Attributes$style, 'overflow-wrap', 'break-word'))
 								]),
 							_List_fromArray(
 								[
 									A2(
-									$mdgriffith$elm_ui$Element$el,
+									$mdgriffith$elm_ui$Element$row,
 									_List_fromArray(
 										[
+											$mdgriffith$elm_ui$Element$spacing(8),
+											$mdgriffith$elm_ui$Element$centerY,
 											$mdgriffith$elm_ui$Element$htmlAttribute(
-											A2($elm$html$Html$Attributes$style, 'display', 'flex')),
-											$mdgriffith$elm_ui$Element$htmlAttribute(
-											A2($elm$html$Html$Attributes$style, 'align-items', 'center'))
-										]),
-									faviconImg),
-									A2(
-									$mdgriffith$elm_ui$Element$paragraph,
-									_List_fromArray(
-										[
-											$mdgriffith$elm_ui$Element$Font$size(16),
-											$mdgriffith$elm_ui$Element$Font$color(txtColor),
-											$mdgriffith$elm_ui$Element$htmlAttribute(
-											A2($elm$html$Html$Attributes$style, 'word-break', 'break-word')),
-											$mdgriffith$elm_ui$Element$htmlAttribute(
-											A2($elm$html$Html$Attributes$style, 'overflow-wrap', 'break-word')),
-											$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill),
-											$mdgriffith$elm_ui$Element$spacing(8)
+											A2($elm$html$Html$Attributes$style, 'white-space', 'nowrap'))
 										]),
 									_List_fromArray(
 										[
@@ -14806,7 +14740,15 @@ var $author$project$Pages$Timeline$clusterItem = F5(
 											$mdgriffith$elm_ui$Element$el,
 											_List_fromArray(
 												[
-													$mdgriffith$elm_ui$Element$Font$size(14),
+													$mdgriffith$elm_ui$Element$centerY,
+													A2($mdgriffith$elm_ui$Element$paddingXY, 0, 4)
+												]),
+											faviconImg),
+											A2(
+											$mdgriffith$elm_ui$Element$el,
+											_List_fromArray(
+												[
+													$mdgriffith$elm_ui$Element$Font$size(13),
 													$mdgriffith$elm_ui$Element$Font$color(mutedTxt)
 												]),
 											$mdgriffith$elm_ui$Element$text(cluster.representative.feedTitle)),
@@ -14814,42 +14756,43 @@ var $author$project$Pages$Timeline$clusterItem = F5(
 											$mdgriffith$elm_ui$Element$el,
 											_List_fromArray(
 												[
-													$mdgriffith$elm_ui$Element$Font$size(14),
+													$mdgriffith$elm_ui$Element$Font$size(13),
 													$mdgriffith$elm_ui$Element$Font$color(mutedTxt),
 													A2($mdgriffith$elm_ui$Element$paddingXY, 4, 0)
 												]),
-											$mdgriffith$elm_ui$Element$text('•')),
-											A2(
-											$mdgriffith$elm_ui$Element$link,
+											$mdgriffith$elm_ui$Element$text('•'))
+										])),
+									A2(
+									$mdgriffith$elm_ui$Element$link,
+									_List_fromArray(
+										[
+											$mdgriffith$elm_ui$Element$Font$size(13),
+											$mdgriffith$elm_ui$Element$htmlAttribute(
+											A2($elm$html$Html$Attributes$style, 'text-decoration', 'none')),
+											$mdgriffith$elm_ui$Element$htmlAttribute(
+											A2($elm$html$Html$Attributes$style, 'color', 'inherit')),
+											$mdgriffith$elm_ui$Element$htmlAttribute(
+											A2($elm$html$Html$Attributes$attribute, 'data-display-link', 'true')),
+											$mdgriffith$elm_ui$Element$mouseOver(
 											_List_fromArray(
 												[
-													$mdgriffith$elm_ui$Element$htmlAttribute(
-													A2($elm$html$Html$Attributes$style, 'text-decoration', 'none')),
-													$mdgriffith$elm_ui$Element$htmlAttribute(
-													A2($elm$html$Html$Attributes$style, 'color', 'inherit')),
-													$mdgriffith$elm_ui$Element$htmlAttribute(
-													A2($elm$html$Html$Attributes$attribute, 'data-display-link', 'true')),
-													$mdgriffith$elm_ui$Element$mouseOver(
-													_List_fromArray(
-														[
-															$mdgriffith$elm_ui$Element$Font$color(
-															A3($mdgriffith$elm_ui$Element$rgb255, 37, 99, 235))
-														])),
-													$mdgriffith$elm_ui$Element$Font$semiBold
-												]),
-											{
-												label: $mdgriffith$elm_ui$Element$text(cluster.representative.title),
-												url: cluster.representative.link
-											}),
-											A2(
-											$mdgriffith$elm_ui$Element$el,
-											_List_fromArray(
-												[
-													A2($mdgriffith$elm_ui$Element$paddingXY, 8, 4)
-												]),
-											$mdgriffith$elm_ui$Element$text(
-												(cluster.count > 1) ? ('↩ ' + $elm$core$String$fromInt(cluster.count)) : ''))
-										]))
+													$mdgriffith$elm_ui$Element$Font$color(
+													A3($mdgriffith$elm_ui$Element$rgb255, 37, 99, 235))
+												])),
+											$mdgriffith$elm_ui$Element$Font$semiBold
+										]),
+									{
+										label: $mdgriffith$elm_ui$Element$text(cluster.representative.title),
+										url: cluster.representative.link
+									}),
+									A2(
+									$mdgriffith$elm_ui$Element$el,
+									_List_fromArray(
+										[
+											A2($mdgriffith$elm_ui$Element$paddingXY, 8, 4)
+										]),
+									$mdgriffith$elm_ui$Element$text(
+										(cluster.count > 1) ? ('↩ ' + $elm$core$String$fromInt(cluster.count)) : ''))
 								]))
 						])),
 					(clusterCount > 1) ? (isExpanded ? A2(
@@ -15117,7 +15060,7 @@ var $author$project$Pages$Timeline$view = F2(
 		var txtColor = $author$project$Theme$textColor(theme);
 		var mutedTxt = $author$project$Theme$mutedColor(theme);
 		var isMobile = shared.windowWidth < 768;
-		var paddingValue = isMobile ? 16 : 120;
+		var paddingValue = isMobile ? 16 : 40;
 		var clustersByDay = A3($author$project$Pages$Timeline$groupClustersByDay, shared.zone, shared.now, model.clusters);
 		var bg = $author$project$Theme$surfaceColor(theme);
 		return A2(
