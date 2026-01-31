@@ -331,7 +331,7 @@ headerView model =
                     ]
             }
         , -- Navigation Section
-          Element.row [ spacing 0, centerY, height fill ]
+            Element.row [ spacing 0, centerY, height fill ]
             [ navLink "HOME" Home
             , navLink "TIMELINE" Timeline
             ]
@@ -373,7 +373,7 @@ themeToggle model =
     Input.button
         [ Background.color bg
         , Font.color lumeOrange
-        , Font.size 16
+        , Ty.body
         , Element.paddingXY 10 8
         , Border.rounded 6
         , htmlAttribute (Html.Attributes.title label)

@@ -4,6 +4,7 @@ import Element exposing (Attribute, Element, column, el, fill, height, htmlAttri
 import Element.Background as Background
 import Element.Border as Border
 import Element.Font as Font
+import ThemeTypography as Ty
 import Html.Attributes
 import Shared exposing (Theme(..))
 import Theme exposing (darkBg, surfaceColor)
@@ -73,7 +74,7 @@ footerView content =
         [ width fill
         , padding 16
         , spacing 8
-        , Font.size 12
+        , Ty.small
         , Font.color (rgb255 150 150 150)
         ]
         [ content ]

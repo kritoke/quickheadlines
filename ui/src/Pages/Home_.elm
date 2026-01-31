@@ -140,7 +140,7 @@ allTab shared =
     el
         [ paddingXY 12 6
         , Border.rounded 6
-        , Font.size 15
+        , Ty.button
         , Font.medium
         , Font.color tabActiveText
         , Background.color (tabActiveBg theme)
@@ -174,7 +174,7 @@ tabButton shared activeTab tab =
     Input.button
         [ paddingXY 12 6
         , Border.rounded 6
-        , Font.size 15
+        , Ty.button
         , Font.medium
         , Font.color txtColor
         , Background.color bg
@@ -197,7 +197,7 @@ content shared model =
         el
             [ centerX
             , centerY
-            , Font.size 18
+            , Ty.size18
             , Font.color muted
             ]
             (text "Loading...")
@@ -206,7 +206,7 @@ content shared model =
         el
             [ centerX
             , centerY
-            , Font.size 18
+            , Ty.size18
             , Font.color errorColor
             ]
             (text "Error loading feeds")
@@ -423,7 +423,7 @@ feedHeader theme feed =
             , if feed.displayLink /= "" then
                 el
                     [ htmlAttribute (Html.Attributes.attribute "data-display-link" "true")
-                    , Font.size 13
+                    , Ty.size13
                     , (case headerTextColor of
                         "" -> htmlAttribute (Html.Attributes.style "color" "var(--header-text-color)")
                         _ -> htmlAttribute (Html.Attributes.style "color" headerTextColor))
@@ -496,7 +496,7 @@ feedItem now theme item =
             Element.none
         , paragraph
             [ Element.width fill
-            , Font.size 13
+            , Ty.size13
             , Font.color txtColor
             , htmlAttribute (Html.Attributes.style "word-break" "break-word")
             , htmlAttribute (Html.Attributes.style "overflow-wrap" "break-word")
@@ -509,7 +509,7 @@ feedItem now theme item =
                 { url = item.link, label = text item.title }
             ]
         , el
-            [ Font.size 12
+            [ Ty.small
             , Font.color mutedTxt
             , Element.alignTop
             , paddingXY 0 2

@@ -176,13 +176,7 @@ view shared model =
         , htmlAttribute (Html.Attributes.class "auto-hide-scroll")
         ]
         [ el
-            [ Font.size
-                (if isMobile then
-                    20
-
-                 else
-                    24
-                )
+        [ (if isMobile then Ty.subtitle else Ty.title)
             , Font.bold
             , Font.color txtColor
             ]
@@ -191,7 +185,7 @@ view shared model =
             el
                 [ centerX
                 , centerY
-                , Font.size 16
+                , Ty.body
                 , Font.color mutedTxt
                 ]
                 (text "Loading...")
@@ -200,7 +194,7 @@ view shared model =
             el
                 [ centerX
                 , centerY
-                , Font.size 16
+                , Ty.body
                 , Font.color errorColor
                 ]
                 (text "Error loading timeline")
@@ -561,7 +555,7 @@ clusterItem zone now theme expandedClusters cluster =
             ]
             [ el
                 [ width (px 85)
-                , Font.size 11
+                , Ty.meta
                 , Font.color timeTxt
                 , Font.family [ Font.monospace ]
                 , alignTop
@@ -578,7 +572,7 @@ clusterItem zone now theme expandedClusters cluster =
             , Font.color txtColor
             ]
             [ -- group favicon + feed title + title together so they wrap naturally
-              paragraph [ spacing 8, width fill, Font.size 13 ]
+              paragraph [ spacing 8, width fill, Ty.size13 ]
                   [ el [ centerY, paddingEach { top = 0, right = 6, bottom = 0, left = 0 } ] faviconImg
                    , el [ Font.color mutedTxt, centerY, Font.size 12
                         , (case headerTextColor of
@@ -645,12 +639,12 @@ clusterOtherItem now theme item =
         , paddingEach { top = 4, bottom = 4, left = 0, right = 0 }
         ]
         [ el [ centerY, paddingEach { top = 0, right = 8, bottom = 0, left = 0 } ] faviconImg
-        , el [ Font.size 11, Font.color mutedTxt, centerY
+        , el [ Ty.meta, Font.color mutedTxt, centerY
              , (case itemHeaderColor of
-                 "" -> htmlAttribute (Html.Attributes.style "color" "var(--header-text-color)")
-                 _ -> htmlAttribute (Html.Attributes.style "color" itemHeaderColor))
+                  "" -> htmlAttribute (Html.Attributes.style "color" "var(--header-text-color)")
+                  _ -> htmlAttribute (Html.Attributes.style "color" itemHeaderColor))
           ] (text item.feedTitle)
-        , el [ Font.size 11, Font.color mutedTxt, paddingXY 4 0, centerY ] (text "•")
+        , el [ Ty.meta, Font.color mutedTxt, paddingXY 4 0, centerY ] (text "•")
         , link
             [ Font.size 11
             , Font.color txtColor
