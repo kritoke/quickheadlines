@@ -146,15 +146,24 @@ view shared model =
         isMobile =
             shared.windowWidth < 768
 
+        isVeryNarrow =
+            shared.windowWidth < 480
+
         horizontalPadding =
-            if isMobile then
+            if isVeryNarrow then
+                8
+
+            else if isMobile then
                 16
 
             else
                 40
 
         verticalPadding =
-            if isMobile then
+            if isVeryNarrow then
+                8
+
+            else if isMobile then
                 16
 
             else
@@ -177,8 +186,7 @@ view shared model =
         , centerX
         , height fill
         , spacing 20
-        , padding horizontalPadding
-        , paddingXY horizontalPadding verticalPadding
+        , paddingEach { top = verticalPadding, bottom = verticalPadding, left = horizontalPadding, right = horizontalPadding }
         , Background.color bg
         , htmlAttribute (Html.Attributes.attribute "data-timeline-page" "true")
         , htmlAttribute (Html.Attributes.class "auto-hide-scroll")
@@ -215,7 +223,7 @@ view shared model =
                     [ width fill
                     , spacing 16
                     ]
-                    (List.concatMap (dayClusterSection shared.zone shared.now theme model.expandedClusters) clustersByDay)
+                    (List.concatMap (dayClusterSection isVeryNarrow shared.zone shared.now theme model.expandedClusters) clustersByDay)
                 , el [ htmlAttribute (Html.Attributes.id "scroll-sentinel"), height (px 1), width fill ] (text "")
                 ]
         ]
@@ -293,15 +301,15 @@ getClusterDateFromKey zone key clusters =
                     Time.millisToPosix 0
 
 
-dayClusterSection : Zone -> Posix -> Theme -> Set String -> DayClusterGroup -> List (Element Msg)
-dayClusterSection zone now theme expandedClusters dayGroup =
+dayClusterSection : Bool -> Zone -> Posix -> Theme -> Set String -> DayClusterGroup -> List (Element Msg)
+dayClusterSection isVeryNarrow zone now theme expandedClusters dayGroup =
     [ dayHeader zone now theme dayGroup.date
     , column
         [ width fill
         , spacing 0
         , paddingEach { top = 16, bottom = 32, left = 0, right = 0 }
         ]
-        (List.map (clusterItem zone now theme expandedClusters) dayGroup.clusters)
+        (List.map (clusterItem isVeryNarrow zone now theme expandedClusters) dayGroup.clusters)
     ]
 
 
@@ -479,8 +487,8 @@ monthToString month =
             "December"
 
 
-clusterItem : Time.Zone -> Time.Posix -> Theme -> Set String -> Cluster -> Element Msg
-clusterItem zone now theme expandedClusters cluster =
+clusterItem : Bool -> Time.Zone -> Time.Posix -> Theme -> Set String -> Cluster -> Element Msg
+clusterItem isVeryNarrow zone now theme expandedClusters cluster =
     let
         txtColor =
             textColor theme
@@ -561,18 +569,18 @@ clusterItem zone now theme expandedClusters cluster =
             , paddingEach { top = 8, bottom = 8, left = 8, right = 8 }
             , htmlAttribute (Html.Attributes.attribute "data-timeline-item" "true")
             ]
-            [ el
-                [ width (px 85)
-                , Ty.meta
-                , Font.color timeTxt
-                , Font.family [ Font.monospace ]
-                , alignTop
-                , paddingXY 6 3
-                , Background.color timeBg
-                , Border.rounded 4
-                , Font.center
-                ]
-                (text timeStr)
+             [ el
+                 [ width (px (if isVeryNarrow then 60 else 85))
+                 , Ty.meta
+                 , Font.color timeTxt
+                 , Font.family [ Font.monospace ]
+                 , alignTop
+                 , paddingXY 6 3
+                 , Background.color timeBg
+                 , Border.rounded 4
+                 , Font.center
+                 ]
+                 (text timeStr)
         , column
             [ width fill
             , spacing 0
@@ -612,12 +620,12 @@ clusterItem zone now theme expandedClusters cluster =
             ]
             ]
         , if clusterCount > 1 && isExpanded then
-            column
-                [ width fill
-                , spacing 8
-                , paddingEach { top = 0, bottom = 12, left = 105, right = 8 }
-                ]
-                (List.map (\it -> clusterOtherItem now theme it) cluster.others)
+             column
+                 [ width fill
+                 , spacing 8
+                 , paddingEach { top = 0, bottom = 12, left = (if isVeryNarrow then 70 else 105), right = 8 }
+                 ]
+                 (List.map (\it -> clusterOtherItem now theme it) cluster.others)
           else
             Element.none
         ]

@@ -1,6 +1,7 @@
 port module Application exposing (Flags, Model, Msg(..), Page(..), init, update, view, subscriptions)
 
 import Browser
+import Browser.Events
 import Browser.Navigation as Nav
 import Element exposing (Element, rgb255, px, text, fill, width, height, spacing, padding, paddingXY, paddingEach, row, centerY, centerX, alignTop, alignRight, moveDown, htmlAttribute)
 import Element.Background as Background
@@ -229,6 +230,8 @@ subscriptions model =
     Sub.batch
         [ -- Update time every second for relative time display
           Time.every 1000 GotTime
+        , -- Listen for window resize events
+          Browser.Events.onResize (\w h -> SharedMsg (Shared.WindowResized w h))
         , case model.page of
             Timeline ->
                 Sub.batch

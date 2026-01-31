@@ -14676,8 +14676,8 @@ var $mdgriffith$elm_ui$Internal$Model$Monospace = {$: 'Monospace'};
 var $mdgriffith$elm_ui$Element$Font$monospace = $mdgriffith$elm_ui$Internal$Model$Monospace;
 var $mdgriffith$elm_ui$Element$rgba = $mdgriffith$elm_ui$Internal$Model$Rgba;
 var $mdgriffith$elm_ui$Element$Font$semiBold = A2($mdgriffith$elm_ui$Internal$Model$Class, $mdgriffith$elm_ui$Internal$Flag$fontWeight, $mdgriffith$elm_ui$Internal$Style$classes.textSemiBold);
-var $author$project$Pages$Timeline$clusterItem = F5(
-	function (zone, now, theme, expandedClusters, cluster) {
+var $author$project$Pages$Timeline$clusterItem = F6(
+	function (isVeryNarrow, zone, now, theme, expandedClusters, cluster) {
 		var txtColor = $author$project$Theme$textColor(theme);
 		var timeTxt = function () {
 			if (theme.$ === 'Dark') {
@@ -14753,7 +14753,8 @@ var $author$project$Pages$Timeline$clusterItem = F5(
 							_List_fromArray(
 								[
 									$mdgriffith$elm_ui$Element$width(
-									$mdgriffith$elm_ui$Element$px(85)),
+									$mdgriffith$elm_ui$Element$px(
+										isVeryNarrow ? 60 : 85)),
 									$author$project$ThemeTypography$meta,
 									$mdgriffith$elm_ui$Element$Font$color(timeTxt),
 									$mdgriffith$elm_ui$Element$Font$family(
@@ -14875,7 +14876,12 @@ var $author$project$Pages$Timeline$clusterItem = F5(
 							$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill),
 							$mdgriffith$elm_ui$Element$spacing(8),
 							$mdgriffith$elm_ui$Element$paddingEach(
-							{bottom: 12, left: 105, right: 8, top: 0})
+							{
+								bottom: 12,
+								left: isVeryNarrow ? 70 : 105,
+								right: 8,
+								top: 0
+							})
 						]),
 					A2(
 						$elm$core$List$map,
@@ -14981,8 +14987,8 @@ var $author$project$Pages$Timeline$dayHeader = F4(
 				]),
 			$mdgriffith$elm_ui$Element$text(headerText));
 	});
-var $author$project$Pages$Timeline$dayClusterSection = F5(
-	function (zone, now, theme, expandedClusters, dayGroup) {
+var $author$project$Pages$Timeline$dayClusterSection = F6(
+	function (isVeryNarrow, zone, now, theme, expandedClusters, dayGroup) {
 		return _List_fromArray(
 			[
 				A4($author$project$Pages$Timeline$dayHeader, zone, now, theme, dayGroup.date),
@@ -14997,7 +15003,7 @@ var $author$project$Pages$Timeline$dayClusterSection = F5(
 					]),
 				A2(
 					$elm$core$List$map,
-					A4($author$project$Pages$Timeline$clusterItem, zone, now, theme, expandedClusters),
+					A5($author$project$Pages$Timeline$clusterItem, isVeryNarrow, zone, now, theme, expandedClusters),
 					dayGroup.clusters))
 			]);
 	});
@@ -15113,9 +15119,10 @@ var $author$project$Pages$Timeline$view = F2(
 		var theme = shared.theme;
 		var txtColor = $author$project$Theme$textColor(theme);
 		var mutedTxt = $author$project$Theme$mutedColor(theme);
+		var isVeryNarrow = shared.windowWidth < 480;
 		var isMobile = shared.windowWidth < 768;
-		var verticalPadding = isMobile ? 16 : 60;
-		var horizontalPadding = isMobile ? 16 : 40;
+		var verticalPadding = isVeryNarrow ? 8 : (isMobile ? 16 : 60);
+		var horizontalPadding = isVeryNarrow ? 8 : (isMobile ? 16 : 40);
 		var clustersByDay = A3($author$project$Pages$Timeline$groupClustersByDay, shared.zone, shared.now, model.clusters);
 		var bg = $author$project$Theme$surfaceColor(theme);
 		return A2(
@@ -15127,8 +15134,8 @@ var $author$project$Pages$Timeline$view = F2(
 					$mdgriffith$elm_ui$Element$centerX,
 					$mdgriffith$elm_ui$Element$height($mdgriffith$elm_ui$Element$fill),
 					$mdgriffith$elm_ui$Element$spacing(20),
-					$mdgriffith$elm_ui$Element$padding(horizontalPadding),
-					A2($mdgriffith$elm_ui$Element$paddingXY, horizontalPadding, verticalPadding),
+					$mdgriffith$elm_ui$Element$paddingEach(
+					{bottom: verticalPadding, left: horizontalPadding, right: horizontalPadding, top: verticalPadding}),
 					$mdgriffith$elm_ui$Element$Background$color(bg),
 					$mdgriffith$elm_ui$Element$htmlAttribute(
 					A2($elm$html$Html$Attributes$attribute, 'data-timeline-page', 'true')),
@@ -15181,7 +15188,7 @@ var $author$project$Pages$Timeline$view = F2(
 								]),
 							A2(
 								$elm$core$List$concatMap,
-								A4($author$project$Pages$Timeline$dayClusterSection, shared.zone, shared.now, theme, model.expandedClusters),
+								A5($author$project$Pages$Timeline$dayClusterSection, isVeryNarrow, shared.zone, shared.now, theme, model.expandedClusters),
 								clustersByDay)),
 							A2(
 							$mdgriffith$elm_ui$Element$el,
