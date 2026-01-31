@@ -146,12 +146,19 @@ view shared model =
         isMobile =
             shared.windowWidth < 768
 
-        paddingValue =
+        horizontalPadding =
             if isMobile then
                 16
 
             else
                 40
+
+        verticalPadding =
+            if isMobile then
+                16
+
+            else
+                60
 
         bg =
             surfaceColor theme
@@ -170,8 +177,8 @@ view shared model =
         , centerX
         , height fill
         , spacing 20
-        , padding paddingValue
-        , paddingXY paddingValue 60
+        , padding horizontalPadding
+        , paddingXY horizontalPadding verticalPadding
         , Background.color bg
         , htmlAttribute (Html.Attributes.attribute "data-timeline-page" "true")
         , htmlAttribute (Html.Attributes.class "auto-hide-scroll")

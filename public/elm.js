@@ -15114,7 +15114,8 @@ var $author$project$Pages$Timeline$view = F2(
 		var txtColor = $author$project$Theme$textColor(theme);
 		var mutedTxt = $author$project$Theme$mutedColor(theme);
 		var isMobile = shared.windowWidth < 768;
-		var paddingValue = isMobile ? 16 : 40;
+		var verticalPadding = isMobile ? 16 : 60;
+		var horizontalPadding = isMobile ? 16 : 40;
 		var clustersByDay = A3($author$project$Pages$Timeline$groupClustersByDay, shared.zone, shared.now, model.clusters);
 		var bg = $author$project$Theme$surfaceColor(theme);
 		return A2(
@@ -15126,8 +15127,8 @@ var $author$project$Pages$Timeline$view = F2(
 					$mdgriffith$elm_ui$Element$centerX,
 					$mdgriffith$elm_ui$Element$height($mdgriffith$elm_ui$Element$fill),
 					$mdgriffith$elm_ui$Element$spacing(20),
-					$mdgriffith$elm_ui$Element$padding(paddingValue),
-					A2($mdgriffith$elm_ui$Element$paddingXY, paddingValue, 60),
+					$mdgriffith$elm_ui$Element$padding(horizontalPadding),
+					A2($mdgriffith$elm_ui$Element$paddingXY, horizontalPadding, verticalPadding),
 					$mdgriffith$elm_ui$Element$Background$color(bg),
 					$mdgriffith$elm_ui$Element$htmlAttribute(
 					A2($elm$html$Html$Attributes$attribute, 'data-timeline-page', 'true')),
