@@ -38,6 +38,9 @@ class FeedResponse
   property items : Array(ItemResponse)
   property total_item_count : Int32
 
+  @[JSON::Field(emit_null: true)]
+  property has_more : Bool?
+
   def initialize(
     @tab : String,
     @url : String,
@@ -50,6 +53,7 @@ class FeedResponse
     @header_text_color : String? = nil,
     @items : Array(ItemResponse) = [] of ItemResponse,
     @total_item_count : Int32 = 0,
+    @has_more : Bool? = nil,
   )
   end
 end

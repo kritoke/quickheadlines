@@ -235,7 +235,7 @@ view shared model =
                   else
                     Input.button
                         [ centerX
-                        , paddingXY 12 4
+                        , paddingXY 4 12
                         , Background.color (rgb255 241 245 249)
                         , Border.rounded 6
                         , Ty.small

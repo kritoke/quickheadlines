@@ -665,6 +665,46 @@ class FeedCache
           favicon_data:      row.read(String?),
         }
       end
+      return unless result
+
+      # Get items slice ordered by pub_date descending
+      items = [] of Item
+      query = "SELECT title, link, pub_date, version FROM items WHERE feed_id = ? ORDER BY pub_date DESC LIMIT ? OFFSET ?"
+
+      @db.query(query, url, limit, offset) do |rows|
+        rows.each do
+          title = rows.read(String)
+          link = rows.read(String)
+          pub_date_str = rows.read(String?)
+          version = rows.read(String?)
+
+          pub_date = pub_date_str.try { |date_str| Time.parse(date_str, "%Y-%m-%d %H:%M:%S", Time::Location::UTC) }
+          items << Item.new(title, link, pub_date, version)
+        end
+      end
+    end
+
+    FeedData.new(
+      result[:title],
+      result[:url],
+      result[:site_link],
+      result[:header_color],
+      result[:header_text_color],
+      items,
+      result[:etag],
+      result[:last_modified],
+      result[:favicon],
+      result[:favicon_data]
+    )
+  end
+
+  # Count total items for a specific feed URL
+  def count_items(url : String) : Int32
+    @mutex.synchronize do
+      result = @db.query_one?("SELECT COUNT(*) FROM items JOIN feeds ON items.feed_id = feeds.id WHERE feeds.url = ?", url, as: {Int64})
+      result ? result.to_i : 0
+    end
+  end
 
       return unless result
 

@@ -194,14 +194,30 @@ tabBar shared model =
                     Shared.Light ->
                         rgb255 229 231 235
         in
-        wrappedRow
-            [ width fill
-            , spacing 16
-            , paddingEach { top = 0, right = 0, bottom = 0, left = 0 }
-            , Border.widthEach { top = 0, right = 0, bottom = 1, left = 0 }
-            , Border.color border
+        Element.column
+            [ Element.width Element.fill
+            , Element.spacing 0
             ]
-            (allTab shared model.activeTab :: List.map (tabButton shared model.activeTab) model.tabs)
+            [ wrappedRow
+                [ width fill
+                , spacing 0
+                , Element.paddingEach { top = 0, right = 0, bottom = 0, left = 0 }
+                ]
+                (allTab shared model.activeTab :: List.map (tabButton shared model.activeTab) model.tabs)
+            , Element.el
+                [ Element.width Element.fill
+                , Element.height (Element.px 1)
+                , Border.color (case shared.theme of
+                    Shared.Dark -> rgb255 75 75 75
+                    Shared.Light -> rgb255 209 213 219
+                  )
+                , Element.htmlAttribute (Html.Attributes.style "background-color" (case shared.theme of
+                    Shared.Dark -> "rgb(75, 75, 75)"
+                    Shared.Light -> "rgb(209, 213, 219)"
+                  ))
+                ]
+                Element.none
+            ]
 
 
 allTab : Shared.Model -> String -> Element Msg
@@ -211,7 +227,7 @@ allTab shared activeTab =
             shared.theme
 
         isActive =
-            String.toLower activeTab == "all"
+            activeTab == "all" || activeTab == "All"
 
         txtColor =
             if isActive then
@@ -232,21 +248,38 @@ allTab shared activeTab =
             else
                 Element.rgba 0 0 0 0
     in
-    Input.button
-        [ paddingXY 16 8
-        , Ty.body
-        , Font.medium
-        , Font.color txtColor
-        , Border.widthEach { top = 0, right = 0, bottom = 2, left = 0 }
-        , Border.color borderColor
-        , htmlAttribute (Html.Attributes.style "cursor" "pointer")
-        , htmlAttribute (Html.Attributes.style "transition" "all 0.2s")
-        , htmlAttribute (Html.Attributes.style "outline" "none")
-        , htmlAttribute (Html.Attributes.class "tab-link")
+    Element.el
+        [ Element.width Element.fill
+        , Element.height (Element.px 40)
+        , Element.htmlAttribute (Html.Attributes.style "display" "flex")
+        , Element.htmlAttribute (Html.Attributes.style "align-items" "flex-end")
+        , Element.htmlAttribute (Html.Attributes.style "position" "relative")
         ]
-        { onPress = Just (SwitchTab "All")
-        , label = text "All"
-        }
+        (Input.button
+            [ Element.htmlAttribute (Html.Attributes.style "position" "relative")
+            , Element.htmlAttribute (Html.Attributes.style "z-index" "1")
+            , paddingXY 16 8
+            , Ty.body
+            , Font.medium
+            , Font.color txtColor
+            , Element.htmlAttribute (Html.Attributes.style "background" "transparent")
+            , Element.htmlAttribute (Html.Attributes.style "border" "none")
+            , Element.htmlAttribute (Html.Attributes.style "cursor" "pointer")
+            , Element.htmlAttribute (Html.Attributes.style "transition" "all 0.2s")
+            , Element.htmlAttribute (Html.Attributes.style "outline" "none")
+            , Element.htmlAttribute (Html.Attributes.class "tab-link")
+            ]
+            { onPress = Just (SwitchTab "All")
+            , label = 
+                Element.el
+                    [ Element.htmlAttribute (Html.Attributes.style "position" "relative")
+                    , Element.htmlAttribute (Html.Attributes.style "padding-bottom" "6px")
+                    , Element.htmlAttribute (Html.Attributes.style "border-bottom" "2px solid")
+                    , Element.htmlAttribute (Html.Attributes.style "border-color" (if isActive then "#F97316" else "transparent"))
+                    ]
+                    (text "All")
+            }
+        )
 
 
 tabButton : Shared.Model -> String -> String -> Element Msg
@@ -256,7 +289,7 @@ tabButton shared activeTab tab =
             shared.theme
 
         isActive =
-            tab == activeTab
+            tab == activeTab || (tab == "all" && (activeTab == "All" || activeTab == "all"))
 
         txtColor =
             if isActive then
@@ -269,28 +302,38 @@ tabButton shared activeTab tab =
 
                     Shared.Light ->
                         rgb255 100 116 139
-
-        borderColor =
-            if isActive then
-                Theme.lumeOrange
-
-            else
-                Element.rgba 0 0 0 0
     in
-    Input.button
-        [ paddingXY 16 8
-        , Ty.body
-        , Font.medium
-        , Font.color txtColor
-        , Border.widthEach { top = 0, right = 0, bottom = 2, left = 0 }
-        , Border.color borderColor
-        , htmlAttribute (Html.Attributes.style "cursor" "pointer")
-        , htmlAttribute (Html.Attributes.style "transition" "all 0.2s")
-        , htmlAttribute (Html.Attributes.class "tab-link")
+    Element.el
+        [ Element.width Element.fill
+        , Element.height (Element.px 40)
+        , Element.htmlAttribute (Html.Attributes.style "display" "flex")
+        , Element.htmlAttribute (Html.Attributes.style "align-items" "flex-end")
         ]
-        { onPress = Just (SwitchTab tab)
-        , label = text tab
-        }
+        (Input.button
+            [ Element.htmlAttribute (Html.Attributes.style "position" "relative")
+            , Element.htmlAttribute (Html.Attributes.style "z-index" "1")
+            , paddingXY 16 8
+            , Ty.body
+            , Font.medium
+            , Font.color txtColor
+            , Element.htmlAttribute (Html.Attributes.style "background" "transparent")
+            , Element.htmlAttribute (Html.Attributes.style "border" "none")
+            , Element.htmlAttribute (Html.Attributes.style "cursor" "pointer")
+            , Element.htmlAttribute (Html.Attributes.style "transition" "all 0.2s")
+            , Element.htmlAttribute (Html.Attributes.style "outline" "none")
+            , Element.htmlAttribute (Html.Attributes.class "tab-link")
+            ]
+            { onPress = Just (SwitchTab tab)
+            , label = 
+                Element.el
+                    [ Element.htmlAttribute (Html.Attributes.style "position" "relative")
+                    , Element.htmlAttribute (Html.Attributes.style "padding-bottom" "6px")
+                    , Element.htmlAttribute (Html.Attributes.style "border-bottom" "2px solid")
+                    , Element.htmlAttribute (Html.Attributes.style "border-color" (if isActive then "#F97316" else "transparent"))
+                    ]
+                    (text tab)
+            }
+        )
 
 
 content : Shared.Model -> Model -> Element Msg
