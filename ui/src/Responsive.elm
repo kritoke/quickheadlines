@@ -92,7 +92,7 @@ verticalPadding breakpoint =
 
         DesktopBreakpoint ->
             -- Reduce excessive top padding on desktop to avoid large empty header area
-            20
+            12
 
 
 uniformPadding : Breakpoint -> Int
@@ -109,7 +109,7 @@ uniformPadding breakpoint =
 
         DesktopBreakpoint ->
             -- Keep overall page padding reasonable on desktop
-            32
+            24
 
 
 containerMaxWidth : Breakpoint -> Element.Length
