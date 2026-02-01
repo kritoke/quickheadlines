@@ -14676,7 +14676,7 @@ var $mdgriffith$elm_ui$Element$rgba = $mdgriffith$elm_ui$Internal$Model$Rgba;
 var $author$project$Pages$Home_$allTab = F2(
 	function (shared, activeTab) {
 		var theme = shared.theme;
-		var isActive = (activeTab === 'all') || (activeTab === 'All');
+		var isActive = $elm$core$String$toLower(activeTab) === 'all';
 		var txtColor = function () {
 			if (isActive) {
 				return $author$project$Theme$lumeOrange;
@@ -14690,65 +14690,28 @@ var $author$project$Pages$Home_$allTab = F2(
 		}();
 		var borderColor = isActive ? $author$project$Theme$lumeOrange : A4($mdgriffith$elm_ui$Element$rgba, 0, 0, 0, 0);
 		return A2(
-			$mdgriffith$elm_ui$Element$el,
+			$mdgriffith$elm_ui$Element$Input$button,
 			_List_fromArray(
 				[
-					$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill),
-					$mdgriffith$elm_ui$Element$height(
-					$mdgriffith$elm_ui$Element$px(40)),
+					A2($mdgriffith$elm_ui$Element$paddingXY, 16, 8),
+					$author$project$ThemeTypography$body,
+					$mdgriffith$elm_ui$Element$Font$medium,
+					$mdgriffith$elm_ui$Element$Font$color(txtColor),
+					$mdgriffith$elm_ui$Element$Border$widthEach(
+					{bottom: 2, left: 0, right: 0, top: 0}),
+					$mdgriffith$elm_ui$Element$Border$color(borderColor),
 					$mdgriffith$elm_ui$Element$htmlAttribute(
-					A2($elm$html$Html$Attributes$style, 'display', 'flex')),
+					A2($elm$html$Html$Attributes$style, 'cursor', 'pointer')),
 					$mdgriffith$elm_ui$Element$htmlAttribute(
-					A2($elm$html$Html$Attributes$style, 'align-items', 'flex-end')),
+					A2($elm$html$Html$Attributes$style, 'outline', 'none')),
 					$mdgriffith$elm_ui$Element$htmlAttribute(
-					A2($elm$html$Html$Attributes$style, 'position', 'relative'))
+					$elm$html$Html$Attributes$class('tab-link'))
 				]),
-			A2(
-				$mdgriffith$elm_ui$Element$Input$button,
-				_List_fromArray(
-					[
-						$mdgriffith$elm_ui$Element$htmlAttribute(
-						A2($elm$html$Html$Attributes$style, 'position', 'relative')),
-						$mdgriffith$elm_ui$Element$htmlAttribute(
-						A2($elm$html$Html$Attributes$style, 'z-index', '1')),
-						A2($mdgriffith$elm_ui$Element$paddingXY, 16, 8),
-						$author$project$ThemeTypography$body,
-						$mdgriffith$elm_ui$Element$Font$medium,
-						$mdgriffith$elm_ui$Element$Font$color(txtColor),
-						$mdgriffith$elm_ui$Element$htmlAttribute(
-						A2($elm$html$Html$Attributes$style, 'background', 'transparent')),
-						$mdgriffith$elm_ui$Element$htmlAttribute(
-						A2($elm$html$Html$Attributes$style, 'border', 'none')),
-						$mdgriffith$elm_ui$Element$htmlAttribute(
-						A2($elm$html$Html$Attributes$style, 'cursor', 'pointer')),
-						$mdgriffith$elm_ui$Element$htmlAttribute(
-						A2($elm$html$Html$Attributes$style, 'transition', 'all 0.2s')),
-						$mdgriffith$elm_ui$Element$htmlAttribute(
-						A2($elm$html$Html$Attributes$style, 'outline', 'none')),
-						$mdgriffith$elm_ui$Element$htmlAttribute(
-						$elm$html$Html$Attributes$class('tab-link'))
-					]),
-				{
-					label: A2(
-						$mdgriffith$elm_ui$Element$el,
-						_List_fromArray(
-							[
-								$mdgriffith$elm_ui$Element$htmlAttribute(
-								A2($elm$html$Html$Attributes$style, 'position', 'relative')),
-								$mdgriffith$elm_ui$Element$htmlAttribute(
-								A2($elm$html$Html$Attributes$style, 'padding-bottom', '6px')),
-								$mdgriffith$elm_ui$Element$htmlAttribute(
-								A2($elm$html$Html$Attributes$style, 'border-bottom', '2px solid')),
-								$mdgriffith$elm_ui$Element$htmlAttribute(
-								A2(
-									$elm$html$Html$Attributes$style,
-									'border-color',
-									isActive ? '#F97316' : 'transparent'))
-							]),
-						$mdgriffith$elm_ui$Element$text('All')),
-					onPress: $elm$core$Maybe$Just(
-						$author$project$Pages$Home_$SwitchTab('All'))
-				}));
+			{
+				label: $mdgriffith$elm_ui$Element$text('All'),
+				onPress: $elm$core$Maybe$Just(
+					$author$project$Pages$Home_$SwitchTab('All'))
+			});
 	});
 var $mdgriffith$elm_ui$Internal$Model$paddingName = F4(
 	function (top, right, bottom, left) {
@@ -14782,7 +14745,7 @@ var $mdgriffith$elm_ui$Element$paddingEach = function (_v0) {
 var $author$project$Pages$Home_$tabButton = F3(
 	function (shared, activeTab, tab) {
 		var theme = shared.theme;
-		var isActive = _Utils_eq(tab, activeTab) || ((tab === 'all') && ((activeTab === 'All') || (activeTab === 'all')));
+		var isActive = _Utils_eq(tab, activeTab) || ((tab === 'all') && ($elm$core$String$toLower(activeTab) === 'all'));
 		var txtColor = function () {
 			if (isActive) {
 				return $author$project$Theme$lumeOrange;
@@ -14794,64 +14757,30 @@ var $author$project$Pages$Home_$tabButton = F3(
 				}
 			}
 		}();
+		var borderColor = isActive ? $author$project$Theme$lumeOrange : A4($mdgriffith$elm_ui$Element$rgba, 0, 0, 0, 0);
 		return A2(
-			$mdgriffith$elm_ui$Element$el,
+			$mdgriffith$elm_ui$Element$Input$button,
 			_List_fromArray(
 				[
-					$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill),
-					$mdgriffith$elm_ui$Element$height(
-					$mdgriffith$elm_ui$Element$px(40)),
+					A2($mdgriffith$elm_ui$Element$paddingXY, 16, 8),
+					$author$project$ThemeTypography$body,
+					$mdgriffith$elm_ui$Element$Font$medium,
+					$mdgriffith$elm_ui$Element$Font$color(txtColor),
+					$mdgriffith$elm_ui$Element$Border$widthEach(
+					{bottom: 2, left: 0, right: 0, top: 0}),
+					$mdgriffith$elm_ui$Element$Border$color(borderColor),
 					$mdgriffith$elm_ui$Element$htmlAttribute(
-					A2($elm$html$Html$Attributes$style, 'display', 'flex')),
+					A2($elm$html$Html$Attributes$style, 'cursor', 'pointer')),
 					$mdgriffith$elm_ui$Element$htmlAttribute(
-					A2($elm$html$Html$Attributes$style, 'align-items', 'flex-end'))
+					A2($elm$html$Html$Attributes$style, 'outline', 'none')),
+					$mdgriffith$elm_ui$Element$htmlAttribute(
+					$elm$html$Html$Attributes$class('tab-link'))
 				]),
-			A2(
-				$mdgriffith$elm_ui$Element$Input$button,
-				_List_fromArray(
-					[
-						$mdgriffith$elm_ui$Element$htmlAttribute(
-						A2($elm$html$Html$Attributes$style, 'position', 'relative')),
-						$mdgriffith$elm_ui$Element$htmlAttribute(
-						A2($elm$html$Html$Attributes$style, 'z-index', '1')),
-						A2($mdgriffith$elm_ui$Element$paddingXY, 16, 8),
-						$author$project$ThemeTypography$body,
-						$mdgriffith$elm_ui$Element$Font$medium,
-						$mdgriffith$elm_ui$Element$Font$color(txtColor),
-						$mdgriffith$elm_ui$Element$htmlAttribute(
-						A2($elm$html$Html$Attributes$style, 'background', 'transparent')),
-						$mdgriffith$elm_ui$Element$htmlAttribute(
-						A2($elm$html$Html$Attributes$style, 'border', 'none')),
-						$mdgriffith$elm_ui$Element$htmlAttribute(
-						A2($elm$html$Html$Attributes$style, 'cursor', 'pointer')),
-						$mdgriffith$elm_ui$Element$htmlAttribute(
-						A2($elm$html$Html$Attributes$style, 'transition', 'all 0.2s')),
-						$mdgriffith$elm_ui$Element$htmlAttribute(
-						A2($elm$html$Html$Attributes$style, 'outline', 'none')),
-						$mdgriffith$elm_ui$Element$htmlAttribute(
-						$elm$html$Html$Attributes$class('tab-link'))
-					]),
-				{
-					label: A2(
-						$mdgriffith$elm_ui$Element$el,
-						_List_fromArray(
-							[
-								$mdgriffith$elm_ui$Element$htmlAttribute(
-								A2($elm$html$Html$Attributes$style, 'position', 'relative')),
-								$mdgriffith$elm_ui$Element$htmlAttribute(
-								A2($elm$html$Html$Attributes$style, 'padding-bottom', '6px')),
-								$mdgriffith$elm_ui$Element$htmlAttribute(
-								A2($elm$html$Html$Attributes$style, 'border-bottom', '2px solid')),
-								$mdgriffith$elm_ui$Element$htmlAttribute(
-								A2(
-									$elm$html$Html$Attributes$style,
-									'border-color',
-									isActive ? '#F97316' : 'transparent'))
-							]),
-						$mdgriffith$elm_ui$Element$text(tab)),
-					onPress: $elm$core$Maybe$Just(
-						$author$project$Pages$Home_$SwitchTab(tab))
-				}));
+			{
+				label: $mdgriffith$elm_ui$Element$text(tab),
+				onPress: $elm$core$Maybe$Just(
+					$author$project$Pages$Home_$SwitchTab(tab))
+			});
 	});
 var $mdgriffith$elm_ui$Internal$Model$Padding = F5(
 	function (a, b, c, d, e) {
@@ -15036,61 +14965,21 @@ var $author$project$Pages$Home_$tabBar = F2(
 				}
 			}();
 			return A2(
-				$mdgriffith$elm_ui$Element$column,
+				$mdgriffith$elm_ui$Element$wrappedRow,
 				_List_fromArray(
 					[
 						$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill),
-						$mdgriffith$elm_ui$Element$spacing(0)
+						$mdgriffith$elm_ui$Element$spacing(0),
+						$mdgriffith$elm_ui$Element$paddingEach(
+						{bottom: 0, left: 4, right: 0, top: 0})
 					]),
-				_List_fromArray(
-					[
-						A2(
-						$mdgriffith$elm_ui$Element$wrappedRow,
-						_List_fromArray(
-							[
-								$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill),
-								$mdgriffith$elm_ui$Element$spacing(0),
-								$mdgriffith$elm_ui$Element$paddingEach(
-								{bottom: 0, left: 0, right: 0, top: 0})
-							]),
-						A2(
-							$elm$core$List$cons,
-							A2($author$project$Pages$Home_$allTab, shared, model.activeTab),
-							A2(
-								$elm$core$List$map,
-								A2($author$project$Pages$Home_$tabButton, shared, model.activeTab),
-								model.tabs))),
-						A2(
-						$mdgriffith$elm_ui$Element$el,
-						_List_fromArray(
-							[
-								$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill),
-								$mdgriffith$elm_ui$Element$height(
-								$mdgriffith$elm_ui$Element$px(1)),
-								$mdgriffith$elm_ui$Element$Border$color(
-								function () {
-									var _v0 = shared.theme;
-									if (_v0.$ === 'Dark') {
-										return A3($mdgriffith$elm_ui$Element$rgb255, 75, 75, 75);
-									} else {
-										return A3($mdgriffith$elm_ui$Element$rgb255, 209, 213, 219);
-									}
-								}()),
-								$mdgriffith$elm_ui$Element$htmlAttribute(
-								A2(
-									$elm$html$Html$Attributes$style,
-									'background-color',
-									function () {
-										var _v1 = shared.theme;
-										if (_v1.$ === 'Dark') {
-											return 'rgb(75, 75, 75)';
-										} else {
-											return 'rgb(209, 213, 219)';
-										}
-									}()))
-							]),
-						$mdgriffith$elm_ui$Element$none)
-					]));
+				A2(
+					$elm$core$List$cons,
+					A2($author$project$Pages$Home_$allTab, shared, model.activeTab),
+					A2(
+						$elm$core$List$map,
+						A2($author$project$Pages$Home_$tabButton, shared, model.activeTab),
+						model.tabs)));
 		}
 	});
 var $author$project$Pages$Home_$view = F2(

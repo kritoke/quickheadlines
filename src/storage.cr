@@ -652,7 +652,7 @@ class FeedCache
   def get_slice(url : String, limit : Int32, offset : Int32) : FeedData?
     @mutex.synchronize do
       # Get feed metadata
-      result = @db.query_one?("SELECT title, url, site_link, header_color, header_text_color, etag, last_modified, favicon, favicon_data FROM feeds WHERE url = ?", url) do |row|
+      feed_result = @db.query_one?("SELECT title, url, site_link, header_color, header_text_color, etag, last_modified, favicon, favicon_data FROM feeds WHERE url = ?", url) do |row|
         {
           title:             row.read(String),
           url:               row.read(String),
@@ -665,7 +665,7 @@ class FeedCache
           favicon_data:      row.read(String?),
         }
       end
-      return unless result
+      return unless feed_result
 
       # Get items slice ordered by pub_date descending
       items = [] of Item
@@ -678,90 +678,25 @@ class FeedCache
           pub_date_str = rows.read(String?)
           version = rows.read(String?)
 
-          pub_date = pub_date_str.try { |date_str| Time.parse(date_str, "%Y-%m-%d %H:%M:%S", Time::Location::UTC) }
-          items << Item.new(title, link, pub_date, version)
-        end
-      end
-    end
+           pub_date = pub_date_str.try { |date_str| Time.parse(date_str, "%Y-%m-%d %H:%M:%S", Time::Location::UTC) }
+           items << Item.new(title, link, pub_date, version)
+         end
+       end
+     end
 
-    FeedData.new(
-      result[:title],
-      result[:url],
-      result[:site_link],
-      result[:header_color],
-      result[:header_text_color],
-      items,
-      result[:etag],
-      result[:last_modified],
-      result[:favicon],
-      result[:favicon_data]
-    )
-  end
-
-  # Count total items for a specific feed URL
-  def count_items(url : String) : Int32
-    @mutex.synchronize do
-      result = @db.query_one?("SELECT COUNT(*) FROM items JOIN feeds ON items.feed_id = feeds.id WHERE feeds.url = ?", url, as: {Int64})
-      result ? result.to_i : 0
-    end
-  end
-
-      return unless result
-
-      # If favicon_data is nil but favicon is a local path, copy it
-      if result[:favicon_data].nil?
-        if favicon = result[:favicon]
-          if favicon.starts_with?("/favicons/")
-            result = {
-              title:             result[:title],
-              url:               result[:url],
-              site_link:         result[:site_link],
-              header_color:      result[:header_color],
-              header_text_color: result[:header_text_color],
-              etag:              result[:etag],
-              last_modified:     result[:last_modified],
-              favicon:           result[:favicon],
-              favicon_data:      favicon,
-            }
-          end
-        end
-      end
-
-      # Get feed_id
-      feed_id_result = @db.query_one?("SELECT id FROM feeds WHERE url = ?", url, as: {Int64})
-      return unless feed_id_result
-      feed_id = feed_id_result
-
-      # Get items slice ordered by pub_date descending
-      items = [] of Item
-      query = "SELECT title, link, pub_date, version FROM items WHERE feed_id = ? ORDER BY pub_date DESC LIMIT ? OFFSET ?"
-
-      @db.query(query, feed_id, limit, offset) do |rows|
-        rows.each do
-          title = rows.read(String)
-          link = rows.read(String)
-          pub_date_str = rows.read(String?)
-          version = rows.read(String?)
-
-          pub_date = pub_date_str.try { |date_str| Time.parse(date_str, "%Y-%m-%d %H:%M:%S", Time::Location::UTC) }
-          items << Item.new(title, link, pub_date, version)
-        end
-      end
-    end
-
-    FeedData.new(
-      result[:title],
-      result[:url],
-      result[:site_link],
-      result[:header_color],
-      result[:header_text_color],
-      items,
-      result[:etag],
-      result[:last_modified],
-      result[:favicon],
-      result[:favicon_data]
-    )
-  end
+     FeedData.new(
+       feed_result[:title],
+       feed_result[:url],
+       feed_result[:site_link],
+       feed_result[:header_color],
+       feed_result[:header_text_color],
+       items,
+       feed_result[:etag],
+       feed_result[:last_modified],
+       feed_result[:favicon],
+       feed_result[:favicon_data]
+     )
+   end
 
   # Update header_color for a feed (extracted from favicon via color-thief)
   # Update header_color and header_text_color for a feed (extracted from favicon via color-thief)
