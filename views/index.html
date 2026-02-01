@@ -144,39 +144,39 @@
           display: inline-flex;
           align-items: center;
           justify-content: center;
-          background: #f1f5f9;
+          background: transparent;
           color: #64748b;
           border-radius: 6px;
           padding: 4px 12px;
-          border: none;
+          border: 1px solid transparent;
           box-shadow: none;
           transition: all 140ms ease;
           cursor: pointer;
           font-weight: 500;
           font-size: 12px;
-          margin-top: 12px;
+          margin-top: 4px;
           width: auto;
           min-width: unset;
         }
         .qh-load-more:hover {
-          background: #e2e8f0;
+          background: rgba(100, 116, 139, 0.1);
           color: #475569;
         }
         .qh-load-more:active {
-          background: #cbd5e1;
+          background: rgba(100, 116, 139, 0.2);
         }
         @media (prefers-color-scheme: dark) {
           .qh-load-more {
-            background: #1e293b;
+            background: transparent;
             color: #94a3b8;
-            border: none;
+            border: 1px solid transparent;
           }
           .qh-load-more:hover {
-            background: #334155;
+            background: rgba(148, 163, 184, 0.1);
             color: #cbd5e1;
           }
           .qh-load-more:active {
-            background: #475569;
+            background: rgba(148, 163, 184, 0.2);
           }
         }
        .qh-observer-indicator {

@@ -12538,7 +12538,6 @@ var $mdgriffith$elm_ui$Internal$Model$AlignX = function (a) {
 };
 var $mdgriffith$elm_ui$Internal$Model$Right = {$: 'Right'};
 var $mdgriffith$elm_ui$Element$alignRight = $mdgriffith$elm_ui$Internal$Model$AlignX($mdgriffith$elm_ui$Internal$Model$Right);
-var $author$project$ThemeTypography$body = $mdgriffith$elm_ui$Element$Font$size(16);
 var $mdgriffith$elm_ui$Internal$Model$Class = F2(
 	function (a, b) {
 		return {$: 'Class', a: a, b: b};
@@ -12610,69 +12609,7 @@ var $elm$core$Basics$always = F2(
 var $mdgriffith$elm_ui$Internal$Model$unstyled = A2($elm$core$Basics$composeL, $mdgriffith$elm_ui$Internal$Model$Unstyled, $elm$core$Basics$always);
 var $mdgriffith$elm_ui$Element$html = $mdgriffith$elm_ui$Internal$Model$unstyled;
 var $mdgriffith$elm_ui$Element$htmlAttribute = $mdgriffith$elm_ui$Internal$Model$Attr;
-var $elm$html$Html$Attributes$alt = $elm$html$Html$Attributes$stringProperty('alt');
-var $elm$html$Html$Attributes$src = function (url) {
-	return A2(
-		$elm$html$Html$Attributes$stringProperty,
-		'src',
-		_VirtualDom_noJavaScriptOrHtmlUri(url));
-};
-var $mdgriffith$elm_ui$Element$image = F2(
-	function (attrs, _v0) {
-		var description = _v0.description;
-		var src = _v0.src;
-		var imageAttributes = A2(
-			$elm$core$List$filter,
-			function (a) {
-				switch (a.$) {
-					case 'Width':
-						return true;
-					case 'Height':
-						return true;
-					default:
-						return false;
-				}
-			},
-			attrs);
-		return A4(
-			$mdgriffith$elm_ui$Internal$Model$element,
-			$mdgriffith$elm_ui$Internal$Model$asEl,
-			$mdgriffith$elm_ui$Internal$Model$div,
-			A2(
-				$elm$core$List$cons,
-				$mdgriffith$elm_ui$Internal$Model$htmlClass($mdgriffith$elm_ui$Internal$Style$classes.imageContainer),
-				attrs),
-			$mdgriffith$elm_ui$Internal$Model$Unkeyed(
-				_List_fromArray(
-					[
-						A4(
-						$mdgriffith$elm_ui$Internal$Model$element,
-						$mdgriffith$elm_ui$Internal$Model$asEl,
-						$mdgriffith$elm_ui$Internal$Model$NodeName('img'),
-						_Utils_ap(
-							_List_fromArray(
-								[
-									$mdgriffith$elm_ui$Internal$Model$Attr(
-									$elm$html$Html$Attributes$src(src)),
-									$mdgriffith$elm_ui$Internal$Model$Attr(
-									$elm$html$Html$Attributes$alt(description))
-								]),
-							imageAttributes),
-						$mdgriffith$elm_ui$Internal$Model$Unkeyed(_List_Nil))
-					])));
-	});
 var $elm$html$Html$img = _VirtualDom_node('img');
-var $mdgriffith$elm_ui$Internal$Flag$letterSpacing = $mdgriffith$elm_ui$Internal$Flag$flag(16);
-var $mdgriffith$elm_ui$Element$Font$letterSpacing = function (offset) {
-	return A2(
-		$mdgriffith$elm_ui$Internal$Model$StyleClass,
-		$mdgriffith$elm_ui$Internal$Flag$letterSpacing,
-		A3(
-			$mdgriffith$elm_ui$Internal$Model$Single,
-			'ls-' + $mdgriffith$elm_ui$Internal$Model$floatClass(offset),
-			'letter-spacing',
-			$elm$core$String$fromFloat(offset) + 'px'));
-};
 var $elm$html$Html$Attributes$href = function (url) {
 	return A2(
 		$elm$html$Html$Attributes$stringProperty,
@@ -12855,6 +12792,169 @@ var $mdgriffith$elm_ui$Element$mouseOver = function (decs) {
 			$mdgriffith$elm_ui$Internal$Model$Hover,
 			$mdgriffith$elm_ui$Internal$Model$unwrapDecorations(decs)));
 };
+var $elm$html$Html$Attributes$src = function (url) {
+	return A2(
+		$elm$html$Html$Attributes$stringProperty,
+		'src',
+		_VirtualDom_noJavaScriptOrHtmlUri(url));
+};
+var $elm$virtual_dom$VirtualDom$style = _VirtualDom_style;
+var $elm$html$Html$Attributes$style = $elm$virtual_dom$VirtualDom$style;
+var $mdgriffith$elm_ui$Internal$Model$BorderWidth = F5(
+	function (a, b, c, d, e) {
+		return {$: 'BorderWidth', a: a, b: b, c: c, d: d, e: e};
+	});
+var $mdgriffith$elm_ui$Element$Border$width = function (v) {
+	return A2(
+		$mdgriffith$elm_ui$Internal$Model$StyleClass,
+		$mdgriffith$elm_ui$Internal$Flag$borderWidth,
+		A5(
+			$mdgriffith$elm_ui$Internal$Model$BorderWidth,
+			'b-' + $elm$core$String$fromInt(v),
+			v,
+			v,
+			v,
+			v));
+};
+var $mdgriffith$elm_ui$Element$Border$widthXY = F2(
+	function (x, y) {
+		return A2(
+			$mdgriffith$elm_ui$Internal$Model$StyleClass,
+			$mdgriffith$elm_ui$Internal$Flag$borderWidth,
+			A5(
+				$mdgriffith$elm_ui$Internal$Model$BorderWidth,
+				'b-' + ($elm$core$String$fromInt(x) + ('-' + $elm$core$String$fromInt(y))),
+				y,
+				x,
+				y,
+				x));
+	});
+var $mdgriffith$elm_ui$Element$Border$widthEach = function (_v0) {
+	var right = _v0.right;
+	var left = _v0.left;
+	var top = _v0.top;
+	var bottom = _v0.bottom;
+	return (_Utils_eq(top, bottom) && _Utils_eq(left, right)) ? (_Utils_eq(top, right) ? $mdgriffith$elm_ui$Element$Border$width(top) : A2($mdgriffith$elm_ui$Element$Border$widthXY, left, top)) : A2(
+		$mdgriffith$elm_ui$Internal$Model$StyleClass,
+		$mdgriffith$elm_ui$Internal$Flag$borderWidth,
+		A5(
+			$mdgriffith$elm_ui$Internal$Model$BorderWidth,
+			'b-' + ($elm$core$String$fromInt(top) + ('-' + ($elm$core$String$fromInt(right) + ('-' + ($elm$core$String$fromInt(bottom) + ('-' + $elm$core$String$fromInt(left))))))),
+			top,
+			right,
+			bottom,
+			left));
+};
+var $author$project$Application$homeIconView = F2(
+	function (model, target) {
+		var isActive = _Utils_eq(model.page, $author$project$Application$Home);
+		var iconPath = isActive ? '/home-icon-active.svg' : '/home-icon.svg';
+		var iconHtml = A2(
+			$elm$html$Html$img,
+			_List_fromArray(
+				[
+					$elm$html$Html$Attributes$src(iconPath),
+					A2($elm$html$Html$Attributes$style, 'width', '28px'),
+					A2($elm$html$Html$Attributes$style, 'height', '28px')
+				]),
+			_List_Nil);
+		return A2(
+			$mdgriffith$elm_ui$Element$el,
+			_List_fromArray(
+				[
+					$mdgriffith$elm_ui$Element$padding(10),
+					$mdgriffith$elm_ui$Element$Border$widthEach(
+					{
+						bottom: isActive ? 2 : 0,
+						left: 0,
+						right: 0,
+						top: 0
+					}),
+					$mdgriffith$elm_ui$Element$Border$color($author$project$Theme$lumeOrange),
+					$mdgriffith$elm_ui$Element$mouseOver(
+					_List_fromArray(
+						[
+							$mdgriffith$elm_ui$Element$Font$color($author$project$Theme$lumeOrange)
+						])),
+					$mdgriffith$elm_ui$Element$centerY,
+					$mdgriffith$elm_ui$Element$htmlAttribute(
+					A2($elm$html$Html$Attributes$style, 'display', 'flex')),
+					$mdgriffith$elm_ui$Element$htmlAttribute(
+					A2($elm$html$Html$Attributes$style, 'align-items', 'center')),
+					$mdgriffith$elm_ui$Element$htmlAttribute(
+					A2($elm$html$Html$Attributes$style, 'justify-content', 'center'))
+				]),
+			A2(
+				$mdgriffith$elm_ui$Element$link,
+				_List_Nil,
+				{
+					label: A2(
+						$mdgriffith$elm_ui$Element$el,
+						_List_fromArray(
+							[
+								$mdgriffith$elm_ui$Element$htmlAttribute(
+								A2($elm$html$Html$Attributes$style, 'display', 'flex'))
+							]),
+						$mdgriffith$elm_ui$Element$html(iconHtml)),
+					url: '/'
+				}));
+	});
+var $elm$html$Html$Attributes$alt = $elm$html$Html$Attributes$stringProperty('alt');
+var $mdgriffith$elm_ui$Element$image = F2(
+	function (attrs, _v0) {
+		var description = _v0.description;
+		var src = _v0.src;
+		var imageAttributes = A2(
+			$elm$core$List$filter,
+			function (a) {
+				switch (a.$) {
+					case 'Width':
+						return true;
+					case 'Height':
+						return true;
+					default:
+						return false;
+				}
+			},
+			attrs);
+		return A4(
+			$mdgriffith$elm_ui$Internal$Model$element,
+			$mdgriffith$elm_ui$Internal$Model$asEl,
+			$mdgriffith$elm_ui$Internal$Model$div,
+			A2(
+				$elm$core$List$cons,
+				$mdgriffith$elm_ui$Internal$Model$htmlClass($mdgriffith$elm_ui$Internal$Style$classes.imageContainer),
+				attrs),
+			$mdgriffith$elm_ui$Internal$Model$Unkeyed(
+				_List_fromArray(
+					[
+						A4(
+						$mdgriffith$elm_ui$Internal$Model$element,
+						$mdgriffith$elm_ui$Internal$Model$asEl,
+						$mdgriffith$elm_ui$Internal$Model$NodeName('img'),
+						_Utils_ap(
+							_List_fromArray(
+								[
+									$mdgriffith$elm_ui$Internal$Model$Attr(
+									$elm$html$Html$Attributes$src(src)),
+									$mdgriffith$elm_ui$Internal$Model$Attr(
+									$elm$html$Html$Attributes$alt(description))
+								]),
+							imageAttributes),
+						$mdgriffith$elm_ui$Internal$Model$Unkeyed(_List_Nil))
+					])));
+	});
+var $mdgriffith$elm_ui$Internal$Flag$letterSpacing = $mdgriffith$elm_ui$Internal$Flag$flag(16);
+var $mdgriffith$elm_ui$Element$Font$letterSpacing = function (offset) {
+	return A2(
+		$mdgriffith$elm_ui$Internal$Model$StyleClass,
+		$mdgriffith$elm_ui$Internal$Flag$letterSpacing,
+		A3(
+			$mdgriffith$elm_ui$Internal$Model$Single,
+			'ls-' + $mdgriffith$elm_ui$Internal$Model$floatClass(offset),
+			'letter-spacing',
+			$elm$core$String$fromFloat(offset) + 'px'));
+};
 var $mdgriffith$elm_ui$Internal$Model$paddingName = F4(
 	function (top, right, bottom, left) {
 		return 'pad-' + ($elm$core$String$fromInt(top) + ('-' + ($elm$core$String$fromInt(right) + ('-' + ($elm$core$String$fromInt(bottom) + ('-' + $elm$core$String$fromInt(left)))))));
@@ -12899,8 +12999,7 @@ var $mdgriffith$elm_ui$Element$Border$rounded = function (radius) {
 			'border-radius',
 			$elm$core$String$fromInt(radius) + 'px'));
 };
-var $elm$virtual_dom$VirtualDom$style = _VirtualDom_style;
-var $elm$html$Html$Attributes$style = $elm$virtual_dom$VirtualDom$style;
+var $author$project$ThemeTypography$subtitle = $mdgriffith$elm_ui$Element$Font$size(20);
 var $author$project$Theme$surfaceColor = function (theme) {
 	if (theme.$ === 'Dark') {
 		return A3($mdgriffith$elm_ui$Element$rgb255, 24, 24, 24);
@@ -13145,51 +13244,60 @@ var $author$project$Application$themeToggle = function (model) {
 				$author$project$Application$SharedMsg($author$project$Shared$ToggleTheme))
 		});
 };
-var $mdgriffith$elm_ui$Internal$Model$BorderWidth = F5(
-	function (a, b, c, d, e) {
-		return {$: 'BorderWidth', a: a, b: b, c: c, d: d, e: e};
-	});
-var $mdgriffith$elm_ui$Element$Border$width = function (v) {
-	return A2(
-		$mdgriffith$elm_ui$Internal$Model$StyleClass,
-		$mdgriffith$elm_ui$Internal$Flag$borderWidth,
-		A5(
-			$mdgriffith$elm_ui$Internal$Model$BorderWidth,
-			'b-' + $elm$core$String$fromInt(v),
-			v,
-			v,
-			v,
-			v));
-};
-var $mdgriffith$elm_ui$Element$Border$widthXY = F2(
-	function (x, y) {
+var $author$project$Application$timelineIconView = F2(
+	function (model, target) {
+		var isActive = _Utils_eq(model.page, $author$project$Application$Timeline);
+		var iconPath = isActive ? '/timeline-icon-active.svg' : '/timeline-icon.svg';
+		var iconHtml = A2(
+			$elm$html$Html$img,
+			_List_fromArray(
+				[
+					$elm$html$Html$Attributes$src(iconPath),
+					A2($elm$html$Html$Attributes$style, 'width', '28px'),
+					A2($elm$html$Html$Attributes$style, 'height', '28px')
+				]),
+			_List_Nil);
 		return A2(
-			$mdgriffith$elm_ui$Internal$Model$StyleClass,
-			$mdgriffith$elm_ui$Internal$Flag$borderWidth,
-			A5(
-				$mdgriffith$elm_ui$Internal$Model$BorderWidth,
-				'b-' + ($elm$core$String$fromInt(x) + ('-' + $elm$core$String$fromInt(y))),
-				y,
-				x,
-				y,
-				x));
+			$mdgriffith$elm_ui$Element$el,
+			_List_fromArray(
+				[
+					$mdgriffith$elm_ui$Element$padding(10),
+					$mdgriffith$elm_ui$Element$Border$widthEach(
+					{
+						bottom: isActive ? 2 : 0,
+						left: 0,
+						right: 0,
+						top: 0
+					}),
+					$mdgriffith$elm_ui$Element$Border$color($author$project$Theme$lumeOrange),
+					$mdgriffith$elm_ui$Element$mouseOver(
+					_List_fromArray(
+						[
+							$mdgriffith$elm_ui$Element$Font$color($author$project$Theme$lumeOrange)
+						])),
+					$mdgriffith$elm_ui$Element$centerY,
+					$mdgriffith$elm_ui$Element$htmlAttribute(
+					A2($elm$html$Html$Attributes$style, 'display', 'flex')),
+					$mdgriffith$elm_ui$Element$htmlAttribute(
+					A2($elm$html$Html$Attributes$style, 'align-items', 'center')),
+					$mdgriffith$elm_ui$Element$htmlAttribute(
+					A2($elm$html$Html$Attributes$style, 'justify-content', 'center'))
+				]),
+			A2(
+				$mdgriffith$elm_ui$Element$link,
+				_List_Nil,
+				{
+					label: A2(
+						$mdgriffith$elm_ui$Element$el,
+						_List_fromArray(
+							[
+								$mdgriffith$elm_ui$Element$htmlAttribute(
+								A2($elm$html$Html$Attributes$style, 'display', 'flex'))
+							]),
+						$mdgriffith$elm_ui$Element$html(iconHtml)),
+					url: '/timeline'
+				}));
 	});
-var $mdgriffith$elm_ui$Element$Border$widthEach = function (_v0) {
-	var right = _v0.right;
-	var left = _v0.left;
-	var top = _v0.top;
-	var bottom = _v0.bottom;
-	return (_Utils_eq(top, bottom) && _Utils_eq(left, right)) ? (_Utils_eq(top, right) ? $mdgriffith$elm_ui$Element$Border$width(top) : A2($mdgriffith$elm_ui$Element$Border$widthXY, left, top)) : A2(
-		$mdgriffith$elm_ui$Internal$Model$StyleClass,
-		$mdgriffith$elm_ui$Internal$Flag$borderWidth,
-		A5(
-			$mdgriffith$elm_ui$Internal$Model$BorderWidth,
-			'b-' + ($elm$core$String$fromInt(top) + ('-' + ($elm$core$String$fromInt(right) + ('-' + ($elm$core$String$fromInt(bottom) + ('-' + $elm$core$String$fromInt(left))))))),
-			top,
-			right,
-			bottom,
-			left));
-};
 var $author$project$Application$headerView = function (model) {
 	var theme = model.shared.theme;
 	var txtColor = $author$project$Theme$textColor(theme);
@@ -13268,6 +13376,13 @@ var $author$project$Application$headerView = function (model) {
 	}();
 	var border = $author$project$Theme$borderColor(theme);
 	var bg = $author$project$Theme$surfaceColor(theme);
+	var activeIconStyle = _List_fromArray(
+		[
+			$mdgriffith$elm_ui$Element$Font$color($author$project$Theme$lumeOrange),
+			$mdgriffith$elm_ui$Element$Border$widthEach(
+			{bottom: 2, left: 0, right: 0, top: 0}),
+			$mdgriffith$elm_ui$Element$Border$color($author$project$Theme$lumeOrange)
+		]);
 	return A2(
 		$mdgriffith$elm_ui$Element$row,
 		_List_fromArray(
@@ -13278,7 +13393,7 @@ var $author$project$Application$headerView = function (model) {
 				$mdgriffith$elm_ui$Element$Border$widthEach(
 				{bottom: 1, left: 0, right: 0, top: 0}),
 				$mdgriffith$elm_ui$Element$Border$color(border),
-				$mdgriffith$elm_ui$Element$spacing(8)
+				$mdgriffith$elm_ui$Element$spacing(12)
 			]),
 		_List_fromArray(
 			[
@@ -13291,7 +13406,8 @@ var $author$project$Application$headerView = function (model) {
 						$mdgriffith$elm_ui$Element$row,
 						_List_fromArray(
 							[
-								$mdgriffith$elm_ui$Element$spacing(8)
+								$mdgriffith$elm_ui$Element$spacing(10),
+								$mdgriffith$elm_ui$Element$centerY
 							]),
 						_List_fromArray(
 							[
@@ -13300,23 +13416,23 @@ var $author$project$Application$headerView = function (model) {
 								_List_fromArray(
 									[
 										$mdgriffith$elm_ui$Element$width(
-										$mdgriffith$elm_ui$Element$px(16)),
+										$mdgriffith$elm_ui$Element$px(32)),
 										$mdgriffith$elm_ui$Element$height(
-										$mdgriffith$elm_ui$Element$px(16)),
-										$mdgriffith$elm_ui$Element$Border$rounded(2)
+										$mdgriffith$elm_ui$Element$px(32)),
+										$mdgriffith$elm_ui$Element$Border$rounded(4)
 									]),
-								{description: '', src: '/logo.svg'}),
+								{description: 'Logo', src: '/logo.svg'}),
 								A2(
 								$mdgriffith$elm_ui$Element$el,
 								_List_fromArray(
 									[
-										$author$project$ThemeTypography$body,
+										$author$project$ThemeTypography$subtitle,
 										$mdgriffith$elm_ui$Element$Font$bold,
 										$mdgriffith$elm_ui$Element$Font$color(txtColor),
 										$mdgriffith$elm_ui$Element$Font$letterSpacing(0.5),
 										$mdgriffith$elm_ui$Element$centerY
 									]),
-								$mdgriffith$elm_ui$Element$text('QUICKHEADLINES'))
+								$mdgriffith$elm_ui$Element$text('Quick Headlines'))
 							])),
 					url: '/'
 				}),
@@ -13324,14 +13440,14 @@ var $author$project$Application$headerView = function (model) {
 				$mdgriffith$elm_ui$Element$row,
 				_List_fromArray(
 					[
-						$mdgriffith$elm_ui$Element$spacing(0),
+						$mdgriffith$elm_ui$Element$spacing(4),
 						$mdgriffith$elm_ui$Element$centerY,
 						$mdgriffith$elm_ui$Element$height($mdgriffith$elm_ui$Element$fill)
 					]),
 				_List_fromArray(
 					[
-						A2(navLink, '/home-icon.svg', $author$project$Application$Home),
-						A2(navLink, '/timeline-icon.svg', $author$project$Application$Timeline)
+						A2($author$project$Application$homeIconView, model, $author$project$Application$Home),
+						A2($author$project$Application$timelineIconView, model, $author$project$Application$Timeline)
 					])),
 				A2(
 				$mdgriffith$elm_ui$Element$el,
@@ -13631,13 +13747,13 @@ var $author$project$Layouts$Shared$footerView = function (content) {
 var $author$project$Responsive$uniformPadding = function (breakpoint) {
 	switch (breakpoint.$) {
 		case 'VeryNarrowBreakpoint':
-			return 8;
+			return 16;
 		case 'MobileBreakpoint':
 			return 16;
 		case 'TabletBreakpoint':
-			return 32;
+			return 48;
 		default:
-			return 32;
+			return 96;
 	}
 };
 var $author$project$Layouts$Shared$headerView = F3(
@@ -14472,7 +14588,7 @@ var $author$project$Theme$themeToColors = function (theme) {
 var $author$project$Pages$Home_$feedCard = F6(
 	function (now, theme, breakpoint, loadingFeed, insertedIds, feed) {
 		var txtColor = $author$project$Theme$textColor(theme);
-		var shouldShowButton = $elm$core$List$length(feed.items) >= 10;
+		var shouldShowButton = ($elm$core$List$length(feed.items) >= 10) && (feed.url !== 'software://releases');
 		var scrollAttributes = function () {
 			if (breakpoint.$ === 'DesktopBreakpoint') {
 				return _List_fromArray(
@@ -14500,10 +14616,7 @@ var $author$project$Pages$Home_$feedCard = F6(
 				return false;
 			}
 		}();
-		var displayedItems = A2(
-			$elm$core$List$take,
-			15,
-			$author$project$Api$sortFeedItems(feed.items));
+		var displayedItems = $author$project$Api$sortFeedItems(feed.items);
 		var colors = $author$project$Theme$themeToColors(theme);
 		var cardBg = $author$project$Theme$cardColor(theme);
 		var btnOnPress = isLoadingThisFeed ? $elm$core$Maybe$Nothing : $elm$core$Maybe$Just(
@@ -14917,6 +15030,7 @@ var $author$project$Pages$Home_$view = F2(
 					A2($author$project$Pages$Home_$content, shared, model)
 				]));
 	});
+var $author$project$ThemeTypography$body = $mdgriffith$elm_ui$Element$Font$size(16);
 var $author$project$Pages$Timeline$ToggleCluster = function (a) {
 	return {$: 'ToggleCluster', a: a};
 };
@@ -15493,13 +15607,13 @@ var $author$project$Pages$Timeline$groupClustersByDay = F3(
 var $author$project$Responsive$horizontalPadding = function (breakpoint) {
 	switch (breakpoint.$) {
 		case 'VeryNarrowBreakpoint':
-			return 8;
+			return 16;
 		case 'MobileBreakpoint':
 			return 16;
 		case 'TabletBreakpoint':
-			return 24;
+			return 48;
 		default:
-			return 32;
+			return 96;
 	}
 };
 var $author$project$Responsive$isMobile = function (breakpoint) {
@@ -15522,7 +15636,6 @@ var $mdgriffith$elm_ui$Element$maximum = F2(
 	function (i, l) {
 		return A2($mdgriffith$elm_ui$Internal$Model$Max, i, l);
 	});
-var $author$project$ThemeTypography$subtitle = $mdgriffith$elm_ui$Element$Font$size(20);
 var $author$project$ThemeTypography$title = $mdgriffith$elm_ui$Element$Font$size(24);
 var $author$project$Responsive$verticalPadding = function (breakpoint) {
 	switch (breakpoint.$) {

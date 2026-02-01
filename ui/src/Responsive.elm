@@ -66,17 +66,20 @@ horizontalPadding : Breakpoint -> Int
 horizontalPadding breakpoint =
     case breakpoint of
         VeryNarrowBreakpoint ->
-            8
+            -- Match v0.4.0: px-4 = 16px on mobile
+            16
 
         MobileBreakpoint ->
+            -- Match v0.4.0: px-4 = 16px on mobile landscape
             16
 
         TabletBreakpoint ->
-            24
+            -- Match v0.4.0: md:px-12 = 48px on tablet
+            48
 
         DesktopBreakpoint ->
-            -- Restore reasonable desktop horizontal padding (was 40, reduced too much)
-            32
+            -- Match v0.4.0: lg:px-24 = 96px on desktop
+            96
 
 
 verticalPadding : Breakpoint -> Int
@@ -100,17 +103,20 @@ uniformPadding : Breakpoint -> Int
 uniformPadding breakpoint =
     case breakpoint of
         VeryNarrowBreakpoint ->
-            8
+            -- Match v0.4.0: px-4 = 16px on mobile
+            16
 
         MobileBreakpoint ->
+            -- Match v0.4.0: px-4 = 16px on mobile landscape
             16
 
         TabletBreakpoint ->
-            32
+            -- Match v0.4.0: md:px-12 = 48px on tablet
+            48
 
         DesktopBreakpoint ->
-            -- Restore reasonable desktop uniform padding (was 96, reduced too much)
-            32
+            -- Match v0.4.0: lg:px-24 = 96px on desktop
+            96
 
 
 containerMaxWidth : Breakpoint -> Element.Length

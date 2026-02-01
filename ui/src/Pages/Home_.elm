@@ -389,7 +389,7 @@ feedCard now theme breakpoint loadingFeed insertedIds feed =
                  _ ->
                      []
 
-         displayedItems = List.take 15 (sortFeedItems feed.items)
+         displayedItems = sortFeedItems feed.items
 
          isLoadingThisFeed =
              case loadingFeed of
@@ -400,7 +400,7 @@ feedCard now theme breakpoint loadingFeed insertedIds feed =
 
          btnOnPress = if isLoadingThisFeed then Nothing else Just (LoadMoreFeed feed.url)
 
-         shouldShowButton = List.length feed.items >= 10
+         shouldShowButton = List.length feed.items >= 10 && feed.url /= "software://releases"
 
          loadMoreButton =
              if shouldShowButton then

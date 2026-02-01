@@ -327,6 +327,13 @@ headerView model =
                     , label = el [ htmlAttribute (HA.style "display" "flex") ] (Element.html iconHtml)
                     }
                 )
+
+        -- Active icon style - brighter version for active state
+        activeIconStyle =
+            [ Font.color lumeOrange
+            , Border.widthEach { bottom = 2, left = 0, right = 0, top = 0 }
+            , Border.color lumeOrange
+            ]
     in
     Element.row
         [ width fill
@@ -334,37 +341,105 @@ headerView model =
         , Background.color bg
         , Border.widthEach { bottom = 1, left = 0, right = 0, top = 0 }
         , Border.color border
-        , spacing 8
+        , spacing 12
         ]
         [ -- Brand Section
           Element.link [ centerY ]
             { url = "/"
             , label =
-                Element.row [ spacing 8 ]
+                Element.row [ spacing 10, centerY ]
                     [ Element.image
-                        [ Element.width (px 16)
-                        , Element.height (px 16)
-                        , Border.rounded 2
+                        [ Element.width (px 32)
+                        , Element.height (px 32)
+                        , Border.rounded 4
                         ]
-                        { src = "/logo.svg", description = "" }
+                        { src = "/logo.svg", description = "Logo" }
                     , Element.el
-                        [ Ty.body
+                        [ Ty.subtitle
                         , Font.bold
                         , Font.color txtColor
                         , Font.letterSpacing 0.5
                         , centerY
                         ]
-                        (text "QUICKHEADLINES")
+                        (text "Quick Headlines")
                     ]
-            }
+             }
         , -- Navigation Section
-          Element.row [ spacing 0, centerY, height fill ]
-            [ navLink "/home-icon.svg" Home
-            , navLink "/timeline-icon.svg" Timeline
+          Element.row [ spacing 4, centerY, height fill ]
+            [ homeIconView model Home
+            , timelineIconView model Timeline
             ]
         , -- Actions Section
           Element.el [ alignRight, centerY ] (themeToggle model)
         ]
+
+
+homeIconView : Model -> Page -> Element Msg
+homeIconView model target =
+    let
+        isActive =
+            model.page == Home
+
+        iconPath =
+            if isActive then "/home-icon-active.svg" else "/home-icon.svg"
+
+        iconHtml =
+            Html.img
+                [ HA.src iconPath
+                , HA.style "width" "28px"
+                , HA.style "height" "28px"
+                ]
+                []
+    in
+    Element.el
+        [ Element.padding 10
+        , Border.widthEach { bottom = if isActive then 2 else 0, left = 0, right = 0, top = 0 }
+        , Border.color lumeOrange
+        , Element.mouseOver [ Font.color lumeOrange ]
+        , centerY
+        , htmlAttribute (HA.style "display" "flex")
+        , htmlAttribute (HA.style "align-items" "center")
+        , htmlAttribute (HA.style "justify-content" "center")
+        ]
+        (Element.link []
+            { url = "/"
+            , label = el [ htmlAttribute (HA.style "display" "flex") ] (Element.html iconHtml)
+            }
+        )
+
+
+timelineIconView : Model -> Page -> Element Msg
+timelineIconView model target =
+    let
+        isActive =
+            model.page == Timeline
+
+        iconPath =
+            if isActive then "/timeline-icon-active.svg" else "/timeline-icon.svg"
+
+        iconHtml =
+            Html.img
+                [ HA.src iconPath
+                , HA.style "width" "28px"
+                , HA.style "height" "28px"
+                ]
+                []
+    in
+    Element.el
+        [ Element.padding 10
+        , Border.widthEach { bottom = if isActive then 2 else 0, left = 0, right = 0, top = 0 }
+        , Border.color lumeOrange
+        , Element.mouseOver [ Font.color lumeOrange ]
+        , centerY
+        , htmlAttribute (HA.style "display" "flex")
+        , htmlAttribute (HA.style "align-items" "center")
+        , htmlAttribute (HA.style "justify-content" "center")
+        ]
+        (Element.link []
+            { url = "/timeline"
+            , label = el [ htmlAttribute (HA.style "display" "flex") ] (Element.html iconHtml)
+            }
+        )
 
 
 themeToggle : Model -> Element Msg
