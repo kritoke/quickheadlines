@@ -90,10 +90,10 @@ update shared msg model =
             , Api.fetchFeedMore url 15 offset (\res -> GotMoreFeed url res)
             )
 
-    GotMoreFeed url (Ok response) ->
+        GotMoreFeed url (Ok response) ->
             let
                 -- Existing links for the feed we loaded more for
-                maybeFeed = List.filter ( -> f.url == url) model.feeds |> List.head
+                maybeFeed = List.filter (\f -> f.url == url) model.feeds |> List.head
 
                 existingLinks =
                     case maybeFeed of
@@ -102,7 +102,7 @@ update shared msg model =
 
                 addedLinksList =
                     response.items
-                        |> List.filter (i -> not (Set.member ri.link existingLinks))
+                        |> List.filter (\i -> not (Set.member i.link existingLinks))
                         |> List.map .link
 
                 addedSet = Set.fromList addedLinksList
@@ -158,11 +158,11 @@ view shared model =
          bg =
              surfaceColor theme
 
-          breakpoint =
-              Responsive.breakpointFromWidth shared.windowWidth
+         breakpoint =
+             Responsive.breakpointFromWidth shared.windowWidth
 
-          pad =
-              Responsive.uniformPadding breakpoint
+         pad =
+             Responsive.uniformPadding breakpoint
      in
      column
         [ width fill
@@ -598,10 +598,7 @@ feedItem now theme insertedIds item =
             ++ (if isInserted then [ htmlAttribute (Html.Attributes.class "timeline-inserted") ] else [])
     in
     row
-        [ width fill
-        ]
-        wrapperAttrs
-        ]
+        ([ width fill ] ++ wrapperAttrs)
         [ el
             [ width (px 6)
             , height (px 6)
