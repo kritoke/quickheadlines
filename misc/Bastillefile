@@ -4,19 +4,30 @@
 CMD service quickheadlines stop 2>/dev/null || true
 CMD rm -rf /tmp/qh 2>/dev/null || true
 
-# 1. Install dependencies
+# 1. Install dependencies (including sudo for user switching)
 # Detect available LLVM version (libmagic is in FreeBSD base system)
-CMD for v in 19 18 17 15; do if pkg info -e llvm$$v >/dev/null 2>&1; then LLVM_PKG="llvm$$v"; break; fi; done && \
-    if [ -z "$$LLVM_PKG" ]; then LLVM_PKG="llvm19"; fi && \
+CMD export LLVM_PKG="llvm19" && \
+    for v in 19 18 17 15; do \
+        if [ -z "$$LLVM_PKG_INSTALLED" ] && pkg info -e llvm$$v >/dev/null 2>&1; then \
+            LLVM_PKG="llvm$$v"; \
+            LLVM_PKG_INSTALLED="yes"; \
+        fi; \
+    done && \
     echo "Using $$LLVM_PKG for LLVM" && \
-    pkg install -y crystal shards git openssl ca_root_nss node npm gmake curl sqlite3 $$LLVM_PKG libevent libyaml
+    pkg install -y crystal shards git openssl ca_root_nss node npm gmake curl sqlite3 sudo $$LLVM_PKG libevent libyaml || \
+    (echo "Package install failed, trying without LLVM..." && \
+     pkg install -y crystal shards git openssl ca_root_nss node npm gmake curl sqlite3 sudo libevent libyaml)
 
 # Link LLVM-Config (auto-detect version)
-CMD for v in 19 18 17 15; do if [ -x "/usr/local/bin/llvm-config$$v" ]; then \
-        ln -sf /usr/local/bin/llvm-config$$v /usr/local/bin/llvm-config; \
-        echo "Linked llvm-config$$v"; \
-        break; \
-    fi; done
+CMD if [ -x "/usr/local/bin/llvm-config19" ]; then \
+        ln -sf /usr/local/bin/llvm-config19 /usr/local/bin/llvm-config && echo "Linked llvm-config19"; \
+    elif [ -x "/usr/local/bin/llvm-config18" ]; then \
+        ln -sf /usr/local/bin/llvm-config18 /usr/local/bin/llvm-config && echo "Linked llvm-config18"; \
+    elif [ -x "/usr/local/bin/llvm-config17" ]; then \
+        ln -sf /usr/local/bin/llvm-config17 /usr/local/bin/llvm-config && echo "Linked llvm-config17"; \
+    elif [ -x "/usr/local/bin/llvm-config15" ]; then \
+        ln -sf /usr/local/bin/llvm-config15 /usr/local/bin/llvm-config && echo "Linked llvm-config15"; \
+    fi
 
 # Link SSL certificates (handle different FreeBSD versions)
 CMD if [ -f /usr/local/share/certs/ca-root-nss.crt ]; then \
@@ -39,14 +50,15 @@ CMD chown -R qh:qh /tmp/qh 2>/dev/null || true
 CMD sysrc quickheadlines_env="GC_MARKERS=1 GC_FREE_SPACE_DIVISOR=20 QUICKHEADLINES_CACHE_DIR=/var/cache/quickheadlines" 2>/dev/null || true
 
 # 5. Build with explicit GMAKE and auto-detected LLVM
-CMD for v in 19 18 17 15; do if [ -x "/usr/local/bin/llvm-config$$v" ]; then \
-        LLVM_CONFIG="/usr/local/bin/llvm-config$$v"; \
-        break; \
-    fi; done && \
-    cd /tmp/qh && \
-    su qh -c "export PATH=/usr/local/bin:\$PATH && npm install @tailwindcss/cli tailwindcss 2>/dev/null || true" && \
-    su qh -c "export PATH=/usr/local/bin:\$PATH && gmake shards install CRYSTAL=/usr/local/bin/crystal" && \
-    su qh -c "export PATH=/usr/local/bin:\$PATH && export MAKE=gmake LLVM_CONFIG=$$LLVM_CONFIG && gmake build CRYSTAL=/usr/local/bin/crystal"
+CMD cd /tmp/qh && \
+    export PATH=/usr/local/bin:$$PATH && \
+    sudo -u qh sh -c "export PATH=/usr/local/bin:\$PATH && npm install @tailwindcss/cli tailwindcss 2>/dev/null || true" && \
+    sudo -u qh sh -c "export PATH=/usr/local/bin:\$PATH && gmake shards install CRYSTAL=/usr/local/bin/crystal" && \
+    if [ -x "/usr/local/bin/llvm-config" ]; then \
+        sudo -u qh sh -c "export PATH=/usr/local/bin:\$PATH && export MAKE=gmake LLVM_CONFIG=/usr/local/bin/llvm-config && gmake build CRYSTAL=/usr/local/bin/crystal"; \
+    else \
+        sudo -u qh sh -c "export PATH=/usr/local/bin:\$PATH && export MAKE=gmake && gmake build CRYSTAL=/usr/local/bin/crystal"; \
+    fi
 
 # 6. Install Binary and Config
 CMD cp /tmp/qh/bin/quickheadlines /usr/local/share/quickheadlines 2>/dev/null || true
