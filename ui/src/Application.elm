@@ -447,16 +447,16 @@ themeToggle model =
                 Shared.Dark ->
                     Html.img
                         [ HA.src "/sun-icon.svg"
-                        , HA.style "width" "20px"
-                        , HA.style "height" "20px"
+                        , HA.style "width" "28px"
+                        , HA.style "height" "28px"
                         ]
                         []
 
                 Shared.Light ->
                     Html.img
                         [ HA.src "/moon-icon.svg"
-                        , HA.style "width" "20px"
-                        , HA.style "height" "20px"
+                        , HA.style "width" "28px"
+                        , HA.style "height" "28px"
                         ]
                         []
     in

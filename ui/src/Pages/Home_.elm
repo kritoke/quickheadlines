@@ -457,22 +457,24 @@ feedCard now theme breakpoint loadingFeed insertedIds feed =
              List.length feed.items < feed.totalItemCount 
              && feed.url /= "software://releases"
 
-         loadMoreButton =
-             if shouldShowButton then
-                 Input.button
-                     [ centerX
-                     , paddingXY 4 12
-                     , Background.color (rgb255 241 245 249)
-                     , Border.rounded 6
-                     , Ty.small
-                     , Font.medium
-                     , htmlAttribute (Html.Attributes.class "qh-load-more")
-                     ]
-                     { onPress = btnOnPress
-                     , label = btnLabel
-                     }
-             else
-                 Element.none
+          loadMoreButton =
+              if shouldShowButton then
+                  Input.button
+                      [ centerX
+                      , paddingXY 4 12
+                      , Background.color cardBg
+                      , Border.rounded 6
+                      , Border.width 1
+                      , Border.color border
+                      , Ty.small
+                      , Font.medium
+                      , htmlAttribute (Html.Attributes.class "qh-load-more")
+                      ]
+                      { onPress = btnOnPress
+                      , label = btnLabel
+                      }
+              else
+                  Element.none
     in
     column
         [ width fill

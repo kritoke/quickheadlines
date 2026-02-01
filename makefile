@@ -94,7 +94,10 @@ download-crystal:
 		rm -f $(CRYSTAL_TARBALL); \
 	fi
 	@rm -f bin/crystal
+	@ls -la $(CRYSTAL_DIR)/bin/crystal 2>/dev/null || echo "ERROR: Crystal binary not found at $(CRYSTAL_DIR)/bin/crystal"
+	@find $(CRYSTAL_DIR) -name crystal -type f 2>/dev/null || echo "No crystal binary found anywhere in $(CRYSTAL_DIR)"
 	@ln -sf $(CRYSTAL_DIR)/bin/crystal bin/crystal
+	@test -x bin/crystal && echo "✓ Symlink created: $(shell readlink bin/crystal)" || echo "ERROR: Symlink creation failed"
 	@echo "✓ Crystal $(CRYSTAL_VERSION) installed in $(CRYSTAL_DIR)"
 
 # Check for required dependencies
