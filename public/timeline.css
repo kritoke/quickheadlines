@@ -102,3 +102,39 @@
   cursor: pointer;
 }
 .qh-debug-btn:active { transform: translateY(1px); }
+
+/* Tab link styles */
+.tab-link {
+  outline: none !important;
+  box-shadow: none !important;
+  position: relative;
+  border: 2px solid transparent !important;
+}
+.tab-link:focus {
+  outline: none !important;
+  box-shadow: none !important;
+  border-color: transparent !important;
+}
+.tab-link:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
+  border-color: transparent !important;
+}
+
+/* Hide default button focus ring in browsers */
+.tab-link::-moz-focus-inner {
+  border: 0 !important;
+  padding: 0 !important;
+}
+.tab-link::-moz-focus-outer {
+  border: 0 !important;
+  margin: 0 !important;
+}
+
+/* Also hide outline on the inner element */
+.tab-link > span {
+  outline: none !important;
+}
+.tab-link:focus > span {
+  outline: none !important;
+}

@@ -241,6 +241,7 @@ allTab shared activeTab =
         , Border.color borderColor
         , htmlAttribute (Html.Attributes.style "cursor" "pointer")
         , htmlAttribute (Html.Attributes.style "transition" "all 0.2s")
+        , htmlAttribute (Html.Attributes.style "outline" "none")
         , htmlAttribute (Html.Attributes.class "tab-link")
         ]
         { onPress = Just (SwitchTab "All")
@@ -445,14 +446,36 @@ feedCard now theme breakpoint loadingFeed insertedIds feed =
 
          loadMoreButton =
              if shouldShowButton then
-                 Input.button
-                     [ centerX
-                     , paddingXY 0 8
-                     , htmlAttribute (Html.Attributes.class "qh-load-more")
-                     ]
-                     { onPress = btnOnPress
-                     , label = btnLabel
-                     }
+                 let
+                     btnBg =
+                         case theme of
+                             Dark ->
+                                 Background.color (rgb255 75 75 75)
+
+                             Light ->
+                                 Background.color (rgb255 241 245 249)
+
+                     btnTextColor =
+                         case theme of
+                             Dark ->
+                                 Font.color (rgb255 255 255 255)
+
+                             Light ->
+                                 Font.color (rgb255 100 116 139)
+                  in
+                  Input.button
+                      [ centerX
+                      , paddingXY 12 4
+                      , btnBg
+                      , btnTextColor
+                      , Border.rounded 6
+                      , Ty.small
+                      , Font.medium
+                      , htmlAttribute (Html.Attributes.class "qh-load-more")
+                      ]
+                      { onPress = btnOnPress
+                      , label = btnLabel
+                      }
              else
                  Element.none
     in

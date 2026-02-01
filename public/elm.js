@@ -14470,6 +14470,7 @@ var $author$project$Pages$Home_$feedItem = F4(
 						A2($author$project$Pages$Home_$relativeTime, now, item.pubDate)))
 				]));
 	});
+var $mdgriffith$elm_ui$Element$Font$medium = A2($mdgriffith$elm_ui$Internal$Model$Class, $mdgriffith$elm_ui$Internal$Flag$fontWeight, $mdgriffith$elm_ui$Internal$Style$classes.textMedium);
 var $author$project$Theme$themeToColors = function (theme) {
 	if (theme.$ === 'Dark') {
 		return {
@@ -14543,16 +14544,45 @@ var $author$project$Pages$Home_$feedCard = F6(
 		var btnOnPress = isLoadingThisFeed ? $elm$core$Maybe$Nothing : $elm$core$Maybe$Just(
 			$author$project$Pages$Home_$LoadMoreFeed(feed.url));
 		var btnLabel = isLoadingThisFeed ? $mdgriffith$elm_ui$Element$text('Loading...') : $mdgriffith$elm_ui$Element$text('Load More');
-		var loadMoreButton = shouldShowButton ? A2(
-			$mdgriffith$elm_ui$Element$Input$button,
-			_List_fromArray(
-				[
-					$mdgriffith$elm_ui$Element$centerX,
-					A2($mdgriffith$elm_ui$Element$paddingXY, 0, 8),
-					$mdgriffith$elm_ui$Element$htmlAttribute(
-					$elm$html$Html$Attributes$class('qh-load-more'))
-				]),
-			{label: btnLabel, onPress: btnOnPress}) : $mdgriffith$elm_ui$Element$none;
+		var loadMoreButton = function () {
+			if (shouldShowButton) {
+				var btnTextColor = function () {
+					if (theme.$ === 'Dark') {
+						return $mdgriffith$elm_ui$Element$Font$color(
+							A3($mdgriffith$elm_ui$Element$rgb255, 255, 255, 255));
+					} else {
+						return $mdgriffith$elm_ui$Element$Font$color(
+							A3($mdgriffith$elm_ui$Element$rgb255, 100, 116, 139));
+					}
+				}();
+				var btnBg = function () {
+					if (theme.$ === 'Dark') {
+						return $mdgriffith$elm_ui$Element$Background$color(
+							A3($mdgriffith$elm_ui$Element$rgb255, 75, 75, 75));
+					} else {
+						return $mdgriffith$elm_ui$Element$Background$color(
+							A3($mdgriffith$elm_ui$Element$rgb255, 241, 245, 249));
+					}
+				}();
+				return A2(
+					$mdgriffith$elm_ui$Element$Input$button,
+					_List_fromArray(
+						[
+							$mdgriffith$elm_ui$Element$centerX,
+							A2($mdgriffith$elm_ui$Element$paddingXY, 12, 4),
+							btnBg,
+							btnTextColor,
+							$mdgriffith$elm_ui$Element$Border$rounded(6),
+							$author$project$ThemeTypography$small,
+							$mdgriffith$elm_ui$Element$Font$medium,
+							$mdgriffith$elm_ui$Element$htmlAttribute(
+							$elm$html$Html$Attributes$class('qh-load-more'))
+						]),
+					{label: btnLabel, onPress: btnOnPress});
+			} else {
+				return $mdgriffith$elm_ui$Element$none;
+			}
+		}();
 		var border = $author$project$Theme$borderColor(theme);
 		return A2(
 			$mdgriffith$elm_ui$Element$column,
@@ -14666,7 +14696,6 @@ var $author$project$Pages$Home_$content = F2(
 			$mdgriffith$elm_ui$Element$text('Error loading feeds')) : A2($author$project$Pages$Home_$feedGrid, shared, model));
 	});
 var $author$project$ThemeTypography$body = $mdgriffith$elm_ui$Element$Font$size(16);
-var $mdgriffith$elm_ui$Element$Font$medium = A2($mdgriffith$elm_ui$Internal$Model$Class, $mdgriffith$elm_ui$Internal$Flag$fontWeight, $mdgriffith$elm_ui$Internal$Style$classes.textMedium);
 var $mdgriffith$elm_ui$Element$rgba = $mdgriffith$elm_ui$Internal$Model$Rgba;
 var $author$project$Pages$Home_$allTab = F2(
 	function (shared, activeTab) {
@@ -14699,6 +14728,8 @@ var $author$project$Pages$Home_$allTab = F2(
 					A2($elm$html$Html$Attributes$style, 'cursor', 'pointer')),
 					$mdgriffith$elm_ui$Element$htmlAttribute(
 					A2($elm$html$Html$Attributes$style, 'transition', 'all 0.2s')),
+					$mdgriffith$elm_ui$Element$htmlAttribute(
+					A2($elm$html$Html$Attributes$style, 'outline', 'none')),
 					$mdgriffith$elm_ui$Element$htmlAttribute(
 					$elm$html$Html$Attributes$class('tab-link'))
 				]),
