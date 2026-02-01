@@ -65,4 +65,66 @@ If you don't use the prefix, you will get a `command not found: crystal` error, 
 - NEVER say "ready to push when you are" - YOU must push.
 - If push fails, resolve and retry until it succeeds.
 
+## Building & Running QuickHeadlines
+
+### The Golden Rule
+**ALWAYS use `nix develop . --command` prefix for any Crystal, Elm, or Shards command.**
+
+This sets up the correct `LD_LIBRARY_PATH` for Crystal's dependencies (boehmgc, libevent, pcre2, etc.). Without it, you'll get cryptic errors like `undefined constant Code` in athena-routing.
+
+### Quick Reference
+
+```bash
+# Start development server (runs on port 8080)
+nix develop . --command make run
+
+# Run Crystal tests
+nix develop . --command crystal spec
+
+# Rebuild Elm frontend (after UI changes)
+nix develop . --command cd ui && elm make src/Main.elm --output=../public/elm.js
+
+# Install/update dependencies
+nix develop . --command shards install
+
+# Format Elm code
+nix develop . --command cd ui && elm-format src/
+
+# Run Playwright tests
+nix develop . --command npx playwright test
+```
+
+### Common Issues & Solutions
+
+| Symptom | Cause | Solution |
+|---------|-------|----------|
+| `undefined constant Code` in athena-routing | Crystal running outside nix develop | Always prefix with `nix develop . --command` |
+| `crystal: command not found` | Crystal not in PATH | Use full path `/home/kritoke/.local/bin/crystal` or nix develop |
+| `libgc.so.1 not found` | Missing library path | Run through nix develop (sets LD_LIBRARY_PATH) |
+| Make command not found | make not in PATH | nix develop provides gnumake |
+
+### Environment Variables
+
+The nix develop shell sets these automatically:
+- `APP_ENV=development`
+- `LD_LIBRARY_PATH` - Includes Crystal dependencies
+- `PATH` - Includes crystal, shards, elm, make, openspec
+
+### Understanding the Build Process
+
+1. **Crystal Backend** (`src/quickheadlines.cr`)
+   - Compiled on-the-fly with `crystal run`
+   - Shards installed in `lib/`
+   - Server listens on http://0.0.0.0:8080
+
+2. **Elm Frontend** (`ui/src/Main.elm`)
+   - Compiled to `public/elm.js`
+   - Served at `/elm.js` route
+   - Inlined CSS in `views/index.html` for development
+
+3. **Routes**
+   - `/` - Main HTML with inlined CSS
+   - `/elm.js` - Compiled Elm bundle
+   - `/api/*` - REST endpoints
+
 
