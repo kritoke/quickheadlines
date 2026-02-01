@@ -41,6 +41,29 @@
   background: #cbd5e1;
 }
 
+/* Dark theme adjustments for load more button - matches v0.4.0 */
+@media (prefers-color-scheme: dark), [data-theme="dark"] {
+  .qh-load-more {
+    background: #1e293b;
+    color: #94a3b8;
+    border: none;
+  }
+  .qh-load-more:hover {
+    background: #334155;
+    color: #cbd5e1;
+  }
+  .qh-load-more:active {
+    background: #475569;
+  }
+}
+.qh-load-more:hover {
+  background: #e2e8f0;
+  color: #475569;
+}
+.qh-load-more:active {
+  background: #cbd5e1;
+}
+
 /* Dark theme adjustments for load more button - works with both prefers-color-scheme and data-theme attribute */
 @media (prefers-color-scheme: dark), [data-theme="dark"] {
   .qh-load-more {
