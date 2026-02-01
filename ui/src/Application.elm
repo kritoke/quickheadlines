@@ -286,11 +286,33 @@ headerView model =
             , Border.widthEach { bottom = 2, left = 0, right = 0, top = 0 }
             , Border.color lumeOrange
             ]
+
+        -- Hide text on mobile, show only icons
+        brandLabel =
+            case breakpoint of
+                VeryNarrowBreakpoint ->
+                    Element.none
+
+                MobileBreakpoint ->
+                    Element.none
+
+                _ ->
+                    Element.el
+                        [ Ty.subtitle
+                        , Font.bold
+                        , Font.color txtColor
+                        , Font.letterSpacing 0.5
+                        , centerY
+                        ]
+                        (text "Quick Headlines")
     in
     Element.row
         [ width fill
         , Background.color bg
         , spacing 12
+        , htmlAttribute (HA.style "flex-wrap" "nowrap")
+        , htmlAttribute (HA.style "overflow-x" "hidden")
+        , htmlAttribute (HA.style "justify-content" "space-between")
         ]
         [ -- Brand Section
           Element.link [ centerY ]
@@ -303,14 +325,7 @@ headerView model =
                         , Border.rounded 4
                         ]
                         { src = "/logo.svg", description = "Logo" }
-                    , Element.el
-                        [ Ty.subtitle
-                        , Font.bold
-                        , Font.color txtColor
-                        , Font.letterSpacing 0.5
-                        , centerY
-                        ]
-                        (text "Quick Headlines")
+                    , brandLabel
                     ]
              }
         , -- Navigation Section

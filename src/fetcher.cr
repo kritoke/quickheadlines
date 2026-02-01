@@ -464,9 +464,9 @@ private def handle_feed_response(feed : Feed, response : HTTP::Client::Response,
   {error_result, redirects, true, current_url}
 end
 
-def fetch_feed(feed : Feed, global_item_limit : Int32, previous_data : FeedData? = nil) : FeedData
-  # Use feed-specific item limit or global default
-  effective_item_limit = feed.item_limit || global_item_limit
+  def fetch_feed(feed : Feed, global_item_limit : Int32, previous_data : FeedData? = nil) : FeedData
+    # Use feed-specific item limit or global default
+    effective_item_limit = feed.item_limit || global_item_limit
 
   # Check cache first
   if cached_data = get_cached_feed(feed, effective_item_limit, previous_data)
@@ -644,9 +644,10 @@ def refresh_all(config : Config)
   STATE.update(Time.local)
 
   # 7. Process story clustering for all fetched feeds
-  fetched_map.values.each do |feed_data|
-    process_feed_item_clustering(feed_data)
-  end
+  # Clustering is expensive - disabled for now to improve performance
+  # fetched_map.values.each do |feed_data|
+  #   process_feed_item_clustering(feed_data)
+  # end
 
   # Clear memory after large amount of data processing
   GC.collect
@@ -745,7 +746,7 @@ def start_refresh_loop(config_path : String)
   puts "[#{Time.local}] Initial refresh complete"
 
   # Save initial cache
-  save_feed_cache(FeedCache.instance, active_config.cache_retention_hours)
+  save_feed_cache(FeedCache.instance, initial_config.cache_retention_hours, initial_config.max_cache_size_mb)
 
   spawn do
     loop do
@@ -769,8 +770,8 @@ def start_refresh_loop(config_path : String)
           puts "[#{Time.local}] Refreshed feeds and ran GC"
         end
 
-        # Save cache after each refresh
-        save_feed_cache(FeedCache.instance, active_config.cache_retention_hours)
+  # Save cache after each refresh
+  save_feed_cache(FeedCache.instance, active_config.cache_retention_hours, active_config.max_cache_size_mb)
 
         # Check if refresh took too long (potential hang)
         refresh_duration = (Time.instant - refresh_start_time).total_seconds

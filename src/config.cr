@@ -111,6 +111,9 @@ struct Config
   # Cache retention period in hours (default: 168 = 1 week)
   property cache_retention_hours : Int32 = 168
 
+  # Maximum cache size in MB (default: 100). When exceeded, cleanup tasks run.
+  property max_cache_size_mb : Int32 = 100
+
   # HTTP client configuration (optional)
   property http_client : HttpClientConfig? = nil
 

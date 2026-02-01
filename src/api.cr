@@ -241,14 +241,18 @@ end
 
 module Api
   # Convert FeedData to FeedResponse
-  def self.feed_to_response(feed : FeedData, tab_name : String = "") : FeedResponse
+  def self.feed_to_response(feed : FeedData, tab_name : String = "", total_count : Int32? = nil, display_item_limit : Int32? = nil) : FeedResponse
     # Load header colors from database to ensure we get the latest
     cache = FeedCache.instance
     colors = cache.get_header_colors(feed.url)
     header_color = colors[:bg_color] || feed.header_color
     header_text_color = colors[:text_color] || feed.header_text_color
 
-    items_response = feed.items.map do |item|
+    # Limit items for initial display (controls how many items are shown in feed cards)
+    limit = display_item_limit || 20
+    displayed_items = feed.items.first(limit)
+
+    items_response = displayed_items.map do |item|
       ItemResponse.new(
         title: item.title,
         link: item.link,
@@ -268,7 +272,7 @@ module Api
       header_color: header_color,
       header_text_color: header_text_color,
       items: items_response,
-      total_item_count: feed.items.size.to_i32
+      total_item_count: total_count || feed.items.size.to_i32
     )
   end
 

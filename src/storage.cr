@@ -50,6 +50,19 @@ def get_cache_db_path(config : Config?) : String
   File.join(get_cache_dir(config), "feed_cache.db")
 end
 
+# Normalize feed URL for consistent matching
+def normalize_feed_url(url : String) : String
+  # Strip trailing slash
+  normalized = url.rchop('/')
+  # Remove common feed path suffixes
+  normalized = normalized.rchop("/feed")
+  normalized = normalized.rchop("/rss")
+  normalized = normalized.rchop("/atom")
+  # Ensure consistent trailing slash if not present
+  normalized = normalized.ends_with?('/') ? normalized : "#{normalized}/"
+  normalized
+end
+
 # Get database file size in bytes
 def get_db_size(db_path : String) : Int64
   if File.exists?(db_path)
@@ -217,19 +230,7 @@ def create_schema(db : DB::Database, db_path : String)
       FOREIGN KEY (item_id) REFERENCES items(id) ON DELETE CASCADE,
       UNIQUE(item_id, band_index)
     )
-    SQL
-
-  # Indexes for performance
-  db.exec("CREATE INDEX IF NOT EXISTS idx_items_feed_id ON items(feed_id)")
-  db.exec("CREATE INDEX IF NOT EXISTS idx_items_pub_date ON items(pub_date DESC)")
-  db.exec("CREATE INDEX IF NOT EXISTS idx_feeds_last_fetched ON feeds(last_fetched DESC)")
-  db.exec("CREATE INDEX IF NOT EXISTS idx_feeds_url ON feeds(url)")
-  db.exec("CREATE INDEX IF NOT EXISTS idx_items_cluster ON items(cluster_id)")
-  db.exec("CREATE INDEX IF NOT EXISTS idx_lsh_band_search ON lsh_bands(band_index, band_hash)")
-
-  # Ensure unique constraint exists (migration logic for legacy DBs)
-  # If table was created before UNIQUE constraint, constraint might be missing.
-  # Creating a unique index enforces this.
+  SQL
 
   # Clean up any duplicate items before creating the unique index
   # Keep the newest entry (highest id) for each (feed_id, link) pair
@@ -437,6 +438,8 @@ class FeedCache
     log_db_size(@db_path, "on startup")
   end
 
+  getter :db_path
+
   # Add a feed and its items to the cache
   def add(feed_data : FeedData)
     @mutex.synchronize do
@@ -472,33 +475,9 @@ class FeedCache
             feed_id
           )
 
-          # Delete old items that are no longer in the feed to prevent duplicates
-          # Get current item links from the feed
-          current_links = feed_data.items.map(&.link)
-          if current_links.empty?
-            # If the feed has no items, delete all items for this feed
-            @db.exec("DELETE FROM items WHERE feed_id = ?", feed_id)
-          else
-            # Delete items that are not in the current feed
-            # We need to delete items that aren't in our current_links list
-            # Since we can't easily mix types in parameter binding, we'll delete in batches
-            # First, get all existing links for this feed
-            existing_links = [] of String
-            @db.query("SELECT link FROM items WHERE feed_id = ?", feed_id) do |rows|
-              rows.each do
-                existing_links << rows.read(String)
-              end
-            end
-
-            # Find links to delete (exist in DB but not in current feed)
-            links_to_delete = existing_links - current_links
-            unless links_to_delete.empty?
-              # Delete items one at a time to avoid type mixing issues
-              links_to_delete.each do |link|
-                @db.exec("DELETE FROM items WHERE feed_id = ? AND link = ?", feed_id, link)
-              end
-            end
-          end
+          # NOTE: We do NOT delete old items here anymore.
+          # The system is designed to accumulate items over time (7 days retention).
+          # Old items are cleaned up by cleanup_old_articles() based on pub_date.
         else
           # Insert new feed
           @db.exec(
@@ -703,14 +682,25 @@ class FeedCache
   # Only updates if not already set manually
   def update_header_colors(feed_url : String, bg_color : String, text_color : String)
     @mutex.synchronize do
+      # Normalize the URL for matching
+      normalized_url = normalize_feed_url(feed_url)
+
       # First check if header_color is already set
-      existing = @db.query_one?("SELECT header_color, header_text_color FROM feeds WHERE url = ?", feed_url) do |row|
+      existing = @db.query_one?("SELECT header_color, header_text_color FROM feeds WHERE url = ?", normalized_url) do |row|
         {header_color: row.read(String?), header_text_color: row.read(String?)}
       end
 
       if existing.nil?
-        # Row doesn't exist - this shouldn't happen but handle it gracefully
-        STDERR.puts "[#{Time.local}] Warning: Feed #{feed_url} not found in database for color update"
+        # Try to find with original URL
+        existing = @db.query_one?("SELECT header_color, header_text_color FROM feeds WHERE url = ?", feed_url) do |row|
+          {header_color: row.read(String?), header_text_color: row.read(String?)}
+        end
+      end
+
+      if existing.nil?
+        # Row doesn't exist - log warning with debugging info
+        all_urls = @db.query_all("SELECT url FROM feeds LIMIT 10", as: String)
+        STDERR.puts "[#{Time.local}] Warning: Feed '#{feed_url}' not found in database. Sample DB URLs: #{all_urls.join(", ")}"
         return
       end
 
@@ -750,6 +740,14 @@ class FeedCache
         {bg_color: row.read(String?), text_color: row.read(String?)}
       end
       result || {bg_color: nil, text_color: nil}
+    end
+  end
+
+  # Get the total count of items for a specific feed URL from the database
+  def item_count(url : String) : Int32
+    @mutex.synchronize do
+      result = @db.query_one?("SELECT COUNT(*) FROM items JOIN feeds ON items.feed_id = feeds.id WHERE feeds.url = ?", url, as: {Int64})
+      result ? result.to_i : 0
     end
   end
 
@@ -829,17 +827,43 @@ class FeedCache
     end
   end
 
-  # Full cleanup: removes old articles and optimizes database
-  def full_cleanup(retention_days : Int32 = CACHE_RETENTION_DAYS)
-    cleanup_old_articles(retention_days)
+  # Check database file size and run aggressive cleanup if limit exceeded
+  def check_size_limit(max_size_mb : Int32 = 100)
+    @mutex.synchronize do
+      return unless @db_path && File.exists?(@db_path)
 
-    # Vacuum to reclaim space after cleanup
-    @db.exec("VACUUM")
-    STDERR.puts "[#{Time.local}] Database vacuumed after cleanup"
+      current_size_mb = File.size(@db_path).to_f64 / (1024 * 1024)
+
+      if current_size_mb > max_size_mb
+        STDERR.puts "[#{Time.local}] Database size (#{current_size_mb.round(2)}MB) exceeds limit (#{max_size_mb}MB), running aggressive cleanup..."
+
+        # Run aggressive cleanup: delete older items first
+        cutoff = (Time.utc - 3.days).to_s("%Y-%m-%d %H:%M:%S")
+        result = @db.exec("DELETE FROM items WHERE pub_date < ? AND cluster_id IS NULL", cutoff)
+        deleted_count = result.rows_affected
+        STDERR.puts "[#{Time.local}] Aggressive cleanup deleted #{deleted_count} old articles"
+
+        # If still over limit, delete even more aggressively
+        if File.size(@db_path).to_f64 / (1024 * 1024) > max_size_mb
+          cutoff = (Time.utc - 1.day).to_s("%Y-%m-%d %H:%M:%S")
+          result = @db.exec("DELETE FROM items WHERE pub_date < ? AND cluster_id IS NULL", cutoff)
+          deleted_count = result.rows_affected
+          STDERR.puts "[#{Time.local}] Very aggressive cleanup deleted #{deleted_count} recent-old articles"
+        end
+
+        # Vacuum to reclaim space
+        begin
+          vacuum
+          STDERR.puts "[#{Time.local}] Vacuumed database after size cleanup"
+        rescue ex
+          STDERR.puts "[#{Time.local}] Vacuum failed: #{ex.message}"
+        end
+      end
+    end
   end
 
-  # Clean up oldest entries until database is under size limit
-  def cleanup_by_size(max_size : Int64)
+  # Sync favicon paths to ensure database points to local files
+  def sync_favicon_paths
     @mutex.synchronize do
       current_size = get_db_size(@db_path)
 
@@ -954,6 +978,21 @@ class FeedCache
         end
       end
     end
+  end
+
+  # Ensure all performance indexes exist
+  def ensure_indexes
+    @mutex.synchronize do
+      # Indexes for performance
+      @db.exec("CREATE INDEX IF NOT EXISTS idx_items_feed_id ON items(feed_id)")
+      @db.exec("CREATE INDEX IF NOT EXISTS idx_items_pub_date ON items(pub_date DESC)")
+      @db.exec("CREATE INDEX IF NOT EXISTS idx_feeds_last_fetched ON feeds(last_fetched DESC)")
+      @db.exec("CREATE INDEX IF NOT EXISTS idx_feeds_url ON feeds(url)")
+      @db.exec("CREATE INDEX IF NOT EXISTS idx_items_cluster ON items(cluster_id)")
+      @db.exec("CREATE INDEX IF NOT EXISTS idx_lsh_band_search ON lsh_bands(band_index, band_hash)")
+    end
+  rescue ex
+    # Ignore errors - indexes might already exist
   end
 
   # Normalize pub_date values stored in the database.
@@ -1396,6 +1435,9 @@ def load_feed_cache(config : Config?) : FeedCache
 
   cache = FeedCache.new(config)
 
+  # Ensure indexes exist (for existing databases that were created before indexes were added)
+  cache.ensure_indexes
+
   # Sync favicon paths to ensure database points to local files
   cache.sync_favicon_paths
 
@@ -1411,12 +1453,10 @@ def load_feed_cache(config : Config?) : FeedCache
   cache.cleanup_old_entries(retention_hours)
 
   # Check if database exceeds hard limit and clean up by size if needed
-  db_size = get_db_size(db_path)
-  if db_size > DB_SIZE_HARD_LIMIT
-    cache.cleanup_by_size(DB_SIZE_HARD_LIMIT)
-  end
+  cache.check_size_limit(DB_SIZE_HARD_LIMIT)
 
   # Vacuum if database is getting large (over 10MB)
+  db_size = get_db_size(cache.db_path)
   if db_size > 10 * 1024 * 1024
     cache.vacuum
   end
@@ -1425,7 +1465,10 @@ def load_feed_cache(config : Config?) : FeedCache
 end
 
 # Save cache (SQLite auto-commits, but we vacuum occasionally)
-def save_feed_cache(cache : FeedCache, retention_hours : Int32 = CACHE_RETENTION_HOURS)
+def save_feed_cache(cache : FeedCache, retention_hours : Int32 = CACHE_RETENTION_HOURS, max_cache_size_mb : Int32 = 100)
+  # Check database file size and run cleanup if exceeded
+  cache.check_size_limit(max_cache_size_mb)
+
   # SQLite saves immediately, but we can vacuum occasionally to optimize
   # This is called after each refresh to periodically optimize
   if rand(100) < 5 # 5% chance to vacuum
@@ -1439,6 +1482,11 @@ def save_feed_cache(cache : FeedCache, retention_hours : Int32 = CACHE_RETENTION
   # Periodically clean up old entries based on retention
   if rand(100) < 10 # 10% chance to run cleanup
     cache.cleanup_old_entries(retention_hours)
+  end
+
+  # Periodically clean up old articles (7-day retention based on pub_date)
+  if rand(100) < 10 # 10% chance to run cleanup
+    cache.cleanup_old_articles(CACHE_RETENTION_DAYS)
   end
 
   # Sync favicon paths to ensure database points to local files

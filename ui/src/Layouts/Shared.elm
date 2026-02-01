@@ -30,21 +30,21 @@ layout { theme, windowWidth, header, footer, main } =
         containerWidth =
             case breakpoint of
                 VeryNarrowBreakpoint ->
-                    800
+                    "100%"
 
                 MobileBreakpoint ->
-                    1000
+                    "100%"
 
                 TabletBreakpoint ->
-                    1300
+                    "1300px"
 
                 DesktopBreakpoint ->
-                    1600
+                    "1600px"
 
         sidePadding =
             case breakpoint of
                 VeryNarrowBreakpoint ->
-                    16
+                    12
 
                 MobileBreakpoint ->
                     16
@@ -70,7 +70,7 @@ layout { theme, windowWidth, header, footer, main } =
         ]
         [ Element.column
             [ width fill
-            , Element.htmlAttribute (Html.Attributes.style "max-width" (String.fromInt containerWidth ++ "px"))
+            , Element.htmlAttribute (Html.Attributes.style "max-width" containerWidth)
             , Element.htmlAttribute (Html.Attributes.style "margin" "0 auto")
             , Element.htmlAttribute (Html.Attributes.style "padding-left" (String.fromInt sidePadding ++ "px"))
             , Element.htmlAttribute (Html.Attributes.style "padding-right" (String.fromInt sidePadding ++ "px"))

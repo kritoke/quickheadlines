@@ -13273,6 +13273,26 @@ var $author$project$Application$headerView = function (model) {
 	var theme = model.shared.theme;
 	var txtColor = $author$project$Theme$textColor(theme);
 	var breakpoint = $author$project$Responsive$breakpointFromWidth(model.shared.windowWidth);
+	var brandLabel = function () {
+		switch (breakpoint.$) {
+			case 'VeryNarrowBreakpoint':
+				return $mdgriffith$elm_ui$Element$none;
+			case 'MobileBreakpoint':
+				return $mdgriffith$elm_ui$Element$none;
+			default:
+				return A2(
+					$mdgriffith$elm_ui$Element$el,
+					_List_fromArray(
+						[
+							$author$project$ThemeTypography$subtitle,
+							$mdgriffith$elm_ui$Element$Font$bold,
+							$mdgriffith$elm_ui$Element$Font$color(txtColor),
+							$mdgriffith$elm_ui$Element$Font$letterSpacing(0.5),
+							$mdgriffith$elm_ui$Element$centerY
+						]),
+					$mdgriffith$elm_ui$Element$text('Quick Headlines'));
+		}
+	}();
 	var border = $author$project$Theme$borderColor(theme);
 	var bg = $author$project$Theme$surfaceColor(theme);
 	var activeIconStyle = _List_fromArray(
@@ -13288,7 +13308,13 @@ var $author$project$Application$headerView = function (model) {
 			[
 				$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill),
 				$mdgriffith$elm_ui$Element$Background$color(bg),
-				$mdgriffith$elm_ui$Element$spacing(12)
+				$mdgriffith$elm_ui$Element$spacing(12),
+				$mdgriffith$elm_ui$Element$htmlAttribute(
+				A2($elm$html$Html$Attributes$style, 'flex-wrap', 'nowrap')),
+				$mdgriffith$elm_ui$Element$htmlAttribute(
+				A2($elm$html$Html$Attributes$style, 'overflow-x', 'hidden')),
+				$mdgriffith$elm_ui$Element$htmlAttribute(
+				A2($elm$html$Html$Attributes$style, 'justify-content', 'space-between'))
 			]),
 		_List_fromArray(
 			[
@@ -13317,17 +13343,7 @@ var $author$project$Application$headerView = function (model) {
 										$mdgriffith$elm_ui$Element$Border$rounded(4)
 									]),
 								{description: 'Logo', src: '/logo.svg'}),
-								A2(
-								$mdgriffith$elm_ui$Element$el,
-								_List_fromArray(
-									[
-										$author$project$ThemeTypography$subtitle,
-										$mdgriffith$elm_ui$Element$Font$bold,
-										$mdgriffith$elm_ui$Element$Font$color(txtColor),
-										$mdgriffith$elm_ui$Element$Font$letterSpacing(0.5),
-										$mdgriffith$elm_ui$Element$centerY
-									]),
-								$mdgriffith$elm_ui$Element$text('Quick Headlines'))
+								brandLabel
 							])),
 					url: '/'
 				}),
@@ -13634,19 +13650,19 @@ var $author$project$Layouts$Shared$layout = function (_v0) {
 	var containerWidth = function () {
 		switch (breakpoint.$) {
 			case 'VeryNarrowBreakpoint':
-				return 800;
+				return '100%';
 			case 'MobileBreakpoint':
-				return 1000;
+				return '100%';
 			case 'TabletBreakpoint':
-				return 1300;
+				return '1300px';
 			default:
-				return 1600;
+				return '1600px';
 		}
 	}();
 	var sidePadding = function () {
 		switch (breakpoint.$) {
 			case 'VeryNarrowBreakpoint':
-				return 16;
+				return 12;
 			case 'MobileBreakpoint':
 				return 16;
 			case 'TabletBreakpoint':
@@ -13679,10 +13695,7 @@ var $author$project$Layouts$Shared$layout = function (_v0) {
 					[
 						$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill),
 						$mdgriffith$elm_ui$Element$htmlAttribute(
-						A2(
-							$elm$html$Html$Attributes$style,
-							'max-width',
-							$elm$core$String$fromInt(containerWidth) + 'px')),
+						A2($elm$html$Html$Attributes$style, 'max-width', containerWidth)),
 						$mdgriffith$elm_ui$Element$htmlAttribute(
 						A2($elm$html$Html$Attributes$style, 'margin', '0 auto')),
 						$mdgriffith$elm_ui$Element$htmlAttribute(

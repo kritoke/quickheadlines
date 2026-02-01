@@ -1,6 +1,7 @@
 refresh_minutes: 30
 item_limit: 20
 server_port: 8080
+max_cache_size_mb: 100
 page_title: "Quick Headlines"
 cache_retention_hours: 168
 

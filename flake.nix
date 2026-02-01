@@ -34,6 +34,7 @@
             git curl gnumake gcc
             openspec.packages.${system}.default
             pkgs.playwright-driver.browsers
+            ameba
           ];
 
           shellHook = ''

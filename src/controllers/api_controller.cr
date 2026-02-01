@@ -139,6 +139,8 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
       TabResponse.new(name: tab.name)
     end
 
+    cache = FeedCache.instance
+
     # Get feeds for active tab (flattened to top level as Elm expects)
     # For "all" tab, aggregate feeds from all tabs + top-level feeds
     feeds_response = if active_tab.to_s.downcase == "all"
@@ -157,11 +159,12 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
                          end
                        end
 
-                       all_feeds_with_tabs.map { |entry| Api.feed_to_response(entry[:feed], entry[:tab_name]) }
-                     else
-                       active_feeds = STATE.feeds_for_tab(active_tab)
-                       active_feeds.map { |feed| Api.feed_to_response(feed, active_tab) }
-                     end
+                        all_feeds_with_tabs.map { |entry| Api.feed_to_response(entry[:feed], entry[:tab_name], cache.item_count(entry[:feed].url), STATE.config.try(&.item_limit) || 20) }
+                      else
+                        active_feeds = STATE.feeds_for_tab(active_tab)
+                        active_feeds.map { |feed| Api.feed_to_response(feed, active_tab, cache.item_count(feed.url), STATE.config.try(&.item_limit) || 20) }
+                      end
+
 
     FeedsPageResponse.new(
       tabs: tabs_response,
@@ -235,7 +238,7 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
           favicon_data: data.favicon_data,
           header_color: data.header_color,
           items: items_response,
-          total_item_count: trimmed_items.size.to_i32
+          total_item_count: cache.item_count(url)
         )
       else
         raise Athena::Framework::Exception::ServiceUnavailable.new("Failed to retrieve feed data")
