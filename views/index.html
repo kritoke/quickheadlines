@@ -558,8 +558,20 @@
          });
        });
        
-       faviconObserver.observe(appElement, { childList: true, subtree: true });
-     })();
-  </script>
+        faviconObserver.observe(appElement, { childList: true, subtree: true });
+
+        // Tab click handler for Elm tabs
+        document.addEventListener('click', function(e) {
+          const tabLink = e.target.closest('.tab-link');
+          if (tabLink) {
+            e.preventDefault();
+            const tabName = tabLink.textContent.trim();
+            if (app.ports && app.ports.switchTab) {
+              app.ports.switchTab(tabName);
+            }
+          }
+        });
+      })();
+   </script>
 </body>
 </html>

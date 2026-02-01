@@ -29,6 +29,8 @@ port saveCurrentPage : String -> Cmd msg
 
 port onNearBottom : (Bool -> msg) -> Sub msg
 
+port switchTab : (String -> msg) -> Sub msg
+
 
 type alias Flags =
     { width : Int
@@ -234,6 +236,8 @@ subscriptions model =
           Time.every 1000 GotTime
         , -- Listen for window resize events
           Browser.Events.onResize (\w h -> SharedMsg (Shared.WindowResized w h))
+        , -- Listen for tab switch from JavaScript
+          switchTab SwitchTab
         , case model.page of
             Timeline ->
                 Sub.batch
@@ -279,16 +283,16 @@ headerView model =
         headerPadding =
             case breakpoint of
                 VeryNarrowBreakpoint ->
-                    { left = 8, right = 8, top = 4, bottom = 4 }
+                    { left = 16, right = 16, top = 12, bottom = 12 }
 
                 MobileBreakpoint ->
-                    { left = 12, right = 12, top = 4, bottom = 4 }
+                    { left = 16, right = 16, top = 12, bottom = 12 }
 
                 TabletBreakpoint ->
-                    { left = 24, right = 24, top = 8, bottom = 8 }
+                    { left = 32, right = 32, top = 12, bottom = 12 }
 
                 DesktopBreakpoint ->
-                    { left = 16, right = 16, top = 8, bottom = 8 }
+                    { left = 48, right = 48, top = 12, bottom = 12 }
 
         -- Active icon style - brighter version for active state
         activeIconStyle =

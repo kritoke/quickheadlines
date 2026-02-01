@@ -13305,13 +13305,13 @@ var $author$project$Application$headerView = function (model) {
 	var headerPadding = function () {
 		switch (breakpoint.$) {
 			case 'VeryNarrowBreakpoint':
-				return {bottom: 4, left: 8, right: 8, top: 4};
+				return {bottom: 12, left: 16, right: 16, top: 12};
 			case 'MobileBreakpoint':
-				return {bottom: 4, left: 12, right: 12, top: 4};
+				return {bottom: 12, left: 16, right: 16, top: 12};
 			case 'TabletBreakpoint':
-				return {bottom: 8, left: 24, right: 24, top: 8};
+				return {bottom: 12, left: 32, right: 32, top: 12};
 			default:
-				return {bottom: 8, left: 16, right: 16, top: 8};
+				return {bottom: 12, left: 48, right: 48, top: 12};
 		}
 	}();
 	var border = $author$project$Theme$borderColor(theme);
@@ -14699,12 +14699,9 @@ var $author$project$Pages$Home_$content = F2(
 var $author$project$ThemeTypography$body = $mdgriffith$elm_ui$Element$Font$size(16);
 var $mdgriffith$elm_ui$Element$Font$medium = A2($mdgriffith$elm_ui$Internal$Model$Class, $mdgriffith$elm_ui$Internal$Flag$fontWeight, $mdgriffith$elm_ui$Internal$Style$classes.textMedium);
 var $mdgriffith$elm_ui$Element$rgba = $mdgriffith$elm_ui$Internal$Model$Rgba;
-var $author$project$Pages$Home_$allTab = function (shared) {
-	var theme = shared.theme;
-	var isActive = (!_Utils_eq(shared.theme, $author$project$Shared$Dark)) && (!_Utils_eq(shared.theme, $author$project$Shared$Light));
-	var txtColor = isActive ? A3($mdgriffith$elm_ui$Element$rgb255, 59, 130, 246) : A3($mdgriffith$elm_ui$Element$rgb255, 148, 163, 184);
-	var colors = $author$project$Theme$themeToColors(theme);
-	var borderColor = isActive ? A3($mdgriffith$elm_ui$Element$rgb255, 59, 130, 246) : A4($mdgriffith$elm_ui$Element$rgba, 0, 0, 0, 0);
+var $author$project$Pages$Home_$allTab = function (isActive) {
+	var txtColor = isActive ? $author$project$Theme$lumeOrange : A3($mdgriffith$elm_ui$Element$rgb255, 100, 116, 139);
+	var borderColor = isActive ? $author$project$Theme$lumeOrange : A4($mdgriffith$elm_ui$Element$rgba, 0, 0, 0, 0);
 	return A2(
 		$mdgriffith$elm_ui$Element$el,
 		_List_fromArray(
@@ -14715,28 +14712,25 @@ var $author$project$Pages$Home_$allTab = function (shared) {
 				$mdgriffith$elm_ui$Element$Font$color(txtColor),
 				$mdgriffith$elm_ui$Element$Border$widthEach(
 				{bottom: 2, left: 0, right: 0, top: 0}),
-				$mdgriffith$elm_ui$Element$Border$color(borderColor)
+				$mdgriffith$elm_ui$Element$Border$color(borderColor),
+				$mdgriffith$elm_ui$Element$htmlAttribute(
+				A2($elm$html$Html$Attributes$style, 'cursor', 'pointer')),
+				$mdgriffith$elm_ui$Element$htmlAttribute(
+				A2($elm$html$Html$Attributes$style, 'transition', 'all 0.2s')),
+				$mdgriffith$elm_ui$Element$htmlAttribute(
+				$elm$html$Html$Attributes$class('tab-link')),
+				$mdgriffith$elm_ui$Element$htmlAttribute(
+				$elm$html$Html$Attributes$class('active'))
 			]),
 		$mdgriffith$elm_ui$Element$text('All'));
 };
-var $author$project$Pages$Home_$tabButton = F3(
-	function (shared, activeTab, tab) {
-		var theme = shared.theme;
+var $author$project$Pages$Home_$tabButton = F2(
+	function (activeTab, tab) {
 		var isActive = _Utils_eq(tab, activeTab);
-		var txtColor = function () {
-			if (isActive) {
-				return A3($mdgriffith$elm_ui$Element$rgb255, 59, 130, 246);
-			} else {
-				if (theme.$ === 'Dark') {
-					return A3($mdgriffith$elm_ui$Element$rgb255, 148, 163, 184);
-				} else {
-					return A3($mdgriffith$elm_ui$Element$rgb255, 100, 116, 139);
-				}
-			}
-		}();
-		var borderColor = isActive ? A3($mdgriffith$elm_ui$Element$rgb255, 59, 130, 246) : A4($mdgriffith$elm_ui$Element$rgba, 0, 0, 0, 0);
+		var txtColor = isActive ? $author$project$Theme$lumeOrange : A3($mdgriffith$elm_ui$Element$rgb255, 100, 116, 139);
+		var borderColor = isActive ? $author$project$Theme$lumeOrange : A4($mdgriffith$elm_ui$Element$rgba, 0, 0, 0, 0);
 		return A2(
-			$mdgriffith$elm_ui$Element$Input$button,
+			$mdgriffith$elm_ui$Element$el,
 			_List_fromArray(
 				[
 					A2($mdgriffith$elm_ui$Element$paddingXY, 16, 8),
@@ -14749,13 +14743,11 @@ var $author$project$Pages$Home_$tabButton = F3(
 					$mdgriffith$elm_ui$Element$htmlAttribute(
 					A2($elm$html$Html$Attributes$style, 'cursor', 'pointer')),
 					$mdgriffith$elm_ui$Element$htmlAttribute(
-					A2($elm$html$Html$Attributes$style, 'transition', 'all 0.2s'))
+					A2($elm$html$Html$Attributes$style, 'transition', 'all 0.2s')),
+					$mdgriffith$elm_ui$Element$htmlAttribute(
+					$elm$html$Html$Attributes$class('tab-link'))
 				]),
-			{
-				label: $mdgriffith$elm_ui$Element$text(tab),
-				onPress: $elm$core$Maybe$Just(
-					$author$project$Pages$Home_$SwitchTab(tab))
-			});
+			$mdgriffith$elm_ui$Element$text(tab));
 	});
 var $mdgriffith$elm_ui$Internal$Model$Padding = F5(
 	function (a, b, c, d, e) {
@@ -14931,6 +14923,7 @@ var $author$project$Pages$Home_$tabBar = F2(
 			return $mdgriffith$elm_ui$Element$none;
 		} else {
 			var theme = shared.theme;
+			var isAllActive = model.activeTab === 'All';
 			var colors = $author$project$Theme$themeToColors(theme);
 			var border = function () {
 				if (theme.$ === 'Dark') {
@@ -14946,17 +14939,17 @@ var $author$project$Pages$Home_$tabBar = F2(
 						$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill),
 						$mdgriffith$elm_ui$Element$spacing(16),
 						$mdgriffith$elm_ui$Element$paddingEach(
-						{bottom: 24, left: 0, right: 0, top: 0}),
+						{bottom: 0, left: 0, right: 0, top: 0}),
 						$mdgriffith$elm_ui$Element$Border$widthEach(
 						{bottom: 1, left: 0, right: 0, top: 0}),
 						$mdgriffith$elm_ui$Element$Border$color(border)
 					]),
 				A2(
 					$elm$core$List$cons,
-					$author$project$Pages$Home_$allTab(shared),
+					$author$project$Pages$Home_$allTab(isAllActive),
 					A2(
 						$elm$core$List$map,
-						A2($author$project$Pages$Home_$tabButton, shared, model.activeTab),
+						$author$project$Pages$Home_$tabButton(model.activeTab),
 						model.tabs)));
 		}
 	});
