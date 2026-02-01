@@ -30,16 +30,16 @@ layout { theme, windowWidth, header, footer, main } =
         containerWidth =
             case breakpoint of
                 VeryNarrowBreakpoint ->
-                    640
+                    660
 
                 MobileBreakpoint ->
-                    768
+                    788
 
                 TabletBreakpoint ->
-                    1024
+                    1044
 
                 DesktopBreakpoint ->
-                    1280
+                    1300
 
         sidePadding =
             case breakpoint of
@@ -60,24 +60,30 @@ layout { theme, windowWidth, header, footer, main } =
         , height fill
         , Background.color bg
         ]
-        [ header
-        , el
+        [ Element.column
             [ width fill
-            , height fill
-            , htmlAttribute (Html.Attributes.style "overflow-y" "auto")
-            , htmlAttribute (Html.Attributes.id "main-content")
+            , Element.htmlAttribute (Html.Attributes.style "max-width" (String.fromInt containerWidth ++ "px"))
+            , Element.htmlAttribute (Html.Attributes.style "margin" "0 auto")
+            , Element.htmlAttribute (Html.Attributes.style "padding-left" (String.fromInt sidePadding ++ "px"))
+            , Element.htmlAttribute (Html.Attributes.style "padding-right" (String.fromInt sidePadding ++ "px"))
+            , Border.widthEach { top = 0, right = 0, bottom = 1, left = 0 }
+            , Border.color (rgb255 229 231 235)
             ]
-            (Element.column
+            [ header
+            , el
                 [ width fill
-                , Element.htmlAttribute (Html.Attributes.style "max-width" (String.fromInt containerWidth ++ "px"))
-                , Element.htmlAttribute (Html.Attributes.style "margin" "0 auto")
-                , Element.htmlAttribute (Html.Attributes.style "padding-left" (String.fromInt sidePadding ++ "px"))
-                , Element.htmlAttribute (Html.Attributes.style "padding-right" (String.fromInt sidePadding ++ "px"))
+                , height fill
+                , htmlAttribute (Html.Attributes.style "overflow-y" "auto")
+                , htmlAttribute (Html.Attributes.id "main-content")
                 ]
-                [ main
-                , footer
-                ]
-            )
+                (Element.column
+                    [ width fill
+                    ]
+                    [ main
+                    , footer
+                    ]
+                )
+            ]
         ]
 
 

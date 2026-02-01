@@ -13634,13 +13634,13 @@ var $author$project$Layouts$Shared$layout = function (_v0) {
 	var containerWidth = function () {
 		switch (breakpoint.$) {
 			case 'VeryNarrowBreakpoint':
-				return 640;
+				return 660;
 			case 'MobileBreakpoint':
-				return 768;
+				return 788;
 			case 'TabletBreakpoint':
-				return 1024;
+				return 1044;
 			default:
-				return 1280;
+				return 1300;
 		}
 	}();
 	var sidePadding = function () {
@@ -13666,43 +13666,56 @@ var $author$project$Layouts$Shared$layout = function (_v0) {
 			]),
 		_List_fromArray(
 			[
-				header,
 				A2(
-				$mdgriffith$elm_ui$Element$el,
+				$mdgriffith$elm_ui$Element$column,
 				_List_fromArray(
 					[
 						$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill),
-						$mdgriffith$elm_ui$Element$height($mdgriffith$elm_ui$Element$fill),
 						$mdgriffith$elm_ui$Element$htmlAttribute(
-						A2($elm$html$Html$Attributes$style, 'overflow-y', 'auto')),
+						A2(
+							$elm$html$Html$Attributes$style,
+							'max-width',
+							$elm$core$String$fromInt(containerWidth) + 'px')),
 						$mdgriffith$elm_ui$Element$htmlAttribute(
-						$elm$html$Html$Attributes$id('main-content'))
+						A2($elm$html$Html$Attributes$style, 'margin', '0 auto')),
+						$mdgriffith$elm_ui$Element$htmlAttribute(
+						A2(
+							$elm$html$Html$Attributes$style,
+							'padding-left',
+							$elm$core$String$fromInt(sidePadding) + 'px')),
+						$mdgriffith$elm_ui$Element$htmlAttribute(
+						A2(
+							$elm$html$Html$Attributes$style,
+							'padding-right',
+							$elm$core$String$fromInt(sidePadding) + 'px')),
+						$mdgriffith$elm_ui$Element$Border$widthEach(
+						{bottom: 1, left: 0, right: 0, top: 0}),
+						$mdgriffith$elm_ui$Element$Border$color(
+						A3($mdgriffith$elm_ui$Element$rgb255, 229, 231, 235))
 					]),
-				A2(
-					$mdgriffith$elm_ui$Element$column,
-					_List_fromArray(
-						[
-							$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill),
-							$mdgriffith$elm_ui$Element$htmlAttribute(
-							A2(
-								$elm$html$Html$Attributes$style,
-								'max-width',
-								$elm$core$String$fromInt(containerWidth) + 'px')),
-							$mdgriffith$elm_ui$Element$htmlAttribute(
-							A2($elm$html$Html$Attributes$style, 'margin', '0 auto')),
-							$mdgriffith$elm_ui$Element$htmlAttribute(
-							A2(
-								$elm$html$Html$Attributes$style,
-								'padding-left',
-								$elm$core$String$fromInt(sidePadding) + 'px')),
-							$mdgriffith$elm_ui$Element$htmlAttribute(
-							A2(
-								$elm$html$Html$Attributes$style,
-								'padding-right',
-								$elm$core$String$fromInt(sidePadding) + 'px'))
-						]),
-					_List_fromArray(
-						[main, footer])))
+				_List_fromArray(
+					[
+						header,
+						A2(
+						$mdgriffith$elm_ui$Element$el,
+						_List_fromArray(
+							[
+								$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill),
+								$mdgriffith$elm_ui$Element$height($mdgriffith$elm_ui$Element$fill),
+								$mdgriffith$elm_ui$Element$htmlAttribute(
+								A2($elm$html$Html$Attributes$style, 'overflow-y', 'auto')),
+								$mdgriffith$elm_ui$Element$htmlAttribute(
+								$elm$html$Html$Attributes$id('main-content'))
+							]),
+						A2(
+							$mdgriffith$elm_ui$Element$column,
+							_List_fromArray(
+								[
+									$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill)
+								]),
+							_List_fromArray(
+								[main, footer])))
+					]))
 			]));
 };
 var $mdgriffith$elm_ui$Element$map = $mdgriffith$elm_ui$Internal$Model$map;
