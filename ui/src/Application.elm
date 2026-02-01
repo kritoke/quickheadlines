@@ -288,45 +288,7 @@ headerView model =
                     { left = 24, right = 24, top = 8, bottom = 8 }
 
                 DesktopBreakpoint ->
-                    { left = 40, right = 40, top = 8, bottom = 8 }
-
-        -- Helper for active link icons
-        navLink iconPath target =
-            let
-                isActive =
-                    model.page == target
-
-                targetPath =
-                    case target of
-                        Home ->
-                            "/"
-
-                        Timeline ->
-                            "/timeline"
-
-                iconHtml =
-                    Html.img
-                        [ HA.src iconPath
-                        , HA.style "width" "24px"
-                        , HA.style "height" "24px"
-                        ]
-                        []
-            in
-            Element.el
-                [ Element.padding 8
-                , Border.widthEach { bottom = if isActive then 2 else 0, left = 0, right = 0, top = 0 }
-                , Border.color lumeOrange
-                , Element.mouseOver [ Font.color lumeOrange ]
-                , centerY
-                , htmlAttribute (HA.style "display" "flex")
-                , htmlAttribute (HA.style "align-items" "center")
-                , htmlAttribute (HA.style "justify-content" "center")
-                ]
-                (Element.link []
-                    { url = targetPath
-                    , label = el [ htmlAttribute (HA.style "display" "flex") ] (Element.html iconHtml)
-                    }
-                )
+                    { left = 16, right = 16, top = 8, bottom = 8 }
 
         -- Active icon style - brighter version for active state
         activeIconStyle =
@@ -381,7 +343,7 @@ homeIconView model target =
             model.page == Home
 
         iconPath =
-            if isActive then "/home-icon-active.svg" else "/home-icon.svg"
+            "/home-icon.svg"
 
         iconHtml =
             Html.img
@@ -415,7 +377,7 @@ timelineIconView model target =
             model.page == Timeline
 
         iconPath =
-            if isActive then "/timeline-icon-active.svg" else "/timeline-icon.svg"
+            "/timeline-icon.svg"
 
         iconHtml =
             Html.img

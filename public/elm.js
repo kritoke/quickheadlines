@@ -12848,7 +12848,7 @@ var $mdgriffith$elm_ui$Element$Border$widthEach = function (_v0) {
 var $author$project$Application$homeIconView = F2(
 	function (model, target) {
 		var isActive = _Utils_eq(model.page, $author$project$Application$Home);
-		var iconPath = isActive ? '/home-icon-active.svg' : '/home-icon.svg';
+		var iconPath = '/home-icon.svg';
 		var iconHtml = A2(
 			$elm$html$Html$img,
 			_List_fromArray(
@@ -13247,7 +13247,7 @@ var $author$project$Application$themeToggle = function (model) {
 var $author$project$Application$timelineIconView = F2(
 	function (model, target) {
 		var isActive = _Utils_eq(model.page, $author$project$Application$Timeline);
-		var iconPath = isActive ? '/timeline-icon-active.svg' : '/timeline-icon.svg';
+		var iconPath = '/timeline-icon.svg';
 		var iconHtml = A2(
 			$elm$html$Html$img,
 			_List_fromArray(
@@ -13301,66 +13301,6 @@ var $author$project$Application$timelineIconView = F2(
 var $author$project$Application$headerView = function (model) {
 	var theme = model.shared.theme;
 	var txtColor = $author$project$Theme$textColor(theme);
-	var navLink = F2(
-		function (iconPath, target) {
-			var targetPath = function () {
-				if (target.$ === 'Home') {
-					return '/';
-				} else {
-					return '/timeline';
-				}
-			}();
-			var isActive = _Utils_eq(model.page, target);
-			var iconHtml = A2(
-				$elm$html$Html$img,
-				_List_fromArray(
-					[
-						$elm$html$Html$Attributes$src(iconPath),
-						A2($elm$html$Html$Attributes$style, 'width', '24px'),
-						A2($elm$html$Html$Attributes$style, 'height', '24px')
-					]),
-				_List_Nil);
-			return A2(
-				$mdgriffith$elm_ui$Element$el,
-				_List_fromArray(
-					[
-						$mdgriffith$elm_ui$Element$padding(8),
-						$mdgriffith$elm_ui$Element$Border$widthEach(
-						{
-							bottom: isActive ? 2 : 0,
-							left: 0,
-							right: 0,
-							top: 0
-						}),
-						$mdgriffith$elm_ui$Element$Border$color($author$project$Theme$lumeOrange),
-						$mdgriffith$elm_ui$Element$mouseOver(
-						_List_fromArray(
-							[
-								$mdgriffith$elm_ui$Element$Font$color($author$project$Theme$lumeOrange)
-							])),
-						$mdgriffith$elm_ui$Element$centerY,
-						$mdgriffith$elm_ui$Element$htmlAttribute(
-						A2($elm$html$Html$Attributes$style, 'display', 'flex')),
-						$mdgriffith$elm_ui$Element$htmlAttribute(
-						A2($elm$html$Html$Attributes$style, 'align-items', 'center')),
-						$mdgriffith$elm_ui$Element$htmlAttribute(
-						A2($elm$html$Html$Attributes$style, 'justify-content', 'center'))
-					]),
-				A2(
-					$mdgriffith$elm_ui$Element$link,
-					_List_Nil,
-					{
-						label: A2(
-							$mdgriffith$elm_ui$Element$el,
-							_List_fromArray(
-								[
-									$mdgriffith$elm_ui$Element$htmlAttribute(
-									A2($elm$html$Html$Attributes$style, 'display', 'flex'))
-								]),
-							$mdgriffith$elm_ui$Element$html(iconHtml)),
-						url: targetPath
-					}));
-		});
 	var breakpoint = $author$project$Responsive$breakpointFromWidth(model.shared.windowWidth);
 	var headerPadding = function () {
 		switch (breakpoint.$) {
@@ -13371,7 +13311,7 @@ var $author$project$Application$headerView = function (model) {
 			case 'TabletBreakpoint':
 				return {bottom: 8, left: 24, right: 24, top: 8};
 			default:
-				return {bottom: 8, left: 40, right: 40, top: 8};
+				return {bottom: 8, left: 16, right: 16, top: 8};
 		}
 	}();
 	var border = $author$project$Theme$borderColor(theme);
