@@ -14472,18 +14472,19 @@ var $author$project$Theme$themeToColors = function (theme) {
 var $author$project$Pages$Home_$feedCard = F6(
 	function (now, theme, breakpoint, loadingFeed, insertedIds, feed) {
 		var txtColor = $author$project$Theme$textColor(theme);
+		var shouldShowButton = $elm$core$List$length(feed.items) >= 10;
 		var scrollAttributes = function () {
 			if (breakpoint.$ === 'DesktopBreakpoint') {
 				return _List_fromArray(
 					[
 						$mdgriffith$elm_ui$Element$htmlAttribute(
-						A2($elm$html$Html$Attributes$style, 'max-height', '280px')),
+						A2($elm$html$Html$Attributes$style, 'max-height', '260px')),
 						$mdgriffith$elm_ui$Element$htmlAttribute(
 						A2($elm$html$Html$Attributes$style, 'overflow-y', 'auto')),
 						$mdgriffith$elm_ui$Element$htmlAttribute(
 						A2($elm$html$Html$Attributes$style, 'scrollbar-width', 'thin')),
 						$mdgriffith$elm_ui$Element$htmlAttribute(
-						A2($elm$html$Html$Attributes$style, 'scrollbar-color', 'transparent transparent')),
+						A2($elm$html$Html$Attributes$style, 'scrollbar-color', 'rgba(128,128,128,0.3) transparent')),
 						$mdgriffith$elm_ui$Element$htmlAttribute(
 						$elm$html$Html$Attributes$class('auto-hide-scroll'))
 					]);
@@ -14491,8 +14492,33 @@ var $author$project$Pages$Home_$feedCard = F6(
 				return _List_Nil;
 			}
 		}();
+		var isLoadingThisFeed = function () {
+			if (loadingFeed.$ === 'Just') {
+				var u = loadingFeed.a;
+				return _Utils_eq(u, feed.url);
+			} else {
+				return false;
+			}
+		}();
+		var displayedItems = A2(
+			$elm$core$List$take,
+			15,
+			$author$project$Api$sortFeedItems(feed.items));
 		var colors = $author$project$Theme$themeToColors(theme);
 		var cardBg = $author$project$Theme$cardColor(theme);
+		var btnOnPress = isLoadingThisFeed ? $elm$core$Maybe$Nothing : $elm$core$Maybe$Just(
+			$author$project$Pages$Home_$LoadMoreFeed(feed.url));
+		var btnLabel = isLoadingThisFeed ? $mdgriffith$elm_ui$Element$text('Loading...') : $mdgriffith$elm_ui$Element$text('Load More');
+		var loadMoreButton = shouldShowButton ? A2(
+			$mdgriffith$elm_ui$Element$Input$button,
+			_List_fromArray(
+				[
+					$mdgriffith$elm_ui$Element$centerX,
+					A2($mdgriffith$elm_ui$Element$paddingXY, 0, 8),
+					$mdgriffith$elm_ui$Element$htmlAttribute(
+					$elm$html$Html$Attributes$class('qh-load-more'))
+				]),
+			{label: btnLabel, onPress: btnOnPress}) : $mdgriffith$elm_ui$Element$none;
 		var border = $author$project$Theme$borderColor(theme);
 		return A2(
 			$mdgriffith$elm_ui$Element$column,
@@ -14519,37 +14545,13 @@ var $author$project$Pages$Home_$feedCard = F6(
 								$mdgriffith$elm_ui$Element$spacing(4)
 							]),
 						scrollAttributes),
-					A2(
-						$elm$core$List$map,
-						A3($author$project$Pages$Home_$feedItem, now, theme, insertedIds),
+					_Utils_ap(
 						A2(
-							$elm$core$List$take,
-							15,
-							$author$project$Api$sortFeedItems(feed.items)))),
-					function () {
-					var shouldShowButton = $elm$core$List$length(feed.items) >= 10;
-					var isLoadingThisFeed = function () {
-						if (loadingFeed.$ === 'Just') {
-							var u = loadingFeed.a;
-							return _Utils_eq(u, feed.url);
-						} else {
-							return false;
-						}
-					}();
-					var btnOnPress = isLoadingThisFeed ? $elm$core$Maybe$Nothing : $elm$core$Maybe$Just(
-						$author$project$Pages$Home_$LoadMoreFeed(feed.url));
-					var btnLabel = isLoadingThisFeed ? $mdgriffith$elm_ui$Element$text('Loading...') : $mdgriffith$elm_ui$Element$text('Load More');
-					return shouldShowButton ? A2(
-						$mdgriffith$elm_ui$Element$Input$button,
+							$elm$core$List$map,
+							A3($author$project$Pages$Home_$feedItem, now, theme, insertedIds),
+							displayedItems),
 						_List_fromArray(
-							[
-								$mdgriffith$elm_ui$Element$htmlAttribute(
-								A2($elm$html$Html$Attributes$style, 'margin-top', '12px')),
-								$mdgriffith$elm_ui$Element$htmlAttribute(
-								$elm$html$Html$Attributes$class('qh-load-more'))
-							]),
-						{label: btnLabel, onPress: btnOnPress}) : $mdgriffith$elm_ui$Element$none;
-				}()
+							[loadMoreButton])))
 				]));
 	});
 var $author$project$Pages$Home_$feedGrid = F2(

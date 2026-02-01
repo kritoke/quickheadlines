@@ -379,15 +379,41 @@ feedCard now theme breakpoint loadingFeed insertedIds feed =
          scrollAttributes =
              case breakpoint of
                  DesktopBreakpoint ->
-                     [ htmlAttribute (Html.Attributes.style "max-height" "280px")
+                     [ htmlAttribute (Html.Attributes.style "max-height" "260px")
                      , htmlAttribute (Html.Attributes.style "overflow-y" "auto")
                      , htmlAttribute (Html.Attributes.style "scrollbar-width" "thin")
-                     , htmlAttribute (Html.Attributes.style "scrollbar-color" "transparent transparent")
+                     , htmlAttribute (Html.Attributes.style "scrollbar-color" "rgba(128,128,128,0.3) transparent")
                      , htmlAttribute (Html.Attributes.class "auto-hide-scroll")
                      ]
 
                  _ ->
                      []
+
+         displayedItems = List.take 15 (sortFeedItems feed.items)
+
+         isLoadingThisFeed =
+             case loadingFeed of
+                 Just u -> u == feed.url
+                 Nothing -> False
+
+         btnLabel = if isLoadingThisFeed then text "Loading..." else text "Load More"
+
+         btnOnPress = if isLoadingThisFeed then Nothing else Just (LoadMoreFeed feed.url)
+
+         shouldShowButton = List.length feed.items >= 10
+
+         loadMoreButton =
+             if shouldShowButton then
+                 Input.button
+                     [ centerX
+                     , paddingXY 0 8
+                     , htmlAttribute (Html.Attributes.class "qh-load-more")
+                     ]
+                     { onPress = btnOnPress
+                     , label = btnLabel
+                     }
+             else
+                 Element.none
     in
     column
         [ width fill
@@ -399,36 +425,12 @@ feedCard now theme breakpoint loadingFeed insertedIds feed =
         , spacing 8
         , padding 12
         ]
-         [ feedHeader theme feed
+        [ feedHeader theme feed
         , column
             ([ width fill
-               , spacing 4
-               ] ++ scrollAttributes)
-                        (List.map (feedItem now theme insertedIds) (List.take 15 (sortFeedItems feed.items)))
-         , -- Show Load more button if there are enough items (matches old v0.4.0 behavior)
-           let
-             isLoadingThisFeed =
-                 case loadingFeed of
-                     Just u -> u == feed.url
-                     Nothing -> False
-
-             btnLabel = if isLoadingThisFeed then text "Loading..." else text "Load More"
-
-             btnOnPress = if isLoadingThisFeed then Nothing else Just (LoadMoreFeed feed.url)
-
-             shouldShowButton = List.length feed.items >= 10
-           in
-           if shouldShowButton then
-             Input.button
-               [ htmlAttribute (Html.Attributes.style "margin-top" "12px")
-               , htmlAttribute (Html.Attributes.class "qh-load-more")
-               ]
-               { onPress = btnOnPress
-               , label = btnLabel
-               }
-           else
-             Element.none
-
+             , spacing 4
+             ] ++ scrollAttributes)
+            (List.map (feedItem now theme insertedIds) displayedItems ++ [ loadMoreButton ])
         ]
 
 
