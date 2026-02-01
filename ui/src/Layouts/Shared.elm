@@ -6,18 +6,20 @@ import Element.Border as Border
 import Element.Font as Font
 import ThemeTypography as Ty
 import Html.Attributes
-import Shared exposing (Theme(..))
+import Shared exposing (Model, Theme(..))
 import Theme exposing (darkBg, surfaceColor)
+import Responsive exposing (Breakpoint(..), breakpointFromWidth, uniformPadding)
 
 
 layout :
     { theme : Theme
+    , windowWidth : Int
     , header : Element msg
     , footer : Element msg
     , main : Element msg
     }
     -> Element msg
-layout { theme, header, footer, main } =
+layout { theme, windowWidth, header, footer, main } =
     let
         bg =
             surfaceColor theme
@@ -27,14 +29,14 @@ layout { theme, header, footer, main } =
         , height fill
         , Background.color bg
         ]
-        [ headerView theme header
+        [ headerView theme windowWidth header
         , mainView main
         , footerView footer
         ]
 
 
-headerView : Theme -> Element msg -> Element msg
-headerView theme content =
+headerView : Theme -> Int -> Element msg -> Element msg
+headerView theme windowWidth content =
     let
         bg =
             surfaceColor theme
@@ -46,10 +48,13 @@ headerView theme content =
 
                 Light ->
                     rgb255 229 231 235
+
+        breakpoint =
+            Responsive.breakpointFromWidth windowWidth
     in
     row
         [ width fill
-        , padding 16
+        , padding (Responsive.uniformPadding breakpoint)
         , Background.color bg
         , Border.widthEach { bottom = 1, left = 0, right = 0, top = 0 }
         , Border.color border

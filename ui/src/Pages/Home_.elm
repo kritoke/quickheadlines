@@ -12,6 +12,7 @@ import Shared exposing (Model, Msg(..), Theme(..))
 import Theme exposing (cardColor, errorColor, surfaceColor, tabActiveBg, tabActiveText, tabHoverBg, tabInactiveText, textColor, themeToColors)
 import ThemeTypography as Ty
 import Time
+import Responsive exposing (Breakpoint(..), breakpointFromWidth, isMobile, uniformPadding, containerMaxWidth)
 
 
 type alias Model =
@@ -80,21 +81,17 @@ view shared model =
          bg =
              surfaceColor theme
 
-         isMobile =
-             shared.windowWidth < 768
+         breakpoint =
+             Responsive.breakpointFromWidth shared.windowWidth
 
-         paddingValue =
-             if isMobile then
-                 16
-
-             else
-                 96
+         pad =
+             Responsive.uniformPadding breakpoint
      in
      column
         [ width fill
         , height fill
         , spacing 20
-        , padding paddingValue
+        , padding pad
         , Background.color bg
         , htmlAttribute (Html.Attributes.attribute "data-page" "home")
         ]
@@ -219,28 +216,39 @@ content shared model =
 feedGrid : Shared.Model -> Model -> Element Msg
 feedGrid shared model =
     let
-        theme =
-            shared.theme
+         theme =
+             shared.theme
 
-        columnCount =
-            if shared.windowWidth >= 1024 then
-                3
+         breakpoint =
+             Responsive.breakpointFromWidth shared.windowWidth
 
-            else if shared.windowWidth >= 768 then
-                2
+         columnCount =
+             case breakpoint of
+                 VeryNarrowBreakpoint ->
+                     1
 
-            else
-                1
+                 MobileBreakpoint ->
+                     1
 
-        gapValue =
-            if shared.windowWidth >= 1024 then
-                24
+                 TabletBreakpoint ->
+                     2
 
-            else if shared.windowWidth >= 768 then
-                20
+                 DesktopBreakpoint ->
+                     3
 
-            else
-                16
+         gapValue =
+             case breakpoint of
+                 VeryNarrowBreakpoint ->
+                     16
+
+                 MobileBreakpoint ->
+                     16
+
+                 TabletBreakpoint ->
+                     20
+
+                 DesktopBreakpoint ->
+                     24
     in
     column
         [ width fill
@@ -253,7 +261,7 @@ feedGrid shared model =
                         [ width fill
                         , spacing gapValue
                         ]
-                        (List.map (feedCard shared.now theme shared.windowWidth) feedRow)
+                        (List.map (feedCard shared.now theme breakpoint) feedRow)
                 )
         )
 
@@ -276,31 +284,33 @@ splitAt n list =
     ( List.take n list, List.drop n list )
 
 
-feedCard : Time.Posix -> Theme -> Int -> Feed -> Element Msg
-feedCard now theme windowWidth feed =
+feedCard : Time.Posix -> Theme -> Responsive.Breakpoint -> Feed -> Element Msg
+feedCard now theme breakpoint feed =
     let
-        colors =
-            themeToColors theme
+         colors =
+             themeToColors theme
 
-        cardBg =
-            cardColor theme
+         cardBg =
+             cardColor theme
 
-        border =
-            Theme.borderColor theme
+         border =
+             Theme.borderColor theme
 
-        txtColor =
-            textColor theme
+         txtColor =
+             textColor theme
 
-        scrollAttributes =
-            if windowWidth >= 1024 then
-                [ htmlAttribute (Html.Attributes.style "max-height" "280px")
-                , htmlAttribute (Html.Attributes.style "overflow-y" "auto")
-                , htmlAttribute (Html.Attributes.style "scrollbar-width" "thin")
-                , htmlAttribute (Html.Attributes.style "scrollbar-color" "transparent transparent")
-                , htmlAttribute (Html.Attributes.class "auto-hide-scroll")
-                ]
-            else
-                []
+         scrollAttributes =
+             case breakpoint of
+                 DesktopBreakpoint ->
+                     [ htmlAttribute (Html.Attributes.style "max-height" "280px")
+                     , htmlAttribute (Html.Attributes.style "overflow-y" "auto")
+                     , htmlAttribute (Html.Attributes.style "scrollbar-width" "thin")
+                     , htmlAttribute (Html.Attributes.style "scrollbar-color" "transparent transparent")
+                     , htmlAttribute (Html.Attributes.class "auto-hide-scroll")
+                     ]
+
+                 _ ->
+                     []
     in
     column
         [ width fill
@@ -312,11 +322,11 @@ feedCard now theme windowWidth feed =
         , spacing 8
         , padding 12
         ]
-        [ feedHeader theme feed
-        , column
-            ([ width fill
-             , spacing 4
-             ] ++ scrollAttributes)
+         [ feedHeader theme feed
+         , column
+             ([ width fill
+              , spacing 4
+              ] ++ scrollAttributes)
             (List.map (feedItem now theme) (List.take 15 (sortFeedItems feed.items)))
         ]
 

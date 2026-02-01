@@ -12309,6 +12309,13 @@ var $author$project$Theme$borderColor = function (theme) {
 		return A3($mdgriffith$elm_ui$Element$rgb255, 229, 231, 235);
 	}
 };
+var $author$project$Responsive$DesktopBreakpoint = {$: 'DesktopBreakpoint'};
+var $author$project$Responsive$MobileBreakpoint = {$: 'MobileBreakpoint'};
+var $author$project$Responsive$TabletBreakpoint = {$: 'TabletBreakpoint'};
+var $author$project$Responsive$VeryNarrowBreakpoint = {$: 'VeryNarrowBreakpoint'};
+var $author$project$Responsive$breakpointFromWidth = function (width) {
+	return (width < 480) ? $author$project$Responsive$VeryNarrowBreakpoint : ((width < 768) ? $author$project$Responsive$MobileBreakpoint : ((width < 1024) ? $author$project$Responsive$TabletBreakpoint : $author$project$Responsive$DesktopBreakpoint));
+};
 var $mdgriffith$elm_ui$Internal$Model$AlignY = function (a) {
 	return {$: 'AlignY', a: a};
 };
@@ -12353,6 +12360,13 @@ var $mdgriffith$elm_ui$Element$el = F2(
 				_List_fromArray(
 					[child])));
 	});
+var $elm$core$Basics$always = F2(
+	function (a, _v0) {
+		return a;
+	});
+var $mdgriffith$elm_ui$Internal$Model$unstyled = A2($elm$core$Basics$composeL, $mdgriffith$elm_ui$Internal$Model$Unstyled, $elm$core$Basics$always);
+var $mdgriffith$elm_ui$Element$html = $mdgriffith$elm_ui$Internal$Model$unstyled;
+var $mdgriffith$elm_ui$Element$htmlAttribute = $mdgriffith$elm_ui$Internal$Model$Attr;
 var $elm$html$Html$Attributes$alt = $elm$html$Html$Attributes$stringProperty('alt');
 var $elm$html$Html$Attributes$src = function (url) {
 	return A2(
@@ -12404,6 +12418,7 @@ var $mdgriffith$elm_ui$Element$image = F2(
 						$mdgriffith$elm_ui$Internal$Model$Unkeyed(_List_Nil))
 					])));
 	});
+var $elm$html$Html$img = _VirtualDom_node('img');
 var $mdgriffith$elm_ui$Internal$Flag$letterSpacing = $mdgriffith$elm_ui$Internal$Flag$flag(16);
 var $mdgriffith$elm_ui$Element$Font$letterSpacing = function (offset) {
 	return A2(
@@ -12626,28 +12641,6 @@ var $mdgriffith$elm_ui$Element$paddingEach = function (_v0) {
 			bottom,
 			left));
 };
-var $mdgriffith$elm_ui$Element$paddingXY = F2(
-	function (x, y) {
-		return _Utils_eq(x, y) ? A2(
-			$mdgriffith$elm_ui$Internal$Model$StyleClass,
-			$mdgriffith$elm_ui$Internal$Flag$padding,
-			A5(
-				$mdgriffith$elm_ui$Internal$Model$PaddingStyle,
-				'p-' + $elm$core$String$fromInt(x),
-				x,
-				x,
-				x,
-				x)) : A2(
-			$mdgriffith$elm_ui$Internal$Model$StyleClass,
-			$mdgriffith$elm_ui$Internal$Flag$padding,
-			A5(
-				$mdgriffith$elm_ui$Internal$Model$PaddingStyle,
-				'p-' + ($elm$core$String$fromInt(x) + ('-' + $elm$core$String$fromInt(y))),
-				y,
-				x,
-				y,
-				x));
-	});
 var $mdgriffith$elm_ui$Internal$Model$Px = function (a) {
 	return {$: 'Px', a: a};
 };
@@ -12663,6 +12656,8 @@ var $mdgriffith$elm_ui$Element$Border$rounded = function (radius) {
 			'border-radius',
 			$elm$core$String$fromInt(radius) + 'px'));
 };
+var $elm$virtual_dom$VirtualDom$style = _VirtualDom_style;
+var $elm$html$Html$Attributes$style = $elm$virtual_dom$VirtualDom$style;
 var $author$project$Theme$surfaceColor = function (theme) {
 	if (theme.$ === 'Dark') {
 		return A3($mdgriffith$elm_ui$Element$rgb255, 24, 24, 24);
@@ -12819,24 +12814,50 @@ var $mdgriffith$elm_ui$Element$Input$button = F2(
 				_List_fromArray(
 					[label])));
 	});
-var $mdgriffith$elm_ui$Element$htmlAttribute = $mdgriffith$elm_ui$Internal$Model$Attr;
+var $mdgriffith$elm_ui$Internal$Model$CenterX = {$: 'CenterX'};
+var $mdgriffith$elm_ui$Element$centerX = $mdgriffith$elm_ui$Internal$Model$AlignX($mdgriffith$elm_ui$Internal$Model$CenterX);
 var $elm$html$Html$Attributes$title = $elm$html$Html$Attributes$stringProperty('title');
 var $author$project$Application$themeToggle = function (model) {
 	var theme = model.shared.theme;
 	var label = function () {
-		var _v2 = model.shared.theme;
-		if (_v2.$ === 'Dark') {
+		if (theme.$ === 'Dark') {
 			return 'Switch to Light';
 		} else {
 			return 'Switch to Dark';
 		}
 	}();
-	var icon = function () {
-		var _v1 = model.shared.theme;
-		if (_v1.$ === 'Dark') {
-			return '☀';
+	var iconHtml = function () {
+		if (theme.$ === 'Dark') {
+			return A2(
+				$elm$html$Html$img,
+				_List_fromArray(
+					[
+						$elm$html$Html$Attributes$src('/sun-icon.svg'),
+						A2($elm$html$Html$Attributes$style, 'width', '20px'),
+						A2($elm$html$Html$Attributes$style, 'height', '20px')
+					]),
+				_List_Nil);
 		} else {
-			return '☾';
+			return A2(
+				$elm$html$Html$img,
+				_List_fromArray(
+					[
+						$elm$html$Html$Attributes$src('/moon-icon.svg'),
+						A2($elm$html$Html$Attributes$style, 'width', '20px'),
+						A2($elm$html$Html$Attributes$style, 'height', '20px')
+					]),
+				_List_Nil);
+		}
+	}();
+	var breakpoint = $author$project$Responsive$breakpointFromWidth(model.shared.windowWidth);
+	var iconPadding = function () {
+		switch (breakpoint.$) {
+			case 'VeryNarrowBreakpoint':
+				return 4;
+			case 'MobileBreakpoint':
+				return 6;
+			default:
+				return 10;
 		}
 	}();
 	var bg = function () {
@@ -12851,15 +12872,32 @@ var $author$project$Application$themeToggle = function (model) {
 		_List_fromArray(
 			[
 				$mdgriffith$elm_ui$Element$Background$color(bg),
-				$mdgriffith$elm_ui$Element$Font$color($author$project$Theme$lumeOrange),
-				$author$project$ThemeTypography$body,
-				A2($mdgriffith$elm_ui$Element$paddingXY, 10, 8),
+				$mdgriffith$elm_ui$Element$padding(iconPadding),
 				$mdgriffith$elm_ui$Element$Border$rounded(6),
 				$mdgriffith$elm_ui$Element$htmlAttribute(
-				$elm$html$Html$Attributes$title(label))
+				$elm$html$Html$Attributes$title(label)),
+				$mdgriffith$elm_ui$Element$htmlAttribute(
+				A2($elm$html$Html$Attributes$style, 'display', 'flex')),
+				$mdgriffith$elm_ui$Element$htmlAttribute(
+				A2($elm$html$Html$Attributes$style, 'align-items', 'center')),
+				$mdgriffith$elm_ui$Element$htmlAttribute(
+				A2($elm$html$Html$Attributes$style, 'justify-content', 'center')),
+				$mdgriffith$elm_ui$Element$htmlAttribute(
+				A2($elm$html$Html$Attributes$style, 'min-width', '36px')),
+				$mdgriffith$elm_ui$Element$htmlAttribute(
+				A2($elm$html$Html$Attributes$style, 'min-height', '36px'))
 			]),
 		{
-			label: $mdgriffith$elm_ui$Element$text(icon),
+			label: A2(
+				$mdgriffith$elm_ui$Element$el,
+				_List_fromArray(
+					[
+						$mdgriffith$elm_ui$Element$centerX,
+						$mdgriffith$elm_ui$Element$centerY,
+						$mdgriffith$elm_ui$Element$htmlAttribute(
+						A2($elm$html$Html$Attributes$style, 'display', 'flex'))
+					]),
+				$mdgriffith$elm_ui$Element$html(iconHtml)),
 			onPress: $elm$core$Maybe$Just(
 				$author$project$Application$SharedMsg($author$project$Shared$ToggleTheme))
 		});
@@ -12913,7 +12951,7 @@ var $author$project$Application$headerView = function (model) {
 	var theme = model.shared.theme;
 	var txtColor = $author$project$Theme$textColor(theme);
 	var navLink = F2(
-		function (label, target) {
+		function (iconPath, target) {
 			var targetPath = function () {
 				if (target.$ === 'Home') {
 					return '/';
@@ -12922,15 +12960,20 @@ var $author$project$Application$headerView = function (model) {
 				}
 			}();
 			var isActive = _Utils_eq(model.page, target);
-			return A2(
-				$mdgriffith$elm_ui$Element$link,
+			var iconHtml = A2(
+				$elm$html$Html$img,
 				_List_fromArray(
 					[
-						$mdgriffith$elm_ui$Element$Font$size(13),
-						$mdgriffith$elm_ui$Element$Font$bold,
-						$mdgriffith$elm_ui$Element$Font$color(
-						isActive ? $author$project$Theme$lumeOrange : txtColor),
-						A2($mdgriffith$elm_ui$Element$paddingXY, 12, 8),
+						$elm$html$Html$Attributes$src(iconPath),
+						A2($elm$html$Html$Attributes$style, 'width', '24px'),
+						A2($elm$html$Html$Attributes$style, 'height', '24px')
+					]),
+				_List_Nil);
+			return A2(
+				$mdgriffith$elm_ui$Element$el,
+				_List_fromArray(
+					[
+						$mdgriffith$elm_ui$Element$padding(8),
 						$mdgriffith$elm_ui$Element$Border$widthEach(
 						{
 							bottom: isActive ? 2 : 0,
@@ -12944,13 +12987,42 @@ var $author$project$Application$headerView = function (model) {
 							[
 								$mdgriffith$elm_ui$Element$Font$color($author$project$Theme$lumeOrange)
 							])),
-						$mdgriffith$elm_ui$Element$centerY
+						$mdgriffith$elm_ui$Element$centerY,
+						$mdgriffith$elm_ui$Element$htmlAttribute(
+						A2($elm$html$Html$Attributes$style, 'display', 'flex')),
+						$mdgriffith$elm_ui$Element$htmlAttribute(
+						A2($elm$html$Html$Attributes$style, 'align-items', 'center')),
+						$mdgriffith$elm_ui$Element$htmlAttribute(
+						A2($elm$html$Html$Attributes$style, 'justify-content', 'center'))
 					]),
-				{
-					label: $mdgriffith$elm_ui$Element$text(label),
-					url: targetPath
-				});
+				A2(
+					$mdgriffith$elm_ui$Element$link,
+					_List_Nil,
+					{
+						label: A2(
+							$mdgriffith$elm_ui$Element$el,
+							_List_fromArray(
+								[
+									$mdgriffith$elm_ui$Element$htmlAttribute(
+									A2($elm$html$Html$Attributes$style, 'display', 'flex'))
+								]),
+							$mdgriffith$elm_ui$Element$html(iconHtml)),
+						url: targetPath
+					}));
 		});
+	var breakpoint = $author$project$Responsive$breakpointFromWidth(model.shared.windowWidth);
+	var headerPadding = function () {
+		switch (breakpoint.$) {
+			case 'VeryNarrowBreakpoint':
+				return {bottom: 4, left: 8, right: 8, top: 4};
+			case 'MobileBreakpoint':
+				return {bottom: 4, left: 12, right: 12, top: 4};
+			case 'TabletBreakpoint':
+				return {bottom: 8, left: 24, right: 24, top: 8};
+			default:
+				return {bottom: 8, left: 40, right: 40, top: 8};
+		}
+	}();
 	var border = $author$project$Theme$borderColor(theme);
 	var bg = $author$project$Theme$surfaceColor(theme);
 	return A2(
@@ -12958,13 +13030,12 @@ var $author$project$Application$headerView = function (model) {
 		_List_fromArray(
 			[
 				$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill),
-				$mdgriffith$elm_ui$Element$paddingEach(
-				{bottom: 4, left: 20, right: 40, top: 4}),
+				$mdgriffith$elm_ui$Element$paddingEach(headerPadding),
 				$mdgriffith$elm_ui$Element$Background$color(bg),
 				$mdgriffith$elm_ui$Element$Border$widthEach(
 				{bottom: 1, left: 0, right: 0, top: 0}),
 				$mdgriffith$elm_ui$Element$Border$color(border),
-				$mdgriffith$elm_ui$Element$spacing(24)
+				$mdgriffith$elm_ui$Element$spacing(8)
 			]),
 		_List_fromArray(
 			[
@@ -13016,8 +13087,8 @@ var $author$project$Application$headerView = function (model) {
 					]),
 				_List_fromArray(
 					[
-						A2(navLink, 'HOME', $author$project$Application$Home),
-						A2(navLink, 'TIMELINE', $author$project$Application$Timeline)
+						A2(navLink, '/home-icon.svg', $author$project$Application$Home),
+						A2(navLink, '/timeline-icon.svg', $author$project$Application$Timeline)
 					])),
 				A2(
 				$mdgriffith$elm_ui$Element$el,
@@ -13314,8 +13385,21 @@ var $author$project$Layouts$Shared$footerView = function (content) {
 		_List_fromArray(
 			[content]));
 };
-var $author$project$Layouts$Shared$headerView = F2(
-	function (theme, content) {
+var $author$project$Responsive$uniformPadding = function (breakpoint) {
+	switch (breakpoint.$) {
+		case 'VeryNarrowBreakpoint':
+			return 8;
+		case 'MobileBreakpoint':
+			return 16;
+		case 'TabletBreakpoint':
+			return 32;
+		default:
+			return 96;
+	}
+};
+var $author$project$Layouts$Shared$headerView = F3(
+	function (theme, windowWidth, content) {
+		var breakpoint = $author$project$Responsive$breakpointFromWidth(windowWidth);
 		var border = function () {
 			if (theme.$ === 'Dark') {
 				return A3($mdgriffith$elm_ui$Element$rgb255, 55, 55, 55);
@@ -13329,7 +13413,8 @@ var $author$project$Layouts$Shared$headerView = F2(
 			_List_fromArray(
 				[
 					$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill),
-					$mdgriffith$elm_ui$Element$padding(16),
+					$mdgriffith$elm_ui$Element$padding(
+					$author$project$Responsive$uniformPadding(breakpoint)),
 					$mdgriffith$elm_ui$Element$Background$color(bg),
 					$mdgriffith$elm_ui$Element$Border$widthEach(
 					{bottom: 1, left: 0, right: 0, top: 0}),
@@ -13339,8 +13424,6 @@ var $author$project$Layouts$Shared$headerView = F2(
 				[content]));
 	});
 var $elm$html$Html$Attributes$id = $elm$html$Html$Attributes$stringProperty('id');
-var $elm$virtual_dom$VirtualDom$style = _VirtualDom_style;
-var $elm$html$Html$Attributes$style = $elm$virtual_dom$VirtualDom$style;
 var $author$project$Layouts$Shared$mainView = function (content) {
 	return A2(
 		$mdgriffith$elm_ui$Element$el,
@@ -13359,6 +13442,7 @@ var $author$project$Layouts$Shared$layout = function (_v0) {
 	var main = _v0.main;
 	var footer = _v0.footer;
 	var header = _v0.header;
+	var windowWidth = _v0.windowWidth;
 	var theme = _v0.theme;
 	var bg = $author$project$Theme$surfaceColor(theme);
 	return A2(
@@ -13371,15 +13455,13 @@ var $author$project$Layouts$Shared$layout = function (_v0) {
 			]),
 		_List_fromArray(
 			[
-				A2($author$project$Layouts$Shared$headerView, theme, header),
+				A3($author$project$Layouts$Shared$headerView, theme, windowWidth, header),
 				$author$project$Layouts$Shared$mainView(main),
 				$author$project$Layouts$Shared$footerView(footer)
 			]));
 };
 var $mdgriffith$elm_ui$Element$map = $mdgriffith$elm_ui$Internal$Model$map;
 var $elm$html$Html$Attributes$attribute = $elm$virtual_dom$VirtualDom$attribute;
-var $mdgriffith$elm_ui$Internal$Model$CenterX = {$: 'CenterX'};
-var $mdgriffith$elm_ui$Element$centerX = $mdgriffith$elm_ui$Internal$Model$AlignX($mdgriffith$elm_ui$Internal$Model$CenterX);
 var $author$project$Theme$errorColor = A3($mdgriffith$elm_ui$Element$rgb255, 239, 68, 68);
 var $elm$core$List$drop = F2(
 	function (n, list) {
@@ -13826,6 +13908,28 @@ var $author$project$Theme$mutedColor = function (theme) {
 		return A3($mdgriffith$elm_ui$Element$rgb255, 107, 114, 128);
 	}
 };
+var $mdgriffith$elm_ui$Element$paddingXY = F2(
+	function (x, y) {
+		return _Utils_eq(x, y) ? A2(
+			$mdgriffith$elm_ui$Internal$Model$StyleClass,
+			$mdgriffith$elm_ui$Internal$Flag$padding,
+			A5(
+				$mdgriffith$elm_ui$Internal$Model$PaddingStyle,
+				'p-' + $elm$core$String$fromInt(x),
+				x,
+				x,
+				x,
+				x)) : A2(
+			$mdgriffith$elm_ui$Internal$Model$StyleClass,
+			$mdgriffith$elm_ui$Internal$Flag$padding,
+			A5(
+				$mdgriffith$elm_ui$Internal$Model$PaddingStyle,
+				'p-' + ($elm$core$String$fromInt(x) + ('-' + $elm$core$String$fromInt(y))),
+				y,
+				x,
+				y,
+				x));
+	});
 var $mdgriffith$elm_ui$Internal$Model$Paragraph = {$: 'Paragraph'};
 var $mdgriffith$elm_ui$Element$paragraph = F2(
 	function (attrs, children) {
@@ -14132,21 +14236,27 @@ var $author$project$Theme$themeToColors = function (theme) {
 	}
 };
 var $author$project$Pages$Home_$feedCard = F4(
-	function (now, theme, windowWidth, feed) {
+	function (now, theme, breakpoint, feed) {
 		var txtColor = $author$project$Theme$textColor(theme);
-		var scrollAttributes = (windowWidth >= 1024) ? _List_fromArray(
-			[
-				$mdgriffith$elm_ui$Element$htmlAttribute(
-				A2($elm$html$Html$Attributes$style, 'max-height', '280px')),
-				$mdgriffith$elm_ui$Element$htmlAttribute(
-				A2($elm$html$Html$Attributes$style, 'overflow-y', 'auto')),
-				$mdgriffith$elm_ui$Element$htmlAttribute(
-				A2($elm$html$Html$Attributes$style, 'scrollbar-width', 'thin')),
-				$mdgriffith$elm_ui$Element$htmlAttribute(
-				A2($elm$html$Html$Attributes$style, 'scrollbar-color', 'transparent transparent')),
-				$mdgriffith$elm_ui$Element$htmlAttribute(
-				$elm$html$Html$Attributes$class('auto-hide-scroll'))
-			]) : _List_Nil;
+		var scrollAttributes = function () {
+			if (breakpoint.$ === 'DesktopBreakpoint') {
+				return _List_fromArray(
+					[
+						$mdgriffith$elm_ui$Element$htmlAttribute(
+						A2($elm$html$Html$Attributes$style, 'max-height', '280px')),
+						$mdgriffith$elm_ui$Element$htmlAttribute(
+						A2($elm$html$Html$Attributes$style, 'overflow-y', 'auto')),
+						$mdgriffith$elm_ui$Element$htmlAttribute(
+						A2($elm$html$Html$Attributes$style, 'scrollbar-width', 'thin')),
+						$mdgriffith$elm_ui$Element$htmlAttribute(
+						A2($elm$html$Html$Attributes$style, 'scrollbar-color', 'transparent transparent')),
+						$mdgriffith$elm_ui$Element$htmlAttribute(
+						$elm$html$Html$Attributes$class('auto-hide-scroll'))
+					]);
+			} else {
+				return _List_Nil;
+			}
+		}();
 		var colors = $author$project$Theme$themeToColors(theme);
 		var cardBg = $author$project$Theme$cardColor(theme);
 		var border = $author$project$Theme$borderColor(theme);
@@ -14187,8 +14297,31 @@ var $author$project$Pages$Home_$feedCard = F4(
 var $author$project$Pages$Home_$feedGrid = F2(
 	function (shared, model) {
 		var theme = shared.theme;
-		var gapValue = (shared.windowWidth >= 1024) ? 24 : ((shared.windowWidth >= 768) ? 20 : 16);
-		var columnCount = (shared.windowWidth >= 1024) ? 3 : ((shared.windowWidth >= 768) ? 2 : 1);
+		var breakpoint = $author$project$Responsive$breakpointFromWidth(shared.windowWidth);
+		var columnCount = function () {
+			switch (breakpoint.$) {
+				case 'VeryNarrowBreakpoint':
+					return 1;
+				case 'MobileBreakpoint':
+					return 1;
+				case 'TabletBreakpoint':
+					return 2;
+				default:
+					return 3;
+			}
+		}();
+		var gapValue = function () {
+			switch (breakpoint.$) {
+				case 'VeryNarrowBreakpoint':
+					return 16;
+				case 'MobileBreakpoint':
+					return 16;
+				case 'TabletBreakpoint':
+					return 20;
+				default:
+					return 24;
+			}
+		}();
 		return A2(
 			$mdgriffith$elm_ui$Element$column,
 			_List_fromArray(
@@ -14208,7 +14341,7 @@ var $author$project$Pages$Home_$feedGrid = F2(
 							]),
 						A2(
 							$elm$core$List$map,
-							A3($author$project$Pages$Home_$feedCard, shared.now, theme, shared.windowWidth),
+							A3($author$project$Pages$Home_$feedCard, shared.now, theme, breakpoint),
 							feedRow));
 				},
 				A2($author$project$Pages$Home_$chunkList, columnCount, model.feeds)));
@@ -14502,9 +14635,9 @@ var $author$project$Pages$Home_$tabBar = F2(
 var $author$project$Pages$Home_$view = F2(
 	function (shared, model) {
 		var theme = shared.theme;
-		var isMobile = shared.windowWidth < 768;
-		var paddingValue = isMobile ? 16 : 96;
 		var colors = $author$project$Theme$themeToColors(theme);
+		var breakpoint = $author$project$Responsive$breakpointFromWidth(shared.windowWidth);
+		var pad = $author$project$Responsive$uniformPadding(breakpoint);
 		var bg = $author$project$Theme$surfaceColor(theme);
 		return A2(
 			$mdgriffith$elm_ui$Element$column,
@@ -14513,7 +14646,7 @@ var $author$project$Pages$Home_$view = F2(
 					$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill),
 					$mdgriffith$elm_ui$Element$height($mdgriffith$elm_ui$Element$fill),
 					$mdgriffith$elm_ui$Element$spacing(20),
-					$mdgriffith$elm_ui$Element$padding(paddingValue),
+					$mdgriffith$elm_ui$Element$padding(pad),
 					$mdgriffith$elm_ui$Element$Background$color(bg),
 					$mdgriffith$elm_ui$Element$htmlAttribute(
 					A2($elm$html$Html$Attributes$attribute, 'data-page', 'home'))
@@ -14676,8 +14809,21 @@ var $mdgriffith$elm_ui$Internal$Model$Monospace = {$: 'Monospace'};
 var $mdgriffith$elm_ui$Element$Font$monospace = $mdgriffith$elm_ui$Internal$Model$Monospace;
 var $mdgriffith$elm_ui$Element$rgba = $mdgriffith$elm_ui$Internal$Model$Rgba;
 var $mdgriffith$elm_ui$Element$Font$semiBold = A2($mdgriffith$elm_ui$Internal$Model$Class, $mdgriffith$elm_ui$Internal$Flag$fontWeight, $mdgriffith$elm_ui$Internal$Style$classes.textSemiBold);
+var $author$project$Responsive$isVeryNarrow = function (breakpoint) {
+	if (breakpoint.$ === 'VeryNarrowBreakpoint') {
+		return true;
+	} else {
+		return false;
+	}
+};
+var $author$project$Responsive$timelineClusterPadding = function (breakpoint) {
+	return $author$project$Responsive$isVeryNarrow(breakpoint) ? 70 : 105;
+};
+var $author$project$Responsive$timelineTimeColumnWidth = function (breakpoint) {
+	return $author$project$Responsive$isVeryNarrow(breakpoint) ? 60 : 85;
+};
 var $author$project$Pages$Timeline$clusterItem = F6(
-	function (isVeryNarrow, zone, now, theme, expandedClusters, cluster) {
+	function (breakpoint, zone, now, theme, expandedClusters, cluster) {
 		var txtColor = $author$project$Theme$textColor(theme);
 		var timeTxt = function () {
 			if (theme.$ === 'Dark') {
@@ -14754,7 +14900,7 @@ var $author$project$Pages$Timeline$clusterItem = F6(
 								[
 									$mdgriffith$elm_ui$Element$width(
 									$mdgriffith$elm_ui$Element$px(
-										isVeryNarrow ? 60 : 85)),
+										$author$project$Responsive$timelineTimeColumnWidth(breakpoint))),
 									$author$project$ThemeTypography$meta,
 									$mdgriffith$elm_ui$Element$Font$color(timeTxt),
 									$mdgriffith$elm_ui$Element$Font$family(
@@ -14878,7 +15024,7 @@ var $author$project$Pages$Timeline$clusterItem = F6(
 							$mdgriffith$elm_ui$Element$paddingEach(
 							{
 								bottom: 12,
-								left: isVeryNarrow ? 70 : 105,
+								left: $author$project$Responsive$timelineClusterPadding(breakpoint),
 								right: 8,
 								top: 0
 							})
@@ -14988,7 +15134,7 @@ var $author$project$Pages$Timeline$dayHeader = F4(
 			$mdgriffith$elm_ui$Element$text(headerText));
 	});
 var $author$project$Pages$Timeline$dayClusterSection = F6(
-	function (isVeryNarrow, zone, now, theme, expandedClusters, dayGroup) {
+	function (breakpoint, zone, now, theme, expandedClusters, dayGroup) {
 		return _List_fromArray(
 			[
 				A4($author$project$Pages$Timeline$dayHeader, zone, now, theme, dayGroup.date),
@@ -15003,7 +15149,7 @@ var $author$project$Pages$Timeline$dayClusterSection = F6(
 					]),
 				A2(
 					$elm$core$List$map,
-					A5($author$project$Pages$Timeline$clusterItem, isVeryNarrow, zone, now, theme, expandedClusters),
+					A5($author$project$Pages$Timeline$clusterItem, breakpoint, zone, now, theme, expandedClusters),
 					dayGroup.clusters))
 			]);
 	});
@@ -15104,6 +15250,30 @@ var $author$project$Pages$Timeline$groupClustersByDay = F3(
 			},
 			$elm$core$List$reverse(groups));
 	});
+var $author$project$Responsive$horizontalPadding = function (breakpoint) {
+	switch (breakpoint.$) {
+		case 'VeryNarrowBreakpoint':
+			return 8;
+		case 'MobileBreakpoint':
+			return 16;
+		case 'TabletBreakpoint':
+			return 32;
+		default:
+			return 40;
+	}
+};
+var $author$project$Responsive$isMobile = function (breakpoint) {
+	switch (breakpoint.$) {
+		case 'VeryNarrowBreakpoint':
+			return true;
+		case 'MobileBreakpoint':
+			return true;
+		case 'TabletBreakpoint':
+			return false;
+		default:
+			return false;
+	}
+};
 var $mdgriffith$elm_ui$Internal$Model$Max = F2(
 	function (a, b) {
 		return {$: 'Max', a: a, b: b};
@@ -15114,16 +15284,27 @@ var $mdgriffith$elm_ui$Element$maximum = F2(
 	});
 var $author$project$ThemeTypography$subtitle = $mdgriffith$elm_ui$Element$Font$size(20);
 var $author$project$ThemeTypography$title = $mdgriffith$elm_ui$Element$Font$size(24);
+var $author$project$Responsive$verticalPadding = function (breakpoint) {
+	switch (breakpoint.$) {
+		case 'VeryNarrowBreakpoint':
+			return 8;
+		case 'MobileBreakpoint':
+			return 16;
+		case 'TabletBreakpoint':
+			return 32;
+		default:
+			return 60;
+	}
+};
 var $author$project$Pages$Timeline$view = F2(
 	function (shared, model) {
 		var theme = shared.theme;
 		var txtColor = $author$project$Theme$textColor(theme);
 		var mutedTxt = $author$project$Theme$mutedColor(theme);
-		var isVeryNarrow = shared.windowWidth < 480;
-		var isMobile = shared.windowWidth < 768;
-		var verticalPadding = isVeryNarrow ? 8 : (isMobile ? 16 : 60);
-		var horizontalPadding = isVeryNarrow ? 8 : (isMobile ? 16 : 40);
 		var clustersByDay = A3($author$project$Pages$Timeline$groupClustersByDay, shared.zone, shared.now, model.clusters);
+		var breakpoint = $author$project$Responsive$breakpointFromWidth(shared.windowWidth);
+		var horizontalPadding = $author$project$Responsive$horizontalPadding(breakpoint);
+		var verticalPadding = $author$project$Responsive$verticalPadding(breakpoint);
 		var bg = $author$project$Theme$surfaceColor(theme);
 		return A2(
 			$mdgriffith$elm_ui$Element$column,
@@ -15134,8 +15315,7 @@ var $author$project$Pages$Timeline$view = F2(
 					$mdgriffith$elm_ui$Element$centerX,
 					$mdgriffith$elm_ui$Element$height($mdgriffith$elm_ui$Element$fill),
 					$mdgriffith$elm_ui$Element$spacing(20),
-					$mdgriffith$elm_ui$Element$paddingEach(
-					{bottom: verticalPadding, left: horizontalPadding, right: horizontalPadding, top: verticalPadding}),
+					A2($mdgriffith$elm_ui$Element$paddingXY, horizontalPadding, verticalPadding),
 					$mdgriffith$elm_ui$Element$Background$color(bg),
 					$mdgriffith$elm_ui$Element$htmlAttribute(
 					A2($elm$html$Html$Attributes$attribute, 'data-timeline-page', 'true')),
@@ -15148,7 +15328,7 @@ var $author$project$Pages$Timeline$view = F2(
 					$mdgriffith$elm_ui$Element$el,
 					_List_fromArray(
 						[
-							isMobile ? $author$project$ThemeTypography$subtitle : $author$project$ThemeTypography$title,
+							$author$project$Responsive$isMobile(breakpoint) ? $author$project$ThemeTypography$subtitle : $author$project$ThemeTypography$title,
 							$mdgriffith$elm_ui$Element$Font$bold,
 							$mdgriffith$elm_ui$Element$Font$color(txtColor)
 						]),
@@ -15188,7 +15368,7 @@ var $author$project$Pages$Timeline$view = F2(
 								]),
 							A2(
 								$elm$core$List$concatMap,
-								A5($author$project$Pages$Timeline$dayClusterSection, isVeryNarrow, shared.zone, shared.now, theme, model.expandedClusters),
+								A5($author$project$Pages$Timeline$dayClusterSection, breakpoint, shared.zone, shared.now, theme, model.expandedClusters),
 								clustersByDay)),
 							A2(
 							$mdgriffith$elm_ui$Element$el,
@@ -15237,7 +15417,8 @@ var $author$project$Application$view = function (model) {
 						footer: $author$project$Application$footerView(model.shared),
 						header: header,
 						main: content,
-						theme: theme
+						theme: theme,
+						windowWidth: model.shared.windowWidth
 					}))
 			]));
 };
