@@ -393,3 +393,11 @@ fetchTimeline limit offset tagger =
         { url = "/api/timeline?limit=" ++ String.fromInt limit ++ "&offset=" ++ String.fromInt offset
         , expect = Http.expectJson tagger timelineDecoder
         }
+
+
+fetchFeedMore : String -> Int -> Int -> (Result Http.Error Feed -> msg) -> Cmd msg
+fetchFeedMore url limit offset tagger =
+    Http.get
+        { url = "/api/feed_more?url=" ++ url ++ "&limit=" ++ String.fromInt limit ++ "&offset=" ++ String.fromInt offset
+        , expect = Http.expectJson tagger feedDecoder
+        }

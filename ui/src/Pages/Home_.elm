@@ -21,6 +21,7 @@ type alias Model =
     , activeTab : String
     , loading : Bool
     , error : Maybe String
+    , loadingFeed : Maybe String
     }
 
 
@@ -39,6 +40,8 @@ init shared =
 type Msg
     = GotFeeds (Result Http.Error Api.FeedsResponse)
     | SwitchTab String
+    | LoadMoreFeed String
+    | GotMoreFeed String (Result Http.Error Api.Feed)
 
 
 update : Shared.Model -> Msg -> Model -> ( Model, Cmd Msg )
@@ -66,6 +69,35 @@ update shared msg model =
         SwitchTab tab ->
             ( { model | activeTab = tab, loading = True, feeds = [] }
             , fetchFeeds tab GotFeeds
+            )
+
+        LoadMoreFeed url ->
+            let
+                maybeFeed = List.filter (\f -> f.url == url) model.feeds |> List.head
+                offset =
+                    case maybeFeed of
+                        Just f -> List.length f.items
+                        Nothing -> 0
+            in
+            ( { model | loadingFeed = Just url }
+            , Api.fetchFeedMore url 15 offset (\res -> GotMoreFeed url res)
+            )
+
+        GotMoreFeed url (Ok response) ->
+            let
+                updateFeed f =
+                    if f.url == url then
+                        { f | items = response.items, totalItemCount = response.totalItemCount }
+                    else
+                        f
+            in
+            ( { model | feeds = List.map updateFeed model.feeds, loadingFeed = Nothing }
+            , Cmd.none
+            )
+
+        GotMoreFeed _ (Err _) ->
+            ( { model | loadingFeed = Nothing, error = Just "Failed to load feed items" }
+            , Cmd.none
             )
 
 
@@ -323,11 +355,19 @@ feedCard now theme breakpoint feed =
         , padding 12
         ]
          [ feedHeader theme feed
-         , column
-             ([ width fill
-              , spacing 4
-              ] ++ scrollAttributes)
+        , column
+            ([ width fill
+               , spacing 4
+               ] ++ scrollAttributes)
             (List.map (feedItem now theme) (List.take 15 (sortFeedItems feed.items)))
+        , if List.length feed.items >= 15 then
+            Input.button
+                [ htmlAttribute (Html.Attributes.style "margin-top" "8px") ]
+                { onPress = Just (LoadMoreFeed feed.url)
+                , label = text "Load more"
+                }
+          else
+            Element.none
         ]
 
 
