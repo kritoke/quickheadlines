@@ -119,7 +119,15 @@
       }
     }
     </style>
-    <link rel="stylesheet" href="/public/timeline.css?v=1">
+    <script>
+      // Load timeline.css with a timestamp to avoid stale caches during development
+      (function(){
+        var l = document.createElement('link');
+        l.rel = 'stylesheet';
+        l.href = '/public/timeline.css?v=' + Date.now();
+        document.head.appendChild(l);
+      })();
+    </script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/color-thief/2.3.2/color-thief.umd.js"></script>
   </head>
   <body>
