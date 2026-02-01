@@ -191,12 +191,17 @@ tabBar shared model =
                 themeToColors theme
 
             border =
-                Theme.borderColor theme
+                case theme of
+                    Shared.Dark ->
+                        rgb255 55 55 55
+
+                    Shared.Light ->
+                        rgb255 229 231 235
         in
         wrappedRow
             [ width fill
-            , spacing 8
-            , paddingEach { top = 0, right = 0, bottom = 16, left = 0 }
+            , spacing 16
+            , paddingEach { top = 0, right = 0, bottom = 24, left = 0 }
             , Border.widthEach { top = 0, right = 0, bottom = 1, left = 0 }
             , Border.color border
             ]
@@ -211,14 +216,31 @@ allTab shared =
 
         colors =
             themeToColors theme
+
+        isActive =
+            shared.theme /= Shared.Dark && shared.theme /= Shared.Light
+
+        txtColor =
+            if isActive then
+                rgb255 59 130 246
+
+            else
+                rgb255 148 163 184
+
+        borderColor =
+            if isActive then
+                rgb255 59 130 246
+
+            else
+                Element.rgba 0 0 0 0
     in
     el
-        [ paddingXY 12 6
-        , Border.rounded 6
-        , Ty.button
+        [ paddingXY 16 8
+        , Ty.body
         , Font.medium
-        , Font.color tabActiveText
-        , Background.color (tabActiveBg theme)
+        , Font.color txtColor
+        , Border.widthEach { top = 0, right = 0, bottom = 2, left = 0 }
+        , Border.color borderColor
         ]
         (text "All")
 
@@ -232,27 +254,34 @@ tabButton shared activeTab tab =
         isActive =
             tab == activeTab
 
-        bg =
-            if isActive then
-                tabActiveBg theme
-
-            else
-                tabHoverBg theme
-
         txtColor =
             if isActive then
-                tabActiveText
+                rgb255 59 130 246
 
             else
-                tabInactiveText theme
+                case theme of
+                    Shared.Dark ->
+                        rgb255 148 163 184
+
+                    Shared.Light ->
+                        rgb255 100 116 139
+
+        borderColor =
+            if isActive then
+                rgb255 59 130 246
+
+            else
+                Element.rgba 0 0 0 0
     in
     Input.button
-        [ paddingXY 12 6
-        , Border.rounded 6
-        , Ty.button
+        [ paddingXY 16 8
+        , Ty.body
         , Font.medium
         , Font.color txtColor
-        , Background.color bg
+        , Border.widthEach { top = 0, right = 0, bottom = 2, left = 0 }
+        , Border.color borderColor
+        , htmlAttribute (Html.Attributes.style "cursor" "pointer")
+        , htmlAttribute (Html.Attributes.style "transition" "all 0.2s")
         ]
         { onPress = Just (SwitchTab tab)
         , label = text tab
@@ -379,7 +408,15 @@ feedCard now theme breakpoint loadingFeed insertedIds feed =
          scrollAttributes =
              case breakpoint of
                  DesktopBreakpoint ->
-                     [ htmlAttribute (Html.Attributes.style "max-height" "260px")
+                     [ htmlAttribute (Html.Attributes.style "max-height" "384px")
+                     , htmlAttribute (Html.Attributes.style "overflow-y" "auto")
+                     , htmlAttribute (Html.Attributes.style "scrollbar-width" "thin")
+                     , htmlAttribute (Html.Attributes.style "scrollbar-color" "rgba(128,128,128,0.3) transparent")
+                     , htmlAttribute (Html.Attributes.class "auto-hide-scroll")
+                     ]
+
+                 TabletBreakpoint ->
+                     [ htmlAttribute (Html.Attributes.style "max-height" "352px")
                      , htmlAttribute (Html.Attributes.style "overflow-y" "auto")
                      , htmlAttribute (Html.Attributes.style "scrollbar-width" "thin")
                      , htmlAttribute (Html.Attributes.style "scrollbar-color" "rgba(128,128,128,0.3) transparent")

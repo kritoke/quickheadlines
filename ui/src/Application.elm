@@ -301,8 +301,6 @@ headerView model =
         [ width fill
         , paddingEach headerPadding
         , Background.color bg
-        , Border.widthEach { bottom = 1, left = 0, right = 0, top = 0 }
-        , Border.color border
         , spacing 12
         ]
         [ -- Brand Section

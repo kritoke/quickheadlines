@@ -13330,9 +13330,6 @@ var $author$project$Application$headerView = function (model) {
 				$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill),
 				$mdgriffith$elm_ui$Element$paddingEach(headerPadding),
 				$mdgriffith$elm_ui$Element$Background$color(bg),
-				$mdgriffith$elm_ui$Element$Border$widthEach(
-				{bottom: 1, left: 0, right: 0, top: 0}),
-				$mdgriffith$elm_ui$Element$Border$color(border),
 				$mdgriffith$elm_ui$Element$spacing(12)
 			]),
 		_List_fromArray(
@@ -13691,9 +13688,9 @@ var $author$project$Responsive$uniformPadding = function (breakpoint) {
 		case 'MobileBreakpoint':
 			return 16;
 		case 'TabletBreakpoint':
-			return 48;
+			return 32;
 		default:
-			return 96;
+			return 48;
 	}
 };
 var $author$project$Layouts$Shared$headerView = F3(
@@ -14530,22 +14527,37 @@ var $author$project$Pages$Home_$feedCard = F6(
 		var txtColor = $author$project$Theme$textColor(theme);
 		var shouldShowButton = ($elm$core$List$length(feed.items) >= 10) && (feed.url !== 'software://releases');
 		var scrollAttributes = function () {
-			if (breakpoint.$ === 'DesktopBreakpoint') {
-				return _List_fromArray(
-					[
-						$mdgriffith$elm_ui$Element$htmlAttribute(
-						A2($elm$html$Html$Attributes$style, 'max-height', '260px')),
-						$mdgriffith$elm_ui$Element$htmlAttribute(
-						A2($elm$html$Html$Attributes$style, 'overflow-y', 'auto')),
-						$mdgriffith$elm_ui$Element$htmlAttribute(
-						A2($elm$html$Html$Attributes$style, 'scrollbar-width', 'thin')),
-						$mdgriffith$elm_ui$Element$htmlAttribute(
-						A2($elm$html$Html$Attributes$style, 'scrollbar-color', 'rgba(128,128,128,0.3) transparent')),
-						$mdgriffith$elm_ui$Element$htmlAttribute(
-						$elm$html$Html$Attributes$class('auto-hide-scroll'))
-					]);
-			} else {
-				return _List_Nil;
+			switch (breakpoint.$) {
+				case 'DesktopBreakpoint':
+					return _List_fromArray(
+						[
+							$mdgriffith$elm_ui$Element$htmlAttribute(
+							A2($elm$html$Html$Attributes$style, 'max-height', '384px')),
+							$mdgriffith$elm_ui$Element$htmlAttribute(
+							A2($elm$html$Html$Attributes$style, 'overflow-y', 'auto')),
+							$mdgriffith$elm_ui$Element$htmlAttribute(
+							A2($elm$html$Html$Attributes$style, 'scrollbar-width', 'thin')),
+							$mdgriffith$elm_ui$Element$htmlAttribute(
+							A2($elm$html$Html$Attributes$style, 'scrollbar-color', 'rgba(128,128,128,0.3) transparent')),
+							$mdgriffith$elm_ui$Element$htmlAttribute(
+							$elm$html$Html$Attributes$class('auto-hide-scroll'))
+						]);
+				case 'TabletBreakpoint':
+					return _List_fromArray(
+						[
+							$mdgriffith$elm_ui$Element$htmlAttribute(
+							A2($elm$html$Html$Attributes$style, 'max-height', '352px')),
+							$mdgriffith$elm_ui$Element$htmlAttribute(
+							A2($elm$html$Html$Attributes$style, 'overflow-y', 'auto')),
+							$mdgriffith$elm_ui$Element$htmlAttribute(
+							A2($elm$html$Html$Attributes$style, 'scrollbar-width', 'thin')),
+							$mdgriffith$elm_ui$Element$htmlAttribute(
+							A2($elm$html$Html$Attributes$style, 'scrollbar-color', 'rgba(128,128,128,0.3) transparent')),
+							$mdgriffith$elm_ui$Element$htmlAttribute(
+							$elm$html$Html$Attributes$class('auto-hide-scroll'))
+						]);
+				default:
+					return _List_Nil;
 			}
 		}();
 		var isLoadingThisFeed = function () {
@@ -14684,63 +14696,60 @@ var $author$project$Pages$Home_$content = F2(
 				]),
 			$mdgriffith$elm_ui$Element$text('Error loading feeds')) : A2($author$project$Pages$Home_$feedGrid, shared, model));
 	});
-var $author$project$ThemeTypography$button = $mdgriffith$elm_ui$Element$Font$size(15);
+var $author$project$ThemeTypography$body = $mdgriffith$elm_ui$Element$Font$size(16);
 var $mdgriffith$elm_ui$Element$Font$medium = A2($mdgriffith$elm_ui$Internal$Model$Class, $mdgriffith$elm_ui$Internal$Flag$fontWeight, $mdgriffith$elm_ui$Internal$Style$classes.textMedium);
-var $author$project$Theme$tabActiveBg = function (theme) {
-	if (theme.$ === 'Dark') {
-		return A3($mdgriffith$elm_ui$Element$rgb255, 40, 40, 40);
-	} else {
-		return A3($mdgriffith$elm_ui$Element$rgb255, 243, 244, 246);
-	}
-};
-var $author$project$Theme$tabActiveText = $author$project$Theme$lumeOrange;
+var $mdgriffith$elm_ui$Element$rgba = $mdgriffith$elm_ui$Internal$Model$Rgba;
 var $author$project$Pages$Home_$allTab = function (shared) {
 	var theme = shared.theme;
+	var isActive = (!_Utils_eq(shared.theme, $author$project$Shared$Dark)) && (!_Utils_eq(shared.theme, $author$project$Shared$Light));
+	var txtColor = isActive ? A3($mdgriffith$elm_ui$Element$rgb255, 59, 130, 246) : A3($mdgriffith$elm_ui$Element$rgb255, 148, 163, 184);
 	var colors = $author$project$Theme$themeToColors(theme);
+	var borderColor = isActive ? A3($mdgriffith$elm_ui$Element$rgb255, 59, 130, 246) : A4($mdgriffith$elm_ui$Element$rgba, 0, 0, 0, 0);
 	return A2(
 		$mdgriffith$elm_ui$Element$el,
 		_List_fromArray(
 			[
-				A2($mdgriffith$elm_ui$Element$paddingXY, 12, 6),
-				$mdgriffith$elm_ui$Element$Border$rounded(6),
-				$author$project$ThemeTypography$button,
+				A2($mdgriffith$elm_ui$Element$paddingXY, 16, 8),
+				$author$project$ThemeTypography$body,
 				$mdgriffith$elm_ui$Element$Font$medium,
-				$mdgriffith$elm_ui$Element$Font$color($author$project$Theme$tabActiveText),
-				$mdgriffith$elm_ui$Element$Background$color(
-				$author$project$Theme$tabActiveBg(theme))
+				$mdgriffith$elm_ui$Element$Font$color(txtColor),
+				$mdgriffith$elm_ui$Element$Border$widthEach(
+				{bottom: 2, left: 0, right: 0, top: 0}),
+				$mdgriffith$elm_ui$Element$Border$color(borderColor)
 			]),
 		$mdgriffith$elm_ui$Element$text('All'));
-};
-var $author$project$Theme$tabHoverBg = function (theme) {
-	if (theme.$ === 'Dark') {
-		return A3($mdgriffith$elm_ui$Element$rgb255, 35, 35, 40);
-	} else {
-		return A3($mdgriffith$elm_ui$Element$rgb255, 229, 231, 235);
-	}
-};
-var $author$project$Theme$tabInactiveText = function (theme) {
-	if (theme.$ === 'Dark') {
-		return A3($mdgriffith$elm_ui$Element$rgb255, 148, 163, 184);
-	} else {
-		return A3($mdgriffith$elm_ui$Element$rgb255, 75, 85, 99);
-	}
 };
 var $author$project$Pages$Home_$tabButton = F3(
 	function (shared, activeTab, tab) {
 		var theme = shared.theme;
 		var isActive = _Utils_eq(tab, activeTab);
-		var txtColor = isActive ? $author$project$Theme$tabActiveText : $author$project$Theme$tabInactiveText(theme);
-		var bg = isActive ? $author$project$Theme$tabActiveBg(theme) : $author$project$Theme$tabHoverBg(theme);
+		var txtColor = function () {
+			if (isActive) {
+				return A3($mdgriffith$elm_ui$Element$rgb255, 59, 130, 246);
+			} else {
+				if (theme.$ === 'Dark') {
+					return A3($mdgriffith$elm_ui$Element$rgb255, 148, 163, 184);
+				} else {
+					return A3($mdgriffith$elm_ui$Element$rgb255, 100, 116, 139);
+				}
+			}
+		}();
+		var borderColor = isActive ? A3($mdgriffith$elm_ui$Element$rgb255, 59, 130, 246) : A4($mdgriffith$elm_ui$Element$rgba, 0, 0, 0, 0);
 		return A2(
 			$mdgriffith$elm_ui$Element$Input$button,
 			_List_fromArray(
 				[
-					A2($mdgriffith$elm_ui$Element$paddingXY, 12, 6),
-					$mdgriffith$elm_ui$Element$Border$rounded(6),
-					$author$project$ThemeTypography$button,
+					A2($mdgriffith$elm_ui$Element$paddingXY, 16, 8),
+					$author$project$ThemeTypography$body,
 					$mdgriffith$elm_ui$Element$Font$medium,
 					$mdgriffith$elm_ui$Element$Font$color(txtColor),
-					$mdgriffith$elm_ui$Element$Background$color(bg)
+					$mdgriffith$elm_ui$Element$Border$widthEach(
+					{bottom: 2, left: 0, right: 0, top: 0}),
+					$mdgriffith$elm_ui$Element$Border$color(borderColor),
+					$mdgriffith$elm_ui$Element$htmlAttribute(
+					A2($elm$html$Html$Attributes$style, 'cursor', 'pointer')),
+					$mdgriffith$elm_ui$Element$htmlAttribute(
+					A2($elm$html$Html$Attributes$style, 'transition', 'all 0.2s'))
 				]),
 			{
 				label: $mdgriffith$elm_ui$Element$text(tab),
@@ -14923,15 +14932,21 @@ var $author$project$Pages$Home_$tabBar = F2(
 		} else {
 			var theme = shared.theme;
 			var colors = $author$project$Theme$themeToColors(theme);
-			var border = $author$project$Theme$borderColor(theme);
+			var border = function () {
+				if (theme.$ === 'Dark') {
+					return A3($mdgriffith$elm_ui$Element$rgb255, 55, 55, 55);
+				} else {
+					return A3($mdgriffith$elm_ui$Element$rgb255, 229, 231, 235);
+				}
+			}();
 			return A2(
 				$mdgriffith$elm_ui$Element$wrappedRow,
 				_List_fromArray(
 					[
 						$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill),
-						$mdgriffith$elm_ui$Element$spacing(8),
+						$mdgriffith$elm_ui$Element$spacing(16),
 						$mdgriffith$elm_ui$Element$paddingEach(
-						{bottom: 16, left: 0, right: 0, top: 0}),
+						{bottom: 24, left: 0, right: 0, top: 0}),
 						$mdgriffith$elm_ui$Element$Border$widthEach(
 						{bottom: 1, left: 0, right: 0, top: 0}),
 						$mdgriffith$elm_ui$Element$Border$color(border)
@@ -14970,7 +14985,6 @@ var $author$project$Pages$Home_$view = F2(
 					A2($author$project$Pages$Home_$content, shared, model)
 				]));
 	});
-var $author$project$ThemeTypography$body = $mdgriffith$elm_ui$Element$Font$size(16);
 var $author$project$Pages$Timeline$ToggleCluster = function (a) {
 	return {$: 'ToggleCluster', a: a};
 };
@@ -15108,7 +15122,6 @@ var $author$project$Pages$Timeline$formatTime = F2(
 	});
 var $mdgriffith$elm_ui$Internal$Model$Monospace = {$: 'Monospace'};
 var $mdgriffith$elm_ui$Element$Font$monospace = $mdgriffith$elm_ui$Internal$Model$Monospace;
-var $mdgriffith$elm_ui$Element$rgba = $mdgriffith$elm_ui$Internal$Model$Rgba;
 var $mdgriffith$elm_ui$Element$Font$semiBold = A2($mdgriffith$elm_ui$Internal$Model$Class, $mdgriffith$elm_ui$Internal$Flag$fontWeight, $mdgriffith$elm_ui$Internal$Style$classes.textSemiBold);
 var $author$project$Responsive$isVeryNarrow = function (breakpoint) {
 	if (breakpoint.$ === 'VeryNarrowBreakpoint') {

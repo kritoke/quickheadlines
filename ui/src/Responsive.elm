@@ -112,11 +112,11 @@ uniformPadding breakpoint =
 
         TabletBreakpoint ->
             -- Match v0.4.0: md:px-12 = 48px on tablet
-            48
+            32
 
         DesktopBreakpoint ->
-            -- Match v0.4.0: lg:px-24 = 96px on desktop
-            96
+            -- Match v0.4.0: lg:px-24 = 96px on desktop - but reduce for cleaner look
+            48
 
 
 containerMaxWidth : Breakpoint -> Element.Length
