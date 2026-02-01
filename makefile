@@ -49,6 +49,9 @@ ifeq ($(OS_NAME),linux)
 else ifeq ($(OS_NAME),macos)
 	CRYSTAL_TARBALL = crystal-$(CRYSTAL_VERSION)-1-$(OS_NAME)-$(ARCH_NAME).tar.gz
 	CRYSTAL_URL = https://github.com/crystal-lang/crystal/releases/download/$(CRYSTAL_VERSION)/$(CRYSTAL_TARBALL)
+else ifeq ($(OS_NAME),freebsd)
+	CRYSTAL_TARBALL = crystal-$(CRYSTAL_VERSION)-1-$(OS_NAME)-$(ARCH_NAME).tar.gz
+	CRYSTAL_URL = https://github.com/crystal-lang/crystal/releases/download/$(CRYSTAL_VERSION)/$(CRYSTAL_TARBALL)
 endif
 
 # Add Homebrew OpenSSL paths for macOS
@@ -70,49 +73,28 @@ download-crystal:
 	@mkdir -p $(CACHE_DIR)
 	@mkdir -p bin
 	@if [ ! -d "$(CRYSTAL_DIR)" ]; then \
+		echo "Downloading $(CRYSTAL_URL)..."; \
+		cd $(CACHE_DIR) && \
 		if [ "$(OS_NAME)" = "freebsd" ]; then \
-			echo "Building Crystal $(CRYSTAL_VERSION) from source on FreeBSD..."; \
-			echo "This may take 30-60 minutes..."; \
-			export MAKE=gmake; \
-			export LLVM_CONFIG="$(FIND_LLVM_CONFIG)"; \
-			cd $(CACHE_DIR) && \
-			fetch https://github.com/crystal-lang/crystal/archive/$(CRYSTAL_VERSION).tar.gz 2>/dev/null || curl -L -o $(CRYSTAL_VERSION).tar.gz https://github.com/crystal-lang/crystal/archive/$(CRYSTAL_VERSION).tar.gz || { \
-				echo "Error: Failed to download Crystal source"; \
-				exit 1; \
-			}; \
-			tar xzf $(CRYSTAL_VERSION).tar.gz || { \
-				echo "Error: Failed to extract Crystal source"; \
-				rm -f $(CRYSTAL_VERSION).tar.gz; \
-				exit 1; \
-			}; \
-			rm -f $(CRYSTAL_VERSION).tar.gz; \
-			mv crystal-$(CRYSTAL_VERSION) $(CRYSTAL_DIR); \
-			cd $(CRYSTAL_DIR) && \
-			$(MAKE) deps && $(MAKE) clean && $(MAKE) crystal || { \
-				echo "Error: Failed to build Crystal"; \
+			fetch $(CRYSTAL_URL) 2>/dev/null || curl -L -o $(CRYSTAL_TARBALL) $(CRYSTAL_URL) || { \
+				echo "Error: Failed to download Crystal tarball"; \
 				exit 1; \
 			}; \
 		else \
-			echo "Downloading $(CRYSTAL_URL)..."; \
-			cd $(CACHE_DIR) && \
 			curl -L -o $(CRYSTAL_TARBALL) $(CRYSTAL_URL) || { \
 				echo "Error: Failed to download Crystal tarball"; \
 				exit 1; \
 			}; \
-			tar xzf $(CRYSTAL_TARBALL) || { \
-				echo "Error: Failed to extract Crystal tarball"; \
-				rm -f $(CRYSTAL_TARBALL); \
-				exit 1; \
-			} && \
+		fi && \
+		tar xzf $(CRYSTAL_TARBALL) || { \
+			echo "Error: Failed to extract Crystal tarball"; \
 			rm -f $(CRYSTAL_TARBALL); \
-		fi; \
+			exit 1; \
+		} && \
+		rm -f $(CRYSTAL_TARBALL); \
 	fi
 	@rm -f bin/crystal
-	@if [ "$(OS_NAME)" = "freebsd" ]; then \
-		ln -sf $(CRYSTAL_DIR)/.build/crystal bin/crystal; \
-	else \
-		ln -sf $(CRYSTAL_DIR)/bin/crystal bin/crystal; \
-	fi
+	@ln -sf $(CRYSTAL_DIR)/bin/crystal bin/crystal
 	@echo "✓ Crystal $(CRYSTAL_VERSION) installed in $(CRYSTAL_DIR)"
 
 # Check for required dependencies
