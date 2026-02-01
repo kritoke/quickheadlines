@@ -15497,9 +15497,9 @@ var $author$project$Responsive$horizontalPadding = function (breakpoint) {
 		case 'MobileBreakpoint':
 			return 16;
 		case 'TabletBreakpoint':
-			return 32;
+			return 24;
 		default:
-			return 40;
+			return 16;
 	}
 };
 var $author$project$Responsive$isMobile = function (breakpoint) {
