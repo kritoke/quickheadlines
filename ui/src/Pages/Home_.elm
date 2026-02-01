@@ -12,7 +12,10 @@ import Shared exposing (Model, Msg(..), Theme(..))
 import Theme exposing (cardColor, errorColor, surfaceColor, tabActiveBg, tabActiveText, tabHoverBg, tabInactiveText, textColor, themeToColors)
 import ThemeTypography as Ty
 import Time
+import Task
+import Process
 import Responsive exposing (Breakpoint(..), breakpointFromWidth, isMobile, uniformPadding, containerMaxWidth)
+import Set exposing (Set)
 
 
 type alias Model =
@@ -22,6 +25,7 @@ type alias Model =
     , loading : Bool
     , error : Maybe String
     , loadingFeed : Maybe String
+    , insertedIds : Set String
     }
 
 
@@ -32,6 +36,8 @@ init shared =
       , activeTab = "all"
       , loading = True
       , error = Nothing
+      , loadingFeed = Nothing
+      , insertedIds = Set.empty
       }
     , fetchFeeds "all" GotFeeds
     )
@@ -42,6 +48,7 @@ type Msg
     | SwitchTab String
     | LoadMoreFeed String
     | GotMoreFeed String (Result Http.Error Api.Feed)
+    | ClearInserted
 
 
 update : Shared.Model -> Msg -> Model -> ( Model, Cmd Msg )
@@ -83,20 +90,58 @@ update shared msg model =
             , Api.fetchFeedMore url 15 offset (\res -> GotMoreFeed url res)
             )
 
-        GotMoreFeed url (Ok response) ->
+    GotMoreFeed url (Ok response) ->
             let
+                -- Existing links for the feed we loaded more for
+                maybeFeed = List.filter ( -> f.url == url) model.feeds |> List.head
+
+                existingLinks =
+                    case maybeFeed of
+                        Just f -> Set.fromList (List.map .link f.items)
+                        Nothing -> Set.empty
+
+                addedLinksList =
+                    response.items
+                        |> List.filter (i -> not (Set.member ri.link existingLinks))
+                        |> List.map .link
+
+                addedSet = Set.fromList addedLinksList
+
+                -- Merge existing items with newly fetched items, sort newest -> oldest,
+                -- and deduplicate by link (prefer the newest items).
+                dedupeByLink items =
+                    let
+                        folder item (acc, seen) =
+                            if Set.member item.link seen then
+                                ( acc, seen )
+                            else
+                                ( acc ++ [ item ], Set.insert item.link seen )
+
+                        (result, _) = List.foldl folder ([], Set.empty) items
+                    in
+                    result
+
                 updateFeed f =
                     if f.url == url then
-                        { f | items = response.items, totalItemCount = response.totalItemCount }
+                        let
+                            merged = Api.sortFeedItems (f.items ++ response.items)
+                            mergedDedup = dedupeByLink merged
+                        in
+                        { f | items = mergedDedup, totalItemCount = response.totalItemCount }
                     else
                         f
             in
-            ( { model | feeds = List.map updateFeed model.feeds, loadingFeed = Nothing }
-            , Cmd.none
+            ( { model | feeds = List.map updateFeed model.feeds, loadingFeed = Nothing, insertedIds = Set.union model.insertedIds addedSet }
+            , Task.perform (\_ -> ClearInserted) (Process.sleep 320)
             )
 
         GotMoreFeed _ (Err _) ->
             ( { model | loadingFeed = Nothing, error = Just "Failed to load feed items" }
+            , Cmd.none
+            )
+
+        ClearInserted ->
+            ( { model | insertedIds = Set.empty }
             , Cmd.none
             )
 
@@ -293,7 +338,7 @@ feedGrid shared model =
                         [ width fill
                         , spacing gapValue
                         ]
-                        (List.map (feedCard shared.now theme breakpoint) feedRow)
+                        (List.map (feedCard shared.now theme breakpoint model.loadingFeed model.insertedIds) feedRow)
                 )
         )
 
@@ -316,8 +361,8 @@ splitAt n list =
     ( List.take n list, List.drop n list )
 
 
-feedCard : Time.Posix -> Theme -> Responsive.Breakpoint -> Feed -> Element Msg
-feedCard now theme breakpoint feed =
+feedCard : Time.Posix -> Theme -> Responsive.Breakpoint -> Maybe String -> Set String -> Feed -> Element Msg
+feedCard now theme breakpoint loadingFeed insertedIds feed =
     let
          colors =
              themeToColors theme
@@ -359,11 +404,11 @@ feedCard now theme breakpoint feed =
             ([ width fill
                , spacing 4
                ] ++ scrollAttributes)
-            (List.map (feedItem now theme) (List.take 15 (sortFeedItems feed.items)))
+                        (List.map (feedItem now theme insertedIds) (List.take 15 (sortFeedItems feed.items)))
         , -- Always show a Load more button (helps debug and matches old quick.easy behavior)
           let
             isLoadingThisFeed =
-                case model.loadingFeed of
+                case loadingFeed of
                     Just u -> u == feed.url
                     Nothing -> False
 
@@ -372,10 +417,13 @@ feedCard now theme breakpoint feed =
             btnOnPress = if isLoadingThisFeed then Nothing else Just (LoadMoreFeed feed.url)
           in
           Input.button
-            [ htmlAttribute (Html.Attributes.style "margin-top" "8px") ]
+            [ htmlAttribute (Html.Attributes.style "margin-top" "8px")
+            , htmlAttribute (Html.Attributes.class "qh-load-more")
+            ]
             { onPress = btnOnPress
             , label = btnLabel
             }
+
         ]
 
 
@@ -530,8 +578,8 @@ faviconView theme faviconUrl =
             Element.none
 
 
-feedItem : Time.Posix -> Theme -> FeedItem -> Element Msg
-feedItem now theme item =
+feedItem : Time.Posix -> Theme -> Set String -> FeedItem -> Element Msg
+feedItem now theme insertedIds item =
     let
         txtColor =
             textColor theme
@@ -539,11 +587,20 @@ feedItem now theme item =
         mutedTxt =
             Theme.mutedColor theme
     in
+    let
+        isInserted = Set.member item.link insertedIds
+        wrapperAttrs =
+            [ width fill
+            , spacing 8
+            , htmlAttribute (Html.Attributes.style "min-width" "0")
+            , htmlAttribute (Html.Attributes.class "timeline-inserted-wrapper")
+            ]
+            ++ (if isInserted then [ htmlAttribute (Html.Attributes.class "timeline-inserted") ] else [])
+    in
     row
         [ width fill
-        , spacing 8
-        , htmlAttribute (Html.Attributes.style "min-width" "0")
-        , htmlAttribute (Html.Attributes.class "timeline-inserted-wrapper")
+        ]
+        wrapperAttrs
         ]
         [ el
             [ width (px 6)

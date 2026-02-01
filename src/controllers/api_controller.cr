@@ -361,6 +361,29 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
     ATH::Response.new(ex.message, 404, HTTP::Headers{"content-type" => "text/plain"})
   end
 
+  # Serve timeline.css at /public/timeline.css so the SPA can load view-specific styles
+  @[ARTA::Get(path: "/public/timeline.css")]
+  def public_timeline_css(request : ATH::Request) : ATH::Response
+    public_path = "./public/timeline.css"
+    unless File.exists?(public_path)
+      return ATH::Response.new("public/timeline.css not found - run 'make elm-land-build' or ensure the file exists", 404, HTTP::Headers{"content-type" => "text/plain; charset=utf-8"})
+    end
+
+    content = File.read(public_path)
+    response = ATH::Response.new(content)
+    response.headers["content-type"] = "text/css; charset=utf-8"
+    if ENV["APP_ENV"]? == "development"
+      response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+      response.headers["Pragma"] = "no-cache"
+      response.headers["Expires"] = "0"
+    else
+      response.headers["Cache-Control"] = "public, max-age=31536000"
+    end
+    response
+  rescue ex : Exception
+    ATH::Response.new(ex.message, 404, HTTP::Headers{"content-type" => "text/plain"})
+  end
+
   # Serve Elm bundle at /public/elm.js (canonical path)
   @[ARTA::Get(path: "/public/elm.js")]
   def public_elm_js(request : ATH::Request) : ATH::Response

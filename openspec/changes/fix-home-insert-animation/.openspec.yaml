@@ -1,0 +1,6 @@
+name: fix-home-insert-animation
+summary: Fix Home page wiring so newly loaded feed items get the insert animation
+status: in_progress
+created: 2026-02-01
+authors:
+  - OpenCode

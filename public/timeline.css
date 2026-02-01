@@ -1,5 +1,7 @@
 .timeline-inserted {
-  animation: qh-insert 220ms ease-out both;
+  animation: qh-insert 300ms cubic-bezier(.22,.9,.29,1) both;
+  /* subtle highlight while animating */
+  box-shadow: 0 6px 18px rgba(16,24,40,0.06);
 }
 
 .timeline-inserted-wrapper {
@@ -7,6 +9,84 @@
 }
 
 @keyframes qh-insert {
-  from { opacity: 0; transform: translateY(8px); }
-  to { opacity: 1; transform: translateY(0); }
+  from { opacity: 0; transform: translateY(12px) scale(0.997); }
+  60% { opacity: 1; transform: translateY(-2px) scale(1.001); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
 }
+
+/* Load more button styles inspired by quick.easy.matthewrhone.com */
+.qh-load-more {
+  display: inline-block;
+  background: linear-gradient(180deg, #ffffff, #f3f4f6);
+  color: #0f172a;
+  border-radius: 999px;
+  padding: 8px 18px;
+  border: 1px solid rgba(16,24,40,0.06);
+  box-shadow: 0 6px 18px rgba(16,24,40,0.06);
+  transition: transform 140ms ease, box-shadow 140ms ease, opacity 120ms ease;
+  cursor: pointer;
+  font-weight: 600;
+}
+.qh-load-more:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 26px rgba(16,24,40,0.12);
+}
+.qh-load-more:active {
+  transform: translateY(0);
+}
+
+/* Dark theme adjustments (basic) */
+@media (prefers-color-scheme: dark) {
+  .qh-load-more {
+    background: linear-gradient(180deg, #111827, #0b1220);
+    color: #e6eef8;
+    border: 1px solid rgba(255,255,255,0.04);
+    box-shadow: 0 6px 18px rgba(2,6,23,0.6);
+  }
+}
+
+/* Small, non-interactive debug indicator (doesn't block clicks) */
+/* Hidden by default so it doesn't sit on the page for regular users. Enable by adding
+   the `qh-debug-enabled` class on the document body (only for local/dev). */
+.qh-observer-indicator {
+  display: none;
+}
+
+.qh-debug-enabled .qh-observer-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  position: fixed !important;
+  right: 12px !important;
+  bottom: 12px !important;
+  z-index: 1200 !important;
+  background: rgba(17,24,39,0.9);
+  color: #fff;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  pointer-events: none; /* ensure it never captures clicks */
+  box-shadow: 0 6px 18px rgba(2,6,23,0.5);
+}
+
+/* Small dev debug panel (non-invasive) */
+.qh-debug-panel {
+  position: fixed !important;
+  right: 12px !important;
+  bottom: 56px !important;
+  z-index: 1200 !important;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  pointer-events: auto;
+}
+.qh-debug-btn {
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.06);
+  color: #fff;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  cursor: pointer;
+}
+.qh-debug-btn:active { transform: translateY(1px); }

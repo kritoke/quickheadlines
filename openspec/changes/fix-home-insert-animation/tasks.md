@@ -1,0 +1,5 @@
+- Update `feedCard` signature to accept `insertedIds` and pass it to `feedItem`.
+- Update `feedItem` signature to take `insertedIds` and add `timeline-inserted` class when appropriate.
+- Build Elm and ensure compilation succeeds.
+- Run Playwright tests that exercise Home load-more animation.
+- Archive change when done.

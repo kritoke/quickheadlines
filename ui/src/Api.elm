@@ -1,4 +1,4 @@
-module Api exposing (Cluster, ClusterItem, Feed, FeedItem, FeedsResponse, Tab, TimelineItem, TimelineResponse, clusterItemsFromTimeline, sortTimelineItems, sortFeedItems, fetchFeeds, fetchTimeline)
+module Api exposing (Cluster, ClusterItem, Feed, FeedItem, FeedsResponse, Tab, TimelineItem, TimelineResponse, clusterItemsFromTimeline, sortTimelineItems, sortFeedItems, fetchFeeds, fetchTimeline, fetchFeedMore)
 
 import Http
 import Json.Decode as Decode exposing (Decoder, field, list, nullable, string, succeed)

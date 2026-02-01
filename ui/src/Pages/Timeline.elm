@@ -29,6 +29,7 @@ type alias Model =
     , hasMore : Bool
     , offset : Int
     , insertedIds : Set String
+    , sentinelNear : Bool
     }
 
 
@@ -43,6 +44,7 @@ init shared =
       , hasMore = True
       , offset = 0
       , insertedIds = Set.empty
+      , sentinelNear = False
       }
     , fetchTimeline 35 0 GotTimeline
     )
@@ -129,11 +131,14 @@ update shared msg model =
             )
 
         NearBottom nearBottom ->
+            let
+                newModel = { model | sentinelNear = nearBottom }
+            in
             if nearBottom && model.hasMore && not model.loadingMore then
-                update shared LoadMore model
+                update shared LoadMore newModel
 
             else
-                ( model, Cmd.none )
+                ( newModel, Cmd.none )
 
         ToggleCluster clusterId ->
             let
@@ -223,20 +228,23 @@ view shared model =
                     ]
                     (List.concatMap (dayClusterSection breakpoint shared.zone shared.now theme model.expandedClusters model.insertedIds) clustersByDay)
                 , el [ htmlAttribute (Html.Attributes.id "scroll-sentinel"), height (px 1), width fill ] (text "")
-                , if model.loadingMore then
-                    el [ centerX, padding 12 ] (text "Loading...")
-                  else if not model.hasMore then
-                    el [ centerX, padding 12, Font.color mutedTxt ] (text "End of feed")
-                  else
-                    -- Show a manual "Load more" button to help verify incremental loading logic
-                    Input.button
-                        [ centerX
-                        , padding 12
-                        , htmlAttribute (Html.Attributes.style "min-width" "160px")
-                        ]
-                        { onPress = Just LoadMore
-                        , label = text "Load more"
-                        }
+        , if model.loadingMore then
+            el [ centerX, padding 12 ] (text "Loading...")
+          else if not model.hasMore then
+            el [ centerX, padding 12, Font.color mutedTxt ] (text "End of feed")
+          else
+            -- Show a manual "Load more" button to help verify incremental loading logic
+            Input.button
+                [ centerX
+                , padding 12
+                , htmlAttribute (Html.Attributes.style "min-width" "160px")
+                , htmlAttribute (Html.Attributes.class "qh-load-more")
+                ]
+                { onPress = Just LoadMore
+                , label = text "Load more"
+                }
+        -- Small visual debug indicator for IntersectionObserver state
+        , el [ htmlAttribute (Html.Attributes.class "qh-observer-indicator") ] (text (if model.sentinelNear then "Observer: near" else "Observer: far"))
                 ]
         ]
 
@@ -499,8 +507,8 @@ monthToString month =
             "December"
 
 
-clusterItem : Responsive.Breakpoint -> Time.Zone -> Time.Posix -> Theme -> Set String -> Cluster -> Element Msg
-clusterItem breakpoint zone now theme expandedClusters cluster =
+clusterItem : Responsive.Breakpoint -> Time.Zone -> Time.Posix -> Theme -> Set String -> Set String -> Cluster -> Element Msg
+clusterItem breakpoint zone now theme expandedClusters insertedIds cluster =
     let
         txtColor =
             textColor theme
@@ -559,6 +567,9 @@ clusterItem breakpoint zone now theme expandedClusters cluster =
     let
         isExpanded =
             Set.member cluster.id expandedClusters
+
+        isInserted =
+            Set.member cluster.representative.id insertedIds
     in
     let
         baseAttrs =
@@ -732,5 +743,5 @@ relativeTime now zone maybePubDate =
 
 
 subscriptions : Model -> Sub Msg
-subscriptions _ =
+subscriptions model =
     Sub.none

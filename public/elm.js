@@ -6370,7 +6370,7 @@ var $author$project$Api$fetchFeeds = F2(
 	});
 var $author$project$Pages$Home_$init = function (shared) {
 	return _Utils_Tuple2(
-		{activeTab: 'all', error: $elm$core$Maybe$Nothing, feeds: _List_Nil, loading: true, tabs: _List_Nil},
+		{activeTab: 'all', error: $elm$core$Maybe$Nothing, feeds: _List_Nil, loading: true, loadingFeed: $elm$core$Maybe$Nothing, tabs: _List_Nil},
 		A2($author$project$Api$fetchFeeds, 'all', $author$project$Pages$Home_$GotFeeds));
 };
 var $author$project$Pages$Timeline$GotTimeline = function (a) {
@@ -6500,7 +6500,7 @@ var $author$project$Api$fetchTimeline = F3(
 	});
 var $author$project$Pages$Timeline$init = function (shared) {
 	return _Utils_Tuple2(
-		{clusters: _List_Nil, error: $elm$core$Maybe$Nothing, expandedClusters: $elm$core$Set$empty, hasMore: true, items: _List_Nil, loading: true, loadingMore: false, offset: 0},
+		{clusters: _List_Nil, error: $elm$core$Maybe$Nothing, expandedClusters: $elm$core$Set$empty, hasMore: true, insertedIds: $elm$core$Set$empty, items: _List_Nil, loading: true, loadingMore: false, offset: 0, sentinelNear: false},
 		A3($author$project$Api$fetchTimeline, 35, 0, $author$project$Pages$Timeline$GotTimeline));
 };
 var $author$project$Shared$Dark = {$: 'Dark'};
@@ -6577,54 +6577,17 @@ var $author$project$Shared$themeToString = function (theme) {
 		return 'light';
 	}
 };
-var $author$project$Pages$Home_$update = F3(
-	function (shared, msg, model) {
-		if (msg.$ === 'GotFeeds') {
-			if (msg.a.$ === 'Ok') {
-				var response = msg.a.a;
-				return _Utils_Tuple2(
-					_Utils_update(
-						model,
-						{
-							activeTab: response.activeTab,
-							error: $elm$core$Maybe$Nothing,
-							feeds: response.feeds,
-							loading: false,
-							tabs: A2(
-								$elm$core$List$map,
-								function ($) {
-									return $.name;
-								},
-								response.tabs)
-						}),
-					$elm$core$Platform$Cmd$none);
-			} else {
-				return _Utils_Tuple2(
-					_Utils_update(
-						model,
-						{
-							error: $elm$core$Maybe$Just('Failed to load feeds'),
-							loading: false
-						}),
-					$elm$core$Platform$Cmd$none);
-			}
-		} else {
-			var tab = msg.a;
-			return _Utils_Tuple2(
-				_Utils_update(
-					model,
-					{activeTab: tab, feeds: _List_Nil, loading: true}),
-				A2($author$project$Api$fetchFeeds, tab, $author$project$Pages$Home_$GotFeeds));
-		}
+var $author$project$Pages$Home_$GotMoreFeed = F2(
+	function (a, b) {
+		return {$: 'GotMoreFeed', a: a, b: b};
 	});
-var $author$project$Pages$Timeline$GotMoreTimeline = function (a) {
-	return {$: 'GotMoreTimeline', a: a};
-};
-var $author$project$Pages$Timeline$LoadMore = {$: 'LoadMore'};
-var $elm$core$Basics$composeL = F3(
-	function (g, f, x) {
-		return g(
-			f(x));
+var $author$project$Api$fetchFeedMore = F4(
+	function (url, limit, offset, tagger) {
+		return $elm$http$Http$get(
+			{
+				expect: A2($elm$http$Http$expectJson, tagger, $author$project$Api$feedDecoder),
+				url: '/api/feed_more?url=' + (url + ('&limit=' + ($elm$core$String$fromInt(limit) + ('&offset=' + $elm$core$String$fromInt(offset)))))
+			});
 	});
 var $elm$core$List$filter = F2(
 	function (isGood, list) {
@@ -6637,10 +6600,210 @@ var $elm$core$List$filter = F2(
 			_List_Nil,
 			list);
 	});
+var $elm$core$List$head = function (list) {
+	if (list.b) {
+		var x = list.a;
+		var xs = list.b;
+		return $elm$core$Maybe$Just(x);
+	} else {
+		return $elm$core$Maybe$Nothing;
+	}
+};
+var $elm$core$Set$insert = F2(
+	function (key, _v0) {
+		var dict = _v0.a;
+		return $elm$core$Set$Set_elm_builtin(
+			A3($elm$core$Dict$insert, key, _Utils_Tuple0, dict));
+	});
+var $elm$core$Dict$member = F2(
+	function (key, dict) {
+		var _v0 = A2($elm$core$Dict$get, key, dict);
+		if (_v0.$ === 'Just') {
+			return true;
+		} else {
+			return false;
+		}
+	});
+var $elm$core$Set$member = F2(
+	function (key, _v0) {
+		var dict = _v0.a;
+		return A2($elm$core$Dict$member, key, dict);
+	});
+var $elm$core$Basics$negate = function (n) {
+	return -n;
+};
 var $elm$core$Basics$neq = _Utils_notEqual;
+var $elm$time$Time$posixToMillis = function (_v0) {
+	var millis = _v0.a;
+	return millis;
+};
+var $elm$core$List$sortWith = _List_sortWith;
+var $author$project$Api$sortFeedItems = function (items) {
+	var comparePub = F2(
+		function (a, b) {
+			var mb = function () {
+				var _v1 = b.pubDate;
+				if (_v1.$ === 'Nothing') {
+					return -1;
+				} else {
+					var p = _v1.a;
+					return $elm$time$Time$posixToMillis(p);
+				}
+			}();
+			var ma = function () {
+				var _v0 = a.pubDate;
+				if (_v0.$ === 'Nothing') {
+					return -1;
+				} else {
+					var p = _v0.a;
+					return $elm$time$Time$posixToMillis(p);
+				}
+			}();
+			var tcmp = A2($elm$core$Basics$compare, mb, ma);
+			return (!_Utils_eq(tcmp, $elm$core$Basics$EQ)) ? tcmp : A2($elm$core$Basics$compare, b.link, a.link);
+		});
+	var sorted = A2($elm$core$List$sortWith, comparePub, items);
+	return sorted;
+};
+var $author$project$Pages$Home_$update = F3(
+	function (shared, msg, model) {
+		switch (msg.$) {
+			case 'GotFeeds':
+				if (msg.a.$ === 'Ok') {
+					var response = msg.a.a;
+					return _Utils_Tuple2(
+						_Utils_update(
+							model,
+							{
+								activeTab: response.activeTab,
+								error: $elm$core$Maybe$Nothing,
+								feeds: response.feeds,
+								loading: false,
+								tabs: A2(
+									$elm$core$List$map,
+									function ($) {
+										return $.name;
+									},
+									response.tabs)
+							}),
+						$elm$core$Platform$Cmd$none);
+				} else {
+					return _Utils_Tuple2(
+						_Utils_update(
+							model,
+							{
+								error: $elm$core$Maybe$Just('Failed to load feeds'),
+								loading: false
+							}),
+						$elm$core$Platform$Cmd$none);
+				}
+			case 'SwitchTab':
+				var tab = msg.a;
+				return _Utils_Tuple2(
+					_Utils_update(
+						model,
+						{activeTab: tab, feeds: _List_Nil, loading: true}),
+					A2($author$project$Api$fetchFeeds, tab, $author$project$Pages$Home_$GotFeeds));
+			case 'LoadMoreFeed':
+				var url = msg.a;
+				var maybeFeed = $elm$core$List$head(
+					A2(
+						$elm$core$List$filter,
+						function (f) {
+							return _Utils_eq(f.url, url);
+						},
+						model.feeds));
+				var offset = function () {
+					if (maybeFeed.$ === 'Just') {
+						var f = maybeFeed.a;
+						return $elm$core$List$length(f.items);
+					} else {
+						return 0;
+					}
+				}();
+				return _Utils_Tuple2(
+					_Utils_update(
+						model,
+						{
+							loadingFeed: $elm$core$Maybe$Just(url)
+						}),
+					A4(
+						$author$project$Api$fetchFeedMore,
+						url,
+						15,
+						offset,
+						function (res) {
+							return A2($author$project$Pages$Home_$GotMoreFeed, url, res);
+						}));
+			default:
+				if (msg.b.$ === 'Ok') {
+					var url = msg.a;
+					var response = msg.b.a;
+					var dedupeByLink = function (items) {
+						var folder = F2(
+							function (item, _v3) {
+								var acc = _v3.a;
+								var seen = _v3.b;
+								return A2($elm$core$Set$member, item.link, seen) ? _Utils_Tuple2(acc, seen) : _Utils_Tuple2(
+									_Utils_ap(
+										acc,
+										_List_fromArray(
+											[item])),
+									A2($elm$core$Set$insert, item.link, seen));
+							});
+						var _v2 = A3(
+							$elm$core$List$foldl,
+							folder,
+							_Utils_Tuple2(_List_Nil, $elm$core$Set$empty),
+							items);
+						var result = _v2.a;
+						return result;
+					};
+					var updateFeed = function (f) {
+						if (_Utils_eq(f.url, url)) {
+							var merged = $author$project$Api$sortFeedItems(
+								_Utils_ap(f.items, response.items));
+							var mergedDedup = dedupeByLink(merged);
+							return _Utils_update(
+								f,
+								{items: mergedDedup, totalItemCount: response.totalItemCount});
+						} else {
+							return f;
+						}
+					};
+					return _Utils_Tuple2(
+						_Utils_update(
+							model,
+							{
+								feeds: A2($elm$core$List$map, updateFeed, model.feeds),
+								loadingFeed: $elm$core$Maybe$Nothing
+							}),
+						$elm$core$Platform$Cmd$none);
+				} else {
+					return _Utils_Tuple2(
+						_Utils_update(
+							model,
+							{
+								error: $elm$core$Maybe$Just('Failed to load feed items'),
+								loadingFeed: $elm$core$Maybe$Nothing
+							}),
+						$elm$core$Platform$Cmd$none);
+				}
+		}
+	});
+var $author$project$Pages$Timeline$ClearInserted = {$: 'ClearInserted'};
+var $author$project$Pages$Timeline$GotMoreTimeline = function (a) {
+	return {$: 'GotMoreTimeline', a: a};
+};
+var $author$project$Pages$Timeline$LoadMore = {$: 'LoadMore'};
+var $elm$core$Basics$composeL = F3(
+	function (g, f, x) {
+		return g(
+			f(x));
+	});
 var $elm$core$Basics$not = _Basics_not;
 var $author$project$Api$toClusterItem = function (item) {
-	return {favicon: item.favicon, feedTitle: item.feedTitle, headerColor: item.headerColor, headerTextColor: item.headerTextColor, link: item.link, pubDate: item.pubDate, title: item.title};
+	return {favicon: item.favicon, feedTitle: item.feedTitle, headerColor: item.headerColor, headerTextColor: item.headerTextColor, id: item.id, link: item.link, pubDate: item.pubDate, title: item.title};
 };
 var $elm$core$Debug$todo = _Debug_todo;
 var $author$project$Api$buildCluster = function (_v0) {
@@ -6664,8 +6827,8 @@ var $author$project$Api$buildCluster = function (_v0) {
 				return _Debug_todo(
 					'Api',
 					{
-						start: {line: 209, column: 29},
-						end: {line: 209, column: 39}
+						start: {line: 210, column: 29},
+						end: {line: 210, column: 39}
 					})('Empty cluster should not exist');
 			}
 		}
@@ -6692,11 +6855,6 @@ var $author$project$Api$buildCluster = function (_v0) {
 		representative: $author$project$Api$toClusterItem(representative)
 	};
 };
-var $elm$time$Time$posixToMillis = function (_v0) {
-	var millis = _v0.a;
-	return millis;
-};
-var $elm$core$List$sortWith = _List_sortWith;
 var $author$project$Api$clusterItemsFromTimeline = function (items) {
 	var sortedItems = A2(
 		$elm$core$List$sortWith,
@@ -6769,32 +6927,16 @@ var $author$project$Api$clusterItemsFromTimeline = function (items) {
 		sortedItems);
 	return A2($elm$core$List$map, $author$project$Api$buildCluster, grouped);
 };
-var $elm$core$Set$insert = F2(
-	function (key, _v0) {
-		var dict = _v0.a;
-		return $elm$core$Set$Set_elm_builtin(
-			A3($elm$core$Dict$insert, key, _Utils_Tuple0, dict));
-	});
-var $elm$core$Dict$member = F2(
-	function (key, dict) {
-		var _v0 = A2($elm$core$Dict$get, key, dict);
-		if (_v0.$ === 'Just') {
-			return true;
-		} else {
-			return false;
-		}
-	});
-var $elm$core$Set$member = F2(
-	function (key, _v0) {
-		var dict = _v0.a;
-		return A2($elm$core$Dict$member, key, dict);
-	});
+var $elm$core$Set$fromList = function (list) {
+	return A3($elm$core$List$foldl, $elm$core$Set$insert, $elm$core$Set$empty, list);
+};
 var $elm$core$Set$remove = F2(
 	function (key, _v0) {
 		var dict = _v0.a;
 		return $elm$core$Set$Set_elm_builtin(
 			A2($elm$core$Dict$remove, key, dict));
 	});
+var $elm$core$Process$sleep = _Process_sleep;
 var $author$project$Api$sortTimelineItems = function (items) {
 	var comparePub = F2(
 		function (a, b) {
@@ -6824,6 +6966,42 @@ var $author$project$Api$sortTimelineItems = function (items) {
 		});
 	return A2($elm$core$List$sortWith, comparePub, items);
 };
+var $elm$core$Dict$foldl = F3(
+	function (func, acc, dict) {
+		foldl:
+		while (true) {
+			if (dict.$ === 'RBEmpty_elm_builtin') {
+				return acc;
+			} else {
+				var key = dict.b;
+				var value = dict.c;
+				var left = dict.d;
+				var right = dict.e;
+				var $temp$func = func,
+					$temp$acc = A3(
+					func,
+					key,
+					value,
+					A3($elm$core$Dict$foldl, func, acc, left)),
+					$temp$dict = right;
+				func = $temp$func;
+				acc = $temp$acc;
+				dict = $temp$dict;
+				continue foldl;
+			}
+		}
+	});
+var $elm$core$Dict$union = F2(
+	function (t1, t2) {
+		return A3($elm$core$Dict$foldl, $elm$core$Dict$insert, t2, t1);
+	});
+var $elm$core$Set$union = F2(
+	function (_v0, _v1) {
+		var dict1 = _v0.a;
+		var dict2 = _v1.a;
+		return $elm$core$Set$Set_elm_builtin(
+			A2($elm$core$Dict$union, dict1, dict2));
+	});
 var $author$project$Pages$Timeline$update = F3(
 	function (shared, msg, model) {
 		update:
@@ -6862,17 +7040,30 @@ var $author$project$Pages$Timeline$update = F3(
 						var newItems = $author$project$Api$sortTimelineItems(
 							_Utils_ap(model.items, response.items));
 						var newClusters = $author$project$Api$clusterItemsFromTimeline(newItems);
+						var addedIds = $elm$core$Set$fromList(
+							A2(
+								$elm$core$List$map,
+								function ($) {
+									return $.id;
+								},
+								response.items));
 						return _Utils_Tuple2(
 							_Utils_update(
 								model,
 								{
 									clusters: newClusters,
 									hasMore: response.hasMore,
+									insertedIds: A2($elm$core$Set$union, model.insertedIds, addedIds),
 									items: newItems,
 									loadingMore: false,
 									offset: model.offset + $elm$core$List$length(response.items)
 								}),
-							$elm$core$Platform$Cmd$none);
+							A2(
+								$elm$core$Task$perform,
+								function (_v1) {
+									return $author$project$Pages$Timeline$ClearInserted;
+								},
+								$elm$core$Process$sleep(300)));
 					} else {
 						return _Utils_Tuple2(
 							_Utils_update(
@@ -6886,18 +7077,27 @@ var $author$project$Pages$Timeline$update = F3(
 							model,
 							{loadingMore: true}),
 						A3($author$project$Api$fetchTimeline, 35, model.offset, $author$project$Pages$Timeline$GotMoreTimeline));
+				case 'ClearInserted':
+					return _Utils_Tuple2(
+						_Utils_update(
+							model,
+							{insertedIds: $elm$core$Set$empty}),
+						$elm$core$Platform$Cmd$none);
 				case 'NearBottom':
 					var nearBottom = msg.a;
+					var newModel = _Utils_update(
+						model,
+						{sentinelNear: nearBottom});
 					if (nearBottom && (model.hasMore && (!model.loadingMore))) {
 						var $temp$shared = shared,
 							$temp$msg = $author$project$Pages$Timeline$LoadMore,
-							$temp$model = model;
+							$temp$model = newModel;
 						shared = $temp$shared;
 						msg = $temp$msg;
 						model = $temp$model;
 						continue update;
 					} else {
-						return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
+						return _Utils_Tuple2(newModel, $elm$core$Platform$Cmd$none);
 					}
 				case 'ToggleCluster':
 					var clusterId = msg.a;
@@ -9470,9 +9670,6 @@ var $elm$core$Basics$min = F2(
 	function (x, y) {
 		return (_Utils_cmp(x, y) < 0) ? x : y;
 	});
-var $elm$core$Basics$negate = function (n) {
-	return -n;
-};
 var $mdgriffith$elm_ui$Internal$Model$renderProps = F3(
 	function (force, _v0, existing) {
 		var key = _v0.a;
@@ -13630,6 +13827,9 @@ var $author$project$Pages$Home_$chunkList = F2(
 				A2($author$project$Pages$Home_$chunkList, size, rest));
 		}
 	});
+var $author$project$Pages$Home_$LoadMoreFeed = function (a) {
+	return {$: 'LoadMoreFeed', a: a};
+};
 var $author$project$Theme$cardColor = function (theme) {
 	if (theme.$ === 'Dark') {
 		return A3($mdgriffith$elm_ui$Element$rgb255, 30, 30, 30);
@@ -14126,7 +14326,9 @@ var $author$project$Pages$Home_$feedItem = F3(
 					$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill),
 					$mdgriffith$elm_ui$Element$spacing(8),
 					$mdgriffith$elm_ui$Element$htmlAttribute(
-					A2($elm$html$Html$Attributes$style, 'min-width', '0'))
+					A2($elm$html$Html$Attributes$style, 'min-width', '0')),
+					$mdgriffith$elm_ui$Element$htmlAttribute(
+					$elm$html$Html$Attributes$class('timeline-inserted-wrapper'))
 				]),
 			_List_fromArray(
 				[
@@ -14187,33 +14389,6 @@ var $author$project$Pages$Home_$feedItem = F3(
 						A2($author$project$Pages$Home_$relativeTime, now, item.pubDate)))
 				]));
 	});
-var $author$project$Api$sortFeedItems = function (items) {
-	var comparePub = F2(
-		function (a, b) {
-			var mb = function () {
-				var _v1 = b.pubDate;
-				if (_v1.$ === 'Nothing') {
-					return -1;
-				} else {
-					var p = _v1.a;
-					return $elm$time$Time$posixToMillis(p);
-				}
-			}();
-			var ma = function () {
-				var _v0 = a.pubDate;
-				if (_v0.$ === 'Nothing') {
-					return -1;
-				} else {
-					var p = _v0.a;
-					return $elm$time$Time$posixToMillis(p);
-				}
-			}();
-			var tcmp = A2($elm$core$Basics$compare, mb, ma);
-			return (!_Utils_eq(tcmp, $elm$core$Basics$EQ)) ? tcmp : A2($elm$core$Basics$compare, b.link, a.link);
-		});
-	var sorted = A2($elm$core$List$sortWith, comparePub, items);
-	return sorted;
-};
 var $author$project$Theme$themeToColors = function (theme) {
 	if (theme.$ === 'Dark') {
 		return {
@@ -14235,8 +14410,8 @@ var $author$project$Theme$themeToColors = function (theme) {
 		};
 	}
 };
-var $author$project$Pages$Home_$feedCard = F4(
-	function (now, theme, breakpoint, feed) {
+var $author$project$Pages$Home_$feedCard = F5(
+	function (now, theme, breakpoint, loadingFeed, feed) {
 		var txtColor = $author$project$Theme$textColor(theme);
 		var scrollAttributes = function () {
 			if (breakpoint.$ === 'DesktopBreakpoint') {
@@ -14291,7 +14466,30 @@ var $author$project$Pages$Home_$feedCard = F4(
 						A2(
 							$elm$core$List$take,
 							15,
-							$author$project$Api$sortFeedItems(feed.items))))
+							$author$project$Api$sortFeedItems(feed.items)))),
+					function () {
+					var isLoadingThisFeed = function () {
+						if (loadingFeed.$ === 'Just') {
+							var u = loadingFeed.a;
+							return _Utils_eq(u, feed.url);
+						} else {
+							return false;
+						}
+					}();
+					var btnOnPress = isLoadingThisFeed ? $elm$core$Maybe$Nothing : $elm$core$Maybe$Just(
+						$author$project$Pages$Home_$LoadMoreFeed(feed.url));
+					var btnLabel = isLoadingThisFeed ? $mdgriffith$elm_ui$Element$text('Loading...') : $mdgriffith$elm_ui$Element$text('Load more');
+					return A2(
+						$mdgriffith$elm_ui$Element$Input$button,
+						_List_fromArray(
+							[
+								$mdgriffith$elm_ui$Element$htmlAttribute(
+								A2($elm$html$Html$Attributes$style, 'margin-top', '8px')),
+								$mdgriffith$elm_ui$Element$htmlAttribute(
+								$elm$html$Html$Attributes$class('qh-load-more'))
+							]),
+						{label: btnLabel, onPress: btnOnPress});
+				}()
 				]));
 	});
 var $author$project$Pages$Home_$feedGrid = F2(
@@ -14341,7 +14539,7 @@ var $author$project$Pages$Home_$feedGrid = F2(
 							]),
 						A2(
 							$elm$core$List$map,
-							A3($author$project$Pages$Home_$feedCard, shared.now, theme, breakpoint),
+							A4($author$project$Pages$Home_$feedCard, shared.now, theme, breakpoint, model.loadingFeed),
 							feedRow));
 				},
 				A2($author$project$Pages$Home_$chunkList, columnCount, model.feeds)));
@@ -14809,8 +15007,8 @@ var $author$project$Responsive$timelineClusterPadding = function (breakpoint) {
 var $author$project$Responsive$timelineTimeColumnWidth = function (breakpoint) {
 	return $author$project$Responsive$isVeryNarrow(breakpoint) ? 60 : 85;
 };
-var $author$project$Pages$Timeline$clusterItem = F6(
-	function (breakpoint, zone, now, theme, expandedClusters, cluster) {
+var $author$project$Pages$Timeline$clusterItem = F7(
+	function (breakpoint, zone, now, theme, expandedClusters, insertedIds, cluster) {
 		var txtColor = $author$project$Theme$textColor(theme);
 		var timeTxt = function () {
 			if (theme.$ === 'Dark') {
@@ -14850,7 +15048,25 @@ var $author$project$Pages$Timeline$clusterItem = F6(
 			}
 		}();
 		var border = $author$project$Theme$borderColor(theme);
+		var isInserted = A2($elm$core$Set$member, cluster.representative.id, insertedIds);
 		var isExpanded = A2($elm$core$Set$member, cluster.id, expandedClusters);
+		var baseAttrs = _List_fromArray(
+			[
+				$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill),
+				$mdgriffith$elm_ui$Element$spacing(8),
+				$mdgriffith$elm_ui$Element$alignTop,
+				$mdgriffith$elm_ui$Element$paddingEach(
+				{bottom: 8, left: 8, right: 8, top: 8}),
+				$mdgriffith$elm_ui$Element$htmlAttribute(
+				A2($elm$html$Html$Attributes$attribute, 'data-timeline-item', 'true'))
+			]);
+		var rowAttrs = isInserted ? _Utils_ap(
+			baseAttrs,
+			_List_fromArray(
+				[
+					$mdgriffith$elm_ui$Element$htmlAttribute(
+					$elm$html$Html$Attributes$class('timeline-inserted'))
+				])) : baseAttrs;
 		return A2(
 			$mdgriffith$elm_ui$Element$column,
 			_List_fromArray(
@@ -14869,16 +15085,7 @@ var $author$project$Pages$Timeline$clusterItem = F6(
 				[
 					A2(
 					$mdgriffith$elm_ui$Element$row,
-					_List_fromArray(
-						[
-							$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill),
-							$mdgriffith$elm_ui$Element$spacing(8),
-							$mdgriffith$elm_ui$Element$alignTop,
-							$mdgriffith$elm_ui$Element$paddingEach(
-							{bottom: 8, left: 8, right: 8, top: 8}),
-							$mdgriffith$elm_ui$Element$htmlAttribute(
-							A2($elm$html$Html$Attributes$attribute, 'data-timeline-item', 'true'))
-						]),
+					rowAttrs,
 					_List_fromArray(
 						[
 							A2(
@@ -15104,8 +15311,8 @@ var $author$project$Pages$Timeline$dayHeader = F4(
 				]),
 			$mdgriffith$elm_ui$Element$text(headerText));
 	});
-var $author$project$Pages$Timeline$dayClusterSection = F6(
-	function (breakpoint, zone, now, theme, expandedClusters, dayGroup) {
+var $author$project$Pages$Timeline$dayClusterSection = F7(
+	function (breakpoint, zone, now, theme, expandedClusters, insertedIds, dayGroup) {
 		return _List_fromArray(
 			[
 				A4($author$project$Pages$Timeline$dayHeader, zone, now, theme, dayGroup.date),
@@ -15120,7 +15327,7 @@ var $author$project$Pages$Timeline$dayClusterSection = F6(
 					]),
 				A2(
 					$elm$core$List$map,
-					A5($author$project$Pages$Timeline$clusterItem, breakpoint, zone, now, theme, expandedClusters),
+					A6($author$project$Pages$Timeline$clusterItem, breakpoint, zone, now, theme, expandedClusters, insertedIds),
 					dayGroup.clusters))
 			]);
 	});
@@ -15339,7 +15546,7 @@ var $author$project$Pages$Timeline$view = F2(
 								]),
 							A2(
 								$elm$core$List$concatMap,
-								A5($author$project$Pages$Timeline$dayClusterSection, breakpoint, shared.zone, shared.now, theme, model.expandedClusters),
+								A6($author$project$Pages$Timeline$dayClusterSection, breakpoint, shared.zone, shared.now, theme, model.expandedClusters, model.insertedIds),
 								clustersByDay)),
 							A2(
 							$mdgriffith$elm_ui$Element$el,
@@ -15351,7 +15558,46 @@ var $author$project$Pages$Timeline$view = F2(
 									$mdgriffith$elm_ui$Element$px(1)),
 									$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill)
 								]),
-							$mdgriffith$elm_ui$Element$text(''))
+							$mdgriffith$elm_ui$Element$text('')),
+							model.loadingMore ? A2(
+							$mdgriffith$elm_ui$Element$el,
+							_List_fromArray(
+								[
+									$mdgriffith$elm_ui$Element$centerX,
+									$mdgriffith$elm_ui$Element$padding(12)
+								]),
+							$mdgriffith$elm_ui$Element$text('Loading...')) : ((!model.hasMore) ? A2(
+							$mdgriffith$elm_ui$Element$el,
+							_List_fromArray(
+								[
+									$mdgriffith$elm_ui$Element$centerX,
+									$mdgriffith$elm_ui$Element$padding(12),
+									$mdgriffith$elm_ui$Element$Font$color(mutedTxt)
+								]),
+							$mdgriffith$elm_ui$Element$text('End of feed')) : A2(
+							$mdgriffith$elm_ui$Element$Input$button,
+							_List_fromArray(
+								[
+									$mdgriffith$elm_ui$Element$centerX,
+									$mdgriffith$elm_ui$Element$padding(12),
+									$mdgriffith$elm_ui$Element$htmlAttribute(
+									A2($elm$html$Html$Attributes$style, 'min-width', '160px')),
+									$mdgriffith$elm_ui$Element$htmlAttribute(
+									$elm$html$Html$Attributes$class('qh-load-more'))
+								]),
+							{
+								label: $mdgriffith$elm_ui$Element$text('Load more'),
+								onPress: $elm$core$Maybe$Just($author$project$Pages$Timeline$LoadMore)
+							})),
+							A2(
+							$mdgriffith$elm_ui$Element$el,
+							_List_fromArray(
+								[
+									$mdgriffith$elm_ui$Element$htmlAttribute(
+									$elm$html$Html$Attributes$class('qh-observer-indicator'))
+								]),
+							$mdgriffith$elm_ui$Element$text(
+								model.sentinelNear ? 'Observer: near' : 'Observer: far'))
 						])))
 				]));
 	});
