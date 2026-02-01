@@ -14745,7 +14745,9 @@ var $mdgriffith$elm_ui$Element$paddingEach = function (_v0) {
 var $author$project$Pages$Home_$tabButton = F3(
 	function (shared, activeTab, tab) {
 		var theme = shared.theme;
-		var isActive = _Utils_eq(tab, activeTab) || ((tab === 'all') && ($elm$core$String$toLower(activeTab) === 'all'));
+		var isActive = _Utils_eq(
+			$elm$core$String$toLower(tab),
+			$elm$core$String$toLower(activeTab));
 		var txtColor = function () {
 			if (isActive) {
 				return $author$project$Theme$lumeOrange;

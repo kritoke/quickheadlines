@@ -267,7 +267,7 @@ tabButton shared activeTab tab =
             shared.theme
 
         isActive =
-            tab == activeTab || (tab == "all" && String.toLower activeTab == "all")
+            String.toLower tab == String.toLower activeTab
 
         txtColor =
             if isActive then
