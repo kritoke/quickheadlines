@@ -433,7 +433,7 @@ themeToggle model =
         , htmlAttribute (HA.style "min-height" "36px")
         ]
         { onPress = Just (SharedMsg ToggleTheme)
-        , label = el [ htmlAttribute (HA.style "display" "flex") ] (Element.html iconHtml)
+        , label = el [ centerX, centerY, htmlAttribute (HA.style "display" "flex") ] (Element.html iconHtml)
         }
 
 
