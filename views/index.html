@@ -336,10 +336,10 @@
                     console.log('Intersection event:', { isIntersecting: entry.isIntersecting, target: entry.target.id, ratio: entry.intersectionRatio });
                     if (entry.isIntersecting) {
                       console.log('Near bottom detected - sending true');
-                      app.ports.onNearBottom.send(true);
+                      try { app.ports.onNearBottom.send(true); } catch(e) { console.warn('onNearBottom.send error', e); }
                     } else {
                       console.log('No longer near bottom - sending false');
-                      app.ports.onNearBottom.send(false);
+                      try { app.ports.onNearBottom.send(false); } catch(e) { console.warn('onNearBottom.send error', e); }
                     }
                   });
                  }, { threshold: 0, root: scrollRoot, rootMargin: '500px' });
@@ -364,11 +364,11 @@
                         near = rect.top <= (window.innerHeight + 500) && rect.bottom >= -500;
                       }
 
-                      if (near !== lastSentinelState) {
-                        lastSentinelState = near;
-                        console.log('checkSentinelVisibility -> near:', near);
-                        app.ports.onNearBottom.send(near);
-                      }
+                       if (near !== lastSentinelState) {
+                         lastSentinelState = near;
+                         console.log('checkSentinelVisibility -> near:', near);
+                         try { app.ports.onNearBottom.send(near); } catch(e) { console.warn('onNearBottom.send error', e); }
+                       }
                     } catch (e) {
                       // ignore measurement errors
                     }
