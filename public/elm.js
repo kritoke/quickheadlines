@@ -13655,6 +13655,13 @@ var $author$project$Layouts$Shared$layout = function (_v0) {
 				return 48;
 		}
 	}();
+	var borderColor = function () {
+		if (theme.$ === 'Dark') {
+			return A3($mdgriffith$elm_ui$Element$rgb255, 55, 55, 55);
+		} else {
+			return A3($mdgriffith$elm_ui$Element$rgb255, 229, 231, 235);
+		}
+	}();
 	var bg = $author$project$Theme$surfaceColor(theme);
 	return A2(
 		$mdgriffith$elm_ui$Element$column,
@@ -13690,8 +13697,7 @@ var $author$project$Layouts$Shared$layout = function (_v0) {
 							$elm$core$String$fromInt(sidePadding) + 'px')),
 						$mdgriffith$elm_ui$Element$Border$widthEach(
 						{bottom: 1, left: 0, right: 0, top: 0}),
-						$mdgriffith$elm_ui$Element$Border$color(
-						A3($mdgriffith$elm_ui$Element$rgb255, 229, 231, 235))
+						$mdgriffith$elm_ui$Element$Border$color(borderColor)
 					]),
 				_List_fromArray(
 					[
@@ -14974,24 +14980,11 @@ var $author$project$Pages$Home_$tabBar = F2(
 						model.tabs)));
 		}
 	});
-var $author$project$Responsive$uniformPadding = function (breakpoint) {
-	switch (breakpoint.$) {
-		case 'VeryNarrowBreakpoint':
-			return 16;
-		case 'MobileBreakpoint':
-			return 16;
-		case 'TabletBreakpoint':
-			return 32;
-		default:
-			return 48;
-	}
-};
 var $author$project$Pages$Home_$view = F2(
 	function (shared, model) {
 		var theme = shared.theme;
 		var colors = $author$project$Theme$themeToColors(theme);
 		var breakpoint = $author$project$Responsive$breakpointFromWidth(shared.windowWidth);
-		var pad = $author$project$Responsive$uniformPadding(breakpoint);
 		var bg = $author$project$Theme$surfaceColor(theme);
 		return A2(
 			$mdgriffith$elm_ui$Element$column,
@@ -15000,7 +14993,6 @@ var $author$project$Pages$Home_$view = F2(
 					$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill),
 					$mdgriffith$elm_ui$Element$height($mdgriffith$elm_ui$Element$fill),
 					$mdgriffith$elm_ui$Element$spacing(20),
-					$mdgriffith$elm_ui$Element$padding(pad),
 					$mdgriffith$elm_ui$Element$Background$color(bg),
 					$mdgriffith$elm_ui$Element$htmlAttribute(
 					A2($elm$html$Html$Attributes$attribute, 'data-page', 'home'))

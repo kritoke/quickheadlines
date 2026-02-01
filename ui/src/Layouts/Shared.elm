@@ -54,6 +54,14 @@ layout { theme, windowWidth, header, footer, main } =
 
                 DesktopBreakpoint ->
                     48
+
+        borderColor =
+            case theme of
+                Dark ->
+                    rgb255 55 55 55
+
+                Light ->
+                    rgb255 229 231 235
     in
     column
         [ width fill
@@ -67,7 +75,7 @@ layout { theme, windowWidth, header, footer, main } =
             , Element.htmlAttribute (Html.Attributes.style "padding-left" (String.fromInt sidePadding ++ "px"))
             , Element.htmlAttribute (Html.Attributes.style "padding-right" (String.fromInt sidePadding ++ "px"))
             , Border.widthEach { top = 0, right = 0, bottom = 1, left = 0 }
-            , Border.color (rgb255 229 231 235)
+            , Border.color borderColor
             ]
             [ header
             , el

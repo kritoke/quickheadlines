@@ -160,21 +160,17 @@ view shared model =
 
          breakpoint =
              Responsive.breakpointFromWidth shared.windowWidth
-
-         pad =
-             Responsive.uniformPadding breakpoint
      in
      column
-        [ width fill
-        , height fill
-        , spacing 20
-        , padding pad
-        , Background.color bg
-        , htmlAttribute (Html.Attributes.attribute "data-page" "home")
-        ]
-        [ tabBar shared model
-        , content shared model
-        ]
+         [ width fill
+         , height fill
+         , spacing 20
+         , Background.color bg
+         , htmlAttribute (Html.Attributes.attribute "data-page" "home")
+         ]
+         [ tabBar shared model
+         , content shared model
+         ]
 
 
 tabBar : Shared.Model -> Model -> Element Msg
