@@ -14576,7 +14576,6 @@ var $author$project$Pages$Home_$feedCard = F6(
 				[
 					$mdgriffith$elm_ui$Element$centerX,
 					A2($mdgriffith$elm_ui$Element$paddingXY, 4, 12),
-					$mdgriffith$elm_ui$Element$Background$color(cardBg),
 					$mdgriffith$elm_ui$Element$Border$rounded(6),
 					$mdgriffith$elm_ui$Element$Border$width(1),
 					$mdgriffith$elm_ui$Element$Border$color(border),

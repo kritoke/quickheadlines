@@ -37,8 +37,16 @@ CMD sysrc quickheadlines_env="GC_MARKERS=1 GC_FREE_SPACE_DIVISOR=20 QUICKHEADLIN
 CMD cd /tmp/qh && \
     export PATH=/usr/local/bin:/usr/bin:/bin:$$PATH && \
     export MAKE=gmake && \
-    echo "Using Crystal from FreeBSD ports..." && \
-    /usr/local/bin/crystal --version && \
+    echo "Finding Crystal installation..." && \
+    which crystal 2>/dev/null || find /usr -name crystal -type f 2>/dev/null || echo "Crystal not found in /usr" && \
+    find / -name crystal -type f 2>/dev/null | head -5 && \
+    if [ -x "/usr/local/bin/crystal" ]; then \
+        /usr/local/bin/crystal --version; \
+    elif [ -x "/usr/bin/crystal" ]; then \
+        /usr/bin/crystal --version; \
+    else \
+        echo "ERROR: Crystal not found"; \
+    fi && \
     echo "Installing Crystal dependencies..." && \
     sudo -u qh sh -c "export PATH=/usr/local/bin:/usr/bin:/bin:\$PATH && shards install" && \
     if [ -f "/usr/local/share/quickheadlines/quickheadlines" ]; then \

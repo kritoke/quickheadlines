@@ -462,7 +462,6 @@ feedCard now theme breakpoint loadingFeed insertedIds feed =
                 Input.button
                     [ centerX
                     , paddingXY 4 12
-                    , Background.color cardBg
                     , Border.rounded 6
                     , Border.width 1
                     , Border.color border
