@@ -552,6 +552,21 @@ clusterItem breakpoint zone now theme expandedClusters cluster =
         isExpanded =
             Set.member cluster.id expandedClusters
     in
+    let
+        baseAttrs =
+            [ width fill
+            , spacing 8
+            , alignTop
+            , paddingEach { top = 8, bottom = 8, left = 8, right = 8 }
+            , htmlAttribute (Html.Attributes.attribute "data-timeline-item" "true")
+            ]
+
+        rowAttrs =
+            if isInserted then
+                baseAttrs ++ [ htmlAttribute (Html.Attributes.class "timeline-inserted") ]
+            else
+                baseAttrs
+    in
     column
         [ width fill
         , paddingEach { top = 4, bottom = 4, left = 0, right = 0 }
@@ -566,13 +581,7 @@ clusterItem breakpoint zone now theme expandedClusters cluster =
             )
         , Border.rounded 8
         ]
-         [ row
-             [ width fill
-             , spacing 8
-             , alignTop
-             , paddingEach { top = 8, bottom = 8, left = 8, right = 8 }
-             , htmlAttribute (Html.Attributes.attribute "data-timeline-item" "true")
-             ]
+         [ row rowAttrs
              [ el
                   [ width (px (Responsive.timelineTimeColumnWidth breakpoint))
                  , Ty.meta

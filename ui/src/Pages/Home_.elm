@@ -495,6 +495,7 @@ feedItem now theme item =
         [ width fill
         , spacing 8
         , htmlAttribute (Html.Attributes.style "min-width" "0")
+        , htmlAttribute (Html.Attributes.class "timeline-inserted-wrapper")
         ]
         [ el
             [ width (px 6)

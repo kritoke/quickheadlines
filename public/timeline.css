@@ -1,0 +1,12 @@
+.timeline-inserted {
+  animation: qh-insert 220ms ease-out both;
+}
+
+.timeline-inserted-wrapper {
+  /* wrapper used for individual feed items when inserted */
+}
+
+@keyframes qh-insert {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
