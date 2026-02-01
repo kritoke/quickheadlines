@@ -158,11 +158,11 @@ view shared model =
          bg =
              surfaceColor theme
 
-         breakpoint =
-             Responsive.breakpointFromWidth shared.windowWidth
+          breakpoint =
+              Responsive.breakpointFromWidth shared.windowWidth
 
-         pad =
-             Responsive.uniformPadding breakpoint
+          pad =
+              Responsive.uniformPadding breakpoint
      in
      column
         [ width fill

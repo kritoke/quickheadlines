@@ -6,8 +6,10 @@
   <title>QuickHeadlines</title>
   <style>
     * { box-sizing: border-box; }
-    body { margin: 0; padding: 0; background: #121212; }
-    #app { width: 100vw; min-height: 100vh; background: #121212; }
+    /* Default to a light background so the app's theme controls the look.
+       Some debug iterations forced a dark background here; restore light default. */
+    body { margin: 0; padding: 0; background: #ffffff; }
+    #app { width: 100vw; min-height: 100vh; background: #ffffff; }
     .feed-header { transition: background-color 0.3s ease, color 0.3s ease; }
     [data-timeline-header="true"] {
       background-color: transparent !important;
@@ -132,7 +134,7 @@
   </head>
   <body>
     <div id="app">
-      <div style="display: flex; justify-content: center; align-items: center; height: 100vh; color: #f0f0f0; font-family: system-ui, sans-serif; font-size: 18px; background: #121212;">Loading QuickHeadlines...</div>
+      <div style="display: flex; justify-content: center; align-items: center; height: 100vh; color: #111827; font-family: system-ui, sans-serif; font-size: 18px; background: #ffffff;">Loading QuickHeadlines...</div>
     </div>
     <script>document.write('<script src="/public/elm.js?v=' + Date.now() + '"><\/script>');</script>
   <script>
