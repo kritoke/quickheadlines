@@ -360,14 +360,22 @@ feedCard now theme breakpoint feed =
                , spacing 4
                ] ++ scrollAttributes)
             (List.map (feedItem now theme) (List.take 15 (sortFeedItems feed.items)))
-        , if List.length feed.items >= 15 then
-            Input.button
-                [ htmlAttribute (Html.Attributes.style "margin-top" "8px") ]
-                { onPress = Just (LoadMoreFeed feed.url)
-                , label = text "Load more"
-                }
-          else
-            Element.none
+        , -- Always show a Load more button (helps debug and matches old quick.easy behavior)
+          let
+            isLoadingThisFeed =
+                case model.loadingFeed of
+                    Just u -> u == feed.url
+                    Nothing -> False
+
+            btnLabel = if isLoadingThisFeed then text "Loading..." else text "Load more"
+
+            btnOnPress = if isLoadingThisFeed then Nothing else Just (LoadMoreFeed feed.url)
+          in
+          Input.button
+            [ htmlAttribute (Html.Attributes.style "margin-top" "8px") ]
+            { onPress = btnOnPress
+            , label = btnLabel
+            }
         ]
 
 
