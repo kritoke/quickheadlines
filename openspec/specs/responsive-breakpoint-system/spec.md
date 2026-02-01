@@ -107,7 +107,7 @@ The system SHALL provide maximum width constraints for page containers based on 
 
 #### Scenario: Desktop max-width
 - **WHEN** breakpoint is Desktop
-- **THEN** containerMaxWidth returns maximum 1200
+- **THEN** containerMaxWidth returns maximum 1600
 
 ### Requirement: Breakpoint boolean helpers
 The system SHALL provide helper functions to test breakpoint types.
