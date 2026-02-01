@@ -1,7 +1,7 @@
 module Pages.ViewIcon exposing (viewIcon)
 
 import Element exposing (..)
-import Element.Border as Border
+import Html
 import Html.Attributes
 
 viewIcon : String -> String -> Element msg
@@ -14,12 +14,13 @@ viewIcon url siteName =
             else
                 url
     in
-    image
-        [ width (px 18)
-        , height (px 18)
-        , Border.rounded 3
-        , centerY
-        , Element.padding 2
-        , htmlAttribute (Html.Attributes.class "qh-favicon")
+    html (Html.img
+        [ Html.Attributes.src iconUrl
+        , Html.Attributes.style "width" "14px"
+        , Html.Attributes.style "height" "14px"
+        , Html.Attributes.style "display" "inline"
+        , Html.Attributes.style "vertical-align" "middle"
+        , Html.Attributes.style "margin-right" "4px"
+        , Html.Attributes.style "margin-bottom" "2px"
         ]
-        { src = iconUrl, description = siteName }
+        [])

@@ -176,7 +176,7 @@ view shared model =
         , htmlAttribute (Html.Attributes.class "auto-hide-scroll")
         ]
         [ el
-        [ (if Responsive.isMobile breakpoint then Ty.subtitle else Ty.title)
+            [ (if Responsive.isMobile breakpoint then Ty.subtitle else Ty.title)
             , Font.bold
             , Font.color txtColor
             ]
@@ -546,13 +546,13 @@ clusterItem breakpoint zone now theme expandedClusters cluster =
             )
         , Border.rounded 8
         ]
-        [ row
-            [ width fill
-            , spacing 12
-            , alignTop
-            , paddingEach { top = 8, bottom = 8, left = 8, right = 8 }
-            , htmlAttribute (Html.Attributes.attribute "data-timeline-item" "true")
-            ]
+         [ row
+             [ width fill
+             , spacing 8
+             , alignTop
+             , paddingEach { top = 8, bottom = 8, left = 8, right = 8 }
+             , htmlAttribute (Html.Attributes.attribute "data-timeline-item" "true")
+             ]
              [ el
                   [ width (px (Responsive.timelineTimeColumnWidth breakpoint))
                  , Ty.meta
@@ -571,36 +571,32 @@ clusterItem breakpoint zone now theme expandedClusters cluster =
             , alignTop
             , Font.color txtColor
             ]
-            [ -- group favicon + feed title + title together so they wrap naturally
-              paragraph [ spacing 8, width fill, Ty.size13 ]
-                  [ el [ centerY, paddingEach { top = 0, right = 6, bottom = 0, left = 0 } ] faviconImg
-                   , el [ Font.color mutedTxt, centerY, Font.size 12
-                        , (case headerTextColor of
-                            "" -> htmlAttribute (Html.Attributes.style "color" "var(--header-text-color)")
-                            _ -> htmlAttribute (Html.Attributes.style "color" headerTextColor))
-                       ] (text cluster.representative.feedTitle)
-                  , el [ Font.color mutedTxt, paddingXY 4 0, centerY ] (text "•")
-                  , link
-                      [ htmlAttribute (Html.Attributes.attribute "data-display-link" "true")
-                      , mouseOver [ Font.color lumeOrange ]
-                      , Font.semiBold
-                      , htmlAttribute (Html.Attributes.style "display" "inline")
-                      ]
-                      { url = cluster.representative.link, label = text cluster.representative.title }
-                  , if cluster.count > 1 then
-                        Input.button
-                            [ paddingEach { top = 0, right = 0, bottom = 0, left = 8 }
-                            , Font.color (if isExpanded then lumeOrange else mutedTxt)
-                            , mouseOver [ Font.color lumeOrange ]
-                            , htmlAttribute (Html.Attributes.style "display" "inline-flex")
-                            , centerY
-                            ]
-                            { onPress = Just (ToggleCluster cluster.id)
-                            , label = text (" ↩ " ++ String.fromInt cluster.count)
-                            }
-                      else
-                          Element.none
-                  ]
+            [ paragraph [ width fill, Ty.size13 ]
+                [ faviconImg
+                , el [ Font.color mutedTxt, Font.size 12
+                    , (case headerTextColor of
+                        "" -> htmlAttribute (Html.Attributes.style "color" "var(--header-text-color)")
+                        _ -> htmlAttribute (Html.Attributes.style "color" headerTextColor))
+                   ] (text cluster.representative.feedTitle)
+                , el [ Font.color mutedTxt, paddingXY 4 0 ] (text "•")
+                , link
+                    [ htmlAttribute (Html.Attributes.attribute "data-display-link" "true")
+                    , mouseOver [ Font.color lumeOrange ]
+                    , Font.semiBold
+                    ]
+                    { url = cluster.representative.link, label = text cluster.representative.title }
+                , if cluster.count > 1 then
+                      Input.button
+                          [ paddingEach { top = 0, right = 0, bottom = 0, left = 8 }
+                          , Font.color (if isExpanded then lumeOrange else mutedTxt)
+                          , mouseOver [ Font.color lumeOrange ]
+                          ]
+                          { onPress = Just (ToggleCluster cluster.id)
+                          , label = text (" ↩ " ++ String.fromInt cluster.count)
+                          }
+                    else
+                        Element.none
+                ]
             ]
             ]
         , if clusterCount > 1 && isExpanded then
@@ -632,26 +628,25 @@ clusterOtherItem now theme item =
                     viewIcon faviconUrl item.feedTitle
                 )
                 item.favicon
-                |> Maybe.withDefault Element.none
+                |> Maybe.withDefault (text "")
     in
     paragraph
         [ width fill
         , paddingEach { top = 4, bottom = 4, left = 0, right = 0 }
         ]
-        [ el [ centerY, paddingEach { top = 0, right = 8, bottom = 0, left = 0 } ] faviconImg
-        , el [ Ty.meta, Font.color mutedTxt, centerY
+        [ faviconImg
+        , el [ Ty.meta, Font.color mutedTxt
              , (case itemHeaderColor of
                   "" -> htmlAttribute (Html.Attributes.style "color" "var(--header-text-color)")
                   _ -> htmlAttribute (Html.Attributes.style "color" itemHeaderColor))
-          ] (text item.feedTitle)
-        , el [ Ty.meta, Font.color mutedTxt, paddingXY 4 0, centerY ] (text "•")
+           ] (text item.feedTitle)
+        , el [ Ty.meta, Font.color mutedTxt, paddingXY 4 0 ] (text "•")
         , link
             [ Font.size 11
             , Font.color txtColor
             , htmlAttribute (Html.Attributes.attribute "data-display-link" "true")
             , mouseOver [ Font.color lumeOrange ]
             , Font.medium
-            , htmlAttribute (Html.Attributes.style "display" "inline")
             ]
             { url = item.link, label = text item.title }
         ]
