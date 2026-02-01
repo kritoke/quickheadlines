@@ -14495,9 +14495,7 @@ var $author$project$Theme$themeToColors = function (theme) {
 var $author$project$Pages$Home_$feedCard = F6(
 	function (now, theme, breakpoint, loadingFeed, insertedIds, feed) {
 		var txtColor = $author$project$Theme$textColor(theme);
-		var shouldShowButton = ($elm$core$List$length(feed.items) >= 10) && ((feed.url !== 'software://releases') && (_Utils_cmp(
-			$elm$core$List$length(feed.items),
-			feed.totalItemCount) < 0));
+		var shouldShowButton = ($elm$core$List$length(feed.items) >= 10) && (feed.url !== 'software://releases');
 		var scrollAttributes = function () {
 			switch (breakpoint.$) {
 				case 'DesktopBreakpoint':
@@ -14551,7 +14549,7 @@ var $author$project$Pages$Home_$feedCard = F6(
 			_List_fromArray(
 				[
 					$mdgriffith$elm_ui$Element$centerX,
-					A2($mdgriffith$elm_ui$Element$paddingXY, 12, 4),
+					A2($mdgriffith$elm_ui$Element$paddingXY, 4, 12),
 					$mdgriffith$elm_ui$Element$Background$color(
 					A3($mdgriffith$elm_ui$Element$rgb255, 241, 245, 249)),
 					$mdgriffith$elm_ui$Element$Border$rounded(6),
@@ -15734,7 +15732,12 @@ var $author$project$Pages$Timeline$view = F2(
 							_List_fromArray(
 								[
 									$mdgriffith$elm_ui$Element$centerX,
-									$mdgriffith$elm_ui$Element$padding(12),
+									A2($mdgriffith$elm_ui$Element$paddingXY, 12, 4),
+									$mdgriffith$elm_ui$Element$Background$color(
+									A3($mdgriffith$elm_ui$Element$rgb255, 241, 245, 249)),
+									$mdgriffith$elm_ui$Element$Border$rounded(6),
+									$author$project$ThemeTypography$small,
+									$mdgriffith$elm_ui$Element$Font$medium,
 									$mdgriffith$elm_ui$Element$htmlAttribute(
 									$elm$html$Html$Attributes$class('qh-load-more'))
 								]),

@@ -445,13 +445,12 @@ feedCard now theme breakpoint loadingFeed insertedIds feed =
          shouldShowButton = 
              List.length feed.items >= 10 
              && feed.url /= "software://releases"
-             && List.length feed.items < feed.totalItemCount
 
          loadMoreButton =
              if shouldShowButton then
                  Input.button
                      [ centerX
-                     , paddingXY 12 4
+                     , paddingXY 4 12
                      , Background.color (rgb255 241 245 249)
                      , Border.rounded 6
                      , Ty.small

@@ -235,7 +235,11 @@ view shared model =
                   else
                     Input.button
                         [ centerX
-                        , padding 12
+                        , paddingXY 12 4
+                        , Background.color (rgb255 241 245 249)
+                        , Border.rounded 6
+                        , Ty.small
+                        , Font.medium
                         , htmlAttribute (Html.Attributes.class "qh-load-more")
                         ]
                         { onPress = Just LoadMore
