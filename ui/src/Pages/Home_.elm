@@ -454,7 +454,7 @@ feedCard now theme breakpoint loadingFeed insertedIds feed =
          btnOnPress = if isLoadingThisFeed then Nothing else Just (LoadMoreFeed feed.url)
 
          shouldShowButton = 
-             List.length feed.items >= 10 
+             List.length feed.items < feed.totalItemCount 
              && feed.url /= "software://releases"
 
          loadMoreButton =

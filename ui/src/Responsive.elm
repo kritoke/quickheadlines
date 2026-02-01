@@ -132,7 +132,7 @@ containerMaxWidth breakpoint =
             Element.maximum 1024 Element.fill
 
         DesktopBreakpoint ->
-            Element.maximum 1200 Element.fill
+            Element.maximum 1600 Element.fill
 
 
 timelineTimeColumnWidth : Breakpoint -> Int

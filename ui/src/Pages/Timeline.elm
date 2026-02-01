@@ -185,7 +185,7 @@ view shared model =
             groupClustersByDay shared.zone shared.now model.clusters
     in
     column
-        [ width (fill |> maximum 1200)
+        [ width (fill |> maximum 1600)
         , centerX
         , height fill
         , spacing 20

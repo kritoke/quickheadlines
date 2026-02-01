@@ -14495,7 +14495,9 @@ var $author$project$Theme$themeToColors = function (theme) {
 var $author$project$Pages$Home_$feedCard = F6(
 	function (now, theme, breakpoint, loadingFeed, insertedIds, feed) {
 		var txtColor = $author$project$Theme$textColor(theme);
-		var shouldShowButton = ($elm$core$List$length(feed.items) >= 10) && (feed.url !== 'software://releases');
+		var shouldShowButton = (_Utils_cmp(
+			$elm$core$List$length(feed.items),
+			feed.totalItemCount) < 0) && (feed.url !== 'software://releases');
 		var scrollAttributes = function () {
 			switch (breakpoint.$) {
 				case 'DesktopBreakpoint':
@@ -15667,7 +15669,7 @@ var $author$project$Pages$Timeline$view = F2(
 			_List_fromArray(
 				[
 					$mdgriffith$elm_ui$Element$width(
-					A2($mdgriffith$elm_ui$Element$maximum, 1200, $mdgriffith$elm_ui$Element$fill)),
+					A2($mdgriffith$elm_ui$Element$maximum, 1600, $mdgriffith$elm_ui$Element$fill)),
 					$mdgriffith$elm_ui$Element$centerX,
 					$mdgriffith$elm_ui$Element$height($mdgriffith$elm_ui$Element$fill),
 					$mdgriffith$elm_ui$Element$spacing(20),

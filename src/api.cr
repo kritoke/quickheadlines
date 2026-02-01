@@ -364,7 +364,7 @@ module Api
 
     # Get feeds for active tab (flattened to top level as Elm expects)
     # For "all" tab, aggregate feeds from all tabs + top-level feeds
-    feeds_response = if active_tab == "all"
+    feeds_response = if active_tab.downcase == "all"
                        # Build list of tuples (feed, tab_name) to preserve tab info
                        all_feeds_with_tabs = [] of {feed: FeedData, tab_name: String}
 

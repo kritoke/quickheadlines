@@ -141,7 +141,7 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
 
     # Get feeds for active tab (flattened to top level as Elm expects)
     # For "all" tab, aggregate feeds from all tabs + top-level feeds
-    feeds_response = if active_tab.downcase == "all"
+    feeds_response = if active_tab.to_s.downcase == "all"
                        # Build list of tuples (feed, tab_name) to preserve tab info
                        all_feeds_with_tabs = [] of {feed: FeedData, tab_name: String}
 
