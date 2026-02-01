@@ -14495,7 +14495,9 @@ var $author$project$Theme$themeToColors = function (theme) {
 var $author$project$Pages$Home_$feedCard = F6(
 	function (now, theme, breakpoint, loadingFeed, insertedIds, feed) {
 		var txtColor = $author$project$Theme$textColor(theme);
-		var shouldShowButton = ($elm$core$List$length(feed.items) >= 10) && (feed.url !== 'software://releases');
+		var shouldShowButton = ($elm$core$List$length(feed.items) >= 10) && ((feed.url !== 'software://releases') && (_Utils_cmp(
+			$elm$core$List$length(feed.items),
+			feed.totalItemCount) < 0));
 		var scrollAttributes = function () {
 			switch (breakpoint.$) {
 				case 'DesktopBreakpoint':
@@ -14544,45 +14546,21 @@ var $author$project$Pages$Home_$feedCard = F6(
 		var btnOnPress = isLoadingThisFeed ? $elm$core$Maybe$Nothing : $elm$core$Maybe$Just(
 			$author$project$Pages$Home_$LoadMoreFeed(feed.url));
 		var btnLabel = isLoadingThisFeed ? $mdgriffith$elm_ui$Element$text('Loading...') : $mdgriffith$elm_ui$Element$text('Load More');
-		var loadMoreButton = function () {
-			if (shouldShowButton) {
-				var btnTextColor = function () {
-					if (theme.$ === 'Dark') {
-						return $mdgriffith$elm_ui$Element$Font$color(
-							A3($mdgriffith$elm_ui$Element$rgb255, 255, 255, 255));
-					} else {
-						return $mdgriffith$elm_ui$Element$Font$color(
-							A3($mdgriffith$elm_ui$Element$rgb255, 100, 116, 139));
-					}
-				}();
-				var btnBg = function () {
-					if (theme.$ === 'Dark') {
-						return $mdgriffith$elm_ui$Element$Background$color(
-							A3($mdgriffith$elm_ui$Element$rgb255, 75, 75, 75));
-					} else {
-						return $mdgriffith$elm_ui$Element$Background$color(
-							A3($mdgriffith$elm_ui$Element$rgb255, 241, 245, 249));
-					}
-				}();
-				return A2(
-					$mdgriffith$elm_ui$Element$Input$button,
-					_List_fromArray(
-						[
-							$mdgriffith$elm_ui$Element$centerX,
-							A2($mdgriffith$elm_ui$Element$paddingXY, 12, 4),
-							btnBg,
-							btnTextColor,
-							$mdgriffith$elm_ui$Element$Border$rounded(6),
-							$author$project$ThemeTypography$small,
-							$mdgriffith$elm_ui$Element$Font$medium,
-							$mdgriffith$elm_ui$Element$htmlAttribute(
-							$elm$html$Html$Attributes$class('qh-load-more'))
-						]),
-					{label: btnLabel, onPress: btnOnPress});
-			} else {
-				return $mdgriffith$elm_ui$Element$none;
-			}
-		}();
+		var loadMoreButton = shouldShowButton ? A2(
+			$mdgriffith$elm_ui$Element$Input$button,
+			_List_fromArray(
+				[
+					$mdgriffith$elm_ui$Element$centerX,
+					A2($mdgriffith$elm_ui$Element$paddingXY, 12, 4),
+					$mdgriffith$elm_ui$Element$Background$color(
+					A3($mdgriffith$elm_ui$Element$rgb255, 241, 245, 249)),
+					$mdgriffith$elm_ui$Element$Border$rounded(6),
+					$author$project$ThemeTypography$small,
+					$mdgriffith$elm_ui$Element$Font$medium,
+					$mdgriffith$elm_ui$Element$htmlAttribute(
+					$elm$html$Html$Attributes$class('qh-load-more'))
+				]),
+			{label: btnLabel, onPress: btnOnPress}) : $mdgriffith$elm_ui$Element$none;
 		var border = $author$project$Theme$borderColor(theme);
 		return A2(
 			$mdgriffith$elm_ui$Element$column,

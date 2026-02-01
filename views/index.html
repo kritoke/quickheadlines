@@ -140,45 +140,45 @@
          60% { opacity: 1; transform: translateY(-2px) scale(1.001); }
          to { opacity: 1; transform: translateY(0) scale(1); }
        }
-        .qh-load-more {
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          background: #f1f5f9;
-          color: #64748b;
-          border-radius: 6px;
-          padding: 4px 12px;
-          border: none;
-          box-shadow: none;
-          transition: all 140ms ease;
-          cursor: pointer;
-          font-weight: 500;
-          font-size: 12px;
-          margin-top: 16px;
-          width: auto;
-          min-width: unset;
-        }
-        .qh-load-more:hover {
-          background: #e2e8f0;
-          color: #475569;
-        }
-        .qh-load-more:active {
-          background: #cbd5e1;
-        }
-        @media (prefers-color-scheme: dark) {
-          .qh-load-more {
-            background: #1f2937;
-            color: #94a3b8;
-            border: none;
-          }
-          .qh-load-more:hover {
-            background: #334155;
-            color: #cbd5e1;
-          }
-          .qh-load-more:active {
-            background: #475569;
-          }
-        }
+         .qh-load-more {
+           display: inline-flex;
+           align-items: center;
+           justify-content: center;
+           background: #f1f5f9;
+           color: #64748b;
+           border-radius: 6px;
+           padding: 4px 12px;
+           border: none;
+           box-shadow: none;
+           transition: all 140ms ease;
+           cursor: pointer;
+           font-weight: 500;
+           font-size: 12px;
+           margin-top: 16px;
+           width: auto;
+           min-width: unset;
+         }
+         .qh-load-more:hover {
+           background: #e2e8f0;
+           color: #475569;
+         }
+         .qh-load-more:active {
+           background: #cbd5e1;
+         }
+         @media (prefers-color-scheme: dark), [data-theme="dark"] {
+           .qh-load-more {
+             background: #334155;
+             color: #e2e8f0;
+             border: none;
+           }
+           .qh-load-more:hover {
+             background: #475569;
+             color: #f8fafc;
+           }
+           .qh-load-more:active {
+             background: #64748b;
+           }
+         }
        .qh-observer-indicator {
          display: none;
        }
@@ -331,6 +331,13 @@
         prefersDark = savedTheme === 'dark';
       } else {
         prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+      }
+      
+      // Apply theme to document
+      if (prefersDark) {
+        document.documentElement.setAttribute('data-theme', 'dark');
+      } else {
+        document.documentElement.setAttribute('data-theme', 'light');
       }
       
       // Check if we should restore a previously saved page

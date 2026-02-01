@@ -41,19 +41,19 @@
   background: #cbd5e1;
 }
 
-/* Dark theme adjustments for load more button */
-@media (prefers-color-scheme: dark) {
+/* Dark theme adjustments for load more button - works with both prefers-color-scheme and data-theme attribute */
+@media (prefers-color-scheme: dark), [data-theme="dark"] {
   .qh-load-more {
-    background: #1f2937;
-    color: #94a3b8;
+    background: #334155;
+    color: #e2e8f0;
     border: none;
   }
   .qh-load-more:hover {
-    background: #334155;
-    color: #cbd5e1;
+    background: #475569;
+    color: #f8fafc;
   }
   .qh-load-more:active {
-    background: #475569;
+    background: #64748b;
   }
 }
 

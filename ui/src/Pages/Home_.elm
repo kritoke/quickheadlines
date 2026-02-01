@@ -442,40 +442,25 @@ feedCard now theme breakpoint loadingFeed insertedIds feed =
 
          btnOnPress = if isLoadingThisFeed then Nothing else Just (LoadMoreFeed feed.url)
 
-         shouldShowButton = List.length feed.items >= 10 && feed.url /= "software://releases"
+         shouldShowButton = 
+             List.length feed.items >= 10 
+             && feed.url /= "software://releases"
+             && List.length feed.items < feed.totalItemCount
 
          loadMoreButton =
              if shouldShowButton then
-                 let
-                     btnBg =
-                         case theme of
-                             Dark ->
-                                 Background.color (rgb255 75 75 75)
-
-                             Light ->
-                                 Background.color (rgb255 241 245 249)
-
-                     btnTextColor =
-                         case theme of
-                             Dark ->
-                                 Font.color (rgb255 255 255 255)
-
-                             Light ->
-                                 Font.color (rgb255 100 116 139)
-                  in
-                  Input.button
-                      [ centerX
-                      , paddingXY 12 4
-                      , btnBg
-                      , btnTextColor
-                      , Border.rounded 6
-                      , Ty.small
-                      , Font.medium
-                      , htmlAttribute (Html.Attributes.class "qh-load-more")
-                      ]
-                      { onPress = btnOnPress
-                      , label = btnLabel
-                      }
+                 Input.button
+                     [ centerX
+                     , paddingXY 12 4
+                     , Background.color (rgb255 241 245 249)
+                     , Border.rounded 6
+                     , Ty.small
+                     , Font.medium
+                     , htmlAttribute (Html.Attributes.class "qh-load-more")
+                     ]
+                     { onPress = btnOnPress
+                     , label = btnLabel
+                     }
              else
                  Element.none
     in
