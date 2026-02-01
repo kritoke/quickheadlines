@@ -643,11 +643,9 @@ def refresh_all(config : Config)
 
   STATE.update(Time.local)
 
-  # 7. Process story clustering for all fetched feeds
-  # Clustering is expensive - disabled for now to improve performance
-  # fetched_map.values.each do |feed_data|
-  #   process_feed_item_clustering(feed_data)
-  # end
+  # 7. Process story clustering for all fetched feeds asynchronously
+  # Use a channel to limit concurrent clustering jobs (max 10 at a time)
+  spawn async_clustering(fetched_map.values.to_a)
 
   # Clear memory after large amount of data processing
   GC.collect
@@ -656,8 +654,23 @@ def refresh_all(config : Config)
 end
 
 # ============================================
-# Story Clustering Functions
+# Async Story Clustering Functions
 # ============================================
+
+# Run clustering asynchronously with concurrency limiting
+def async_clustering(feeds : Array(FeedData))
+  clustering_channel = Channel(Nil).new(10) # Max 10 concurrent clustering jobs
+
+  spawn do
+    feeds.each do |feed_data|
+      spawn do
+        clustering_channel.send(nil) # Reserve slot
+        process_feed_item_clustering(feed_data)
+        clustering_channel.receive    # Release slot
+      end
+    end
+  end
+end
 
 # Compute cluster assignment for a single item
 def compute_cluster_for_item(item_id : Int64, title : String) : Int64?
