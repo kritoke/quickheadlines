@@ -8,6 +8,8 @@ import Element.Font as Font
 import Element.Input as Input
 import Html.Attributes
 import Http
+import Process
+import Task
 import Set exposing (Set)
 import Shared exposing (Model, Msg(..), Theme(..))
 import Theme exposing (borderColor, cardColor, errorColor, lumeOrange, mutedColor, surfaceColor, textColor)
@@ -26,6 +28,7 @@ type alias Model =
     , error : Maybe String
     , hasMore : Bool
     , offset : Int
+    , insertedIds : Set String
     }
 
 
@@ -39,6 +42,7 @@ init shared =
       , error = Nothing
       , hasMore = True
       , offset = 0
+      , insertedIds = Set.empty
       }
     , fetchTimeline 35 0 GotTimeline
     )
@@ -48,6 +52,7 @@ type Msg
     = GotTimeline (Result Http.Error Api.TimelineResponse)
     | GotMoreTimeline (Result Http.Error Api.TimelineResponse)
     | LoadMore
+    | ClearInserted
     | ToggleCluster String
     | ToggleTheme
     | NearBottom Bool
@@ -91,6 +96,9 @@ update shared msg model =
 
                 newClusters =
                     clusterItemsFromTimeline newItems
+
+                addedIds =
+                    response.items |> List.map .id |> Set.fromList
             in
             ( { model
                 | items = newItems
@@ -98,8 +106,9 @@ update shared msg model =
                 , loadingMore = False
                 , hasMore = response.hasMore
                 , offset = model.offset + List.length response.items
+                , insertedIds = Set.union model.insertedIds addedIds
               }
-            , Cmd.none
+            , Task.perform (\_ -> ClearInserted) (Process.sleep 300)
             )
 
         GotMoreTimeline (Err _) ->
@@ -112,6 +121,11 @@ update shared msg model =
         LoadMore ->
             ( { model | loadingMore = True }
             , fetchTimeline 35 model.offset GotMoreTimeline
+            )
+
+        ClearInserted ->
+            ( { model | insertedIds = Set.empty }
+            , Cmd.none
             )
 
         NearBottom nearBottom ->
@@ -207,8 +221,14 @@ view shared model =
                     [ width fill
                     , spacing 16
                     ]
-                    (List.concatMap (dayClusterSection breakpoint shared.zone shared.now theme model.expandedClusters) clustersByDay)
+                    (List.concatMap (dayClusterSection breakpoint shared.zone shared.now theme model.expandedClusters model.insertedIds) clustersByDay)
                 , el [ htmlAttribute (Html.Attributes.id "scroll-sentinel"), height (px 1), width fill ] (text "")
+                , if model.loadingMore then
+                    el [ centerX, padding 12 ] (text "Loading...")
+                  else if not model.hasMore then
+                    el [ centerX, padding 12, Font.color mutedTxt ] (text "End of feed")
+                  else
+                    Element.none
                 ]
         ]
 
@@ -285,15 +305,15 @@ getClusterDateFromKey zone key clusters =
                     Time.millisToPosix 0
 
 
-dayClusterSection : Responsive.Breakpoint -> Zone -> Posix -> Theme -> Set String -> DayClusterGroup -> List (Element Msg)
-dayClusterSection breakpoint zone now theme expandedClusters dayGroup =
+dayClusterSection : Responsive.Breakpoint -> Zone -> Posix -> Theme -> Set String -> Set String -> DayClusterGroup -> List (Element Msg)
+dayClusterSection breakpoint zone now theme expandedClusters insertedIds dayGroup =
     [ dayHeader zone now theme dayGroup.date
     , column
         [ width fill
         , spacing 0
         , paddingEach { top = 16, bottom = 32, left = 0, right = 0 }
         ]
-        (List.map (clusterItem breakpoint zone now theme expandedClusters) dayGroup.clusters)
+        (List.map (clusterItem breakpoint zone now theme expandedClusters insertedIds) dayGroup.clusters)
     ]
 
 

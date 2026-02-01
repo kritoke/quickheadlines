@@ -67,6 +67,7 @@ type alias ClusterItem =
     , favicon : Maybe String
     , headerColor : Maybe String
     , headerTextColor : Maybe String
+    , id : String
     }
 
 
@@ -228,6 +229,7 @@ toClusterItem item =
     , favicon = item.favicon
     , headerColor = item.headerColor
     , headerTextColor = item.headerTextColor
+    , id = item.id
     }
 
 
