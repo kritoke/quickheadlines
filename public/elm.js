@@ -15648,18 +15648,9 @@ var $author$project$Pages$Timeline$view = F2(
 									$elm$html$Html$Attributes$class('qh-load-more'))
 								]),
 							{
-								label: $mdgriffith$elm_ui$Element$text('Load more'),
+								label: $mdgriffith$elm_ui$Element$text('Load More'),
 								onPress: $elm$core$Maybe$Just($author$project$Pages$Timeline$LoadMore)
-							})),
-							A2(
-							$mdgriffith$elm_ui$Element$el,
-							_List_fromArray(
-								[
-									$mdgriffith$elm_ui$Element$htmlAttribute(
-									$elm$html$Html$Attributes$class('qh-observer-indicator'))
-								]),
-							$mdgriffith$elm_ui$Element$text(
-								model.sentinelNear ? 'Observer: near' : 'Observer: far'))
+							}))
 						])))
 				]));
 	});
