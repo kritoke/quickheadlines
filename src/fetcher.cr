@@ -354,8 +354,8 @@ private def apply_auth_headers(headers : HTTP::Headers, auth : AuthConfig) : Nil
   end
 end
 
-private def handle_success_response(feed : Feed, response : HTTP::Client::Response, item_limit : Int32, previous_data : FeedData?) : FeedData
-  parsed = parse_feed(response.body_io, item_limit)
+private def handle_success_response(feed : Feed, response : HTTP::Client::Response, display_limit : Int32, db_fetch_limit : Int32, previous_data : FeedData?) : FeedData
+  parsed = parse_feed(response.body_io, db_fetch_limit)
   items = parsed[:items]
   site_link = parsed[:site_link] || feed.url
 
@@ -439,7 +439,7 @@ private def handle_timeout_error(feed : Feed, retries : Int32) : Int32
 end
 
 # Handle HTTP response for feed fetching
-private def handle_feed_response(feed : Feed, response : HTTP::Client::Response, current_url : String, redirects : Int32, effective_item_limit : Int32, previous_data : FeedData?, cache : FeedCache) : {FeedData?, Int32, Bool, String}
+private def handle_feed_response(feed : Feed, response : HTTP::Client::Response, current_url : String, redirects : Int32, display_limit : Int32, db_fetch_limit : Int32, previous_data : FeedData?, cache : FeedCache) : {FeedData?, Int32, Bool, String}
   if response.status.redirection? && (location = response.headers["Location"]?)
     new_url = URI.parse(current_url).resolve(location).to_s
     return {nil, redirects + 1, false, new_url}
@@ -450,7 +450,7 @@ private def handle_feed_response(feed : Feed, response : HTTP::Client::Response,
   end
 
   if response.status.success?
-    result = handle_success_response(feed, response, effective_item_limit, previous_data)
+    result = handle_success_response(feed, response, display_limit, db_fetch_limit, previous_data)
     cache.add(result)
     return {result, redirects, true, current_url}
   end
@@ -459,14 +459,13 @@ private def handle_feed_response(feed : Feed, response : HTTP::Client::Response,
     return {nil, redirects, false, current_url}
   end
 
-  # Client error - return error, don't retry
   error_result = error_feed_data(feed, "Error fetching feed (status #{response.status_code})")
   {error_result, redirects, true, current_url}
 end
 
-  def fetch_feed(feed : Feed, global_item_limit : Int32, previous_data : FeedData? = nil) : FeedData
-    # Use feed-specific item limit or global default
-    effective_item_limit = feed.item_limit || global_item_limit
+def fetch_feed(feed : Feed, display_item_limit : Int32, db_fetch_limit : Int32, previous_data : FeedData? = nil) : FeedData
+    # Use feed-specific item limit or global default for display
+    effective_item_limit = feed.item_limit || display_item_limit
 
   # Check cache first
   if cached_data = get_cached_feed(feed, effective_item_limit, previous_data)
@@ -499,7 +498,7 @@ end
 
       client.get(uri.request_target, headers: headers) do |response|
         result, new_redirects, should_return, new_url = handle_feed_response(
-          feed, response, current_url, redirects, effective_item_limit, previous_data, cache
+          feed, response, current_url, redirects, effective_item_limit, db_fetch_limit, previous_data, cache
         )
         current_url = new_url
 
@@ -591,7 +590,7 @@ def refresh_all(config : Config)
       SEM.receive
       begin
         prev = existing_data[feed.url]?
-        channel.send(fetch_feed(feed, config.item_limit, prev))
+        channel.send(fetch_feed(feed, config.item_limit, config.db_fetch_limit, prev))
       ensure
         SEM.send(nil)
       end
