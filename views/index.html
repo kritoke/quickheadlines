@@ -119,6 +119,13 @@
         margin-right: 8px !important;
         vertical-align: middle !important;
       }
+      /* Force smaller top padding for Elm pages on desktop to avoid extra empty header space */
+      @media (min-width: 1024px) {
+        [data-timeline-page="true"], [data-page="home"] {
+          padding-top: 12px !important;
+          padding-bottom: 12px !important;
+        }
+      }
     }
     </style>
     <script>
