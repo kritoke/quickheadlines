@@ -228,7 +228,15 @@ view shared model =
                   else if not model.hasMore then
                     el [ centerX, padding 12, Font.color mutedTxt ] (text "End of feed")
                   else
-                    Element.none
+                    -- Show a manual "Load more" button to help verify incremental loading logic
+                    Input.button
+                        [ centerX
+                        , padding 12
+                        , htmlAttribute (Html.Attributes.style "min-width" "160px")
+                        ]
+                        { onPress = Just LoadMore
+                        , label = text "Load more"
+                        }
                 ]
         ]
 
