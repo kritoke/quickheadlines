@@ -6,8 +6,8 @@ CMD rm -rf /tmp/qh 2>/dev/null || true
 
 # 1. Install dependencies (including sudo for user switching)
 # Note: node/npm not needed - elm.js is pre-compiled in the repo
-# Note: Crystal will be downloaded as pre-built binary (1.19.1)
-CMD pkg install -y shards git openssl ca_root_nss gmake curl sqlite3 sudo libevent libyaml || \
+# Note: FreeBSD uses Crystal from ports (1.8.2) instead of 1.19.1 which isn't available
+CMD pkg install -y crystal shards git openssl ca_root_nss gmake curl sqlite3 sudo libevent libyaml || \
     (echo "Package install failed..." && exit 1)
 
 # Link SSL certificates (handle different FreeBSD versions)
@@ -19,32 +19,35 @@ CMD if [ -f /usr/local/share/certs/ca-root-nss.crt ]; then \
 
 # 2. Create user and core directories
 CMD pw useradd qh -d /usr/local/share/quickheadlines -s /usr/sbin/nologin 2>/dev/null || true
-CMD mkdir -p /usr/local/share/quickheadlines /var/cache/quickheadlines /home/qh/.cache/crystal
+CMD mkdir -p /usr/local/share/quickheadlines /var/cache/quickheadlines /home/qh
 CMD chown -R qh:qh /usr/local/share/quickheadlines /var/cache/quickheadlines /home/qh 2>/dev/null || true
 
-# 3. Setup Persistent Crystal Cache
-# Mount to match makefile's CACHE_DIR: $(HOME)/.cache/quickheadlines/crystal
-FSTAB /usr/local/bastille/cache/crystal/quickheadlines /home/qh/.cache/quickheadlines nullfs rw 0 0
+# 3. Setup Persistence Cache
+# Cache shards lib directory to avoid re-downloading dependencies
+FSTAB /usr/local/bastille/cache/crystal/quickheadlines /home/qh/.cache nullfs rw 0 0
 
 # 4. Clone and Prepare Environment
 CMD git clone https://github.com/kritoke/quickheadlines.git /tmp/qh 2>/dev/null || true
 CMD chown -R qh:qh /tmp/qh 2>/dev/null || true
 CMD sysrc quickheadlines_env="GC_MARKERS=1 GC_FREE_SPACE_DIVISOR=20 QUICKHEADLINES_CACHE_DIR=/var/cache/quickheadlines" 2>/dev/null || true
 
-# 5. Build Crystal and quickheadlines
+# 5. Build quickheadlines
 # elm.js is pre-compiled in the repository, so we don't need to compile it on FreeBSD
-# Crystal 1.19.1 will be downloaded as pre-built binary from official releases
+# Crystal is installed from FreeBSD ports (1.8.2)
+# Check if binary already exists to avoid recompiling
 CMD cd /tmp/qh && \
-    export PATH=/usr/local/bin:$$PATH && \
+    export PATH=/usr/local/bin:/usr/bin:/bin:$$PATH && \
     export MAKE=gmake && \
-    echo "Downloading Crystal 1.19.1 pre-built binary..." && \
-    sudo -u qh sh -c "export PATH=/usr/local/bin:\$PATH && export MAKE=gmake && gmake download-crystal" && \
-    echo "Crystal download complete. Verifying..." && \
-    test -x /tmp/qh/bin/crystal && /tmp/qh/bin/crystal --version || (echo "ERROR: Crystal not found" && exit 1) && \
+    echo "Using Crystal from FreeBSD ports..." && \
+    crystal --version && \
     echo "Installing Crystal dependencies..." && \
-    sudo -u qh sh -c "export PATH=/tmp/qh/bin:/usr/local/bin:\$PATH && shards install" && \
-    echo "Building quickheadlines binary..." && \
-    sudo -u qh sh -c "export PATH=/tmp/qh/bin:/usr/local/bin:\$PATH && export MAKE=gmake && gmake build"
+    sudo -u qh sh -c "export PATH=/usr/local/bin:/usr/bin:/bin:\$PATH && shards install" && \
+    if [ -f "/usr/local/share/quickheadlines/quickheadlines" ]; then \
+        echo "✓ Using existing quickheadlines binary (skipping build)"; \
+    else \
+        echo "Building quickheadlines binary..." && \
+        sudo -u qh sh -c "export PATH=/usr/local/bin:/usr/bin:/bin:\$PATH && export MAKE=gmake && gmake build"; \
+    fi
 
 # 6. Install Binary and Config
 CMD cp /tmp/qh/bin/quickheadlines /usr/local/share/quickheadlines 2>/dev/null || true

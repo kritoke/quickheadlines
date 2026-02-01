@@ -13146,8 +13146,8 @@ var $author$project$Application$themeToggle = function (model) {
 				_List_fromArray(
 					[
 						$elm$html$Html$Attributes$src('/sun-icon.svg'),
-						A2($elm$html$Html$Attributes$style, 'width', '20px'),
-						A2($elm$html$Html$Attributes$style, 'height', '20px')
+						A2($elm$html$Html$Attributes$style, 'width', '28px'),
+						A2($elm$html$Html$Attributes$style, 'height', '28px')
 					]),
 				_List_Nil);
 		} else {
@@ -13156,8 +13156,8 @@ var $author$project$Application$themeToggle = function (model) {
 				_List_fromArray(
 					[
 						$elm$html$Html$Attributes$src('/moon-icon.svg'),
-						A2($elm$html$Html$Attributes$style, 'width', '20px'),
-						A2($elm$html$Html$Attributes$style, 'height', '20px')
+						A2($elm$html$Html$Attributes$style, 'width', '28px'),
+						A2($elm$html$Html$Attributes$style, 'height', '28px')
 					]),
 				_List_Nil);
 		}
@@ -14569,22 +14569,23 @@ var $author$project$Pages$Home_$feedCard = F6(
 		var btnOnPress = isLoadingThisFeed ? $elm$core$Maybe$Nothing : $elm$core$Maybe$Just(
 			$author$project$Pages$Home_$LoadMoreFeed(feed.url));
 		var btnLabel = isLoadingThisFeed ? $mdgriffith$elm_ui$Element$text('Loading...') : $mdgriffith$elm_ui$Element$text('Load More');
+		var border = $author$project$Theme$borderColor(theme);
 		var loadMoreButton = shouldShowButton ? A2(
 			$mdgriffith$elm_ui$Element$Input$button,
 			_List_fromArray(
 				[
 					$mdgriffith$elm_ui$Element$centerX,
 					A2($mdgriffith$elm_ui$Element$paddingXY, 4, 12),
-					$mdgriffith$elm_ui$Element$Background$color(
-					A3($mdgriffith$elm_ui$Element$rgb255, 241, 245, 249)),
+					$mdgriffith$elm_ui$Element$Background$color(cardBg),
 					$mdgriffith$elm_ui$Element$Border$rounded(6),
+					$mdgriffith$elm_ui$Element$Border$width(1),
+					$mdgriffith$elm_ui$Element$Border$color(border),
 					$author$project$ThemeTypography$small,
 					$mdgriffith$elm_ui$Element$Font$medium,
 					$mdgriffith$elm_ui$Element$htmlAttribute(
 					$elm$html$Html$Attributes$class('qh-load-more'))
 				]),
 			{label: btnLabel, onPress: btnOnPress}) : $mdgriffith$elm_ui$Element$none;
-		var border = $author$project$Theme$borderColor(theme);
 		return A2(
 			$mdgriffith$elm_ui$Element$column,
 			_List_fromArray(

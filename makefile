@@ -8,6 +8,9 @@ ELM_FORMAT ?= elm-format
 VERSION := $(shell grep '^version:' shard.yml | awk '{print $$2}')
 BUILD_REV ?= v$(VERSION)
 CRYSTAL_VERSION = 1.19.1
+ifeq ($(OS_NAME),freebsd)
+	CRYSTAL_VERSION = 1.8.2
+endif
 
 # Detect system for platform-specific builds
 UNAME_S := $(shell uname -s)
@@ -94,18 +97,23 @@ download-crystal:
 		rm -f $(CRYSTAL_TARBALL); \
 	fi
 	@rm -f bin/crystal
-	@ls -la $(CRYSTAL_DIR)/bin/crystal 2>/dev/null || echo "ERROR: Crystal binary not found at $(CRYSTAL_DIR)/bin/crystal"
-	@find $(CRYSTAL_DIR) -name crystal -type f 2>/dev/null || echo "No crystal binary found anywhere in $(CRYSTAL_DIR)"
 	@ln -sf $(CRYSTAL_DIR)/bin/crystal bin/crystal
-	@test -x bin/crystal && echo "✓ Symlink created: $(shell readlink bin/crystal)" || echo "ERROR: Symlink creation failed"
 	@echo "✓ Crystal $(CRYSTAL_VERSION) installed in $(CRYSTAL_DIR)"
 
 # Check for required dependencies
 check-deps:
 	@echo "Checking dependencies..."
 	@if [ ! -x "$(CRYSTAL)" ]; then \
-		echo "Crystal compiler not found, downloading..."; \
-		$(MAKE) download-crystal; \
+		if [ "$(OS_NAME)" = "freebsd" ]; then \
+			echo "❌ Error: Crystal not found in /usr/local/bin"; \
+			echo ""; \
+			echo "Install Crystal:"; \
+			echo "  FreeBSD: sudo pkg install crystal"; \
+			exit 1; \
+		else \
+			echo "Crystal compiler not found, downloading..."; \
+			$(MAKE) download-crystal; \
+		fi; \
 	fi
 	@echo "✓ Crystal compiler: $$($(CRYSTAL) --version)"
 	@if [ "$(OS_NAME)" = "freebsd" ]; then \

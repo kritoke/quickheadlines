@@ -409,72 +409,72 @@ splitAt n list =
 feedCard : Time.Posix -> Theme -> Responsive.Breakpoint -> Maybe String -> Set String -> Feed -> Element Msg
 feedCard now theme breakpoint loadingFeed insertedIds feed =
     let
-         colors =
-             themeToColors theme
+        colors =
+            themeToColors theme
 
-         cardBg =
-             cardColor theme
+        cardBg =
+            cardColor theme
 
-         border =
-             Theme.borderColor theme
+        border =
+            Theme.borderColor theme
 
-         txtColor =
-             textColor theme
+        txtColor =
+            textColor theme
 
-         scrollAttributes =
-             case breakpoint of
-                 DesktopBreakpoint ->
-                     [ htmlAttribute (Html.Attributes.style "max-height" "384px")
-                     , htmlAttribute (Html.Attributes.style "overflow-y" "auto")
-                     , htmlAttribute (Html.Attributes.style "scrollbar-width" "thin")
-                     , htmlAttribute (Html.Attributes.style "scrollbar-color" "rgba(128,128,128,0.3) transparent")
-                     , htmlAttribute (Html.Attributes.class "auto-hide-scroll")
-                     ]
+        scrollAttributes =
+            case breakpoint of
+                DesktopBreakpoint ->
+                    [ htmlAttribute (Html.Attributes.style "max-height" "384px")
+                    , htmlAttribute (Html.Attributes.style "overflow-y" "auto")
+                    , htmlAttribute (Html.Attributes.style "scrollbar-width" "thin")
+                    , htmlAttribute (Html.Attributes.style "scrollbar-color" "rgba(128,128,128,0.3) transparent")
+                    , htmlAttribute (Html.Attributes.class "auto-hide-scroll")
+                    ]
 
-                 TabletBreakpoint ->
-                     [ htmlAttribute (Html.Attributes.style "max-height" "352px")
-                     , htmlAttribute (Html.Attributes.style "overflow-y" "auto")
-                     , htmlAttribute (Html.Attributes.style "scrollbar-width" "thin")
-                     , htmlAttribute (Html.Attributes.style "scrollbar-color" "rgba(128,128,128,0.3) transparent")
-                     , htmlAttribute (Html.Attributes.class "auto-hide-scroll")
-                     ]
+                TabletBreakpoint ->
+                    [ htmlAttribute (Html.Attributes.style "max-height" "352px")
+                    , htmlAttribute (Html.Attributes.style "overflow-y" "auto")
+                    , htmlAttribute (Html.Attributes.style "scrollbar-width" "thin")
+                    , htmlAttribute (Html.Attributes.style "scrollbar-color" "rgba(128,128,128,0.3) transparent")
+                    , htmlAttribute (Html.Attributes.class "auto-hide-scroll")
+                    ]
 
-                 _ ->
-                     []
+                _ ->
+                    []
 
-         displayedItems = sortFeedItems feed.items
+        displayedItems = sortFeedItems feed.items
 
-         isLoadingThisFeed =
-             case loadingFeed of
-                 Just u -> u == feed.url
-                 Nothing -> False
+        isLoadingThisFeed =
+            case loadingFeed of
+                Just u -> u == feed.url
+                Nothing -> False
 
-         btnLabel = if isLoadingThisFeed then text "Loading..." else text "Load More"
+        btnLabel = if isLoadingThisFeed then text "Loading..." else text "Load More"
 
-         btnOnPress = if isLoadingThisFeed then Nothing else Just (LoadMoreFeed feed.url)
+        btnOnPress = if isLoadingThisFeed then Nothing else Just (LoadMoreFeed feed.url)
 
-         shouldShowButton = 
-             List.length feed.items < feed.totalItemCount 
-             && feed.url /= "software://releases"
+        shouldShowButton =
+            List.length feed.items < feed.totalItemCount
+            && feed.url /= "software://releases"
 
-          loadMoreButton =
-              if shouldShowButton then
-                  Input.button
-                      [ centerX
-                      , paddingXY 4 12
-                      , Background.color cardBg
-                      , Border.rounded 6
-                      , Border.width 1
-                      , Border.color border
-                      , Ty.small
-                      , Font.medium
-                      , htmlAttribute (Html.Attributes.class "qh-load-more")
-                      ]
-                      { onPress = btnOnPress
-                      , label = btnLabel
-                      }
-              else
-                  Element.none
+        loadMoreButton =
+            if shouldShowButton then
+                Input.button
+                    [ centerX
+                    , paddingXY 4 12
+                    , Background.color cardBg
+                    , Border.rounded 6
+                    , Border.width 1
+                    , Border.color border
+                    , Ty.small
+                    , Font.medium
+                    , htmlAttribute (Html.Attributes.class "qh-load-more")
+                    ]
+                    { onPress = btnOnPress
+                    , label = btnLabel
+                    }
+            else
+                Element.none
     in
     column
         [ width fill
