@@ -13724,7 +13724,17 @@ var $author$project$Layouts$Shared$layout = function (_v0) {
 								$mdgriffith$elm_ui$Element$htmlAttribute(
 								A2($elm$html$Html$Attributes$style, 'overflow-y', 'auto')),
 								$mdgriffith$elm_ui$Element$htmlAttribute(
-								$elm$html$Html$Attributes$id('main-content'))
+								$elm$html$Html$Attributes$id('main-content')),
+								function () {
+								switch (breakpoint.$) {
+									case 'VeryNarrowBreakpoint':
+										return $mdgriffith$elm_ui$Element$padding(8);
+									case 'MobileBreakpoint':
+										return $mdgriffith$elm_ui$Element$padding(12);
+									default:
+										return $mdgriffith$elm_ui$Element$padding(0);
+								}
+							}()
 							]),
 						A2(
 							$mdgriffith$elm_ui$Element$column,

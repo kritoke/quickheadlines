@@ -83,6 +83,15 @@ layout { theme, windowWidth, header, footer, main } =
                 , height fill
                 , htmlAttribute (Html.Attributes.style "overflow-y" "auto")
                 , htmlAttribute (Html.Attributes.id "main-content")
+                , case breakpoint of
+                    VeryNarrowBreakpoint ->
+                        Element.padding 8
+
+                    MobileBreakpoint ->
+                        Element.padding 12
+
+                    _ ->
+                        Element.padding 0
                 ]
                 (Element.column
                     [ width fill

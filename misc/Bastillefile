@@ -44,9 +44,9 @@ CMD for v in 19 18 17 15; do if [ -x "/usr/local/bin/llvm-config$$v" ]; then \
         break; \
     fi; done && \
     cd /tmp/qh && \
-    su qh -c "npm install @tailwindcss/cli tailwindcss 2>/dev/null || true" && \
-    su qh -c "gmake shards install CRYSTAL=/usr/local/bin/crystal" && \
-    su qh -c "export MAKE=gmake LLVM_CONFIG=$$LLVM_CONFIG && gmake build CRYSTAL=/usr/local/bin/crystal"
+    su qh -c "export PATH=/usr/local/bin:\$PATH && npm install @tailwindcss/cli tailwindcss 2>/dev/null || true" && \
+    su qh -c "export PATH=/usr/local/bin:\$PATH && gmake shards install CRYSTAL=/usr/local/bin/crystal" && \
+    su qh -c "export PATH=/usr/local/bin:\$PATH && export MAKE=gmake LLVM_CONFIG=$$LLVM_CONFIG && gmake build CRYSTAL=/usr/local/bin/crystal"
 
 # 6. Install Binary and Config
 CMD cp /tmp/qh/bin/quickheadlines /usr/local/share/quickheadlines 2>/dev/null || true
