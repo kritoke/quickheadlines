@@ -12309,6 +12309,13 @@ var $author$project$Theme$borderColor = function (theme) {
 		return A3($mdgriffith$elm_ui$Element$rgb255, 229, 231, 235);
 	}
 };
+var $author$project$Responsive$DesktopBreakpoint = {$: 'DesktopBreakpoint'};
+var $author$project$Responsive$MobileBreakpoint = {$: 'MobileBreakpoint'};
+var $author$project$Responsive$TabletBreakpoint = {$: 'TabletBreakpoint'};
+var $author$project$Responsive$VeryNarrowBreakpoint = {$: 'VeryNarrowBreakpoint'};
+var $author$project$Responsive$breakpointFromWidth = function (width) {
+	return (width < 480) ? $author$project$Responsive$VeryNarrowBreakpoint : ((width < 768) ? $author$project$Responsive$MobileBreakpoint : ((width < 1024) ? $author$project$Responsive$TabletBreakpoint : $author$project$Responsive$DesktopBreakpoint));
+};
 var $mdgriffith$elm_ui$Internal$Model$AlignY = function (a) {
 	return {$: 'AlignY', a: a};
 };
@@ -12672,13 +12679,6 @@ var $author$project$Application$SharedMsg = function (a) {
 	return {$: 'SharedMsg', a: a};
 };
 var $author$project$Shared$ToggleTheme = {$: 'ToggleTheme'};
-var $author$project$Responsive$DesktopBreakpoint = {$: 'DesktopBreakpoint'};
-var $author$project$Responsive$MobileBreakpoint = {$: 'MobileBreakpoint'};
-var $author$project$Responsive$TabletBreakpoint = {$: 'TabletBreakpoint'};
-var $author$project$Responsive$VeryNarrowBreakpoint = {$: 'VeryNarrowBreakpoint'};
-var $author$project$Responsive$breakpointFromWidth = function (width) {
-	return (width < 480) ? $author$project$Responsive$VeryNarrowBreakpoint : ((width < 768) ? $author$project$Responsive$MobileBreakpoint : ((width < 1024) ? $author$project$Responsive$TabletBreakpoint : $author$project$Responsive$DesktopBreakpoint));
-};
 var $mdgriffith$elm_ui$Internal$Model$Button = {$: 'Button'};
 var $elm$json$Json$Encode$bool = _Json_wrap;
 var $elm$html$Html$Attributes$boolProperty = F2(
@@ -13006,6 +13006,19 @@ var $author$project$Application$headerView = function (model) {
 						url: targetPath
 					}));
 		});
+	var breakpoint = $author$project$Responsive$breakpointFromWidth(model.shared.windowWidth);
+	var headerPadding = function () {
+		switch (breakpoint.$) {
+			case 'VeryNarrowBreakpoint':
+				return {bottom: 4, left: 8, right: 8, top: 4};
+			case 'MobileBreakpoint':
+				return {bottom: 4, left: 12, right: 12, top: 4};
+			case 'TabletBreakpoint':
+				return {bottom: 8, left: 24, right: 24, top: 8};
+			default:
+				return {bottom: 8, left: 40, right: 40, top: 8};
+		}
+	}();
 	var border = $author$project$Theme$borderColor(theme);
 	var bg = $author$project$Theme$surfaceColor(theme);
 	return A2(
@@ -13013,8 +13026,7 @@ var $author$project$Application$headerView = function (model) {
 		_List_fromArray(
 			[
 				$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill),
-				$mdgriffith$elm_ui$Element$paddingEach(
-				{bottom: 4, left: 16, right: 40, top: 4}),
+				$mdgriffith$elm_ui$Element$paddingEach(headerPadding),
 				$mdgriffith$elm_ui$Element$Background$color(bg),
 				$mdgriffith$elm_ui$Element$Border$widthEach(
 				{bottom: 1, left: 0, right: 0, top: 0}),

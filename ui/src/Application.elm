@@ -273,6 +273,23 @@ headerView model =
         border =
             Theme.borderColor theme
 
+        breakpoint =
+            Responsive.breakpointFromWidth model.shared.windowWidth
+
+        headerPadding =
+            case breakpoint of
+                VeryNarrowBreakpoint ->
+                    { left = 8, right = 8, top = 4, bottom = 4 }
+
+                MobileBreakpoint ->
+                    { left = 12, right = 12, top = 4, bottom = 4 }
+
+                TabletBreakpoint ->
+                    { left = 24, right = 24, top = 8, bottom = 8 }
+
+                DesktopBreakpoint ->
+                    { left = 40, right = 40, top = 8, bottom = 8 }
+
         -- Helper for active link icons
         navLink iconPath target =
             let
@@ -313,7 +330,7 @@ headerView model =
     in
     Element.row
         [ width fill
-        , paddingEach { left = 16, right = 40, top = 4, bottom = 4 }
+        , paddingEach headerPadding
         , Background.color bg
         , Border.widthEach { bottom = 1, left = 0, right = 0, top = 0 }
         , Border.color border
@@ -330,18 +347,18 @@ headerView model =
                         , Border.rounded 2
                         ]
                         { src = "/logo.svg", description = "" }
-                , Element.el
-                    [ Ty.body
-                    , Font.bold
-                    , Font.color txtColor
-                    , Font.letterSpacing 0.5
-                    , centerY
-                    ]
-                    (text "QUICKHEADLINES")
+                    , Element.el
+                        [ Ty.body
+                        , Font.bold
+                        , Font.color txtColor
+                        , Font.letterSpacing 0.5
+                        , centerY
+                        ]
+                        (text "QUICKHEADLINES")
                     ]
             }
         , -- Navigation Section
-            Element.row [ spacing 0, centerY, height fill ]
+          Element.row [ spacing 0, centerY, height fill ]
             [ navLink "/home-icon.svg" Home
             , navLink "/timeline-icon.svg" Timeline
             ]
