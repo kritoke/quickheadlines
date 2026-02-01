@@ -13637,7 +13637,7 @@ var $author$project$Responsive$uniformPadding = function (breakpoint) {
 		case 'TabletBreakpoint':
 			return 32;
 		default:
-			return 12;
+			return 32;
 	}
 };
 var $author$project$Layouts$Shared$headerView = F3(
@@ -14540,7 +14540,7 @@ var $author$project$Pages$Home_$feedCard = F6(
 						feed.totalItemCount) < 0;
 					var btnOnPress = isLoadingThisFeed ? $elm$core$Maybe$Nothing : $elm$core$Maybe$Just(
 						$author$project$Pages$Home_$LoadMoreFeed(feed.url));
-					var btnLabel = isLoadingThisFeed ? $mdgriffith$elm_ui$Element$text('Loading...') : $mdgriffith$elm_ui$Element$text('Load more');
+					var btnLabel = isLoadingThisFeed ? $mdgriffith$elm_ui$Element$text('Loading...') : $mdgriffith$elm_ui$Element$text('Load More');
 					return (hasMoreItems || isLoadingThisFeed) ? A2(
 						$mdgriffith$elm_ui$Element$Input$button,
 						_List_fromArray(
@@ -15499,7 +15499,7 @@ var $author$project$Responsive$horizontalPadding = function (breakpoint) {
 		case 'TabletBreakpoint':
 			return 24;
 		default:
-			return 16;
+			return 32;
 	}
 };
 var $author$project$Responsive$isMobile = function (breakpoint) {
@@ -15533,7 +15533,7 @@ var $author$project$Responsive$verticalPadding = function (breakpoint) {
 		case 'TabletBreakpoint':
 			return 32;
 		default:
-			return 6;
+			return 24;
 	}
 };
 var $author$project$Pages$Timeline$view = F2(

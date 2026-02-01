@@ -414,7 +414,7 @@ feedCard now theme breakpoint loadingFeed insertedIds feed =
 
              hasMoreItems = List.length feed.items < feed.totalItemCount
 
-             btnLabel = if isLoadingThisFeed then text "Loading..." else text "Load more"
+             btnLabel = if isLoadingThisFeed then text "Loading..." else text "Load More"
 
              btnOnPress = if isLoadingThisFeed then Nothing else Just (LoadMoreFeed feed.url)
            in

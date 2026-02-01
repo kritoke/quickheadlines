@@ -75,8 +75,8 @@ horizontalPadding breakpoint =
             24
 
         DesktopBreakpoint ->
-            -- Reduced horizontal padding for desktop to avoid excessive side spacing
-            16
+            -- Restore reasonable desktop horizontal padding (was 40, reduced too much)
+            32
 
 
 verticalPadding : Breakpoint -> Int
@@ -92,8 +92,8 @@ verticalPadding breakpoint =
             32
 
         DesktopBreakpoint ->
-            -- Reduce excessive top padding on desktop to avoid large empty header area
-            6
+            -- Restore reasonable desktop vertical padding (was 60, reduced too much)
+            24
 
 
 uniformPadding : Breakpoint -> Int
@@ -109,8 +109,8 @@ uniformPadding breakpoint =
             32
 
         DesktopBreakpoint ->
-            -- Keep overall page padding reasonable on desktop
-            12
+            -- Restore reasonable desktop uniform padding (was 96, reduced too much)
+            32
 
 
 containerMaxWidth : Breakpoint -> Element.Length
