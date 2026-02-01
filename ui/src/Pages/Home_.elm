@@ -197,9 +197,6 @@ tabBar shared model =
 
                     Shared.Light ->
                         rgb255 229 231 235
-
-            isAllActive =
-                model.activeTab == "All"
         in
         wrappedRow
             [ width fill
@@ -208,18 +205,29 @@ tabBar shared model =
             , Border.widthEach { top = 0, right = 0, bottom = 1, left = 0 }
             , Border.color border
             ]
-            (allTab isAllActive :: List.map (tabButton model.activeTab) model.tabs)
+            (allTab shared model.activeTab :: List.map (tabButton shared model.activeTab) model.tabs)
 
 
-allTab : Bool -> Element Msg
-allTab isActive =
+allTab : Shared.Model -> String -> Element Msg
+allTab shared activeTab =
     let
+        theme =
+            shared.theme
+
+        isActive =
+            activeTab == "All"
+
         txtColor =
             if isActive then
                 Theme.lumeOrange
 
             else
-                rgb255 100 116 139
+                case theme of
+                    Shared.Dark ->
+                        rgb255 148 163 184
+
+                    Shared.Light ->
+                        rgb255 100 116 139
 
         borderColor =
             if isActive then
@@ -228,7 +236,7 @@ allTab isActive =
             else
                 Element.rgba 0 0 0 0
     in
-    el
+    Input.button
         [ paddingXY 16 8
         , Ty.body
         , Font.medium
@@ -238,14 +246,18 @@ allTab isActive =
         , htmlAttribute (Html.Attributes.style "cursor" "pointer")
         , htmlAttribute (Html.Attributes.style "transition" "all 0.2s")
         , htmlAttribute (Html.Attributes.class "tab-link")
-        , htmlAttribute (Html.Attributes.class "active")
         ]
-        (text "All")
+        { onPress = Just (SwitchTab "All")
+        , label = text "All"
+        }
 
 
-tabButton : String -> String -> Element Msg
-tabButton activeTab tab =
+tabButton : Shared.Model -> String -> String -> Element Msg
+tabButton shared activeTab tab =
     let
+        theme =
+            shared.theme
+
         isActive =
             tab == activeTab
 
@@ -254,7 +266,12 @@ tabButton activeTab tab =
                 Theme.lumeOrange
 
             else
-                rgb255 100 116 139
+                case theme of
+                    Shared.Dark ->
+                        rgb255 148 163 184
+
+                    Shared.Light ->
+                        rgb255 100 116 139
 
         borderColor =
             if isActive then
@@ -263,7 +280,7 @@ tabButton activeTab tab =
             else
                 Element.rgba 0 0 0 0
     in
-    el
+    Input.button
         [ paddingXY 16 8
         , Ty.body
         , Font.medium
@@ -274,7 +291,9 @@ tabButton activeTab tab =
         , htmlAttribute (Html.Attributes.style "transition" "all 0.2s")
         , htmlAttribute (Html.Attributes.class "tab-link")
         ]
-        (text tab)
+        { onPress = Just (SwitchTab tab)
+        , label = text tab
+        }
 
 
 content : Shared.Model -> Model -> Element Msg

@@ -23,15 +23,61 @@ layout { theme, windowWidth, header, footer, main } =
     let
         bg =
             surfaceColor theme
+
+        breakpoint =
+            Responsive.breakpointFromWidth windowWidth
+
+        containerWidth =
+            case breakpoint of
+                VeryNarrowBreakpoint ->
+                    640
+
+                MobileBreakpoint ->
+                    768
+
+                TabletBreakpoint ->
+                    1024
+
+                DesktopBreakpoint ->
+                    1280
+
+        sidePadding =
+            case breakpoint of
+                VeryNarrowBreakpoint ->
+                    16
+
+                MobileBreakpoint ->
+                    16
+
+                TabletBreakpoint ->
+                    32
+
+                DesktopBreakpoint ->
+                    48
     in
     column
         [ width fill
         , height fill
         , Background.color bg
         ]
-        [ headerView theme windowWidth header
-        , mainView main
-        , footerView footer
+        [ header
+        , el
+            [ width fill
+            , height fill
+            , htmlAttribute (Html.Attributes.style "overflow-y" "auto")
+            , htmlAttribute (Html.Attributes.id "main-content")
+            ]
+            (Element.column
+                [ width fill
+                , Element.htmlAttribute (Html.Attributes.style "max-width" (String.fromInt containerWidth ++ "px"))
+                , Element.htmlAttribute (Html.Attributes.style "margin" "0 auto")
+                , Element.htmlAttribute (Html.Attributes.style "padding-left" (String.fromInt sidePadding ++ "px"))
+                , Element.htmlAttribute (Html.Attributes.style "padding-right" (String.fromInt sidePadding ++ "px"))
+                ]
+                [ main
+                , footer
+                ]
+            )
         ]
 
 
@@ -40,24 +86,10 @@ headerView theme windowWidth content =
     let
         bg =
             surfaceColor theme
-
-        border =
-            case theme of
-                Dark ->
-                    rgb255 55 55 55
-
-                Light ->
-                    rgb255 229 231 235
-
-        breakpoint =
-            Responsive.breakpointFromWidth windowWidth
     in
     row
         [ width fill
-        , padding (Responsive.uniformPadding breakpoint)
         , Background.color bg
-        , Border.widthEach { bottom = 1, left = 0, right = 0, top = 0 }
-        , Border.color border
         ]
         [ content ]
 

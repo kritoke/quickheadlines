@@ -280,20 +280,6 @@ headerView model =
         breakpoint =
             Responsive.breakpointFromWidth model.shared.windowWidth
 
-        headerPadding =
-            case breakpoint of
-                VeryNarrowBreakpoint ->
-                    { left = 16, right = 16, top = 12, bottom = 12 }
-
-                MobileBreakpoint ->
-                    { left = 16, right = 16, top = 12, bottom = 12 }
-
-                TabletBreakpoint ->
-                    { left = 32, right = 32, top = 12, bottom = 12 }
-
-                DesktopBreakpoint ->
-                    { left = 48, right = 48, top = 12, bottom = 12 }
-
         -- Active icon style - brighter version for active state
         activeIconStyle =
             [ Font.color lumeOrange
@@ -303,7 +289,6 @@ headerView model =
     in
     Element.row
         [ width fill
-        , paddingEach headerPadding
         , Background.color bg
         , spacing 12
         ]
