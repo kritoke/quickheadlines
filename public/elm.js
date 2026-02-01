@@ -14582,6 +14582,8 @@ var $author$project$Pages$Home_$feedCard = F6(
 					$author$project$ThemeTypography$small,
 					$mdgriffith$elm_ui$Element$Font$medium,
 					$mdgriffith$elm_ui$Element$htmlAttribute(
+					A2($elm$html$Html$Attributes$style, 'color', 'inherit')),
+					$mdgriffith$elm_ui$Element$htmlAttribute(
 					$elm$html$Html$Attributes$class('qh-load-more'))
 				]),
 			{label: btnLabel, onPress: btnOnPress}) : $mdgriffith$elm_ui$Element$none;

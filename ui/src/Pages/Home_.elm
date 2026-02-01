@@ -467,6 +467,7 @@ feedCard now theme breakpoint loadingFeed insertedIds feed =
                     , Border.color border
                     , Ty.small
                     , Font.medium
+                    , htmlAttribute (Html.Attributes.style "color" "inherit")
                     , htmlAttribute (Html.Attributes.class "qh-load-more")
                     ]
                     { onPress = btnOnPress
