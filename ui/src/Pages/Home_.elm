@@ -405,24 +405,29 @@ feedCard now theme breakpoint loadingFeed insertedIds feed =
                , spacing 4
                ] ++ scrollAttributes)
                         (List.map (feedItem now theme insertedIds) (List.take 15 (sortFeedItems feed.items)))
-        , -- Always show a Load more button (helps debug and matches old quick.easy behavior)
-          let
-            isLoadingThisFeed =
-                case loadingFeed of
-                    Just u -> u == feed.url
-                    Nothing -> False
+         , -- Show Load more button only when there are more items to load
+           let
+             isLoadingThisFeed =
+                 case loadingFeed of
+                     Just u -> u == feed.url
+                     Nothing -> False
 
-            btnLabel = if isLoadingThisFeed then text "Loading..." else text "Load more"
+             hasMoreItems = List.length feed.items < feed.totalItemCount
 
-            btnOnPress = if isLoadingThisFeed then Nothing else Just (LoadMoreFeed feed.url)
-          in
-          Input.button
-            [ htmlAttribute (Html.Attributes.style "margin-top" "8px")
-            , htmlAttribute (Html.Attributes.class "qh-load-more")
-            ]
-            { onPress = btnOnPress
-            , label = btnLabel
-            }
+             btnLabel = if isLoadingThisFeed then text "Loading..." else text "Load more"
+
+             btnOnPress = if isLoadingThisFeed then Nothing else Just (LoadMoreFeed feed.url)
+           in
+           if hasMoreItems || isLoadingThisFeed then
+             Input.button
+               [ htmlAttribute (Html.Attributes.style "margin-top" "12px")
+               , htmlAttribute (Html.Attributes.class "qh-load-more")
+               ]
+               { onPress = btnOnPress
+               , label = btnLabel
+               }
+           else
+             Element.none
 
         ]
 

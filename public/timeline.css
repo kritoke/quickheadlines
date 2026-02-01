@@ -14,34 +14,45 @@
   to { opacity: 1; transform: translateY(0) scale(1); }
 }
 
-/* Load more button styles inspired by quick.easy.matthewrhone.com */
+/* Load more button styles - light gray pill, visible only when more items available */
 .qh-load-more {
-  display: inline-block;
-  background: linear-gradient(180deg, #ffffff, #f3f4f6);
-  color: #0f172a;
-  border-radius: 999px;
-  padding: 8px 18px;
-  border: 1px solid rgba(16,24,40,0.06);
-  box-shadow: 0 6px 18px rgba(16,24,40,0.06);
-  transition: transform 140ms ease, box-shadow 140ms ease, opacity 120ms ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #f3f4f6;
+  color: #374151;
+  border-radius: 8px;
+  padding: 12px 24px;
+  border: 1px solid #e5e7eb;
+  box-shadow: none;
+  transition: all 140ms ease;
   cursor: pointer;
-  font-weight: 600;
+  font-weight: 500;
+  font-size: 14px;
+  margin-top: 12px;
+  width: 100%;
 }
 .qh-load-more:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 10px 26px rgba(16,24,40,0.12);
+  background: #e5e7eb;
+  transform: none;
+  box-shadow: none;
 }
 .qh-load-more:active {
-  transform: translateY(0);
+  background: #d1d5db;
 }
 
-/* Dark theme adjustments (basic) */
+/* Dark theme adjustments for load more button */
 @media (prefers-color-scheme: dark) {
   .qh-load-more {
-    background: linear-gradient(180deg, #111827, #0b1220);
-    color: #e6eef8;
-    border: 1px solid rgba(255,255,255,0.04);
-    box-shadow: 0 6px 18px rgba(2,6,23,0.6);
+    background: #374151;
+    color: #f9fafb;
+    border: 1px solid #4b5563;
+  }
+  .qh-load-more:hover {
+    background: #4b5563;
+  }
+  .qh-load-more:active {
+    background: #6b7280;
   }
 }
 
