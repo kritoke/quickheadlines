@@ -405,20 +405,20 @@ feedCard now theme breakpoint loadingFeed insertedIds feed =
                , spacing 4
                ] ++ scrollAttributes)
                         (List.map (feedItem now theme insertedIds) (List.take 15 (sortFeedItems feed.items)))
-         , -- Show Load more button only when there are more items to load
+         , -- Show Load more button if there are enough items (matches old v0.4.0 behavior)
            let
              isLoadingThisFeed =
                  case loadingFeed of
                      Just u -> u == feed.url
                      Nothing -> False
 
-             hasMoreItems = List.length feed.items < feed.totalItemCount
-
              btnLabel = if isLoadingThisFeed then text "Loading..." else text "Load More"
 
              btnOnPress = if isLoadingThisFeed then Nothing else Just (LoadMoreFeed feed.url)
+
+             shouldShowButton = List.length feed.items >= 10
            in
-           if hasMoreItems || isLoadingThisFeed then
+           if shouldShowButton then
              Input.button
                [ htmlAttribute (Html.Attributes.style "margin-top" "12px")
                , htmlAttribute (Html.Attributes.class "qh-load-more")

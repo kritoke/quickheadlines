@@ -236,7 +236,6 @@ view shared model =
                     Input.button
                         [ centerX
                         , padding 12
-                        , htmlAttribute (Html.Attributes.style "min-width" "160px")
                         , htmlAttribute (Html.Attributes.class "qh-load-more")
                         ]
                         { onPress = Just LoadMore

@@ -14527,6 +14527,7 @@ var $author$project$Pages$Home_$feedCard = F6(
 							15,
 							$author$project$Api$sortFeedItems(feed.items)))),
 					function () {
+					var shouldShowButton = $elm$core$List$length(feed.items) >= 10;
 					var isLoadingThisFeed = function () {
 						if (loadingFeed.$ === 'Just') {
 							var u = loadingFeed.a;
@@ -14535,13 +14536,10 @@ var $author$project$Pages$Home_$feedCard = F6(
 							return false;
 						}
 					}();
-					var hasMoreItems = _Utils_cmp(
-						$elm$core$List$length(feed.items),
-						feed.totalItemCount) < 0;
 					var btnOnPress = isLoadingThisFeed ? $elm$core$Maybe$Nothing : $elm$core$Maybe$Just(
 						$author$project$Pages$Home_$LoadMoreFeed(feed.url));
 					var btnLabel = isLoadingThisFeed ? $mdgriffith$elm_ui$Element$text('Loading...') : $mdgriffith$elm_ui$Element$text('Load More');
-					return (hasMoreItems || isLoadingThisFeed) ? A2(
+					return shouldShowButton ? A2(
 						$mdgriffith$elm_ui$Element$Input$button,
 						_List_fromArray(
 							[
@@ -15642,8 +15640,6 @@ var $author$project$Pages$Timeline$view = F2(
 								[
 									$mdgriffith$elm_ui$Element$centerX,
 									$mdgriffith$elm_ui$Element$padding(12),
-									$mdgriffith$elm_ui$Element$htmlAttribute(
-									A2($elm$html$Html$Attributes$style, 'min-width', '160px')),
 									$mdgriffith$elm_ui$Element$htmlAttribute(
 									$elm$html$Html$Attributes$class('qh-load-more'))
 								]),
