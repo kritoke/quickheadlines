@@ -119,24 +119,103 @@
         margin-right: 8px !important;
         vertical-align: middle !important;
       }
-      /* Force smaller top padding for Elm pages on desktop to avoid extra empty header space */
-      @media (min-width: 1024px) {
-        [data-timeline-page="true"], [data-page="home"] {
-          padding-top: 12px !important;
-          padding-bottom: 12px !important;
-        }
-      }
-    }
-    </style>
-    <script>
-      // Load timeline.css with a timestamp to avoid stale caches during development
-      (function(){
-        var l = document.createElement('link');
-        l.rel = 'stylesheet';
-        l.href = '/public/timeline.css?v=' + Date.now();
-        document.head.appendChild(l);
-      })();
-    </script>
+       /* Force smaller top padding for Elm pages on desktop to avoid extra empty header space */
+       @media (min-width: 1024px) {
+         [data-timeline-page="true"], [data-page="home"] {
+           padding-top: 12px !important;
+           padding-bottom: 12px !important;
+         }
+       }
+       /* Inlined timeline.css styles */
+       .timeline-inserted {
+         animation: qh-insert 300ms cubic-bezier(.22,.9,.29,1) both;
+         box-shadow: 0 6px 18px rgba(16,24,40,0.06);
+       }
+       .timeline-inserted-wrapper {
+       }
+       @keyframes qh-insert {
+         from { opacity: 0; transform: translateY(12px) scale(0.997); }
+         60% { opacity: 1; transform: translateY(-2px) scale(1.001); }
+         to { opacity: 1; transform: translateY(0) scale(1); }
+       }
+       .qh-load-more {
+         display: inline-flex;
+         align-items: center;
+         justify-content: center;
+         background: #f3f4f6;
+         color: #374151;
+         border-radius: 8px;
+         padding: 12px 24px;
+         border: 1px solid #e5e7eb;
+         box-shadow: none;
+         transition: all 140ms ease;
+         cursor: pointer;
+         font-weight: 500;
+         font-size: 14px;
+         margin-top: 12px;
+         width: 100%;
+       }
+       .qh-load-more:hover {
+         background: #e5e7eb;
+         transform: none;
+         box-shadow: none;
+       }
+       .qh-load-more:active {
+         background: #d1d5db;
+       }
+       @media (prefers-color-scheme: dark) {
+         .qh-load-more {
+           background: #374151;
+           color: #f9fafb;
+           border: 1px solid #4b5563;
+         }
+         .qh-load-more:hover {
+           background: #4b5563;
+         }
+         .qh-load-more:active {
+           background: #6b7280;
+         }
+       }
+       .qh-observer-indicator {
+         display: none;
+       }
+       .qh-debug-enabled .qh-observer-indicator {
+         display: inline-flex;
+         align-items: center;
+         gap: 8px;
+         position: fixed !important;
+         right: 12px !important;
+         bottom: 12px !important;
+         z-index: 1200 !important;
+         background: rgba(17,24,39,0.9);
+         color: #fff;
+         padding: 6px 10px;
+         border-radius: 999px;
+         font-size: 12px;
+         pointer-events: none;
+         box-shadow: 0 6px 18px rgba(2,6,23,0.5);
+       }
+       .qh-debug-panel {
+         position: fixed !important;
+         right: 12px !important;
+         bottom: 56px !important;
+         z-index: 1200 !important;
+         display: flex;
+         flex-direction: column;
+         gap: 6px;
+         pointer-events: auto;
+       }
+       .qh-debug-btn {
+         background: rgba(255,255,255,0.06);
+         border: 1px solid rgba(255,255,255,0.06);
+         color: #fff;
+         padding: 6px 10px;
+         border-radius: 6px;
+         font-size: 12px;
+         cursor: pointer;
+       }
+       .qh-debug-btn:active { transform: translateY(1px); }
+     </style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/color-thief/2.3.2/color-thief.umd.js"></script>
   </head>
   <body>

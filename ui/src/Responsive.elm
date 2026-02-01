@@ -72,10 +72,11 @@ horizontalPadding breakpoint =
             16
 
         TabletBreakpoint ->
-            32
+            24
 
         DesktopBreakpoint ->
-            40
+            -- Reduced horizontal padding for desktop to avoid excessive side spacing
+            16
 
 
 verticalPadding : Breakpoint -> Int
