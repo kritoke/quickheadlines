@@ -30,16 +30,16 @@ layout { theme, windowWidth, header, footer, main } =
         containerWidth =
             case breakpoint of
                 VeryNarrowBreakpoint ->
-                    660
+                    800
 
                 MobileBreakpoint ->
-                    788
+                    1000
 
                 TabletBreakpoint ->
-                    1044
+                    1300
 
                 DesktopBreakpoint ->
-                    1300
+                    1600
 
         sidePadding =
             case breakpoint of
@@ -58,10 +58,10 @@ layout { theme, windowWidth, header, footer, main } =
         borderColor =
             case theme of
                 Dark ->
-                    rgb255 55 55 55
+                    rgb255 75 75 75
 
                 Light ->
-                    rgb255 229 231 235
+                    rgb255 209 213 219
     in
     column
         [ width fill
@@ -74,7 +74,7 @@ layout { theme, windowWidth, header, footer, main } =
             , Element.htmlAttribute (Html.Attributes.style "margin" "0 auto")
             , Element.htmlAttribute (Html.Attributes.style "padding-left" (String.fromInt sidePadding ++ "px"))
             , Element.htmlAttribute (Html.Attributes.style "padding-right" (String.fromInt sidePadding ++ "px"))
-            , Border.widthEach { top = 0, right = 0, bottom = 1, left = 0 }
+            , Border.widthEach { top = 0, right = 0, bottom = 2, left = 0 }
             , Border.color borderColor
             ]
             [ header

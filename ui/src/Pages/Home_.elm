@@ -211,7 +211,7 @@ allTab shared activeTab =
             shared.theme
 
         isActive =
-            activeTab == "All"
+            String.toLower activeTab == "all"
 
         txtColor =
             if isActive then

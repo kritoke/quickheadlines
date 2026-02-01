@@ -13634,13 +13634,13 @@ var $author$project$Layouts$Shared$layout = function (_v0) {
 	var containerWidth = function () {
 		switch (breakpoint.$) {
 			case 'VeryNarrowBreakpoint':
-				return 660;
+				return 800;
 			case 'MobileBreakpoint':
-				return 788;
+				return 1000;
 			case 'TabletBreakpoint':
-				return 1044;
-			default:
 				return 1300;
+			default:
+				return 1600;
 		}
 	}();
 	var sidePadding = function () {
@@ -13657,9 +13657,9 @@ var $author$project$Layouts$Shared$layout = function (_v0) {
 	}();
 	var borderColor = function () {
 		if (theme.$ === 'Dark') {
-			return A3($mdgriffith$elm_ui$Element$rgb255, 55, 55, 55);
+			return A3($mdgriffith$elm_ui$Element$rgb255, 75, 75, 75);
 		} else {
-			return A3($mdgriffith$elm_ui$Element$rgb255, 229, 231, 235);
+			return A3($mdgriffith$elm_ui$Element$rgb255, 209, 213, 219);
 		}
 	}();
 	var bg = $author$project$Theme$surfaceColor(theme);
@@ -13696,7 +13696,7 @@ var $author$project$Layouts$Shared$layout = function (_v0) {
 							'padding-right',
 							$elm$core$String$fromInt(sidePadding) + 'px')),
 						$mdgriffith$elm_ui$Element$Border$widthEach(
-						{bottom: 1, left: 0, right: 0, top: 0}),
+						{bottom: 2, left: 0, right: 0, top: 0}),
 						$mdgriffith$elm_ui$Element$Border$color(borderColor)
 					]),
 				_List_fromArray(
@@ -14671,7 +14671,7 @@ var $mdgriffith$elm_ui$Element$rgba = $mdgriffith$elm_ui$Internal$Model$Rgba;
 var $author$project$Pages$Home_$allTab = F2(
 	function (shared, activeTab) {
 		var theme = shared.theme;
-		var isActive = activeTab === 'All';
+		var isActive = $elm$core$String$toLower(activeTab) === 'all';
 		var txtColor = function () {
 			if (isActive) {
 				return $author$project$Theme$lumeOrange;
