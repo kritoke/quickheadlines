@@ -14965,21 +14965,49 @@ var $author$project$Pages$Home_$tabBar = F2(
 				}
 			}();
 			return A2(
-				$mdgriffith$elm_ui$Element$wrappedRow,
+				$mdgriffith$elm_ui$Element$column,
 				_List_fromArray(
 					[
 						$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill),
-						$mdgriffith$elm_ui$Element$spacing(0),
-						$mdgriffith$elm_ui$Element$paddingEach(
-						{bottom: 0, left: 4, right: 0, top: 0})
+						$mdgriffith$elm_ui$Element$spacing(0)
 					]),
-				A2(
-					$elm$core$List$cons,
-					A2($author$project$Pages$Home_$allTab, shared, model.activeTab),
-					A2(
-						$elm$core$List$map,
-						A2($author$project$Pages$Home_$tabButton, shared, model.activeTab),
-						model.tabs)));
+				_List_fromArray(
+					[
+						A2(
+						$mdgriffith$elm_ui$Element$wrappedRow,
+						_List_fromArray(
+							[
+								$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill),
+								$mdgriffith$elm_ui$Element$spacing(0),
+								$mdgriffith$elm_ui$Element$paddingEach(
+								{bottom: 0, left: 4, right: 0, top: 0})
+							]),
+						A2(
+							$elm$core$List$cons,
+							A2($author$project$Pages$Home_$allTab, shared, model.activeTab),
+							A2(
+								$elm$core$List$map,
+								A2($author$project$Pages$Home_$tabButton, shared, model.activeTab),
+								model.tabs))),
+						A2(
+						$mdgriffith$elm_ui$Element$el,
+						_List_fromArray(
+							[
+								$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill),
+								$mdgriffith$elm_ui$Element$height(
+								$mdgriffith$elm_ui$Element$px(1)),
+								$mdgriffith$elm_ui$Element$Background$color(
+								function () {
+									var _v0 = shared.theme;
+									if (_v0.$ === 'Dark') {
+										return A3($mdgriffith$elm_ui$Element$rgb255, 75, 75, 75);
+									} else {
+										return A3($mdgriffith$elm_ui$Element$rgb255, 209, 213, 219);
+									}
+								}())
+							]),
+						$mdgriffith$elm_ui$Element$none)
+					]));
 		}
 	});
 var $author$project$Pages$Home_$view = F2(

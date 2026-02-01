@@ -194,12 +194,26 @@ tabBar shared model =
                     Shared.Light ->
                         rgb255 229 231 235
         in
-        wrappedRow
-            [ width fill
-            , spacing 0
-            , paddingEach { top = 0, right = 0, bottom = 0, left = 4 }
+        Element.column
+            [ Element.width Element.fill
+            , Element.spacing 0
             ]
-            (allTab shared model.activeTab :: List.map (tabButton shared model.activeTab) model.tabs)
+            [ wrappedRow
+                [ width fill
+                , spacing 0
+                , paddingEach { top = 0, right = 0, bottom = 0, left = 4 }
+                ]
+                (allTab shared model.activeTab :: List.map (tabButton shared model.activeTab) model.tabs)
+            , el
+                [ width fill
+                , height (px 1)
+                , Background.color (case shared.theme of
+                    Shared.Dark -> rgb255 75 75 75
+                    Shared.Light -> rgb255 209 213 219
+                  )
+                ]
+                Element.none
+            ]
 
 
 allTab : Shared.Model -> String -> Element Msg
