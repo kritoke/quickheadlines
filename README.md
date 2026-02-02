@@ -14,6 +14,8 @@ I wanted it to be as simple as dropping an executable and a YAML file with feeds
 - **Adaptive UI**: Automatically extracts colors from site favicons to style feed headers.
 - **Dark Mode**: Built-in support with a toggle, including high-contrast scrollbars and scroll-indicators for Safari compatibility.
 - **Live Updates**: Automatically refreshes feeds in the background and updates the UI without a page reload using [Morphodom](https://github.com/patrick-steele-idem/morphdom).
+- **Hybrid Clustering**: Groups similar stories together using a two-pass algorithm (LSH + Jaccard similarity) with stop-word filtering for high precision.
+- **Clustering Status**: Visual indicator in the UI shows when background clustering is active.
 - **Authentication**: Support for Basic, Bearer token, and API Key authentication for private feeds.
 - **Configurable Caching**: SQLite-based caching with configurable retention and size limits.
 - **Health Monitoring**: Built-in health monitoring with CPU spike detection and error logging.

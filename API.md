@@ -147,8 +147,40 @@ Clustering started in background
 
 **Notes:**
 - Processes up to 500 uncategorized items per run
-- Uses MinHash LSH for similarity detection
+- Uses Hybrid Clustering (LSH + Jaccard similarity verification)
 - Runs asynchronously, check timeline for results
+
+### Status
+
+#### GET /api/status
+
+Get the current system status including clustering state.
+
+**Response:**
+```json
+{
+  "is_clustering": true,
+  "active_jobs": 5
+}
+```
+
+**Fields:**
+- `is_clustering`: Whether clustering jobs are currently running
+- `active_jobs`: Number of active clustering jobs
+
+### Clustering Algorithm (v0.5.1+)
+
+QuickHeadlines uses a **Hybrid Clustering** approach for grouping similar stories:
+
+1. **LSH Candidate Discovery**: Fast candidate lookup using Locality-Sensitive Hashing
+2. **Jaccard Verification**: Direct Jaccard similarity check on normalized headlines
+3. **Stop-word Filtering**: Removes common words (the, and, says, etc.) before comparison
+4. **Length-Aware Thresholds**:
+   - Short headlines (< 5 words): 0.85 threshold
+   - Standard headlines: 0.70 threshold
+   - Minimum 4 non-stop words required for clustering
+
+This replaces the previous LSH-only approach for higher precision grouping.
 
 ### Version
 

@@ -1,6 +1,6 @@
 # QuickHeadlines Constitution (OpenSpec Edition)
 
-> **Version:** 1.3.0
+> **Version:** 1.4.0
 > **Guiding Principle:** Type-safe architecture, minimal dependencies, environment-locked development, and strict frontend primitives.
 
 ## 1. Environment & Execution (The Nix Rule)
@@ -14,11 +14,13 @@
 * **Data Handling:** Use strictly typed DTOs with `JSON::Serializable` for all API responses and internal transports.
 * **Database:** Use SQLite via `crystal-sqlite3`; all DB access must be wrapped in Athena Services (no global DB variables).
 * **Serialization:** Use `Athena::Serializer` for JSON serialization; never hand-string JSON or rely on ad-hoc hash structures.
+* **Clustering:** Use the **Hybrid Clustering Algorithm** (LSH candidate discovery + Jaccard similarity verification). All title normalization MUST use `ClusteringUtilities` to ensure consistency.
 
 ### Frontend (The Elm Land UI)
 * **Framework:** Elm Land with `mdgriffith/elm-ui` (Element primitives).
 * **Standard Styling:** ALL UI layout and interactive components MUST be implemented using `Element` primitives. Treat `Element` as the canonical DOM abstraction for the project.
 * **Strictly Forbidden:** Direct use of `Html`, `Html.Attributes`, raw `class` attributes, Tailwind, or other CSS frameworks for layout or component structure. Stylesheets may be used for global variables and conservative overrides (e.g., theme variables), but structural/layout work belongs in Element.
+* **Theme Support:** Use global theme CSS variables and ensure interactive elements (links, buttons) have correct data attributes (e.g., `data-timeline-item="true"`) to inherit theme styles correctly.
 * **State & Effects:** Use Elm Land's file-based routing and Effect patterns for API calls and side effects.
 
 ### Architecture (The Headless Split)
