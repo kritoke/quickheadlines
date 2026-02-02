@@ -1203,6 +1203,17 @@ class FeedCache
     end
   end
 
+  # Get item title by ID (for clustering verification)
+  def get_item_title(item_id : Int64) : String?
+    @mutex.synchronize do
+      @db.query_one?(
+        "SELECT title FROM items WHERE id = ?",
+        item_id,
+        as: String
+      )
+    end
+  end
+
   # Public getter for database (for cluster queries)
   def db : DB::Database
     @db

@@ -705,13 +705,14 @@ clusterOtherItem now theme item =
     paragraph
         [ width fill
         , paddingEach { top = 4, bottom = 4, left = 0, right = 0 }
+        , htmlAttribute (Html.Attributes.attribute "data-timeline-item" "true")
         ]
         [ faviconImg
         , el [ Ty.meta, Font.color mutedTxt
              , (case itemHeaderColor of
                   "" -> htmlAttribute (Html.Attributes.style "color" "var(--header-text-color)")
                   _ -> htmlAttribute (Html.Attributes.style "color" itemHeaderColor))
-           ] (text item.feedTitle)
+            ] (text item.feedTitle)
         , el [ Ty.meta, Font.color mutedTxt, paddingXY 4 0 ] (text "•")
         , link
             [ Font.size 11

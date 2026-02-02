@@ -6455,7 +6455,7 @@ var $author$project$Api$timelineItemDecoder = A2(
 					_List_fromArray(
 						[
 							$elm$json$Json$Decode$int,
-							$elm$json$Json$Decode$succeed(0)
+							$elm$json$Json$Decode$succeed(1)
 						]))));
 	},
 	A2(
@@ -15311,7 +15311,9 @@ var $author$project$Pages$Timeline$clusterOtherItem = F3(
 				[
 					$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill),
 					$mdgriffith$elm_ui$Element$paddingEach(
-					{bottom: 4, left: 0, right: 0, top: 4})
+					{bottom: 4, left: 0, right: 0, top: 4}),
+					$mdgriffith$elm_ui$Element$htmlAttribute(
+					A2($elm$html$Html$Attributes$attribute, 'data-timeline-item', 'true'))
 				]),
 			_List_fromArray(
 				[

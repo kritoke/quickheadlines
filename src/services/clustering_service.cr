@@ -1,12 +1,118 @@
 require "athena"
 require "lexis-minhash"
 
+module ClusteringUtilities
+  STOP_WORDS = Set.new([
+    "the", "a", "an", "and", "or", "but", "in", "on", "at", "to", "for",
+    "of", "with", "by", "from", "as", "is", "was", "are", "were", "been",
+    "be", "have", "has", "had", "do", "does", "did", "will", "would",
+    "could", "should", "may", "might", "must", "shall", "can", "need",
+    "this", "that", "these", "those", "it", "its", "they", "them",
+    "time", "times", "day", "days", "week", "weeks", "month", "months",
+    "year", "years", "new", "latest", "update", "updates", "report", "reports",
+    "says", "said", "just", "now", "how", "what", "when", "where", "why",
+  ])
+
+  SHORT_HEADLINE_THRESHOLD = 0.85
+  MIN_WORDS_FOR_CLUSTERING = 4
+
+  def self.normalize_headline(text : String) : String
+    return "" if text.empty?
+    normalized = text.downcase.strip
+    words = normalized.split(/\s+/)
+    filtered = words.reject { |word| STOP_WORDS.includes?(word) }
+    filtered.join(" ")
+  end
+
+  def self.jaccard_similarity(text1 : String, text2 : String) : Float64
+    norm1 = normalize_headline(text1)
+    norm2 = normalize_headline(text2)
+
+    words1 = Set.new(norm1.split(/\s+/))
+    words2 = Set.new(norm2.split(/\s+/))
+
+    intersection = words1 & words2
+    union = words1 | words2
+
+    return 0.0_f64 if union.empty?
+    intersection.size.to_f64 / union.size.to_f64
+  end
+
+  def self.word_count(text : String) : Int32
+    normalized = normalize_headline(text)
+    return 0 if normalized.empty?
+    normalized.split(/\s+/).size
+  end
+end
+
 class Quickheadlines::Services::ClusteringService
+  include ClusteringUtilities
+
   @engine : LexisMinhash::Engine
   @db : DB::Database
 
   def initialize(@db : DB::Database)
     @engine = LexisMinhash::Engine.new
+  end
+
+  def compute_cluster_for_item(item_id : Int64, title : String, cache : FeedCache) : Int64?
+    return nil if title.empty?
+    return nil if word_count(title) < MIN_WORDS_FOR_CLUSTERING
+
+    document = LexisMinhash::SimpleDocument.new(title)
+    signature = LexisMinhash::Engine.compute_signature(document)
+
+    cache.store_item_signature(item_id, signature)
+
+    bands = LexisMinhash::Engine.generate_bands(signature)
+    cache.store_lsh_bands(item_id, bands)
+
+    candidates = cache.find_lsh_candidates(signature)
+    candidates = candidates.reject { |id| id == item_id }
+
+    STDERR.puts "[Clustering] Processing '#{title[0...50]}...' - Found #{candidates.size} LSH candidates" if ENV["DEBUG_CLUSTERING"]?
+
+    if candidates.empty?
+      cache.assign_cluster(item_id, item_id)
+      STDERR.puts "[Clustering] Created new cluster for '#{title[0...50]}...'" if ENV["DEBUG_CLUSTERING"]?
+      return item_id
+    end
+
+    best_match = nil
+    best_similarity = 0.0_f64
+    best_title = ""
+
+    candidates.each do |candidate_id|
+      candidate_title = cache.get_item_title(candidate_id)
+      next unless candidate_title
+
+      similarity = jaccard_similarity(title, candidate_title)
+      if similarity > best_similarity
+        best_similarity = similarity
+        best_match = candidate_id
+        best_title = candidate_title
+      end
+    end
+
+    threshold = word_count(title) < 5 ? SHORT_HEADLINE_THRESHOLD : LexisMinhash::Engine::SIMILARITY_THRESHOLD
+
+    STDERR.puts "[Clustering] Best match similarity: #{best_similarity.round(2)} (threshold: #{threshold})" if ENV["DEBUG_CLUSTERING"]?
+
+    if best_match && best_similarity >= threshold
+      cluster_items = cache.get_cluster_items(best_match)
+      if cluster_items.any? { |id| id != best_match }
+        cluster_id = cluster_items.first
+      else
+        cluster_id = best_match
+      end
+      cache.assign_cluster(item_id, cluster_id)
+      STDERR.puts "[Clustering] Clustered '#{title[0...50]}...' with '#{best_title[0...50]}...'" if ENV["DEBUG_CLUSTERING"]?
+      cluster_id
+    else
+      cache.assign_cluster(item_id, item_id)
+      STDERR.puts "[Clustering] Created new cluster for '#{title[0...50]}...'" if ENV["DEBUG_CLUSTERING"]?
+      item_id
+    end
   end
 
   def cluster_stories(stories : Array(Quickheadlines::Entities::Story)) : Array(Quickheadlines::Entities::Cluster)
