@@ -253,7 +253,7 @@ allTab shared activeTab =
          txtColor =
              if isActive then
                  case theme of
-                     Shared.Dark -> rgb255 30 41 59
+                     Shared.Dark -> rgb255 255 140 0
                      Shared.Light -> rgb255 15 23 42
              else
                  case theme of
@@ -265,7 +265,7 @@ allTab shared activeTab =
          bgColor =
              if isActive then
                  case theme of
-                     Shared.Dark -> rgba 255 165 0 0.3
+                     Shared.Dark -> rgba 255 140 0 0.6
                      Shared.Light -> rgb255 255 165 0
              else
                  Element.rgba 0 0 0 0
@@ -308,7 +308,7 @@ tabButton shared activeTab tab =
          txtColor =
              if isActive then
                  case theme of
-                     Shared.Dark -> rgb255 30 41 59
+                     Shared.Dark -> rgb255 255 140 0
                      Shared.Light -> rgb255 15 23 42
              else
                  case theme of
@@ -321,7 +321,7 @@ tabButton shared activeTab tab =
          bgColor =
              if isActive then
                  case theme of
-                     Shared.Dark -> rgba 255 165 0 0.3
+                     Shared.Dark -> rgba 255 140 0 0.6
                      Shared.Light -> rgb255 255 165 0
              else
                  Element.rgba 0 0 0 0
@@ -678,7 +678,7 @@ faviconView theme faviconUrl =
         bgColor =
             case theme of
                 Dark ->
-                    rgba 255 165 0 0.3
+                    rgba 255 140 0 0.6
 
                 Light ->
                     rgb255 255 255 255

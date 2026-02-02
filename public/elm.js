@@ -14564,7 +14564,7 @@ var $author$project$Pages$Home_$faviconView = F2(
 	function (theme, faviconUrl) {
 		var bgColor = function () {
 			if (theme.$ === 'Dark') {
-				return A4($mdgriffith$elm_ui$Element$rgba, 255, 165, 0, 0.3);
+				return A4($mdgriffith$elm_ui$Element$rgba, 255, 140, 0, 0.6);
 			} else {
 				return A3($mdgriffith$elm_ui$Element$rgb255, 255, 255, 255);
 			}
@@ -15350,7 +15350,7 @@ var $author$project$Pages$Home_$allTab = F2(
 		var txtColor = function () {
 			if (isActive) {
 				if (theme.$ === 'Dark') {
-					return A3($mdgriffith$elm_ui$Element$rgb255, 30, 41, 59);
+					return A3($mdgriffith$elm_ui$Element$rgb255, 255, 140, 0);
 				} else {
 					return A3($mdgriffith$elm_ui$Element$rgb255, 15, 23, 42);
 				}
@@ -15368,7 +15368,7 @@ var $author$project$Pages$Home_$allTab = F2(
 		var bgColor = function () {
 			if (isActive) {
 				if (theme.$ === 'Dark') {
-					return A4($mdgriffith$elm_ui$Element$rgba, 255, 165, 0, 0.3);
+					return A4($mdgriffith$elm_ui$Element$rgba, 255, 140, 0, 0.6);
 				} else {
 					return A3($mdgriffith$elm_ui$Element$rgb255, 255, 165, 0);
 				}
@@ -15479,7 +15479,7 @@ var $author$project$Pages$Home_$tabButton = F3(
 		var txtColor = function () {
 			if (isActive) {
 				if (theme.$ === 'Dark') {
-					return A3($mdgriffith$elm_ui$Element$rgb255, 30, 41, 59);
+					return A3($mdgriffith$elm_ui$Element$rgb255, 255, 140, 0);
 				} else {
 					return A3($mdgriffith$elm_ui$Element$rgb255, 15, 23, 42);
 				}
@@ -15497,7 +15497,7 @@ var $author$project$Pages$Home_$tabButton = F3(
 		var bgColor = function () {
 			if (isActive) {
 				if (theme.$ === 'Dark') {
-					return A4($mdgriffith$elm_ui$Element$rgba, 255, 165, 0, 0.3);
+					return A4($mdgriffith$elm_ui$Element$rgba, 255, 140, 0, 0.6);
 				} else {
 					return A3($mdgriffith$elm_ui$Element$rgb255, 255, 165, 0);
 				}
