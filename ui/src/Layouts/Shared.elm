@@ -4,10 +4,11 @@ import Element exposing (Attribute, Element, column, el, fill, height, htmlAttri
 import Element.Background as Background
 import Element.Border as Border
 import Element.Font as Font
+import Element.Region as Region
 import ThemeTypography as Ty
 import Html.Attributes
 import Shared exposing (Model, Theme(..))
-import Theme exposing (darkBg, surfaceColor)
+import Theme exposing (darkBg, surfaceColor, semantic)
 import Responsive exposing (Breakpoint(..), breakpointFromWidth, uniformPadding)
 
 
@@ -67,6 +68,7 @@ layout { theme, windowWidth, header, footer, main } =
         [ width fill
         , height fill
         , Background.color bg
+        , semantic "layout-container"
         ]
         [ Element.column
             [ width fill
@@ -76,6 +78,8 @@ layout { theme, windowWidth, header, footer, main } =
             , Element.htmlAttribute (Html.Attributes.style "padding-right" (String.fromInt sidePadding ++ "px"))
             , Border.widthEach { top = 0, right = 0, bottom = 2, left = 0 }
             , Border.color borderColor
+            , Region.navigation
+            , semantic "main-header"
             ]
             [ header
             , el
@@ -83,6 +87,8 @@ layout { theme, windowWidth, header, footer, main } =
                 , height fill
                 , htmlAttribute (Html.Attributes.style "overflow-y" "auto")
                 , htmlAttribute (Html.Attributes.id "main-content")
+                , Region.mainContent
+                , semantic "main-content-scroll"
                 , case breakpoint of
                     VeryNarrowBreakpoint ->
                         Element.padding 8
@@ -113,6 +119,7 @@ headerView theme windowWidth content =
     row
         [ width fill
         , Background.color bg
+        , semantic "header-row"
         ]
         [ content ]
 
@@ -124,6 +131,8 @@ mainView content =
         , height fill
         , htmlAttribute (Html.Attributes.style "overflow-y" "auto")
         , htmlAttribute (Html.Attributes.id "main-content")
+        , Region.mainContent
+        , semantic "content-view"
         ]
         content
 
@@ -136,5 +145,7 @@ footerView content =
         , spacing 8
         , Ty.small
         , Font.color (rgb255 150 150 150)
+        , Region.footer
+        , semantic "main-footer"
         ]
         [ content ]
