@@ -14257,15 +14257,25 @@ var $author$project$Layouts$Shared$layout = function (_v0) {
 		}
 	}();
 	var sidePadding = function () {
-		switch (breakpoint.$) {
+		var _v4 = _Utils_Tuple2(breakpoint, isTimeline);
+		switch (_v4.a.$) {
 			case 'VeryNarrowBreakpoint':
+				var _v5 = _v4.a;
 				return 12;
 			case 'MobileBreakpoint':
+				var _v6 = _v4.a;
 				return 16;
 			case 'TabletBreakpoint':
+				var _v7 = _v4.a;
 				return 32;
 			default:
-				return 48;
+				if (_v4.b) {
+					var _v8 = _v4.a;
+					return 0;
+				} else {
+					var _v9 = _v4.a;
+					return 48;
+				}
 		}
 	}();
 	var borderColor = function () {
@@ -14323,15 +14333,10 @@ var $author$project$Layouts$Shared$layout = function (_v0) {
 						_List_fromArray(
 							[
 								$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill),
-								$mdgriffith$elm_ui$Element$height($mdgriffith$elm_ui$Element$fill),
 								$mdgriffith$elm_ui$Element$htmlAttribute(
 								$elm$html$Html$Attributes$id('main-content')),
 								$mdgriffith$elm_ui$Element$Region$mainContent,
 								$author$project$Theme$semantic('main-content-scroll'),
-								$mdgriffith$elm_ui$Element$htmlAttribute(
-								A2($elm$html$Html$Attributes$style, 'overflow-y', 'auto')),
-								$mdgriffith$elm_ui$Element$htmlAttribute(
-								A2($elm$html$Html$Attributes$style, 'min-height', '0')),
 								function () {
 								switch (breakpoint.$) {
 									case 'VeryNarrowBreakpoint':

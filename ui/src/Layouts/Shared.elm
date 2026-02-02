@@ -44,17 +44,20 @@ layout { theme, windowWidth, header, footer, main, isTimeline } =
                     "1600px"
 
         sidePadding =
-            case breakpoint of
-                VeryNarrowBreakpoint ->
+            case ( breakpoint, isTimeline ) of
+                ( VeryNarrowBreakpoint, _ ) ->
                     12
 
-                MobileBreakpoint ->
+                ( MobileBreakpoint, _ ) ->
                     16
 
-                TabletBreakpoint ->
+                ( TabletBreakpoint, _ ) ->
                     32
 
-                DesktopBreakpoint ->
+                ( DesktopBreakpoint, True ) ->
+                    0
+
+                ( DesktopBreakpoint, False ) ->
                     48
 
         borderColor =
@@ -88,12 +91,9 @@ layout { theme, windowWidth, header, footer, main, isTimeline } =
             , if isTimeline then
                 Element.column
                     [ width fill
-                    , Element.height Element.fill
                     , htmlAttribute (Html.Attributes.id "main-content")
                     , Region.mainContent
                     , semantic "main-content-scroll"
-                    , Element.htmlAttribute (Html.Attributes.style "overflow-y" "auto")
-                    , Element.htmlAttribute (Html.Attributes.style "min-height" "0")
                     , case breakpoint of
                         VeryNarrowBreakpoint ->
                             Element.padding 8

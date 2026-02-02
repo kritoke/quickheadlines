@@ -8,21 +8,18 @@ test.describe('Debug Scroll Position', () => {
     await page.waitForTimeout(2000);
 
     const before = await page.evaluate(() => {
-      const main = document.getElementById('main-content');
-      return main ? { scrollTop: main.scrollTop, scrollHeight: main.scrollHeight, clientHeight: main.clientHeight } : null;
+      return { scrollY: window.scrollY, scrollHeight: document.body.scrollHeight, innerHeight: window.innerHeight };
     });
     console.log('Before scroll:', JSON.stringify(before, null, 2));
 
-    // Scroll to bottom
+    // Scroll to bottom using body scroll
     await page.evaluate(() => {
-      const main = document.getElementById('main-content');
-      if (main) main.scrollTop = main.scrollHeight;
+      window.scrollTo(0, document.body.scrollHeight);
     });
     await page.waitForTimeout(500);
 
     const after = await page.evaluate(() => {
-      const main = document.getElementById('main-content');
-      return main ? { scrollTop: main.scrollTop, scrollHeight: main.scrollHeight, clientHeight: main.clientHeight } : null;
+      return { scrollY: window.scrollY, scrollHeight: document.body.scrollHeight, innerHeight: window.innerHeight };
     });
     console.log('After scroll:', JSON.stringify(after, null, 2));
 
@@ -31,7 +28,7 @@ test.describe('Debug Scroll Position', () => {
       const s = document.getElementById('scroll-sentinel');
       if (!s) return null;
       const rect = s.getBoundingClientRect();
-      return { top: rect.top, bottom: rect.bottom };
+      return { top: rect.top, bottom: rect.bottom, viewportHeight: window.innerHeight };
     });
     console.log('Sentinel position:', JSON.stringify(sentinel, null, 2));
   });

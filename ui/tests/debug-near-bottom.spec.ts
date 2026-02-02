@@ -15,19 +15,17 @@ test.describe('Debug Scroll Detection', () => {
     const initial = await page.evaluate(() => {
       const sentinel = document.getElementById('scroll-sentinel');
       const rect = sentinel?.getBoundingClientRect();
-      const main = document.getElementById('main-content');
       return {
         sentinelTop: rect?.top,
-        scrollTop: main?.scrollTop,
+        scrollY: window.scrollY,
         items: document.querySelectorAll('[data-timeline-item="true"]').length
       };
     });
     console.log('Initial:', JSON.stringify(initial, null, 2));
 
-    // Scroll to bottom
+    // Scroll to bottom using body scroll
     await page.evaluate(() => {
-      const main = document.getElementById('main-content');
-      if (main) main.scrollTop = main.scrollHeight;
+      window.scrollTo(0, document.body.scrollHeight);
     });
     await page.waitForTimeout(2000);
 
@@ -35,10 +33,9 @@ test.describe('Debug Scroll Detection', () => {
     const after = await page.evaluate(() => {
       const sentinel = document.getElementById('scroll-sentinel');
       const rect = sentinel?.getBoundingClientRect();
-      const main = document.getElementById('main-content');
       return {
         sentinelTop: rect?.top,
-        scrollTop: main?.scrollTop,
+        scrollY: window.scrollY,
         items: document.querySelectorAll('[data-timeline-item="true"]').length
       };
     });
