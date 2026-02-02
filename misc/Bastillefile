@@ -33,27 +33,39 @@ CMD sysrc quickheadlines_env="GC_MARKERS=1 GC_FREE_SPACE_DIVISOR=20 QUICKHEADLIN
 
 # 5. Build quickheadlines
 # elm.js is pre-compiled in the repository, so we don't need to compile it on FreeBSD
-# Crystal is installed from FreeBSD ports (1.8.2)
+# Crystal 1.19.1 is built from source using system Crystal (1.8.2) from ports
 CMD cd /tmp/qh && \
     export PATH=/usr/local/bin:/usr/bin:/bin:$$PATH && \
     export MAKE=gmake && \
-    echo "Finding Crystal installation..." && \
-    which crystal 2>/dev/null || find /usr -name crystal -type f 2>/dev/null || echo "Crystal not found in /usr" && \
-    find / -name crystal -type f 2>/dev/null | head -5 && \
+    echo "Checking system Crystal from ports..." && \
     if [ -x "/usr/local/bin/crystal" ]; then \
+        echo "Found Crystal:" && \
         /usr/local/bin/crystal --version; \
     elif [ -x "/usr/bin/crystal" ]; then \
+        echo "Found Crystal:" && \
         /usr/bin/crystal --version; \
     else \
         echo "ERROR: Crystal not found"; \
+        exit 1; \
+    fi && \
+    echo "Building Crystal 1.19.1 from source (30-60 minutes)..." && \
+    sudo -u qh sh -c "export PATH=/usr/local/bin:/usr/bin:/bin:\$PATH && export MAKE=gmake && make download-crystal" && \
+    echo "Crystal 1.19.1 built, checking..." && \
+    if [ -x "/tmp/qh/bin/crystal" ]; then \
+        /tmp/qh/bin/crystal --version; \
+    else \
+        echo "ERROR: Crystal 1.19.1 build failed"; \
+        exit 1; \
     fi && \
     echo "Installing Crystal dependencies..." && \
-    sudo -u qh sh -c "export PATH=/usr/local/bin:/usr/bin:/bin:\$PATH && shards install" && \
-    if [ -f "/usr/local/share/quickheadlines/quickheadlines" ]; then \
-        echo "✓ Using existing quickheadlines binary (skipping build)"; \
+    sudo -u qh sh -c "export PATH=/tmp/qh/bin:/usr/local/bin:/usr/bin:/bin:\$PATH && shards install" && \
+    if [ -n "$$QUICKHEADLINES_SKIP_BUILD" ]; then \
+        echo "SKIP_BUILD mode: Using existing binary"; \
+    elif [ -f "/usr/local/share/quickheadlines/quickheadlines" ]; then \
+        echo "Existing binary found, skipping build"; \
     else \
         echo "Building quickheadlines binary..." && \
-        sudo -u qh sh -c "export PATH=/usr/local/bin:/usr/bin:/bin:\$PATH && export MAKE=gmake && gmake build"; \
+        sudo -u qh sh -c "export PATH=/tmp/qh/bin:/usr/local/bin:/usr/bin:/bin:\$PATH && export MAKE=gmake && make build"; \
     fi
 
 # 6. Install Binary and Config

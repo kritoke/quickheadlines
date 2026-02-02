@@ -9,7 +9,7 @@ VERSION := $(shell grep '^version:' shard.yml | awk '{print $$2}')
 BUILD_REV ?= v$(VERSION)
 CRYSTAL_VERSION = 1.19.1
 ifeq ($(OS_NAME),freebsd)
-	CRYSTAL_VERSION = 1.8.2
+	CRYSTAL_VERSION = 1.18.2
 endif
 
 # Detect system for platform-specific builds
@@ -79,8 +79,24 @@ download-crystal:
 		echo "Downloading $(CRYSTAL_URL)..."; \
 		cd $(CACHE_DIR) && \
 		if [ "$(OS_NAME)" = "freebsd" ]; then \
-			fetch $(CRYSTAL_URL) 2>/dev/null || curl -L -o $(CRYSTAL_TARBALL) $(CRYSTAL_URL) || { \
-				echo "Error: Failed to download Crystal tarball"; \
+			echo "Building Crystal $(CRYSTAL_VERSION) from source on FreeBSD..."; \
+			echo "This may take 30-60 minutes..."; \
+			export MAKE=gmake; \
+			export LLVM_CONFIG="$(FIND_LLVM_CONFIG)"; \
+			fetch https://github.com/crystal-lang/crystal/archive/$(CRYSTAL_VERSION).tar.gz 2>/dev/null || curl -L -o $(CRYSTAL_VERSION).tar.gz https://github.com/crystal-lang/crystal/archive/$(CRYSTAL_VERSION).tar.gz || { \
+				echo "Error: Failed to download Crystal source"; \
+				exit 1; \
+			}; \
+			tar xzf $(CRYSTAL_VERSION).tar.gz || { \
+				echo "Error: Failed to extract Crystal source"; \
+				rm -f $(CRYSTAL_VERSION).tar.gz; \
+				exit 1; \
+			}; \
+			rm -f $(CRYSTAL_VERSION).tar.gz; \
+			mv crystal-$(CRYSTAL_VERSION) $(CRYSTAL_DIR); \
+			cd $(CRYSTAL_DIR) && \
+			$(MAKE) deps && $(MAKE) clean && $(MAKE) crystal || { \
+				echo "Error: Failed to build Crystal"; \
 				exit 1; \
 			}; \
 		else \
@@ -88,16 +104,20 @@ download-crystal:
 				echo "Error: Failed to download Crystal tarball"; \
 				exit 1; \
 			}; \
-		fi && \
-		tar xzf $(CRYSTAL_TARBALL) || { \
-			echo "Error: Failed to extract Crystal tarball"; \
+			tar xzf $(CRYSTAL_TARBALL) || { \
+				echo "Error: Failed to extract Crystal tarball"; \
+				rm -f $(CRYSTAL_TARBALL); \
+				exit 1; \
+			} && \
 			rm -f $(CRYSTAL_TARBALL); \
-			exit 1; \
-		} && \
-		rm -f $(CRYSTAL_TARBALL); \
+		fi; \
 	fi
 	@rm -f bin/crystal
-	@ln -sf $(CRYSTAL_DIR)/bin/crystal bin/crystal
+	@if [ "$(OS_NAME)" = "freebsd" ]; then \
+		ln -sf $(CRYSTAL_DIR)/.build/crystal bin/crystal; \
+	else \
+		ln -sf $(CRYSTAL_DIR)/bin/crystal bin/crystal; \
+	fi
 	@echo "✓ Crystal $(CRYSTAL_VERSION) installed in $(CRYSTAL_DIR)"
 
 # Check for required dependencies
