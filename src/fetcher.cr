@@ -644,7 +644,12 @@ def refresh_all(config : Config)
 
   # 7. Process story clustering for all fetched feeds asynchronously
   # Use a channel to limit concurrent clustering jobs (max 10 at a time)
-  spawn async_clustering(fetched_map.values.to_a)
+  # Ensure all feeds are committed to the database before starting clustering
+  spawn do
+    # Small delay to allow SQLite WAL checkpoints/commits to settle across fibers
+    sleep 100.milliseconds
+    async_clustering(fetched_map.values.to_a)
+  end
 
   # Clear memory after large amount of data processing
   GC.collect
@@ -657,15 +662,26 @@ end
 # ============================================
 
 # Run clustering asynchronously with concurrency limiting
+CLUSTERING_JOBS = Atomic(Int32).new(0)
+
 def async_clustering(feeds : Array(FeedData))
   clustering_channel = Channel(Nil).new(10) # Max 10 concurrent clustering jobs
+  
+  STATE.is_clustering = true
+  CLUSTERING_JOBS.set(feeds.size)
 
   spawn do
     feeds.each do |feed_data|
       spawn do
         clustering_channel.send(nil) # Reserve slot
-        process_feed_item_clustering(feed_data)
-        clustering_channel.receive    # Release slot
+        begin
+          process_feed_item_clustering(feed_data)
+        ensure
+          clustering_channel.receive    # Release slot
+          if CLUSTERING_JOBS.sub(1) <= 1
+            STATE.is_clustering = false
+          end
+        end
       end
     end
   end

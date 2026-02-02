@@ -30,6 +30,7 @@ type alias Model =
     , offset : Int
     , insertedIds : Set String
     , sentinelNear : Bool
+    , isClustering : Bool
     }
 
 
@@ -45,6 +46,7 @@ init shared =
       , offset = 0
       , insertedIds = Set.empty
       , sentinelNear = False
+      , isClustering = False
       }
     , fetchTimeline 35 0 GotTimeline
     )
@@ -79,6 +81,7 @@ update shared msg model =
                 , error = Nothing
                 , hasMore = response.hasMore
                 , offset = List.length response.items
+                , isClustering = response.isClustering
               }
             , Cmd.none
             )
@@ -109,6 +112,7 @@ update shared msg model =
                 , hasMore = response.hasMore
                 , offset = model.offset + List.length response.items
                 , insertedIds = Set.union model.insertedIds addedIds
+                , isClustering = response.isClustering
               }
             , Task.perform (\_ -> ClearInserted) (Process.sleep 300)
             )
@@ -194,12 +198,15 @@ view shared model =
         , htmlAttribute (Html.Attributes.attribute "data-timeline-page" "true")
         , htmlAttribute (Html.Attributes.class "auto-hide-scroll")
         ]
-        [ el
-            [ (if Responsive.isMobile breakpoint then Ty.subtitle else Ty.title)
-            , Font.bold
-            , Font.color txtColor
+        [ row [ width fill, spacing 10 ]
+            [ el
+                [ (if Responsive.isMobile breakpoint then Ty.subtitle else Ty.title)
+                , Font.bold
+                , Font.color txtColor
+                ]
+                (text "Timeline")
+            , clusteringIndicator model.isClustering
             ]
-            (text "Timeline")
         , if model.loading && List.isEmpty model.clusters then
             el
                 [ centerX
@@ -465,6 +472,23 @@ formatTime zone date =
                 String.fromInt minute
     in
     String.fromInt hour12 ++ ":" ++ mm ++ " " ++ period
+
+
+clusteringIndicator : Bool -> Element msg
+clusteringIndicator isClustering =
+    if isClustering then
+        row
+            [ spacing 2
+            , htmlAttribute (Html.Attributes.class "clustering-indicator")
+            , htmlAttribute (Html.Attributes.title "Story clustering in progress...")
+            ]
+            [ el [ htmlAttribute (Html.Attributes.class "clustering-dot") ] (text ".")
+            , el [ htmlAttribute (Html.Attributes.class "clustering-dot") ] (text ".")
+            , el [ htmlAttribute (Html.Attributes.class "clustering-dot") ] (text ".")
+            ]
+
+    else
+        Element.none
 
 
 monthToString : Time.Month -> String

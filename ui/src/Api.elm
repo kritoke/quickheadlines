@@ -34,6 +34,15 @@ type alias FeedsResponse =
     { tabs : List Tab
     , activeTab : String
     , feeds : List Feed
+    , isClustering : Bool
+    }
+
+
+type alias TimelineResponse =
+    { items : List TimelineItem
+    , hasMore : Bool
+    , totalCount : Int
+    , isClustering : Bool
     }
 
 
@@ -49,13 +58,6 @@ type alias TimelineItem =
     , clusterId : Maybe String
     , isRepresentative : Bool
     , clusterSize : Int
-    }
-
-
-type alias TimelineResponse =
-    { items : List TimelineItem
-    , hasMore : Bool
-    , totalCount : Int
     }
 
 
@@ -297,6 +299,22 @@ feedItemDecoder =
         (field "pub_date" (nullable (Decode.map Time.millisToPosix Decode.int)))
 
 
+timelineItemDecoder : Decoder TimelineItem
+timelineItemDecoder =
+    Decode.succeed TimelineItem
+        |> Decode.andThen (\f -> Decode.field "id" string |> Decode.map f)
+        |> Decode.andThen (\f -> Decode.field "title" string |> Decode.map f)
+        |> Decode.andThen (\f -> Decode.field "link" string |> Decode.map f)
+        |> Decode.andThen (\f -> Decode.field "pub_date" (nullable (Decode.map Time.millisToPosix Decode.int)) |> Decode.map f)
+        |> Decode.andThen (\f -> Decode.field "feed_title" string |> Decode.map f)
+        |> Decode.andThen (\f -> Decode.field "favicon" (nullable string) |> Decode.map f)
+        |> Decode.andThen (\f -> Decode.field "header_color" (nullable string) |> Decode.map f)
+        |> Decode.andThen (\f -> Decode.field "header_text_color" (nullable string) |> Decode.map f)
+        |> Decode.andThen (\f -> Decode.field "cluster_id" (nullable string) |> Decode.map f)
+        |> Decode.andThen (\f -> Decode.field "is_representative" Decode.bool |> Decode.map f)
+        |> Decode.andThen (\f -> Decode.field "cluster_size" (Decode.oneOf [ Decode.int, Decode.succeed 1 ]) |> Decode.map f)
+
+
 tabDecoder : Decoder Tab
 tabDecoder =
     Decode.map Tab (field "name" string)
@@ -304,87 +322,20 @@ tabDecoder =
 
 feedsDecoder : Decoder FeedsResponse
 feedsDecoder =
-    Decode.map3 FeedsResponse
-        (field "tabs" (list tabDecoder))
-        (field "active_tab" string)
-        (field "feeds" (list feedDecoder))
-
-
-fetchFeeds : String -> (Result Http.Error FeedsResponse -> msg) -> Cmd msg
-fetchFeeds tab tagger =
-    Http.get
-        { url = "/api/feeds?tab=" ++ tab
-        , expect = Http.expectJson tagger feedsDecoder
-        }
-
-
-timelineItemDecoder : Decoder TimelineItem
-timelineItemDecoder =
-    Decode.field "id" string
-        |> Decode.andThen
-            (\id ->
-                Decode.field "title" string
-                    |> Decode.andThen
-                        (\title ->
-                            Decode.field "link" string
-                                |> Decode.andThen
-                                    (\link ->
-                                        Decode.field "pub_date" (nullable (Decode.map Time.millisToPosix Decode.int))
-                                            |> Decode.andThen
-                                                (\pubDate ->
-                                                    Decode.field "feed_title" string
-                                                        |> Decode.andThen
-                                                            (\feedTitle ->
-                                                                Decode.field "favicon" (nullable string)
-                                                                    |> Decode.andThen
-                                                                        (\favicon ->
-                                                                            Decode.field "header_color" (nullable string)
-                                                                                |> Decode.andThen
-                                                                                    (\headerColor ->
-                                                                                        Decode.field "header_text_color" (nullable string)
-                                                                                            |> Decode.andThen
-                                                                                                (\headerTextColor ->
-                                                                                                    Decode.field "cluster_id" (nullable string)
-                                                                                                        |> Decode.andThen
-                                                                                                            (\clusterId ->
-                                                                                                                Decode.field "is_representative" Decode.bool
-                                                                                                                    |> Decode.andThen
-                                                                                                                        (\isRepresentative ->
-                                                                                                                            Decode.field "cluster_size" (nullable Decode.int)
-                                                                                                                                |> Decode.andThen
-                                                                                                                                    (\clusterSize ->
-                                                                                                                                        succeed
-                                                                                                                                            { id = id
-                                                                                                                                            , title = title
-                                                                                                                                            , link = link
-                                                                                                                                            , pubDate = pubDate
-                                                                                                                                            , feedTitle = feedTitle
-                                                                                                                                            , favicon = favicon
-                                                                                                                                            , headerColor = headerColor
-                                                                                                                                            , headerTextColor = headerTextColor
-                                                                                                                                            , clusterId = clusterId
-                                                                                                                                            , isRepresentative = isRepresentative
-                                                                                                                                            , clusterSize = Maybe.withDefault 0 clusterSize
-                                                                                                                                            }
-                                                                                                                                    )
-                                                                                                                        )
-                                                                                                            )
-                                                                                                )
-                                                                                    )
-                                                                        )
-                                                            )
-                                                )
-                                    )
-                        )
-            )
+    Decode.succeed FeedsResponse
+        |> Decode.andThen (\f -> Decode.field "tabs" (list tabDecoder) |> Decode.map f)
+        |> Decode.andThen (\f -> Decode.field "active_tab" string |> Decode.map f)
+        |> Decode.andThen (\f -> Decode.field "feeds" (list feedDecoder) |> Decode.map f)
+        |> Decode.andThen (\f -> Decode.field "is_clustering" (Decode.oneOf [ Decode.bool, Decode.succeed False ]) |> Decode.map f)
 
 
 timelineDecoder : Decoder TimelineResponse
 timelineDecoder =
-    Decode.map3 TimelineResponse
-        (field "items" (list timelineItemDecoder))
-        (field "has_more" Decode.bool)
-        (field "total_count" Decode.int)
+    Decode.succeed TimelineResponse
+        |> Decode.andThen (\f -> Decode.field "items" (list timelineItemDecoder) |> Decode.map f)
+        |> Decode.andThen (\f -> Decode.field "has_more" Decode.bool |> Decode.map f)
+        |> Decode.andThen (\f -> Decode.field "total_count" Decode.int |> Decode.map f)
+        |> Decode.andThen (\f -> Decode.field "is_clustering" (Decode.oneOf [ Decode.bool, Decode.succeed False ]) |> Decode.map f)
 
 
 fetchTimeline : Int -> Int -> (Result Http.Error TimelineResponse -> msg) -> Cmd msg
@@ -400,4 +351,12 @@ fetchFeedMore url limit offset tagger =
     Http.get
         { url = "/api/feed_more?url=" ++ url ++ "&limit=" ++ String.fromInt limit ++ "&offset=" ++ String.fromInt offset
         , expect = Http.expectJson tagger feedDecoder
+        }
+
+
+fetchFeeds : String -> (Result Http.Error FeedsResponse -> msg) -> Cmd msg
+fetchFeeds tab tagger =
+    Http.get
+        { url = "/api/feeds?tab=" ++ tab
+        , expect = Http.expectJson tagger feedsDecoder
         }

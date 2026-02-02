@@ -169,7 +169,8 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
     FeedsPageResponse.new(
       tabs: tabs_response,
       active_tab: active_tab,
-      feeds: feeds_response
+      feeds: feeds_response,
+      is_clustering: STATE.is_clustering
     )
   end
 
@@ -282,14 +283,18 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
     TimelinePageResponse.new(
       items: items_response,
       has_more: has_more,
-      total_count: total_count
+      total_count: total_count,
+      is_clustering: STATE.is_clustering
     )
   end
 
   # GET /api/version - Get version for update checking
   @[ARTA::Get(path: "/api/version")]
-  def version : VersionResponse
-    VersionResponse.new(updated_at: STATE.updated_at.to_unix_ms)
+  def version : ATH::View(VersionResponse)
+    self.view(VersionResponse.new(
+      updated_at: STATE.updated_at.to_unix_ms,
+      is_clustering: STATE.is_clustering
+    ))
   end
 
   # GET /version - Get version as plain text (legacy endpoint)

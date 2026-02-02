@@ -6072,9 +6072,9 @@ var $elm$http$Http$expectJson = F2(
 						A2($elm$json$Json$Decode$decodeString, decoder, string));
 				}));
 	});
-var $author$project$Api$FeedsResponse = F3(
-	function (tabs, activeTab, feeds) {
-		return {activeTab: activeTab, feeds: feeds, tabs: tabs};
+var $author$project$Api$FeedsResponse = F4(
+	function (tabs, activeTab, feeds, isClustering) {
+		return {activeTab: activeTab, feeds: feeds, isClustering: isClustering, tabs: tabs};
 	});
 var $author$project$Api$FeedItem = F3(
 	function (title, link, pubDate) {
@@ -6179,18 +6179,53 @@ var $author$project$Api$tabDecoder = A2(
 	$elm$json$Json$Decode$map,
 	$author$project$Api$Tab,
 	A2($elm$json$Json$Decode$field, 'name', $elm$json$Json$Decode$string));
-var $author$project$Api$feedsDecoder = A4(
-	$elm$json$Json$Decode$map3,
-	$author$project$Api$FeedsResponse,
+var $author$project$Api$feedsDecoder = A2(
+	$elm$json$Json$Decode$andThen,
+	function (f) {
+		return A2(
+			$elm$json$Json$Decode$map,
+			f,
+			A2(
+				$elm$json$Json$Decode$field,
+				'is_clustering',
+				$elm$json$Json$Decode$oneOf(
+					_List_fromArray(
+						[
+							$elm$json$Json$Decode$bool,
+							$elm$json$Json$Decode$succeed(false)
+						]))));
+	},
 	A2(
-		$elm$json$Json$Decode$field,
-		'tabs',
-		$elm$json$Json$Decode$list($author$project$Api$tabDecoder)),
-	A2($elm$json$Json$Decode$field, 'active_tab', $elm$json$Json$Decode$string),
-	A2(
-		$elm$json$Json$Decode$field,
-		'feeds',
-		$elm$json$Json$Decode$list($author$project$Api$feedDecoder)));
+		$elm$json$Json$Decode$andThen,
+		function (f) {
+			return A2(
+				$elm$json$Json$Decode$map,
+				f,
+				A2(
+					$elm$json$Json$Decode$field,
+					'feeds',
+					$elm$json$Json$Decode$list($author$project$Api$feedDecoder)));
+		},
+		A2(
+			$elm$json$Json$Decode$andThen,
+			function (f) {
+				return A2(
+					$elm$json$Json$Decode$map,
+					f,
+					A2($elm$json$Json$Decode$field, 'active_tab', $elm$json$Json$Decode$string));
+			},
+			A2(
+				$elm$json$Json$Decode$andThen,
+				function (f) {
+					return A2(
+						$elm$json$Json$Decode$map,
+						f,
+						A2(
+							$elm$json$Json$Decode$field,
+							'tabs',
+							$elm$json$Json$Decode$list($author$project$Api$tabDecoder)));
+				},
+				$elm$json$Json$Decode$succeed($author$project$Api$FeedsResponse)))));
 var $elm$http$Http$emptyBody = _Http_emptyBody;
 var $elm$http$Http$Request = function (a) {
 	return {$: 'Request', a: a};
@@ -6374,122 +6409,196 @@ var $author$project$Api$fetchFeeds = F2(
 	});
 var $author$project$Pages$Home_$init = function (shared) {
 	return _Utils_Tuple2(
-		{activeTab: 'all', error: $elm$core$Maybe$Nothing, feeds: _List_Nil, insertedIds: $elm$core$Set$empty, loading: true, loadingFeed: $elm$core$Maybe$Nothing, tabs: _List_Nil},
+		{activeTab: 'all', error: $elm$core$Maybe$Nothing, feeds: _List_Nil, insertedIds: $elm$core$Set$empty, isClustering: false, loading: true, loadingFeed: $elm$core$Maybe$Nothing, tabs: _List_Nil},
 		A2($author$project$Api$fetchFeeds, 'all', $author$project$Pages$Home_$GotFeeds));
 };
 var $author$project$Pages$Timeline$GotTimeline = function (a) {
 	return {$: 'GotTimeline', a: a};
 };
-var $author$project$Api$TimelineResponse = F3(
-	function (items, hasMore, totalCount) {
-		return {hasMore: hasMore, items: items, totalCount: totalCount};
+var $author$project$Api$TimelineResponse = F4(
+	function (items, hasMore, totalCount, isClustering) {
+		return {hasMore: hasMore, isClustering: isClustering, items: items, totalCount: totalCount};
 	});
-var $elm$core$Maybe$withDefault = F2(
-	function (_default, maybe) {
-		if (maybe.$ === 'Just') {
-			var value = maybe.a;
-			return value;
-		} else {
-			return _default;
-		}
-	});
+var $author$project$Api$TimelineItem = function (id) {
+	return function (title) {
+		return function (link) {
+			return function (pubDate) {
+				return function (feedTitle) {
+					return function (favicon) {
+						return function (headerColor) {
+							return function (headerTextColor) {
+								return function (clusterId) {
+									return function (isRepresentative) {
+										return function (clusterSize) {
+											return {clusterId: clusterId, clusterSize: clusterSize, favicon: favicon, feedTitle: feedTitle, headerColor: headerColor, headerTextColor: headerTextColor, id: id, isRepresentative: isRepresentative, link: link, pubDate: pubDate, title: title};
+										};
+									};
+								};
+							};
+						};
+					};
+				};
+			};
+		};
+	};
+};
 var $author$project$Api$timelineItemDecoder = A2(
 	$elm$json$Json$Decode$andThen,
-	function (id) {
+	function (f) {
 		return A2(
+			$elm$json$Json$Decode$map,
+			f,
+			A2(
+				$elm$json$Json$Decode$field,
+				'cluster_size',
+				$elm$json$Json$Decode$oneOf(
+					_List_fromArray(
+						[
+							$elm$json$Json$Decode$int,
+							$elm$json$Json$Decode$succeed(0)
+						]))));
+	},
+	A2(
+		$elm$json$Json$Decode$andThen,
+		function (f) {
+			return A2(
+				$elm$json$Json$Decode$map,
+				f,
+				A2($elm$json$Json$Decode$field, 'is_representative', $elm$json$Json$Decode$bool));
+		},
+		A2(
 			$elm$json$Json$Decode$andThen,
-			function (title) {
+			function (f) {
 				return A2(
+					$elm$json$Json$Decode$map,
+					f,
+					A2(
+						$elm$json$Json$Decode$field,
+						'cluster_id',
+						$elm$json$Json$Decode$nullable($elm$json$Json$Decode$string)));
+			},
+			A2(
+				$elm$json$Json$Decode$andThen,
+				function (f) {
+					return A2(
+						$elm$json$Json$Decode$map,
+						f,
+						A2(
+							$elm$json$Json$Decode$field,
+							'header_text_color',
+							$elm$json$Json$Decode$nullable($elm$json$Json$Decode$string)));
+				},
+				A2(
 					$elm$json$Json$Decode$andThen,
-					function (link) {
+					function (f) {
 						return A2(
+							$elm$json$Json$Decode$map,
+							f,
+							A2(
+								$elm$json$Json$Decode$field,
+								'header_color',
+								$elm$json$Json$Decode$nullable($elm$json$Json$Decode$string)));
+					},
+					A2(
+						$elm$json$Json$Decode$andThen,
+						function (f) {
+							return A2(
+								$elm$json$Json$Decode$map,
+								f,
+								A2(
+									$elm$json$Json$Decode$field,
+									'favicon',
+									$elm$json$Json$Decode$nullable($elm$json$Json$Decode$string)));
+						},
+						A2(
 							$elm$json$Json$Decode$andThen,
-							function (pubDate) {
+							function (f) {
 								return A2(
-									$elm$json$Json$Decode$andThen,
-									function (feedTitle) {
-										return A2(
-											$elm$json$Json$Decode$andThen,
-											function (favicon) {
-												return A2(
-													$elm$json$Json$Decode$andThen,
-													function (headerColor) {
-														return A2(
-															$elm$json$Json$Decode$andThen,
-															function (headerTextColor) {
-																return A2(
-																	$elm$json$Json$Decode$andThen,
-																	function (clusterId) {
-																		return A2(
-																			$elm$json$Json$Decode$andThen,
-																			function (isRepresentative) {
-																				return A2(
-																					$elm$json$Json$Decode$andThen,
-																					function (clusterSize) {
-																						return $elm$json$Json$Decode$succeed(
-																							{
-																								clusterId: clusterId,
-																								clusterSize: A2($elm$core$Maybe$withDefault, 0, clusterSize),
-																								favicon: favicon,
-																								feedTitle: feedTitle,
-																								headerColor: headerColor,
-																								headerTextColor: headerTextColor,
-																								id: id,
-																								isRepresentative: isRepresentative,
-																								link: link,
-																								pubDate: pubDate,
-																								title: title
-																							});
-																					},
-																					A2(
-																						$elm$json$Json$Decode$field,
-																						'cluster_size',
-																						$elm$json$Json$Decode$nullable($elm$json$Json$Decode$int)));
-																			},
-																			A2($elm$json$Json$Decode$field, 'is_representative', $elm$json$Json$Decode$bool));
-																	},
-																	A2(
-																		$elm$json$Json$Decode$field,
-																		'cluster_id',
-																		$elm$json$Json$Decode$nullable($elm$json$Json$Decode$string)));
-															},
-															A2(
-																$elm$json$Json$Decode$field,
-																'header_text_color',
-																$elm$json$Json$Decode$nullable($elm$json$Json$Decode$string)));
-													},
-													A2(
-														$elm$json$Json$Decode$field,
-														'header_color',
-														$elm$json$Json$Decode$nullable($elm$json$Json$Decode$string)));
-											},
-											A2(
-												$elm$json$Json$Decode$field,
-												'favicon',
-												$elm$json$Json$Decode$nullable($elm$json$Json$Decode$string)));
-									},
+									$elm$json$Json$Decode$map,
+									f,
 									A2($elm$json$Json$Decode$field, 'feed_title', $elm$json$Json$Decode$string));
 							},
 							A2(
-								$elm$json$Json$Decode$field,
-								'pub_date',
-								$elm$json$Json$Decode$nullable(
-									A2($elm$json$Json$Decode$map, $elm$time$Time$millisToPosix, $elm$json$Json$Decode$int))));
-					},
-					A2($elm$json$Json$Decode$field, 'link', $elm$json$Json$Decode$string));
-			},
-			A2($elm$json$Json$Decode$field, 'title', $elm$json$Json$Decode$string));
+								$elm$json$Json$Decode$andThen,
+								function (f) {
+									return A2(
+										$elm$json$Json$Decode$map,
+										f,
+										A2(
+											$elm$json$Json$Decode$field,
+											'pub_date',
+											$elm$json$Json$Decode$nullable(
+												A2($elm$json$Json$Decode$map, $elm$time$Time$millisToPosix, $elm$json$Json$Decode$int))));
+								},
+								A2(
+									$elm$json$Json$Decode$andThen,
+									function (f) {
+										return A2(
+											$elm$json$Json$Decode$map,
+											f,
+											A2($elm$json$Json$Decode$field, 'link', $elm$json$Json$Decode$string));
+									},
+									A2(
+										$elm$json$Json$Decode$andThen,
+										function (f) {
+											return A2(
+												$elm$json$Json$Decode$map,
+												f,
+												A2($elm$json$Json$Decode$field, 'title', $elm$json$Json$Decode$string));
+										},
+										A2(
+											$elm$json$Json$Decode$andThen,
+											function (f) {
+												return A2(
+													$elm$json$Json$Decode$map,
+													f,
+													A2($elm$json$Json$Decode$field, 'id', $elm$json$Json$Decode$string));
+											},
+											$elm$json$Json$Decode$succeed($author$project$Api$TimelineItem))))))))))));
+var $author$project$Api$timelineDecoder = A2(
+	$elm$json$Json$Decode$andThen,
+	function (f) {
+		return A2(
+			$elm$json$Json$Decode$map,
+			f,
+			A2(
+				$elm$json$Json$Decode$field,
+				'is_clustering',
+				$elm$json$Json$Decode$oneOf(
+					_List_fromArray(
+						[
+							$elm$json$Json$Decode$bool,
+							$elm$json$Json$Decode$succeed(false)
+						]))));
 	},
-	A2($elm$json$Json$Decode$field, 'id', $elm$json$Json$Decode$string));
-var $author$project$Api$timelineDecoder = A4(
-	$elm$json$Json$Decode$map3,
-	$author$project$Api$TimelineResponse,
 	A2(
-		$elm$json$Json$Decode$field,
-		'items',
-		$elm$json$Json$Decode$list($author$project$Api$timelineItemDecoder)),
-	A2($elm$json$Json$Decode$field, 'has_more', $elm$json$Json$Decode$bool),
-	A2($elm$json$Json$Decode$field, 'total_count', $elm$json$Json$Decode$int));
+		$elm$json$Json$Decode$andThen,
+		function (f) {
+			return A2(
+				$elm$json$Json$Decode$map,
+				f,
+				A2($elm$json$Json$Decode$field, 'total_count', $elm$json$Json$Decode$int));
+		},
+		A2(
+			$elm$json$Json$Decode$andThen,
+			function (f) {
+				return A2(
+					$elm$json$Json$Decode$map,
+					f,
+					A2($elm$json$Json$Decode$field, 'has_more', $elm$json$Json$Decode$bool));
+			},
+			A2(
+				$elm$json$Json$Decode$andThen,
+				function (f) {
+					return A2(
+						$elm$json$Json$Decode$map,
+						f,
+						A2(
+							$elm$json$Json$Decode$field,
+							'items',
+							$elm$json$Json$Decode$list($author$project$Api$timelineItemDecoder)));
+				},
+				$elm$json$Json$Decode$succeed($author$project$Api$TimelineResponse)))));
 var $author$project$Api$fetchTimeline = F3(
 	function (limit, offset, tagger) {
 		return $elm$http$Http$get(
@@ -6500,7 +6609,7 @@ var $author$project$Api$fetchTimeline = F3(
 	});
 var $author$project$Pages$Timeline$init = function (shared) {
 	return _Utils_Tuple2(
-		{clusters: _List_Nil, error: $elm$core$Maybe$Nothing, expandedClusters: $elm$core$Set$empty, hasMore: true, insertedIds: $elm$core$Set$empty, items: _List_Nil, loading: true, loadingMore: false, offset: 0, sentinelNear: false},
+		{clusters: _List_Nil, error: $elm$core$Maybe$Nothing, expandedClusters: $elm$core$Set$empty, hasMore: true, insertedIds: $elm$core$Set$empty, isClustering: false, items: _List_Nil, loading: true, loadingMore: false, offset: 0, sentinelNear: false},
 		A3($author$project$Api$fetchTimeline, 35, 0, $author$project$Pages$Timeline$GotTimeline));
 };
 var $author$project$Shared$Dark = {$: 'Dark'};
@@ -6720,6 +6829,7 @@ var $author$project$Pages$Home_$update = F3(
 								activeTab: response.activeTab,
 								error: $elm$core$Maybe$Nothing,
 								feeds: response.feeds,
+								isClustering: response.isClustering,
 								loading: false,
 								tabs: A2(
 									$elm$core$List$map,
@@ -6913,8 +7023,8 @@ var $author$project$Api$buildCluster = function (_v0) {
 				return _Debug_todo(
 					'Api',
 					{
-						start: {line: 210, column: 29},
-						end: {line: 210, column: 39}
+						start: {line: 212, column: 29},
+						end: {line: 212, column: 39}
 					})('Empty cluster should not exist');
 			}
 		}
@@ -6941,6 +7051,15 @@ var $author$project$Api$buildCluster = function (_v0) {
 		representative: $author$project$Api$toClusterItem(representative)
 	};
 };
+var $elm$core$Maybe$withDefault = F2(
+	function (_default, maybe) {
+		if (maybe.$ === 'Just') {
+			var value = maybe.a;
+			return value;
+		} else {
+			return _default;
+		}
+	});
 var $author$project$Api$clusterItemsFromTimeline = function (items) {
 	var sortedItems = A2(
 		$elm$core$List$sortWith,
@@ -7065,6 +7184,7 @@ var $author$project$Pages$Timeline$update = F3(
 									clusters: sortedClusters,
 									error: $elm$core$Maybe$Nothing,
 									hasMore: response.hasMore,
+									isClustering: response.isClustering,
 									items: response.items,
 									loading: false,
 									offset: $elm$core$List$length(response.items)
@@ -7100,6 +7220,7 @@ var $author$project$Pages$Timeline$update = F3(
 									clusters: newClusters,
 									hasMore: response.hasMore,
 									insertedIds: A2($elm$core$Set$union, model.insertedIds, addedIds),
+									isClustering: response.isClustering,
 									items: newItems,
 									loadingMore: false,
 									offset: model.offset + $elm$core$List$length(response.items)
@@ -14740,6 +14861,46 @@ var $author$project$Pages$Home_$allTab = F2(
 					$author$project$Pages$Home_$SwitchTab('All'))
 			});
 	});
+var $author$project$Pages$Home_$clusteringIndicator = function (isClustering) {
+	return isClustering ? A2(
+		$mdgriffith$elm_ui$Element$row,
+		_List_fromArray(
+			[
+				A2($mdgriffith$elm_ui$Element$paddingXY, 16, 8),
+				$mdgriffith$elm_ui$Element$spacing(2),
+				$mdgriffith$elm_ui$Element$htmlAttribute(
+				$elm$html$Html$Attributes$class('clustering-indicator')),
+				$mdgriffith$elm_ui$Element$htmlAttribute(
+				$elm$html$Html$Attributes$title('Story clustering in progress...'))
+			]),
+		_List_fromArray(
+			[
+				A2(
+				$mdgriffith$elm_ui$Element$el,
+				_List_fromArray(
+					[
+						$mdgriffith$elm_ui$Element$htmlAttribute(
+						$elm$html$Html$Attributes$class('clustering-dot'))
+					]),
+				$mdgriffith$elm_ui$Element$text('.')),
+				A2(
+				$mdgriffith$elm_ui$Element$el,
+				_List_fromArray(
+					[
+						$mdgriffith$elm_ui$Element$htmlAttribute(
+						$elm$html$Html$Attributes$class('clustering-dot'))
+					]),
+				$mdgriffith$elm_ui$Element$text('.')),
+				A2(
+				$mdgriffith$elm_ui$Element$el,
+				_List_fromArray(
+					[
+						$mdgriffith$elm_ui$Element$htmlAttribute(
+						$elm$html$Html$Attributes$class('clustering-dot'))
+					]),
+				$mdgriffith$elm_ui$Element$text('.'))
+			])) : $mdgriffith$elm_ui$Element$none;
+};
 var $mdgriffith$elm_ui$Internal$Model$paddingName = F4(
 	function (top, right, bottom, left) {
 		return 'pad-' + ($elm$core$String$fromInt(top) + ('-' + ($elm$core$String$fromInt(right) + ('-' + ($elm$core$String$fromInt(bottom) + ('-' + $elm$core$String$fromInt(left)))))));
@@ -15014,10 +15175,15 @@ var $author$project$Pages$Home_$tabBar = F2(
 						A2(
 							$elm$core$List$cons,
 							A2($author$project$Pages$Home_$allTab, shared, model.activeTab),
-							A2(
-								$elm$core$List$map,
-								A2($author$project$Pages$Home_$tabButton, shared, model.activeTab),
-								model.tabs))),
+							_Utils_ap(
+								A2(
+									$elm$core$List$map,
+									A2($author$project$Pages$Home_$tabButton, shared, model.activeTab),
+									model.tabs),
+								_List_fromArray(
+									[
+										$author$project$Pages$Home_$clusteringIndicator(model.isClustering)
+									])))),
 						A2(
 						$mdgriffith$elm_ui$Element$el,
 						_List_fromArray(
@@ -15062,6 +15228,45 @@ var $author$project$Pages$Home_$view = F2(
 					A2($author$project$Pages$Home_$content, shared, model)
 				]));
 	});
+var $author$project$Pages$Timeline$clusteringIndicator = function (isClustering) {
+	return isClustering ? A2(
+		$mdgriffith$elm_ui$Element$row,
+		_List_fromArray(
+			[
+				$mdgriffith$elm_ui$Element$spacing(2),
+				$mdgriffith$elm_ui$Element$htmlAttribute(
+				$elm$html$Html$Attributes$class('clustering-indicator')),
+				$mdgriffith$elm_ui$Element$htmlAttribute(
+				$elm$html$Html$Attributes$title('Story clustering in progress...'))
+			]),
+		_List_fromArray(
+			[
+				A2(
+				$mdgriffith$elm_ui$Element$el,
+				_List_fromArray(
+					[
+						$mdgriffith$elm_ui$Element$htmlAttribute(
+						$elm$html$Html$Attributes$class('clustering-dot'))
+					]),
+				$mdgriffith$elm_ui$Element$text('.')),
+				A2(
+				$mdgriffith$elm_ui$Element$el,
+				_List_fromArray(
+					[
+						$mdgriffith$elm_ui$Element$htmlAttribute(
+						$elm$html$Html$Attributes$class('clustering-dot'))
+					]),
+				$mdgriffith$elm_ui$Element$text('.')),
+				A2(
+				$mdgriffith$elm_ui$Element$el,
+				_List_fromArray(
+					[
+						$mdgriffith$elm_ui$Element$htmlAttribute(
+						$elm$html$Html$Attributes$class('clustering-dot'))
+					]),
+				$mdgriffith$elm_ui$Element$text('.'))
+			])) : $mdgriffith$elm_ui$Element$none;
+};
 var $author$project$Pages$Timeline$ToggleCluster = function (a) {
 	return {$: 'ToggleCluster', a: a};
 };
@@ -15708,14 +15913,25 @@ var $author$project$Pages$Timeline$view = F2(
 			_List_fromArray(
 				[
 					A2(
-					$mdgriffith$elm_ui$Element$el,
+					$mdgriffith$elm_ui$Element$row,
 					_List_fromArray(
 						[
-							$author$project$Responsive$isMobile(breakpoint) ? $author$project$ThemeTypography$subtitle : $author$project$ThemeTypography$title,
-							$mdgriffith$elm_ui$Element$Font$bold,
-							$mdgriffith$elm_ui$Element$Font$color(txtColor)
+							$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill),
+							$mdgriffith$elm_ui$Element$spacing(10)
 						]),
-					$mdgriffith$elm_ui$Element$text('Timeline')),
+					_List_fromArray(
+						[
+							A2(
+							$mdgriffith$elm_ui$Element$el,
+							_List_fromArray(
+								[
+									$author$project$Responsive$isMobile(breakpoint) ? $author$project$ThemeTypography$subtitle : $author$project$ThemeTypography$title,
+									$mdgriffith$elm_ui$Element$Font$bold,
+									$mdgriffith$elm_ui$Element$Font$color(txtColor)
+								]),
+							$mdgriffith$elm_ui$Element$text('Timeline')),
+							$author$project$Pages$Timeline$clusteringIndicator(model.isClustering)
+						])),
 					(model.loading && $elm$core$List$isEmpty(model.clusters)) ? A2(
 					$mdgriffith$elm_ui$Element$el,
 					_List_fromArray(

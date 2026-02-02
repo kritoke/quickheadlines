@@ -136,8 +136,9 @@ class FeedsPageResponse
   property tabs : Array(TabResponse)
   property active_tab : String
   property feeds : Array(FeedResponse)
+  property is_clustering : Bool = false
 
-  def initialize(@tabs : Array(TabResponse), @active_tab : String, @feeds : Array(FeedResponse))
+  def initialize(@tabs : Array(TabResponse), @active_tab : String, @feeds : Array(FeedResponse), @is_clustering : Bool = false)
   end
 end
 
@@ -146,10 +147,11 @@ class TimelinePageResponse
   include JSON::Serializable
 
   property items : Array(TimelineItemResponse)
-  property? has_more : Bool
+  property has_more : Bool
   property total_count : Int32
+  property is_clustering : Bool = false
 
-  def initialize(@items : Array(TimelineItemResponse), @has_more : Bool, @total_count : Int32)
+  def initialize(@items : Array(TimelineItemResponse), @has_more : Bool, @total_count : Int32, @is_clustering : Bool = false)
   end
 end
 
@@ -157,9 +159,10 @@ end
 class VersionResponse
   include JSON::Serializable
 
+  property is_clustering : Bool
   property updated_at : Int64
 
-  def initialize(@updated_at : Int64)
+  def initialize(@updated_at : Int64, @is_clustering : Bool = false)
   end
 end
 
@@ -395,7 +398,8 @@ module Api
     response = FeedsPageResponse.new(
       tabs: tabs_response,
       active_tab: active_tab,
-      feeds: feeds_response
+      feeds: feeds_response,
+      is_clustering: STATE.is_clustering
     )
 
     send_json(context, response)
@@ -506,7 +510,8 @@ module Api
     response = TimelinePageResponse.new(
       items: items_response,
       has_more: has_more,
-      total_count: total_count.to_i32
+      total_count: total_count.to_i32,
+      is_clustering: STATE.is_clustering
     )
 
     send_json(context, response)
@@ -514,7 +519,10 @@ module Api
 
   # Handle /api/version endpoint
   def self.handle_version(context : HTTP::Server::Context)
-    response = VersionResponse.new(updated_at: STATE.updated_at.to_unix_ms)
+    response = VersionResponse.new(
+      updated_at: STATE.updated_at.to_unix_ms,
+      is_clustering: STATE.is_clustering
+    )
     send_json(context, response)
   end
 end

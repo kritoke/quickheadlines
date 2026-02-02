@@ -26,6 +26,7 @@ type alias Model =
     , error : Maybe String
     , loadingFeed : Maybe String
     , insertedIds : Set String
+    , isClustering : Bool
     }
 
 
@@ -38,6 +39,7 @@ init shared =
       , error = Nothing
       , loadingFeed = Nothing
       , insertedIds = Set.empty
+      , isClustering = False
       }
     , fetchFeeds "all" GotFeeds
     )
@@ -61,6 +63,7 @@ update shared msg model =
                 , activeTab = response.activeTab
                 , loading = False
                 , error = Nothing
+                , isClustering = response.isClustering
               }
             , Cmd.none
             )
@@ -203,7 +206,7 @@ tabBar shared model =
                 , spacing 0
                 , paddingEach { top = 0, right = 0, bottom = 0, left = 4 }
                 ]
-                (allTab shared model.activeTab :: List.map (tabButton shared model.activeTab) model.tabs)
+                (allTab shared model.activeTab :: List.map (tabButton shared model.activeTab) model.tabs ++ [ clusteringIndicator model.isClustering ])
             , el
                 [ width fill
                 , height (px 1)
@@ -302,6 +305,24 @@ tabButton shared activeTab tab =
         { onPress = Just (SwitchTab tab)
         , label = text tab
         }
+
+
+clusteringIndicator : Bool -> Element msg
+clusteringIndicator isClustering =
+    if isClustering then
+        row
+            [ paddingXY 16 8
+            , spacing 2
+            , htmlAttribute (Html.Attributes.class "clustering-indicator")
+            , htmlAttribute (Html.Attributes.title "Story clustering in progress...")
+            ]
+            [ el [ htmlAttribute (Html.Attributes.class "clustering-dot") ] (text ".")
+            , el [ htmlAttribute (Html.Attributes.class "clustering-dot") ] (text ".")
+            , el [ htmlAttribute (Html.Attributes.class "clustering-dot") ] (text ".")
+            ]
+
+    else
+        Element.none
 
 
 content : Shared.Model -> Model -> Element Msg

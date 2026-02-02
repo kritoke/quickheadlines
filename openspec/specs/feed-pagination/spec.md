@@ -1,35 +1,12 @@
-# feed-pagination Specification
-
-## Purpose
-TBD
-
-## Requirements
+## MODIFIED Requirements
 
 ### Requirement: Consistent "Load More" Visibility
-The system SHALL only display the "Load More" button for a feed if there are more items available to fetch from the backend.
+The system SHALL only display the "Load More" button for a feed if there are more items available to fetch from the backend. The `total_item_count` returned by the API MUST represent the total count of items stored in the persistent database for that feed, not just the count of items in the current response.
 
-#### Scenario: Feed has more items
-- **WHEN** the number of displayed items is less than the `total_item_count` for that feed
+#### Scenario: Feed has more items in database
+- **WHEN** the number of displayed items is less than the `total_item_count` (total items in DB)
 - **THEN** the "Load More" button MUST be visible
 
-#### Scenario: Feed is exhausted
-- **WHEN** the number of displayed items is equal to or greater than the `total_item_count`
+#### Scenario: Feed is exhausted in database
+- **WHEN** the number of displayed items is equal to or greater than the `total_item_count` (total items in DB)
 - **THEN** the "Load More" button SHALL NOT be visible
-
-### Requirement: Standardized "Load More" Styling
-The "Load More" button SHALL use consistent styling across all views (Home and Timeline).
-
-#### Scenario: Button styling on Home page
-- **WHEN** viewing a feed card on the Home page
-- **THEN** the "Load More" button SHALL have 12px font size, 4px 12px padding, and a background color of `#f1f5f9`
-
-#### Scenario: Button styling on Timeline page
-- **WHEN** viewing the Timeline page
-- **THEN** the "Load More" button SHALL have 12px font size, 4px 12px padding, and a background color of `#f1f5f9`
-
-### Requirement: Case-Insensitive Tab API
-The backend API SHALL handle tab parameters case-insensitively, specifically ensuring the "all" tab works regardless of casing.
-
-#### Scenario: Fetching feeds with "All" tab
-- **WHEN** a request is made to `/api/feeds?tab=All`
-- **THEN** the system SHALL return the same result as `/api/feeds?tab=all`
