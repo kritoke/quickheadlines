@@ -15670,7 +15670,9 @@ var $author$project$Pages$Home_$tabBar = F2(
 				_List_fromArray(
 					[
 						$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill),
-						$mdgriffith$elm_ui$Element$spacing(0)
+						$mdgriffith$elm_ui$Element$spacing(0),
+						$mdgriffith$elm_ui$Element$paddingEach(
+						{bottom: 0, left: 4, right: 0, top: 8})
 					]),
 				_List_fromArray(
 					[
@@ -15679,9 +15681,7 @@ var $author$project$Pages$Home_$tabBar = F2(
 						_List_fromArray(
 							[
 								$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill),
-								$mdgriffith$elm_ui$Element$spacing(0),
-								$mdgriffith$elm_ui$Element$paddingEach(
-								{bottom: 0, left: 4, right: 0, top: 0})
+								$mdgriffith$elm_ui$Element$spacing(0)
 							]),
 						A2(
 							$elm$core$List$cons,
@@ -16446,6 +16446,24 @@ var $author$project$Pages$Timeline$view = F2(
 							$mdgriffith$elm_ui$Element$text('Timeline')),
 							$author$project$Pages$Timeline$clusteringIndicator(model.isClustering)
 						])),
+					A2(
+					$mdgriffith$elm_ui$Element$el,
+					_List_fromArray(
+						[
+							$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill),
+							$mdgriffith$elm_ui$Element$height(
+							$mdgriffith$elm_ui$Element$px(1)),
+							$mdgriffith$elm_ui$Element$Background$color(
+							function () {
+								var _v0 = shared.theme;
+								if (_v0.$ === 'Dark') {
+									return A3($mdgriffith$elm_ui$Element$rgb255, 75, 75, 75);
+								} else {
+									return A3($mdgriffith$elm_ui$Element$rgb255, 209, 213, 219);
+								}
+							}())
+						]),
+					$mdgriffith$elm_ui$Element$none),
 					(model.loading && $elm$core$List$isEmpty(model.clusters)) ? A2(
 					$mdgriffith$elm_ui$Element$el,
 					_List_fromArray(
@@ -16515,8 +16533,6 @@ var $author$project$Pages$Timeline$view = F2(
 								[
 									$mdgriffith$elm_ui$Element$centerX,
 									A2($mdgriffith$elm_ui$Element$paddingXY, 4, 12),
-									$mdgriffith$elm_ui$Element$Background$color(
-									A3($mdgriffith$elm_ui$Element$rgb255, 241, 245, 249)),
 									$mdgriffith$elm_ui$Element$Border$rounded(6),
 									$author$project$ThemeTypography$small,
 									$mdgriffith$elm_ui$Element$Font$medium,

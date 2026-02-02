@@ -206,16 +206,25 @@ view shared model =
         , htmlAttribute (Html.Attributes.attribute "data-timeline-page" "true")
         , htmlAttribute (Html.Attributes.class "auto-hide-scroll")
         ]
-        [ row [ width fill, spacing 10 ]
-            [ el
-                [ (if Responsive.isMobile breakpoint then Ty.subtitle else Ty.title)
-                , Font.bold
-                , Font.color txtColor
-                ]
-                (text "Timeline")
-            , clusteringIndicator model.isClustering
-            ]
-        , if model.loading && List.isEmpty model.clusters then
+         [ row [ width fill, spacing 10 ]
+             [ el
+                 [ (if Responsive.isMobile breakpoint then Ty.subtitle else Ty.title)
+                 , Font.bold
+                 , Font.color txtColor
+                 ]
+                 (text "Timeline")
+             , clusteringIndicator model.isClustering
+             ]
+         , el
+             [ width fill
+             , height (px 1)
+             , Background.color (case shared.theme of
+                 Shared.Dark -> rgb255 75 75 75
+                 Shared.Light -> rgb255 209 213 219
+               )
+             ]
+             Element.none
+         , if model.loading && List.isEmpty model.clusters then
             el
                 [ centerX
                 , centerY
@@ -249,17 +258,16 @@ view shared model =
                     el [ centerX, padding 12, Font.color mutedTxt ] (text "End of feed")
                   else
                     Input.button
-                        [ centerX
-                        , paddingXY 4 12
-                        , Background.color (rgb255 241 245 249)
-                        , Border.rounded 6
-                        , Ty.small
-                        , Font.medium
-                        , htmlAttribute (Html.Attributes.class "qh-load-more")
-                        ]
-                        { onPress = Just LoadMore
-                        , label = text "Load More"
-                        }
+                         [ centerX
+                         , paddingXY 4 12
+                         , Border.rounded 6
+                         , Ty.small
+                         , Font.medium
+                         , htmlAttribute (Html.Attributes.class "qh-load-more")
+                         ]
+                         { onPress = Just LoadMore
+                         , label = text "Load More"
+                         }
                 ]
             ]
 

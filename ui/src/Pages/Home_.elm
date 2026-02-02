@@ -197,16 +197,16 @@ tabBar shared model =
                     Shared.Light ->
                         rgb255 229 231 235
         in
-        Element.column
-            [ Element.width Element.fill
-            , Element.spacing 0
-            ]
-            [ wrappedRow
-                [ width fill
-                , spacing 0
-                , paddingEach { top = 0, right = 0, bottom = 0, left = 4 }
-                ]
-                (allTab shared model.activeTab :: List.map (tabButton shared model.activeTab) model.tabs ++ [ clusteringIndicator model.isClustering ])
+         Element.column
+             [ Element.width Element.fill
+             , Element.spacing 0
+             , Element.paddingEach { top = 8, right = 0, bottom = 0, left = 4 }
+             ]
+             [ wrappedRow
+                 [ width fill
+                 , spacing 0
+                 ]
+                 (allTab shared model.activeTab :: List.map (tabButton shared model.activeTab) model.tabs ++ [ clusteringIndicator model.isClustering ])
             , el
                 [ width fill
                 , height (px 1)
