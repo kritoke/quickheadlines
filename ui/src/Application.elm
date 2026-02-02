@@ -227,17 +227,24 @@ view model =
                     ( "Timeline"
                     , Element.map TimelineMsg timelineContent
                     )
-      in
-      let
-          isTimeline =
-              case model.page of
-                  Timeline -> True
-                  _ -> False
-      in
-      Browser.Document title
-           [ Layout.layout { theme = theme, windowWidth = model.shared.windowWidth, header = header, footer = footerView model.shared, main = content, isTimeline = isTimeline }
-              |> Element.layout []
-          ]
+
+        isTimeline =
+            case model.page of
+                Timeline -> True
+                _ -> False
+
+        pageDataAttr =
+            if isTimeline then
+                htmlAttribute (HA.attribute "data-timeline-page" "true")
+            else
+                htmlAttribute (HA.attribute "data-page" "home")
+
+        layoutContent =
+            Layout.layout { theme = theme, windowWidth = model.shared.windowWidth, header = header, footer = footerView model.shared, main = content, isTimeline = isTimeline }
+    in
+    Browser.Document title
+        [ Element.layout [ pageDataAttr ] layoutContent
+        ]
 
 
 subscriptions : Model -> Sub Msg

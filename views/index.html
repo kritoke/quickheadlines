@@ -6,8 +6,17 @@
   <title>QuickHeadlines</title>
   <style>
     * { box-sizing: border-box; }
-    body { margin: 0; padding: 0; background: #ffffff; }
+    html, body { margin: 0; padding: 0; height: 100%; }
     #app { width: 100vw; min-height: 100vh; background: #ffffff; }
+    /* Timeline page: app-like scrolling */
+    [data-timeline-page="true"] html, [data-timeline-page="true"] body { height: 100%; overflow: hidden; }
+    [data-timeline-page="true"] { height: 100%; position: relative; overflow: hidden; }
+    [data-timeline-page="true"] [data-semantic="layout-container"] { position: relative; height: 100%; }
+    [data-timeline-page="true"] [data-semantic="main-header"] { position: relative; height: auto; }
+    [data-timeline-page="true"] [data-semantic="main-content-scroll"] { position: absolute; top: 80px; bottom: 0; left: 0; right: 0; overflow-y: auto; }
+    [data-timeline-page="true"] [data-semantic="main-footer"] { position: relative; height: auto; }
+    /* Home page: normal browser scrolling */
+    [data-page="home"] { overflow-y: auto; height: auto; }
     .feed-header { transition: background-color 0.3s ease, color 0.3s ease; }
     .feed-header { transition: background-color 0.3s ease, color 0.3s ease; }
     [data-timeline-header="true"] {
@@ -26,18 +35,18 @@
       color: inherit !important;
       text-decoration: underline !important;
     }
-    [data-timeline-item="true"] {
-      background-color: transparent !important;
-      background: transparent !important;
-    }
-    [data-timeline-item="true"] a, 
-    [data-timeline-item="true"] el, 
-    [data-timeline-item="true"] div,
-    [data-timeline-item="true"] span {
-        text-decoration: none;
+     [data-timeline-item="true"] {
+       background-color: transparent !important;
+       background: transparent !important;
      }
-    [data-timeline-item="true"] a {
-        text-decoration: underline !important;
+     [data-timeline-item="true"] a, 
+     [data-timeline-item="true"] el, 
+     [data-timeline-item="true"] div,
+     [data-timeline-item="true"] span {
+         text-decoration: none;
+      }
+     [data-timeline-item="true"] a {
+       text-decoration: underline !important;
      }
      /* Ensure links in timeline are visible - override any default browser styles */
      [data-timeline-page="true"] a {
@@ -361,14 +370,66 @@
             });
           }
           
-          if (app.ports && app.ports.saveCurrentPage) {
-            app.ports.saveCurrentPage.subscribe(function(page) {
-              console.log('Saving current page:', page);
-              localStorage.setItem('quickheadlines-page', page);
-            });
-          }
+           if (app.ports && app.ports.saveCurrentPage) {
+             app.ports.saveCurrentPage.subscribe(function(page) {
+               console.log('Saving current page:', page);
+               localStorage.setItem('quickheadlines-page', page);
+             });
+           }
 
-         window.addEventListener('resize', function() {
+          // Fix timeline layout using absolute positioning
+          function fixTimelineLayout() {
+            const timeline = document.querySelector('[data-timeline-page="true"]');
+            if (!timeline) return;
+            
+            const layout = timeline.querySelector('[data-semantic="layout-container"]');
+            const header = timeline.querySelector('[data-semantic="main-header"]');
+            const main = timeline.querySelector('[data-semantic="main-content-scroll"]');
+            const footer = timeline.querySelector('[data-semantic="main-footer"]');
+            
+            if (!layout || !header || !main) return;
+            
+            // Get actual content height of header (not stretched by flex)
+            const headerContent = header.querySelector('div');
+            const headerHeight = headerContent ? headerContent.offsetHeight : 80;
+            const footerHeight = footer ? footer.offsetHeight : 32;
+            
+            // Fix header height
+            header.style.height = headerHeight + 'px';
+            header.style.overflow = 'hidden';
+            
+            // Use absolute positioning with explicit height for main content
+            const viewportHeight = window.innerHeight;
+            const mainHeight = viewportHeight - headerHeight - footerHeight;
+            
+            main.style.position = 'absolute';
+            main.style.top = headerHeight + 'px';
+            main.style.bottom = 'auto';
+            main.style.left = '0';
+            main.style.right = '0';
+            main.style.height = mainHeight + 'px';
+            main.style.width = '100%';
+            main.style.overflowY = 'auto';
+            
+            // Fix the first child to expand to full content height
+            const mainFirstChild = main.firstElementChild;
+            if (mainFirstChild) {
+              mainFirstChild.style.flex = 'none';
+              mainFirstChild.style.height = 'auto';
+              mainFirstChild.style.minHeight = '100%';
+              // The child should expand to contain all content
+              mainFirstChild.style.overflow = 'visible';
+            }
+            
+            console.log('Fixed: header=' + headerHeight + ', footer=' + footerHeight + ', mainHeight=' + mainHeight + 'px');
+          }
+          
+          // Run after Elm renders
+          setTimeout(fixTimelineLayout, 100);
+          setTimeout(fixTimelineLayout, 500);
+          setTimeout(fixTimelineLayout, 1500);
+
+          window.addEventListener('resize', function() {
            // Handle resize if needed
          });
 

@@ -7874,6 +7874,14 @@ var $elm$browser$Browser$Document = F2(
 	function (title, body) {
 		return {body: body, title: title};
 	});
+var $elm$virtual_dom$VirtualDom$attribute = F2(
+	function (key, value) {
+		return A2(
+			_VirtualDom_attribute,
+			_VirtualDom_noOnOrFormAction(key),
+			_VirtualDom_noJavaScriptOrHtmlUri(value));
+	});
+var $elm$html$Html$Attributes$attribute = $elm$virtual_dom$VirtualDom$attribute;
 var $mdgriffith$elm_ui$Internal$Model$Colored = F3(
 	function (a, b, c) {
 		return {$: 'Colored', a: a, b: b, c: c};
@@ -11809,13 +11817,6 @@ var $mdgriffith$elm_ui$Internal$Model$alignYName = function (align) {
 			return $mdgriffith$elm_ui$Internal$Style$classes.alignedVertically + (' ' + $mdgriffith$elm_ui$Internal$Style$classes.alignCenterY);
 	}
 };
-var $elm$virtual_dom$VirtualDom$attribute = F2(
-	function (key, value) {
-		return A2(
-			_VirtualDom_attribute,
-			_VirtualDom_noOnOrFormAction(key),
-			_VirtualDom_noJavaScriptOrHtmlUri(value));
-	});
 var $mdgriffith$elm_ui$Internal$Model$FullTransform = F4(
 	function (a, b, c, d) {
 		return {$: 'FullTransform', a: a, b: b, c: c, d: d};
@@ -14231,7 +14232,6 @@ var $mdgriffith$elm_ui$Internal$Model$Main = {$: 'Main'};
 var $mdgriffith$elm_ui$Element$Region$mainContent = $mdgriffith$elm_ui$Internal$Model$Describe($mdgriffith$elm_ui$Internal$Model$Main);
 var $mdgriffith$elm_ui$Internal$Model$Navigation = {$: 'Navigation'};
 var $mdgriffith$elm_ui$Element$Region$navigation = $mdgriffith$elm_ui$Internal$Model$Describe($mdgriffith$elm_ui$Internal$Model$Navigation);
-var $elm$html$Html$Attributes$attribute = $elm$virtual_dom$VirtualDom$attribute;
 var $author$project$Theme$semantic = function (name) {
 	return $mdgriffith$elm_ui$Element$htmlAttribute(
 		A2($elm$html$Html$Attributes$attribute, 'data-semantic', name));
@@ -14283,7 +14283,9 @@ var $author$project$Layouts$Shared$layout = function (_v0) {
 				$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill),
 				$mdgriffith$elm_ui$Element$height($mdgriffith$elm_ui$Element$fill),
 				$mdgriffith$elm_ui$Element$Background$color(bg),
-				$author$project$Theme$semantic('layout-container')
+				$author$project$Theme$semantic('layout-container'),
+				$mdgriffith$elm_ui$Element$htmlAttribute(
+				A2($elm$html$Html$Attributes$style, 'min-height', '0'))
 			]),
 		_List_fromArray(
 			[
@@ -14292,6 +14294,7 @@ var $author$project$Layouts$Shared$layout = function (_v0) {
 				_List_fromArray(
 					[
 						$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill),
+						$mdgriffith$elm_ui$Element$height($mdgriffith$elm_ui$Element$fill),
 						$mdgriffith$elm_ui$Element$htmlAttribute(
 						A2($elm$html$Html$Attributes$style, 'max-width', containerWidth)),
 						$mdgriffith$elm_ui$Element$htmlAttribute(
@@ -14310,19 +14313,17 @@ var $author$project$Layouts$Shared$layout = function (_v0) {
 						{bottom: 2, left: 0, right: 0, top: 0}),
 						$mdgriffith$elm_ui$Element$Border$color(borderColor),
 						$mdgriffith$elm_ui$Element$Region$navigation,
-						$author$project$Theme$semantic('main-header'),
-						isTimeline ? $mdgriffith$elm_ui$Element$htmlAttribute(
-						A2($elm$html$Html$Attributes$style, 'position', 'relative')) : $mdgriffith$elm_ui$Element$htmlAttribute(
-						A2($elm$html$Html$Attributes$style, 'position', 'static'))
+						$author$project$Theme$semantic('main-header')
 					]),
 				_List_fromArray(
 					[
 						header,
 						isTimeline ? A2(
-						$mdgriffith$elm_ui$Element$el,
+						$mdgriffith$elm_ui$Element$column,
 						_List_fromArray(
 							[
 								$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill),
+								$mdgriffith$elm_ui$Element$height($mdgriffith$elm_ui$Element$fill),
 								$mdgriffith$elm_ui$Element$htmlAttribute(
 								$elm$html$Html$Attributes$id('main-content')),
 								$mdgriffith$elm_ui$Element$Region$mainContent,
@@ -14330,15 +14331,7 @@ var $author$project$Layouts$Shared$layout = function (_v0) {
 								$mdgriffith$elm_ui$Element$htmlAttribute(
 								A2($elm$html$Html$Attributes$style, 'overflow-y', 'auto')),
 								$mdgriffith$elm_ui$Element$htmlAttribute(
-								A2($elm$html$Html$Attributes$style, 'position', 'absolute')),
-								$mdgriffith$elm_ui$Element$htmlAttribute(
-								A2($elm$html$Html$Attributes$style, 'top', '80px')),
-								$mdgriffith$elm_ui$Element$htmlAttribute(
-								A2($elm$html$Html$Attributes$style, 'bottom', '0')),
-								$mdgriffith$elm_ui$Element$htmlAttribute(
-								A2($elm$html$Html$Attributes$style, 'left', '0')),
-								$mdgriffith$elm_ui$Element$htmlAttribute(
-								A2($elm$html$Html$Attributes$style, 'right', '0')),
+								A2($elm$html$Html$Attributes$style, 'min-height', '0')),
 								function () {
 								switch (breakpoint.$) {
 									case 'VeryNarrowBreakpoint':
@@ -14350,7 +14343,8 @@ var $author$project$Layouts$Shared$layout = function (_v0) {
 								}
 							}()
 							]),
-						main) : A2(
+						_List_fromArray(
+							[main])) : A2(
 						$mdgriffith$elm_ui$Element$el,
 						_List_fromArray(
 							[
@@ -14371,7 +14365,13 @@ var $author$project$Layouts$Shared$layout = function (_v0) {
 							}()
 							]),
 						main),
-						footer
+						A2(
+						$mdgriffith$elm_ui$Element$el,
+						_List_fromArray(
+							[
+								$author$project$Theme$semantic('main-footer')
+							]),
+						footer)
 					]))
 			]));
 };
@@ -16528,6 +16528,17 @@ var $author$project$Pages$Timeline$view = F2(
 var $author$project$Application$view = function (model) {
 	var shared = model.shared;
 	var theme = shared.theme;
+	var isTimeline = function () {
+		var _v2 = model.page;
+		if (_v2.$ === 'Timeline') {
+			return true;
+		} else {
+			return false;
+		}
+	}();
+	var pageDataAttr = isTimeline ? $mdgriffith$elm_ui$Element$htmlAttribute(
+		A2($elm$html$Html$Attributes$attribute, 'data-timeline-page', 'true')) : $mdgriffith$elm_ui$Element$htmlAttribute(
+		A2($elm$html$Html$Attributes$attribute, 'data-page', 'home'));
 	var header = $author$project$Application$headerView(model);
 	var _v0 = function () {
 		var _v1 = model.page;
@@ -16545,14 +16556,15 @@ var $author$project$Application$view = function (model) {
 	}();
 	var title = _v0.a;
 	var content = _v0.b;
-	var isTimeline = function () {
-		var _v2 = model.page;
-		if (_v2.$ === 'Timeline') {
-			return true;
-		} else {
-			return false;
-		}
-	}();
+	var layoutContent = $author$project$Layouts$Shared$layout(
+		{
+			footer: $author$project$Application$footerView(model.shared),
+			header: header,
+			isTimeline: isTimeline,
+			main: content,
+			theme: theme,
+			windowWidth: model.shared.windowWidth
+		});
 	return A2(
 		$elm$browser$Browser$Document,
 		title,
@@ -16560,16 +16572,9 @@ var $author$project$Application$view = function (model) {
 			[
 				A2(
 				$mdgriffith$elm_ui$Element$layout,
-				_List_Nil,
-				$author$project$Layouts$Shared$layout(
-					{
-						footer: $author$project$Application$footerView(model.shared),
-						header: header,
-						isTimeline: isTimeline,
-						main: content,
-						theme: theme,
-						windowWidth: model.shared.windowWidth
-					}))
+				_List_fromArray(
+					[pageDataAttr]),
+				layoutContent)
 			]));
 };
 var $author$project$Main$main = $elm$browser$Browser$application(

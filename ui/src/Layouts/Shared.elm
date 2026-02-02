@@ -70,9 +70,11 @@ layout { theme, windowWidth, header, footer, main, isTimeline } =
         , Element.height Element.fill
         , Background.color bg
         , semantic "layout-container"
+        , Element.htmlAttribute (Html.Attributes.style "min-height" "0")
         ]
         [ Element.column
             [ width fill
+            , Element.height Element.fill
             , Element.htmlAttribute (Html.Attributes.style "max-width" containerWidth)
             , Element.htmlAttribute (Html.Attributes.style "margin" "0 auto")
             , Element.htmlAttribute (Html.Attributes.style "padding-left" (String.fromInt sidePadding ++ "px"))
@@ -81,21 +83,17 @@ layout { theme, windowWidth, header, footer, main, isTimeline } =
             , Border.color borderColor
             , Region.navigation
             , semantic "main-header"
-            , if isTimeline then Element.htmlAttribute (Html.Attributes.style "position" "relative") else Element.htmlAttribute (Html.Attributes.style "position" "static")
             ]
             [ header
             , if isTimeline then
-                el
+                Element.column
                     [ width fill
+                    , Element.height Element.fill
                     , htmlAttribute (Html.Attributes.id "main-content")
                     , Region.mainContent
                     , semantic "main-content-scroll"
                     , Element.htmlAttribute (Html.Attributes.style "overflow-y" "auto")
-                    , Element.htmlAttribute (Html.Attributes.style "position" "absolute")
-                    , Element.htmlAttribute (Html.Attributes.style "top" "80px")
-                    , Element.htmlAttribute (Html.Attributes.style "bottom" "0")
-                    , Element.htmlAttribute (Html.Attributes.style "left" "0")
-                    , Element.htmlAttribute (Html.Attributes.style "right" "0")
+                    , Element.htmlAttribute (Html.Attributes.style "min-height" "0")
                     , case breakpoint of
                         VeryNarrowBreakpoint ->
                             Element.padding 8
@@ -106,7 +104,7 @@ layout { theme, windowWidth, header, footer, main, isTimeline } =
                         _ ->
                             Element.padding 0
                     ]
-                    main
+                    [ main ]
               else
                 el
                     [ width fill
@@ -124,7 +122,7 @@ layout { theme, windowWidth, header, footer, main, isTimeline } =
                             Element.padding 0
                     ]
                     main
-            , footer
+            , el [ semantic "main-footer" ] footer
             ]
         ]
 
