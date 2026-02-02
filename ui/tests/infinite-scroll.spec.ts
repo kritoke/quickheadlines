@@ -55,26 +55,26 @@ test.describe('Infinite Scroll', () => {
   });
 
   test('more items load on infinite scroll', async ({ page }) => {
-    // Get initial cluster count
-    const initialClusters = await page.locator('[data-timeline-page="true"] > div:nth-child(2) > div').count();
-    console.log('Initial clusters:', initialClusters);
+    // Get initial item count
+    const initialItems = await page.locator('[data-timeline-item="true"]').count();
+    console.log('Initial items:', initialItems);
 
-    // Scroll down multiple times
-    for (let i = 0; i < 3; i++) {
+    // Scroll the inner column inside #main-content (the actual scrollable element)
+    for (let i = 0; i < 5; i++) {
       await page.evaluate(() => {
-        const timeline = document.querySelector('[data-timeline-page="true"]');
-        if (timeline) {
-          (timeline as any).scrollTop += (timeline as any).clientHeight;
+        const mainContent = document.getElementById('main-content');
+        if (mainContent && mainContent.firstElementChild) {
+          (mainContent.firstElementChild as HTMLElement).scrollTop = (mainContent.firstElementChild as HTMLElement).scrollHeight;
         }
       });
-      await page.waitForTimeout(500);
+      await page.waitForTimeout(800);
     }
 
-    // Get final cluster count
-    const finalClusters = await page.locator('[data-timeline-page="true"] > div:nth-child(2) > div').count();
-    console.log('Final clusters:', finalClusters);
+    // Get final item count
+    const finalItems = await page.locator('[data-timeline-item="true"]').count();
+    console.log('Final items:', finalItems);
 
     // Should have more items if infinite scroll worked
-    expect(finalClusters).toBeGreaterThanOrEqual(initialClusters);
+    expect(finalItems).toBeGreaterThan(initialItems);
   });
 });

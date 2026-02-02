@@ -6,10 +6,26 @@
   <title>QuickHeadlines</title>
   <style>
     * { box-sizing: border-box; }
-    /* Default to a light background so the app's theme controls the look.
-       Some debug iterations forced a dark background here; restore light default. */
-    body { margin: 0; padding: 0; background: #ffffff; }
-    #app { width: 100vw; min-height: 100vh; background: #ffffff; }
+    /* App-like scrolling: constrain html/body to viewport, prevent browser scroll */
+    html, body {
+      height: 100%;
+      overflow: hidden;
+      margin: 0;
+      padding: 0;
+    }
+    /* Constrain Elm root div to fill viewport */
+    body > div:not([id]) {
+      height: 100% !important;
+      max-height: 100% !important;
+    }
+    #app {
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      background: #ffffff;
+    }
     .feed-header { transition: background-color 0.3s ease, color 0.3s ease; }
     [data-timeline-header="true"] {
       background-color: transparent !important;
@@ -351,18 +367,19 @@
         window.history.replaceState(null, '', savedPage);
       }
 
-      try {
-         console.log('Initializing Elm...');
-          var app = Elm.Main.init({
-            node: appElement,
-            flags: {
-              width: window.innerWidth,
-              height: window.innerHeight,
-              prefersDark: prefersDark,
-              timestamp: Date.now()
-            }
-          });
-         console.log('Elm initialized successfully');
+       try {
+          console.log('Initializing Elm...');
+           var app = Elm.Main.init({
+             node: appElement,
+             flags: {
+               width: window.innerWidth,
+               height: window.innerHeight,
+               prefersDark: prefersDark,
+               timestamp: Date.now()
+             }
+           });
+          console.log('Elm initialized successfully');
+          window.app = app; // Expose for debugging
 
           if (app.ports && app.ports.saveTheme) {
             app.ports.saveTheme.subscribe(function(theme) {
@@ -424,18 +441,47 @@
                 console.log('Selected IntersectionObserver root:', scrollRoot);
 
                 // Use rootMargin to trigger observer when element is within 500px of viewport/container bottom
+                // Only trigger near-bottom when sentinel is actually visible AND content is scrolled near bottom
                 sentinelObserver = new IntersectionObserver((entries) => {
                   entries.forEach(entry => {
-                    console.log('Intersection event:', { isIntersecting: entry.isIntersecting, target: entry.target.id, ratio: entry.intersectionRatio });
+                    // Only consider it "near bottom" if the sentinel is actually intersecting
+                    // and the scroll position is near the bottom
                     if (entry.isIntersecting) {
-                      console.log('Near bottom detected - sending true');
-                      try { app.ports.onNearBottom.send(true); } catch(e) { console.warn('onNearBottom.send error', e); }
+                      // Use the inner scrollable container for scroll position
+                      const scrollContainer = document.querySelector('#main-content > div');
+                      if (scrollContainer) {
+                        try {
+                          const scrollTop = scrollContainer.scrollTop;
+                          const scrollHeight = scrollContainer.scrollHeight;
+                          const clientHeight = scrollContainer.clientHeight;
+                          const maxScroll = scrollHeight - clientHeight;
+                          const isScrolledNearBottom = maxScroll > 0 && scrollTop >= maxScroll - 600;
+
+                          console.log('Intersection event:', {
+                            isIntersecting: entry.isIntersecting,
+                            scrollTop: scrollTop,
+                            scrollHeight: scrollHeight,
+                            clientHeight: clientHeight,
+                            maxScroll: maxScroll,
+                            isScrolledNearBottom: isScrolledNearBottom
+                          });
+
+                          if (isScrolledNearBottom) {
+                            console.log('Near bottom detected - sending true');
+                            try { app.ports.onNearBottom.send(true); } catch(e) { console.warn('onNearBottom.send error', e); }
+                          } else {
+                            console.log('Sentinel visible but not scrolled near bottom, scrollTop:', scrollTop, 'maxScroll:', maxScroll);
+                          }
+                        } catch(e) {
+                          console.warn('Error checking scroll position:', e);
+                        }
+                      }
                     } else {
-                      console.log('No longer near bottom - sending false');
+                      console.log('Sentinel not intersecting - sending false');
                       try { app.ports.onNearBottom.send(false); } catch(e) { console.warn('onNearBottom.send error', e); }
                     }
                   });
-                 }, { threshold: 0, root: scrollRoot, rootMargin: '500px' });
+                 }, { threshold: 0, root: null, rootMargin: '0px' });
 
                 sentinelObserver.observe(sentinel);
                 // Fallback: if IntersectionObserver doesn't report expected values in

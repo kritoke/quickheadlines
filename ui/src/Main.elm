@@ -15,7 +15,7 @@ main =
         { init = Application.init
         , view = Application.view
         , update = Application.update
-        , subscriptions = subscriptions
+        , subscriptions = Application.subscriptions
         , onUrlChange = Application.UrlChanged
         , onUrlRequest = handleUrlRequest
         }

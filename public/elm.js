@@ -6665,10 +6665,510 @@ var $author$project$Application$init = F3(
 						A2($elm$core$Platform$Cmd$map, $author$project$Application$TimelineMsg, timelineCmd)
 					])));
 	});
+var $author$project$Pages$Timeline$NearBottom = function (a) {
+	return {$: 'NearBottom', a: a};
+};
+var $author$project$Application$SharedMsg = function (a) {
+	return {$: 'SharedMsg', a: a};
+};
+var $author$project$Application$SwitchTab = function (a) {
+	return {$: 'SwitchTab', a: a};
+};
+var $author$project$Shared$WindowResized = F2(
+	function (a, b) {
+		return {$: 'WindowResized', a: a, b: b};
+	});
 var $elm$core$Platform$Sub$batch = _Platform_batch;
+var $elm$time$Time$Every = F2(
+	function (a, b) {
+		return {$: 'Every', a: a, b: b};
+	});
+var $elm$time$Time$State = F2(
+	function (taggers, processes) {
+		return {processes: processes, taggers: taggers};
+	});
+var $elm$time$Time$init = $elm$core$Task$succeed(
+	A2($elm$time$Time$State, $elm$core$Dict$empty, $elm$core$Dict$empty));
+var $elm$time$Time$addMySub = F2(
+	function (_v0, state) {
+		var interval = _v0.a;
+		var tagger = _v0.b;
+		var _v1 = A2($elm$core$Dict$get, interval, state);
+		if (_v1.$ === 'Nothing') {
+			return A3(
+				$elm$core$Dict$insert,
+				interval,
+				_List_fromArray(
+					[tagger]),
+				state);
+		} else {
+			var taggers = _v1.a;
+			return A3(
+				$elm$core$Dict$insert,
+				interval,
+				A2($elm$core$List$cons, tagger, taggers),
+				state);
+		}
+	});
+var $elm$core$Dict$foldl = F3(
+	function (func, acc, dict) {
+		foldl:
+		while (true) {
+			if (dict.$ === 'RBEmpty_elm_builtin') {
+				return acc;
+			} else {
+				var key = dict.b;
+				var value = dict.c;
+				var left = dict.d;
+				var right = dict.e;
+				var $temp$func = func,
+					$temp$acc = A3(
+					func,
+					key,
+					value,
+					A3($elm$core$Dict$foldl, func, acc, left)),
+					$temp$dict = right;
+				func = $temp$func;
+				acc = $temp$acc;
+				dict = $temp$dict;
+				continue foldl;
+			}
+		}
+	});
+var $elm$core$Dict$merge = F6(
+	function (leftStep, bothStep, rightStep, leftDict, rightDict, initialResult) {
+		var stepState = F3(
+			function (rKey, rValue, _v0) {
+				stepState:
+				while (true) {
+					var list = _v0.a;
+					var result = _v0.b;
+					if (!list.b) {
+						return _Utils_Tuple2(
+							list,
+							A3(rightStep, rKey, rValue, result));
+					} else {
+						var _v2 = list.a;
+						var lKey = _v2.a;
+						var lValue = _v2.b;
+						var rest = list.b;
+						if (_Utils_cmp(lKey, rKey) < 0) {
+							var $temp$rKey = rKey,
+								$temp$rValue = rValue,
+								$temp$_v0 = _Utils_Tuple2(
+								rest,
+								A3(leftStep, lKey, lValue, result));
+							rKey = $temp$rKey;
+							rValue = $temp$rValue;
+							_v0 = $temp$_v0;
+							continue stepState;
+						} else {
+							if (_Utils_cmp(lKey, rKey) > 0) {
+								return _Utils_Tuple2(
+									list,
+									A3(rightStep, rKey, rValue, result));
+							} else {
+								return _Utils_Tuple2(
+									rest,
+									A4(bothStep, lKey, lValue, rValue, result));
+							}
+						}
+					}
+				}
+			});
+		var _v3 = A3(
+			$elm$core$Dict$foldl,
+			stepState,
+			_Utils_Tuple2(
+				$elm$core$Dict$toList(leftDict),
+				initialResult),
+			rightDict);
+		var leftovers = _v3.a;
+		var intermediateResult = _v3.b;
+		return A3(
+			$elm$core$List$foldl,
+			F2(
+				function (_v4, result) {
+					var k = _v4.a;
+					var v = _v4.b;
+					return A3(leftStep, k, v, result);
+				}),
+			intermediateResult,
+			leftovers);
+	});
+var $elm$time$Time$setInterval = _Time_setInterval;
+var $elm$time$Time$spawnHelp = F3(
+	function (router, intervals, processes) {
+		if (!intervals.b) {
+			return $elm$core$Task$succeed(processes);
+		} else {
+			var interval = intervals.a;
+			var rest = intervals.b;
+			var spawnTimer = $elm$core$Process$spawn(
+				A2(
+					$elm$time$Time$setInterval,
+					interval,
+					A2($elm$core$Platform$sendToSelf, router, interval)));
+			var spawnRest = function (id) {
+				return A3(
+					$elm$time$Time$spawnHelp,
+					router,
+					rest,
+					A3($elm$core$Dict$insert, interval, id, processes));
+			};
+			return A2($elm$core$Task$andThen, spawnRest, spawnTimer);
+		}
+	});
+var $elm$time$Time$onEffects = F3(
+	function (router, subs, _v0) {
+		var processes = _v0.processes;
+		var rightStep = F3(
+			function (_v6, id, _v7) {
+				var spawns = _v7.a;
+				var existing = _v7.b;
+				var kills = _v7.c;
+				return _Utils_Tuple3(
+					spawns,
+					existing,
+					A2(
+						$elm$core$Task$andThen,
+						function (_v5) {
+							return kills;
+						},
+						$elm$core$Process$kill(id)));
+			});
+		var newTaggers = A3($elm$core$List$foldl, $elm$time$Time$addMySub, $elm$core$Dict$empty, subs);
+		var leftStep = F3(
+			function (interval, taggers, _v4) {
+				var spawns = _v4.a;
+				var existing = _v4.b;
+				var kills = _v4.c;
+				return _Utils_Tuple3(
+					A2($elm$core$List$cons, interval, spawns),
+					existing,
+					kills);
+			});
+		var bothStep = F4(
+			function (interval, taggers, id, _v3) {
+				var spawns = _v3.a;
+				var existing = _v3.b;
+				var kills = _v3.c;
+				return _Utils_Tuple3(
+					spawns,
+					A3($elm$core$Dict$insert, interval, id, existing),
+					kills);
+			});
+		var _v1 = A6(
+			$elm$core$Dict$merge,
+			leftStep,
+			bothStep,
+			rightStep,
+			newTaggers,
+			processes,
+			_Utils_Tuple3(
+				_List_Nil,
+				$elm$core$Dict$empty,
+				$elm$core$Task$succeed(_Utils_Tuple0)));
+		var spawnList = _v1.a;
+		var existingDict = _v1.b;
+		var killTask = _v1.c;
+		return A2(
+			$elm$core$Task$andThen,
+			function (newProcesses) {
+				return $elm$core$Task$succeed(
+					A2($elm$time$Time$State, newTaggers, newProcesses));
+			},
+			A2(
+				$elm$core$Task$andThen,
+				function (_v2) {
+					return A3($elm$time$Time$spawnHelp, router, spawnList, existingDict);
+				},
+				killTask));
+	});
+var $elm$time$Time$onSelfMsg = F3(
+	function (router, interval, state) {
+		var _v0 = A2($elm$core$Dict$get, interval, state.taggers);
+		if (_v0.$ === 'Nothing') {
+			return $elm$core$Task$succeed(state);
+		} else {
+			var taggers = _v0.a;
+			var tellTaggers = function (time) {
+				return $elm$core$Task$sequence(
+					A2(
+						$elm$core$List$map,
+						function (tagger) {
+							return A2(
+								$elm$core$Platform$sendToApp,
+								router,
+								tagger(time));
+						},
+						taggers));
+			};
+			return A2(
+				$elm$core$Task$andThen,
+				function (_v1) {
+					return $elm$core$Task$succeed(state);
+				},
+				A2($elm$core$Task$andThen, tellTaggers, $elm$time$Time$now));
+		}
+	});
+var $elm$core$Basics$composeL = F3(
+	function (g, f, x) {
+		return g(
+			f(x));
+	});
+var $elm$time$Time$subMap = F2(
+	function (f, _v0) {
+		var interval = _v0.a;
+		var tagger = _v0.b;
+		return A2(
+			$elm$time$Time$Every,
+			interval,
+			A2($elm$core$Basics$composeL, f, tagger));
+	});
+_Platform_effectManagers['Time'] = _Platform_createManager($elm$time$Time$init, $elm$time$Time$onEffects, $elm$time$Time$onSelfMsg, 0, $elm$time$Time$subMap);
+var $elm$time$Time$subscription = _Platform_leaf('Time');
+var $elm$time$Time$every = F2(
+	function (interval, tagger) {
+		return $elm$time$Time$subscription(
+			A2($elm$time$Time$Every, interval, tagger));
+	});
+var $elm$core$Platform$Sub$map = _Platform_map;
 var $elm$core$Platform$Sub$none = $elm$core$Platform$Sub$batch(_List_Nil);
-var $author$project$Main$subscriptions = function (model) {
+var $author$project$Application$onNearBottom = _Platform_incomingPort('onNearBottom', $elm$json$Json$Decode$bool);
+var $elm$browser$Browser$Events$Window = {$: 'Window'};
+var $elm$browser$Browser$Events$MySub = F3(
+	function (a, b, c) {
+		return {$: 'MySub', a: a, b: b, c: c};
+	});
+var $elm$browser$Browser$Events$State = F2(
+	function (subs, pids) {
+		return {pids: pids, subs: subs};
+	});
+var $elm$browser$Browser$Events$init = $elm$core$Task$succeed(
+	A2($elm$browser$Browser$Events$State, _List_Nil, $elm$core$Dict$empty));
+var $elm$browser$Browser$Events$nodeToKey = function (node) {
+	if (node.$ === 'Document') {
+		return 'd_';
+	} else {
+		return 'w_';
+	}
+};
+var $elm$browser$Browser$Events$addKey = function (sub) {
+	var node = sub.a;
+	var name = sub.b;
+	return _Utils_Tuple2(
+		_Utils_ap(
+			$elm$browser$Browser$Events$nodeToKey(node),
+			name),
+		sub);
+};
+var $elm$core$Dict$fromList = function (assocs) {
+	return A3(
+		$elm$core$List$foldl,
+		F2(
+			function (_v0, dict) {
+				var key = _v0.a;
+				var value = _v0.b;
+				return A3($elm$core$Dict$insert, key, value, dict);
+			}),
+		$elm$core$Dict$empty,
+		assocs);
+};
+var $elm$browser$Browser$Events$Event = F2(
+	function (key, event) {
+		return {event: event, key: key};
+	});
+var $elm$browser$Browser$Events$spawn = F3(
+	function (router, key, _v0) {
+		var node = _v0.a;
+		var name = _v0.b;
+		var actualNode = function () {
+			if (node.$ === 'Document') {
+				return _Browser_doc;
+			} else {
+				return _Browser_window;
+			}
+		}();
+		return A2(
+			$elm$core$Task$map,
+			function (value) {
+				return _Utils_Tuple2(key, value);
+			},
+			A3(
+				_Browser_on,
+				actualNode,
+				name,
+				function (event) {
+					return A2(
+						$elm$core$Platform$sendToSelf,
+						router,
+						A2($elm$browser$Browser$Events$Event, key, event));
+				}));
+	});
+var $elm$core$Dict$union = F2(
+	function (t1, t2) {
+		return A3($elm$core$Dict$foldl, $elm$core$Dict$insert, t2, t1);
+	});
+var $elm$browser$Browser$Events$onEffects = F3(
+	function (router, subs, state) {
+		var stepRight = F3(
+			function (key, sub, _v6) {
+				var deads = _v6.a;
+				var lives = _v6.b;
+				var news = _v6.c;
+				return _Utils_Tuple3(
+					deads,
+					lives,
+					A2(
+						$elm$core$List$cons,
+						A3($elm$browser$Browser$Events$spawn, router, key, sub),
+						news));
+			});
+		var stepLeft = F3(
+			function (_v4, pid, _v5) {
+				var deads = _v5.a;
+				var lives = _v5.b;
+				var news = _v5.c;
+				return _Utils_Tuple3(
+					A2($elm$core$List$cons, pid, deads),
+					lives,
+					news);
+			});
+		var stepBoth = F4(
+			function (key, pid, _v2, _v3) {
+				var deads = _v3.a;
+				var lives = _v3.b;
+				var news = _v3.c;
+				return _Utils_Tuple3(
+					deads,
+					A3($elm$core$Dict$insert, key, pid, lives),
+					news);
+			});
+		var newSubs = A2($elm$core$List$map, $elm$browser$Browser$Events$addKey, subs);
+		var _v0 = A6(
+			$elm$core$Dict$merge,
+			stepLeft,
+			stepBoth,
+			stepRight,
+			state.pids,
+			$elm$core$Dict$fromList(newSubs),
+			_Utils_Tuple3(_List_Nil, $elm$core$Dict$empty, _List_Nil));
+		var deadPids = _v0.a;
+		var livePids = _v0.b;
+		var makeNewPids = _v0.c;
+		return A2(
+			$elm$core$Task$andThen,
+			function (pids) {
+				return $elm$core$Task$succeed(
+					A2(
+						$elm$browser$Browser$Events$State,
+						newSubs,
+						A2(
+							$elm$core$Dict$union,
+							livePids,
+							$elm$core$Dict$fromList(pids))));
+			},
+			A2(
+				$elm$core$Task$andThen,
+				function (_v1) {
+					return $elm$core$Task$sequence(makeNewPids);
+				},
+				$elm$core$Task$sequence(
+					A2($elm$core$List$map, $elm$core$Process$kill, deadPids))));
+	});
+var $elm$browser$Browser$Events$onSelfMsg = F3(
+	function (router, _v0, state) {
+		var event = _v0.event;
+		var key = _v0.key;
+		var toMessage = function (_v2) {
+			var subKey = _v2.a;
+			var _v3 = _v2.b;
+			var node = _v3.a;
+			var name = _v3.b;
+			var decoder = _v3.c;
+			return _Utils_eq(subKey, key) ? A2(_Browser_decodeEvent, decoder, event) : $elm$core$Maybe$Nothing;
+		};
+		var messages = A2($elm$core$List$filterMap, toMessage, state.subs);
+		return A2(
+			$elm$core$Task$andThen,
+			function (_v1) {
+				return $elm$core$Task$succeed(state);
+			},
+			$elm$core$Task$sequence(
+				A2(
+					$elm$core$List$map,
+					$elm$core$Platform$sendToApp(router),
+					messages)));
+	});
+var $elm$browser$Browser$Events$subMap = F2(
+	function (func, _v0) {
+		var node = _v0.a;
+		var name = _v0.b;
+		var decoder = _v0.c;
+		return A3(
+			$elm$browser$Browser$Events$MySub,
+			node,
+			name,
+			A2($elm$json$Json$Decode$map, func, decoder));
+	});
+_Platform_effectManagers['Browser.Events'] = _Platform_createManager($elm$browser$Browser$Events$init, $elm$browser$Browser$Events$onEffects, $elm$browser$Browser$Events$onSelfMsg, 0, $elm$browser$Browser$Events$subMap);
+var $elm$browser$Browser$Events$subscription = _Platform_leaf('Browser.Events');
+var $elm$browser$Browser$Events$on = F3(
+	function (node, name, decoder) {
+		return $elm$browser$Browser$Events$subscription(
+			A3($elm$browser$Browser$Events$MySub, node, name, decoder));
+	});
+var $elm$browser$Browser$Events$onResize = function (func) {
+	return A3(
+		$elm$browser$Browser$Events$on,
+		$elm$browser$Browser$Events$Window,
+		'resize',
+		A2(
+			$elm$json$Json$Decode$field,
+			'target',
+			A3(
+				$elm$json$Json$Decode$map2,
+				func,
+				A2($elm$json$Json$Decode$field, 'innerWidth', $elm$json$Json$Decode$int),
+				A2($elm$json$Json$Decode$field, 'innerHeight', $elm$json$Json$Decode$int))));
+};
+var $author$project$Pages$Timeline$subscriptions = function (model) {
 	return $elm$core$Platform$Sub$none;
+};
+var $author$project$Application$switchTab = _Platform_incomingPort('switchTab', $elm$json$Json$Decode$string);
+var $author$project$Application$subscriptions = function (model) {
+	return $elm$core$Platform$Sub$batch(
+		_List_fromArray(
+			[
+				A2($elm$time$Time$every, 1000, $author$project$Application$GotTime),
+				$elm$browser$Browser$Events$onResize(
+				F2(
+					function (w, h) {
+						return $author$project$Application$SharedMsg(
+							A2($author$project$Shared$WindowResized, w, h));
+					})),
+				$author$project$Application$switchTab($author$project$Application$SwitchTab),
+				function () {
+				var _v0 = model.page;
+				if (_v0.$ === 'Timeline') {
+					return $elm$core$Platform$Sub$batch(
+						_List_fromArray(
+							[
+								A2(
+								$elm$core$Platform$Sub$map,
+								$author$project$Application$TimelineMsg,
+								$author$project$Pages$Timeline$subscriptions(model.timeline)),
+								A2(
+								$elm$core$Platform$Sub$map,
+								$author$project$Application$TimelineMsg,
+								$author$project$Application$onNearBottom($author$project$Pages$Timeline$NearBottom))
+							]));
+				} else {
+					return $elm$core$Platform$Sub$none;
+				}
+			}()
+			]));
 };
 var $author$project$Pages$Home_$SwitchTab = function (a) {
 	return {$: 'SwitchTab', a: a};
@@ -6780,35 +7280,6 @@ var $author$project$Api$sortFeedItems = function (items) {
 	var sorted = A2($elm$core$List$sortWith, comparePub, items);
 	return sorted;
 };
-var $elm$core$Dict$foldl = F3(
-	function (func, acc, dict) {
-		foldl:
-		while (true) {
-			if (dict.$ === 'RBEmpty_elm_builtin') {
-				return acc;
-			} else {
-				var key = dict.b;
-				var value = dict.c;
-				var left = dict.d;
-				var right = dict.e;
-				var $temp$func = func,
-					$temp$acc = A3(
-					func,
-					key,
-					value,
-					A3($elm$core$Dict$foldl, func, acc, left)),
-					$temp$dict = right;
-				func = $temp$func;
-				acc = $temp$acc;
-				dict = $temp$dict;
-				continue foldl;
-			}
-		}
-	});
-var $elm$core$Dict$union = F2(
-	function (t1, t2) {
-		return A3($elm$core$Dict$foldl, $elm$core$Dict$insert, t2, t1);
-	});
 var $elm$core$Set$union = F2(
 	function (_v0, _v1) {
 		var dict1 = _v0.a;
@@ -6992,12 +7463,6 @@ var $author$project$Pages$Timeline$ClearInserted = {$: 'ClearInserted'};
 var $author$project$Pages$Timeline$GotMoreTimeline = function (a) {
 	return {$: 'GotMoreTimeline', a: a};
 };
-var $author$project$Pages$Timeline$LoadMore = {$: 'LoadMore'};
-var $elm$core$Basics$composeL = F3(
-	function (g, f, x) {
-		return g(
-			f(x));
-	});
 var $author$project$Api$toClusterItem = function (item) {
 	return {favicon: item.favicon, feedTitle: item.feedTitle, headerColor: item.headerColor, headerTextColor: item.headerTextColor, id: item.id, link: item.link, pubDate: item.pubDate, title: item.title};
 };
@@ -7169,114 +7634,118 @@ var $author$project$Api$sortTimelineItems = function (items) {
 };
 var $author$project$Pages$Timeline$update = F3(
 	function (shared, msg, model) {
-		update:
-		while (true) {
-			switch (msg.$) {
-				case 'GotTimeline':
-					if (msg.a.$ === 'Ok') {
-						var response = msg.a.a;
-						var clusters = $author$project$Api$clusterItemsFromTimeline(response.items);
-						var sortedClusters = clusters;
-						return _Utils_Tuple2(
-							_Utils_update(
-								model,
-								{
-									clusters: sortedClusters,
-									error: $elm$core$Maybe$Nothing,
-									hasMore: response.hasMore,
-									isClustering: response.isClustering,
-									items: response.items,
-									loading: false,
-									offset: $elm$core$List$length(response.items)
-								}),
-							$elm$core$Platform$Cmd$none);
-					} else {
-						return _Utils_Tuple2(
-							_Utils_update(
-								model,
-								{
-									error: $elm$core$Maybe$Just('Failed to load timeline'),
-									loading: false
-								}),
-							$elm$core$Platform$Cmd$none);
-					}
-				case 'GotMoreTimeline':
-					if (msg.a.$ === 'Ok') {
-						var response = msg.a.a;
-						var newItems = $author$project$Api$sortTimelineItems(
-							_Utils_ap(model.items, response.items));
-						var newClusters = $author$project$Api$clusterItemsFromTimeline(newItems);
-						var addedIds = $elm$core$Set$fromList(
-							A2(
-								$elm$core$List$map,
-								function ($) {
-									return $.id;
-								},
-								response.items));
-						return _Utils_Tuple2(
-							_Utils_update(
-								model,
-								{
-									clusters: newClusters,
-									hasMore: response.hasMore,
-									insertedIds: A2($elm$core$Set$union, model.insertedIds, addedIds),
-									isClustering: response.isClustering,
-									items: newItems,
-									loadingMore: false,
-									offset: model.offset + $elm$core$List$length(response.items)
-								}),
-							A2(
-								$elm$core$Task$perform,
-								function (_v1) {
-									return $author$project$Pages$Timeline$ClearInserted;
-								},
-								$elm$core$Process$sleep(300)));
-					} else {
-						return _Utils_Tuple2(
-							_Utils_update(
-								model,
-								{loadingMore: false}),
-							$elm$core$Platform$Cmd$none);
-					}
-				case 'LoadMore':
+		switch (msg.$) {
+			case 'GotTimeline':
+				if (msg.a.$ === 'Ok') {
+					var response = msg.a.a;
+					var clusters = $author$project$Api$clusterItemsFromTimeline(response.items);
+					var sortedClusters = clusters;
 					return _Utils_Tuple2(
 						_Utils_update(
 							model,
-							{loadingMore: true}),
-						A3($author$project$Api$fetchTimeline, 35, model.offset, $author$project$Pages$Timeline$GotMoreTimeline));
-				case 'ClearInserted':
-					return _Utils_Tuple2(
-						_Utils_update(
-							model,
-							{insertedIds: $elm$core$Set$empty}),
+							{
+								clusters: sortedClusters,
+								error: $elm$core$Maybe$Nothing,
+								hasMore: response.hasMore,
+								isClustering: response.isClustering,
+								items: response.items,
+								loading: false,
+								offset: $elm$core$List$length(response.items)
+							}),
 						$elm$core$Platform$Cmd$none);
-				case 'NearBottom':
-					var nearBottom = msg.a;
-					var newModel = _Utils_update(
+				} else {
+					return _Utils_Tuple2(
+						_Utils_update(
+							model,
+							{
+								error: $elm$core$Maybe$Just('Failed to load timeline'),
+								loading: false
+							}),
+						$elm$core$Platform$Cmd$none);
+				}
+			case 'GotMoreTimeline':
+				if (msg.a.$ === 'Ok') {
+					var response = msg.a.a;
+					var existingIds = $elm$core$Set$fromList(
+						A2(
+							$elm$core$List$map,
+							function ($) {
+								return $.id;
+							},
+							model.items));
+					var newItemsFromResponse = A2(
+						$elm$core$List$filter,
+						function (it) {
+							return !A2($elm$core$Set$member, it.id, existingIds);
+						},
+						response.items);
+					var newItems = $author$project$Api$sortTimelineItems(
+						_Utils_ap(model.items, newItemsFromResponse));
+					var newClusters = $author$project$Api$clusterItemsFromTimeline(newItems);
+					var addedIds = $elm$core$Set$fromList(
+						A2(
+							$elm$core$List$map,
+							function ($) {
+								return $.id;
+							},
+							newItemsFromResponse));
+					return _Utils_Tuple2(
+						_Utils_update(
+							model,
+							{
+								clusters: newClusters,
+								hasMore: response.hasMore,
+								insertedIds: A2($elm$core$Set$union, model.insertedIds, addedIds),
+								isClustering: response.isClustering,
+								items: newItems,
+								loadingMore: false,
+								offset: model.offset + $elm$core$List$length(newItemsFromResponse)
+							}),
+						A2(
+							$elm$core$Task$perform,
+							function (_v1) {
+								return $author$project$Pages$Timeline$ClearInserted;
+							},
+							$elm$core$Process$sleep(300)));
+				} else {
+					return _Utils_Tuple2(
+						_Utils_update(
+							model,
+							{loadingMore: false}),
+						$elm$core$Platform$Cmd$none);
+				}
+			case 'LoadMore':
+				return _Utils_Tuple2(
+					_Utils_update(
 						model,
-						{sentinelNear: nearBottom});
-					if (nearBottom && (model.hasMore && (!model.loadingMore))) {
-						var $temp$shared = shared,
-							$temp$msg = $author$project$Pages$Timeline$LoadMore,
-							$temp$model = newModel;
-						shared = $temp$shared;
-						msg = $temp$msg;
-						model = $temp$model;
-						continue update;
-					} else {
-						return _Utils_Tuple2(newModel, $elm$core$Platform$Cmd$none);
-					}
-				case 'ToggleCluster':
-					var clusterId = msg.a;
-					var newExpanded = A2($elm$core$Set$member, clusterId, model.expandedClusters) ? A2($elm$core$Set$remove, clusterId, model.expandedClusters) : A2($elm$core$Set$insert, clusterId, model.expandedClusters);
-					return _Utils_Tuple2(
-						_Utils_update(
-							model,
-							{expandedClusters: newExpanded}),
-						$elm$core$Platform$Cmd$none);
-				default:
-					return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
-			}
+						{loadingMore: true}),
+					A3($author$project$Api$fetchTimeline, 35, model.offset, $author$project$Pages$Timeline$GotMoreTimeline));
+			case 'ClearInserted':
+				return _Utils_Tuple2(
+					_Utils_update(
+						model,
+						{insertedIds: $elm$core$Set$empty}),
+					$elm$core$Platform$Cmd$none);
+			case 'NearBottom':
+				var nearBottom = msg.a;
+				var newModel = _Utils_update(
+					model,
+					{sentinelNear: nearBottom});
+				return (nearBottom && (model.hasMore && ((!model.loadingMore) && (!model.loading)))) ? _Utils_Tuple2(
+					_Utils_update(
+						newModel,
+						{loadingMore: true}),
+					A3($author$project$Api$fetchTimeline, 35, model.offset, $author$project$Pages$Timeline$GotMoreTimeline)) : _Utils_Tuple2(newModel, $elm$core$Platform$Cmd$none);
+			case 'ToggleCluster':
+				var clusterId = msg.a;
+				var newExpanded = A2($elm$core$Set$member, clusterId, model.expandedClusters) ? A2($elm$core$Set$remove, clusterId, model.expandedClusters) : A2($elm$core$Set$insert, clusterId, model.expandedClusters);
+				return _Utils_Tuple2(
+					_Utils_update(
+						model,
+						{expandedClusters: newExpanded}),
+					$elm$core$Platform$Cmd$none);
+			default:
+				return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
 		}
 	});
 var $author$project$Shared$update = F2(
@@ -13109,9 +13578,6 @@ var $author$project$Theme$textColor = function (theme) {
 		return A3($mdgriffith$elm_ui$Element$rgb255, 17, 24, 39);
 	}
 };
-var $author$project$Application$SharedMsg = function (a) {
-	return {$: 'SharedMsg', a: a};
-};
 var $author$project$Shared$ToggleTheme = {$: 'ToggleTheme'};
 var $mdgriffith$elm_ui$Internal$Model$Button = {$: 'Button'};
 var $elm$json$Json$Encode$bool = _Json_wrap;
@@ -13761,6 +14227,15 @@ var $mdgriffith$elm_ui$Element$column = F2(
 			$mdgriffith$elm_ui$Internal$Model$Unkeyed(children));
 	});
 var $elm$html$Html$Attributes$id = $elm$html$Html$Attributes$stringProperty('id');
+var $mdgriffith$elm_ui$Internal$Model$Main = {$: 'Main'};
+var $mdgriffith$elm_ui$Element$Region$mainContent = $mdgriffith$elm_ui$Internal$Model$Describe($mdgriffith$elm_ui$Internal$Model$Main);
+var $mdgriffith$elm_ui$Internal$Model$Navigation = {$: 'Navigation'};
+var $mdgriffith$elm_ui$Element$Region$navigation = $mdgriffith$elm_ui$Internal$Model$Describe($mdgriffith$elm_ui$Internal$Model$Navigation);
+var $elm$html$Html$Attributes$attribute = $elm$virtual_dom$VirtualDom$attribute;
+var $author$project$Theme$semantic = function (name) {
+	return $mdgriffith$elm_ui$Element$htmlAttribute(
+		A2($elm$html$Html$Attributes$attribute, 'data-semantic', name));
+};
 var $author$project$Layouts$Shared$layout = function (_v0) {
 	var main = _v0.main;
 	var footer = _v0.footer;
@@ -13805,8 +14280,12 @@ var $author$project$Layouts$Shared$layout = function (_v0) {
 		_List_fromArray(
 			[
 				$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill),
-				$mdgriffith$elm_ui$Element$height($mdgriffith$elm_ui$Element$fill),
-				$mdgriffith$elm_ui$Element$Background$color(bg)
+				$mdgriffith$elm_ui$Element$htmlAttribute(
+				A2($elm$html$Html$Attributes$style, 'height', '100%')),
+				$mdgriffith$elm_ui$Element$htmlAttribute(
+				A2($elm$html$Html$Attributes$style, 'max-height', '100%')),
+				$mdgriffith$elm_ui$Element$Background$color(bg),
+				$author$project$Theme$semantic('layout-container')
 			]),
 		_List_fromArray(
 			[
@@ -13815,6 +14294,10 @@ var $author$project$Layouts$Shared$layout = function (_v0) {
 				_List_fromArray(
 					[
 						$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill),
+						$mdgriffith$elm_ui$Element$htmlAttribute(
+						A2($elm$html$Html$Attributes$style, 'height', '100%')),
+						$mdgriffith$elm_ui$Element$htmlAttribute(
+						A2($elm$html$Html$Attributes$style, 'max-height', '100%')),
 						$mdgriffith$elm_ui$Element$htmlAttribute(
 						A2($elm$html$Html$Attributes$style, 'max-width', containerWidth)),
 						$mdgriffith$elm_ui$Element$htmlAttribute(
@@ -13831,7 +14314,9 @@ var $author$project$Layouts$Shared$layout = function (_v0) {
 							$elm$core$String$fromInt(sidePadding) + 'px')),
 						$mdgriffith$elm_ui$Element$Border$widthEach(
 						{bottom: 2, left: 0, right: 0, top: 0}),
-						$mdgriffith$elm_ui$Element$Border$color(borderColor)
+						$mdgriffith$elm_ui$Element$Border$color(borderColor),
+						$mdgriffith$elm_ui$Element$Region$navigation,
+						$author$project$Theme$semantic('main-header')
 					]),
 				_List_fromArray(
 					[
@@ -13841,11 +14326,14 @@ var $author$project$Layouts$Shared$layout = function (_v0) {
 						_List_fromArray(
 							[
 								$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill),
-								$mdgriffith$elm_ui$Element$height($mdgriffith$elm_ui$Element$fill),
 								$mdgriffith$elm_ui$Element$htmlAttribute(
-								A2($elm$html$Html$Attributes$style, 'overflow-y', 'auto')),
+								A2($elm$html$Html$Attributes$style, 'height', '100%')),
+								$mdgriffith$elm_ui$Element$htmlAttribute(
+								A2($elm$html$Html$Attributes$style, 'max-height', '100%')),
 								$mdgriffith$elm_ui$Element$htmlAttribute(
 								$elm$html$Html$Attributes$id('main-content')),
+								$mdgriffith$elm_ui$Element$Region$mainContent,
+								$author$project$Theme$semantic('main-content-scroll'),
 								function () {
 								switch (breakpoint.$) {
 									case 'VeryNarrowBreakpoint':
@@ -13861,7 +14349,11 @@ var $author$project$Layouts$Shared$layout = function (_v0) {
 							$mdgriffith$elm_ui$Element$column,
 							_List_fromArray(
 								[
-									$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill)
+									$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill),
+									$mdgriffith$elm_ui$Element$htmlAttribute(
+									A2($elm$html$Html$Attributes$style, 'height', '100%')),
+									$mdgriffith$elm_ui$Element$htmlAttribute(
+									A2($elm$html$Html$Attributes$style, 'overflow-y', 'auto'))
 								]),
 							_List_fromArray(
 								[main, footer])))
@@ -13869,7 +14361,6 @@ var $author$project$Layouts$Shared$layout = function (_v0) {
 			]));
 };
 var $mdgriffith$elm_ui$Element$map = $mdgriffith$elm_ui$Internal$Model$map;
-var $elm$html$Html$Attributes$attribute = $elm$virtual_dom$VirtualDom$attribute;
 var $author$project$Theme$errorColor = A3($mdgriffith$elm_ui$Element$rgb255, 239, 68, 68);
 var $elm$core$List$drop = F2(
 	function (n, list) {
@@ -15228,6 +15719,7 @@ var $author$project$Pages$Home_$view = F2(
 					A2($author$project$Pages$Home_$content, shared, model)
 				]));
 	});
+var $author$project$Pages$Timeline$LoadMore = {$: 'LoadMore'};
 var $author$project$Pages$Timeline$clusteringIndicator = function (isClustering) {
 	return isClustering ? A2(
 		$mdgriffith$elm_ui$Element$row,
@@ -16057,7 +16549,7 @@ var $author$project$Application$view = function (model) {
 			]));
 };
 var $author$project$Main$main = $elm$browser$Browser$application(
-	{init: $author$project$Application$init, onUrlChange: $author$project$Application$UrlChanged, onUrlRequest: $author$project$Main$handleUrlRequest, subscriptions: $author$project$Main$subscriptions, update: $author$project$Application$update, view: $author$project$Application$view});
+	{init: $author$project$Application$init, onUrlChange: $author$project$Application$UrlChanged, onUrlRequest: $author$project$Main$handleUrlRequest, subscriptions: $author$project$Application$subscriptions, update: $author$project$Application$update, view: $author$project$Application$view});
 _Platform_export({'Main':{'init':$author$project$Main$main(
 	A2(
 		$elm$json$Json$Decode$andThen,

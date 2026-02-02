@@ -25,7 +25,12 @@ import Url
 
 port saveTheme : String -> Cmd msg
 
+
 port saveCurrentPage : String -> Cmd msg
+
+
+port saveTimelineState : String -> Cmd msg
+
 
 port onNearBottom : (Bool -> msg) -> Sub msg
 

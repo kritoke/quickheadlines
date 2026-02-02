@@ -1,6 +1,7 @@
 module Theme exposing (..)
 
 import Element exposing (Attribute, Color, rgb255, htmlAttribute)
+import Element.Font as Font
 import Html.Attributes
 import ThemeTypography as Ty
 import Shared exposing (Theme(..))

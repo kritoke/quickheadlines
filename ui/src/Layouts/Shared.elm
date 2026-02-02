@@ -66,12 +66,15 @@ layout { theme, windowWidth, header, footer, main } =
     in
     column
         [ width fill
-        , height fill
+        , Element.htmlAttribute (Html.Attributes.style "height" "100%")
+        , Element.htmlAttribute (Html.Attributes.style "max-height" "100%")
         , Background.color bg
         , semantic "layout-container"
         ]
         [ Element.column
             [ width fill
+            , Element.htmlAttribute (Html.Attributes.style "height" "100%")
+            , Element.htmlAttribute (Html.Attributes.style "max-height" "100%")
             , Element.htmlAttribute (Html.Attributes.style "max-width" containerWidth)
             , Element.htmlAttribute (Html.Attributes.style "margin" "0 auto")
             , Element.htmlAttribute (Html.Attributes.style "padding-left" (String.fromInt sidePadding ++ "px"))
@@ -84,8 +87,8 @@ layout { theme, windowWidth, header, footer, main } =
             [ header
             , el
                 [ width fill
-                , height fill
-                , htmlAttribute (Html.Attributes.style "overflow-y" "auto")
+                , Element.htmlAttribute (Html.Attributes.style "height" "100%")
+                , Element.htmlAttribute (Html.Attributes.style "max-height" "100%")
                 , htmlAttribute (Html.Attributes.id "main-content")
                 , Region.mainContent
                 , semantic "main-content-scroll"
@@ -101,6 +104,8 @@ layout { theme, windowWidth, header, footer, main } =
                 ]
                 (Element.column
                     [ width fill
+                    , Element.htmlAttribute (Html.Attributes.style "height" "100%")
+                    , Element.htmlAttribute (Html.Attributes.style "overflow-y" "auto")
                     ]
                     [ main
                     , footer
