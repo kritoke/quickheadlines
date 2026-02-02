@@ -14257,25 +14257,15 @@ var $author$project$Layouts$Shared$layout = function (_v0) {
 		}
 	}();
 	var sidePadding = function () {
-		var _v4 = _Utils_Tuple2(breakpoint, isTimeline);
-		switch (_v4.a.$) {
+		switch (breakpoint.$) {
 			case 'VeryNarrowBreakpoint':
-				var _v5 = _v4.a;
 				return 12;
 			case 'MobileBreakpoint':
-				var _v6 = _v4.a;
 				return 16;
 			case 'TabletBreakpoint':
-				var _v7 = _v4.a;
 				return 32;
 			default:
-				if (_v4.b) {
-					var _v8 = _v4.a;
-					return 0;
-				} else {
-					var _v9 = _v4.a;
-					return 48;
-				}
+				return 48;
 		}
 	}();
 	var borderColor = function () {

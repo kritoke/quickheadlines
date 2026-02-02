@@ -44,21 +44,11 @@ layout { theme, windowWidth, header, footer, main, isTimeline } =
                     "1600px"
 
         sidePadding =
-            case ( breakpoint, isTimeline ) of
-                ( VeryNarrowBreakpoint, _ ) ->
-                    12
-
-                ( MobileBreakpoint, _ ) ->
-                    16
-
-                ( TabletBreakpoint, _ ) ->
-                    32
-
-                ( DesktopBreakpoint, True ) ->
-                    0
-
-                ( DesktopBreakpoint, False ) ->
-                    48
+             case breakpoint of
+                 VeryNarrowBreakpoint -> 12
+                 MobileBreakpoint -> 16
+                 TabletBreakpoint -> 32
+                 DesktopBreakpoint -> 48
 
         borderColor =
             case theme of
