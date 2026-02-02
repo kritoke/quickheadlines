@@ -41,16 +41,13 @@ RUN mkdir -p /public/favicons
 
 WORKDIR /
 
-COPY --from=builder /app/server /server
-COPY public/elm.js /public/elm.js
-COPY assets /assets
-COPY views /views
-COPY feeds.yml /feeds.yml.default
+ COPY --from=builder /app/server /server
+ COPY public/elm.js /public/elm.js
+ COPY assets /assets
+ COPY views /views
+ COPY feeds.yml /feeds.yml.default
 
-# Debug - list files to verify
-RUN ls -la /ui/elm.js /public/elm.js /views/index.html
-
-RUN if [ ! -f /feeds.yml ]; then cp /feeds.yml.default /feeds.yml; fi
+ RUN if [ ! -f /feeds.yml ]; then cp /feeds.yml.default /feeds.yml; fi
 
 EXPOSE 8080
 
