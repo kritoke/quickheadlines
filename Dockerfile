@@ -39,7 +39,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 RUN mkdir -p /public/favicons
 
-WORKDIR /
+ WORKDIR /
+
+ ENV APP_ENV=production
 
  COPY --from=builder /app/server /server
  COPY public/elm.js /public/elm.js
