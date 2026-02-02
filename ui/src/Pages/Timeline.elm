@@ -196,9 +196,8 @@ view shared model =
         clustersByDay =
             groupClustersByDay shared.zone shared.now model.clusters
     in
-    column
-        [ width (fill |> maximum 1600)
-        , centerX
+     column
+        [ width fill
         , height fill
         , spacing 20
         , paddingXY horizontalPadding verticalPadding
@@ -206,7 +205,7 @@ view shared model =
         , htmlAttribute (Html.Attributes.attribute "data-timeline-page" "true")
         , htmlAttribute (Html.Attributes.class "auto-hide-scroll")
         ]
-         [ row [ width fill, spacing 10 ]
+        [ row [ width fill, spacing 10 ]
              [ el
                  [ (if Responsive.isMobile breakpoint then Ty.subtitle else Ty.title)
                  , Font.bold
@@ -217,13 +216,14 @@ view shared model =
              ]
          , el
              [ width fill
-             , height (px 1)
+             , height (px 2)
              , Background.color (case shared.theme of
-                 Shared.Dark -> rgb255 75 75 75
-                 Shared.Light -> rgb255 209 213 219
+                 Shared.Dark -> rgb255 100 100 100
+                 Shared.Light -> rgb255 200 200 200
                )
              ]
              Element.none
+         , el [ height (px 16) ] Element.none
          , if model.loading && List.isEmpty model.clusters then
             el
                 [ centerX

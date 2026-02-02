@@ -16418,14 +16418,6 @@ var $author$project$Responsive$horizontalPadding = function (breakpoint) {
 			return 96;
 	}
 };
-var $mdgriffith$elm_ui$Internal$Model$Max = F2(
-	function (a, b) {
-		return {$: 'Max', a: a, b: b};
-	});
-var $mdgriffith$elm_ui$Element$maximum = F2(
-	function (i, l) {
-		return A2($mdgriffith$elm_ui$Internal$Model$Max, i, l);
-	});
 var $author$project$ThemeTypography$title = $mdgriffith$elm_ui$Element$Font$size(24);
 var $author$project$Responsive$verticalPadding = function (breakpoint) {
 	switch (breakpoint.$) {
@@ -16453,9 +16445,7 @@ var $author$project$Pages$Timeline$view = F2(
 			$mdgriffith$elm_ui$Element$column,
 			_List_fromArray(
 				[
-					$mdgriffith$elm_ui$Element$width(
-					A2($mdgriffith$elm_ui$Element$maximum, 1600, $mdgriffith$elm_ui$Element$fill)),
-					$mdgriffith$elm_ui$Element$centerX,
+					$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill),
 					$mdgriffith$elm_ui$Element$height($mdgriffith$elm_ui$Element$fill),
 					$mdgriffith$elm_ui$Element$spacing(20),
 					A2($mdgriffith$elm_ui$Element$paddingXY, horizontalPadding, verticalPadding),
@@ -16493,16 +16483,24 @@ var $author$project$Pages$Timeline$view = F2(
 						[
 							$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill),
 							$mdgriffith$elm_ui$Element$height(
-							$mdgriffith$elm_ui$Element$px(1)),
+							$mdgriffith$elm_ui$Element$px(2)),
 							$mdgriffith$elm_ui$Element$Background$color(
 							function () {
 								var _v0 = shared.theme;
 								if (_v0.$ === 'Dark') {
-									return A3($mdgriffith$elm_ui$Element$rgb255, 75, 75, 75);
+									return A3($mdgriffith$elm_ui$Element$rgb255, 100, 100, 100);
 								} else {
-									return A3($mdgriffith$elm_ui$Element$rgb255, 209, 213, 219);
+									return A3($mdgriffith$elm_ui$Element$rgb255, 200, 200, 200);
 								}
 							}())
+						]),
+					$mdgriffith$elm_ui$Element$none),
+					A2(
+					$mdgriffith$elm_ui$Element$el,
+					_List_fromArray(
+						[
+							$mdgriffith$elm_ui$Element$height(
+							$mdgriffith$elm_ui$Element$px(16))
 						]),
 					$mdgriffith$elm_ui$Element$none),
 					(model.loading && $elm$core$List$isEmpty(model.clusters)) ? A2(
