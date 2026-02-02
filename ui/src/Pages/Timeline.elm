@@ -96,21 +96,27 @@ update shared msg model =
 
         GotMoreTimeline (Ok response) ->
             let
+                existingIds =
+                    model.items |> List.map .id |> Set.fromList
+
+                newItemsFromResponse =
+                    response.items |> List.filter (\it -> not (Set.member it.id existingIds))
+
                 newItems =
-                    Api.sortTimelineItems (model.items ++ response.items)
+                    Api.sortTimelineItems (model.items ++ newItemsFromResponse)
 
                 newClusters =
                     clusterItemsFromTimeline newItems
 
                 addedIds =
-                    response.items |> List.map .id |> Set.fromList
+                    newItemsFromResponse |> List.map .id |> Set.fromList
             in
             ( { model
                 | items = newItems
                 , clusters = newClusters
                 , loadingMore = False
                 , hasMore = response.hasMore
-                , offset = model.offset + List.length response.items
+                , offset = model.offset + List.length newItemsFromResponse
                 , insertedIds = Set.union model.insertedIds addedIds
                 , isClustering = response.isClustering
               }
@@ -138,8 +144,10 @@ update shared msg model =
             let
                 newModel = { model | sentinelNear = nearBottom }
             in
-            if nearBottom && model.hasMore && not model.loadingMore then
-                update shared LoadMore newModel
+            if nearBottom && model.hasMore && not model.loadingMore && not model.loading then
+                ( { newModel | loadingMore = True }
+                , fetchTimeline 35 model.offset GotMoreTimeline
+                )
 
             else
                 ( newModel, Cmd.none )

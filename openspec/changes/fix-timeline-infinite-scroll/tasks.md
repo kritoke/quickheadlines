@@ -4,18 +4,18 @@
 4. Implementation plan & tasks (`tasks.md`) — now
 
 Implementation checklist
-- [ ] Wire incremental loading in `ui/src/Pages/Timeline.elm`:
-  - [ ] Add `LoadMore` message and `loading` flag to the model
-  - [ ] Implement `requestMore` helper that calls the existing feed endpoint with `offset`/`limit`
-  - [ ] Throttle/debounce scroll handler to avoid duplicate requests
-  - [ ] Append received items to the model while preserving order and deduplicating by ID
-- [ ] Animate inserted items in `ui/src/Components/FeedItem.elm` or wrapper:
-  - [ ] Add CSS classes/Elm transition helper to apply fade + slide-up (220ms ease-out)
-  - [ ] Ensure animation uses transforms (avoid layout thrash)
-- [ ] Loading UI:
-  - [ ] Show spinner at bottom while `loading` is true
-  - [ ] Show end-of-feed state when an empty page is returned
-  - [ ] Show error state with retry when fetch fails
+- [x] Wire incremental loading in `ui/src/Pages/Timeline.elm`:
+  - [x] Add `LoadMore` message and `loading` flag to the model
+  - [x] Implement `requestMore` helper that calls the existing feed endpoint with `offset`/`limit`
+  - [x] Throttle/debounce scroll handler to avoid duplicate requests (implemented deduplication and state checks)
+  - [x] Append received items to the model while preserving order and deduplicating by ID
+- [x] Animate inserted items in `ui/src/Components/FeedItem.elm` or wrapper:
+  - [x] Add CSS classes/Elm transition helper to apply fade + slide-up (220ms ease-out)
+  - [x] Ensure animation uses transforms (avoid layout thrash)
+- [x] Loading UI:
+  - [x] Show spinner at bottom while `loading` is true
+  - [x] Show end-of-feed state when an empty page is returned
+  - [x] Show error state with retry when fetch fails
 - [ ] Optional persistence (sessionStorage):
   - [ ] On mount, check `sessionStorage` for stored `loadedIds` and `scrollY`, restore items if present
   - [ ] On successful load, persist `loadedIds` and current scroll position
