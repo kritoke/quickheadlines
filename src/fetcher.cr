@@ -690,10 +690,13 @@ end
 
 # Compute cluster assignment for a single item
 def compute_cluster_for_item(item_id : Int64, title : String) : Int64?
-  return nil if title.empty?
-  return nil if ClusteringUtilities.word_count(title) < ClusteringUtilities::MIN_WORDS_FOR_CLUSTERING
-
   cache = FeedCache.instance
+  
+  if title.empty? || ClusteringUtilities.word_count(title) < ClusteringUtilities::MIN_WORDS_FOR_CLUSTERING
+    # Too short to safely cluster, assign to its own cluster
+    cache.assign_cluster(item_id, item_id)
+    return item_id
+  end
 
   document = LexisMinhash::SimpleDocument.new(title)
   signature = LexisMinhash::Engine.compute_signature(document)

@@ -783,19 +783,23 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
 
         STDERR.puts "[#{Time.local}] Found #{uncategorized_items.size} uncategorized items"
 
-        clustered_count = 0
-        uncategorized_items.each do |item|
-          if item[:title].empty?
-            next
+        STATE.is_clustering = true
+        begin
+          clustered_count = 0
+          uncategorized_items.each do |item|
+            if item[:title].empty?
+              next
+            end
+            result = compute_cluster_for_item(item[:id], item[:title])
+            clustered_count += 1
+            if clustered_count % 50 == 0
+              STDERR.puts "[#{Time.local}] Processed #{clustered_count} items..."
+            end
           end
-          result = compute_cluster_for_item(item[:id], item[:title])
-          clustered_count += 1
-          if clustered_count % 50 == 0
-            STDERR.puts "[#{Time.local}] Processed #{clustered_count} items..."
-          end
+          STDERR.puts "[#{Time.local}] Clustering complete: #{clustered_count} items processed"
+        ensure
+          STATE.is_clustering = false
         end
-
-        STDERR.puts "[#{Time.local}] Clustering complete: #{clustered_count} items processed"
       rescue ex
         STDERR.puts "[#{Time.local}] Clustering error: #{ex.message}"
         STDERR.puts ex.backtrace.join("\n")
@@ -803,5 +807,14 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
     end
 
     ATH::Response.new("Clustering started in background", 202, HTTP::Headers{"content-type" => "text/plain"})
+  end
+
+  # GET /api/status - Get current system status
+  @[ARTA::Get(path: "/api/status")]
+  def status : Quickheadlines::DTOs::StatusResponse
+    Quickheadlines::DTOs::StatusResponse.new(
+      is_clustering: STATE.is_clustering,
+      active_jobs: 0 # We don't track background fiber count yet
+    )
   end
 end

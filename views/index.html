@@ -32,8 +32,13 @@
       background: transparent !important;
       color: inherit !important;
     }
-    [data-timeline-item="true"] a {
+    [data-timeline-item="true"] a, 
+    [data-timeline-item="true"] el, 
+    [data-timeline-item="true"] div,
+    [data-timeline-item="true"] span {
        color: inherit !important;
+     }
+    [data-timeline-item="true"] a {
        text-decoration: underline !important;
      }
      /* Ensure links in timeline are visible - override any default browser styles */

@@ -32,6 +32,7 @@ require "./events/story_fetched_event"
 require "./listeners/heat_map_listener"
 
 require "./dtos/story_dto"
+require "./dtos/status_dto"
 require "./dtos/cluster_dto"
 require "./dtos/feed_dto"
 
