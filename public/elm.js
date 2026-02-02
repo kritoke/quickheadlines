@@ -15350,7 +15350,7 @@ var $author$project$Pages$Home_$allTab = F2(
 		var txtColor = function () {
 			if (isActive) {
 				if (theme.$ === 'Dark') {
-					return A3($mdgriffith$elm_ui$Element$rgb255, 255, 140, 0);
+					return A3($mdgriffith$elm_ui$Element$rgb255, 255, 255, 255);
 				} else {
 					return A3($mdgriffith$elm_ui$Element$rgb255, 15, 23, 42);
 				}
@@ -15479,7 +15479,7 @@ var $author$project$Pages$Home_$tabButton = F3(
 		var txtColor = function () {
 			if (isActive) {
 				if (theme.$ === 'Dark') {
-					return A3($mdgriffith$elm_ui$Element$rgb255, 255, 140, 0);
+					return A3($mdgriffith$elm_ui$Element$rgb255, 255, 255, 255);
 				} else {
 					return A3($mdgriffith$elm_ui$Element$rgb255, 15, 23, 42);
 				}

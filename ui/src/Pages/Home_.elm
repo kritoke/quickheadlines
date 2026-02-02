@@ -253,7 +253,7 @@ allTab shared activeTab =
          txtColor =
              if isActive then
                  case theme of
-                     Shared.Dark -> rgb255 255 140 0
+                     Shared.Dark -> rgb255 255 255 255
                      Shared.Light -> rgb255 15 23 42
              else
                  case theme of
@@ -308,7 +308,7 @@ tabButton shared activeTab tab =
          txtColor =
              if isActive then
                  case theme of
-                     Shared.Dark -> rgb255 255 140 0
+                     Shared.Dark -> rgb255 255 255 255
                      Shared.Light -> rgb255 15 23 42
              else
                  case theme of
