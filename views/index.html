@@ -129,14 +129,16 @@
          margin-right: 8px !important;
          vertical-align: middle !important;
        }
-       /* Tab link styles - completely remove all shadows and filters */
-       .tab-link, .tab-link:hover, .tab-link:active, .tab-link:focus,
-       .tab-link::before, .tab-link::after {
+       /* Tab link styles - aggressively remove all shadows */
+       [data-page="home"] button,
+       [data-page="home"] button:hover,
+       [data-page="home"] button:active,
+       [data-page="home"] button:focus {
          box-shadow: none !important;
          text-shadow: none !important;
          filter: none !important;
          -webkit-filter: none !important;
-         background-image: none !important;
+         outline: none !important;
        }
        /* Force reasonable padding for Elm pages on desktop */
         @media (min-width: 1024px) {
