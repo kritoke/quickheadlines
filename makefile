@@ -120,7 +120,7 @@ download-crystal:
 		fi; \
 	fi
 	@rm -f bin/crystal
-	@if [ "$(OS_NAME)" = "freebsd" ]; then \
+	@if [ "$(OS_NAME)" = "freebsd" ] || ([ "$(OS_NAME)" = "linux" ] && [ "$(ARCH_NAME)" = "arm64" ]); then \
 		ln -sf $(CRYSTAL_DIR)/.build/crystal bin/crystal; \
 	else \
 		ln -sf $(CRYSTAL_DIR)/bin/crystal bin/crystal; \
@@ -143,15 +143,23 @@ check-deps:
 		fi; \
 	fi
 	@echo "✓ Crystal compiler: $$($(CRYSTAL) --version)"
-	@if [ "$(OS_NAME)" = "freebsd" ]; then \
+	@if [ "$(OS_NAME)" = "freebsd" ] || ([ "$(OS_NAME)" = "linux" ] && [ "$(ARCH_NAME)" = "arm64" ]); then \
 		if [ -f "public/elm.js" ]; then \
 			echo "✓ Using pre-compiled public/elm.js"; \
 		else \
 			echo "❌ Error: Elm compiler not found and public/elm.js missing"; \
 			echo ""; \
-			echo "On FreeBSD, you need either:"; \
+			if [ "$(OS_NAME)" = "freebsd" ]; then \
+				echo "On FreeBSD, you need either:"; \
+			else \
+				echo "On Linux arm64, you need either:"; \
+			fi; \
 			echo "  1. The pre-compiled public/elm.js file (recommended)"; \
-			echo "  2. Elm compiler: pkg install elm; npm install -g elm"; \
+			if [ "$(OS_NAME)" = "freebsd" ]; then \
+				echo "  2. Elm compiler: pkg install elm; npm install -g elm"; \
+			else \
+				echo "  2. Elm compiler: npm install -g elm"; \
+			fi; \
 			exit 1; \
 		fi; \
 	fi
@@ -298,7 +306,7 @@ elm-install:
 # 1. Compile Elm to JavaScript
 elm-build:
 	@echo "Compiling Elm to JavaScript..."
-	@if [ "$(OS_NAME)" = "freebsd" ]; then \
+	@if [ "$(OS_NAME)" = "freebsd" ] || ([ "$(OS_NAME)" = "linux" ] && [ "$(ARCH_NAME)" = "arm64" ]); then \
 		if [ -f "public/elm.js" ]; then \
 			echo "✓ Using pre-compiled public/elm.js (skipping Elm compilation)"; \
 		else \
