@@ -95,10 +95,17 @@ download-crystal:
 			rm -f $(CRYSTAL_VERSION).tar.gz; \
 			mv crystal-$(CRYSTAL_VERSION) $(CRYSTAL_DIR); \
 			cd $(CRYSTAL_DIR) && \
-			$(MAKE) deps && $(MAKE) clean && $(MAKE) crystal || { \
-				echo "Error: Failed to build Crystal"; \
-				exit 1; \
-			}; \
+			if [ "$(OS_NAME)" = "freebsd" ]; then \
+				gmake deps && gmake clean && gmake crystal || { \
+					echo "Error: Failed to build Crystal"; \
+					exit 1; \
+				}; \
+			else \
+				$(MAKE) deps && $(MAKE) clean && $(MAKE) crystal || { \
+					echo "Error: Failed to build Crystal"; \
+					exit 1; \
+				}; \
+			fi; \
 		else \
 			curl -L -o $(CRYSTAL_TARBALL) $(CRYSTAL_URL) || { \
 				echo "Error: Failed to download Crystal tarball"; \

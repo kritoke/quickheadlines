@@ -12,6 +12,12 @@
     [data-timeline-page="true"] [data-semantic="main-content-scroll"] {
       display: block;
     }
+    /* Remove top padding from main content on timeline for desktop */
+    @media (min-width: 1024px) {
+      [data-timeline-page="true"] [data-semantic="main-content-scroll"] > *:first-child {
+        padding-top: 0 !important;
+      }
+    }
     /* Home page: normal browser scrolling */
     [data-page="home"] { overflow-y: auto; height: auto; }
     /* Home page: normal browser scrolling */
@@ -125,9 +131,8 @@
       }
         /* Force reasonable padding for Elm pages on desktop */
         @media (min-width: 1024px) {
-          [data-timeline-page="true"], [data-page="home"] {
-            padding-top: 24px !important;
-            padding-bottom: 24px !important;
+          [data-page="home"] [data-semantic="main-content-scroll"] > *:first-child {
+            padding-top: 0 !important;
           }
         }
        /* Inlined timeline.css styles */

@@ -33,11 +33,11 @@ CMD sysrc quickheadlines_env="GC_MARKERS=1 GC_FREE_SPACE_DIVISOR=20 QUICKHEADLIN
 
 # 5. Build quickheadlines
 # elm.js is pre-compiled in the repository, so we don't need to compile it on FreeBSD
-# Crystal 1.19.1 is built from source using system Crystal (1.8.2) from ports
+# Crystal 1.18.2 (from Freshports) builds Crystal 1.19.1 from source
 CMD cd /tmp/qh && \
     export PATH=/usr/local/bin:/usr/bin:/bin:$$PATH && \
     export MAKE=gmake && \
-    echo "Checking system Crystal from ports..." && \
+    echo "Checking system Crystal 1.18.2 from ports..." && \
     if [ -x "/usr/local/bin/crystal" ]; then \
         echo "Found Crystal:" && \
         /usr/local/bin/crystal --version; \
@@ -49,12 +49,11 @@ CMD cd /tmp/qh && \
         exit 1; \
     fi && \
     echo "Building Crystal 1.19.1 from source (30-60 minutes)..." && \
-    sudo -u qh sh -c "export PATH=/usr/local/bin:/usr/bin:/bin:\$PATH && export MAKE=gmake && make download-crystal" && \
+    sudo -u qh sh -c "export PATH=/usr/local/bin:/usr/bin:/bin:\$PATH && export MAKE=gmake && gmake download-crystal" && \
     echo "Crystal 1.19.1 built, checking..." && \
-    if [ -x "/tmp/qh/bin/crystal" ]; then \
-        /tmp/qh/bin/crystal --version; \
-    else \
-        echo "ERROR: Crystal 1.19.1 build failed"; \
+    CRYSTAL_VER=$$(/usr/local/bin/crystal --version 2>/dev/null || echo "unknown") && \
+    if [ "$$CRYSTAL_VER" != "Crystal 1.19.1" ]; then \
+        echo "ERROR: Crystal version mismatch. Got: $$CRYSTAL_VER, Expected: Crystal 1.19.1"; \
         exit 1; \
     fi && \
     echo "Installing Crystal dependencies..." && \
@@ -65,7 +64,7 @@ CMD cd /tmp/qh && \
         echo "Existing binary found, skipping build"; \
     else \
         echo "Building quickheadlines binary..." && \
-        sudo -u qh sh -c "export PATH=/tmp/qh/bin:/usr/local/bin:/usr/bin:/bin:\$PATH && export MAKE=gmake && make build"; \
+        sudo -u qh sh -c "export PATH=/tmp/qh/bin:/usr/local/bin:/usr/bin:/bin:\$PATH && export MAKE=gmake && gmake build"; \
     fi
 
 # 6. Install Binary and Config
