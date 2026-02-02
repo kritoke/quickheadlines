@@ -227,11 +227,17 @@ view model =
                     ( "Timeline"
                     , Element.map TimelineMsg timelineContent
                     )
-     in
-     Browser.Document title
-          [ Layout.layout { theme = theme, windowWidth = model.shared.windowWidth, header = header, footer = footerView model.shared, main = content }
-             |> Element.layout []
-         ]
+      in
+      let
+          isTimeline =
+              case model.page of
+                  Timeline -> True
+                  _ -> False
+      in
+      Browser.Document title
+           [ Layout.layout { theme = theme, windowWidth = model.shared.windowWidth, header = header, footer = footerView model.shared, main = content, isTimeline = isTimeline }
+              |> Element.layout []
+          ]
 
 
 subscriptions : Model -> Sub Msg

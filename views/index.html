@@ -6,26 +6,9 @@
   <title>QuickHeadlines</title>
   <style>
     * { box-sizing: border-box; }
-    /* App-like scrolling: constrain html/body to viewport, prevent browser scroll */
-    html, body {
-      height: 100%;
-      overflow: hidden;
-      margin: 0;
-      padding: 0;
-    }
-    /* Constrain Elm root div to fill viewport */
-    body > div:not([id]) {
-      height: 100% !important;
-      max-height: 100% !important;
-    }
-    #app {
-      width: 100vw;
-      height: 100vh;
-      overflow: hidden;
-      display: flex;
-      flex-direction: column;
-      background: #ffffff;
-    }
+    body { margin: 0; padding: 0; background: #ffffff; }
+    #app { width: 100vw; min-height: 100vh; background: #ffffff; }
+    .feed-header { transition: background-color 0.3s ease, color 0.3s ease; }
     .feed-header { transition: background-color 0.3s ease, color 0.3s ease; }
     [data-timeline-header="true"] {
       background-color: transparent !important;
@@ -84,8 +67,6 @@
     /* Auto-hide scrollbars */
     .auto-hide-scroll {
       overflow-y: auto;
-      scrollbar-width: thin;
-      scrollbar-color: rgba(128, 128, 128, 0.4) transparent;
     }
     .auto-hide-scroll::-webkit-scrollbar {
       width: 6px;
@@ -97,17 +78,10 @@
     .auto-hide-scroll::-webkit-scrollbar-thumb {
       background-color: rgba(128, 128, 128, 0.4);
       border-radius: 3px;
-      opacity: 0;
-      transition: opacity 0.3s ease;
-    }
-    .auto-hide-scroll:hover::-webkit-scrollbar-thumb {
-      opacity: 1;
     }
     /* Main content scrollbar */
     #main-content {
       overflow-y: auto;
-      scrollbar-width: thin;
-      scrollbar-color: rgba(128, 128, 128, 0.3) transparent;
     }
     #main-content::-webkit-scrollbar {
       width: 8px;
@@ -494,18 +468,12 @@
                     try {
                       if (!sentinel) return;
                       var rect = sentinel.getBoundingClientRect();
-                      var near = false;
-                      if (scrollRoot) {
-                        var rootRect = scrollRoot.getBoundingClientRect();
-                        // sentinel is near bottom when its top is within 500px of root bottom
-                        near = rect.top <= (rootRect.bottom + 500) && rect.bottom >= (rootRect.top - 500);
-                      } else {
-                        near = rect.top <= (window.innerHeight + 500) && rect.bottom >= -500;
-                      }
+                      // Always use viewport for calculation
+                      var near = rect.top <= (window.innerHeight + 500) && rect.bottom >= -500;
 
                        if (near !== lastSentinelState) {
                          lastSentinelState = near;
-                         console.log('checkSentinelVisibility -> near:', near);
+                         console.log('checkSentinelVisibility -> near:', near, 'rect.top:', rect.top);
                          try { app.ports.onNearBottom.send(near); } catch(e) { console.warn('onNearBottom.send error', e); }
                        }
                     } catch (e) {
@@ -513,15 +481,22 @@
                     }
                   }
 
-                  var debounced = null;
-                  function scheduleCheck() { if (debounced) clearTimeout(debounced); debounced = setTimeout(checkSentinelVisibility, 80); }
+                  // Poll for sentinel position changes
+                  var pollingInterval = setInterval(function() {
+                    checkSentinelVisibility();
+                  }, 100);
 
-                  // Listen to scroll events on the root (or window) and to resizes
-                  (scrollRoot || window).addEventListener('scroll', scheduleCheck, { passive: true });
-                  window.addEventListener('resize', scheduleCheck);
+                  // Also listen to scroll on scroll container if available
+                  if (scrollRoot) {
+                    scrollRoot.addEventListener('scroll', function() {
+                      // Immediate check on scroll
+                      checkSentinelVisibility();
+                    }, { passive: true });
+                  }
+                  window.addEventListener('resize', checkSentinelVisibility);
 
-                  // Run an initial check after observer setup
-          setTimeout(checkSentinelVisibility, 50);
+                  // Run an initial check
+                  setTimeout(checkSentinelVisibility, 50);
                 })();
 
                 // Debug helpers removed (dev UI injection was intentionally stripped for commit-ready build).

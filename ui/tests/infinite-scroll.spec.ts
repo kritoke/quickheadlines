@@ -59,12 +59,12 @@ test.describe('Infinite Scroll', () => {
     const initialItems = await page.locator('[data-timeline-item="true"]').count();
     console.log('Initial items:', initialItems);
 
-    // Scroll the inner column inside #main-content (the actual scrollable element)
+    // Scroll #main-content directly (it now has overflow-y: auto)
     for (let i = 0; i < 5; i++) {
       await page.evaluate(() => {
         const mainContent = document.getElementById('main-content');
-        if (mainContent && mainContent.firstElementChild) {
-          (mainContent.firstElementChild as HTMLElement).scrollTop = (mainContent.firstElementChild as HTMLElement).scrollHeight;
+        if (mainContent) {
+          mainContent.scrollTop = mainContent.scrollHeight;
         }
       });
       await page.waitForTimeout(800);
