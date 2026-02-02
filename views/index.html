@@ -119,17 +119,23 @@
       body .font-size-18 { font-size: 20px !important; }
       body .font-size-20 { font-size: 22px !important; }
 
-      /* Favicon helper to ensure consistent sizing and vertical alignment on desktop */
-      body .qh-favicon {
-        display: inline-flex !important;
-        align-items: center !important;
-        justify-content: center !important;
-        width: 18px !important;
-        height: 18px !important;
-        margin-right: 8px !important;
-        vertical-align: middle !important;
-      }
-        /* Force reasonable padding for Elm pages on desktop */
+       /* Favicon helper to ensure consistent sizing and vertical alignment on desktop */
+       body .qh-favicon {
+         display: inline-flex !important;
+         align-items: center !important;
+         justify-content: center !important;
+         width: 18px !important;
+         height: 18px !important;
+         margin-right: 8px !important;
+         vertical-align: middle !important;
+       }
+         /* Tab link styles - clean look with no shadow */
+         .tab-link, .tab-link:hover, .tab-link:active {
+           box-shadow: none !important;
+           text-shadow: none !important;
+           filter: none !important;
+         }
+         /* Force reasonable padding for Elm pages on desktop */
         @media (min-width: 1024px) {
           [data-page="home"] [data-semantic="main-content-scroll"] > *:first-child {
             padding-top: 0 !important;
