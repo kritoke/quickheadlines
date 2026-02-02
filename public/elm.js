@@ -14559,11 +14559,12 @@ var $author$project$Theme$cardColor = function (theme) {
 		return A3($mdgriffith$elm_ui$Element$rgb255, 255, 255, 255);
 	}
 };
+var $mdgriffith$elm_ui$Element$rgba = $mdgriffith$elm_ui$Internal$Model$Rgba;
 var $author$project$Pages$Home_$faviconView = F2(
 	function (theme, faviconUrl) {
 		var bgColor = function () {
 			if (theme.$ === 'Dark') {
-				return A3($mdgriffith$elm_ui$Element$rgb255, 203, 213, 225);
+				return A4($mdgriffith$elm_ui$Element$rgba, 255, 165, 0, 0.3);
 			} else {
 				return A3($mdgriffith$elm_ui$Element$rgb255, 255, 255, 255);
 			}
@@ -15342,7 +15343,6 @@ var $author$project$Responsive$isMobile = function (breakpoint) {
 			return false;
 	}
 };
-var $mdgriffith$elm_ui$Element$rgba = $mdgriffith$elm_ui$Internal$Model$Rgba;
 var $author$project$Pages$Home_$allTab = F2(
 	function (shared, activeTab) {
 		var theme = shared.theme;
@@ -15368,9 +15368,9 @@ var $author$project$Pages$Home_$allTab = F2(
 		var bgColor = function () {
 			if (isActive) {
 				if (theme.$ === 'Dark') {
-					return A3($mdgriffith$elm_ui$Element$rgb255, 203, 213, 225);
+					return A4($mdgriffith$elm_ui$Element$rgba, 255, 165, 0, 0.3);
 				} else {
-					return A3($mdgriffith$elm_ui$Element$rgb255, 254, 215, 0);
+					return A3($mdgriffith$elm_ui$Element$rgb255, 255, 165, 0);
 				}
 			} else {
 				return A4($mdgriffith$elm_ui$Element$rgba, 0, 0, 0, 0);
@@ -15497,9 +15497,9 @@ var $author$project$Pages$Home_$tabButton = F3(
 		var bgColor = function () {
 			if (isActive) {
 				if (theme.$ === 'Dark') {
-					return A3($mdgriffith$elm_ui$Element$rgb255, 203, 213, 225);
+					return A4($mdgriffith$elm_ui$Element$rgba, 255, 165, 0, 0.3);
 				} else {
-					return A3($mdgriffith$elm_ui$Element$rgb255, 254, 215, 0);
+					return A3($mdgriffith$elm_ui$Element$rgb255, 255, 165, 0);
 				}
 			} else {
 				return A4($mdgriffith$elm_ui$Element$rgba, 0, 0, 0, 0);
