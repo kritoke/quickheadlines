@@ -768,12 +768,12 @@ def start_refresh_loop(config_path : String)
   active_config = load_config(config_path)
   last_mtime = File.info(config_path).modification_time
 
-  # Do an initial refresh with active config
-  refresh_all(active_config)
-  puts "[#{Time.local}] Initial refresh complete"
+   # Do an initial refresh with active config
+   refresh_all(active_config)
+   puts "[#{Time.local}] Initial refresh complete"
 
-  # Save initial cache
-  save_feed_cache(FeedCache.instance, initial_config.cache_retention_hours, initial_config.max_cache_size_mb)
+   # Save initial cache
+   save_feed_cache(FeedCache.instance, active_config.cache_retention_hours, active_config.max_cache_size_mb)
 
   spawn do
     loop do

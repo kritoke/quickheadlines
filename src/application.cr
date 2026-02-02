@@ -82,10 +82,15 @@ begin
   # Clear in-memory favicon cache to prevent stale base64 data from previous runs
   FAVICON_CACHE.clear
 
-  # Initial load so the first request sees real data
-  refresh_all(initial_config)
+   # Initial load so the first request sees real data
+   refresh_all(initial_config)
 
-  # Verify feeds are loaded before starting server
+   # Start background refresh loop for automatic feed updates
+   spawn do
+     start_refresh_loop("feeds.yml")
+   end
+
+   # Verify feeds are loaded before starting server
   STDERR.puts "[#{Time.local}] Verifying feeds loaded..."
   STDERR.puts "[#{Time.local}] STATE.feeds.size=#{STATE.feeds.size}"
   STATE.tabs.each do |tab|
