@@ -15330,7 +15330,6 @@ var $author$project$Pages$Home_$content = F2(
 				]),
 			$mdgriffith$elm_ui$Element$text('Error loading feeds')) : A2($author$project$Pages$Home_$feedGrid, shared, model));
 	});
-var $author$project$ThemeTypography$body = $mdgriffith$elm_ui$Element$Font$size(16);
 var $author$project$Responsive$isMobile = function (breakpoint) {
 	switch (breakpoint.$) {
 		case 'VeryNarrowBreakpoint':
@@ -15350,7 +15349,11 @@ var $author$project$Pages$Home_$allTab = F2(
 		var isActive = $elm$core$String$toLower(activeTab) === 'all';
 		var txtColor = function () {
 			if (isActive) {
-				return $author$project$Theme$lumeOrange;
+				if (theme.$ === 'Dark') {
+					return A3($mdgriffith$elm_ui$Element$rgb255, 30, 41, 59);
+				} else {
+					return A3($mdgriffith$elm_ui$Element$rgb255, 15, 23, 42);
+				}
 			} else {
 				if (theme.$ === 'Dark') {
 					return A3($mdgriffith$elm_ui$Element$rgb255, 148, 163, 184);
@@ -15361,19 +15364,28 @@ var $author$project$Pages$Home_$allTab = F2(
 		}();
 		var breakpoint = $author$project$Responsive$breakpointFromWidth(shared.windowWidth);
 		var isMobile = $author$project$Responsive$isMobile(breakpoint);
-		var pad = isMobile ? 8 : 16;
-		var borderColor = isActive ? $author$project$Theme$lumeOrange : A4($mdgriffith$elm_ui$Element$rgba, 0, 0, 0, 0);
+		var pad = isMobile ? 10 : 16;
+		var bgColor = function () {
+			if (isActive) {
+				if (theme.$ === 'Dark') {
+					return A3($mdgriffith$elm_ui$Element$rgb255, 203, 213, 225);
+				} else {
+					return A3($mdgriffith$elm_ui$Element$rgb255, 254, 215, 0);
+				}
+			} else {
+				return A4($mdgriffith$elm_ui$Element$rgba, 0, 0, 0, 0);
+			}
+		}();
 		return A2(
 			$mdgriffith$elm_ui$Element$Input$button,
 			_List_fromArray(
 				[
-					A2($mdgriffith$elm_ui$Element$paddingXY, pad, 10),
-					$author$project$ThemeTypography$body,
+					A2($mdgriffith$elm_ui$Element$paddingXY, pad, 8),
+					$author$project$ThemeTypography$small,
 					$mdgriffith$elm_ui$Element$Font$medium,
 					$mdgriffith$elm_ui$Element$Font$color(txtColor),
-					$mdgriffith$elm_ui$Element$Border$widthEach(
-					{bottom: 2, left: 0, right: 0, top: 0}),
-					$mdgriffith$elm_ui$Element$Border$color(borderColor),
+					$mdgriffith$elm_ui$Element$Background$color(bgColor),
+					$mdgriffith$elm_ui$Element$Border$rounded(16),
 					$mdgriffith$elm_ui$Element$htmlAttribute(
 					A2($elm$html$Html$Attributes$style, 'cursor', 'pointer')),
 					$mdgriffith$elm_ui$Element$htmlAttribute(
@@ -15466,7 +15478,11 @@ var $author$project$Pages$Home_$tabButton = F3(
 			$elm$core$String$toLower(activeTab));
 		var txtColor = function () {
 			if (isActive) {
-				return $author$project$Theme$lumeOrange;
+				if (theme.$ === 'Dark') {
+					return A3($mdgriffith$elm_ui$Element$rgb255, 30, 41, 59);
+				} else {
+					return A3($mdgriffith$elm_ui$Element$rgb255, 15, 23, 42);
+				}
 			} else {
 				if (theme.$ === 'Dark') {
 					return A3($mdgriffith$elm_ui$Element$rgb255, 148, 163, 184);
@@ -15477,19 +15493,28 @@ var $author$project$Pages$Home_$tabButton = F3(
 		}();
 		var breakpoint = $author$project$Responsive$breakpointFromWidth(shared.windowWidth);
 		var isMobile = $author$project$Responsive$isMobile(breakpoint);
-		var pad = isMobile ? 8 : 16;
-		var borderColor = isActive ? $author$project$Theme$lumeOrange : A4($mdgriffith$elm_ui$Element$rgba, 0, 0, 0, 0);
+		var pad = isMobile ? 10 : 16;
+		var bgColor = function () {
+			if (isActive) {
+				if (theme.$ === 'Dark') {
+					return A3($mdgriffith$elm_ui$Element$rgb255, 203, 213, 225);
+				} else {
+					return A3($mdgriffith$elm_ui$Element$rgb255, 254, 215, 0);
+				}
+			} else {
+				return A4($mdgriffith$elm_ui$Element$rgba, 0, 0, 0, 0);
+			}
+		}();
 		return A2(
 			$mdgriffith$elm_ui$Element$Input$button,
 			_List_fromArray(
 				[
-					A2($mdgriffith$elm_ui$Element$paddingXY, pad, 10),
-					$author$project$ThemeTypography$body,
+					A2($mdgriffith$elm_ui$Element$paddingXY, pad, 8),
+					$author$project$ThemeTypography$small,
 					$mdgriffith$elm_ui$Element$Font$medium,
 					$mdgriffith$elm_ui$Element$Font$color(txtColor),
-					$mdgriffith$elm_ui$Element$Border$widthEach(
-					{bottom: 2, left: 0, right: 0, top: 0}),
-					$mdgriffith$elm_ui$Element$Border$color(borderColor),
+					$mdgriffith$elm_ui$Element$Background$color(bgColor),
+					$mdgriffith$elm_ui$Element$Border$rounded(16),
 					$mdgriffith$elm_ui$Element$htmlAttribute(
 					A2($elm$html$Html$Attributes$style, 'cursor', 'pointer')),
 					$mdgriffith$elm_ui$Element$htmlAttribute(
@@ -15709,7 +15734,7 @@ var $author$project$Pages$Home_$tabBar = F2(
 						$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill),
 						$mdgriffith$elm_ui$Element$spacing(0),
 						$mdgriffith$elm_ui$Element$paddingEach(
-						{bottom: 0, left: 4, right: 0, top: 12})
+						{bottom: 0, left: 4, right: 0, top: 16})
 					]),
 				_List_fromArray(
 					[
@@ -15718,7 +15743,9 @@ var $author$project$Pages$Home_$tabBar = F2(
 						_List_fromArray(
 							[
 								$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill),
-								$mdgriffith$elm_ui$Element$spacing(0),
+								$mdgriffith$elm_ui$Element$spacing(6),
+								$mdgriffith$elm_ui$Element$paddingEach(
+								{bottom: 12, left: 4, right: 4, top: 4}),
 								$mdgriffith$elm_ui$Element$htmlAttribute(
 								A2($elm$html$Html$Attributes$style, 'overflow-x', 'auto')),
 								$mdgriffith$elm_ui$Element$htmlAttribute(
@@ -15735,27 +15762,9 @@ var $author$project$Pages$Home_$tabBar = F2(
 						_List_fromArray(
 							[
 								$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill),
-								$mdgriffith$elm_ui$Element$spacing(0)
+								$mdgriffith$elm_ui$Element$spacing(6)
 							]),
-						tabElements),
-						A2(
-						$mdgriffith$elm_ui$Element$el,
-						_List_fromArray(
-							[
-								$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill),
-								$mdgriffith$elm_ui$Element$height(
-								$mdgriffith$elm_ui$Element$px(1)),
-								$mdgriffith$elm_ui$Element$Background$color(
-								function () {
-									var _v0 = shared.theme;
-									if (_v0.$ === 'Dark') {
-										return A3($mdgriffith$elm_ui$Element$rgb255, 75, 75, 75);
-									} else {
-										return A3($mdgriffith$elm_ui$Element$rgb255, 209, 213, 219);
-									}
-								}())
-							]),
-						$mdgriffith$elm_ui$Element$none)
+						tabElements)
 					]));
 		}
 	});
@@ -15783,6 +15792,7 @@ var $author$project$Pages$Home_$view = F2(
 				]));
 	});
 var $author$project$Pages$Timeline$LoadMore = {$: 'LoadMore'};
+var $author$project$ThemeTypography$body = $mdgriffith$elm_ui$Element$Font$size(16);
 var $author$project$Pages$Timeline$clusteringIndicator = function (isClustering) {
 	return isClustering ? A2(
 		$mdgriffith$elm_ui$Element$row,

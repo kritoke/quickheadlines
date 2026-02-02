@@ -212,35 +212,27 @@ tabBar shared model =
          Element.column
               [ Element.width Element.fill
               , Element.spacing 0
-              , Element.paddingEach { top = 12, right = 0, bottom = 0, left = 4 }
+              , Element.paddingEach { top = 16, right = 0, bottom = 0, left = 4 }
               ]
-         [ if isMobile then
-             row
-             [ width fill
-             , spacing 0
-                      , htmlAttribute (Html.Attributes.style "overflow-x" "auto")
-                      , htmlAttribute (Html.Attributes.style "white-space" "nowrap")
-                      , htmlAttribute (Html.Attributes.style "-webkit-overflow-scrolling" "touch")
-                      , Element.htmlAttribute (Html.Attributes.style "scrollbar-width" "none")
-                      , Element.htmlAttribute (Html.Attributes.class "auto-hide-scroll")
-                     ]
-                     tabElements
-               else
-                 wrappedRow
-                     [ width fill
-                     , spacing 0
-                     ]
-                     tabElements
-             , el
-                 [ width fill
-                 , height (px 1)
-                 , Background.color (case shared.theme of
-                     Shared.Dark -> rgb255 75 75 75
-                     Shared.Light -> rgb255 209 213 219
-                   )
-                 ]
-                 Element.none
-             ]
+          [ if isMobile then
+              row
+              [ width fill
+              , spacing 6
+              , Element.paddingEach { top = 4, right = 4, bottom = 12, left = 4 }
+              , htmlAttribute (Html.Attributes.style "overflow-x" "auto")
+              , htmlAttribute (Html.Attributes.style "white-space" "nowrap")
+              , htmlAttribute (Html.Attributes.style "-webkit-overflow-scrolling" "touch")
+              , Element.htmlAttribute (Html.Attributes.style "scrollbar-width" "none")
+              , Element.htmlAttribute (Html.Attributes.class "auto-hide-scroll")
+              ]
+              tabElements
+            else
+                  wrappedRow
+                      [ width fill
+                      , spacing 6
+                      ]
+                      tabElements
+              ]
 
 
 allTab : Shared.Model -> String -> Element Msg
@@ -260,33 +252,34 @@ allTab shared activeTab =
 
          txtColor =
              if isActive then
-                 Theme.lumeOrange
-
+                 case theme of
+                     Shared.Dark -> rgb255 30 41 59
+                     Shared.Light -> rgb255 15 23 42
              else
                  case theme of
                      Shared.Dark ->
                          rgb255 148 163 184
-
                      Shared.Light ->
                          rgb255 100 116 139
 
-         borderColor =
+         bgColor =
              if isActive then
-                 Theme.lumeOrange
-
+                 case theme of
+                     Shared.Dark -> rgb255 203 213 225
+                     Shared.Light -> rgb255 254 215 0
              else
                  Element.rgba 0 0 0 0
 
          pad =
-             if isMobile then 8 else 16
+             if isMobile then 10 else 16
      in
      Input.button
-         [ paddingXY pad 10
-         , Ty.body
+         [ paddingXY pad 8
+         , Ty.small
          , Font.medium
          , Font.color txtColor
-         , Border.widthEach { top = 0, right = 0, bottom = 2, left = 0 }
-         , Border.color borderColor
+         , Background.color bgColor
+         , Border.rounded 16
          , htmlAttribute (Html.Attributes.style "cursor" "pointer")
          , htmlAttribute (Html.Attributes.style "outline" "none")
          , htmlAttribute (Html.Attributes.style "flex-shrink" "0")
@@ -314,8 +307,9 @@ tabButton shared activeTab tab =
 
          txtColor =
              if isActive then
-                 Theme.lumeOrange
-
+                 case theme of
+                     Shared.Dark -> rgb255 30 41 59
+                     Shared.Light -> rgb255 15 23 42
              else
                  case theme of
                      Shared.Dark ->
@@ -324,23 +318,24 @@ tabButton shared activeTab tab =
                      Shared.Light ->
                          rgb255 100 116 139
 
-         borderColor =
+         bgColor =
              if isActive then
-                 Theme.lumeOrange
-
+                 case theme of
+                     Shared.Dark -> rgb255 203 213 225
+                     Shared.Light -> rgb255 254 215 0
              else
                  Element.rgba 0 0 0 0
 
          pad =
-             if isMobile then 8 else 16
+             if isMobile then 10 else 16
      in
      Input.button
-         [ paddingXY pad 10
-         , Ty.body
+         [ paddingXY pad 8
+         , Ty.small
          , Font.medium
          , Font.color txtColor
-         , Border.widthEach { top = 0, right = 0, bottom = 2, left = 0 }
-         , Border.color borderColor
+         , Background.color bgColor
+         , Border.rounded 16
          , htmlAttribute (Html.Attributes.style "cursor" "pointer")
          , htmlAttribute (Html.Attributes.style "outline" "none")
          , htmlAttribute (Html.Attributes.style "flex-shrink" "0")
