@@ -15367,7 +15367,7 @@ var $author$project$Pages$Home_$allTab = F2(
 			$mdgriffith$elm_ui$Element$Input$button,
 			_List_fromArray(
 				[
-					A2($mdgriffith$elm_ui$Element$paddingXY, pad, 8),
+					A2($mdgriffith$elm_ui$Element$paddingXY, pad, 10),
 					$author$project$ThemeTypography$body,
 					$mdgriffith$elm_ui$Element$Font$medium,
 					$mdgriffith$elm_ui$Element$Font$color(txtColor),
@@ -15483,7 +15483,7 @@ var $author$project$Pages$Home_$tabButton = F3(
 			$mdgriffith$elm_ui$Element$Input$button,
 			_List_fromArray(
 				[
-					A2($mdgriffith$elm_ui$Element$paddingXY, pad, 8),
+					A2($mdgriffith$elm_ui$Element$paddingXY, pad, 10),
 					$author$project$ThemeTypography$body,
 					$mdgriffith$elm_ui$Element$Font$medium,
 					$mdgriffith$elm_ui$Element$Font$color(txtColor),
@@ -15709,7 +15709,7 @@ var $author$project$Pages$Home_$tabBar = F2(
 						$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill),
 						$mdgriffith$elm_ui$Element$spacing(0),
 						$mdgriffith$elm_ui$Element$paddingEach(
-						{bottom: 0, left: 4, right: 0, top: 8})
+						{bottom: 0, left: 4, right: 0, top: 12})
 					]),
 				_List_fromArray(
 					[

@@ -210,19 +210,19 @@ tabBar shared model =
                  allTab shared model.activeTab :: List.map (tabButton shared model.activeTab) model.tabs ++ [ clusteringIndicator model.isClustering ]
          in
          Element.column
-             [ Element.width Element.fill
-             , Element.spacing 0
-             , Element.paddingEach { top = 8, right = 0, bottom = 0, left = 4 }
-             ]
-             [ if isMobile then
-                 row
-                     [ width fill
-                     , spacing 0
-                     , htmlAttribute (Html.Attributes.style "overflow-x" "auto")
-                     , htmlAttribute (Html.Attributes.style "white-space" "nowrap")
-                     , htmlAttribute (Html.Attributes.style "-webkit-overflow-scrolling" "touch")
-                     , Element.htmlAttribute (Html.Attributes.style "scrollbar-width" "none")
-                     , Element.htmlAttribute (Html.Attributes.class "auto-hide-scroll")
+              [ Element.width Element.fill
+              , Element.spacing 0
+              , Element.paddingEach { top = 12, right = 0, bottom = 0, left = 4 }
+              ]
+         [ if isMobile then
+             row
+             [ width fill
+             , spacing 0
+                      , htmlAttribute (Html.Attributes.style "overflow-x" "auto")
+                      , htmlAttribute (Html.Attributes.style "white-space" "nowrap")
+                      , htmlAttribute (Html.Attributes.style "-webkit-overflow-scrolling" "touch")
+                      , Element.htmlAttribute (Html.Attributes.style "scrollbar-width" "none")
+                      , Element.htmlAttribute (Html.Attributes.class "auto-hide-scroll")
                      ]
                      tabElements
                else
@@ -281,7 +281,7 @@ allTab shared activeTab =
              if isMobile then 8 else 16
      in
      Input.button
-         [ paddingXY pad 8
+         [ paddingXY pad 10
          , Ty.body
          , Font.medium
          , Font.color txtColor
@@ -335,7 +335,7 @@ tabButton shared activeTab tab =
              if isMobile then 8 else 16
      in
      Input.button
-         [ paddingXY pad 8
+         [ paddingXY pad 10
          , Ty.body
          , Font.medium
          , Font.color txtColor
