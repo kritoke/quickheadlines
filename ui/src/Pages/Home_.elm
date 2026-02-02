@@ -178,133 +178,177 @@ view shared model =
 
 tabBar : Shared.Model -> Model -> Element Msg
 tabBar shared model =
-    if List.isEmpty model.tabs then
-        Element.none
+     if List.isEmpty model.tabs then
+         Element.none
 
-    else
-        let
-            theme =
-                shared.theme
+     else
+         let
+             theme =
+                 shared.theme
 
-            colors =
-                themeToColors theme
+             colors =
+                 themeToColors theme
 
-            border =
-                case theme of
-                    Shared.Dark ->
-                        rgb255 55 55 55
+             breakpoint =
+                 Responsive.breakpointFromWidth shared.windowWidth
 
-                    Shared.Light ->
-                        rgb255 229 231 235
-        in
+             border =
+                 case theme of
+                     Shared.Dark ->
+                         rgb255 55 55 55
+
+                     Shared.Light ->
+                         rgb255 229 231 235
+
+             isMobile =
+                 Responsive.isMobile breakpoint
+
+             tabPadding =
+                 if isMobile then 8 else 16
+
+             tabElements =
+                 allTab shared model.activeTab :: List.map (tabButton shared model.activeTab) model.tabs ++ [ clusteringIndicator model.isClustering ]
+         in
          Element.column
              [ Element.width Element.fill
              , Element.spacing 0
              , Element.paddingEach { top = 8, right = 0, bottom = 0, left = 4 }
              ]
-             [ wrappedRow
+             [ if isMobile then
+                 row
+                     [ width fill
+                     , spacing 0
+                     , htmlAttribute (Html.Attributes.style "overflow-x" "auto")
+                     , htmlAttribute (Html.Attributes.style "white-space" "nowrap")
+                     , htmlAttribute (Html.Attributes.style "-webkit-overflow-scrolling" "touch")
+                     , Element.htmlAttribute (Html.Attributes.style "scrollbar-width" "none")
+                     , Element.htmlAttribute (Html.Attributes.class "auto-hide-scroll")
+                     ]
+                     tabElements
+               else
+                 wrappedRow
+                     [ width fill
+                     , spacing 0
+                     ]
+                     tabElements
+             , el
                  [ width fill
-                 , spacing 0
+                 , height (px 1)
+                 , Background.color (case shared.theme of
+                     Shared.Dark -> rgb255 75 75 75
+                     Shared.Light -> rgb255 209 213 219
+                   )
                  ]
-                 (allTab shared model.activeTab :: List.map (tabButton shared model.activeTab) model.tabs ++ [ clusteringIndicator model.isClustering ])
-            , el
-                [ width fill
-                , height (px 1)
-                , Background.color (case shared.theme of
-                    Shared.Dark -> rgb255 75 75 75
-                    Shared.Light -> rgb255 209 213 219
-                  )
-                ]
-                Element.none
-            ]
+                 Element.none
+             ]
 
 
 allTab : Shared.Model -> String -> Element Msg
 allTab shared activeTab =
-    let
-        theme =
-            shared.theme
+     let
+         theme =
+             shared.theme
 
-        isActive =
-            String.toLower activeTab == "all"
+         breakpoint =
+             Responsive.breakpointFromWidth shared.windowWidth
 
-        txtColor =
-            if isActive then
-                Theme.lumeOrange
+         isMobile =
+             Responsive.isMobile breakpoint
 
-            else
-                case theme of
-                    Shared.Dark ->
-                        rgb255 148 163 184
+         isActive =
+             String.toLower activeTab == "all"
 
-                    Shared.Light ->
-                        rgb255 100 116 139
+         txtColor =
+             if isActive then
+                 Theme.lumeOrange
 
-        borderColor =
-            if isActive then
-                Theme.lumeOrange
+             else
+                 case theme of
+                     Shared.Dark ->
+                         rgb255 148 163 184
 
-            else
-                Element.rgba 0 0 0 0
-    in
-    Input.button
-        [ paddingXY 16 8
-        , Ty.body
-        , Font.medium
-        , Font.color txtColor
-        , Border.widthEach { top = 0, right = 0, bottom = 2, left = 0 }
-        , Border.color borderColor
-        , htmlAttribute (Html.Attributes.style "cursor" "pointer")
-        , htmlAttribute (Html.Attributes.style "outline" "none")
-        , htmlAttribute (Html.Attributes.class "tab-link")
-        ]
-        { onPress = Just (SwitchTab "All")
-        , label = text "All"
-        }
+                     Shared.Light ->
+                         rgb255 100 116 139
+
+         borderColor =
+             if isActive then
+                 Theme.lumeOrange
+
+             else
+                 Element.rgba 0 0 0 0
+
+         pad =
+             if isMobile then 8 else 16
+     in
+     Input.button
+         [ paddingXY pad 8
+         , Ty.body
+         , Font.medium
+         , Font.color txtColor
+         , Border.widthEach { top = 0, right = 0, bottom = 2, left = 0 }
+         , Border.color borderColor
+         , htmlAttribute (Html.Attributes.style "cursor" "pointer")
+         , htmlAttribute (Html.Attributes.style "outline" "none")
+         , htmlAttribute (Html.Attributes.style "flex-shrink" "0")
+         , htmlAttribute (Html.Attributes.class "tab-link")
+         ]
+         { onPress = Just (SwitchTab "All")
+         , label = text "All"
+         }
 
 
 tabButton : Shared.Model -> String -> String -> Element Msg
 tabButton shared activeTab tab =
-    let
-        theme =
-            shared.theme
+     let
+         theme =
+             shared.theme
 
-        isActive =
-            String.toLower tab == String.toLower activeTab
+         breakpoint =
+             Responsive.breakpointFromWidth shared.windowWidth
 
-        txtColor =
-            if isActive then
-                Theme.lumeOrange
+         isMobile =
+             Responsive.isMobile breakpoint
 
-            else
-                case theme of
-                    Shared.Dark ->
-                        rgb255 148 163 184
+         isActive =
+             String.toLower tab == String.toLower activeTab
 
-                    Shared.Light ->
-                        rgb255 100 116 139
+         txtColor =
+             if isActive then
+                 Theme.lumeOrange
 
-        borderColor =
-            if isActive then
-                Theme.lumeOrange
+             else
+                 case theme of
+                     Shared.Dark ->
+                         rgb255 148 163 184
 
-            else
-                Element.rgba 0 0 0 0
-    in
-    Input.button
-        [ paddingXY 16 8
-        , Ty.body
-        , Font.medium
-        , Font.color txtColor
-        , Border.widthEach { top = 0, right = 0, bottom = 2, left = 0 }
-        , Border.color borderColor
-        , htmlAttribute (Html.Attributes.style "cursor" "pointer")
-        , htmlAttribute (Html.Attributes.style "outline" "none")
-        , htmlAttribute (Html.Attributes.class "tab-link")
-        ]
-        { onPress = Just (SwitchTab tab)
-        , label = text tab
-        }
+                     Shared.Light ->
+                         rgb255 100 116 139
+
+         borderColor =
+             if isActive then
+                 Theme.lumeOrange
+
+             else
+                 Element.rgba 0 0 0 0
+
+         pad =
+             if isMobile then 8 else 16
+     in
+     Input.button
+         [ paddingXY pad 8
+         , Ty.body
+         , Font.medium
+         , Font.color txtColor
+         , Border.widthEach { top = 0, right = 0, bottom = 2, left = 0 }
+         , Border.color borderColor
+         , htmlAttribute (Html.Attributes.style "cursor" "pointer")
+         , htmlAttribute (Html.Attributes.style "outline" "none")
+         , htmlAttribute (Html.Attributes.style "flex-shrink" "0")
+         , htmlAttribute (Html.Attributes.class "tab-link")
+         ]
+         { onPress = Just (SwitchTab tab)
+         , label = text tab
+         }
 
 
 clusteringIndicator : Bool -> Element msg

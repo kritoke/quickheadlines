@@ -15331,6 +15331,18 @@ var $author$project$Pages$Home_$content = F2(
 			$mdgriffith$elm_ui$Element$text('Error loading feeds')) : A2($author$project$Pages$Home_$feedGrid, shared, model));
 	});
 var $author$project$ThemeTypography$body = $mdgriffith$elm_ui$Element$Font$size(16);
+var $author$project$Responsive$isMobile = function (breakpoint) {
+	switch (breakpoint.$) {
+		case 'VeryNarrowBreakpoint':
+			return true;
+		case 'MobileBreakpoint':
+			return true;
+		case 'TabletBreakpoint':
+			return false;
+		default:
+			return false;
+	}
+};
 var $mdgriffith$elm_ui$Element$rgba = $mdgriffith$elm_ui$Internal$Model$Rgba;
 var $author$project$Pages$Home_$allTab = F2(
 	function (shared, activeTab) {
@@ -15347,12 +15359,15 @@ var $author$project$Pages$Home_$allTab = F2(
 				}
 			}
 		}();
+		var breakpoint = $author$project$Responsive$breakpointFromWidth(shared.windowWidth);
+		var isMobile = $author$project$Responsive$isMobile(breakpoint);
+		var pad = isMobile ? 8 : 16;
 		var borderColor = isActive ? $author$project$Theme$lumeOrange : A4($mdgriffith$elm_ui$Element$rgba, 0, 0, 0, 0);
 		return A2(
 			$mdgriffith$elm_ui$Element$Input$button,
 			_List_fromArray(
 				[
-					A2($mdgriffith$elm_ui$Element$paddingXY, 16, 8),
+					A2($mdgriffith$elm_ui$Element$paddingXY, pad, 8),
 					$author$project$ThemeTypography$body,
 					$mdgriffith$elm_ui$Element$Font$medium,
 					$mdgriffith$elm_ui$Element$Font$color(txtColor),
@@ -15363,6 +15378,8 @@ var $author$project$Pages$Home_$allTab = F2(
 					A2($elm$html$Html$Attributes$style, 'cursor', 'pointer')),
 					$mdgriffith$elm_ui$Element$htmlAttribute(
 					A2($elm$html$Html$Attributes$style, 'outline', 'none')),
+					$mdgriffith$elm_ui$Element$htmlAttribute(
+					A2($elm$html$Html$Attributes$style, 'flex-shrink', '0')),
 					$mdgriffith$elm_ui$Element$htmlAttribute(
 					$elm$html$Html$Attributes$class('tab-link'))
 				]),
@@ -15458,12 +15475,15 @@ var $author$project$Pages$Home_$tabButton = F3(
 				}
 			}
 		}();
+		var breakpoint = $author$project$Responsive$breakpointFromWidth(shared.windowWidth);
+		var isMobile = $author$project$Responsive$isMobile(breakpoint);
+		var pad = isMobile ? 8 : 16;
 		var borderColor = isActive ? $author$project$Theme$lumeOrange : A4($mdgriffith$elm_ui$Element$rgba, 0, 0, 0, 0);
 		return A2(
 			$mdgriffith$elm_ui$Element$Input$button,
 			_List_fromArray(
 				[
-					A2($mdgriffith$elm_ui$Element$paddingXY, 16, 8),
+					A2($mdgriffith$elm_ui$Element$paddingXY, pad, 8),
 					$author$project$ThemeTypography$body,
 					$mdgriffith$elm_ui$Element$Font$medium,
 					$mdgriffith$elm_ui$Element$Font$color(txtColor),
@@ -15474,6 +15494,8 @@ var $author$project$Pages$Home_$tabButton = F3(
 					A2($elm$html$Html$Attributes$style, 'cursor', 'pointer')),
 					$mdgriffith$elm_ui$Element$htmlAttribute(
 					A2($elm$html$Html$Attributes$style, 'outline', 'none')),
+					$mdgriffith$elm_ui$Element$htmlAttribute(
+					A2($elm$html$Html$Attributes$style, 'flex-shrink', '0')),
 					$mdgriffith$elm_ui$Element$htmlAttribute(
 					$elm$html$Html$Attributes$class('tab-link'))
 				]),
@@ -15657,7 +15679,22 @@ var $author$project$Pages$Home_$tabBar = F2(
 			return $mdgriffith$elm_ui$Element$none;
 		} else {
 			var theme = shared.theme;
+			var tabElements = A2(
+				$elm$core$List$cons,
+				A2($author$project$Pages$Home_$allTab, shared, model.activeTab),
+				_Utils_ap(
+					A2(
+						$elm$core$List$map,
+						A2($author$project$Pages$Home_$tabButton, shared, model.activeTab),
+						model.tabs),
+					_List_fromArray(
+						[
+							$author$project$Pages$Home_$clusteringIndicator(model.isClustering)
+						])));
 			var colors = $author$project$Theme$themeToColors(theme);
+			var breakpoint = $author$project$Responsive$breakpointFromWidth(shared.windowWidth);
+			var isMobile = $author$project$Responsive$isMobile(breakpoint);
+			var tabPadding = isMobile ? 8 : 16;
 			var border = function () {
 				if (theme.$ === 'Dark') {
 					return A3($mdgriffith$elm_ui$Element$rgb255, 55, 55, 55);
@@ -15676,25 +15713,31 @@ var $author$project$Pages$Home_$tabBar = F2(
 					]),
 				_List_fromArray(
 					[
-						A2(
+						isMobile ? A2(
+						$mdgriffith$elm_ui$Element$row,
+						_List_fromArray(
+							[
+								$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill),
+								$mdgriffith$elm_ui$Element$spacing(0),
+								$mdgriffith$elm_ui$Element$htmlAttribute(
+								A2($elm$html$Html$Attributes$style, 'overflow-x', 'auto')),
+								$mdgriffith$elm_ui$Element$htmlAttribute(
+								A2($elm$html$Html$Attributes$style, 'white-space', 'nowrap')),
+								$mdgriffith$elm_ui$Element$htmlAttribute(
+								A2($elm$html$Html$Attributes$style, '-webkit-overflow-scrolling', 'touch')),
+								$mdgriffith$elm_ui$Element$htmlAttribute(
+								A2($elm$html$Html$Attributes$style, 'scrollbar-width', 'none')),
+								$mdgriffith$elm_ui$Element$htmlAttribute(
+								$elm$html$Html$Attributes$class('auto-hide-scroll'))
+							]),
+						tabElements) : A2(
 						$mdgriffith$elm_ui$Element$wrappedRow,
 						_List_fromArray(
 							[
 								$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill),
 								$mdgriffith$elm_ui$Element$spacing(0)
 							]),
-						A2(
-							$elm$core$List$cons,
-							A2($author$project$Pages$Home_$allTab, shared, model.activeTab),
-							_Utils_ap(
-								A2(
-									$elm$core$List$map,
-									A2($author$project$Pages$Home_$tabButton, shared, model.activeTab),
-									model.tabs),
-								_List_fromArray(
-									[
-										$author$project$Pages$Home_$clusteringIndicator(model.isClustering)
-									])))),
+						tabElements),
 						A2(
 						$mdgriffith$elm_ui$Element$el,
 						_List_fromArray(
@@ -16363,18 +16406,6 @@ var $author$project$Responsive$horizontalPadding = function (breakpoint) {
 			return 48;
 		default:
 			return 96;
-	}
-};
-var $author$project$Responsive$isMobile = function (breakpoint) {
-	switch (breakpoint.$) {
-		case 'VeryNarrowBreakpoint':
-			return true;
-		case 'MobileBreakpoint':
-			return true;
-		case 'TabletBreakpoint':
-			return false;
-		default:
-			return false;
 	}
 };
 var $mdgriffith$elm_ui$Internal$Model$Max = F2(
