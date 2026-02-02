@@ -130,6 +130,10 @@
          vertical-align: middle !important;
        }
        /* Tab link styles - aggressively remove all shadows */
+       [data-page="home"] .tab-link,
+       [data-page="home"] .tab-link:hover,
+       [data-page="home"] .tab-link:active,
+       [data-page="home"] .tab-link:focus,
        [data-page="home"] button,
        [data-page="home"] button:hover,
        [data-page="home"] button:active,
@@ -139,6 +143,7 @@
          filter: none !important;
          -webkit-filter: none !important;
          outline: none !important;
+         -webkit-appearance: none !important;
        }
        /* Force reasonable padding for Elm pages on desktop */
         @media (min-width: 1024px) {
