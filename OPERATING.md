@@ -317,7 +317,7 @@ export QUICKHEADLINES_CACHE_DIR=/tmp/quickheadlines
 ## 11. Dependencies
 
 ### Required (Auto-installed via Nix)
-- **Crystal:** >= 1.18.2 (version 1.19.1 used)
+- **Crystal:** >= 1.18.2
 - **Shards:** Crystal package manager
 - **SQLite3:** Development libraries
 - **OpenSSL:** Development libraries

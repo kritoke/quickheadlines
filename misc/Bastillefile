@@ -5,17 +5,12 @@ CMD service quickheadlines stop 2>/dev/null || true
 CMD rm -rf /tmp/qh 2>/dev/null || true
 
 # 1. Install dependencies (including sudo for user switching)
-# Note: node/npm not needed - elm.js is pre-compiled in the repo
-# Note: FreeBSD uses Crystal from ports (1.8.2) instead of 1.19.1 which isn't available
-CMD pkg install -y crystal shards git openssl ca_root_nss gmake curl sqlite3 sudo libevent libyaml || \
-    (echo "Package install failed..." && exit 1)
+# Note: node/npm not needed - elm.js is pre-compiled in repo
+# Note: FreeBSD uses Crystal 1.18.2 from ports (Athena-compatible)
+CMD pkg install -y crystal shards git openssl ca_root_nss gmake curl sqlite3 sudo libevent libyaml
 
 # Link SSL certificates (handle different FreeBSD versions)
-CMD if [ -f /usr/local/share/certs/ca-root-nss.crt ]; then \
-        ln -sf /usr/local/share/certs/ca-root-nss.crt /etc/ssl/cert.pem 2>/dev/null || true; \
-    elif [ -f /etc/ssl/cert.pem ]; then \
-        echo "SSL cert already linked"; \
-    fi
+CMD sh -c "if [ -f /usr/local/share/certs/ca-root-nss.crt ]; then ln -sf /usr/local/share/certs/ca-root-nss.crt /etc/ssl/cert.pem 2>/dev/null || true; elif [ -f /etc/ssl/cert.pem ]; then echo 'SSL cert already linked'; fi"
 
 # 2. Create user and core directories
 CMD pw useradd qh -d /usr/local/share/quickheadlines -s /usr/sbin/nologin 2>/dev/null || true
@@ -27,45 +22,29 @@ CMD chown -R qh:qh /usr/local/share/quickheadlines /var/cache/quickheadlines /ho
 FSTAB /usr/local/bastille/cache/crystal/quickheadlines /home/qh/.cache nullfs rw 0 0
 
 # 4. Clone and Prepare Environment
-CMD git clone https://github.com/kritoke/quickheadlines.git /tmp/qh 2>/dev/null || true
-CMD chown -R qh:qh /tmp/qh 2>/dev/null || true
-CMD sysrc quickheadlines_env="GC_MARKERS=1 GC_FREE_SPACE_DIVISOR=20 QUICKHEADLINES_CACHE_DIR=/var/cache/quickheadlines" 2>/dev/null || true
+# Configuration via quickheadlines_env variable:
+#   QUICKHEADLINES_DEV=1         - Clone main branch for development
+#   QUICKHEADLINES_TAG=x.x.x     - Clone specific tag
+#   QUICKHEADLINES_REPO_URL=...  - Custom repository URL
+CMD rm -rf /tmp/qh 2>/dev/null || true
+CMD mkdir -p /tmp/qh
+CMD sh -c "if [ -n \"\$QUICKHEADLINES_DEV\" ]; then echo 'DEV mode: Cloning main branch'; REPO_URL=\"\${QUICKHEADLINES_REPO_URL:-https://github.com/kritoke/quickheadlines.git}\"; git clone \$REPO_URL /tmp/qh || { echo 'ERROR: Failed to clone repository'; exit 1; }; elif [ -n \"\$QUICKHEADLINES_TAG\" ]; then echo \"Cloning tag \$QUICKHEADLINES_TAG\"; REPO_URL=\"\${QUICKHEADLINES_REPO_URL:-https://github.com/kritoke/quickheadlines.git}\"; git clone --branch \$QUICKHEADLINES_TAG \$REPO_URL /tmp/qh 2>/dev/null || { echo \"ERROR: Tag \$QUICKHEADLINES_TAG not found\"; exit 1; }; else echo 'PROD mode: Cloning default branch'; REPO_URL=\"\${QUICKHEADLINES_REPO_URL:-https://github.com/kritoke/quickheadlines.git}\"; git clone \$REPO_URL /tmp/qh || { echo 'ERROR: Failed to clone repository'; exit 1; }; fi && chown -R qh:qh /tmp/qh 2>/dev/null || true"
 
 # 5. Build quickheadlines
-# elm.js is pre-compiled in the repository, so we don't need to compile it on FreeBSD
-# Crystal 1.18.2 (from Freshports) builds Crystal 1.19.1 from source
-CMD cd /tmp/qh && \
-    export PATH=/usr/local/bin:/usr/bin:/bin:$$PATH && \
-    export MAKE=gmake && \
-    echo "Checking system Crystal 1.18.2 from ports..." && \
-    if [ -x "/usr/local/bin/crystal" ]; then \
-        echo "Found Crystal:" && \
-        /usr/local/bin/crystal --version; \
-    elif [ -x "/usr/bin/crystal" ]; then \
-        echo "Found Crystal:" && \
-        /usr/bin/crystal --version; \
-    else \
-        echo "ERROR: Crystal not found"; \
-        exit 1; \
-    fi && \
-    echo "Building Crystal 1.19.1 from source (30-60 minutes)..." && \
-    sudo -u qh sh -c "export PATH=/usr/local/bin:/usr/bin:/bin:\$PATH && export MAKE=gmake && gmake download-crystal" && \
-    echo "Crystal 1.19.1 built, checking..." && \
-    CRYSTAL_VER=$$(/usr/local/bin/crystal --version 2>/dev/null || echo "unknown") && \
-    if [ "$$CRYSTAL_VER" != "Crystal 1.19.1" ]; then \
-        echo "ERROR: Crystal version mismatch. Got: $$CRYSTAL_VER, Expected: Crystal 1.19.1"; \
-        exit 1; \
-    fi && \
-    echo "Installing Crystal dependencies..." && \
-    sudo -u qh sh -c "export PATH=/tmp/qh/bin:/usr/local/bin:/usr/bin:/bin:\$PATH && shards install" && \
-    if [ -n "$$QUICKHEADLINES_SKIP_BUILD" ]; then \
-        echo "SKIP_BUILD mode: Using existing binary"; \
-    elif [ -f "/usr/local/share/quickheadlines/quickheadlines" ]; then \
-        echo "Existing binary found, skipping build"; \
-    else \
-        echo "Building quickheadlines binary..." && \
-        sudo -u qh sh -c "export PATH=/tmp/qh/bin:/usr/local/bin:/usr/bin:/bin:\$PATH && export MAKE=gmake && gmake build"; \
-    fi
+# elm.js is pre-compiled in repository, so we don't need to compile it on FreeBSD
+# Use system Crystal 1.18.2 (Athena-compatible)
+
+# Validate repository was cloned
+CMD sh -c "if [ ! -d '/tmp/qh' ] || [ ! -f '/tmp/qh/makefile' ]; then echo 'ERROR: Repository not cloned to /tmp/qh'; exit 1; fi"
+
+# Use system Crystal 1.18.2
+CMD sh -c "crystal --version && echo 'Using system Crystal:'"
+
+# Install dependencies
+CMD sh -c "cd /tmp/qh && export HOME=/home/qh && echo 'Installing Crystal dependencies...' && sudo -u qh sh -c \"export HOME=/home/qh && shards install\""
+
+# Build or skip based on configuration
+CMD sh -c "cd /tmp/qh && export MAKE=gmake && export HOME=/home/qh && if [ -n \"\$QUICKHEADLINES_SKIP_BUILD\" ]; then echo 'SKIP_BUILD mode: Using existing binary'; if [ ! -f '/usr/local/share/quickheadlines/quickheadlines' ]; then echo 'ERROR: SKIP_BUILD specified but no existing binary found'; exit 1; fi; elif [ -f '/usr/local/share/quickheadlines/quickheadlines' ]; then echo 'Existing binary found, skipping build'; else echo 'Building quickheadlines binary...' && sudo -u qh sh -c \"export MAKE=gmake && export HOME=/home/qh && gmake build\" && echo 'Copying binary to installation directory...' && cp bin/quickheadlines /usr/local/share/quickheadlines/ 2>/dev/null || true; fi"
 
 # 6. Install Binary and Config
 CMD cp /tmp/qh/bin/quickheadlines /usr/local/share/quickheadlines 2>/dev/null || true

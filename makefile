@@ -2,14 +2,15 @@
 # Migrated from Crystal/Slang/Tailwind to Crystal/Elm with elm-ui
 
 NAME = quickheadlines
-CRYSTAL ?= $(shell which crystal 2>/dev/null || echo $(PWD)/bin/crystal)
+CRYSTAL ?= bin/crystal
 ELM    ?= elm
 ELM_FORMAT ?= elm-format
 VERSION := $(shell grep '^version:' shard.yml | awk '{print $$2}')
 BUILD_REV ?= v$(VERSION)
-CRYSTAL_VERSION = 1.19.1
+CRYSTAL_VERSION = 1.18.2
+BOOTSTRAP_CRYSTAL_VERSION = 1.18.2
 ifeq ($(OS_NAME),freebsd)
-	CRYSTAL_VERSION = 1.18.2
+	CRYSTAL_VERSION = $(BOOTSTRAP_CRYSTAL_VERSION)
 endif
 
 # Detect system for platform-specific builds
@@ -31,30 +32,31 @@ endif
 
 # Architecture detection
 ifeq ($(UNAME_M),x86_64)
-	ARCH_NAME = x64
+	ARCH_NAME = x86_64
 endif
 ifeq ($(UNAME_M),amd64)
-    ARCH_NAME = x64
+    ARCH_NAME = x86_64
 endif
 ifeq ($(UNAME_M),arm64)
-	ARCH_NAME = arm64
+	ARCH_NAME = aarch64
 endif
 ifeq ($(UNAME_M),aarch64)
-	ARCH_NAME = arm64
+	ARCH_NAME = aarch64
 endif
 
 # Crystal binary setup - use cache directory for persistence
 CACHE_DIR = $(HOME)/.cache/quickheadlines/crystal
 CRYSTAL_DIR = $(CACHE_DIR)/crystal-$(CRYSTAL_VERSION)-$(OS_NAME)-$(ARCH_NAME)
+CRYSTAL_BIN = $(CRYSTAL_DIR)/.build/crystal
 ifeq ($(OS_NAME),linux)
-	CRYSTAL_TARBALL = crystal-$(CRYSTAL_VERSION)-1-$(OS_NAME)-$(ARCH_NAME).tar.gz
-	CRYSTAL_URL = https://github.com/crystal-lang/crystal/releases/download/$(CRYSTAL_VERSION)/$(CRYSTAL_TARBALL)
+	CRYSTAL_DIR = $(CACHE_DIR)/crystal-$(CRYSTAL_VERSION)-1
+	CRYSTAL_BIN = $(CRYSTAL_DIR)/bin/crystal
 else ifeq ($(OS_NAME),macos)
-	CRYSTAL_TARBALL = crystal-$(CRYSTAL_VERSION)-1-$(OS_NAME)-$(ARCH_NAME).tar.gz
-	CRYSTAL_URL = https://github.com/crystal-lang/crystal/releases/download/$(CRYSTAL_VERSION)/$(CRYSTAL_TARBALL)
+	CRYSTAL_DIR = $(CACHE_DIR)/crystal-$(CRYSTAL_VERSION)-1
+	CRYSTAL_BIN = $(CRYSTAL_DIR)/bin/crystal
 else ifeq ($(OS_NAME),freebsd)
-	CRYSTAL_TARBALL = crystal-$(CRYSTAL_VERSION)-1-$(OS_NAME)-$(ARCH_NAME).tar.gz
-	CRYSTAL_URL = https://github.com/crystal-lang/crystal/releases/download/$(CRYSTAL_VERSION)/$(CRYSTAL_TARBALL)
+	# FreeBSD: Use system Crystal 1.18.2 (Athena-compatible)
+	CRYSTAL_BIN = $(shell which crystal)
 endif
 
 # Add Homebrew OpenSSL paths for macOS
@@ -75,14 +77,16 @@ download-crystal:
 	@echo "Installing Crystal $(CRYSTAL_VERSION)..."
 	@mkdir -p $(CACHE_DIR)
 	@mkdir -p bin
-	@if [ ! -d "$(CRYSTAL_DIR)" ]; then \
-		echo "Downloading $(CRYSTAL_URL)..."; \
+	@if [ -x "$(CRYSTAL_BIN)" ]; then \
+		echo "✓ Found cached Crystal $(CRYSTAL_VERSION)"; \
+	else \
+		echo "Building Crystal $(CRYSTAL_VERSION) from source..."; \
+		echo "This may take 30-60 minutes..."; \
 		cd $(CACHE_DIR) && \
 		if [ "$(OS_NAME)" = "freebsd" ]; then \
-			echo "Building Crystal $(CRYSTAL_VERSION) from source on FreeBSD..."; \
-			echo "This may take 30-60 minutes..."; \
 			export MAKE=gmake; \
 			export LLVM_CONFIG="$(FIND_LLVM_CONFIG)"; \
+			echo "Using LLVM config: $$LLVM_CONFIG"; \
 			fetch https://github.com/crystal-lang/crystal/archive/$(CRYSTAL_VERSION).tar.gz 2>/dev/null || curl -L -o $(CRYSTAL_VERSION).tar.gz https://github.com/crystal-lang/crystal/archive/$(CRYSTAL_VERSION).tar.gz || { \
 				echo "Error: Failed to download Crystal source"; \
 				exit 1; \
@@ -95,17 +99,23 @@ download-crystal:
 			rm -f $(CRYSTAL_VERSION).tar.gz; \
 			mv crystal-$(CRYSTAL_VERSION) $(CRYSTAL_DIR); \
 			cd $(CRYSTAL_DIR) && \
-			if [ "$(OS_NAME)" = "freebsd" ]; then \
-				gmake deps && gmake clean && gmake crystal || { \
-					echo "Error: Failed to build Crystal"; \
-					exit 1; \
-				}; \
-			else \
-				$(MAKE) deps && $(MAKE) clean && $(MAKE) crystal || { \
-					echo "Error: Failed to build Crystal"; \
-					exit 1; \
-				}; \
-			fi; \
+			echo "Setting up build environment..."; \
+			export CC=cc; \
+			export CXX=c++; \
+			export LIBRARY_PATH=/usr/local/lib; \
+			export CPATH=/usr/local/include; \
+			export PATH=/usr/local/bin:/usr/bin:/bin:$$PATH; \
+			echo "Running make deps..."; \
+			gmake deps || { \
+				echo "Error: Failed to install Crystal dependencies"; \
+				exit 1; \
+			}; \
+			echo "Building Crystal $(CRYSTAL_VERSION)..."; \
+			gmake crystal CRYSTAL_CONFIG_BUILD_COMMIT=$$(git rev-parse HEAD 2>/dev/null || echo "unknown") || { \
+				echo "Error: Failed to build Crystal"; \
+				echo "Check build log above for details"; \
+				exit 1; \
+			}; \
 		else \
 			curl -L -o $(CRYSTAL_TARBALL) $(CRYSTAL_URL) || { \
 				echo "Error: Failed to download Crystal tarball"; \
@@ -120,30 +130,27 @@ download-crystal:
 		fi; \
 	fi
 	@rm -f bin/crystal
-	@if [ "$(OS_NAME)" = "freebsd" ] || ([ "$(OS_NAME)" = "linux" ] && [ "$(ARCH_NAME)" = "arm64" ]); then \
-		ln -sf $(CRYSTAL_DIR)/.build/crystal bin/crystal; \
+	@if [ "$(OS_NAME)" = "freebsd" ]; then \
+		ln -sf $(CRYSTAL_BIN) bin/crystal; \
 	else \
 		ln -sf $(CRYSTAL_DIR)/bin/crystal bin/crystal; \
 	fi
-	@echo "✓ Crystal $(CRYSTAL_VERSION) installed in $(CRYSTAL_DIR)"
+	@echo "✓ Crystal $(CRYSTAL_VERSION) ready"
 
 # Check for required dependencies
 check-deps:
 	@echo "Checking dependencies..."
 	@if [ ! -x "$(CRYSTAL)" ]; then \
 		if [ "$(OS_NAME)" = "freebsd" ]; then \
-			echo "❌ Error: Crystal not found in /usr/local/bin"; \
-			echo ""; \
-			echo "Install Crystal:"; \
-			echo "  FreeBSD: sudo pkg install crystal"; \
-			exit 1; \
+			echo "Crystal compiler not found, building Crystal $(CRYSTAL_VERSION) from source..."; \
+			$(MAKE) download-crystal; \
 		else \
 			echo "Crystal compiler not found, downloading..."; \
 			$(MAKE) download-crystal; \
 		fi; \
 	fi
 	@echo "✓ Crystal compiler: $$($(CRYSTAL) --version)"
-	@if [ "$(OS_NAME)" = "freebsd" ] || ([ "$(OS_NAME)" = "linux" ] && [ "$(ARCH_NAME)" = "arm64" ]); then \
+	@if [ "$(OS_NAME)" = "freebsd" ] || ([ "$(OS_NAME)" = "linux" ] && [ "$(ARCH_NAME)" = "aarch64" ]); then \
 		if [ -f "public/elm.js" ]; then \
 			echo "✓ Using pre-compiled public/elm.js"; \
 		else \
@@ -306,7 +313,7 @@ elm-install:
 # 1. Compile Elm to JavaScript
 elm-build:
 	@echo "Compiling Elm to JavaScript..."
-	@if [ "$(OS_NAME)" = "freebsd" ] || ([ "$(OS_NAME)" = "linux" ] && [ "$(ARCH_NAME)" = "arm64" ]); then \
+	@if [ "$(OS_NAME)" = "freebsd" ] || ([ "$(OS_NAME)" = "linux" ] && [ "$(ARCH_NAME)" = "aarch64" ]); then \
 		if [ -f "public/elm.js" ]; then \
 			echo "✓ Using pre-compiled public/elm.js (skipping Elm compilation)"; \
 		else \
@@ -411,9 +418,9 @@ help:
 	@echo "  - libmagic"
 	@if [ "$(OS_NAME)" = "freebsd" ]; then \
 		echo ""; \
-		echo "FreeBSD-specific dependencies:"; \
-		echo "  - git, gmake, libyaml, libevent"; \
-		echo "  - LLVM ($(FIND_LLVM_CONFIG) detected)"; \
+		echo "FreeBSD-specific notes:"; \
+		echo "  - Uses system Crystal 1.18.2 (Athena-compatible)"; \
+		echo "  - No Crystal build from source required"; \
 	fi
 	@echo ""
 	@echo "Installation commands:"
@@ -422,3 +429,4 @@ help:
 	@echo "  Arch:          sudo pacman -S crystal sqlite openssl libmagic"
 	@echo "  macOS:         brew install crystal openssl libmagic"
 	@echo "  FreeBSD:       sudo pkg install crystal sqlite3 openssl git gmake libyaml libevent llvm19 libmagic"
+	@echo "                 (Uses system Crystal 1.18.2 - Athena-compatible)"

@@ -94,7 +94,17 @@ class Quickheadlines::Services::ClusteringService
       end
     end
 
-    threshold = word_count(title) < 5 ? SHORT_HEADLINE_THRESHOLD : LexisMinhash::Engine::SIMILARITY_THRESHOLD
+    word_count_value = word_count(title)
+    threshold = if word_count_value < 5
+      # Short headlines need high threshold to avoid false positives on generic terms
+      SHORT_HEADLINE_THRESHOLD
+    elsif word_count_value <= 7
+      # Medium headlines use moderate threshold for balanced precision/recall
+      0.80_f64
+    else
+      # Long headlines can use lower threshold to catch related stories with variations
+      0.75_f64
+    end
 
     STDERR.puts "[Clustering] Best match similarity: #{best_similarity.round(2)} (threshold: #{threshold})" if ENV["DEBUG_CLUSTERING"]?
 

@@ -1,5 +1,5 @@
 {
-  description = "Quickheadlines Spoke - Crystal 1.19.1 & Elm";
+  description = "Quickheadlines Spoke - Crystal & Elm";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
@@ -11,38 +11,30 @@
       system = "aarch64-linux";
       pkgs = nixpkgs.legacyPackages.${system};
 
-      # 💎 Manual Crystal 1.19.1 Derivation
-      crystal_1_19 = pkgs.stdenv.mkDerivation rec {
-        pname = "crystal";
-        version = "1.19.1";
-        src = pkgs.fetchurl {
-          url = "https://github.com/crystal-lang/crystal/releases/download/${version}/crystal-${version}-1-linux-aarch64.tar.gz";
-          sha256 = "sha256-5L/JfRj6HAVd+Umy2MSunk6P5RfaLepTbP85kuw096M="; 
-        };
-        installPhase = "mkdir -p $out && cp -r ./* $out/";
-      };
+      # 💎 Use nixpkgs Crystal 1.18.2
+      crystal_1_18 = pkgs.crystal;
     in {
       # Nesting under the system fixes the 'attribute missing' error
       devShells.${system} = {
         default = pkgs.mkShell {
-          buildInputs = with pkgs; [
-            crystal_1_19
-            bash
-            shards pkg-config openssl sqlite libxml2 libyaml
-            libevent zlib pcre2 gmp boehmgc file
-            elmPackages.elm elmPackages.elm-format
-            git curl gnumake gcc
-            openspec.packages.${system}.default
-            pkgs.playwright-driver.browsers
-            ameba
-          ];
+            buildInputs = with pkgs; [
+              crystal
+              bash
+              shards pkg-config openssl sqlite libxml2 libyaml
+              libevent zlib pcre2 gmp boehmgc file
+              elmPackages.elm elmPackages.elm-format
+              git curl gnumake gcc
+              openspec.packages.${system}.default
+              pkgs.playwright-driver.browsers
+              ameba
+            ];
 
           shellHook = ''
             export LD_LIBRARY_PATH="${pkgs.lib.makeLibraryPath [ pkgs.boehmgc pkgs.libevent pkgs.openssl pkgs.file pkgs.pcre2 pkgs.gmp ]}:$LD_LIBRARY_PATH"
 
             mkdir -p ~/.local/bin
-            ln -sf ${crystal_1_19}/bin/crystal ~/.local/bin/crystal
-            ln -sf ${crystal_1_19}/bin/shards ~/.local/bin/shards
+            ln -sf ${pkgs.crystal}/bin/crystal ~/.local/bin/crystal
+            ln -sf ${pkgs.crystal}/bin/shards ~/.local/bin/shards
             ln -sf ${openspec.packages.${system}.default}/bin/openspec ~/.local/bin/openspec
 
             # Ensure the openspec package's bin directory is first on PATH so the
@@ -55,7 +47,7 @@
             # [ -f "/workspaces/aiworkflow/bin/env.sh" ] && source /workspaces/aiworkflow/bin/env.sh
 
             export APP_ENV=development
-            echo "🚀 Quickheadlines Loaded with Crystal 1.19.1"
+            echo "🚀 Quickheadlines Loaded with Crystal"
 
             # Avoid creating aliases that interfere with command lookup; rely on PATH
             export OPEN_SPEC_PROJECT_DIR="$PWD"

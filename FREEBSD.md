@@ -172,7 +172,6 @@ The `misc/Bastillefile` performs these steps:
 
 ## Notes
 
-- Crystal version: 1.8.2 (from FreeBSD ports, 1.19.1 not available for FreeBSD)
+- Crystal version: 1.18.2 (from FreeBSD ports) - Athena framework compatible
 - Elm.js is pre-compiled and included in the repository
 - No node/npm required for FreeBSD deployment
-- Binary is cached to avoid recompiling on every deployment
