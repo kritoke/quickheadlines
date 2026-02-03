@@ -16405,7 +16405,7 @@ var $author$project$Responsive$horizontalPadding = function (breakpoint) {
 		case 'TabletBreakpoint':
 			return 48;
 		default:
-			return 96;
+			return 0;
 	}
 };
 var $author$project$ThemeTypography$title = $mdgriffith$elm_ui$Element$Font$size(24);
@@ -16439,6 +16439,8 @@ var $author$project$Pages$Timeline$view = F2(
 					$mdgriffith$elm_ui$Element$height($mdgriffith$elm_ui$Element$fill),
 					$mdgriffith$elm_ui$Element$spacing(20),
 					A2($mdgriffith$elm_ui$Element$paddingXY, horizontalPadding, verticalPadding),
+					$mdgriffith$elm_ui$Element$paddingEach(
+					{bottom: 0, left: 0, right: 0, top: 24}),
 					$mdgriffith$elm_ui$Element$Background$color(bg),
 					$mdgriffith$elm_ui$Element$htmlAttribute(
 					A2($elm$html$Html$Attributes$attribute, 'data-timeline-page', 'true')),

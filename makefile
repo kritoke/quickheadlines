@@ -313,15 +313,7 @@ elm-install:
 # 1. Compile Elm to JavaScript
 elm-build:
 	@echo "Compiling Elm to JavaScript..."
-	@echo "QUICKHEADLINES_SKIP_NODE = $${QUICKHEADLINES_SKIP_NODE:-0}"
-	@if [ "$${QUICKHEADLINES_SKIP_NODE:-0}" = "1" ]; then \
-		if [ -f "public/elm.js" ]; then \
-			echo "✓ Skipping Elm compilation (QUICKHEADLINES_SKIP_NODE=1)"; \
-		else \
-			echo "❌ Error: QUICKHEADLINES_SKIP_NODE=1 but public/elm.js not found"; \
-			exit 1; \
-		fi; \
-	elif [ "$(OS_NAME)" = "freebsd" ] || ([ "$(OS_NAME)" = "linux" ] && [ "$(ARCH_NAME)" = "aarch64" ]); then \
+	@if [ "$(OS_NAME)" = "freebsd" ] || ([ "$(OS_NAME)" = "linux" ] && [ "$(ARCH_NAME)" = "aarch64" ]); then \
 		if [ -f "public/elm.js" ]; then \
 			echo "✓ Using pre-compiled public/elm.js (skipping Elm compilation)"; \
 		else \
@@ -336,17 +328,8 @@ elm-build:
 # 1b. Compile Elm Land UI to JavaScript
 elm-land-build:
 	@echo "Compiling Elm Land UI..."
-	@if [ "$${QUICKHEADLINES_SKIP_NODE:-0}" = "1" ]; then \
-		if [ -f "public/elm.js" ]; then \
-			echo "✓ Skipping Elm Land compilation (QUICKHEADLINES_SKIP_NODE=1)"; \
-		else \
-			echo "❌ Error: QUICKHEADLINES_SKIP_NODE=1 but public/elm.js not found"; \
-			exit 1; \
-		fi; \
-	else \
-		cd ui && $(ELM) make src/Main.elm --output=../public/elm.js; \
-		echo "✓ Elm Land compiled to public/elm.js ($(shell wc -c < public/elm.js 2>/dev/null || echo "0") bytes)"; \
-	fi
+	cd ui && $(ELM) make src/Main.elm --output=../public/elm.js
+	@echo "✓ Elm Land compiled to public/elm.js ($(shell wc -c < public/elm.js 2>/dev/null || echo "0") bytes)"
 
 # --- Removed elm-embed target ---
 # Elm.js is now served directly from disk with GitHub fallback
@@ -393,7 +376,12 @@ build-release: check-deps elm-build
 	APP_ENV=production $(CRYSTAL) build --release --no-debug $(CRYSTAL_BUILD_OPTS) -Dversion=$(BUILD_REV) src/quickheadlines.cr -o bin/$(NAME)-$(BUILD_REV)-$(OS_NAME)-$(ARCH_NAME)
 
 # 7. Run in Development Mode
-run: check-deps elm-land-build
+run: check-deps
+	@if [ "$(OS_NAME)" = "freebsd" ] && [ -f "public/elm.js" ]; then \
+		echo "✓ Using pre-compiled public/elm.js (skipping elm-land-build)"; \
+	else \
+		$(MAKE) elm-land-build; \
+	fi
 	@echo "Starting server in development mode..."
 	APP_ENV=development $(CRYSTAL) run src/quickheadlines.cr -- config=feeds.yml
 

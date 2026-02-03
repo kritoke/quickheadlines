@@ -4,7 +4,6 @@ require "./software_fetcher"
 require "./favicon_storage"
 require "./health_monitor"
 require "./config"
-require "lexis-minhash"
 require "./services/clustering_service"
 
 # ----- Favicon cache with size limits and expiration -----
@@ -644,14 +643,6 @@ def refresh_all(config : Config)
   STATE.update(Time.local)
 
   # 7. Process story clustering for all fetched feeds asynchronously
-  # Use a channel to limit concurrent clustering jobs (max 10 at a time)
-  # Ensure all feeds are committed to the database before starting clustering
-  spawn do
-    # Small delay to allow SQLite WAL checkpoints/commits to settle across fibers
-    sleep 100.milliseconds
-    async_clustering(fetched_map.values.to_a)
-  end
-
   # Clear memory after large amount of data processing
   GC.collect
 
@@ -691,58 +682,8 @@ end
 # Compute cluster assignment for a single item
 def compute_cluster_for_item(item_id : Int64, title : String) : Int64?
   cache = FeedCache.instance
-  
-  if title.empty? || ClusteringUtilities.word_count(title) < ClusteringUtilities::MIN_WORDS_FOR_CLUSTERING
-    # Too short to safely cluster, assign to its own cluster
-    cache.assign_cluster(item_id, item_id)
-    return item_id
-  end
-
-  document = LexisMinhash::SimpleDocument.new(title)
-  signature = LexisMinhash::Engine.compute_signature(document)
-
-  cache.store_item_signature(item_id, signature)
-
-  bands = LexisMinhash::Engine.generate_bands(signature)
-  cache.store_lsh_bands(item_id, bands)
-
-  candidates = cache.find_lsh_candidates(signature)
-  candidates = candidates.reject { |id| id == item_id }
-
-  if candidates.empty?
-    cache.assign_cluster(item_id, item_id)
-    return item_id
-  end
-
-  best_match = nil
-  best_similarity = 0.0_f64
-
-  candidates.each do |candidate_id|
-    candidate_title = cache.get_item_title(candidate_id)
-    next unless candidate_title
-
-    similarity = ClusteringUtilities.jaccard_similarity(title, candidate_title)
-    if similarity > best_similarity
-      best_similarity = similarity
-      best_match = candidate_id
-    end
-  end
-
-  threshold = ClusteringUtilities.word_count(title) < 5 ? ClusteringUtilities::SHORT_HEADLINE_THRESHOLD : LexisMinhash::Engine::SIMILARITY_THRESHOLD
-
-  if best_match && best_similarity >= threshold
-    cluster_items = cache.get_cluster_items(best_match)
-    if cluster_items.any? { |id| id != best_match }
-      cluster_id = cluster_items.first
-    else
-      cluster_id = best_match
-    end
-    cache.assign_cluster(item_id, cluster_id)
-    cluster_id
-  else
-    cache.assign_cluster(item_id, item_id)
-    item_id
-  end
+  service = clustering_service
+  service.compute_cluster_for_item(item_id, title, cache)
 end
 
 # Process clustering for all items in a feed

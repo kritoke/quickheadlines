@@ -6,7 +6,6 @@ require "mutex"
 require "openssl"
 require "./config"
 require "./models"
-require "lexis-minhash"
 require "./favicon_storage"
 require "./health_monitor"
 
@@ -1078,76 +1077,40 @@ class FeedCache
   # Story Grouping / Clustering Methods
   # ============================================
 
-  # Store MinHash signature for an item
-  def store_item_signature(item_id : Int64, signature : Array(UInt32))
+  # Find all items excluding a specific item ID
+  # Used for brute-force similarity comparison
+  def find_all_items_excluding(item_id : Int64, limit : Int32 = 500) : Array(Int64)
+    items = [] of Int64
     @mutex.synchronize do
-      bytes = LexisMinhash::Engine.signature_to_bytes(signature)
-      @db.exec("UPDATE items SET minhash_signature = ? WHERE id = ?", bytes, item_id)
-    end
-  end
-
-  # Get MinHash signature for an item
-  def get_item_signature(item_id : Int64) : Array(UInt32)?
-    @mutex.synchronize do
-      result = @db.query_one?("SELECT minhash_signature FROM items WHERE id = ?", item_id, as: {Bytes?})
-      return unless result
-      LexisMinhash::Engine.bytes_to_signature(result)
-    end
-  end
-
-  # Store LSH bands for an item
-  def store_lsh_bands(item_id : Int64, bands : Array({Int32, UInt64}))
-    @mutex.synchronize do
-      @db.exec("BEGIN TRANSACTION")
-      begin
-        # Delete existing bands for this item
-        @db.exec("DELETE FROM lsh_bands WHERE item_id = ?", item_id)
-
-        # Insert new bands (convert UInt64 to Int64 for SQLite)
-        bands.each do |band_index, band_hash|
-          @db.exec(
-            "INSERT INTO lsh_bands (item_id, band_index, band_hash, created_at) VALUES (?, ?, ?, ?)",
-            item_id,
-            band_index,
-            band_hash.to_i64,
-            Time.utc.to_s("%Y-%m-%d %H:%M:%S")
-          )
-        end
-        @db.exec("COMMIT")
-      rescue ex
-        @db.exec("ROLLBACK")
-        STDERR.puts "[Cache ERROR] Failed to store LSH bands for item #{item_id}: #{ex.message}"
-      end
-    end
-  end
-
-  # Find candidate similar items using LSH
-  # Returns item IDs that share at least one LSH band
-  def find_lsh_candidates(signature : Array(UInt32)) : Array(Int64)
-    bands = LexisMinhash::Engine.generate_bands(signature)
-    candidates = Set(Int64).new
-
-    @mutex.synchronize do
-      bands.each do |band_index, band_hash|
-        # Convert UInt64 to Int64 for SQLite compatibility
-        band_hash_int = band_hash.to_i64
-        @db.query("SELECT DISTINCT item_id FROM lsh_bands WHERE band_index = ? AND band_hash = ?", band_index, band_hash_int) do |rows|
-          rows.each do
-            item_id = rows.read(Int64)
-            candidates << item_id
-          end
+      @db.query("SELECT id FROM items WHERE id != ? ORDER BY id DESC LIMIT ?", item_id, limit) do |rows|
+        rows.each do
+          items << rows.read(Int64)
         end
       end
     end
+    items
+  end
 
-    candidates.to_a
+  # Find items by keywords (for paraphrase clustering)
+  def find_by_keywords(keywords : Array(String), exclude_id : Int64, limit : Int32 = 100) : Array(Int64)
+    return [] of Int64 if keywords.empty?
+
+    items = [] of Int64
+    placeholders = keywords.map { |_| "title LIKE ?" }.join(" OR ")
+    sql = "SELECT DISTINCT id FROM items WHERE id != ? AND (#{placeholders}) ORDER BY id DESC LIMIT ?"
+
+    args = [exclude_id] + keywords.map { |k| "%#{k}%" } + [limit]
+    @db.query(sql, args: args) do |rows|
+      rows.each do
+        items << rows.read(Int64)
+      end
+    end
+    items
   end
 
   # Assign an item to a cluster
   def assign_cluster(item_id : Int64, cluster_id : Int64?)
-    @mutex.synchronize do
-      @db.exec("UPDATE items SET cluster_id = ? WHERE id = ?", cluster_id, item_id)
-    end
+    @db.exec("UPDATE items SET cluster_id = ? WHERE id = ?", cluster_id, item_id)
   end
 
   # Get all item IDs in a cluster

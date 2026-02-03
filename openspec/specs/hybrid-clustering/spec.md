@@ -1,30 +1,41 @@
 # hybrid-clustering Specification
 
 ## Purpose
-TBD - created by archiving change fix-clustering-algorithm-hybrid. Update Purpose after archive.
+Cluster similar news stories using a hybrid approach combining embedding-based semantic similarity with fallback token-based matching for edge cases.
+
 ## Requirements
-### Requirement: Two-Pass Similarity Verification
-The clustering system SHALL use a two-pass algorithm to group similar news stories. The first pass MUST use Locality-Sensitive Hashing (LSH) for fast candidate identification. The second pass MUST perform a direct Jaccard similarity check on the normalized titles of candidates to verify grouping.
+### Requirement: Embedding-Based Primary Clustering
+The clustering system SHALL use sentence embedding cosine similarity as the primary clustering mechanism. Stories with embedding cosine similarity >= 0.75 SHALL be considered potential matches for the same cluster.
 
-#### Scenario: High Precision Grouping
-- **WHEN** two stories have similar LSH signatures but the second-pass Jaccard similarity of their titles is below 0.75
-- **THEN** the stories SHALL NOT be assigned to the same cluster
-
-#### Scenario: Verification Success
-- **WHEN** two stories have similar LSH signatures and their second-pass Jaccard similarity is 0.75 or higher
+#### Scenario: High Semantic Similarity Clustering
+- **WHEN** two stories have embedding cosine similarity of 0.82
 - **THEN** the stories SHALL be assigned to the same cluster
 
-### Requirement: Enhanced Headline Normalization
-The system SHALL normalize headlines by converting to lowercase, removing punctuation, and filtering out common stop-words (e.g., "the", "and", "says") before computing signatures or similarity.
+#### Scenario: Low Semantic Similarity Rejection
+- **WHEN** two stories have embedding cosine similarity of 0.45
+- **THEN** the stories SHALL NOT be assigned to the same cluster
+
+### Requirement: Fallback Token-Based Matching
+For headlines with fewer than 5 non-stop-words, the system SHALL fall back to Jaccard similarity on normalized text when embeddings may be unreliable.
+
+#### Scenario: Short Headline Uses Fallback
+- **WHEN** a headline has fewer than 5 non-stop-words
+- **THEN** the system SHALL use Jaccard similarity with 0.85 threshold for clustering decisions
+
+#### Scenario: Short Headline Clustering with Fallback
+- **WHEN** two short headlines have Jaccard similarity of 0.80
+- **THEN** they SHALL NOT be clustered together due to the 0.85 threshold
+
+### Requirement: Headline Normalization
+The system SHALL normalize headlines by converting to lowercase, removing punctuation, and filtering out common stop-words (e.g., "the", "and", "says") before computing token-based similarity.
 
 #### Scenario: Stop-word Filtering
-- **WHEN** computing a signature for "The Bitcoin price says experts are worried"
-- **THEN** the words "the", "says", "are" MUST be excluded from the shingles/features
+- **WHEN** computing Jaccard similarity for "The Bitcoin price says experts are worried"
+- **THEN** the words "the", "says", "are" MUST be excluded from the comparison
 
-### Requirement: Short Headline Protection
-The system SHALL apply a stricter similarity threshold (0.85) for headlines with fewer than 5 non-stop-words to prevent false positive clustering of generic news terms.
+### Requirement: Batch Processing
+The clustering system SHALL process headlines in batches to minimize API calls and database roundtrips. Each batch SHALL generate embeddings, find candidates, and cluster within a single pass.
 
-#### Scenario: Short Headline Clustering
-- **WHEN** two headlines have 4 non-stop-words and a similarity of 0.80
-- **THEN** they SHALL NOT be clustered together due to the increased threshold for short headlines
-
+#### Scenario: Batch Clustering
+- **WHEN** 100 new headlines are ingested
+- **THEN** the system SHALL generate embeddings in a single batch API call and cluster all items efficiently

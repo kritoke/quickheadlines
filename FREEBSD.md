@@ -35,10 +35,7 @@ bastille cmd 15.0 quickheadlines sh -c 'cd /tmp/qh/misc && bash Bastillefile'
 QuickHeadlines can be configured via environment variables. Set these **before running bastille bootstrap/template**:
 
 ```bash
-# For development mode (main branch)
-export QUICKHEADLINES_DEV=1
-
-# For specific tag
+# For specific tag (default is latest release)
 export QUICKHEADLINES_TAG=v0.5.0
 
 # Custom repository
@@ -65,17 +62,6 @@ sysrc quickheadlines_env="VAR1=value1 VAR2=value2 ..."
 | `quickheadlines_cachedir` | Cache directory | `/var/cache/quickheadlines` |
 
 ## Usage Examples
-
-### Development Mode (Main Branch)
-
-```bash
-# Set environment variable before bootstrap
-export QUICKHEADLINES_DEV=1
-bastille bootstrap quickheadlines
-
-# Or set it inline
-env QUICKHEADLINES_DEV=1 bastille bootstrap quickheadlines
-```
 
 ### Specific Release Tag
 
@@ -200,3 +186,4 @@ The `misc/Bastillefile` performs these steps:
 - No node/npm required for FreeBSD deployment
 - Development dependencies (like ameba) are skipped during installation to avoid compilation issues with Crystal 1.18.2
 - Binary is always rebuilt and replaced during deployment (set SKIP_BUILD=1 to preserve existing binary)
+- For development mode, manually modify the Bastillefile to clone the main branch instead of a tagged release

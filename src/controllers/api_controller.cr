@@ -770,7 +770,7 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
         db = cache.db
 
         uncategorized_items = [] of {id: Int64, title: String, link: String, pub_date: Time?}
-        db.query("SELECT id, title, link, pub_date FROM items WHERE cluster_id IS NULL OR cluster_id = id ORDER BY pub_date DESC LIMIT 500") do |rows|
+        db.query("SELECT id, title, link, pub_date FROM items WHERE cluster_id IS NULL OR cluster_id = id ORDER BY pub_date DESC LIMIT 5000") do |rows|
           rows.each do
             id = rows.read(Int64)
             title = rows.read(String)
