@@ -313,7 +313,15 @@ elm-install:
 # 1. Compile Elm to JavaScript
 elm-build:
 	@echo "Compiling Elm to JavaScript..."
-	@if [ "$(OS_NAME)" = "freebsd" ] || ([ "$(OS_NAME)" = "linux" ] && [ "$(ARCH_NAME)" = "aarch64" ]); then \
+	@echo "QUICKHEADLINES_SKIP_NODE = $${QUICKHEADLINES_SKIP_NODE:-0}"
+	@if [ "$${QUICKHEADLINES_SKIP_NODE:-0}" = "1" ]; then \
+		if [ -f "public/elm.js" ]; then \
+			echo "✓ Skipping Elm compilation (QUICKHEADLINES_SKIP_NODE=1)"; \
+		else \
+			echo "❌ Error: QUICKHEADLINES_SKIP_NODE=1 but public/elm.js not found"; \
+			exit 1; \
+		fi; \
+	elif [ "$(OS_NAME)" = "freebsd" ] || ([ "$(OS_NAME)" = "linux" ] && [ "$(ARCH_NAME)" = "aarch64" ]); then \
 		if [ -f "public/elm.js" ]; then \
 			echo "✓ Using pre-compiled public/elm.js (skipping Elm compilation)"; \
 		else \
@@ -328,8 +336,17 @@ elm-build:
 # 1b. Compile Elm Land UI to JavaScript
 elm-land-build:
 	@echo "Compiling Elm Land UI..."
-	cd ui && $(ELM) make src/Main.elm --output=../public/elm.js
-	@echo "✓ Elm Land compiled to public/elm.js ($(shell wc -c < public/elm.js 2>/dev/null || echo "0") bytes)"
+	@if [ "$${QUICKHEADLINES_SKIP_NODE:-0}" = "1" ]; then \
+		if [ -f "public/elm.js" ]; then \
+			echo "✓ Skipping Elm Land compilation (QUICKHEADLINES_SKIP_NODE=1)"; \
+		else \
+			echo "❌ Error: QUICKHEADLINES_SKIP_NODE=1 but public/elm.js not found"; \
+			exit 1; \
+		fi; \
+	else \
+		cd ui && $(ELM) make src/Main.elm --output=../public/elm.js; \
+		echo "✓ Elm Land compiled to public/elm.js ($(shell wc -c < public/elm.js 2>/dev/null || echo "0") bytes)"; \
+	fi
 
 # --- Removed elm-embed target ---
 # Elm.js is now served directly from disk with GitHub fallback

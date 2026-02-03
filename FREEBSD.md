@@ -30,27 +30,34 @@ cd /tmp/qh/misc
 bastille cmd 15.0 quickheadlines sh -c 'cd /tmp/qh/misc && bash Bastillefile'
 ```
 
-## Configuration Options
+### Configuration Options
 
-QuickHeadlines can be configured via environment variables. Set these in `/etc/rc.conf`:
+QuickHeadlines can be configured via environment variables. Set these **before running bastille bootstrap/template**:
+
+```bash
+# For development mode (main branch)
+export QUICKHEADLINES_DEV=1
+
+# For specific tag
+export QUICKHEADLINES_TAG=v0.5.0
+
+# Custom repository
+export QUICKHEADLINES_REPO_URL=https://github.com/myuser/quickheadlines.git
+
+# Then run bootstrap/template
+bastille bootstrap quickheadlines
+```
+
+### Service Configuration Variables
+
+These are set in `/etc/rc.conf` for the running service:
 
 ```bash
 sysrc quickheadlines_env="VAR1=value1 VAR2=value2 ..."
 ```
 
-### Build Configuration Variables
-
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `QUICKHEADLINES_DEV` | Clone main branch instead of latest tag | `unset` |
-| `QUICKHEADLINES_TAG` | Clone specific release tag (e.g., `0.5.0`) | `unset` |
-| `QUICKHEADLINES_SKIP_BUILD` | Skip building, use existing binary | `unset` |
-| `QUICKHEADLINES_REPO_URL` | Custom repository URL | `https://github.com/kritoke/quickheadlines.git` |
-
-### Service Configuration Variables
-
-| Variable | Description | Default |
-|----------|-------------|---------|
+| Service Variable | Description | Default |
+|------------------|-------------|---------|
 | `quickheadlines_enable` | Enable service on boot | `NO` |
 | `quickheadlines_svcuser` | User to run as | `qh` |
 | `quickheadlines_env` | Environment variables | `GC_MARKERS=1 GC_FREE_SPACE_DIVISOR=20` |
@@ -62,29 +69,45 @@ sysrc quickheadlines_env="VAR1=value1 VAR2=value2 ..."
 ### Development Mode (Main Branch)
 
 ```bash
-bastille cmd quickheadlines sysrc quickheadlines_env="QUICKHEADLINES_DEV=1 GC_MARKERS=1"
-bastille cmd quickheadlines service quickheadlines restart
+# Set environment variable before bootstrap
+export QUICKHEADLINES_DEV=1
+bastille bootstrap quickheadlines
+
+# Or set it inline
+env QUICKHEADLINES_DEV=1 bastille bootstrap quickheadlines
 ```
 
 ### Specific Release Tag
 
 ```bash
-bastille cmd quickheadlines sysrc quickheadlines_env="QUICKHEADLINES_TAG=0.5.0"
-bastille cmd quickheadlines service quickheadlines restart
+# Set environment variable before bootstrap
+export QUICKHEADLINES_TAG=v0.5.0
+bastille bootstrap quickheadlines
+
+# Or set it inline
+env QUICKHEADLINES_TAG=v0.5.0 bastille bootstrap quickheadlines
 ```
 
 ### Skip Build (Use Existing Binary)
 
 ```bash
-bastille cmd quickheadlines sysrc quickheadlines_env="QUICKHEADLINES_SKIP_BUILD=1"
-bastille cmd quickheadlines service quickheadlines restart
+# Set environment variable before bootstrap
+export QUICKHEADLINES_SKIP_BUILD=1
+bastille bootstrap quickheadlines
+
+# Or set it inline
+env QUICKHEADLINES_SKIP_BUILD=1 bastille bootstrap quickheadlines
 ```
 
 ### Custom Repository
 
 ```bash
-bastille cmd quickheadlines sysrc quickheadlines_env="QUICKHEADLINES_REPO_URL=https://github.com/myuser/quickheadlines.git"
-bastille cmd quickheadlines service quickheadlines restart
+# Set environment variable before bootstrap
+export QUICKHEADLINES_REPO_URL=https://github.com/myuser/quickheadlines.git
+bastille bootstrap quickheadlines
+
+# Or set it inline
+env QUICKHEADLINES_REPO_URL=https://github.com/myuser/quickheadlines.git bastille bootstrap quickheadlines
 ```
 
 ## Persistence
@@ -165,9 +188,9 @@ The `misc/Bastillefile` performs these steps:
 2. **Create user**: `qh` user with home at `/usr/local/share/quickheadlines`
 3. **Setup cache**: Mount persistent cache at `/home/qh/.cache`
 4. **Clone repo**: Clone specified tag/branch (default: latest release)
-5. **Install deps**: Run `shards install`
-6. **Build**: Compile binary (unless SKIP_BUILD=1 or binary exists)
-7. **Install**: Copy binary and config to `/usr/local/share/quickheadlines`
+5. **Install deps**: Run `shards install --production` (skips development dependencies that may cause issues)
+6. **Build**: Compile binary (always builds and replaces existing binary unless SKIP_BUILD=1)
+7. **Install**: Copy binary and config to `/usr/local/share/quickheadlines` (binary already installed during build)
 8. **Setup service**: Install rc.d script and enable service
 
 ## Notes
@@ -175,3 +198,5 @@ The `misc/Bastillefile` performs these steps:
 - Crystal version: 1.18.2 (from FreeBSD ports) - Athena framework compatible
 - Elm.js is pre-compiled and included in the repository
 - No node/npm required for FreeBSD deployment
+- Development dependencies (like ameba) are skipped during installation to avoid compilation issues with Crystal 1.18.2
+- Binary is always rebuilt and replaced during deployment (set SKIP_BUILD=1 to preserve existing binary)
