@@ -315,6 +315,7 @@ view shared model =
                                     rgb255 241 245 249
                             )
                          , htmlAttribute (Html.Attributes.class "qh-load-more")
+                         , htmlAttribute (Html.Attributes.attribute "data-load-more" "true")
                          ]
                          { onPress = Just LoadMore
                          , label = text "Load More"

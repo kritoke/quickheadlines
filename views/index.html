@@ -133,22 +133,28 @@
          .qh-load-more:active {
            background: #cbd5e1;
          }
-          .qh-load-more:focus {
-            outline: none;
-          }
-           [data-theme="dark"] .qh-load-more {
-             background: #334155;
-             color: #f8fafc;
-             border: 1px solid #475569;
+           .qh-load-more:focus {
+             outline: none;
            }
-           [data-theme="dark"] .qh-load-more:hover {
-             background: #475569;
-             color: #fff;
+           html[data-theme="dark"] .qh-load-more,
+           html[data-theme="dark"] .qh-load-more span,
+           html[data-theme="dark"] .qh-load-more button {
+             background: #334155 !important;
+             color: #f8fafc !important;
+             border-color: #475569 !important;
            }
-           [data-theme="dark"] .qh-load-more:active {
-             background: #1e293b;
+           html[data-theme="dark"] .qh-load-more:hover,
+           html[data-theme="dark"] .qh-load-more:hover span,
+           html[data-theme="dark"] .qh-load-more:hover button {
+             background: #475569 !important;
+             color: #fff !important;
            }
-         .qh-notification {
+           html[data-theme="dark"] .qh-load-more:active,
+           html[data-theme="dark"] .qh-load-more:active span,
+           html[data-theme="dark"] .qh-load-more:active button {
+             background: #1e293b !important;
+           }
+          .qh-notification {
           position: fixed !important;
           right: 12px !important;
           bottom: 12px !important;

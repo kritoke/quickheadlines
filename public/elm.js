@@ -16619,7 +16619,9 @@ var $author$project$Pages$Timeline$view = F2(
 										}
 									}()),
 									$mdgriffith$elm_ui$Element$htmlAttribute(
-									$elm$html$Html$Attributes$class('qh-load-more'))
+									$elm$html$Html$Attributes$class('qh-load-more')),
+									$mdgriffith$elm_ui$Element$htmlAttribute(
+									A2($elm$html$Html$Attributes$attribute, 'data-load-more', 'true'))
 								]),
 							{
 								aH: $mdgriffith$elm_ui$Element$text('Load More'),
