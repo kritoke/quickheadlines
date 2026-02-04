@@ -329,9 +329,70 @@
     </div>
     <script>document.write('<script src="/elm.js?v=' + Date.now() + '"><\/script>');</script>
   <script>
-    window.feedHeaderCache = window.feedHeaderCache || {};
+     // Header color cache with localStorage persistence (7-day expiration)
+     window.feedHeaderCache = {};
+     const HEADER_CACHE_KEY = 'qh_header_colors';
+     const HEADER_CACHE_EXPIRY = 7 * 24 * 60 * 60 * 1000; // 7 days in milliseconds
 
-    window.extractHeaderColors = function() {
+     // Load cached colors from localStorage
+     window.loadHeaderColorsFromCache = function() {
+       try {
+         const cached = localStorage.getItem(HEADER_CACHE_KEY);
+         if (cached) {
+           const parsed = JSON.parse(cached);
+           const now = Date.now();
+           // Filter out expired entries
+           Object.keys(parsed).forEach(key => {
+             const entry = parsed[key];
+             if (entry.timestamp && (now - entry.timestamp) > HEADER_CACHE_EXPIRY) {
+               delete parsed[key];
+             }
+           });
+           // Save cleaned cache back
+           localStorage.setItem(HEADER_CACHE_KEY, JSON.stringify(parsed));
+           window.feedHeaderCache = parsed;
+           return parsed;
+         }
+       } catch (e) {
+         // localStorage unavailable or quota exceeded
+       }
+       return {};
+     };
+
+     // Apply cached colors immediately on page load
+     window.applyCachedHeaderColors = function() {
+       const cached = window.loadHeaderColorsFromCache();
+       Object.keys(cached).forEach(key => {
+         const entry = cached[key];
+         // Find headers by favicon src matching the cache key
+         const headers = document.querySelectorAll('.feed-header[data-use-adaptive-colors="true"]');
+         headers.forEach(header => {
+           const img = header.querySelector('img');
+           if (img && img.getAttribute('src') === key) {
+             header.style.backgroundColor = entry.bg;
+             header.style.color = entry.text;
+             const link = header.querySelector('a');
+             if (link) {
+               link.style.setProperty('color', entry.text, 'important');
+             }
+           }
+         });
+       });
+     };
+
+     // Save extracted colors to localStorage
+     window.saveHeaderColorToCache = function(key, bg, text) {
+       try {
+         const cached = window.loadHeaderColorsFromCache();
+         cached[key] = { bg: bg, text: text, timestamp: Date.now() };
+         localStorage.setItem(HEADER_CACHE_KEY, JSON.stringify(cached));
+         window.feedHeaderCache = cached;
+       } catch (e) {
+         // localStorage unavailable or quota exceeded
+       }
+     };
+
+     window.extractHeaderColors = function() {
       if (typeof ColorThief === 'undefined') return;
       const colorThief = new ColorThief();
 
@@ -403,29 +464,29 @@
             const bgColor = 'rgb(' + r + ',' + g + ',' + b + ')';
             const link = header.querySelector('a');
 
-            header.style.backgroundColor = bgColor;
-            header.style.color = textColor;
-            if (link) {
-              link.style.setProperty('color', textColor, 'important');
-              link.style.textDecoration = 'none';
-            }
+             header.style.backgroundColor = bgColor;
+             header.style.color = textColor;
+             if (link) {
+               link.style.setProperty('color', textColor, 'important');
+               link.style.textDecoration = 'none';
+             }
 
-            // Store by favicon key for reliable cache lookup
-            if (faviconKey) {
-              window.feedHeaderCache[faviconKey] = { bg: bgColor, text: textColor };
-            }
+             // Save to localStorage cache
+             if (faviconKey && faviconKey !== 'default') {
+               window.saveHeaderColorToCache(faviconKey, bgColor, textColor);
+             }
 
-            // Save extracted colors to database using feed URL if available
-            const feedUrl = link ? link.href : null;
-            if (feedUrl) {
-              fetch('/api/header_color', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ feed_url: feedUrl, color: bgColor, text_color: textColor })
-              }).catch(e => {});
-            }
+             // Save extracted colors to database using feed URL if available
+             const feedUrl = link ? link.href : null;
+             if (feedUrl) {
+               fetch('/api/header_color', {
+                 method: 'POST',
+                 headers: { 'Content-Type': 'application/json' },
+                 body: JSON.stringify({ feed_url: feedUrl, color: bgColor, text_color: textColor })
+               }).catch(e => {});
+             }
 
-            header.dataset.adaptive = 'true';
+             header.dataset.adaptive = 'true';
           } catch (e) {
             // Silently fail - color extraction is optional
           }
@@ -448,14 +509,17 @@
         prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
       }
       
-       // Apply theme to document
-       if (prefersDark) {
-         document.documentElement.setAttribute('data-theme', 'dark');
-       } else {
-         document.documentElement.setAttribute('data-theme', 'light');
-       }
+        // Apply theme to document
+        if (prefersDark) {
+          document.documentElement.setAttribute('data-theme', 'dark');
+        } else {
+          document.documentElement.setAttribute('data-theme', 'light');
+        }
 
-        // Fix header colors for dark mode
+        // Apply cached header colors immediately to prevent flash
+        setTimeout(window.applyCachedHeaderColors, 10);
+
+         // Fix header colors for dark mode
         if (prefersDark) {
           setTimeout(window.fixHeaderColors, 100);
           setTimeout(window.fixHeaderColors, 200);
