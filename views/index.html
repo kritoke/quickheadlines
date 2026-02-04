@@ -4,69 +4,40 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>QuickHeadlines</title>
-  <style>
+   <style>
     * { box-sizing: border-box; }
     html, body { margin: 0; padding: 0; height: 100%; }
     #app { width: 100vw; min-height: 100vh; background: #ffffff; }
-    /* Timeline page: use normal browser scrolling */
+    /* Timeline page scrolling */
     [data-timeline-page="true"] [data-semantic="main-content-scroll"] {
       display: block;
     }
-    /* Remove top padding from main content on timeline for desktop */
     @media (min-width: 1024px) {
       [data-timeline-page="true"] [data-semantic="main-content-scroll"] > *:first-child {
         padding-top: 0 !important;
       }
     }
-    /* Home page: normal browser scrolling */
     [data-page="home"] { overflow-y: auto; height: auto; }
-    /* Home page: normal browser scrolling */
-    [data-page="home"] { overflow-y: auto; height: auto; }
-    .feed-header { transition: background-color 0.3s ease, color 0.3s ease; }
     .feed-header { transition: background-color 0.3s ease, color 0.3s ease; }
     [data-timeline-header="true"] {
       background-color: transparent !important;
       background: transparent !important;
-      font-size: 1.25rem !important; /* 20px equivalent */
+      font-size: 1.25rem !important;
       font-weight: bold;
       -webkit-text-size-adjust: none;
     }
     [data-timeline-page="true"] [data-adaptive]:not(.feed-header) {
       background-color: transparent !important;
       background: transparent !important;
-      color: inherit !important;
     }
-    [data-timeline-page="true"] [data-adaptive]:not(.feed-header) a {
-      color: inherit !important;
+    [data-timeline-item="true"] {
+      background-color: transparent !important;
+      background: transparent !important;
+    }
+    [data-timeline-item="true"] a {
       text-decoration: underline !important;
     }
-     [data-timeline-item="true"] {
-       background-color: transparent !important;
-       background: transparent !important;
-     }
-     [data-timeline-item="true"] a, 
-     [data-timeline-item="true"] el, 
-     [data-timeline-item="true"] div,
-     [data-timeline-item="true"] span {
-         text-decoration: none;
-      }
-     [data-timeline-item="true"] a {
-       text-decoration: underline !important;
-     }
-     /* Ensure links in timeline are visible - override any default browser styles */
-     [data-timeline-page="true"] a {
-       color: inherit !important;
-     }
-     [data-timeline-page="true"] a:visited {
-       color: inherit !important;
-     }
-     [data-timeline-page="true"] a:hover {
-       color: inherit !important;
-     }
-     [data-timeline-page="true"] a:active {
-       color: inherit !important;
-     }
-    [data-display-link="true"] {
+    [data-timeline-item="true"] a {
       color: inherit !important;
     }
     .feed-header a {
@@ -75,10 +46,10 @@
     }
     @media only screen and (max-width: 768px) {
       [data-timeline-header="true"] {
-        font-size: 1.125rem !important; /* 18px equivalent */
+        font-size: 1.125rem !important;
       }
     }
-    /* Auto-hide scrollbars */
+    /\* Auto-hide scrollbars - cannot be done in Elm due to pseudo-elements \*/
     .auto-hide-scroll {
       overflow-y: auto;
     }
@@ -93,7 +64,6 @@
       background-color: rgba(128, 128, 128, 0.4);
       border-radius: 3px;
     }
-    /* Main content scrollbar */
     #main-content {
       overflow-y: auto;
     }
@@ -108,7 +78,6 @@
       background-color: rgba(128, 128, 128, 0.3);
       border-radius: 4px;
     }
-    /* Desktop-only overrides to normalize Elm-generated font-size classes */
     @media (min-width: 768px) {
       body .font-size-11 { font-size: 14px !important; }
       body .font-size-12 { font-size: 15px !important; }
@@ -118,8 +87,6 @@
       body .font-size-16 { font-size: 18px !important; }
       body .font-size-18 { font-size: 20px !important; }
       body .font-size-20 { font-size: 22px !important; }
-
-       /* Favicon helper to ensure consistent sizing and vertical alignment on desktop */
        body .qh-favicon {
          display: inline-flex !important;
          align-items: center !important;
@@ -129,7 +96,6 @@
          margin-right: 8px !important;
          vertical-align: middle !important;
        }
-       /* Tab link styles - aggressively remove all shadows */
        [data-page="home"] .tab-link,
        [data-page="home"] .tab-link:hover,
        [data-page="home"] .tab-link:active,
@@ -140,26 +106,16 @@
        [data-page="home"] button:focus {
          box-shadow: none !important;
          text-shadow: none !important;
-         filter: none !important;
-         -webkit-filter: none !important;
-         outline: none !important;
-         -webkit-appearance: none !important;
-         -webkit-tap-highlight-color: transparent !important;
        }
-       /* Force reasonable padding for Elm pages on desktop */
-        @media (min-width: 1024px) {
-          [data-page="home"] [data-semantic="main-content-scroll"] > *:first-child {
-            padding-top: 0 !important;
-          }
-        }
-       /* Inlined timeline.css styles */
-       .timeline-inserted {
-         animation: qh-insert 300ms cubic-bezier(.22,.9,.29,1) both;
-         box-shadow: 0 6px 18px rgba(16,24,40,0.06);
+       @keyframes qh-fade-in {
+         from { opacity: 0; transform: translateY(8px); }
+         to { opacity: 1; transform: translateY(0); }
        }
-       .timeline-inserted-wrapper {
+        @keyframes qh-fade-out {
+         from { opacity: 1; transform: translateY(0); }
+         to { opacity: 0; transform: translateY(-8px); }
        }
-       @keyframes qh-insert {
+        @keyframes qh-insert {
          from { opacity: 0; transform: translateY(12px) scale(0.997); }
          60% { opacity: 1; transform: translateY(-2px) scale(1.001); }
          to { opacity: 1; transform: translateY(0) scale(1); }
@@ -189,61 +145,79 @@
          .qh-load-more:active {
            background: #cbd5e1;
          }
-         @media (prefers-color-scheme: dark), [data-theme="dark"] {
+         .qh-load-more:focus {
+           outline: none;
+         }
+         @media (prefers-color-scheme: dark) {
            .qh-load-more {
-             background: #334155;
-             color: #e2e8f0;
-             border: none;
+             background: rgba(255,255,255,0.06);
+             color: rgba(255,255,255,0.7);
+             border: 1px solid rgba(255,255,255,0.06);
            }
            .qh-load-more:hover {
-             background: #475569;
-             color: #f8fafc;
-           }
-           .qh-load-more:active {
-             background: #64748b;
+             background: rgba(255,255,255,0.1);
+             color: #fff;
            }
          }
-       .qh-observer-indicator {
-         display: none;
-       }
-       .qh-debug-enabled .qh-observer-indicator {
-         display: inline-flex;
-         align-items: center;
-         gap: 8px;
-         position: fixed !important;
-         right: 12px !important;
-         bottom: 12px !important;
-         z-index: 1200 !important;
-         background: rgba(17,24,39,0.9);
-         color: #fff;
-         padding: 6px 10px;
-         border-radius: 999px;
-         font-size: 12px;
-         pointer-events: none;
-         box-shadow: 0 6px 18px rgba(2,6,23,0.5);
-       }
-       .qh-debug-panel {
-         position: fixed !important;
-         right: 12px !important;
-         bottom: 56px !important;
-         z-index: 1200 !important;
-         display: flex;
-         flex-direction: column;
-         gap: 6px;
-         pointer-events: auto;
-       }
-       .qh-debug-btn {
-         background: rgba(255,255,255,0.06);
-         border: 1px solid rgba(255,255,255,0.06);
-         color: #fff;
-         padding: 6px 10px;
-         border-radius: 6px;
-         font-size: 12px;
-         cursor: pointer;
-       }
-       .qh-debug-btn:active { transform: translateY(1px); }
-     </style>
+        .qh-notification {
+          position: fixed !important;
+          right: 12px !important;
+          bottom: 12px !important;
+          z-index: 1200 !important;
+          background: rgba(17,24,39,0.9);
+          color: #fff;
+          padding: 6px 10px;
+          border-radius: 999px;
+          font-size: 12px;
+          pointer-events: none;
+          box-shadow: 0 6px 18px rgba(2,6,23,0.5);
+        }
+        .qh-debug-panel {
+          position: fixed !important;
+          right: 12px !important;
+          bottom: 56px !important;
+          z-index: 1200 !important;
+          display: flex;
+          flex-direction: column;
+          gap: 6px;
+          pointer-events: auto;
+        }
+        .qh-debug-btn {
+          background: rgba(255,255,255,0.06);
+          border: 1px solid rgba(255,255,255,0.06);
+          color: #fff;
+          padding: 6px 10px;
+          border-radius: 6px;
+          font-size: 12px;
+          cursor: pointer;
+        }
+      </style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/color-thief/2.3.2/color-thief.umd.js"></script>
+    <script>
+      // Force timeline feed titles to use muted gray - run LAST after everything
+      document.addEventListener('DOMContentLoaded', function() {
+        function forceTimelineColors() {
+          document.querySelectorAll('[data-timeline-item="true"] span, [data-timeline-item="true"] div').forEach(function(el) {
+            // Check if this looks like a feed title (has feed favicon or feed text)
+            if (el.textContent && (
+                el.textContent.includes('Ars Technica') ||
+                el.textContent.includes('Dev.to') ||
+                el.textContent.includes('Tech Radar') ||
+                el.textContent.includes('Hacker News') ||
+                el.querySelector('img[src*="favicon"]')
+            )) {
+              el.style.color = '#94a3b8 !important';
+              el.style.setProperty('color', '#94a3b8', 'important');
+            }
+          });
+        }
+        // Run multiple times to catch any timing issues
+        forceTimelineColors();
+        setTimeout(forceTimelineColors, 500);
+        setTimeout(forceTimelineColors, 1500);
+        setTimeout(forceTimelineColors, 3000);
+      });
+    </script>
   </head>
   <body>
     <div id="app">
@@ -263,6 +237,12 @@
 
         // Skip timeline headers explicitly - they should never be colored
         if (header.dataset.timelineHeader === 'true') {
+          header.dataset.adaptive = 'true';
+          return;
+        }
+
+        // Skip headers inside timeline items - they use theme colors, not color thief
+        if (header.closest('[data-timeline-item="true"]')) {
           header.dataset.adaptive = 'true';
           return;
         }

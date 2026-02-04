@@ -19,6 +19,52 @@ import Pages.ViewIcon exposing (viewIcon)
 import Responsive exposing (Breakpoint, breakpointFromWidth, isMobile, isVeryNarrow, horizontalPadding, verticalPadding, containerMaxWidth, timelineTimeColumnWidth, timelineClusterPadding)
 
 
+parseHexColor : String -> Maybe Element.Color
+parseHexColor hex =
+    let
+        cleanHex =
+            String.replace "#" "" hex
+    in
+    case String.length cleanHex of
+        6 ->
+            let
+                r =
+                    String.slice 0 2 cleanHex |> String.toInt |> Maybe.withDefault 0
+                g =
+                    String.slice 2 4 cleanHex |> String.toInt |> Maybe.withDefault 0
+                b =
+                    String.slice 4 6 cleanHex |> String.toInt |> Maybe.withDefault 0
+            in
+            Just (rgb255 r g b)
+
+        3 ->
+            let
+                r =
+                    String.slice 0 1 cleanHex |> (\x -> x ++ x) |> String.toInt |> Maybe.withDefault 0
+                g =
+                    String.slice 1 2 cleanHex |> (\x -> x ++ x) |> String.toInt |> Maybe.withDefault 0
+                b =
+                    String.slice 2 3 cleanHex |> (\x -> x ++ x) |> String.toInt |> Maybe.withDefault 0
+            in
+            Just (rgb255 r g b)
+
+        _ ->
+            Nothing
+
+
+getFeedTitleColor : Shared.Theme -> String -> Element.Color
+getFeedTitleColor theme headerColor =
+    case ( parseHexColor headerColor, theme ) of
+        ( Just color, Shared.Light ) ->
+            color
+
+        ( _, Shared.Dark ) ->
+            mutedColor theme
+
+        ( Nothing, _ ) ->
+            mutedColor theme
+
+
 type alias Model =
     { items : List TimelineItem
     , clusters : List Cluster
@@ -196,15 +242,16 @@ view shared model =
         clustersByDay =
             groupClustersByDay shared.zone shared.now model.clusters
     in
-     column
-        [ width fill
-        , height fill
-        , spacing 20
-        , paddingXY horizontalPadding verticalPadding
-        , Background.color bg
-        , htmlAttribute (Html.Attributes.attribute "data-timeline-page" "true")
-        , htmlAttribute (Html.Attributes.class "auto-hide-scroll")
-        ]
+      column
+         [ width fill
+         , height fill
+         , spacing 20
+         , paddingXY horizontalPadding verticalPadding
+         , Background.color bg
+         , Font.color txtColor
+         , htmlAttribute (Html.Attributes.attribute "data-timeline-page" "true")
+         , htmlAttribute (Html.Attributes.class "auto-hide-scroll")
+         ]
         [ row [ width fill, spacing 10 ]
              [ el
                  [ (if Responsive.isMobile breakpoint then Ty.subtitle else Ty.title)
@@ -661,16 +708,14 @@ clusterItem breakpoint zone now theme expandedClusters insertedIds cluster =
             ]
             [ paragraph [ width fill, Ty.size13 ]
                 [ faviconImg
-                , el [ Font.color mutedTxt, Font.size 12
-                    , (case headerTextColor of
-                        "" -> htmlAttribute (Html.Attributes.style "color" "var(--header-text-color)")
-                        _ -> htmlAttribute (Html.Attributes.style "color" headerTextColor))
-                   ] (text cluster.representative.feedTitle)
+                , el [ Font.size 12, Font.color (getFeedTitleColor theme headerTextColor) ]
+                     (text cluster.representative.feedTitle)
                 , el [ Font.color mutedTxt, paddingXY 4 0 ] (text "•")
                 , link
                     [ htmlAttribute (Html.Attributes.attribute "data-display-link" "true")
-                    , mouseOver [ Font.color lumeOrange ]
+                    , Font.color txtColor
                     , Font.semiBold
+                    , mouseOver [ Font.color lumeOrange ]
                     ]
                     { url = cluster.representative.link, label = text cluster.representative.title }
                 , if cluster.count > 1 then
@@ -701,9 +746,6 @@ clusterItem breakpoint zone now theme expandedClusters insertedIds cluster =
 
 clusterOtherItem now theme item =
     let
-        txtColor =
-            textColor theme
-
         mutedTxt =
             mutedColor theme
 
@@ -722,20 +764,19 @@ clusterOtherItem now theme item =
         [ width fill
         , paddingEach { top = 4, bottom = 4, left = 0, right = 0 }
         , htmlAttribute (Html.Attributes.attribute "data-timeline-item" "true")
+        , Background.color (rgba 0 0 0 0)
+        , Font.color (textColor theme)
         ]
         [ faviconImg
-        , el [ Ty.meta, Font.color mutedTxt
-             , (case itemHeaderColor of
-                  "" -> htmlAttribute (Html.Attributes.style "color" "var(--header-text-color)")
-                  _ -> htmlAttribute (Html.Attributes.style "color" itemHeaderColor))
-            ] (text item.feedTitle)
+        , el [ Ty.meta, Font.color (getFeedTitleColor theme itemHeaderColor) ]
+             (text item.feedTitle)
         , el [ Ty.meta, Font.color mutedTxt, paddingXY 4 0 ] (text "•")
         , link
             [ Font.size 11
-            , Font.color txtColor
             , htmlAttribute (Html.Attributes.attribute "data-display-link" "true")
-            , mouseOver [ Font.color lumeOrange ]
+            , Font.color (textColor theme)
             , Font.medium
+            , mouseOver [ Font.color lumeOrange ]
             ]
             { url = item.link, label = text item.title }
         ]

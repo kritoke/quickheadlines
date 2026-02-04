@@ -15827,6 +15827,86 @@ var $author$project$Pages$Timeline$ToggleCluster = function (a) {
 };
 var $mdgriffith$elm_ui$Internal$Flag$fontAlignment = $mdgriffith$elm_ui$Internal$Flag$flag(12);
 var $mdgriffith$elm_ui$Element$Font$center = A2($mdgriffith$elm_ui$Internal$Model$Class, $mdgriffith$elm_ui$Internal$Flag$fontAlignment, $mdgriffith$elm_ui$Internal$Style$classes.textCenter);
+var $author$project$Pages$Timeline$parseHexColor = function (hex) {
+	var cleanHex = A3($elm$core$String$replace, '#', '', hex);
+	var _v0 = $elm$core$String$length(cleanHex);
+	switch (_v0) {
+		case 6:
+			var r = A2(
+				$elm$core$Maybe$withDefault,
+				0,
+				$elm$core$String$toInt(
+					A3($elm$core$String$slice, 0, 2, cleanHex)));
+			var g = A2(
+				$elm$core$Maybe$withDefault,
+				0,
+				$elm$core$String$toInt(
+					A3($elm$core$String$slice, 2, 4, cleanHex)));
+			var b = A2(
+				$elm$core$Maybe$withDefault,
+				0,
+				$elm$core$String$toInt(
+					A3($elm$core$String$slice, 4, 6, cleanHex)));
+			return $elm$core$Maybe$Just(
+				A3($mdgriffith$elm_ui$Element$rgb255, r, g, b));
+		case 3:
+			var r = A2(
+				$elm$core$Maybe$withDefault,
+				0,
+				$elm$core$String$toInt(
+					function (x) {
+						return _Utils_ap(x, x);
+					}(
+						A3($elm$core$String$slice, 0, 1, cleanHex))));
+			var g = A2(
+				$elm$core$Maybe$withDefault,
+				0,
+				$elm$core$String$toInt(
+					function (x) {
+						return _Utils_ap(x, x);
+					}(
+						A3($elm$core$String$slice, 1, 2, cleanHex))));
+			var b = A2(
+				$elm$core$Maybe$withDefault,
+				0,
+				$elm$core$String$toInt(
+					function (x) {
+						return _Utils_ap(x, x);
+					}(
+						A3($elm$core$String$slice, 2, 3, cleanHex))));
+			return $elm$core$Maybe$Just(
+				A3($mdgriffith$elm_ui$Element$rgb255, r, g, b));
+		default:
+			return $elm$core$Maybe$Nothing;
+	}
+};
+var $author$project$Pages$Timeline$getFeedTitleColor = F2(
+	function (theme, headerColor) {
+		var _v0 = _Utils_Tuple2(
+			$author$project$Pages$Timeline$parseHexColor(headerColor),
+			theme);
+		_v0$1:
+		while (true) {
+			if (_v0.a.$ === 'Just') {
+				if (_v0.b.$ === 'Light') {
+					var color = _v0.a.a;
+					var _v1 = _v0.b;
+					return color;
+				} else {
+					break _v0$1;
+				}
+			} else {
+				if (_v0.b.$ === 'Dark') {
+					break _v0$1;
+				} else {
+					var _v3 = _v0.a;
+					return $author$project$Theme$mutedColor(theme);
+				}
+			}
+		}
+		var _v2 = _v0.b;
+		return $author$project$Theme$mutedColor(theme);
+	});
 var $author$project$ThemeTypography$meta = $mdgriffith$elm_ui$Element$Font$size(11);
 var $author$project$Pages$ViewIcon$viewIcon = F2(
 	function (url, siteName) {
@@ -15848,7 +15928,6 @@ var $author$project$Pages$ViewIcon$viewIcon = F2(
 	});
 var $author$project$Pages$Timeline$clusterOtherItem = F3(
 	function (now, theme, item) {
-		var txtColor = $author$project$Theme$textColor(theme);
 		var mutedTxt = $author$project$Theme$mutedColor(theme);
 		var itemHeaderColor = A2($elm$core$Maybe$withDefault, '', item.headerTextColor);
 		var faviconImg = A2(
@@ -15868,7 +15947,11 @@ var $author$project$Pages$Timeline$clusterOtherItem = F3(
 					$mdgriffith$elm_ui$Element$paddingEach(
 					{bottom: 4, left: 0, right: 0, top: 4}),
 					$mdgriffith$elm_ui$Element$htmlAttribute(
-					A2($elm$html$Html$Attributes$attribute, 'data-timeline-item', 'true'))
+					A2($elm$html$Html$Attributes$attribute, 'data-timeline-item', 'true')),
+					$mdgriffith$elm_ui$Element$Background$color(
+					A4($mdgriffith$elm_ui$Element$rgba, 0, 0, 0, 0)),
+					$mdgriffith$elm_ui$Element$Font$color(
+					$author$project$Theme$textColor(theme))
 				]),
 			_List_fromArray(
 				[
@@ -15878,16 +15961,8 @@ var $author$project$Pages$Timeline$clusterOtherItem = F3(
 					_List_fromArray(
 						[
 							$author$project$ThemeTypography$meta,
-							$mdgriffith$elm_ui$Element$Font$color(mutedTxt),
-							function () {
-							if (itemHeaderColor === '') {
-								return $mdgriffith$elm_ui$Element$htmlAttribute(
-									A2($elm$html$Html$Attributes$style, 'color', 'var(--header-text-color)'));
-							} else {
-								return $mdgriffith$elm_ui$Element$htmlAttribute(
-									A2($elm$html$Html$Attributes$style, 'color', itemHeaderColor));
-							}
-						}()
+							$mdgriffith$elm_ui$Element$Font$color(
+							A2($author$project$Pages$Timeline$getFeedTitleColor, theme, itemHeaderColor))
 						]),
 					$mdgriffith$elm_ui$Element$text(item.feedTitle)),
 					A2(
@@ -15904,15 +15979,16 @@ var $author$project$Pages$Timeline$clusterOtherItem = F3(
 					_List_fromArray(
 						[
 							$mdgriffith$elm_ui$Element$Font$size(11),
-							$mdgriffith$elm_ui$Element$Font$color(txtColor),
 							$mdgriffith$elm_ui$Element$htmlAttribute(
 							A2($elm$html$Html$Attributes$attribute, 'data-display-link', 'true')),
+							$mdgriffith$elm_ui$Element$Font$color(
+							$author$project$Theme$textColor(theme)),
+							$mdgriffith$elm_ui$Element$Font$medium,
 							$mdgriffith$elm_ui$Element$mouseOver(
 							_List_fromArray(
 								[
 									$mdgriffith$elm_ui$Element$Font$color($author$project$Theme$lumeOrange)
-								])),
-							$mdgriffith$elm_ui$Element$Font$medium
+								]))
 						]),
 					{
 						label: $mdgriffith$elm_ui$Element$text(item.title),
@@ -15986,9 +16062,9 @@ var $author$project$Pages$Timeline$clusterItem = F7(
 			}
 		}();
 		var timeStr = function () {
-			var _v3 = cluster.representative.pubDate;
-			if (_v3.$ === 'Just') {
-				var pd = _v3.a;
+			var _v2 = cluster.representative.pubDate;
+			if (_v2.$ === 'Just') {
+				var pd = _v2.a;
 				return A2($author$project$Pages$Timeline$formatTime, zone, pd);
 			} else {
 				return '???';
@@ -16100,17 +16176,9 @@ var $author$project$Pages$Timeline$clusterItem = F7(
 											$mdgriffith$elm_ui$Element$el,
 											_List_fromArray(
 												[
-													$mdgriffith$elm_ui$Element$Font$color(mutedTxt),
 													$mdgriffith$elm_ui$Element$Font$size(12),
-													function () {
-													if (headerTextColor === '') {
-														return $mdgriffith$elm_ui$Element$htmlAttribute(
-															A2($elm$html$Html$Attributes$style, 'color', 'var(--header-text-color)'));
-													} else {
-														return $mdgriffith$elm_ui$Element$htmlAttribute(
-															A2($elm$html$Html$Attributes$style, 'color', headerTextColor));
-													}
-												}()
+													$mdgriffith$elm_ui$Element$Font$color(
+													A2($author$project$Pages$Timeline$getFeedTitleColor, theme, headerTextColor))
 												]),
 											$mdgriffith$elm_ui$Element$text(cluster.representative.feedTitle)),
 											A2(
@@ -16127,12 +16195,13 @@ var $author$project$Pages$Timeline$clusterItem = F7(
 												[
 													$mdgriffith$elm_ui$Element$htmlAttribute(
 													A2($elm$html$Html$Attributes$attribute, 'data-display-link', 'true')),
+													$mdgriffith$elm_ui$Element$Font$color(txtColor),
+													$mdgriffith$elm_ui$Element$Font$semiBold,
 													$mdgriffith$elm_ui$Element$mouseOver(
 													_List_fromArray(
 														[
 															$mdgriffith$elm_ui$Element$Font$color($author$project$Theme$lumeOrange)
-														])),
-													$mdgriffith$elm_ui$Element$Font$semiBold
+														]))
 												]),
 											{
 												label: $mdgriffith$elm_ui$Element$text(cluster.representative.title),
@@ -16405,7 +16474,7 @@ var $author$project$Responsive$horizontalPadding = function (breakpoint) {
 		case 'TabletBreakpoint':
 			return 48;
 		default:
-			return 0;
+			return 96;
 	}
 };
 var $author$project$ThemeTypography$title = $mdgriffith$elm_ui$Element$Font$size(24);
@@ -16439,9 +16508,8 @@ var $author$project$Pages$Timeline$view = F2(
 					$mdgriffith$elm_ui$Element$height($mdgriffith$elm_ui$Element$fill),
 					$mdgriffith$elm_ui$Element$spacing(20),
 					A2($mdgriffith$elm_ui$Element$paddingXY, horizontalPadding, verticalPadding),
-					$mdgriffith$elm_ui$Element$paddingEach(
-					{bottom: 0, left: 0, right: 0, top: 24}),
 					$mdgriffith$elm_ui$Element$Background$color(bg),
+					$mdgriffith$elm_ui$Element$Font$color(txtColor),
 					$mdgriffith$elm_ui$Element$htmlAttribute(
 					A2($elm$html$Html$Attributes$attribute, 'data-timeline-page', 'true')),
 					$mdgriffith$elm_ui$Element$htmlAttribute(
