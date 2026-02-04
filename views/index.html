@@ -513,13 +513,19 @@
              });
            }
 
-            if (app.ports && app.ports.saveCurrentPage) {
-              app.ports.saveCurrentPage.subscribe(function(page) {
-                localStorage.setItem('quickheadlines-page', page);
-              });
-            }
+             if (app.ports && app.ports.saveCurrentPage) {
+               app.ports.saveCurrentPage.subscribe(function(page) {
+                 localStorage.setItem('quickheadlines-page', page);
+               });
+             }
 
-           window.addEventListener('resize', function() {
+             if (app.ports && app.ports.saveActiveTab) {
+               app.ports.saveActiveTab.subscribe(function(tab) {
+                 localStorage.setItem('quickheadlines-tab', tab);
+               });
+             }
+
+            window.addEventListener('resize', function() {
             // Handle resize if needed
           });
 
