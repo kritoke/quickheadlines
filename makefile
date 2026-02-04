@@ -324,6 +324,10 @@ elm-build:
 		$(ELM) make src/Main.elm --output=public/elm.js; \
 		echo "✓ Elm compiled to public/elm.js ($(shell wc -c < public/elm.js 2>/dev/null || echo "0") bytes)"; \
 	fi
+	@echo "Copying CSS to public directory..."
+	@mkdir -p public/css
+	@cp assets/css/input.css public/css/input.css 2>/dev/null || true
+	@echo "✓ CSS copied to public/css/input.css"
 
 # 1b. Compile Elm Land UI to JavaScript
 elm-land-build:

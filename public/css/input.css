@@ -1,0 +1,251 @@
+/* QuickHeadlines Custom CSS - No Tailwind dependency */
+
+:root {
+  /* Set sensible desktop base font-size so Elm Element font values feel natural */
+  font-size: 16px;
+  --color-surface: #1f2937;
+  --color-surface-light: #f9fafb;
+  --color-surface-dark: #111827;
+  --color-card: #111827;
+  --color-card-light: #ffffff;
+  --color-border-subtle: #334155;
+  --color-border-light: #e5e7eb;
+  /* UI variables for headers and feed titles */
+  --feed-title-color: #0f172a; /* dark-gray fallback for light mode */
+  --header-text-color: #0f172a;
+}
+
+/* Dark mode */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-card: #111827;
+    --color-card-light: #1f2937;
+    /* Override feed/header colors in dark mode */
+    --feed-title-color: #e5e7eb; /* light-gray for titles in dark mode */
+    --header-text-color: #e5e7eb;
+  }
+}
+
+/* Desktop-only overrides to normalize Elm-generated font-size classes */
+@media (min-width: 768px) {
+  body .font-size-11 { font-size: 14px !important; }
+  body .font-size-12 { font-size: 15px !important; }
+  body .font-size-13 { font-size: 16px !important; }
+  body .font-size-14 { font-size: 17px !important; }
+  body .font-size-15 { font-size: 18px !important; }
+  body .font-size-16 { font-size: 18px !important; }
+  body .font-size-18 { font-size: 20px !important; }
+  body .font-size-20 { font-size: 22px !important; }
+
+  /* Favicon helper to ensure consistent sizing and vertical alignment on desktop */
+  body .qh-favicon {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 18px !important;
+    height: 18px !important;
+    margin-right: 8px !important;
+    vertical-align: middle !important;
+  }
+}
+
+/* Cards */
+.feed-box {
+  overflow-wrap: break-word;
+  border-radius: 0.75rem; 
+  background-color: var(--color-card-light, #ffffff);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  height: auto;
+  width: 100%;
+}
+
+@media (min-width: 768px) { 
+  .feed-box { 
+    height: 22rem; 
+    position: relative;
+  } 
+  .feed-box .feed-body { 
+    overflow-y: auto;
+  }
+  /* Subtle shadow at the bottom to indicate more content to scroll */
+  .feed-box::after {
+    content: "";
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 1.5rem;
+    pointer-events: none;
+    /* Increased opacity for better visibility in light mode */
+    background: linear-gradient(to bottom, transparent, rgba(0, 0, 0, 0.2));
+    transition: opacity 0.3s ease;
+    z-index: 10;
+  }
+
+  :where(.dark, .dark *) .feed-box::after {
+    background: linear-gradient(to bottom, transparent, rgba(0, 0, 0, 0.6));
+  }
+
+  .feed-box.is-at-bottom::after {
+    opacity: 0;
+  }
+}
+@media (min-width: 1024px) { .feed-box { height: 24rem; } }
+
+.feed-box .feed-header {
+  padding: 0.75rem 0.75rem;
+  background-color: #f3f4f6;
+  border-radius: 0.75rem;
+  margin-bottom: 0.4rem;
+  transition: background-color 0.4s ease, color 0.4s ease;
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  min-height: 44px; /* ensure touch target on mobile */
+}
+
+:where(.dark, .dark *) .feed-box .feed-header {
+  background-color: #1f2937;
+}
+
+.feed-box .feed-title {
+  margin: 0; 
+  font-size: 1.1rem;
+  line-height: 1.2;
+  font-weight: 700;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.05);
+  /* Use canonical variable for title color so themes control it */
+  color: var(--feed-title-color, inherit);
+}
+
+.feed-box .feed-body {
+  padding: 0.75rem;
+  /* flex-shrink: 1 allows the body to be smaller than its content on desktop to trigger scrolling */
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+  min-width: 0;
+  scrollbar-width: none;
+}
+
+.feed-box .feed-body::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+.feed-box .feed-body::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.feed-box .feed-body::-webkit-scrollbar-thumb {
+  background-color: transparent;
+  border-radius: 4px;
+  transition: background-color 0.2s ease;
+}
+
+.feed-box .feed-body::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(0, 0, 0, 0.3);
+}
+
+:where(.dark, .dark *) .feed-box .feed-body::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(255, 255, 255, 0.3);
+}
+
+.feed-box .feed-body ul,
+.feed-box .feed-body li {
+  display: block;
+  width: 100%;
+}
+
+.feed-title-link {
+  color: inherit;
+}
+
+/* Dark mode feed box background */
+@media (prefers-color-scheme: dark) {
+  .feed-box {
+    background-color: var(--color-card, #111827);
+  }
+}
+
+/* Theme Toggle */
+#theme-toggle {
+  cursor: pointer;
+}
+
+/* Tabs */
+.tab-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  margin-bottom: 1.5rem;
+  padding-bottom: 0.25rem;
+  border-bottom: 1px solid var(--color-border-light);
+}
+@media (prefers-color-scheme: dark) {
+  .tab-container {
+    border-bottom-color: var(--color-border-subtle);
+  }
+}
+
+.tab-link {
+  padding: 0.5rem 1rem;
+  font-weight: 500;
+  border-radius: 0.375rem;
+  color: #64748b;
+  transition: all 0.15s ease;
+}
+
+.tab-link:hover {
+  background-color: #f1f5f9;
+  color: #1e293b;
+}
+
+.tab-link.active {
+  background-color: #eff6ff;
+  color: #2563eb;
+}
+
+@media (prefers-color-scheme: dark) {
+  .tab-link:hover {
+    background-color: #1e293b;
+    color: #e2e8f0;
+  }
+  .tab-link.active {
+    background-color: #1e3a5f;
+    color: #60a5fa;
+  }
+}
+
+/* Cluster Expand/Collapse */
+.qh-hidden {
+  display: none !important;
+}
+
+.cluster-expand-btn,
+.cluster-collapse-btn {
+  cursor: pointer;
+}
+
+/* Animation for cluster items */
+.cluster-item {
+  transition: opacity 0.2s ease;
+}
+
+/* Desktop site header styling - consistent across all views */
+.qh-site-header {
+  /* Mobile: no extra padding */
+  padding-left: 0;
+  padding-right: 0;
+}
+
+/* Desktop (>=640px): apply standardized padding and layout */
+@media (min-width: 640px) {
+  .qh-site-header {
+    padding-left: 24px;
+    padding-right: 24px;
+  }
+}
