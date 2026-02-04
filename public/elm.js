@@ -13933,7 +13933,9 @@ var $author$project$Application$headerView = function (model) {
 				$mdgriffith$elm_ui$Element$htmlAttribute(
 				A2($elm$html$Html$Attributes$style, 'overflow-x', 'hidden')),
 				$mdgriffith$elm_ui$Element$htmlAttribute(
-				A2($elm$html$Html$Attributes$style, 'justify-content', 'space-between'))
+				A2($elm$html$Html$Attributes$style, 'justify-content', 'space-between')),
+				$mdgriffith$elm_ui$Element$htmlAttribute(
+				$elm$html$Html$Attributes$class('qh-site-header'))
 			]),
 		_List_fromArray(
 			[

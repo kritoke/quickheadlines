@@ -327,6 +327,7 @@ headerView model =
         , htmlAttribute (HA.style "flex-wrap" "nowrap")
         , htmlAttribute (HA.style "overflow-x" "hidden")
         , htmlAttribute (HA.style "justify-content" "space-between")
+        , htmlAttribute (HA.class "qh-site-header")
         ]
         [ -- Brand Section
           Element.link [ centerY ]

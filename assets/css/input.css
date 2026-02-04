@@ -234,3 +234,18 @@
 .cluster-item {
   transition: opacity 0.2s ease;
 }
+
+/* Desktop site header styling - consistent across all views */
+.qh-site-header {
+  /* Mobile: no extra padding */
+  padding-left: 0;
+  padding-right: 0;
+}
+
+/* Desktop (>=640px): apply standardized padding and layout */
+@media (min-width: 640px) {
+  .qh-site-header {
+    padding-left: 24px;
+    padding-right: 24px;
+  }
+}
