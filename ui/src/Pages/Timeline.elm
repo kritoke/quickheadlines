@@ -292,29 +292,33 @@ view shared model =
                   else if not model.hasMore then
                     el [ centerX, padding 12, Font.color mutedTxt ] (text "End of feed")
                   else
+                    let
+                        bgColor =
+                            case theme of
+                                Shared.Dark ->
+                                    "rgb(51, 65, 85)"
+
+                                Shared.Light ->
+                                    "rgb(241, 245, 249)"
+
+                        textColor =
+                            case theme of
+                                Shared.Dark ->
+                                    "rgb(248, 250, 252)"
+
+                                Shared.Light ->
+                                    "rgb(100, 116, 139)"
+                    in
                     Input.button
                          [ centerX
                          , paddingXY 4 12
                          , Border.rounded 6
                          , Ty.small
                          , Font.medium
-                         , Font.color
-                            (case theme of
-                                Dark ->
-                                    rgb255 248 250 252
-
-                                Light ->
-                                    rgb255 100 116 139
-                            )
-                         , Background.color
-                            (case theme of
-                                Dark ->
-                                    rgb255 51 65 85
-
-                                Light ->
-                                    rgb255 241 245 249
-                            )
                          , htmlAttribute (Html.Attributes.class "qh-load-more")
+                         , htmlAttribute (Html.Attributes.style "background-color" bgColor)
+                         , htmlAttribute (Html.Attributes.style "color" textColor)
+                         , htmlAttribute (Html.Attributes.style "border-color" "rgba(0,0,0,0.08)")
                          , htmlAttribute (Html.Attributes.attribute "data-load-more" "true")
                          ]
                          { onPress = Just LoadMore

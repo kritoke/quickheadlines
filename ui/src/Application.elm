@@ -39,6 +39,8 @@ port onNearBottom : (Bool -> msg) -> Sub msg
 
 port switchTab : (String -> msg) -> Sub msg
 
+port envThemeChanged : (Bool -> msg) -> Sub msg
+
 
 type alias Flags =
     { width : Int
@@ -260,6 +262,8 @@ subscriptions model =
           Browser.Events.onResize (\w h -> SharedMsg (Shared.WindowResized w h))
         , -- Listen for tab switch from JavaScript
           switchTab SwitchTab
+        , -- Listen for OS theme changes from JavaScript
+          envThemeChanged (\isDark -> SharedMsg (Shared.SetSystemTheme isDark))
         , case model.page of
             Timeline ->
                 Sub.batch

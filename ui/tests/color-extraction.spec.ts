@@ -21,6 +21,12 @@ test.describe('Color Extraction', () => {
   });
 
   test('feedHeaderCache initializes as empty object', async ({ page }) => {
+    // Clear cache first to ensure clean test state
+    await page.evaluate(() => {
+      localStorage.removeItem('qh_header_colors');
+      window.feedHeaderCache = {};
+    });
+
     const isEmpty = await page.evaluate(() => {
       return Object.keys(window.feedHeaderCache || {}).length === 0;
     });

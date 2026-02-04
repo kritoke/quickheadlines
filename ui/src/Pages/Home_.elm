@@ -523,6 +523,23 @@ feedCard now theme breakpoint loadingFeed insertedIds feed =
 
         loadMoreButton =
             if shouldShowButton then
+                let
+                    bgColor =
+                        case theme of
+                            Shared.Dark ->
+                                "rgb(51, 65, 85)"
+
+                            Shared.Light ->
+                                "rgb(241, 245, 249)"
+
+                    textColor =
+                        case theme of
+                            Shared.Dark ->
+                                "rgb(248, 250, 252)"
+
+                            Shared.Light ->
+                                "rgb(100, 116, 139)"
+                in
                 Input.button
                     [ centerX
                     , paddingXY 4 12
@@ -531,8 +548,10 @@ feedCard now theme breakpoint loadingFeed insertedIds feed =
                     , Border.color border
                     , Ty.small
                     , Font.medium
-                    , htmlAttribute (Html.Attributes.style "color" "inherit")
                     , htmlAttribute (Html.Attributes.class "qh-load-more")
+                    , htmlAttribute (Html.Attributes.style "background-color" bgColor)
+                    , htmlAttribute (Html.Attributes.style "color" textColor)
+                    , htmlAttribute (Html.Attributes.style "border-color" "rgba(0,0,0,0.08)")
                     ]
                     { onPress = btnOnPress
                     , label = btnLabel

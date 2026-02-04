@@ -22,6 +22,7 @@ type Msg
     = ToggleTheme
     | WindowResized Int Int
     | SetTime Time.Posix
+    | SetSystemTheme Bool
 
 
 init : Int -> Int -> Bool -> Time.Posix -> Time.Zone -> Maybe String -> Model
@@ -60,6 +61,9 @@ update msg model =
 
         SetTime posix ->
             { model | now = posix }
+
+        SetSystemTheme isDark ->
+            { model | theme = if isDark then Dark else Light }
 
 
 getHeight : Time.Posix -> Maybe Int
