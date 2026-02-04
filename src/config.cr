@@ -80,6 +80,20 @@ struct SoftwareConfig
   property repos : Array(String)
 end
 
+struct RateLimitingCategoryConfig
+  include YAML::Serializable
+  property limit : Int32?
+  property window_minutes : Int32?
+end
+
+struct RateLimitingConfig
+  include YAML::Serializable
+  property enabled : Bool = true
+  property cleanup_interval_minutes : Int32 = 5
+  property max_entries : Int32 = 10_000
+  property categories : Hash(String, RateLimitingCategoryConfig)? = nil
+end
+
 struct TabConfig
   include YAML::Serializable
   property name : String
@@ -116,6 +130,9 @@ struct Config
 
   # Maximum cache size in MB (default: 100). When exceeded, cleanup tasks run.
   property max_cache_size_mb : Int32 = 100
+
+  # Rate limiting configuration (optional)
+  property rate_limiting : RateLimitingConfig? = nil
 
   # HTTP client configuration (optional)
   property http_client : HttpClientConfig? = nil
@@ -196,7 +213,39 @@ def load_config(path : String) : Config
   # (result is logged but not used - validation errors are printed to stderr)
   validate_config_feeds(config)
 
+  # Initialize rate limiting if configured
+  if rate_limit_config = config.rate_limiting
+    if rate_limit_config.enabled
+      initialize_rate_limiter(rate_limit_config)
+    end
+  end
+
   config
+end
+
+private def initialize_rate_limiter(rate_limit_config : RateLimitingConfig)
+  if categories = rate_limit_config.categories
+    limits = Hash(String, Int32).new
+    windows = Hash(String, Time::Span).new
+
+    categories.each do |cat, config|
+      if limit = config.limit
+        limits[cat] = limit
+      end
+      if window_minutes = config.window_minutes
+        windows[cat] = window_minutes.minutes
+      end
+    end
+
+    unless limits.empty?
+      Quickheadlines::RateLimiting::RateLimitConfig.custom_limits = limits
+    end
+    unless windows.empty?
+      Quickheadlines::RateLimiting::RateLimitConfig.custom_windows = windows
+    end
+  end
+
+  STDERR.puts "[#{Time.local}] Rate limiting configured with custom limits"
 end
 
 def find_default_config : String?

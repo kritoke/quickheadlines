@@ -1,4 +1,6 @@
 require "athena"
+require "../rate_limiter"
+require "../dtos/rate_limit_stats_dto"
 
 class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
   @db_service : DatabaseService
@@ -10,9 +12,32 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
   def initialize(@db_service : DatabaseService)
   end
 
+  private def check_rate_limit(request : ATH::Request) : Bool
+    return true if request.path.starts_with?("/api/admin")
+
+    ip = request.request.remote_address.try(&.to_s) || "unknown"
+    category = Quickheadlines::RateLimiting::RateLimitConfig.get_category(request.path)
+
+    result = rate_limiter.check_limit(ip, category)
+
+    unless result[:allowed]
+      STDERR.puts "[#{Time.local}] Rate limit exceeded for #{ip} on #{request.path}"
+      return false
+    end
+
+    true
+  end
+
   # GET /api/clusters - Get all clustered stories
   @[ARTA::Get(path: "/api/clusters")]
   def clusters(request : ATH::Request) : Quickheadlines::DTOs::ClustersResponse
+    unless check_rate_limit(request)
+      return Quickheadlines::DTOs::ClustersResponse.new(
+        clusters: [] of Quickheadlines::DTOs::ClusterResponse,
+        total_count: 0
+      )
+    end
+
     clusters = get_clusters_from_db(@db_service.db)
 
     cluster_responses = clusters.map { |cluster| Quickheadlines::DTOs::ClusterResponse.from_entity(cluster) }
@@ -756,6 +781,16 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
     else
       ATH::Response.new("Favicon not found", 404, HTTP::Headers{"content-type" => "text/plain"})
     end
+  end
+
+  # GET /api/admin/rate-limit-stats - Get rate limiting statistics
+  @[ARTA::Get(path: "/api/admin/rate-limit-stats")]
+  def rate_limit_stats : Quickheadlines::DTOs::RateLimitStatsResponse
+    stats = rate_limiter.stats
+    Quickheadlines::DTOs::RateLimitStatsResponse.new(
+      total_entries: stats[:total_entries],
+      by_category: stats[:by_category]
+    )
   end
 
   # POST /api/run-clustering - Manually trigger clustering on all uncategorized items
