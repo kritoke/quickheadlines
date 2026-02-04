@@ -200,31 +200,12 @@
           pointer-events: none;
           box-shadow: 0 6px 18px rgba(2,6,23,0.5);
         }
-        .qh-debug-panel {
-          position: fixed !important;
-          right: 12px !important;
-          bottom: 56px !important;
-          z-index: 1200 !important;
-          display: flex;
-          flex-direction: column;
-          gap: 6px;
-          pointer-events: auto;
-        }
-        .qh-debug-btn {
-          background: rgba(255,255,255,0.06);
-          border: 1px solid rgba(255,255,255,0.06);
-           color: #fff;
-           padding: 6px 10px;
-           border-radius: 6px;
-           font-size: 12px;
-           cursor: pointer;
-         }
-         /* Desktop site header styling */
-         .qh-site-header { padding-left: 0; padding-right: 0; }
-         @media (min-width: 640px) {
-           .qh-site-header { padding-left: 24px; padding-right: 24px; }
-         }
-       </style>
+          /* Desktop site header styling */
+          .qh-site-header { padding-left: 0; padding-right: 0; }
+          @media (min-width: 640px) {
+            .qh-site-header { padding-left: 24px; padding-right: 24px; }
+          }
+        </style>
      <script src="https://cdnjs.cloudflare.com/ajax/libs/color-thief/2.3.2/color-thief.umd.js"></script>
       <script>
        function fixHeaderColors() {
@@ -354,29 +335,25 @@
       if (typeof ColorThief === 'undefined') return;
       const colorThief = new ColorThief();
 
-      var allHeaders = document.querySelectorAll('.feed-header[data-use-adaptive-colors="true"]');
-      console.log('extractHeaderColors: found ' + allHeaders.length + ' headers to process');
+       var allHeaders = document.querySelectorAll('.feed-header[data-use-adaptive-colors="true"]');
 
       allHeaders.forEach(header => {
         var inTimeline = header.closest('[data-timeline-item="true"]') !== null;
-        console.log('extractHeaderColors: processing header, inTimeline=' + inTimeline + ', adaptive=' + header.dataset.adaptive);
 
         // Skip if already processed
         if (header.dataset.adaptive === 'true') {
-          console.log('extractHeaderColors: skipping, already adaptive');
+          header.dataset.adaptive = 'true';
           return;
         }
 
         // Skip ANY header that's inside a timeline item - use theme colors instead
         if (inTimeline) {
-          console.log('extractHeaderColors: skipping timeline header');
           header.dataset.adaptive = 'true';
           return;
         }
 
         // Skip timeline headers explicitly
         if (header.dataset.timelineHeader === 'true') {
-          console.log('extractHeaderColors: skipping timelineHeader');
           header.dataset.adaptive = 'true';
           return;
         }
@@ -485,18 +462,16 @@
         }
       
        // Check if we should restore a previously saved page
-       var savedPage = localStorage.getItem('quickheadlines-page');
-       if (savedPage && savedPage !== window.location.pathname) {
-         console.log('Restoring saved page:', savedPage);
-         window.history.replaceState(null, '', savedPage);
-       }
+        var savedPage = localStorage.getItem('quickheadlines-page');
+        if (savedPage && savedPage !== window.location.pathname) {
+          window.history.replaceState(null, '', savedPage);
+        }
 
-       // Get saved tab from localStorage
-       var savedTab = localStorage.getItem('quickheadlines-tab');
+        // Get saved tab from localStorage
+        var savedTab = localStorage.getItem('quickheadlines-tab');
 
-        try {
-           console.log('Initializing Elm...');
-            var app = Elm.Main.init({
+         try {
+             var app = Elm.Main.init({
               node: appElement,
               flags: {
                 width: window.innerWidth,
@@ -506,23 +481,21 @@
                 savedTab: savedTab
               }
             });
-          console.log('Elm initialized successfully');
-          window.app = app; // Expose for debugging
+           window.app = app; // Expose for debugging
 
-          if (app.ports && app.ports.saveTheme) {
-            app.ports.saveTheme.subscribe(function(theme) {
-              localStorage.setItem('quickheadlines-theme', theme);
-            });
-          }
-          
-           if (app.ports && app.ports.saveCurrentPage) {
-             app.ports.saveCurrentPage.subscribe(function(page) {
-               console.log('Saving current page:', page);
-               localStorage.setItem('quickheadlines-page', page);
+           if (app.ports && app.ports.saveTheme) {
+             app.ports.saveTheme.subscribe(function(theme) {
+               localStorage.setItem('quickheadlines-theme', theme);
              });
            }
 
-          window.addEventListener('resize', function() {
+            if (app.ports && app.ports.saveCurrentPage) {
+              app.ports.saveCurrentPage.subscribe(function(page) {
+                localStorage.setItem('quickheadlines-page', page);
+              });
+            }
+
+           window.addEventListener('resize', function() {
             // Handle resize if needed
           });
 
@@ -552,45 +525,42 @@
           let observerRetries = 0;
           const maxRetries = 50; // Retry for up to 5 seconds (50 * 100ms)
           
-          const observeSentinel = () => {
-            if (app.ports && app.ports.onNearBottom) {
-              const sentinel = document.getElementById('scroll-sentinel');
-              console.log('Checking sentinel (attempt ' + (observerRetries + 1) + '):', { exists: !!sentinel, sentinelObserver: !!sentinelObserver });
-                if (sentinel && !sentinelObserver) {
-                console.log('Setting up IntersectionObserver for sentinel');
-                // Try to find the nearest scrollable ancestor and use it as the observer root so
-                // the observer works when the sentinel is inside a scroll container (not the viewport).
-                function findScrollParent(el) {
-                  var parent = el.parentElement;
-                  while (parent) {
-                    var style = window.getComputedStyle(parent);
-                    var overflowY = (style.overflowY || '').toLowerCase();
-                    // Only accept explicit scrolling containers
-                    if (overflowY === 'auto' || overflowY === 'scroll' || overflowY === 'overlay') return parent;
-                    parent = parent.parentElement;
-                  }
-                  return null;
-                }
+           const observeSentinel = () => {
+             if (app.ports && app.ports.onNearBottom) {
+               const sentinel = document.getElementById('scroll-sentinel');
+                 if (sentinel && !sentinelObserver) {
+                 // Try to find the nearest scrollable ancestor and use it as the observer root so
+                 // the observer works when the sentinel is inside a scroll container (not the viewport).
+                 function findScrollParent(el) {
+                   var parent = el.parentElement;
+                   while (parent) {
+                     var style = window.getComputedStyle(parent);
+                     var overflowY = (style.overflowY || '').toLowerCase();
+                     // Only accept explicit scrolling containers
+                     if (overflowY === 'auto' || overflowY === 'scroll' || overflowY === 'overlay') return parent;
+                     parent = parent.parentElement;
+                   }
+                   return null;
+                 }
 
-                // Prefer an actual scroll container. Only use the timeline page element as the root
-                // if it is explicitly scrollable; otherwise fall back to the viewport (null).
-                var potentialRoot = document.querySelector('[data-timeline-page="true"]');
-                var scrollRoot = findScrollParent(sentinel) || null;
-                if (!scrollRoot && potentialRoot) {
-                  var potentialStyle = window.getComputedStyle(potentialRoot);
-                  var potOverflow = (potentialStyle.overflowY || '').toLowerCase();
-                  if (potOverflow === 'auto' || potOverflow === 'scroll' || potOverflow === 'overlay') {
-                    scrollRoot = potentialRoot;
-                  }
-                }
-                console.log('Selected IntersectionObserver root:', scrollRoot);
+                 // Prefer an actual scroll container. Only use the timeline page element as the root
+                 // if it is explicitly scrollable; otherwise fall back to the viewport (null).
+                 var potentialRoot = document.querySelector('[data-timeline-page="true"]');
+                 var scrollRoot = findScrollParent(sentinel) || null;
+                 if (!scrollRoot && potentialRoot) {
+                   var potentialStyle = window.getComputedStyle(potentialRoot);
+                   var potOverflow = (potentialStyle.overflowY || '').toLowerCase();
+                   if (potOverflow === 'auto' || potOverflow === 'scroll' || potOverflow === 'overlay') {
+                     scrollRoot = potentialRoot;
+                   }
+                 }
 
-                // Use rootMargin to trigger observer when element is within 500px of viewport/container bottom
-                // Only trigger near-bottom when sentinel is actually visible AND content is scrolled near bottom
-                sentinelObserver = new IntersectionObserver((entries) => {
-                  entries.forEach(entry => {
-                    // Only consider it "near bottom" if the sentinel is actually intersecting
-                    // and the scroll position is near the bottom
+                 // Use rootMargin to trigger observer when element is within 500px of viewport/container bottom
+                 // Only trigger near-bottom when sentinel is actually visible AND content is scrolled near bottom
+                 sentinelObserver = new IntersectionObserver((entries) => {
+                   entries.forEach(entry => {
+                     // Only consider it "near bottom" if the sentinel is actually intersecting
+                     // and the scroll position is near the bottom
                     if (entry.isIntersecting) {
                       // Use the inner scrollable container for scroll position
                       const scrollContainer = document.querySelector('#main-content > div');
@@ -599,34 +569,21 @@
                           const scrollTop = scrollContainer.scrollTop;
                           const scrollHeight = scrollContainer.scrollHeight;
                           const clientHeight = scrollContainer.clientHeight;
-                          const maxScroll = scrollHeight - clientHeight;
-                          const isScrolledNearBottom = maxScroll > 0 && scrollTop >= maxScroll - 600;
+                           const maxScroll = scrollHeight - clientHeight;
+                           const isScrolledNearBottom = maxScroll > 0 && scrollTop >= maxScroll - 600;
 
-                          console.log('Intersection event:', {
-                            isIntersecting: entry.isIntersecting,
-                            scrollTop: scrollTop,
-                            scrollHeight: scrollHeight,
-                            clientHeight: clientHeight,
-                            maxScroll: maxScroll,
-                            isScrolledNearBottom: isScrolledNearBottom
-                          });
-
-                          if (isScrolledNearBottom) {
-                            console.log('Near bottom detected - sending true');
-                            try { app.ports.onNearBottom.send(true); } catch(e) { console.warn('onNearBottom.send error', e); }
-                          } else {
-                            console.log('Sentinel visible but not scrolled near bottom, scrollTop:', scrollTop, 'maxScroll:', maxScroll);
-                          }
-                        } catch(e) {
-                          console.warn('Error checking scroll position:', e);
-                        }
-                      }
-                    } else {
-                      console.log('Sentinel not intersecting - sending false');
-                      try { app.ports.onNearBottom.send(false); } catch(e) { console.warn('onNearBottom.send error', e); }
-                    }
-                  });
-                 }, { threshold: 0, root: null, rootMargin: '0px' });
+                           if (isScrolledNearBottom) {
+                             try { app.ports.onNearBottom.send(true); } catch(e) { }
+                           } else {
+                           }
+                         } catch(e) {
+                         }
+                       }
+                     } else {
+                       try { app.ports.onNearBottom.send(false); } catch(e) { }
+                     }
+                   });
+                  }, { threshold: 0, root: null, rootMargin: '0px' });
 
                 sentinelObserver.observe(sentinel);
                 // Fallback: if IntersectionObserver doesn't report expected values in
@@ -640,52 +597,47 @@
                       if (!sentinel) return;
                       var rect = sentinel.getBoundingClientRect();
                       // Always use viewport for calculation
-                      var near = rect.top <= (window.innerHeight + 500) && rect.bottom >= -500;
+                       var near = rect.top <= (window.innerHeight + 500) && rect.bottom >= -500;
 
                        if (near !== lastSentinelState) {
                          lastSentinelState = near;
-                         console.log('checkSentinelVisibility -> near:', near, 'rect.top:', rect.top);
-                         try { app.ports.onNearBottom.send(near); } catch(e) { console.warn('onNearBottom.send error', e); }
+                         try { app.ports.onNearBottom.send(near); } catch(e) { }
                        }
-                    } catch (e) {
-                      // ignore measurement errors
-                    }
-                  }
+                     } catch (e) {
+                       // ignore measurement errors
+                     }
+                   }
 
-                  // Poll for sentinel position changes
-                  var pollingInterval = setInterval(function() {
-                    checkSentinelVisibility();
-                  }, 100);
+                   // Poll for sentinel position changes
+                   var pollingInterval = setInterval(function() {
+                     checkSentinelVisibility();
+                   }, 100);
 
-                  // Also listen to scroll on scroll container if available
-                  if (scrollRoot) {
-                    scrollRoot.addEventListener('scroll', function() {
-                      // Immediate check on scroll
-                      checkSentinelVisibility();
-                    }, { passive: true });
-                  }
-                  window.addEventListener('resize', checkSentinelVisibility);
+                   // Also listen to scroll on scroll container if available
+                   if (scrollRoot) {
+                     scrollRoot.addEventListener('scroll', function() {
+                       // Immediate check on scroll
+                       checkSentinelVisibility();
+                     }, { passive: true });
+                   }
+                   window.addEventListener('resize', checkSentinelVisibility);
 
-                  // Run an initial check
-                  setTimeout(checkSentinelVisibility, 50);
-                })();
+                   // Run an initial check
+                   setTimeout(checkSentinelVisibility, 50);
+                 })();
 
-                // Debug helpers removed (dev UI injection was intentionally stripped for commit-ready build).
-                const rect = sentinel.getBoundingClientRect();
-                console.log('IntersectionObserver set up for sentinel, position:', { top: rect.top, bottom: rect.bottom, height: rect.height, viewportHeight: window.innerHeight });
-                observerRetries = 0;
-              } else if (!sentinel && sentinelObserver) {
-                sentinelObserver.disconnect();
-                sentinelObserver = null;
-              } else if (!sentinel && !sentinelObserver && observerRetries < maxRetries) {
-                observerRetries++;
-                console.log('Sentinel not found, retrying in 100ms...');
-                setTimeout(observeSentinel, 100);
-              }
-            }
-          };
+                 observerRetries = 0;
+               } else if (!sentinel && sentinelObserver) {
+                 sentinelObserver.disconnect();
+                 sentinelObserver = null;
+               } else if (!sentinel && !sentinelObserver && observerRetries < maxRetries) {
+                 observerRetries++;
+                 setTimeout(observeSentinel, 100);
+               }
+             }
+           };
 
-         // Debounce function for mutations
+          // Debounce function for mutations
          let mutationTimeout = null;
          const debouncedMutation = () => {
            if (mutationTimeout) clearTimeout(mutationTimeout);

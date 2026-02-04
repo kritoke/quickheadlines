@@ -43,8 +43,10 @@ The goal is to clean up all debug code, fix the bugs, and polish the UI for a pr
 ## Capabilities
 
 ### New Capabilities
-- `release-cleanup`: Comprehensive debug code removal
-- `header-color-cache`: Persistent color storage system (optional enhancement)
+- `header-color-cache`: Persistent color storage system
+- `timeline-day-header`: Improved day header styling
+- `feed-card-styling`: Consistent feed card design
+- `debug-cleanup`: Remove debug console statements
 
 ### Modified Capabilities
 - `ui-styling`: Updates for day header and feed card improvements
