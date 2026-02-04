@@ -484,25 +484,28 @@
           setTimeout(window.fixAllHeaders, 200);
         }
       
-      // Check if we should restore a previously saved page
-      var savedPage = localStorage.getItem('quickheadlines-page');
-      if (savedPage && savedPage !== window.location.pathname) {
-        console.log('Restoring saved page:', savedPage);
-        window.history.replaceState(null, '', savedPage);
-      }
+       // Check if we should restore a previously saved page
+       var savedPage = localStorage.getItem('quickheadlines-page');
+       if (savedPage && savedPage !== window.location.pathname) {
+         console.log('Restoring saved page:', savedPage);
+         window.history.replaceState(null, '', savedPage);
+       }
 
-       try {
-          console.log('Initializing Elm...');
-           var app = Elm.Main.init({
-             node: appElement,
-             flags: {
-               width: window.innerWidth,
-               height: window.innerHeight,
-               prefersDark: prefersDark,
-               timestamp: Date.now(),
-               savedTab: pathTab || savedTab
-             }
-           });
+       // Get saved tab from localStorage
+       var savedTab = localStorage.getItem('quickheadlines-tab');
+
+        try {
+           console.log('Initializing Elm...');
+            var app = Elm.Main.init({
+              node: appElement,
+              flags: {
+                width: window.innerWidth,
+                height: window.innerHeight,
+                prefersDark: prefersDark,
+                timestamp: Date.now(),
+                savedTab: savedTab
+              }
+            });
           console.log('Elm initialized successfully');
           window.app = app; // Expose for debugging
 
