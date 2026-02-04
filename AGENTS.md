@@ -127,4 +127,30 @@ The nix develop shell sets these automatically:
    - `/elm.js` - Compiled Elm bundle
    - `/api/*` - REST endpoints
 
+## Key Learnings
+
+### JavaScript/CSS Debugging
+
+- **Console logging for timing issues**: When code runs before elements exist, add `console.log` to verify execution order and element presence
+- **CSS execution order matters**: Inline styles (`style=""`) override CSS classes. Use `!important` in CSS to override inline styles from JavaScript/Elm
+- **Function scope**: Functions defined inside `DOMContentLoaded` callbacks aren't accessible outside. Assign to `window.functionName` to make them globally available
+- **Timing fixups**: Run code at multiple intervals (500ms, 1500ms, 3000ms) to catch elements that load at different times
+
+### Color Handling
+
+- **YIQ Formula for text readability**: Calculate contrast color from background using `((r * 299) + (g * 587) + (b * 114)) / 1000`. If result >= 128, use dark text; otherwise use light text
+- **Color thief limitations**: Favicons that fail to load (404s, broken images) cause color extraction to fail, leaving headers with default/invisible colors
+- **Elm color classes**: Elm generates dynamic classes like `fc-148-163-184` for inline colors. These can be overridden with CSS targeting the element directly
+- **Fixing unreadable headers**: Strip inline styles with `element.style.cssText = ''` then apply readable colors using YIQ
+
+### Horizontal Scrollbars
+
+- **Prevent with `overflow-x: hidden`**: Add to `html`, `body`, `#app`, and scroll containers to prevent horizontal overflow
+- **Use `!important`**: `overflow-x: hidden !important` ensures the rule takes precedence over other CSS
+
+### When NOT to Fix
+
+- Leave working features alone. If color thief produces readable results, don't override it with aggressive fixes
+- Simple is better. Over-engineering causes new bugs (like breaking previously working colors)
+
 
