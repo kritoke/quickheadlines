@@ -6,18 +6,15 @@
   <title>QuickHeadlines</title>
      <style>
       * { box-sizing: border-box; }
-      html, body { margin: 0; padding: 0; height: 100%; overflow-x: hidden; }
-      #app { width: 100vw; min-height: 100vh; background: #ffffff; overflow-x: hidden; }
-      /* Timeline page scrolling */
-    [data-timeline-page="true"] [data-semantic="main-content-scroll"] {
-      display: block;
-    }
+      html, body { margin: 0; padding: 0; height: 100%; overflow-x: hidden !important; overflow-y: auto; }
+      #app { width: 100vw; min-height: 100vh; background: #ffffff; overflow-x: hidden !important; }
+     [data-timeline-page="true"] { overflow-x: hidden; }
     @media (min-width: 1024px) {
       [data-timeline-page="true"] [data-semantic="main-content-scroll"] > *:first-child {
         padding-top: 0 !important;
       }
     }
-    [data-page="home"] { overflow-y: auto; height: auto; }
+     [data-page="home"] { overflow-y: auto; height: auto; overflow-x: hidden; }
     .feed-header { transition: background-color 0.3s ease, color 0.3s ease; }
     [data-timeline-header="true"] {
       background-color: transparent !important;
@@ -66,7 +63,7 @@
     }
      #main-content {
        overflow-y: auto;
-       overflow-x: hidden;
+       overflow-x: hidden !important;
      }
     #main-content::-webkit-scrollbar {
       width: 8px;
