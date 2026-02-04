@@ -4,11 +4,11 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>QuickHeadlines</title>
-    <style>
-     * { box-sizing: border-box; }
-     html, body { margin: 0; padding: 0; height: 100%; }
-     #app { width: 100vw; min-height: 100vh; background: #ffffff; }
-     /* Timeline page scrolling */
+     <style>
+      * { box-sizing: border-box; }
+      html, body { margin: 0; padding: 0; height: 100%; overflow-x: hidden; }
+      #app { width: 100vw; min-height: 100vh; background: #ffffff; overflow-x: hidden; }
+      /* Timeline page scrolling */
     [data-timeline-page="true"] [data-semantic="main-content-scroll"] {
       display: block;
     }
@@ -64,9 +64,10 @@
       background-color: rgba(128, 128, 128, 0.4);
       border-radius: 3px;
     }
-    #main-content {
-      overflow-y: auto;
-    }
+     #main-content {
+       overflow-y: auto;
+       overflow-x: hidden;
+     }
     #main-content::-webkit-scrollbar {
       width: 8px;
       height: 8px;
