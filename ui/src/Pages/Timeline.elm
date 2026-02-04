@@ -412,27 +412,39 @@ dayHeader zone now theme date =
         dateDay =
             toDay zone date
 
-        badgeBg =
+        headerBg =
             case theme of
                 Dark ->
-                    rgb255 49 46 129
+                    "rgb(30, 41, 59)"
 
-                -- Indigo 900
                 Light ->
-                    rgb255 226 232 240
+                    "rgb(241, 245, 249)"
 
-        -- Slate 200
-        badgeTxt =
+        headerBorder =
             case theme of
                 Dark ->
-                    rgb255 224 242 254
+                    "1px solid rgb(51, 65, 85)"
 
-                -- Indigo 100
                 Light ->
-                    rgb255 30 41 59
+                    "1px solid rgb(226, 232, 240)"
 
-        -- Slate 800
         headerText =
+            case theme of
+                Dark ->
+                    "rgb(248, 250, 252)"
+
+                Light ->
+                    "rgb(30, 41, 59)"
+
+        highlightColor =
+            case theme of
+                Dark ->
+                    "rgb(251, 146, 60)"
+
+                Light ->
+                    "rgb(234, 88, 12)"
+
+        headerTextDisplay =
             if dateYear == nowYear && dateMonth == nowMonth && dateDay == nowDay then
                 "Today"
 
@@ -461,16 +473,25 @@ dayHeader zone now theme date =
     in
     row
         [ spacing 16
-        , paddingXY 0 24
+        , paddingXY 16 12
         , htmlAttribute (Html.Attributes.attribute "data-timeline-header" "true")
+        , htmlAttribute (Html.Attributes.style "background-color" headerBg)
+        , htmlAttribute (Html.Attributes.style "border-bottom" headerBorder)
+        , htmlAttribute (Html.Attributes.style "border-radius" "4px")
+        , htmlAttribute (Html.Attributes.style "margin" "8px 0")
+        , htmlAttribute (Html.Attributes.style "color" headerText)
         ]
         [ el
-            [ Font.size 24
+            [ Font.size 18
             , Font.bold
+            , Font.semiBold
             , Font.color Theme.lumeOrange
-            , htmlAttribute (Html.Attributes.class "qh-header-highlight")
+            , htmlAttribute (Html.Attributes.style "color" highlightColor)
+            , htmlAttribute (Html.Attributes.style "position" "relative")
+            , htmlAttribute (Html.Attributes.style "display" "inline-block")
+            , htmlAttribute (Html.Attributes.style "z-index" "1")
             ]
-            (text headerText)
+            (text headerTextDisplay)
         ]
 
 

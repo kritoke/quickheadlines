@@ -4,152 +4,38 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>QuickHeadlines</title>
-     <style>
-      * { box-sizing: border-box; }
-      html, body { margin: 0; padding: 0; height: 100%; overflow-x: hidden !important; overflow-y: auto; }
-      #app { width: 100vw; min-height: 100vh; background: #ffffff; overflow-x: hidden !important; }
-     [data-timeline-page="true"] { overflow-x: hidden; }
-    @media (min-width: 1024px) {
-      [data-timeline-page="true"] [data-semantic="main-content-scroll"] > *:first-child {
-        padding-top: 0 !important;
-      }
-    }
-      [data-page="home"] { overflow-y: auto; height: auto; overflow-x: hidden; }
-      .feed-header { transition: background-color 0.3s ease, color 0.3s ease; }
+      <style>
+       * { box-sizing: border-box; }
+       html, body { margin: 0; padding: 0; height: 100%; overflow-x: hidden !important; overflow-y: auto; }
+       #app { width: 100vw; min-height: 100vh; background: #ffffff; overflow-x: hidden !important; }
+      [data-timeline-page="true"] { overflow-x: hidden; }
+     @media (min-width: 1024px) {
+       [data-timeline-page="true"] [data-semantic="main-content-scroll"] > *:first-child {
+         padding-top: 0 !important;
+       }
+     }
+       [data-page="home"] { overflow-y: auto; height: auto; overflow-x: hidden; }
+       .feed-header { transition: background-color 0.3s ease, color 0.3s ease; }
 
-      /* Timeline day headers */
-      [data-timeline-header="true"] {
-        padding: 12px 16px !important;
-        margin: 8px 0 !important;
-        border-radius: 4px !important;
-      }
-      [data-timeline-page="true"] [data-adaptive]:not(.feed-header) {
-        background-color: transparent !important;
-        background: transparent !important;
-      }
-      [data-timeline-item="true"] {
-        background-color: transparent !important;
-        background: transparent !important;
-      }
-      [data-timeline-item="true"] a {
-        text-decoration: underline !important;
-      }
-      [data-timeline-item="true"] a {
-        color: inherit !important;
-      }
-      .feed-header a {
-        color: inherit !important;
-        text-decoration: underline;
-      }
-      /* Light mode day header */
-      [data-timeline-header="true"] {
-        background-color: #f1f5f9 !important;
-        border-bottom: 1px solid #e2e8f0 !important;
-      }
-      [data-timeline-header="true"],
-      [data-timeline-header="true"] * {
-        color: #1e293b !important;
-      }
-      @media only screen and (max-width: 768px) {
-        [data-timeline-header="true"] {
-          font-size: 1rem !important;
-          padding: 10px 12px !important;
-        }
-      }
-      @media (min-width: 769px) {
-        [data-timeline-header="true"] {
-          font-size: 1.125rem !important;
-          font-weight: 600 !important;
-        }
-      }
-      [data-timeline-header="true"] .qh-header-highlight {
-        position: relative;
-        display: inline-block;
-        z-index: 1;
-        color: #ea580c !important;
-        font-weight: 600;
-      }
-      [data-timeline-header="true"] .qh-header-highlight::before {
-        content: '';
-        position: absolute;
-        width: 100%;
-        height: 14px;
-        bottom: 0;
-        left: 0;
-        background-color: rgba(234, 88, 12, 0.2);
-        z-index: -1;
-        border-radius: 2px;
-      }
-      /* Dark mode day header */
-      @media (prefers-color-scheme: dark) {
-        [data-timeline-header="true"] {
-          background-color: #1e293b !important;
-          border-bottom-color: #334155 !important;
-        }
-        [data-timeline-header="true"],
-        [data-timeline-header="true"] * {
-          color: #f8fafc !important;
-        }
-        [data-timeline-header="true"] .qh-header-highlight {
-          color: #fb923c !important;
-        }
-        [data-timeline-header="true"] .qh-header-highlight::before {
-          background-color: rgba(251, 146, 60, 0.25);
-        }
-      }
-    [data-timeline-page="true"] [data-adaptive]:not(.feed-header) {
-      background-color: transparent !important;
-      background: transparent !important;
-    }
-    [data-timeline-item="true"] {
-      background-color: transparent !important;
-      background: transparent !important;
-    }
-    [data-timeline-item="true"] a {
-      text-decoration: underline !important;
-    }
-    [data-timeline-item="true"] a {
-      color: inherit !important;
-    }
-    .feed-header a {
-      color: inherit !important;
-      text-decoration: underline;
-    }
-     @media only screen and (max-width: 768px) {
-       [data-timeline-header="true"] {
-         font-size: 1.125rem !important;
+       [data-timeline-page="true"] [data-adaptive]:not(.feed-header) {
+         background-color: transparent !important;
+         background: transparent !important;
        }
-     }
-     [data-timeline-header="true"] {
-       font-size: 1.5rem !important;
-       font-weight: 700 !important;
-     }
-     [data-timeline-header="true"] .qh-header-highlight {
-       position: relative;
-       display: inline-block;
-       z-index: 1;
-       color: #FF8C00 !important;
-     }
-     [data-timeline-header="true"] .qh-header-highlight::before {
-       content: '';
-       position: absolute;
-       width: 100%;
-       height: 14px;
-       bottom: 0;
-       left: 0;
-       background-color: rgba(255, 140, 0, 0.4);
-       z-index: -1;
-       border-radius: 2px;
-     }
-     @media (prefers-color-scheme: dark) {
-       [data-timeline-header="true"] .qh-header-highlight {
-         color: #FFB347 !important;
+       [data-timeline-item="true"] {
+         background-color: transparent !important;
+         background: transparent !important;
        }
-       [data-timeline-header="true"] .qh-header-highlight::before {
-         background-color: rgba(255, 140, 0, 0.25);
+       [data-timeline-item="true"] a {
+         text-decoration: underline !important;
        }
-     }
-    /\* Auto-hide scrollbars - cannot be done in Elm due to pseudo-elements \*/
+       [data-timeline-item="true"] a {
+         color: inherit !important;
+       }
+       .feed-header a {
+         color: inherit !important;
+         text-decoration: underline;
+       }
+     /\* Auto-hide scrollbars - cannot be done in Elm due to pseudo-elements \*/
     .auto-hide-scroll {
       overflow-y: auto;
     }
@@ -250,7 +136,7 @@
          .qh-load-more:focus {
            outline: none;
          }
-         @media (prefers-color-scheme: dark) {
+              [data-theme="dark"] [data-timeline-header="true"] {
            .qh-load-more {
              background: rgba(255,255,255,0.06);
              color: rgba(255,255,255,0.7);

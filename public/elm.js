@@ -16262,10 +16262,38 @@ var $author$project$Pages$Timeline$dayHeader = F4(
 		var nowYear = A2($elm$time$Time$toYear, zone, now);
 		var nowMonth = A2($elm$time$Time$toMonth, zone, now);
 		var nowDay = A2($elm$time$Time$toDay, zone, now);
+		var highlightColor = function () {
+			if (!theme) {
+				return 'rgb(251, 146, 60)';
+			} else {
+				return 'rgb(234, 88, 12)';
+			}
+		}();
+		var headerText = function () {
+			if (!theme) {
+				return 'rgb(248, 250, 252)';
+			} else {
+				return 'rgb(30, 41, 59)';
+			}
+		}();
+		var headerBorder = function () {
+			if (!theme) {
+				return '1px solid rgb(51, 65, 85)';
+			} else {
+				return '1px solid rgb(226, 232, 240)';
+			}
+		}();
+		var headerBg = function () {
+			if (!theme) {
+				return 'rgb(30, 41, 59)';
+			} else {
+				return 'rgb(241, 245, 249)';
+			}
+		}();
 		var dateYear = A2($elm$time$Time$toYear, zone, date);
 		var dateMonth = A2($elm$time$Time$toMonth, zone, date);
 		var dateDay = A2($elm$time$Time$toDay, zone, date);
-		var headerText = function () {
+		var headerTextDisplay = function () {
 			if (_Utils_eq(dateYear, nowYear) && (_Utils_eq(dateMonth, nowMonth) && _Utils_eq(dateDay, nowDay))) {
 				return 'Today';
 			} else {
@@ -16277,28 +16305,24 @@ var $author$project$Pages$Timeline$dayHeader = F4(
 				return (_Utils_eq(dateYear, yYear) && (_Utils_eq(dateMonth, yMonth) && _Utils_eq(dateDay, yDay))) ? 'Yesterday' : A2($author$project$Pages$Timeline$formatDate, zone, date);
 			}
 		}();
-		var badgeTxt = function () {
-			if (!theme) {
-				return A3($mdgriffith$elm_ui$Element$rgb255, 224, 242, 254);
-			} else {
-				return A3($mdgriffith$elm_ui$Element$rgb255, 30, 41, 59);
-			}
-		}();
-		var badgeBg = function () {
-			if (!theme) {
-				return A3($mdgriffith$elm_ui$Element$rgb255, 49, 46, 129);
-			} else {
-				return A3($mdgriffith$elm_ui$Element$rgb255, 226, 232, 240);
-			}
-		}();
 		return A2(
 			$mdgriffith$elm_ui$Element$row,
 			_List_fromArray(
 				[
 					$mdgriffith$elm_ui$Element$spacing(16),
-					A2($mdgriffith$elm_ui$Element$paddingXY, 0, 24),
+					A2($mdgriffith$elm_ui$Element$paddingXY, 16, 12),
 					$mdgriffith$elm_ui$Element$htmlAttribute(
-					A2($elm$html$Html$Attributes$attribute, 'data-timeline-header', 'true'))
+					A2($elm$html$Html$Attributes$attribute, 'data-timeline-header', 'true')),
+					$mdgriffith$elm_ui$Element$htmlAttribute(
+					A2($elm$html$Html$Attributes$style, 'background-color', headerBg)),
+					$mdgriffith$elm_ui$Element$htmlAttribute(
+					A2($elm$html$Html$Attributes$style, 'border-bottom', headerBorder)),
+					$mdgriffith$elm_ui$Element$htmlAttribute(
+					A2($elm$html$Html$Attributes$style, 'border-radius', '4px')),
+					$mdgriffith$elm_ui$Element$htmlAttribute(
+					A2($elm$html$Html$Attributes$style, 'margin', '8px 0')),
+					$mdgriffith$elm_ui$Element$htmlAttribute(
+					A2($elm$html$Html$Attributes$style, 'color', headerText))
 				]),
 			_List_fromArray(
 				[
@@ -16306,13 +16330,20 @@ var $author$project$Pages$Timeline$dayHeader = F4(
 					$mdgriffith$elm_ui$Element$el,
 					_List_fromArray(
 						[
-							$mdgriffith$elm_ui$Element$Font$size(24),
+							$mdgriffith$elm_ui$Element$Font$size(18),
 							$mdgriffith$elm_ui$Element$Font$bold,
+							$mdgriffith$elm_ui$Element$Font$semiBold,
 							$mdgriffith$elm_ui$Element$Font$color($author$project$Theme$lumeOrange),
 							$mdgriffith$elm_ui$Element$htmlAttribute(
-							$elm$html$Html$Attributes$class('qh-header-highlight'))
+							A2($elm$html$Html$Attributes$style, 'color', highlightColor)),
+							$mdgriffith$elm_ui$Element$htmlAttribute(
+							A2($elm$html$Html$Attributes$style, 'position', 'relative')),
+							$mdgriffith$elm_ui$Element$htmlAttribute(
+							A2($elm$html$Html$Attributes$style, 'display', 'inline-block')),
+							$mdgriffith$elm_ui$Element$htmlAttribute(
+							A2($elm$html$Html$Attributes$style, 'z-index', '1'))
 						]),
-					$mdgriffith$elm_ui$Element$text(headerText))
+					$mdgriffith$elm_ui$Element$text(headerTextDisplay))
 				]));
 	});
 var $author$project$Pages$Timeline$dayClusterSection = F7(
