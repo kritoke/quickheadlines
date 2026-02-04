@@ -298,6 +298,22 @@ view shared model =
                          , Border.rounded 6
                          , Ty.small
                          , Font.medium
+                         , Font.color
+                            (case theme of
+                                Dark ->
+                                    rgb255 248 250 252
+
+                                Light ->
+                                    rgb255 100 116 139
+                            )
+                         , Background.color
+                            (case theme of
+                                Dark ->
+                                    rgb255 51 65 85
+
+                                Light ->
+                                    rgb255 241 245 249
+                            )
                          , htmlAttribute (Html.Attributes.class "qh-load-more")
                          ]
                          { onPress = Just LoadMore

@@ -16602,6 +16602,22 @@ var $author$project$Pages$Timeline$view = F2(
 									$mdgriffith$elm_ui$Element$Border$rounded(6),
 									$author$project$ThemeTypography$small,
 									$mdgriffith$elm_ui$Element$Font$medium,
+									$mdgriffith$elm_ui$Element$Font$color(
+									function () {
+										if (!theme) {
+											return A3($mdgriffith$elm_ui$Element$rgb255, 248, 250, 252);
+										} else {
+											return A3($mdgriffith$elm_ui$Element$rgb255, 100, 116, 139);
+										}
+									}()),
+									$mdgriffith$elm_ui$Element$Background$color(
+									function () {
+										if (!theme) {
+											return A3($mdgriffith$elm_ui$Element$rgb255, 51, 65, 85);
+										} else {
+											return A3($mdgriffith$elm_ui$Element$rgb255, 241, 245, 249);
+										}
+									}()),
 									$mdgriffith$elm_ui$Element$htmlAttribute(
 									$elm$html$Html$Attributes$class('qh-load-more'))
 								]),
