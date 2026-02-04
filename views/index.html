@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>QuickHeadlines</title>
+  <link rel="stylesheet" href="/assets/css/input.css">
      <style>
       * { box-sizing: border-box; }
       html, body { margin: 0; padding: 0; height: 100%; overflow-x: hidden !important; overflow-y: auto; }
@@ -584,12 +585,17 @@
           let observerRetries = 0;
           const maxRetries = 50; // Retry for up to 5 seconds (50 * 100ms)
           
-          const observeSentinel = () => {
-            if (app.ports && app.ports.onNearBottom) {
-              const sentinel = document.getElementById('scroll-sentinel');
-              console.log('Checking sentinel (attempt ' + (observerRetries + 1) + '):', { exists: !!sentinel, sentinelObserver: !!sentinelObserver });
-                if (sentinel && !sentinelObserver) {
-                console.log('Setting up IntersectionObserver for sentinel');
+           const observeSentinel = () => {
+             if (app.ports && app.ports.onNearBottom) {
+               const sentinel = document.getElementById('scroll-sentinel');
+               if (!sentinel) {
+                 if (observerRetries < 5) {
+                   observerRetries++;
+                   setTimeout(observeSentinel, 100);
+                 }
+                 return;
+               }
+                 if (!sentinelObserver) {
                 // Try to find the nearest scrollable ancestor and use it as the observer root so
                 // the observer works when the sentinel is inside a scroll container (not the viewport).
                 function findScrollParent(el) {
@@ -615,46 +621,34 @@
                     scrollRoot = potentialRoot;
                   }
                 }
-                console.log('Selected IntersectionObserver root:', scrollRoot);
 
-                // Use rootMargin to trigger observer when element is within 500px of viewport/container bottom
-                // Only trigger near-bottom when sentinel is actually visible AND content is scrolled near bottom
                 sentinelObserver = new IntersectionObserver((entries) => {
                   entries.forEach(entry => {
-                    // Only consider it "near bottom" if the sentinel is actually intersecting
-                    // and the scroll position is near the bottom
-                    if (entry.isIntersecting) {
-                      // Use the inner scrollable container for scroll position
-                      const scrollContainer = document.querySelector('#main-content > div');
-                      if (scrollContainer) {
-                        try {
-                          const scrollTop = scrollContainer.scrollTop;
-                          const scrollHeight = scrollContainer.scrollHeight;
-                          const clientHeight = scrollContainer.clientHeight;
-                          const maxScroll = scrollHeight - clientHeight;
-                          const isScrolledNearBottom = maxScroll > 0 && scrollTop >= maxScroll - 600;
-
-                          console.log('Intersection event:', {
-                            isIntersecting: entry.isIntersecting,
-                            scrollTop: scrollTop,
-                            scrollHeight: scrollHeight,
-                            clientHeight: clientHeight,
-                            maxScroll: maxScroll,
-                            isScrolledNearBottom: isScrolledNearBottom
-                          });
-
-                          if (isScrolledNearBottom) {
-                            console.log('Near bottom detected - sending true');
-                            try { app.ports.onNearBottom.send(true); } catch(e) { console.warn('onNearBottom.send error', e); }
-                          } else {
-                            console.log('Sentinel visible but not scrolled near bottom, scrollTop:', scrollTop, 'maxScroll:', maxScroll);
-                          }
-                        } catch(e) {
-                          console.warn('Error checking scroll position:', e);
-                        }
-                      }
-                    } else {
-                      console.log('Sentinel not intersecting - sending false');
+                   // Only consider it "near bottom" if the sentinel is actually intersecting
+                     // and the scroll position is near the bottom
+                     if (entry.isIntersecting) {
+                       // Use the inner scrollable container for scroll position
+                       const scrollContainer = document.querySelector('#main-content > div');
+                       if (scrollContainer) {
+                         try {
+                           const scrollTop = scrollContainer.scrollTop || document.documentElement.scrollTop || document.body.scrollTop;
+                           const scrollHeight = scrollContainer.scrollHeight || document.documentElement.scrollHeight;
+                           const clientHeight = scrollContainer.clientHeight || document.documentElement.clientHeight;
+                           const maxScroll = scrollHeight - clientHeight;
+                           const near = maxScroll > 0 && scrollTop >= (maxScroll - 500);
+                           if (near) {
+                             if (!window.nearBottomSent) {
+                               console.log('Near bottom detected, triggering load');
+                               window.nearBottomSent = true;
+                               app.ports.onNearBottom.send(true);
+                             }
+                           } else {
+                             window.nearBottomSent = false;
+                           }
+                         } catch(e) {
+                         }
+                       }
+                     }
                       try { app.ports.onNearBottom.send(false); } catch(e) { console.warn('onNearBottom.send error', e); }
                     }
                   });
@@ -667,55 +661,50 @@
                 // chosen root and sends onNearBottom when within 500px of the bottom.
                 (function() {
                   var lastSentinelState = null;
-                  function checkSentinelVisibility() {
-                    try {
-                      if (!sentinel) return;
-                      var rect = sentinel.getBoundingClientRect();
-                      // Always use viewport for calculation
-                      var near = rect.top <= (window.innerHeight + 500) && rect.bottom >= -500;
+                   function checkSentinelVisibility() {
+                     try {
+                       if (!sentinel) return;
+                       var rect = sentinel.getBoundingClientRect();
+                       // Always use viewport for calculation
+                       var near = rect.top <= (window.innerHeight + 500) && rect.bottom >= -500;
 
-                       if (near !== lastSentinelState) {
-                         lastSentinelState = near;
-                         console.log('checkSentinelVisibility -> near:', near, 'rect.top:', rect.top);
-                         try { app.ports.onNearBottom.send(near); } catch(e) { console.warn('onNearBottom.send error', e); }
-                       }
-                    } catch (e) {
-                      // ignore measurement errors
-                    }
-                  }
+                        if (near !== lastSentinelState) {
+                          lastSentinelState = near;
+                          try { app.ports.onNearBottom.send(near); } catch(e) { }
+                        }
+                     } catch (e) {
+                       // ignore measurement errors
+                     }
+                   }
 
-                  // Poll for sentinel position changes
-                  var pollingInterval = setInterval(function() {
-                    checkSentinelVisibility();
-                  }, 100);
+                   // Poll for sentinel position changes
+                   var pollingInterval = setInterval(function() {
+                     checkSentinelVisibility();
+                   }, 100);
 
-                  // Also listen to scroll on scroll container if available
-                  if (scrollRoot) {
-                    scrollRoot.addEventListener('scroll', function() {
-                      // Immediate check on scroll
-                      checkSentinelVisibility();
-                    }, { passive: true });
-                  }
-                  window.addEventListener('resize', checkSentinelVisibility);
+                   // Also listen to scroll on scroll container if available
+                   if (scrollRoot) {
+                     scrollRoot.addEventListener('scroll', function() {
+                       // Immediate check on scroll
+                       checkSentinelVisibility();
+                     }, { passive: true });
+                   }
+                   window.addEventListener('resize', checkSentinelVisibility);
 
-                  // Run an initial check
-                  setTimeout(checkSentinelVisibility, 50);
-                })();
+                   // Run an initial check
+                   setTimeout(checkSentinelVisibility, 50);
+                 })();
 
-                // Debug helpers removed (dev UI injection was intentionally stripped for commit-ready build).
-                const rect = sentinel.getBoundingClientRect();
-                console.log('IntersectionObserver set up for sentinel, position:', { top: rect.top, bottom: rect.bottom, height: rect.height, viewportHeight: window.innerHeight });
-                observerRetries = 0;
-              } else if (!sentinel && sentinelObserver) {
-                sentinelObserver.disconnect();
-                sentinelObserver = null;
-              } else if (!sentinel && !sentinelObserver && observerRetries < maxRetries) {
-                observerRetries++;
-                console.log('Sentinel not found, retrying in 100ms...');
-                setTimeout(observeSentinel, 100);
-              }
-            }
-          };
+                 observerRetries = 0;
+               } else if (!sentinel && sentinelObserver) {
+                 sentinelObserver.disconnect();
+                 sentinelObserver = null;
+               } else if (!sentinel && !sentinelObserver && observerRetries < 5) {
+                 observerRetries++;
+                 setTimeout(observeSentinel, 100);
+               }
+             }
+           };
 
          // Debounce function for mutations
          let mutationTimeout = null;
