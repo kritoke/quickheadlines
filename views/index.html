@@ -4,206 +4,227 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>QuickHeadlines</title>
-  <style>
-      /* QuickHeadlines Custom CSS - Inlined for reliability */
+     <style>
       * { box-sizing: border-box; }
       html, body { margin: 0; padding: 0; height: 100%; overflow-x: hidden !important; overflow-y: auto; }
       #app { width: 100vw; min-height: 100vh; background: #ffffff; overflow-x: hidden !important; }
-
-      /* CSS Variables */
-      :root {
-        font-size: 16px;
-        --color-surface: #1f2937;
-        --color-surface-light: #f9fafb;
-        --color-surface-dark: #111827;
-        --color-card: #111827;
-        --color-card-light: #ffffff;
-        --color-border-subtle: #334155;
-        --color-border-light: #e5e7eb;
-        --feed-title-color: #0f172a;
-        --header-text-color: #0f172a;
+     [data-timeline-page="true"] { overflow-x: hidden; }
+    @media (min-width: 1024px) {
+      [data-timeline-page="true"] [data-semantic="main-content-scroll"] > *:first-child {
+        padding-top: 0 !important;
       }
-
-      @media (prefers-color-scheme: dark) {
-        :root {
-          --color-card: #111827;
-          --color-card-light: #1f2937;
-          --feed-title-color: #e5e7eb;
-          --header-text-color: #ffffff;
+    }
+     [data-page="home"] { overflow-y: auto; height: auto; overflow-x: hidden; }
+    .feed-header { transition: background-color 0.3s ease, color 0.3s ease; }
+    [data-timeline-header="true"] {
+      background-color: transparent !important;
+      background: transparent !important;
+      font-size: 1.25rem !important;
+      font-weight: bold;
+      -webkit-text-size-adjust: none;
+    }
+    [data-timeline-page="true"] [data-adaptive]:not(.feed-header) {
+      background-color: transparent !important;
+      background: transparent !important;
+    }
+    [data-timeline-item="true"] {
+      background-color: transparent !important;
+      background: transparent !important;
+    }
+    [data-timeline-item="true"] a {
+      text-decoration: underline !important;
+    }
+    [data-timeline-item="true"] a {
+      color: inherit !important;
+    }
+    .feed-header a {
+      color: inherit !important;
+      text-decoration: underline;
+    }
+     @media only screen and (max-width: 768px) {
+       [data-timeline-header="true"] {
+         font-size: 1.125rem !important;
+       }
+     }
+     [data-timeline-header="true"] {
+       font-size: 1.5rem !important;
+       font-weight: 700 !important;
+     }
+     [data-timeline-header="true"] .qh-header-highlight {
+       position: relative;
+       display: inline-block;
+       z-index: 1;
+       color: #FF8C00 !important;
+     }
+     [data-timeline-header="true"] .qh-header-highlight::before {
+       content: '';
+       position: absolute;
+       width: 100%;
+       height: 14px;
+       bottom: 0;
+       left: 0;
+       background-color: rgba(255, 140, 0, 0.4);
+       z-index: -1;
+       border-radius: 2px;
+     }
+     @media (prefers-color-scheme: dark) {
+       [data-timeline-header="true"] .qh-header-highlight {
+         color: #FFB347 !important;
+       }
+       [data-timeline-header="true"] .qh-header-highlight::before {
+         background-color: rgba(255, 140, 0, 0.25);
+       }
+     }
+    /\* Auto-hide scrollbars - cannot be done in Elm due to pseudo-elements \*/
+    .auto-hide-scroll {
+      overflow-y: auto;
+    }
+    .auto-hide-scroll::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    .auto-hide-scroll::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    .auto-hide-scroll::-webkit-scrollbar-thumb {
+      background-color: rgba(128, 128, 128, 0.4);
+      border-radius: 3px;
+    }
+     #main-content {
+       overflow-y: auto;
+       overflow-x: hidden !important;
+     }
+    #main-content::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+    #main-content::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    #main-content::-webkit-scrollbar-thumb {
+      background-color: rgba(128, 128, 128, 0.3);
+      border-radius: 4px;
+    }
+    @media (min-width: 768px) {
+      body .font-size-11 { font-size: 14px !important; }
+      body .font-size-12 { font-size: 15px !important; }
+      body .font-size-13 { font-size: 16px !important; }
+      body .font-size-14 { font-size: 17px !important; }
+      body .font-size-15 { font-size: 18px !important; }
+      body .font-size-16 { font-size: 18px !important; }
+      body .font-size-18 { font-size: 20px !important; }
+      body .font-size-20 { font-size: 22px !important; }
+       body .qh-favicon {
+         display: inline-flex !important;
+         align-items: center !important;
+         justify-content: center !important;
+         width: 18px !important;
+         height: 18px !important;
+         margin-right: 8px !important;
+         vertical-align: middle !important;
+       }
+       [data-page="home"] .tab-link,
+       [data-page="home"] .tab-link:hover,
+       [data-page="home"] .tab-link:active,
+       [data-page="home"] .tab-link:focus,
+       [data-page="home"] button,
+       [data-page="home"] button:hover,
+       [data-page="home"] button:active,
+       [data-page="home"] button:focus {
+         box-shadow: none !important;
+         text-shadow: none !important;
+       }
+       @keyframes qh-fade-in {
+         from { opacity: 0; transform: translateY(8px); }
+         to { opacity: 1; transform: translateY(0); }
+       }
+        @keyframes qh-fade-out {
+         from { opacity: 1; transform: translateY(0); }
+         to { opacity: 0; transform: translateY(-8px); }
+       }
+        @keyframes qh-insert {
+          from { opacity: 0; transform: translateY(12px) scale(0.997); }
+          60% { opacity: 1; transform: translateY(-2px) scale(1.001); }
+          to { opacity: 1; transform: translateY(0) scale(1); }
         }
-        .feed-box { background-color: var(--color-card, #111827); }
-        [data-theme="dark"] { --header-text-color: #ffffff; }
-      }
-
-      /* Desktop font normalization */
-      @media (min-width: 768px) {
-        body .font-size-11 { font-size: 14px !important; }
-        body .font-size-12 { font-size: 15px !important; }
-        body .font-size-13 { font-size: 16px !important; }
-        body .font-size-14 { font-size: 17px !important; }
-        body .font-size-15 { font-size: 18px !important; }
-        body .font-size-16 { font-size: 18px !important; }
-        body .font-size-18 { font-size: 20px !important; }
-        body .font-size-20 { font-size: 22px !important; }
-        body .qh-favicon {
-          display: inline-flex !important;
-          align-items: center !important;
-          justify-content: center !important;
-          width: 18px !important;
-          height: 18px !important;
-          margin-right: 8px !important;
-          vertical-align: middle !important;
-        }
-      }
-
-      /* Cards */
-      .feed-box {
-        overflow-wrap: break-word;
-        border-radius: 0.75rem;
-        background-color: var(--color-card-light, #ffffff);
-        overflow: hidden;
-        display: flex;
-        flex-direction: column;
-        align-items: stretch;
-        height: auto;
-        width: 100%;
-      }
-
-      @media (min-width: 768px) {
-        .feed-box { height: 22rem; position: relative; }
-        .feed-box .feed-body { overflow-y: auto; }
-        .feed-box::after {
-          content: "";
-          position: absolute;
-          bottom: 0; left: 0; right: 0;
-          height: 1.5rem;
+        /* Logo styles removed - now using inline styles */
+          .qh-load-more {
+           display: inline-flex;
+           align-items: center;
+           justify-content: center;
+           background: #f1f5f9;
+           color: #64748b;
+           border-radius: 6px;
+           padding: 4px 12px;
+           border: none;
+           box-shadow: none;
+           transition: all 140ms ease;
+           cursor: pointer;
+           font-weight: 500;
+           font-size: 12px;
+           margin-top: 16px;
+           width: auto;
+           min-width: unset;
+         }
+         .qh-load-more:hover {
+           background: #e2e8f0;
+           color: #475569;
+         }
+         .qh-load-more:active {
+           background: #cbd5e1;
+         }
+         .qh-load-more:focus {
+           outline: none;
+         }
+         @media (prefers-color-scheme: dark) {
+           .qh-load-more {
+             background: rgba(255,255,255,0.06);
+             color: rgba(255,255,255,0.7);
+             border: 1px solid rgba(255,255,255,0.06);
+           }
+           .qh-load-more:hover {
+             background: rgba(255,255,255,0.1);
+             color: #fff;
+           }
+         }
+        .qh-notification {
+          position: fixed !important;
+          right: 12px !important;
+          bottom: 12px !important;
+          z-index: 1200 !important;
+          background: rgba(17,24,39,0.9);
+          color: #fff;
+          padding: 6px 10px;
+          border-radius: 999px;
+          font-size: 12px;
           pointer-events: none;
-          background: linear-gradient(to bottom, transparent, rgba(0, 0, 0, 0.2));
-          transition: opacity 0.3s ease;
-          z-index: 10;
+          box-shadow: 0 6px 18px rgba(2,6,23,0.5);
         }
-        :where(.dark, .dark *) .feed-box::after {
-          background: linear-gradient(to bottom, transparent, rgba(0, 0, 0, 0.6));
+        .qh-debug-panel {
+          position: fixed !important;
+          right: 12px !important;
+          bottom: 56px !important;
+          z-index: 1200 !important;
+          display: flex;
+          flex-direction: column;
+          gap: 6px;
+          pointer-events: auto;
         }
-        .feed-box.is-at-bottom::after { opacity: 0; }
-      }
-
-      @media (min-width: 1024px) { .feed-box { height: 24rem; } }
-
-      .feed-box .feed-header {
-        padding: 0.75rem 0.75rem;
-        background-color: #f3f4f6;
-        border-radius: 0.75rem;
-        margin-bottom: 0.4rem;
-        transition: background-color 0.4s ease, color 0.4s ease;
-        flex: 0 0 auto;
-        display: flex;
-        align-items: center;
-        min-height: 44px;
-      }
-
-      :where(.dark, .dark *) .feed-box .feed-header { background-color: #1f2937; }
-
-      .feed-box .feed-title {
-        margin: 0;
-        font-size: 1.1rem;
-        line-height: 1.2;
-        font-weight: 700;
-        text-shadow: 0 1px 1px rgba(0, 0, 0, 0.05);
-        color: var(--feed-title-color, inherit);
-      }
-
-      .feed-box .feed-body {
-        padding: 0.75rem;
-        flex: 1 1 auto;
-        min-height: 0;
-        width: 100%;
-        min-width: 0;
-        scrollbar-width: none;
-      }
-
-      .feed-box .feed-body::-webkit-scrollbar { width: 4px; height: 4px; }
-      .feed-box .feed-body::-webkit-scrollbar-track { background: transparent; }
-      .feed-box .feed-body::-webkit-scrollbar-thumb {
-        background-color: transparent;
-        border-radius: 4px;
-        transition: background-color 0.2s ease;
-      }
-      .feed-box .feed-body::-webkit-scrollbar-thumb:hover { background-color: rgba(0, 0, 0, 0.3); }
-      :where(.dark, .dark *) .feed-box .feed-body::-webkit-scrollbar-thumb:hover { background-color: rgba(255, 255, 255, 0.3); }
-
-      .feed-box .feed-body ul, .feed-box .feed-body li {
-        display: block;
-        width: 100%;
-      }
-
-      .feed-title-link { color: inherit; }
-
-      /* Timeline page */
-      [data-timeline-page="true"] { overflow-x: hidden; }
-      @media (min-width: 1024px) {
-        [data-timeline-page="true"] [data-semantic="main-content-scroll"] > *:first-child { padding-top: 0 !important; }
-      }
-      [data-page="home"] { overflow-y: auto; height: auto; overflow-x: hidden; }
-
-      .feed-header { transition: background-color 0.3s ease, color 0.3s ease; }
-      [data-timeline-header="true"] {
-        background-color: transparent !important;
-        background: transparent !important;
-        font-size: 1.25rem !important;
-        font-weight: bold;
-        -webkit-text-size-adjust: none;
-      }
-      [data-timeline-page="true"] [data-adaptive]:not(.feed-header) {
-        background-color: transparent !important;
-        background: transparent !important;
-      }
-      [data-timeline-item="true"] {
-        background-color: transparent !important;
-        background: transparent !important;
-      }
-
-      /* Theme Toggle */
-      #theme-toggle { cursor: pointer; }
-
-      /* Tabs */
-      .tab-container {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 0.25rem;
-        margin-bottom: 1.5rem;
-        padding-bottom: 0.25rem;
-        border-bottom: 1px solid var(--color-border-light);
-      }
-      @media (prefers-color-scheme: dark) {
-        .tab-container { border-bottom-color: var(--color-border-subtle); }
-      }
-
-      .tab-link {
-        padding: 0.5rem 1rem;
-        font-weight: 500;
-        border-radius: 0.375rem;
-        color: #64748b;
-        transition: all 0.15s ease;
-      }
-      .tab-link:hover { background-color: #f1f5f9; color: #1e293b; }
-      .tab-link.active { background-color: #eff6ff; color: #2563eb; }
-      @media (prefers-color-scheme: dark) {
-        .tab-link:hover { background-color: #1e293b; color: #e2e8f0; }
-        .tab-link.active { background-color: #1e3a5f; color: #60a5fa; }
-      }
-
-      /* Clusters */
-      .qh-hidden { display: none !important; }
-      .cluster-expand-btn, .cluster-collapse-btn { cursor: pointer; }
-      .cluster-item { transition: opacity 0.2s ease; }
-
-      /* Desktop site header styling - consistent across all views */
-      .qh-site-header { padding-left: 0; padding-right: 0; }
-      @media (min-width: 640px) {
-        .qh-site-header { padding-left: 24px; padding-right: 24px; }
-      }
-     </style>
+        .qh-debug-btn {
+          background: rgba(255,255,255,0.06);
+          border: 1px solid rgba(255,255,255,0.06);
+           color: #fff;
+           padding: 6px 10px;
+           border-radius: 6px;
+           font-size: 12px;
+           cursor: pointer;
+         }
+         /* Desktop site header styling */
+         .qh-site-header { padding-left: 0; padding-right: 0; }
+         @media (min-width: 640px) {
+           .qh-site-header { padding-left: 24px; padding-right: 24px; }
+         }
+       </style>
      <script src="https://cdnjs.cloudflare.com/ajax/libs/color-thief/2.3.2/color-thief.umd.js"></script>
     <script>
       function fixAllHeaders() {
@@ -463,37 +484,24 @@
           setTimeout(window.fixAllHeaders, 200);
         }
       
-       // Check if we should restore a previously saved page
-       var savedPage = localStorage.getItem('quickheadlines-page');
-       if (savedPage && savedPage !== window.location.pathname) {
-         console.log('Restoring saved page:', savedPage);
-         window.history.replaceState(null, '', savedPage);
-       }
+      // Check if we should restore a previously saved page
+      var savedPage = localStorage.getItem('quickheadlines-page');
+      if (savedPage && savedPage !== window.location.pathname) {
+        console.log('Restoring saved page:', savedPage);
+        window.history.replaceState(null, '', savedPage);
+      }
 
-       // Get saved tab from localStorage
-       var savedTab = localStorage.getItem('quickheadlines-tab');
-
-       // Extract the tab from the URL path
-       var pathTab = null;
-       if (window.location.pathname !== '/' && window.location.pathname !== '') {
-         var segments = window.location.pathname.split('/').filter(s => s);
-         if (segments.length > 0) {
-           pathTab = decodeURIComponent(segments[segments.length - 1]);
-         }
-       }
-
-        try {
-           console.log('Initializing Elm...');
-            var app = Elm.Main.init({
-              node: appElement,
-              flags: {
-                width: window.innerWidth,
-                height: window.innerHeight,
-                prefersDark: prefersDark,
-                timestamp: Date.now(),
-                savedTab: pathTab || savedTab
-              }
-            });
+       try {
+          console.log('Initializing Elm...');
+           var app = Elm.Main.init({
+             node: appElement,
+             flags: {
+               width: window.innerWidth,
+               height: window.innerHeight,
+               prefersDark: prefersDark,
+               timestamp: Date.now()
+             }
+           });
           console.log('Elm initialized successfully');
           window.app = app; // Expose for debugging
 
@@ -504,47 +512,27 @@
           }
           
            if (app.ports && app.ports.saveCurrentPage) {
-              app.ports.saveCurrentPage.subscribe(function(page) {
-                console.log('Saving current page:', page);
-                localStorage.setItem('quickheadlines-page', page);
-              });
-            }
-
-            if (app.ports && app.ports.saveActiveTab) {
-              app.ports.saveActiveTab.subscribe(function(tab) {
-                console.log('Saving active tab:', tab);
-                localStorage.setItem('quickheadlines-tab', tab);
-                // Extract colors after tab switch
-                setTimeout(function() {
-                  window.extractHeaderColors();
-                  if (window.fixAllHeaders) window.fixAllHeaders();
-                }, 500);
-              });
-            }
+             app.ports.saveCurrentPage.subscribe(function(page) {
+               console.log('Saving current page:', page);
+               localStorage.setItem('quickheadlines-page', page);
+             });
+           }
 
           window.addEventListener('resize', function() {
             // Handle resize if needed
           });
 
            // Extract colors after Elm renders
-           setTimeout(window.extractHeaderColors, 500);
-           setTimeout(window.extractHeaderColors, 1500);
-           setTimeout(window.extractHeaderColors, 3000);
-           setTimeout(window.extractHeaderColors, 5000);
+          setTimeout(window.extractHeaderColors, 500);
+          setTimeout(window.extractHeaderColors, 1500);
 
            // Fix header colors after color extraction
-           setTimeout(function() {
-             if (window.fixAllHeaders) window.fixAllHeaders();
-           }, 1000);
-           setTimeout(function() {
-             if (window.fixAllHeaders) window.fixAllHeaders();
-           }, 2500);
-           setTimeout(function() {
-             if (window.fixAllHeaders) window.fixAllHeaders();
-           }, 4000);
-           setTimeout(function() {
-             if (window.fixAllHeaders) window.fixAllHeaders();
-           }, 6000);
+          setTimeout(function() {
+            if (window.fixAllHeaders) window.fixAllHeaders();
+          }, 1000);
+          setTimeout(function() {
+            if (window.fixAllHeaders) window.fixAllHeaders();
+          }, 2500);
 
           // Watch for theme changes
           new MutationObserver(function(mutations) {
@@ -560,17 +548,12 @@
           let observerRetries = 0;
           const maxRetries = 50; // Retry for up to 5 seconds (50 * 100ms)
           
-           const observeSentinel = () => {
-             if (app.ports && app.ports.onNearBottom) {
-               const sentinel = document.getElementById('scroll-sentinel');
-               if (!sentinel) {
-                 if (observerRetries < 5) {
-                   observerRetries++;
-                   setTimeout(observeSentinel, 100);
-                 }
-                 return;
-               }
-                 if (!sentinelObserver) {
+          const observeSentinel = () => {
+            if (app.ports && app.ports.onNearBottom) {
+              const sentinel = document.getElementById('scroll-sentinel');
+              console.log('Checking sentinel (attempt ' + (observerRetries + 1) + '):', { exists: !!sentinel, sentinelObserver: !!sentinelObserver });
+                if (sentinel && !sentinelObserver) {
+                console.log('Setting up IntersectionObserver for sentinel');
                 // Try to find the nearest scrollable ancestor and use it as the observer root so
                 // the observer works when the sentinel is inside a scroll container (not the viewport).
                 function findScrollParent(el) {
@@ -596,34 +579,46 @@
                     scrollRoot = potentialRoot;
                   }
                 }
+                console.log('Selected IntersectionObserver root:', scrollRoot);
 
+                // Use rootMargin to trigger observer when element is within 500px of viewport/container bottom
+                // Only trigger near-bottom when sentinel is actually visible AND content is scrolled near bottom
                 sentinelObserver = new IntersectionObserver((entries) => {
                   entries.forEach(entry => {
-                   // Only consider it "near bottom" if the sentinel is actually intersecting
-                     // and the scroll position is near the bottom
-                     if (entry.isIntersecting) {
-                       // Use the inner scrollable container for scroll position
-                       const scrollContainer = document.querySelector('#main-content > div');
-                       if (scrollContainer) {
-                         try {
-                           const scrollTop = scrollContainer.scrollTop || document.documentElement.scrollTop || document.body.scrollTop;
-                           const scrollHeight = scrollContainer.scrollHeight || document.documentElement.scrollHeight;
-                           const clientHeight = scrollContainer.clientHeight || document.documentElement.clientHeight;
-                           const maxScroll = scrollHeight - clientHeight;
-                           const near = maxScroll > 0 && scrollTop >= (maxScroll - 500);
-                           if (near) {
-                             if (!window.nearBottomSent) {
-                               console.log('Near bottom detected, triggering load');
-                               window.nearBottomSent = true;
-                               app.ports.onNearBottom.send(true);
-                             }
-                           } else {
-                             window.nearBottomSent = false;
-                           }
-                         } catch(e) {
-                         }
-                       }
-                     }
+                    // Only consider it "near bottom" if the sentinel is actually intersecting
+                    // and the scroll position is near the bottom
+                    if (entry.isIntersecting) {
+                      // Use the inner scrollable container for scroll position
+                      const scrollContainer = document.querySelector('#main-content > div');
+                      if (scrollContainer) {
+                        try {
+                          const scrollTop = scrollContainer.scrollTop;
+                          const scrollHeight = scrollContainer.scrollHeight;
+                          const clientHeight = scrollContainer.clientHeight;
+                          const maxScroll = scrollHeight - clientHeight;
+                          const isScrolledNearBottom = maxScroll > 0 && scrollTop >= maxScroll - 600;
+
+                          console.log('Intersection event:', {
+                            isIntersecting: entry.isIntersecting,
+                            scrollTop: scrollTop,
+                            scrollHeight: scrollHeight,
+                            clientHeight: clientHeight,
+                            maxScroll: maxScroll,
+                            isScrolledNearBottom: isScrolledNearBottom
+                          });
+
+                          if (isScrolledNearBottom) {
+                            console.log('Near bottom detected - sending true');
+                            try { app.ports.onNearBottom.send(true); } catch(e) { console.warn('onNearBottom.send error', e); }
+                          } else {
+                            console.log('Sentinel visible but not scrolled near bottom, scrollTop:', scrollTop, 'maxScroll:', maxScroll);
+                          }
+                        } catch(e) {
+                          console.warn('Error checking scroll position:', e);
+                        }
+                      }
+                    } else {
+                      console.log('Sentinel not intersecting - sending false');
                       try { app.ports.onNearBottom.send(false); } catch(e) { console.warn('onNearBottom.send error', e); }
                     }
                   });
@@ -636,50 +631,55 @@
                 // chosen root and sends onNearBottom when within 500px of the bottom.
                 (function() {
                   var lastSentinelState = null;
-                   function checkSentinelVisibility() {
-                     try {
-                       if (!sentinel) return;
-                       var rect = sentinel.getBoundingClientRect();
-                       // Always use viewport for calculation
-                       var near = rect.top <= (window.innerHeight + 500) && rect.bottom >= -500;
+                  function checkSentinelVisibility() {
+                    try {
+                      if (!sentinel) return;
+                      var rect = sentinel.getBoundingClientRect();
+                      // Always use viewport for calculation
+                      var near = rect.top <= (window.innerHeight + 500) && rect.bottom >= -500;
 
-                        if (near !== lastSentinelState) {
-                          lastSentinelState = near;
-                          try { app.ports.onNearBottom.send(near); } catch(e) { }
-                        }
-                     } catch (e) {
-                       // ignore measurement errors
-                     }
-                   }
+                       if (near !== lastSentinelState) {
+                         lastSentinelState = near;
+                         console.log('checkSentinelVisibility -> near:', near, 'rect.top:', rect.top);
+                         try { app.ports.onNearBottom.send(near); } catch(e) { console.warn('onNearBottom.send error', e); }
+                       }
+                    } catch (e) {
+                      // ignore measurement errors
+                    }
+                  }
 
-                   // Poll for sentinel position changes
-                   var pollingInterval = setInterval(function() {
-                     checkSentinelVisibility();
-                   }, 100);
+                  // Poll for sentinel position changes
+                  var pollingInterval = setInterval(function() {
+                    checkSentinelVisibility();
+                  }, 100);
 
-                   // Also listen to scroll on scroll container if available
-                   if (scrollRoot) {
-                     scrollRoot.addEventListener('scroll', function() {
-                       // Immediate check on scroll
-                       checkSentinelVisibility();
-                     }, { passive: true });
-                   }
-                   window.addEventListener('resize', checkSentinelVisibility);
+                  // Also listen to scroll on scroll container if available
+                  if (scrollRoot) {
+                    scrollRoot.addEventListener('scroll', function() {
+                      // Immediate check on scroll
+                      checkSentinelVisibility();
+                    }, { passive: true });
+                  }
+                  window.addEventListener('resize', checkSentinelVisibility);
 
-                   // Run an initial check
-                   setTimeout(checkSentinelVisibility, 50);
-                 })();
+                  // Run an initial check
+                  setTimeout(checkSentinelVisibility, 50);
+                })();
 
-                 observerRetries = 0;
-               } else if (!sentinel && sentinelObserver) {
-                 sentinelObserver.disconnect();
-                 sentinelObserver = null;
-               } else if (!sentinel && !sentinelObserver && observerRetries < 5) {
-                 observerRetries++;
-                 setTimeout(observeSentinel, 100);
-               }
-             }
-           };
+                // Debug helpers removed (dev UI injection was intentionally stripped for commit-ready build).
+                const rect = sentinel.getBoundingClientRect();
+                console.log('IntersectionObserver set up for sentinel, position:', { top: rect.top, bottom: rect.bottom, height: rect.height, viewportHeight: window.innerHeight });
+                observerRetries = 0;
+              } else if (!sentinel && sentinelObserver) {
+                sentinelObserver.disconnect();
+                sentinelObserver = null;
+              } else if (!sentinel && !sentinelObserver && observerRetries < maxRetries) {
+                observerRetries++;
+                console.log('Sentinel not found, retrying in 100ms...');
+                setTimeout(observeSentinel, 100);
+              }
+            }
+          };
 
          // Debounce function for mutations
          let mutationTimeout = null;
