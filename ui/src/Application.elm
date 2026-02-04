@@ -3,7 +3,7 @@ port module Application exposing (Flags, Model, Msg(..), Page(..), init, update,
 import Browser
 import Browser.Events
 import Browser.Navigation as Nav
-import Element exposing (Element, rgb255, px, text, fill, width, height, spacing, padding, paddingXY, paddingEach, row, centerY, centerX, alignTop, alignRight, moveDown, htmlAttribute, el, clip)
+import Element exposing (Element, rgb255, rgba, px, text, fill, width, height, spacing, padding, paddingXY, paddingEach, row, centerY, centerX, alignTop, alignRight, moveDown, htmlAttribute, el, clip)
 import Element.Background as Background
 import Element.Border as Border
 import Element.Font as Font
@@ -16,7 +16,7 @@ import Pages.Home_ as Home
 import Pages.Timeline as Timeline
 import Responsive exposing (Breakpoint(..), breakpointFromWidth)
 import Shared exposing (Model, Msg(..), Theme(..))
-import Theme exposing (lumeOrange, surfaceColor, textColor)
+import Theme exposing (headerSurface, lumeOrange, surfaceColor, textColor)
 import ThemeTypography as Ty
 import Time
 import Task
@@ -295,7 +295,7 @@ headerView model =
             model.shared.theme
 
         bg =
-            surfaceColor theme
+            Theme.headerSurface theme
 
         txtColor =
             textColor theme
@@ -316,12 +316,12 @@ headerView model =
 
                 _ ->
                     Element.el
-                        [ Ty.subtitle
-                        , Font.bold
-                        , Font.color txtColor
-                        , Font.letterSpacing 0.5
-                        , centerY
-                        ]
+                        (Ty.hero breakpoint
+                            ++ [ Font.color txtColor
+                               , centerY
+                               , htmlAttribute (HA.style "padding" "6px 8px")
+                               ]
+                        )
                         (text "Quick Headlines")
     in
     Element.row
@@ -331,6 +331,16 @@ headerView model =
         , htmlAttribute (HA.style "flex-wrap" "nowrap")
         , htmlAttribute (HA.style "overflow-x" "hidden")
         , htmlAttribute (HA.style "justify-content" "space-between")
+        , htmlAttribute (HA.style "backdrop-filter" "blur(6px)")
+        , Border.widthEach { bottom = 1, left = 0, right = 0, top = 0 }
+        , Border.color
+            (case theme of
+                Shared.Dark ->
+                    rgba 1 1 1 0.06
+
+                Shared.Light ->
+                    rgba 15 23 42 0.06
+            )
         , htmlAttribute (HA.class "qh-site-header")
         ]
         [ -- Brand Section

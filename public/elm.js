@@ -13177,12 +13177,6 @@ var $mdgriffith$elm_ui$Internal$Model$AlignX = function (a) {
 };
 var $mdgriffith$elm_ui$Internal$Model$Right = {$: 'Right'};
 var $mdgriffith$elm_ui$Element$alignRight = $mdgriffith$elm_ui$Internal$Model$AlignX($mdgriffith$elm_ui$Internal$Model$Right);
-var $mdgriffith$elm_ui$Internal$Model$Class = F2(
-	function (a, b) {
-		return {$: 'Class', a: a, b: b};
-	});
-var $mdgriffith$elm_ui$Internal$Flag$fontWeight = $mdgriffith$elm_ui$Internal$Flag$flag(13);
-var $mdgriffith$elm_ui$Element$Font$bold = A2($mdgriffith$elm_ui$Internal$Model$Class, $mdgriffith$elm_ui$Internal$Flag$fontWeight, $mdgriffith$elm_ui$Internal$Style$classes.bold);
 var $author$project$Theme$borderColor = function (theme) {
 	if (theme.$ === 'Dark') {
 		return A3($mdgriffith$elm_ui$Element$rgb255, 55, 55, 55);
@@ -13213,6 +13207,17 @@ var $mdgriffith$elm_ui$Element$Background$color = function (clr) {
 			'background-color',
 			clr));
 };
+var $mdgriffith$elm_ui$Internal$Flag$borderColor = $mdgriffith$elm_ui$Internal$Flag$flag(28);
+var $mdgriffith$elm_ui$Element$Border$color = function (clr) {
+	return A2(
+		$mdgriffith$elm_ui$Internal$Model$StyleClass,
+		$mdgriffith$elm_ui$Internal$Flag$borderColor,
+		A3(
+			$mdgriffith$elm_ui$Internal$Model$Colored,
+			'bc-' + $mdgriffith$elm_ui$Internal$Model$formatColorClass(clr),
+			'border-color',
+			clr));
+};
 var $mdgriffith$elm_ui$Element$el = F2(
 	function (attrs, child) {
 		return A4(
@@ -13230,16 +13235,49 @@ var $mdgriffith$elm_ui$Element$el = F2(
 				_List_fromArray(
 					[child])));
 	});
-var $mdgriffith$elm_ui$Internal$Flag$borderColor = $mdgriffith$elm_ui$Internal$Flag$flag(28);
-var $mdgriffith$elm_ui$Element$Border$color = function (clr) {
+var $author$project$Theme$headerSurface = function (theme) {
+	if (theme.$ === 'Dark') {
+		return A3($mdgriffith$elm_ui$Element$rgb255, 24, 24, 24);
+	} else {
+		return A3($mdgriffith$elm_ui$Element$rgb255, 255, 255, 255);
+	}
+};
+var $mdgriffith$elm_ui$Internal$Flag$letterSpacing = $mdgriffith$elm_ui$Internal$Flag$flag(16);
+var $mdgriffith$elm_ui$Element$Font$letterSpacing = function (offset) {
 	return A2(
 		$mdgriffith$elm_ui$Internal$Model$StyleClass,
-		$mdgriffith$elm_ui$Internal$Flag$borderColor,
+		$mdgriffith$elm_ui$Internal$Flag$letterSpacing,
 		A3(
-			$mdgriffith$elm_ui$Internal$Model$Colored,
-			'bc-' + $mdgriffith$elm_ui$Internal$Model$formatColorClass(clr),
-			'border-color',
-			clr));
+			$mdgriffith$elm_ui$Internal$Model$Single,
+			'ls-' + $mdgriffith$elm_ui$Internal$Model$floatClass(offset),
+			'letter-spacing',
+			$elm$core$String$fromFloat(offset) + 'px'));
+};
+var $mdgriffith$elm_ui$Internal$Model$Class = F2(
+	function (a, b) {
+		return {$: 'Class', a: a, b: b};
+	});
+var $mdgriffith$elm_ui$Internal$Flag$fontWeight = $mdgriffith$elm_ui$Internal$Flag$flag(13);
+var $mdgriffith$elm_ui$Element$Font$semiBold = A2($mdgriffith$elm_ui$Internal$Model$Class, $mdgriffith$elm_ui$Internal$Flag$fontWeight, $mdgriffith$elm_ui$Internal$Style$classes.textSemiBold);
+var $author$project$ThemeTypography$hero = function (breakpoint) {
+	var size = function () {
+		switch (breakpoint.$) {
+			case 'VeryNarrowBreakpoint':
+				return 20;
+			case 'MobileBreakpoint':
+				return 20;
+			case 'TabletBreakpoint':
+				return 28;
+			default:
+				return 36;
+		}
+	}();
+	return _List_fromArray(
+		[
+			$mdgriffith$elm_ui$Element$Font$size(size),
+			$mdgriffith$elm_ui$Element$Font$semiBold,
+			$mdgriffith$elm_ui$Element$Font$letterSpacing(0.6)
+		]);
 };
 var $elm$core$Basics$always = F2(
 	function (a, _v0) {
@@ -13583,21 +13621,11 @@ var $mdgriffith$elm_ui$Element$image = F2(
 						$mdgriffith$elm_ui$Internal$Model$Unkeyed(_List_Nil))
 					])));
 	});
-var $mdgriffith$elm_ui$Internal$Flag$letterSpacing = $mdgriffith$elm_ui$Internal$Flag$flag(16);
-var $mdgriffith$elm_ui$Element$Font$letterSpacing = function (offset) {
-	return A2(
-		$mdgriffith$elm_ui$Internal$Model$StyleClass,
-		$mdgriffith$elm_ui$Internal$Flag$letterSpacing,
-		A3(
-			$mdgriffith$elm_ui$Internal$Model$Single,
-			'ls-' + $mdgriffith$elm_ui$Internal$Model$floatClass(offset),
-			'letter-spacing',
-			$elm$core$String$fromFloat(offset) + 'px'));
-};
 var $mdgriffith$elm_ui$Internal$Model$Px = function (a) {
 	return {$: 'Px', a: a};
 };
 var $mdgriffith$elm_ui$Element$px = $mdgriffith$elm_ui$Internal$Model$Px;
+var $mdgriffith$elm_ui$Element$rgba = $mdgriffith$elm_ui$Internal$Model$Rgba;
 var $mdgriffith$elm_ui$Internal$Flag$borderRound = $mdgriffith$elm_ui$Internal$Flag$flag(17);
 var $mdgriffith$elm_ui$Element$Border$rounded = function (radius) {
 	return A2(
@@ -13608,14 +13636,6 @@ var $mdgriffith$elm_ui$Element$Border$rounded = function (radius) {
 			'br-' + $elm$core$String$fromInt(radius),
 			'border-radius',
 			$elm$core$String$fromInt(radius) + 'px'));
-};
-var $author$project$ThemeTypography$subtitle = $mdgriffith$elm_ui$Element$Font$size(20);
-var $author$project$Theme$surfaceColor = function (theme) {
-	if (theme.$ === 'Dark') {
-		return A3($mdgriffith$elm_ui$Element$rgb255, 24, 24, 24);
-	} else {
-		return A3($mdgriffith$elm_ui$Element$rgb255, 249, 250, 251);
-	}
 };
 var $mdgriffith$elm_ui$Element$text = function (content) {
 	return $mdgriffith$elm_ui$Internal$Model$Text(content);
@@ -13918,19 +13938,20 @@ var $author$project$Application$headerView = function (model) {
 			default:
 				return A2(
 					$mdgriffith$elm_ui$Element$el,
-					_List_fromArray(
-						[
-							$author$project$ThemeTypography$subtitle,
-							$mdgriffith$elm_ui$Element$Font$bold,
-							$mdgriffith$elm_ui$Element$Font$color(txtColor),
-							$mdgriffith$elm_ui$Element$Font$letterSpacing(0.5),
-							$mdgriffith$elm_ui$Element$centerY
-						]),
+					_Utils_ap(
+						$author$project$ThemeTypography$hero(breakpoint),
+						_List_fromArray(
+							[
+								$mdgriffith$elm_ui$Element$Font$color(txtColor),
+								$mdgriffith$elm_ui$Element$centerY,
+								$mdgriffith$elm_ui$Element$htmlAttribute(
+								A2($elm$html$Html$Attributes$style, 'padding', '6px 8px'))
+							])),
 					$mdgriffith$elm_ui$Element$text('Quick Headlines'));
 		}
 	}();
 	var border = $author$project$Theme$borderColor(theme);
-	var bg = $author$project$Theme$surfaceColor(theme);
+	var bg = $author$project$Theme$headerSurface(theme);
 	return A2(
 		$mdgriffith$elm_ui$Element$row,
 		_List_fromArray(
@@ -13944,6 +13965,18 @@ var $author$project$Application$headerView = function (model) {
 				A2($elm$html$Html$Attributes$style, 'overflow-x', 'hidden')),
 				$mdgriffith$elm_ui$Element$htmlAttribute(
 				A2($elm$html$Html$Attributes$style, 'justify-content', 'space-between')),
+				$mdgriffith$elm_ui$Element$htmlAttribute(
+				A2($elm$html$Html$Attributes$style, 'backdrop-filter', 'blur(6px)')),
+				$mdgriffith$elm_ui$Element$Border$widthEach(
+				{bottom: 1, left: 0, right: 0, top: 0}),
+				$mdgriffith$elm_ui$Element$Border$color(
+				function () {
+					if (theme.$ === 'Dark') {
+						return A4($mdgriffith$elm_ui$Element$rgba, 1, 1, 1, 0.06);
+					} else {
+						return A4($mdgriffith$elm_ui$Element$rgba, 15, 23, 42, 0.06);
+					}
+				}()),
 				$mdgriffith$elm_ui$Element$htmlAttribute(
 				$elm$html$Html$Attributes$class('qh-site-header'))
 			]),
@@ -14279,6 +14312,13 @@ var $author$project$Theme$semantic = function (name) {
 	return $mdgriffith$elm_ui$Element$htmlAttribute(
 		A2($elm$html$Html$Attributes$attribute, 'data-semantic', name));
 };
+var $author$project$Theme$surfaceColor = function (theme) {
+	if (theme.$ === 'Dark') {
+		return A3($mdgriffith$elm_ui$Element$rgb255, 24, 24, 24);
+	} else {
+		return A3($mdgriffith$elm_ui$Element$rgb255, 249, 250, 251);
+	}
+};
 var $author$project$Layouts$Shared$layout = function (_v0) {
 	var isTimeline = _v0.isTimeline;
 	var main = _v0.main;
@@ -14592,6 +14632,7 @@ var $author$project$Theme$cardColor = function (theme) {
 		return A3($mdgriffith$elm_ui$Element$rgb255, 255, 255, 255);
 	}
 };
+var $mdgriffith$elm_ui$Element$Font$bold = A2($mdgriffith$elm_ui$Internal$Model$Class, $mdgriffith$elm_ui$Internal$Flag$fontWeight, $mdgriffith$elm_ui$Internal$Style$classes.bold);
 var $author$project$Pages$Home_$faviconView = F2(
 	function (theme, faviconUrl) {
 		var bgColor = function () {
@@ -15400,7 +15441,6 @@ var $author$project$Responsive$isMobile = function (breakpoint) {
 			return false;
 	}
 };
-var $mdgriffith$elm_ui$Element$rgba = $mdgriffith$elm_ui$Internal$Model$Rgba;
 var $author$project$Pages$Home_$allTab = F2(
 	function (shared, activeTab) {
 		var theme = shared.theme;
@@ -16066,7 +16106,6 @@ var $author$project$Pages$Timeline$formatTime = F2(
 	});
 var $mdgriffith$elm_ui$Internal$Model$Monospace = {$: 'Monospace'};
 var $mdgriffith$elm_ui$Element$Font$monospace = $mdgriffith$elm_ui$Internal$Model$Monospace;
-var $mdgriffith$elm_ui$Element$Font$semiBold = A2($mdgriffith$elm_ui$Internal$Model$Class, $mdgriffith$elm_ui$Internal$Flag$fontWeight, $mdgriffith$elm_ui$Internal$Style$classes.textSemiBold);
 var $author$project$Responsive$isVeryNarrow = function (breakpoint) {
 	if (breakpoint.$ === 'VeryNarrowBreakpoint') {
 		return true;
@@ -16281,6 +16320,32 @@ var $author$project$Pages$Timeline$clusterItem = F7(
 						cluster.others)) : $mdgriffith$elm_ui$Element$none
 				]));
 	});
+var $author$project$ThemeTypography$dayHeader = function (breakpoint) {
+	var size = function () {
+		switch (breakpoint.$) {
+			case 'VeryNarrowBreakpoint':
+				return 14;
+			case 'MobileBreakpoint':
+				return 14;
+			case 'TabletBreakpoint':
+				return 16;
+			default:
+				return 18;
+		}
+	}();
+	return _List_fromArray(
+		[
+			$mdgriffith$elm_ui$Element$Font$size(size),
+			$mdgriffith$elm_ui$Element$Font$semiBold
+		]);
+};
+var $author$project$Theme$dayHeaderBg = function (theme) {
+	if (theme.$ === 'Dark') {
+		return A3($mdgriffith$elm_ui$Element$rgb255, 30, 40, 54);
+	} else {
+		return A3($mdgriffith$elm_ui$Element$rgb255, 245, 247, 249);
+	}
+};
 var $author$project$Pages$Timeline$monthToString = function (month) {
 	switch (month.$) {
 		case 'Jan':
@@ -16324,39 +16389,11 @@ var $author$project$Pages$Timeline$formatDate = F2(
 			A2($elm$time$Time$toDay, zone, date));
 		return month + (' ' + (day + (', ' + year)));
 	});
-var $author$project$Pages$Timeline$dayHeader = F4(
-	function (zone, now, theme, date) {
+var $author$project$Pages$Timeline$dayHeader = F5(
+	function (breakpoint, zone, now, theme, date) {
 		var nowYear = A2($elm$time$Time$toYear, zone, now);
 		var nowMonth = A2($elm$time$Time$toMonth, zone, now);
 		var nowDay = A2($elm$time$Time$toDay, zone, now);
-		var highlightColor = function () {
-			if (theme.$ === 'Dark') {
-				return 'rgb(251, 146, 60)';
-			} else {
-				return 'rgb(234, 88, 12)';
-			}
-		}();
-		var headerText = function () {
-			if (theme.$ === 'Dark') {
-				return 'rgb(248, 250, 252)';
-			} else {
-				return 'rgb(30, 41, 59)';
-			}
-		}();
-		var headerBorder = function () {
-			if (theme.$ === 'Dark') {
-				return '1px solid rgb(51, 65, 85)';
-			} else {
-				return '1px solid rgb(226, 232, 240)';
-			}
-		}();
-		var headerBg = function () {
-			if (theme.$ === 'Dark') {
-				return 'rgb(30, 41, 59)';
-			} else {
-				return 'rgb(241, 245, 249)';
-			}
-		}();
 		var dateYear = A2($elm$time$Time$toYear, zone, date);
 		var dateMonth = A2($elm$time$Time$toMonth, zone, date);
 		var dateDay = A2($elm$time$Time$toDay, zone, date);
@@ -16376,20 +16413,12 @@ var $author$project$Pages$Timeline$dayHeader = F4(
 			$mdgriffith$elm_ui$Element$row,
 			_List_fromArray(
 				[
-					$mdgriffith$elm_ui$Element$spacing(16),
+					$mdgriffith$elm_ui$Element$spacing(12),
 					A2($mdgriffith$elm_ui$Element$paddingXY, 16, 12),
 					$mdgriffith$elm_ui$Element$htmlAttribute(
 					A2($elm$html$Html$Attributes$attribute, 'data-timeline-header', 'true')),
 					$mdgriffith$elm_ui$Element$htmlAttribute(
-					A2($elm$html$Html$Attributes$style, 'background-color', headerBg)),
-					$mdgriffith$elm_ui$Element$htmlAttribute(
-					A2($elm$html$Html$Attributes$style, 'border-bottom', headerBorder)),
-					$mdgriffith$elm_ui$Element$htmlAttribute(
-					A2($elm$html$Html$Attributes$style, 'border-radius', '4px')),
-					$mdgriffith$elm_ui$Element$htmlAttribute(
-					A2($elm$html$Html$Attributes$style, 'margin', '8px 0')),
-					$mdgriffith$elm_ui$Element$htmlAttribute(
-					A2($elm$html$Html$Attributes$style, 'color', headerText))
+					A2($elm$html$Html$Attributes$style, 'transition', 'transform .20s ease-out, opacity .20s ease-out'))
 				]),
 			_List_fromArray(
 				[
@@ -16397,27 +16426,46 @@ var $author$project$Pages$Timeline$dayHeader = F4(
 					$mdgriffith$elm_ui$Element$el,
 					_List_fromArray(
 						[
-							$mdgriffith$elm_ui$Element$Font$size(18),
-							$mdgriffith$elm_ui$Element$Font$bold,
-							$mdgriffith$elm_ui$Element$Font$semiBold,
-							$mdgriffith$elm_ui$Element$Font$color($author$project$Theme$lumeOrange),
+							$mdgriffith$elm_ui$Element$width(
+							$mdgriffith$elm_ui$Element$px(8)),
+							$mdgriffith$elm_ui$Element$height(
+							$mdgriffith$elm_ui$Element$px(8)),
+							$mdgriffith$elm_ui$Element$Background$color($author$project$Theme$lumeOrange),
+							$mdgriffith$elm_ui$Element$Border$rounded(999),
 							$mdgriffith$elm_ui$Element$htmlAttribute(
-							A2($elm$html$Html$Attributes$style, 'color', highlightColor)),
+							A2($elm$html$Html$Attributes$style, 'flex-shrink', '0')),
 							$mdgriffith$elm_ui$Element$htmlAttribute(
-							A2($elm$html$Html$Attributes$style, 'position', 'relative')),
-							$mdgriffith$elm_ui$Element$htmlAttribute(
-							A2($elm$html$Html$Attributes$style, 'display', 'inline-block')),
-							$mdgriffith$elm_ui$Element$htmlAttribute(
-							A2($elm$html$Html$Attributes$style, 'z-index', '1'))
+							A2($elm$html$Html$Attributes$style, 'margin-top', '6px'))
 						]),
-					$mdgriffith$elm_ui$Element$text(headerTextDisplay))
+					$mdgriffith$elm_ui$Element$none),
+					A2(
+					$mdgriffith$elm_ui$Element$el,
+					_List_fromArray(
+						[
+							$mdgriffith$elm_ui$Element$Background$color(
+							$author$project$Theme$dayHeaderBg(theme)),
+							$mdgriffith$elm_ui$Element$Border$rounded(999),
+							A2($mdgriffith$elm_ui$Element$paddingXY, 8, 12),
+							$mdgriffith$elm_ui$Element$htmlAttribute(
+							A2($elm$html$Html$Attributes$style, 'display', 'inline-block'))
+						]),
+					A2(
+						$mdgriffith$elm_ui$Element$el,
+						_Utils_ap(
+							$author$project$ThemeTypography$dayHeader(breakpoint),
+							_List_fromArray(
+								[
+									$mdgriffith$elm_ui$Element$Font$color(
+									$author$project$Theme$textColor(theme))
+								])),
+						$mdgriffith$elm_ui$Element$text(headerTextDisplay)))
 				]));
 	});
 var $author$project$Pages$Timeline$dayClusterSection = F7(
 	function (breakpoint, zone, now, theme, expandedClusters, insertedIds, dayGroup) {
 		return _List_fromArray(
 			[
-				A4($author$project$Pages$Timeline$dayHeader, zone, now, theme, dayGroup.date),
+				A5($author$project$Pages$Timeline$dayHeader, breakpoint, zone, now, theme, dayGroup.date),
 				A2(
 				$mdgriffith$elm_ui$Element$column,
 				_List_fromArray(

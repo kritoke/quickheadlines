@@ -12,7 +12,7 @@ import Process
 import Task
 import Set exposing (Set)
 import Shared exposing (Model, Msg(..), Theme(..))
-import Theme exposing (borderColor, cardColor, errorColor, lumeOrange, mutedColor, surfaceColor, textColor)
+import Theme exposing (borderColor, cardColor, dayHeaderBg, errorColor, lumeOrange, mutedColor, surfaceColor, textColor)
 import ThemeTypography as Ty
 import Time exposing (Posix, Zone, toDay, toMonth, toYear)
 import Pages.ViewIcon exposing (viewIcon)
@@ -402,7 +402,7 @@ getClusterDateFromKey zone key clusters =
 
 dayClusterSection : Responsive.Breakpoint -> Zone -> Posix -> Theme -> Set String -> Set String -> DayClusterGroup -> List (Element Msg)
 dayClusterSection breakpoint zone now theme expandedClusters insertedIds dayGroup =
-    [ dayHeader zone now theme dayGroup.date
+    [ dayHeader breakpoint zone now theme dayGroup.date
     , column
         [ width fill
         , spacing 0
@@ -412,8 +412,8 @@ dayClusterSection breakpoint zone now theme expandedClusters insertedIds dayGrou
     ]
 
 
-dayHeader : Zone -> Posix -> Theme -> Posix -> Element Msg
-dayHeader zone now theme date =
+dayHeader : Responsive.Breakpoint -> Zone -> Posix -> Theme -> Posix -> Element Msg
+dayHeader breakpoint zone now theme date =
     let
         nowYear =
             toYear zone now
@@ -432,38 +432,6 @@ dayHeader zone now theme date =
 
         dateDay =
             toDay zone date
-
-        headerBg =
-            case theme of
-                Dark ->
-                    "rgb(30, 41, 59)"
-
-                Light ->
-                    "rgb(241, 245, 249)"
-
-        headerBorder =
-            case theme of
-                Dark ->
-                    "1px solid rgb(51, 65, 85)"
-
-                Light ->
-                    "1px solid rgb(226, 232, 240)"
-
-        headerText =
-            case theme of
-                Dark ->
-                    "rgb(248, 250, 252)"
-
-                Light ->
-                    "rgb(30, 41, 59)"
-
-        highlightColor =
-            case theme of
-                Dark ->
-                    "rgb(251, 146, 60)"
-
-                Light ->
-                    "rgb(234, 88, 12)"
 
         headerTextDisplay =
             if dateYear == nowYear && dateMonth == nowMonth && dateDay == nowDay then
@@ -493,26 +461,32 @@ dayHeader zone now theme date =
                     formatDate zone date
     in
     row
-        [ spacing 16
+        [ spacing 12
         , paddingXY 16 12
         , htmlAttribute (Html.Attributes.attribute "data-timeline-header" "true")
-        , htmlAttribute (Html.Attributes.style "background-color" headerBg)
-        , htmlAttribute (Html.Attributes.style "border-bottom" headerBorder)
-        , htmlAttribute (Html.Attributes.style "border-radius" "4px")
-        , htmlAttribute (Html.Attributes.style "margin" "8px 0")
-        , htmlAttribute (Html.Attributes.style "color" headerText)
+        , htmlAttribute (Html.Attributes.style "transition" "transform .20s ease-out, opacity .20s ease-out")
         ]
         [ el
-            [ Font.size 18
-            , Font.bold
-            , Font.semiBold
-            , Font.color Theme.lumeOrange
-            , htmlAttribute (Html.Attributes.style "color" highlightColor)
-            , htmlAttribute (Html.Attributes.style "position" "relative")
-            , htmlAttribute (Html.Attributes.style "display" "inline-block")
-            , htmlAttribute (Html.Attributes.style "z-index" "1")
+            [ width (px 8)
+            , height (px 8)
+            , Background.color Theme.lumeOrange
+            , Border.rounded 999
+            , htmlAttribute (Html.Attributes.style "flex-shrink" "0")
+            , htmlAttribute (Html.Attributes.style "margin-top" "6px")
             ]
-            (text headerTextDisplay)
+            Element.none
+        , el
+            [ Background.color (dayHeaderBg theme)
+            , Border.rounded 999
+            , paddingXY 8 12
+            , htmlAttribute (Html.Attributes.style "display" "inline-block")
+            ]
+            (el
+                (Ty.dayHeader breakpoint
+                    ++ [ Font.color (textColor theme) ]
+                )
+                (text headerTextDisplay)
+            )
         ]
 
 

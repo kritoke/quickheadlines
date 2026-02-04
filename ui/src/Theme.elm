@@ -155,3 +155,23 @@ metadataStyle theme =
     [ Font.size 14
     , Font.color (mutedColor theme)
     ]
+
+
+headerSurface : Theme -> Color
+headerSurface theme =
+    case theme of
+        Dark ->
+            rgb255 24 24 24
+
+        Light ->
+            rgb255 255 255 255
+
+
+dayHeaderBg : Theme -> Color
+dayHeaderBg theme =
+    case theme of
+        Dark ->
+            rgb255 30 40 54
+
+        Light ->
+            rgb255 245 247 249
