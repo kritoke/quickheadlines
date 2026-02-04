@@ -210,7 +210,19 @@ buildCluster ( clusterId, clusterItems ) =
                             first
 
                         [] ->
-                            Debug.todo "Empty cluster should not exist"
+                            -- This case shouldn't happen with valid data
+                            { id = ""
+                            , title = "Unknown"
+                            , link = ""
+                            , pubDate = Nothing
+                            , feedTitle = ""
+                            , favicon = Nothing
+                            , headerColor = Nothing
+                            , headerTextColor = Nothing
+                            , clusterId = Nothing
+                            , isRepresentative = True
+                            , clusterSize = 1
+                            }
 
         -- Exclude representative from others to prevent duplication
         others =

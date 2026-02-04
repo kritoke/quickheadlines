@@ -226,43 +226,43 @@
          }
        </style>
      <script src="https://cdnjs.cloudflare.com/ajax/libs/color-thief/2.3.2/color-thief.umd.js"></script>
-    <script>
-      function fixAllHeaders() {
-        // Fix ALL headers to have consistent readable text colors
-        document.querySelectorAll('.feed-header').forEach(header => {
-          const bgColor = header.style.backgroundColor;
-          if (!bgColor || bgColor === 'transparent') return;
+      <script>
+       function fixHeaderColors() {
+         // Fix ALL headers to have consistent readable text colors
+         document.querySelectorAll('.feed-header').forEach(header => {
+           const bgColor = header.style.backgroundColor;
+           if (!bgColor || bgColor === 'transparent') return;
 
-          // Extract RGB from any rgb() format
-          const match = bgColor.match(/(\d+),\s*(\d+),\s*(\d+)/);
-          if (!match) return;
+           // Extract RGB from any rgb() format
+           const match = bgColor.match(/(\d+),\s*(\d+),\s*(\d+)/);
+           if (!match) return;
 
-          const r = parseInt(match[1]);
-          const g = parseInt(match[2]);
-          const b = parseInt(match[3]);
+           const r = parseInt(match[1]);
+           const g = parseInt(match[2]);
+           const b = parseInt(match[3]);
 
-          // Calculate readable text color using YIQ
-          const yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
-          const textColor = yiq >= 128 ? '#1f2937' : '#ffffff';
+           // Calculate readable text color using YIQ
+           const yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
+           const textColor = yiq >= 128 ? '#1f2937' : '#ffffff';
 
-          // Apply to all text elements in the header - title, link, URL
-          header.style.color = textColor;
+           // Apply to all text elements in the header - title, link, URL
+           header.style.color = textColor;
 
-          const link = header.querySelector('a');
-          if (link) {
-            link.style.color = textColor;
-            link.style.setProperty('color', textColor, 'important');
-          }
+           const link = header.querySelector('a');
+           if (link) {
+             link.style.color = textColor;
+             link.style.setProperty('color', textColor, 'important');
+           }
 
-          const subText = header.querySelector('[data-display-link="true"]');
-          if (subText) {
-            subText.style.color = textColor;
-            subText.style.opacity = ''; // Remove opacity to use full contrast
-          }
-        });
-      }
+           const subText = header.querySelector('[data-display-link="true"]');
+           if (subText) {
+             subText.style.color = textColor;
+             subText.style.opacity = '';
+           }
+         });
+       }
 
-      window.extractHeaderColors = function() {
+       window.extractHeaderColors = function() {
         if (typeof ColorThief === 'undefined') return;
         const colorThief = new ColorThief();
 
@@ -480,8 +480,8 @@
 
         // Fix header colors for dark mode
         if (prefersDark) {
-          setTimeout(window.fixAllHeaders, 100);
-          setTimeout(window.fixAllHeaders, 200);
+          setTimeout(window.fixHeaderColors, 100);
+          setTimeout(window.fixHeaderColors, 200);
         }
       
        // Check if we should restore a previously saved page
@@ -532,17 +532,17 @@
 
            // Fix header colors after color extraction
           setTimeout(function() {
-            if (window.fixAllHeaders) window.fixAllHeaders();
+            if (window.fixHeaderColors) window.fixHeaderColors();
           }, 1000);
           setTimeout(function() {
-            if (window.fixAllHeaders) window.fixAllHeaders();
+            if (window.fixHeaderColors) window.fixHeaderColors();
           }, 2500);
 
           // Watch for theme changes
           new MutationObserver(function(mutations) {
             mutations.forEach(function(mutation) {
-              if (mutation.attributeName === 'data-theme' && window.fixAllHeaders) {
-                window.fixAllHeaders();
+              if (mutation.attributeName === 'data-theme' && window.fixHeaderColors) {
+                window.fixHeaderColors();
               }
             });
           }).observe(document.documentElement, { attributes: true });
@@ -764,8 +764,8 @@
         faviconObserver.observe(appElement, { childList: true, subtree: true });
 
         // Fix header colors after initial load
-        setTimeout(fixAllHeaders, 2000);
-        setTimeout(fixAllHeaders, 4000);
+        setTimeout(fixHeaderColors, 2000);
+        setTimeout(fixHeaderColors, 4000);
        })();
      </script>
 </body>

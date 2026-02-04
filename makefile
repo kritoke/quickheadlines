@@ -321,14 +321,14 @@ elm-build:
 			exit 1; \
 		fi; \
 	else \
-		$(ELM) make src/Main.elm --output=public/elm.js; \
+		$(ELM) make src/Main.elm --output=public/elm.js --optimize; \
 		echo "✓ Elm compiled to public/elm.js ($(shell wc -c < public/elm.js 2>/dev/null || echo "0") bytes)"; \
 	fi
 
 # 1b. Compile Elm Land UI to JavaScript
 elm-land-build:
 	@echo "Compiling Elm Land UI..."
-	cd ui && $(ELM) make src/Main.elm --output=../public/elm.js
+	cd ui && $(ELM) make src/Main.elm --output=../public/elm.js --optimize
 	@echo "✓ Elm Land compiled to public/elm.js ($(shell wc -c < public/elm.js 2>/dev/null || echo "0") bytes)"
 
 # --- Removed elm-embed target ---
