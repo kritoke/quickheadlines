@@ -298,14 +298,6 @@ headerView model =
         breakpoint =
             Responsive.breakpointFromWidth model.shared.windowWidth
 
-        -- Active icon style - brighter version for active state
-        activeIconStyle =
-            [ Font.color lumeOrange
-            , Border.widthEach { bottom = 2, left = 0, right = 0, top = 0 }
-            , Border.color lumeOrange
-            ]
-
-        -- Hide text on mobile, show only icons
         brandLabel =
             case breakpoint of
                 VeryNarrowBreakpoint ->
@@ -340,7 +332,7 @@ headerView model =
                     [ Element.image
                         [ Element.width (px 32)
                         , Element.height (px 32)
-                        , Border.rounded 4
+                        , Border.rounded 8
                         ]
                         { src = "/logo.svg", description = "Logo" }
                     , brandLabel

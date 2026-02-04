@@ -41,11 +41,40 @@
       color: inherit !important;
       text-decoration: underline;
     }
-    @media only screen and (max-width: 768px) {
-      [data-timeline-header="true"] {
-        font-size: 1.125rem !important;
-      }
-    }
+     @media only screen and (max-width: 768px) {
+       [data-timeline-header="true"] {
+         font-size: 1.125rem !important;
+       }
+     }
+     [data-timeline-header="true"] {
+       font-size: 1.5rem !important;
+       font-weight: 700 !important;
+     }
+     [data-timeline-header="true"] .qh-header-highlight {
+       position: relative;
+       display: inline-block;
+       z-index: 1;
+       color: #FF8C00 !important;
+     }
+     [data-timeline-header="true"] .qh-header-highlight::before {
+       content: '';
+       position: absolute;
+       width: 100%;
+       height: 14px;
+       bottom: 0;
+       left: 0;
+       background-color: rgba(255, 140, 0, 0.4);
+       z-index: -1;
+       border-radius: 2px;
+     }
+     @media (prefers-color-scheme: dark) {
+       [data-timeline-header="true"] .qh-header-highlight {
+         color: #FFB347 !important;
+       }
+       [data-timeline-header="true"] .qh-header-highlight::before {
+         background-color: rgba(255, 140, 0, 0.25);
+       }
+     }
     /\* Auto-hide scrollbars - cannot be done in Elm due to pseudo-elements \*/
     .auto-hide-scroll {
       overflow-y: auto;
@@ -114,11 +143,12 @@
          to { opacity: 0; transform: translateY(-8px); }
        }
         @keyframes qh-insert {
-         from { opacity: 0; transform: translateY(12px) scale(0.997); }
-         60% { opacity: 1; transform: translateY(-2px) scale(1.001); }
-         to { opacity: 1; transform: translateY(0) scale(1); }
-       }
-         .qh-load-more {
+          from { opacity: 0; transform: translateY(12px) scale(0.997); }
+          60% { opacity: 1; transform: translateY(-2px) scale(1.001); }
+          to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        /* Logo styles removed - now using inline styles */
+          .qh-load-more {
            display: inline-flex;
            align-items: center;
            justify-content: center;

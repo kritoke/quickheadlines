@@ -4547,6 +4547,23 @@ function _Http_track(router, xhr, tracker)
 	});
 }
 
+function _Url_percentEncode(string)
+{
+	return encodeURIComponent(string);
+}
+
+function _Url_percentDecode(string)
+{
+	try
+	{
+		return $elm$core$Maybe$Just(decodeURIComponent(string));
+	}
+	catch (e)
+	{
+		return $elm$core$Maybe$Nothing;
+	}
+}
+
 
 function _Time_now(millisToPosix)
 {
@@ -6399,12 +6416,13 @@ var $elm$http$Http$get = function (r) {
 	return $elm$http$Http$request(
 		{body: $elm$http$Http$emptyBody, expect: r.expect, headers: _List_Nil, method: 'GET', timeout: $elm$core$Maybe$Nothing, tracker: $elm$core$Maybe$Nothing, url: r.url});
 };
+var $elm$url$Url$percentEncode = _Url_percentEncode;
 var $author$project$Api$fetchFeeds = F2(
 	function (tab, tagger) {
 		return $elm$http$Http$get(
 			{
 				expect: A2($elm$http$Http$expectJson, tagger, $author$project$Api$feedsDecoder),
-				url: '/api/feeds?tab=' + tab
+				url: '/api/feeds?tab=' + $elm$url$Url$percentEncode(tab)
 			});
 	});
 var $author$project$Pages$Home_$init = function (shared) {
@@ -7196,7 +7214,7 @@ var $author$project$Api$fetchFeedMore = F4(
 		return $elm$http$Http$get(
 			{
 				expect: A2($elm$http$Http$expectJson, tagger, $author$project$Api$feedDecoder),
-				url: '/api/feed_more?url=' + (url + ('&limit=' + ($elm$core$String$fromInt(limit) + ('&offset=' + $elm$core$String$fromInt(offset)))))
+				url: '/api/feed_more?url=' + ($elm$url$Url$percentEncode(url) + ('&limit=' + ($elm$core$String$fromInt(limit) + ('&offset=' + $elm$core$String$fromInt(offset)))))
 			});
 	});
 var $elm$core$List$filter = F2(
@@ -7488,8 +7506,8 @@ var $author$project$Api$buildCluster = function (_v0) {
 				return _Debug_todo(
 					'Api',
 					{
-						start: {line: 212, column: 29},
-						end: {line: 212, column: 39}
+						start: {line: 213, column: 29},
+						end: {line: 213, column: 39}
 					})('Empty cluster should not exist');
 			}
 		}
@@ -13165,17 +13183,6 @@ var $mdgriffith$elm_ui$Element$Background$color = function (clr) {
 			'background-color',
 			clr));
 };
-var $mdgriffith$elm_ui$Internal$Flag$borderColor = $mdgriffith$elm_ui$Internal$Flag$flag(28);
-var $mdgriffith$elm_ui$Element$Border$color = function (clr) {
-	return A2(
-		$mdgriffith$elm_ui$Internal$Model$StyleClass,
-		$mdgriffith$elm_ui$Internal$Flag$borderColor,
-		A3(
-			$mdgriffith$elm_ui$Internal$Model$Colored,
-			'bc-' + $mdgriffith$elm_ui$Internal$Model$formatColorClass(clr),
-			'border-color',
-			clr));
-};
 var $mdgriffith$elm_ui$Element$el = F2(
 	function (attrs, child) {
 		return A4(
@@ -13193,6 +13200,17 @@ var $mdgriffith$elm_ui$Element$el = F2(
 				_List_fromArray(
 					[child])));
 	});
+var $mdgriffith$elm_ui$Internal$Flag$borderColor = $mdgriffith$elm_ui$Internal$Flag$flag(28);
+var $mdgriffith$elm_ui$Element$Border$color = function (clr) {
+	return A2(
+		$mdgriffith$elm_ui$Internal$Model$StyleClass,
+		$mdgriffith$elm_ui$Internal$Flag$borderColor,
+		A3(
+			$mdgriffith$elm_ui$Internal$Model$Colored,
+			'bc-' + $mdgriffith$elm_ui$Internal$Model$formatColorClass(clr),
+			'border-color',
+			clr));
+};
 var $elm$core$Basics$always = F2(
 	function (a, _v0) {
 		return a;
@@ -13883,13 +13901,6 @@ var $author$project$Application$headerView = function (model) {
 	}();
 	var border = $author$project$Theme$borderColor(theme);
 	var bg = $author$project$Theme$surfaceColor(theme);
-	var activeIconStyle = _List_fromArray(
-		[
-			$mdgriffith$elm_ui$Element$Font$color($author$project$Theme$lumeOrange),
-			$mdgriffith$elm_ui$Element$Border$widthEach(
-			{bottom: 2, left: 0, right: 0, top: 0}),
-			$mdgriffith$elm_ui$Element$Border$color($author$project$Theme$lumeOrange)
-		]);
 	return A2(
 		$mdgriffith$elm_ui$Element$row,
 		_List_fromArray(
@@ -13928,7 +13939,7 @@ var $author$project$Application$headerView = function (model) {
 										$mdgriffith$elm_ui$Element$px(32)),
 										$mdgriffith$elm_ui$Element$height(
 										$mdgriffith$elm_ui$Element$px(32)),
-										$mdgriffith$elm_ui$Element$Border$rounded(4)
+										$mdgriffith$elm_ui$Element$Border$rounded(8)
 									]),
 								{description: 'Logo', src: '/logo.svg'}),
 								brandLabel
@@ -15783,45 +15794,6 @@ var $author$project$Pages$Home_$view = F2(
 	});
 var $author$project$Pages$Timeline$LoadMore = {$: 'LoadMore'};
 var $author$project$ThemeTypography$body = $mdgriffith$elm_ui$Element$Font$size(16);
-var $author$project$Pages$Timeline$clusteringIndicator = function (isClustering) {
-	return isClustering ? A2(
-		$mdgriffith$elm_ui$Element$row,
-		_List_fromArray(
-			[
-				$mdgriffith$elm_ui$Element$spacing(2),
-				$mdgriffith$elm_ui$Element$htmlAttribute(
-				$elm$html$Html$Attributes$class('clustering-indicator')),
-				$mdgriffith$elm_ui$Element$htmlAttribute(
-				$elm$html$Html$Attributes$title('Story clustering in progress...'))
-			]),
-		_List_fromArray(
-			[
-				A2(
-				$mdgriffith$elm_ui$Element$el,
-				_List_fromArray(
-					[
-						$mdgriffith$elm_ui$Element$htmlAttribute(
-						$elm$html$Html$Attributes$class('clustering-dot'))
-					]),
-				$mdgriffith$elm_ui$Element$text('.')),
-				A2(
-				$mdgriffith$elm_ui$Element$el,
-				_List_fromArray(
-					[
-						$mdgriffith$elm_ui$Element$htmlAttribute(
-						$elm$html$Html$Attributes$class('clustering-dot'))
-					]),
-				$mdgriffith$elm_ui$Element$text('.')),
-				A2(
-				$mdgriffith$elm_ui$Element$el,
-				_List_fromArray(
-					[
-						$mdgriffith$elm_ui$Element$htmlAttribute(
-						$elm$html$Html$Attributes$class('clustering-dot'))
-					]),
-				$mdgriffith$elm_ui$Element$text('.'))
-			])) : $mdgriffith$elm_ui$Element$none;
-};
 var $author$project$Pages$Timeline$ToggleCluster = function (a) {
 	return {$: 'ToggleCluster', a: a};
 };
@@ -16252,8 +16224,6 @@ var $author$project$Pages$Timeline$clusterItem = F7(
 						cluster.others)) : $mdgriffith$elm_ui$Element$none
 				]));
 	});
-var $mdgriffith$elm_ui$Internal$Model$Left = {$: 'Left'};
-var $mdgriffith$elm_ui$Element$alignLeft = $mdgriffith$elm_ui$Internal$Model$AlignX($mdgriffith$elm_ui$Internal$Model$Left);
 var $author$project$Pages$Timeline$monthToString = function (month) {
 	switch (month.$) {
 		case 'Jan':
@@ -16332,21 +16302,28 @@ var $author$project$Pages$Timeline$dayHeader = F4(
 			}
 		}();
 		return A2(
-			$mdgriffith$elm_ui$Element$el,
+			$mdgriffith$elm_ui$Element$row,
 			_List_fromArray(
 				[
-					$mdgriffith$elm_ui$Element$Font$size(20),
-					$mdgriffith$elm_ui$Element$Font$bold,
-					$mdgriffith$elm_ui$Element$Font$color(badgeTxt),
-					$mdgriffith$elm_ui$Element$Background$color(badgeBg),
-					$mdgriffith$elm_ui$Element$Border$rounded(8),
-					$mdgriffith$elm_ui$Element$padding(8),
-					A2($mdgriffith$elm_ui$Element$paddingXY, 16, 8),
+					$mdgriffith$elm_ui$Element$spacing(16),
+					A2($mdgriffith$elm_ui$Element$paddingXY, 0, 24),
 					$mdgriffith$elm_ui$Element$htmlAttribute(
-					A2($elm$html$Html$Attributes$attribute, 'data-timeline-header', 'true')),
-					$mdgriffith$elm_ui$Element$alignLeft
+					A2($elm$html$Html$Attributes$attribute, 'data-timeline-header', 'true'))
 				]),
-			$mdgriffith$elm_ui$Element$text(headerText));
+			_List_fromArray(
+				[
+					A2(
+					$mdgriffith$elm_ui$Element$el,
+					_List_fromArray(
+						[
+							$mdgriffith$elm_ui$Element$Font$size(24),
+							$mdgriffith$elm_ui$Element$Font$bold,
+							$mdgriffith$elm_ui$Element$Font$color($author$project$Theme$lumeOrange),
+							$mdgriffith$elm_ui$Element$htmlAttribute(
+							$elm$html$Html$Attributes$class('qh-header-highlight'))
+						]),
+					$mdgriffith$elm_ui$Element$text(headerText))
+				]));
 	});
 var $author$project$Pages$Timeline$dayClusterSection = F7(
 	function (breakpoint, zone, now, theme, expandedClusters, insertedIds, dayGroup) {
@@ -16477,7 +16454,6 @@ var $author$project$Responsive$horizontalPadding = function (breakpoint) {
 			return 96;
 	}
 };
-var $author$project$ThemeTypography$title = $mdgriffith$elm_ui$Element$Font$size(24);
 var $author$project$Responsive$verticalPadding = function (breakpoint) {
 	switch (breakpoint.$) {
 		case 'VeryNarrowBreakpoint':
@@ -16506,8 +16482,6 @@ var $author$project$Pages$Timeline$view = F2(
 				[
 					$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill),
 					$mdgriffith$elm_ui$Element$height($mdgriffith$elm_ui$Element$fill),
-					$mdgriffith$elm_ui$Element$spacing(20),
-					A2($mdgriffith$elm_ui$Element$paddingXY, horizontalPadding, verticalPadding),
 					$mdgriffith$elm_ui$Element$Background$color(bg),
 					$mdgriffith$elm_ui$Element$Font$color(txtColor),
 					$mdgriffith$elm_ui$Element$htmlAttribute(
@@ -16517,26 +16491,6 @@ var $author$project$Pages$Timeline$view = F2(
 				]),
 			_List_fromArray(
 				[
-					A2(
-					$mdgriffith$elm_ui$Element$row,
-					_List_fromArray(
-						[
-							$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill),
-							$mdgriffith$elm_ui$Element$spacing(10)
-						]),
-					_List_fromArray(
-						[
-							A2(
-							$mdgriffith$elm_ui$Element$el,
-							_List_fromArray(
-								[
-									$author$project$Responsive$isMobile(breakpoint) ? $author$project$ThemeTypography$subtitle : $author$project$ThemeTypography$title,
-									$mdgriffith$elm_ui$Element$Font$bold,
-									$mdgriffith$elm_ui$Element$Font$color(txtColor)
-								]),
-							$mdgriffith$elm_ui$Element$text('Timeline')),
-							$author$project$Pages$Timeline$clusteringIndicator(model.isClustering)
-						])),
 					A2(
 					$mdgriffith$elm_ui$Element$el,
 					_List_fromArray(
@@ -16553,14 +16507,6 @@ var $author$project$Pages$Timeline$view = F2(
 									return A3($mdgriffith$elm_ui$Element$rgb255, 200, 200, 200);
 								}
 							}())
-						]),
-					$mdgriffith$elm_ui$Element$none),
-					A2(
-					$mdgriffith$elm_ui$Element$el,
-					_List_fromArray(
-						[
-							$mdgriffith$elm_ui$Element$height(
-							$mdgriffith$elm_ui$Element$px(16))
 						]),
 					$mdgriffith$elm_ui$Element$none),
 					(model.loading && $elm$core$List$isEmpty(model.clusters)) ? A2(

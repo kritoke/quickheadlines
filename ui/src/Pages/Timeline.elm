@@ -245,33 +245,21 @@ view shared model =
       column
          [ width fill
          , height fill
-         , spacing 20
-         , paddingXY horizontalPadding verticalPadding
          , Background.color bg
          , Font.color txtColor
          , htmlAttribute (Html.Attributes.attribute "data-timeline-page" "true")
          , htmlAttribute (Html.Attributes.class "auto-hide-scroll")
          ]
-        [ row [ width fill, spacing 10 ]
-             [ el
-                 [ (if Responsive.isMobile breakpoint then Ty.subtitle else Ty.title)
-                 , Font.bold
-                 , Font.color txtColor
-                 ]
-                 (text "Timeline")
-             , clusteringIndicator model.isClustering
-             ]
-         , el
-             [ width fill
-             , height (px 2)
-             , Background.color (case shared.theme of
-                 Shared.Dark -> rgb255 100 100 100
-                 Shared.Light -> rgb255 200 200 200
-               )
-             ]
-             Element.none
-         , el [ height (px 16) ] Element.none
-         , if model.loading && List.isEmpty model.clusters then
+         [ el
+               [ width fill
+               , height (px 2)
+               , Background.color (case shared.theme of
+                   Shared.Dark -> rgb255 100 100 100
+                   Shared.Light -> rgb255 200 200 200
+                 )
+               ]
+               Element.none
+          , if model.loading && List.isEmpty model.clusters then
             el
                 [ centerX
                 , centerY
@@ -471,18 +459,19 @@ dayHeader zone now theme date =
                 else
                     formatDate zone date
     in
-    el
-        [ Font.size 20
-        , Font.bold
-        , Font.color badgeTxt
-        , Background.color badgeBg
-        , Border.rounded 8
-        , padding 8
-        , paddingXY 16 8
+    row
+        [ spacing 16
+        , paddingXY 0 24
         , htmlAttribute (Html.Attributes.attribute "data-timeline-header" "true")
-        , Element.alignLeft
         ]
-        (text headerText)
+        [ el
+            [ Font.size 24
+            , Font.bold
+            , Font.color Theme.lumeOrange
+            , htmlAttribute (Html.Attributes.class "qh-header-highlight")
+            ]
+            (text headerText)
+        ]
 
 
 formatDate : Zone -> Posix -> String
