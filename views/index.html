@@ -4,11 +4,11 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>QuickHeadlines</title>
-   <style>
-    * { box-sizing: border-box; }
-    html, body { margin: 0; padding: 0; height: 100%; }
-    #app { width: 100vw; min-height: 100vh; background: #ffffff; }
-    /* Timeline page scrolling */
+    <style>
+     * { box-sizing: border-box; }
+     html, body { margin: 0; padding: 0; height: 100%; }
+     #app { width: 100vw; min-height: 100vh; background: #ffffff; }
+     /* Timeline page scrolling */
     [data-timeline-page="true"] [data-semantic="main-content-scroll"] {
       display: block;
     }
@@ -192,31 +192,121 @@
           cursor: pointer;
         }
       </style>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/color-thief/2.3.2/color-thief.umd.js"></script>
+     <script src="https://cdnjs.cloudflare.com/ajax/libs/color-thief/2.3.2/color-thief.umd.js"></script>
     <script>
-      // Force timeline feed titles to use muted gray - run LAST after everything
-      document.addEventListener('DOMContentLoaded', function() {
-        function forceTimelineColors() {
-          document.querySelectorAll('[data-timeline-item="true"] span, [data-timeline-item="true"] div').forEach(function(el) {
-            // Check if this looks like a feed title (has feed favicon or feed text)
-            if (el.textContent && (
-                el.textContent.includes('Ars Technica') ||
-                el.textContent.includes('Dev.to') ||
-                el.textContent.includes('Tech Radar') ||
-                el.textContent.includes('Hacker News') ||
-                el.querySelector('img[src*="favicon"]')
-            )) {
-              el.style.color = '#94a3b8 !important';
-              el.style.setProperty('color', '#94a3b8', 'important');
+      function fixAllHeaders() {
+        // Fix ALL headers to have consistent readable text colors
+        document.querySelectorAll('.feed-header').forEach(header => {
+          const bgColor = header.style.backgroundColor;
+          if (!bgColor || bgColor === 'transparent') return;
+
+          // Extract RGB from any rgb() format
+          const match = bgColor.match(/(\d+),\s*(\d+),\s*(\d+)/);
+          if (!match) return;
+
+          const r = parseInt(match[1]);
+          const g = parseInt(match[2]);
+          const b = parseInt(match[3]);
+
+          // Calculate readable text color using YIQ
+          const yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
+          const textColor = yiq >= 128 ? '#1f2937' : '#ffffff';
+
+          // Apply to all text elements in the header - title, link, URL
+          header.style.color = textColor;
+
+          const link = header.querySelector('a');
+          if (link) {
+            link.style.color = textColor;
+            link.style.setProperty('color', textColor, 'important');
+          }
+
+          const subText = header.querySelector('[data-display-link="true"]');
+          if (subText) {
+            subText.style.color = textColor;
+            subText.style.opacity = ''; // Remove opacity to use full contrast
+          }
+        });
+      }
+
+      window.extractHeaderColors = function() {
+        if (typeof ColorThief === 'undefined') return;
+        const colorThief = new ColorThief();
+
+        document.querySelectorAll('.feed-header[data-use-adaptive-colors="true"]').forEach(header => {
+          if (header.dataset.adaptive === 'true') return;
+          if (header.closest('[data-timeline-item="true"]')) {
+            header.dataset.adaptive = 'true';
+            return;
+          }
+          if (header.dataset.timelineHeader === 'true') {
+            header.dataset.adaptive = 'true';
+            return;
+          }
+          if (!header.classList.contains('feed-header')) return;
+
+          const img = header.querySelector('img');
+          const imgSrc = img ? img.getAttribute('src') : null;
+          const faviconKey = imgSrc || 'default';
+
+          if (window.feedHeaderCache[faviconKey]) {
+            const cached = window.feedHeaderCache[faviconKey];
+            header.style.backgroundColor = cached.bg;
+            header.style.color = cached.text;
+            const link = header.querySelector('a');
+            if (link) {
+              link.style.setProperty('color', cached.text, 'important');
+              link.style.textDecoration = 'none';
             }
-          });
-        }
-        // Run multiple times to catch any timing issues
-        forceTimelineColors();
-        setTimeout(forceTimelineColors, 500);
-        setTimeout(forceTimelineColors, 1500);
-        setTimeout(forceTimelineColors, 3000);
-      });
+            header.dataset.adaptive = 'true';
+            return;
+          }
+
+          if (!img || !imgSrc) return;
+
+          const tempImg = new Image();
+          tempImg.crossOrigin = 'Anonymous';
+          tempImg.src = imgSrc;
+
+          tempImg.onload = function() {
+            try {
+              const color = colorThief.getColor(tempImg);
+              if (!color || !color.length) return;
+
+              const [r, g, b] = color;
+              const yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
+              const textColor = (yiq >= 128) ? '#1f2937' : '#ffffff';
+              const bgColor = 'rgb(' + r + ',' + g + ',' + b + ')';
+              const link = header.querySelector('a');
+
+              header.style.backgroundColor = bgColor;
+              header.style.color = textColor;
+              if (link) {
+                link.style.setProperty('color', textColor, 'important');
+                link.style.textDecoration = 'none';
+              }
+
+              if (faviconKey) {
+                window.feedHeaderCache[faviconKey] = { bg: bgColor, text: textColor };
+              }
+
+              const feedUrl = link ? link.href : null;
+              if (feedUrl) {
+                fetch('/api/header_color', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ feed_url: feedUrl, color: bgColor, text_color: textColor })
+                }).catch(e => {});
+              }
+
+              header.dataset.adaptive = 'true';
+            } catch (e) {}
+          };
+        });
+      };
+
+      // Fix cached header colors in dark mode
+      window.fixHeaderColors = fixHeaderColors;
     </script>
   </head>
   <body>
@@ -231,18 +321,29 @@
       if (typeof ColorThief === 'undefined') return;
       const colorThief = new ColorThief();
 
-      document.querySelectorAll('.feed-header[data-use-adaptive-colors="true"]').forEach(header => {
-        // Skip if already processed
-        if (header.dataset.adaptive === 'true') return;
+      var allHeaders = document.querySelectorAll('.feed-header[data-use-adaptive-colors="true"]');
+      console.log('extractHeaderColors: found ' + allHeaders.length + ' headers to process');
 
-        // Skip timeline headers explicitly - they should never be colored
-        if (header.dataset.timelineHeader === 'true') {
+      allHeaders.forEach(header => {
+        var inTimeline = header.closest('[data-timeline-item="true"]') !== null;
+        console.log('extractHeaderColors: processing header, inTimeline=' + inTimeline + ', adaptive=' + header.dataset.adaptive);
+
+        // Skip if already processed
+        if (header.dataset.adaptive === 'true') {
+          console.log('extractHeaderColors: skipping, already adaptive');
+          return;
+        }
+
+        // Skip ANY header that's inside a timeline item - use theme colors instead
+        if (inTimeline) {
+          console.log('extractHeaderColors: skipping timeline header');
           header.dataset.adaptive = 'true';
           return;
         }
 
-        // Skip headers inside timeline items - they use theme colors, not color thief
-        if (header.closest('[data-timeline-item="true"]')) {
+        // Skip timeline headers explicitly
+        if (header.dataset.timelineHeader === 'true') {
+          console.log('extractHeaderColors: skipping timelineHeader');
           header.dataset.adaptive = 'true';
           return;
         }
@@ -337,12 +438,18 @@
         prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
       }
       
-      // Apply theme to document
-      if (prefersDark) {
-        document.documentElement.setAttribute('data-theme', 'dark');
-      } else {
-        document.documentElement.setAttribute('data-theme', 'light');
-      }
+       // Apply theme to document
+       if (prefersDark) {
+         document.documentElement.setAttribute('data-theme', 'dark');
+       } else {
+         document.documentElement.setAttribute('data-theme', 'light');
+       }
+
+        // Fix header colors for dark mode
+        if (prefersDark) {
+          setTimeout(window.fixAllHeaders, 100);
+          setTimeout(window.fixAllHeaders, 200);
+        }
       
       // Check if we should restore a previously saved page
       var savedPage = localStorage.getItem('quickheadlines-page');
@@ -382,9 +489,26 @@
             // Handle resize if needed
           });
 
-         // Extract colors after Elm renders
-         setTimeout(window.extractHeaderColors, 500);
-         setTimeout(window.extractHeaderColors, 1500);
+           // Extract colors after Elm renders
+          setTimeout(window.extractHeaderColors, 500);
+          setTimeout(window.extractHeaderColors, 1500);
+
+           // Fix header colors after color extraction
+          setTimeout(function() {
+            if (window.fixAllHeaders) window.fixAllHeaders();
+          }, 1000);
+          setTimeout(function() {
+            if (window.fixAllHeaders) window.fixAllHeaders();
+          }, 2500);
+
+          // Watch for theme changes
+          new MutationObserver(function(mutations) {
+            mutations.forEach(function(mutation) {
+              if (mutation.attributeName === 'data-theme' && window.fixAllHeaders) {
+                window.fixAllHeaders();
+              }
+            });
+          }).observe(document.documentElement, { attributes: true });
 
          // Set up single MutationObserver for both color extraction and sentinel observation
           let sentinelObserver = null;
@@ -582,26 +706,30 @@
          });
        }, 500);
        
-       // Also add mutation observer to handle dynamically added images
-       var faviconObserver = new MutationObserver(function(mutations) {
-         mutations.forEach(function(mutation) {
-           if (mutation.addedNodes.length) {
-             mutation.addedNodes.forEach(function(node) {
-               if (node.nodeType === 1) { // Element node
-                 var images = node.querySelectorAll ? node.querySelectorAll('img[src*="favicons"], img[alt*="favicon"], img[alt*="Feed favicon"]') : [];
-                 images.forEach(function(img) {
-                   if (img.onerror === null) {
-                     img.onerror = arguments.callee;
-                   }
-                 });
-               }
-             });
-           }
-         });
-       });
-       
+        // Also add mutation observer to handle dynamically added images
+        var faviconObserver = new MutationObserver(function(mutations) {
+          mutations.forEach(function(mutation) {
+            if (mutation.addedNodes.length) {
+              mutation.addedNodes.forEach(function(node) {
+                if (node.nodeType === 1) { // Element node
+                  var images = node.querySelectorAll ? node.querySelectorAll('img[src*="favicons"], img[alt*="favicon"], img[alt*="Feed favicon"]') : [];
+                  images.forEach(function(img) {
+                    if (img.onerror === null) {
+                      img.onerror = arguments.callee;
+                    }
+                  });
+                }
+              });
+            }
+          });
+        });
+
         faviconObserver.observe(appElement, { childList: true, subtree: true });
-      })();
-    </script>
+
+        // Fix header colors after initial load
+        setTimeout(fixAllHeaders, 2000);
+        setTimeout(fixAllHeaders, 4000);
+       })();
+     </script>
 </body>
 </html>
