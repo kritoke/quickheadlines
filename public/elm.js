@@ -4645,6 +4645,10 @@ var _Bitwise_shiftRightZfBy = F2(function(offset, a)
 {
 	return a >>> offset;
 });
+var $elm$core$Maybe$Just = function (a) {
+	return {$: 'Just', a: a};
+};
+var $elm$core$Maybe$Nothing = {$: 'Nothing'};
 var $author$project$Application$UrlChanged = function (a) {
 	return {$: 'UrlChanged', a: a};
 };
@@ -4751,10 +4755,6 @@ var $elm$json$Json$Decode$OneOf = function (a) {
 };
 var $elm$core$Basics$False = {$: 'False'};
 var $elm$core$Basics$add = _Basics_add;
-var $elm$core$Maybe$Just = function (a) {
-	return {$: 'Just', a: a};
-};
-var $elm$core$Maybe$Nothing = {$: 'Nothing'};
 var $elm$core$String$all = _String_all;
 var $elm$core$Basics$and = _Basics_and;
 var $elm$core$Basics$append = _Utils_append;
@@ -6425,10 +6425,31 @@ var $author$project$Api$fetchFeeds = F2(
 				url: '/api/feeds?tab=' + $elm$url$Url$percentEncode(tab)
 			});
 	});
+var $elm$core$Maybe$withDefault = F2(
+	function (_default, maybe) {
+		if (maybe.$ === 'Just') {
+			var value = maybe.a;
+			return value;
+		} else {
+			return _default;
+		}
+	});
 var $author$project$Pages$Home_$init = function (shared) {
 	return _Utils_Tuple2(
-		{activeTab: 'all', error: $elm$core$Maybe$Nothing, feeds: _List_Nil, insertedIds: $elm$core$Set$empty, isClustering: false, loading: true, loadingFeed: $elm$core$Maybe$Nothing, tabs: _List_Nil},
-		A2($author$project$Api$fetchFeeds, 'all', $author$project$Pages$Home_$GotFeeds));
+		{
+			activeTab: A2($elm$core$Maybe$withDefault, 'all', shared.savedTab),
+			error: $elm$core$Maybe$Nothing,
+			feeds: _List_Nil,
+			insertedIds: $elm$core$Set$empty,
+			isClustering: false,
+			loading: true,
+			loadingFeed: $elm$core$Maybe$Nothing,
+			tabs: _List_Nil
+		},
+		A2(
+			$author$project$Api$fetchFeeds,
+			A2($elm$core$Maybe$withDefault, 'all', shared.savedTab),
+			$author$project$Pages$Home_$GotFeeds));
 };
 var $author$project$Pages$Timeline$GotTimeline = function (a) {
 	return {$: 'GotTimeline', a: a};
@@ -6632,10 +6653,11 @@ var $author$project$Pages$Timeline$init = function (shared) {
 };
 var $author$project$Shared$Dark = {$: 'Dark'};
 var $author$project$Shared$Light = {$: 'Light'};
-var $author$project$Shared$init = F5(
-	function (width, height, prefersDark, now, zone) {
+var $author$project$Shared$init = F6(
+	function (width, height, prefersDark, now, zone, savedTab) {
 		return {
 			now: now,
+			savedTab: savedTab,
 			theme: prefersDark ? $author$project$Shared$Dark : $author$project$Shared$Light,
 			windowHeight: height,
 			windowWidth: width,
@@ -6659,13 +6681,14 @@ var $elm$time$Time$utc = A2($elm$time$Time$Zone, 0, _List_Nil);
 var $author$project$Application$init = F3(
 	function (flags, url, key) {
 		var zone = $elm$time$Time$utc;
-		var shared = A5(
+		var shared = A6(
 			$author$project$Shared$init,
 			flags.width,
 			flags.height,
 			flags.prefersDark,
 			$elm$time$Time$millisToPosix(flags.timestamp * 1000),
-			zone);
+			zone,
+			flags.savedTab);
 		var page = A2($elm$core$String$contains, '/timeline', url.path) ? $author$project$Application$Timeline : $author$project$Application$Home;
 		var _v0 = $author$project$Pages$Timeline$init(shared);
 		var timelineModel = _v0.a;
@@ -7261,6 +7284,7 @@ var $elm$core$Set$member = F2(
 		return A2($elm$core$Dict$member, key, dict);
 	});
 var $elm$core$Basics$not = _Basics_not;
+var $author$project$Pages$Home_$saveActiveTab = _Platform_outgoingPort('saveActiveTab', $elm$json$Json$Encode$string);
 var $elm$core$Process$sleep = _Process_sleep;
 var $elm$core$Basics$negate = function (n) {
 	return -n;
@@ -7344,7 +7368,12 @@ var $author$project$Pages$Home_$update = F3(
 					_Utils_update(
 						model,
 						{activeTab: tab, feeds: _List_Nil, loading: true}),
-					A2($author$project$Api$fetchFeeds, tab, $author$project$Pages$Home_$GotFeeds));
+					$elm$core$Platform$Cmd$batch(
+						_List_fromArray(
+							[
+								A2($author$project$Api$fetchFeeds, tab, $author$project$Pages$Home_$GotFeeds),
+								$author$project$Pages$Home_$saveActiveTab(tab)
+							])));
 			case 'LoadMoreFeed':
 				var url = msg.a;
 				var maybeFeed = $elm$core$List$head(
@@ -7534,15 +7563,6 @@ var $author$project$Api$buildCluster = function (_v0) {
 		representative: $author$project$Api$toClusterItem(representative)
 	};
 };
-var $elm$core$Maybe$withDefault = F2(
-	function (_default, maybe) {
-		if (maybe.$ === 'Just') {
-			var value = maybe.a;
-			return value;
-		} else {
-			return _default;
-		}
-	});
 var $author$project$Api$clusterItemsFromTimeline = function (items) {
 	var sortedItems = A2(
 		$elm$core$List$sortWith,
@@ -14718,6 +14738,13 @@ var $author$project$Pages$Home_$feedHeader = F2(
 						calculatedTextColor,
 						_List_Nil);
 				} else {
+					var defaultTextColor = function () {
+						if (theme.$ === 'Dark') {
+							return 'rgb(255, 255, 255)';
+						} else {
+							return 'rgb(17, 24, 39)';
+						}
+					}();
 					return _Utils_Tuple3(
 						function () {
 							if (theme.$ === 'Dark') {
@@ -14728,13 +14755,7 @@ var $author$project$Pages$Home_$feedHeader = F2(
 									A3($mdgriffith$elm_ui$Element$rgb255, 243, 244, 246));
 							}
 						}(),
-						function () {
-							if (theme.$ === 'Dark') {
-								return 'rgb(255, 255, 255)';
-							} else {
-								return 'rgb(17, 24, 39)';
-							}
-						}(),
+						defaultTextColor,
 						_List_fromArray(
 							[
 								$mdgriffith$elm_ui$Element$htmlAttribute(
@@ -16654,16 +16675,29 @@ _Platform_export({'Main':{'init':$author$project$Main$main(
 				function (timestamp) {
 					return A2(
 						$elm$json$Json$Decode$andThen,
-						function (prefersDark) {
+						function (savedTab) {
 							return A2(
 								$elm$json$Json$Decode$andThen,
-								function (height) {
-									return $elm$json$Json$Decode$succeed(
-										{height: height, prefersDark: prefersDark, timestamp: timestamp, width: width});
+								function (prefersDark) {
+									return A2(
+										$elm$json$Json$Decode$andThen,
+										function (height) {
+											return $elm$json$Json$Decode$succeed(
+												{height: height, prefersDark: prefersDark, savedTab: savedTab, timestamp: timestamp, width: width});
+										},
+										A2($elm$json$Json$Decode$field, 'height', $elm$json$Json$Decode$int));
 								},
-								A2($elm$json$Json$Decode$field, 'height', $elm$json$Json$Decode$int));
+								A2($elm$json$Json$Decode$field, 'prefersDark', $elm$json$Json$Decode$bool));
 						},
-						A2($elm$json$Json$Decode$field, 'prefersDark', $elm$json$Json$Decode$bool));
+						A2(
+							$elm$json$Json$Decode$field,
+							'savedTab',
+							$elm$json$Json$Decode$oneOf(
+								_List_fromArray(
+									[
+										$elm$json$Json$Decode$null($elm$core$Maybe$Nothing),
+										A2($elm$json$Json$Decode$map, $elm$core$Maybe$Just, $elm$json$Json$Decode$string)
+									]))));
 				},
 				A2($elm$json$Json$Decode$field, 'timestamp', $elm$json$Json$Decode$int));
 		},

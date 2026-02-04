@@ -48,14 +48,33 @@ end
 private def parse_rss(xml : XML::Node, limit : Int32) : {site_link: String, items: Array(Item), favicon: String?}
   site_link = "#"
   items = [] of Item
-  if channel = xml.xpath_node("//*[local-name()='channel']")
-    site_link = resolve_rss_site_link(channel)
-
-    channel.xpath_nodes("./*[local-name()='item']").each do |node|
+  
+  # Check if this is an RDF/RSS feed (items are siblings of channel, not children)
+  is_rdf = xml.root.try(&.name) == "RDF"
+  
+  if is_rdf
+    # For RDF/RSS format, find channel and items at root level
+    if channel = xml.xpath_node("//*[local-name()='channel']")
+      site_link = resolve_rss_site_link(channel)
+    end
+    
+    # In RDF, items are at root level, not inside channel
+    xml.xpath_nodes("//*[local-name()='item']").each do |node|
       items << parse_rss_item(node)
       break if items.size >= limit
     end
+  else
+    # Standard RSS format
+    if channel = xml.xpath_node("//*[local-name()='channel']")
+      site_link = resolve_rss_site_link(channel)
+      
+      channel.xpath_nodes("./*[local-name()='item']").each do |node|
+        items << parse_rss_item(node)
+        break if items.size >= limit
+      end
+    end
   end
+  
   favicon = xml.xpath_node("//*[local-name()='channel']/*[local-name()='image']/*[local-name()='url']").try(&.text)
   {site_link: site_link, items: items, favicon: favicon}
 end
@@ -82,7 +101,9 @@ private def parse_rss_item(node : XML::Node) : Item
 
   # Try pubDate first, then dc:date (Dublin Core), then other date elements
   pub_date_str = node.xpath_node("./*[local-name()='pubDate']").try(&.text) ||
+                 node.xpath_node("./*[local-name()='dc:date']").try(&.text) ||
                  node.xpath_node("./*[local-name()='date']").try(&.text) ||
+                 node.xpath_node(".//*[local-name()='dc:date']").try(&.text) ||
                  node.xpath_node(".//*[local-name()='date']").try(&.text)
   pub_date = parse_time(pub_date_str)
 

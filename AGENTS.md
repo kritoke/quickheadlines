@@ -42,22 +42,37 @@ OpenCode agents often try to be "helpful" by running commands directly in the sh
 
 If you don't use the prefix, you will get a `command not found: crystal` error, even though the file is right there in the project.
 
+### 5. Compilation Before Completion
+
+> MANDATORY COMPILATION CHECK:
+> Before EVER saying a task is "done", "complete", "ready for review", or marking it as finished, you MUST compile the program and verify it builds successfully.
+>
+> **Required command:**
+> ```bash
+> nix develop . --command crystal build src/quickheadlines.cr
+> ```
+>
+> If compilation fails, the task is NOT done. Fix all compilation errors before marking the task as complete.
+>
+> **This rule is NON-NEGOTIABLE.** Multiple instances of agents claiming tasks were "done" while the code didn't compile have caused issues. NEVER mark work as complete until `crystal build` succeeds.
+
 ## Landing the Plane (Session Completion)
 
 **When ending a work session**, you MUST complete ALL steps below. Work is NOT complete until `git push` succeeds.
 
 **MANDATORY WORKFLOW:**
 
-1. **Verify Work:** Run `nix develop . --command npx playwright test` and any relevant Crystal specs.
-2. **Archival:** Use `/opsx:archive <name>` for all completed changes.
-3. **PUSH TO REMOTE:**
-   ```bash
-   git pull --rebase
-   git push
-   git status  # MUST show "up to date with origin"
-   ```
-4. **Clean up:** Clear stashes, prune remote branches.
-5. **Hand off:** Provide context for next session.
+1. **COMPILE FIRST:** Run `nix develop . --command crystal build src/quickheadlines.cr` - MUST succeed before proceeding
+2. **Verify Work:** Run `nix develop . --command npx playwright test` and any relevant Crystal specs.
+3. **Archival:** Use `/opsx:archive <name>` for all completed changes.
+4. **PUSH TO REMOTE:**
+    ```bash
+    git pull --rebase
+    git push
+    git status  # MUST show "up to date with origin"
+    ```
+5. **Clean up:** Clear stashes, prune remote branches.
+6. **Hand off:** Provide context for next session.
 
 **CRITICAL RULES:**
 - Work is NOT complete until `git push` succeeds.
@@ -102,6 +117,7 @@ nix develop . --command npx playwright test
 | `crystal: command not found` | Crystal not in PATH | Use full path `/home/kritoke/.local/bin/crystal` or nix develop |
 | `libgc.so.1 not found` | Missing library path | Run through nix develop (sets LD_LIBRARY_PATH) |
 | Make command not found | make not in PATH | nix develop provides gnumake |
+| Feeds not updating after config changes | Stale database cache | Run `rm -rf ~/.cache/quickheadlines/feed_cache.db*` then restart server |
 
 ### Environment Variables
 

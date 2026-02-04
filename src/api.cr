@@ -253,7 +253,15 @@ module Api
 
     # Limit items for initial display (controls how many items are shown in feed cards)
     limit = display_item_limit || 20
-    displayed_items = feed.items.first(limit)
+    
+    # Sort items by pub_date (newest first) before limiting
+    sorted_items = feed.items.sort_by do |item|
+      # Items with pub_date come first, sorted newest to oldest
+      # Items without pub_date come last
+      item.pub_date.try(&.to_unix) || Int64::MIN
+    end.reverse
+    
+    displayed_items = sorted_items.first(limit)
 
     items_response = displayed_items.map do |item|
       ItemResponse.new(

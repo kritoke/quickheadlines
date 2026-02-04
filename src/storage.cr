@@ -1113,6 +1113,84 @@ class FeedCache
     @db.exec("UPDATE items SET cluster_id = ? WHERE id = ?", cluster_id, item_id)
   end
 
+  # Store MinHash signature for an item
+  def store_item_signature(item_id : Int64, signature : Array(UInt32))
+    @mutex.synchronize do
+      bytes = LexisMinhash::Engine.signature_to_bytes(signature)
+      @db.exec("UPDATE items SET minhash_signature = ? WHERE id = ?", bytes, item_id)
+    end
+  end
+
+  # Get MinHash signature for an item
+  def get_item_signature(item_id : Int64) : Array(UInt32)?
+    @mutex.synchronize do
+      result = @db.query_one?("SELECT minhash_signature FROM items WHERE id = ?", item_id, as: {Bytes?})
+      return unless result
+      LexisMinhash::Engine.bytes_to_signature(result)
+    end
+  end
+
+  # Store LSH bands for an item
+  def store_lsh_bands(item_id : Int64, band_hashes : Array(UInt64))
+    @mutex.synchronize do
+      begin
+        @db.exec("BEGIN TRANSACTION")
+        @db.exec("DELETE FROM lsh_bands WHERE item_id = ?", item_id)
+        band_hashes.each_with_index do |band_hash, band_index|
+          @db.exec(
+            "INSERT INTO lsh_bands (item_id, band_index, band_hash, created_at) VALUES (?, ?, ?, ?)",
+            item_id,
+            band_index,
+            band_hash.to_i64,
+            Time.utc.to_s("%Y-%m-%d %H:%M:%S")
+          )
+        end
+        @db.exec("COMMIT")
+      rescue ex
+        @db.exec("ROLLBACK")
+        STDERR.puts "[Cache ERROR] Failed to store LSH bands for item #{item_id}: #{ex.message}"
+      end
+    end
+  end
+
+  # Find candidate similar items using LSH
+  def find_lsh_candidates(signature : Array(UInt32)) : Array(Int64)
+    bands = LexisMinhash::Engine.generate_bands(signature)
+    candidates = Set(Int64).new
+
+    @mutex.synchronize do
+      bands.each do |band_index, band_hash|
+        @db.query("SELECT DISTINCT item_id FROM lsh_bands WHERE band_index = ? AND band_hash = ?", band_index, band_hash.to_i64) do |rows|
+          rows.each do
+            item_id = rows.read(Int64)
+            candidates << item_id
+          end
+        end
+      end
+    end
+
+    candidates.to_a
+  end
+
+  # Clear clustering metadata (but keep feeds and items)
+  def clear_clustering_metadata
+    @mutex.synchronize do
+      @db.exec("UPDATE items SET cluster_id = NULL")
+      @db.exec("DELETE FROM lsh_bands")
+      STDERR.puts "[#{Time.local}] Cleared clustering metadata"
+    end
+  end
+
+  # Clear all cached data (feeds, items, clustering metadata)
+  def clear_all
+    @mutex.synchronize do
+      @db.exec("DELETE FROM items")
+      @db.exec("DELETE FROM feeds")
+      @db.exec("DELETE FROM lsh_bands")
+      STDERR.puts "[#{Time.local}] Cleared all cached data"
+    end
+  end
+
   # Get all item IDs in a cluster
   def get_cluster_items(cluster_id : Int64) : Array(Int64)
     items = [] of Int64

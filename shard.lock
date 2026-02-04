@@ -56,6 +56,10 @@ shards:
     git: https://github.com/crystal-lang/crystal-db.git
     version: 0.11.0
 
+  lexis-minhash:
+    git: https://github.com/kritoke/lexis-minhash.git
+    version: 0.1.0
+
   sqlite3:
     git: https://github.com/crystal-lang/crystal-sqlite3.git
     version: 0.19.0

@@ -14,6 +14,7 @@ type alias Model =
     , windowHeight : Int
     , now : Time.Posix
     , zone : Time.Zone
+    , savedTab : Maybe String
     }
 
 
@@ -23,8 +24,8 @@ type Msg
     | SetTime Time.Posix
 
 
-init : Int -> Int -> Bool -> Time.Posix -> Time.Zone -> Model
-init width height prefersDark now zone =
+init : Int -> Int -> Bool -> Time.Posix -> Time.Zone -> Maybe String -> Model
+init width height prefersDark now zone savedTab =
     { theme =
         if prefersDark then
             Dark
@@ -35,6 +36,7 @@ init width height prefersDark now zone =
     , windowHeight = height
     , now = now
     , zone = zone
+    , savedTab = savedTab
     }
 
 

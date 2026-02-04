@@ -1,6 +1,6 @@
 require "athena"
-require "levenshtein"
 require "json"
+require "lexis-minhash"
 
 module ClusteringUtilities
   STOP_WORDS = Set.new([
@@ -17,12 +17,16 @@ module ClusteringUtilities
     "works", "work", "working", "today", "where",
   ])
 
-  SHORT_HEADLINE_THRESHOLD = 0.85
+  # Replaced by LexisMinhash constants
+  # Keeping for reference during migration
+  #
+  # SHORT_HEADLINE_THRESHOLD = 0.85
   MIN_WORDS_FOR_CLUSTERING = 5
-  JACCARD_FALLBACK_THRESHOLD = 0.45
-  WORD_COVERAGE_THRESHOLD = 0.70
-  MIN_SHARED_KEYWORDS = 2
-  MIN_WORD_LENGTH = 5
+
+  # JACCARD_FALLBACK_THRESHOLD = 0.45
+  # WORD_COVERAGE_THRESHOLD = 0.70
+  # MIN_SHARED_KEYWORDS = 2
+  # MIN_WORD_LENGTH = 5
 
   def self.normalize_headline(text : String) : String
     return "" if text.empty?
@@ -32,67 +36,70 @@ module ClusteringUtilities
     filtered.join(" ")
   end
 
-  def self.jaccard_similarity(text1 : String, text2 : String) : Float64
-    norm1 = normalize_headline(text1)
-    norm2 = normalize_headline(text2)
-
-    words1 = Set.new(norm1.split(/\s+/))
-    words2 = Set.new(norm2.split(/\s+/))
-
-    intersection = words1 & words2
-    union = words1 | words2
-
-    return 0.0_f64 if union.empty?
-    intersection.size.to_f64 / union.size.to_f64
-  end
-
-  def self.word_coverage_similarity(text1 : String, text2 : String) : Float64
-    norm1 = normalize_headline(text1)
-    norm2 = normalize_headline(text2)
-
-    words1 = norm1.split(/\s+/).select { |w| w.size >= MIN_WORD_LENGTH }
-    words2 = norm2.split(/\s+/).select { |w| w.size >= MIN_WORD_LENGTH }
-
-    return 0.0_f64 if words1.empty? || words2.empty?
-
-    matched = Set(String).new
-
-    words1.each do |w1|
-      if words2.includes?(w1)
-        matched << w1
-      else
-        words2.each do |w2|
-          if w1.includes?(w2) || w2.includes?(w1)
-            matched << w1
-            break
-          elsif levenshtein_distance(w1, w2) <= 2
-            matched << w1
-            break
-          end
-        end
-      end
-    end
-
-    return 0.0_f64 if matched.size < MIN_SHARED_KEYWORDS
-
-    shared = matched.size.to_f64
-    coverage1 = shared / words1.size
-    coverage2 = shared / words2.size
-
-    {coverage1, coverage2}.min
-  end
-
-  def self.hybrid_similarity(text1 : String, text2 : String) : Float64
-    jac = jaccard_similarity(text1, text2)
-    word_cov = word_coverage_similarity(text1, text2)
-
-    if jac < JACCARD_FALLBACK_THRESHOLD && word_cov > jac
-      STDERR.puts "[Clustering] Jaccard=#{jac.round(2)} < #{JACCARD_FALLBACK_THRESHOLD}, using word_coverage=#{word_cov.round(2)}" if ENV["DEBUG_CLUSTERING"]?
-      return word_cov
-    end
-
-    jac
-  end
+  # Replaced by LexisMinhash::Engine.similarity for MinHash-based similarity estimation
+  # Keeping for reference during migration
+  #
+  # def self.jaccard_similarity(text1 : String, text2 : String) : Float64
+  #   norm1 = normalize_headline(text1)
+  #   norm2 = normalize_headline(text2)
+  #
+  #   words1 = Set.new(norm1.split(/\s+/))
+  #   words2 = Set.new(norm2.split(/\s+/))
+  #
+  #   intersection = words1 & words2
+  #   union = words1 | words2
+  #
+  #   return 0.0_f64 if union.empty?
+  #   intersection.size.to_f64 / union.size.to_f64
+  # end
+  #
+  # def self.word_coverage_similarity(text1 : String, text2 : String) : Float64
+  #   norm1 = normalize_headline(text1)
+  #   norm2 = normalize_headline(text2)
+  #
+  #   words1 = norm1.split(/\s+/).select { |w| w.size >= MIN_WORD_LENGTH }
+  #   words2 = norm2.split(/\s+/).select { |w| w.size >= MIN_WORD_LENGTH }
+  #
+  #   return 0.0_f64 if words1.empty? || words2.empty?
+  #
+  #   matched = Set(String).new
+  #
+  #   words1.each do |w1|
+  #     if words2.includes?(w1)
+  #       matched << w1
+  #     else
+  #       words2.each do |w2|
+  #         if w1.includes?(w2) || w2.includes?(w1)
+  #           matched << w1
+  #           break
+  #         elsif levenshtein_distance(w1, w2) <= 2
+  #           matched << w1
+  #           break
+  #         end
+  #       end
+  #     end
+  #   end
+  #
+  #   return 0.0_f64 if matched.size < MIN_SHARED_KEYWORDS
+  #
+  #   shared = matched.size.to_f64
+  #   coverage1 = shared / words1.size
+  #   coverage2 = shared / words2.size
+  #
+  #   {coverage1, coverage2}.min
+  # end
+  #
+  # def self.hybrid_similarity(text1 : String, text2 : String) : Float64
+  #   jac = jaccard_similarity(text1, text2)
+  #   word_cov = word_coverage_similarity(text1, text2)
+  #
+  #   if jac < JACCARD_FALLBACK_THRESHOLD && word_cov > jac
+  #     STDERR.puts "[Clustering] Jaccard=#{jac.round(2)} < #{JACCARD_FALLBACK_THRESHOLD}, using word_coverage=#{word_cov.round(2)}" if ENV["DEBUG_CLUSTERING"]?
+  #     return word_cov
+  #   end
+  #
+  #   jac
+  # end
 
   def self.word_count(text : String) : Int32
     normalized = normalize_headline(text)
@@ -100,33 +107,40 @@ module ClusteringUtilities
     normalized.split(/\s+/).size
   end
 
-  def self.extract_keywords(text : String) : Array(String)
-    normalized = normalize_headline(text)
-    words = normalized.split(/\s+/)
-    words.select { |w| w.size > 4 }.first(5)
-  end
+  # Replaced by LexisMinhash::SimpleDocument which handles stop-word filtering internally
+  # Keeping for reference during migration
+  #
+  # def self.extract_keywords(text : String) : Array(String)
+  #   normalized = normalize_headline(text)
+  #   words = normalized.split(/\s+/)
+  #   words.select { |w| w.size > 4 }.first(5)
+  # end
 
-  private def self.levenshtein_distance(s1 : String, s2 : String) : Int32
-    return (s1.size - s2.size).abs if s1.size == 0 || s2.size == 0
+  # Only used by word_coverage_similarity which is replaced by LexisMinhash::Engine.similarity
+  # Keeping for reference during migration
+  #
+  # private def self.levenshtein_distance(s1 : String, s2 : String) : Int32
+  #   return (s1.size - s2.size).abs if s1.size == 0 || s2.size == 0
+  #
+  #   matrix = Array(Array(Int32)).new(s1.size + 1) { |i| Array(Int32).new(s2.size + 1, 0) }
+  #
+  #   (0..s1.size).each { |i| matrix[i][0] = i }
+  #   (0..s2.size).each { |j| matrix[0][j] = j }
+  #
+  #   (1..s1.size).each do |i|
+  #     (1..s2.size).each do |j|
+  #       cost = s1[i - 1] == s2[j - 1] ? 0 : 1
+  #       matrix[i][j] = {
+  #         matrix[i - 1][j] + 1,
+  #         matrix[i][j - 1] + 1,
+  #         matrix[i - 1][j - 1] + cost,
+  #       }.min
+  #     end
+  #   end
+  #
+  #   matrix[s1.size][s2.size]
+  # end
 
-    matrix = Array(Array(Int32)).new(s1.size + 1) { |i| Array(Int32).new(s2.size + 1, 0) }
-
-    (0..s1.size).each { |i| matrix[i][0] = i }
-    (0..s2.size).each { |j| matrix[0][j] = j }
-
-    (1..s1.size).each do |i|
-      (1..s2.size).each do |j|
-        cost = s1[i - 1] == s2[j - 1] ? 0 : 1
-        matrix[i][j] = {
-          matrix[i - 1][j] + 1,
-          matrix[i][j - 1] + 1,
-          matrix[i - 1][j - 1] + cost,
-        }.min
-      end
-    end
-
-    matrix[s1.size][s2.size]
-  end
 end
 
 class Quickheadlines::Services::ClusteringService
@@ -141,14 +155,20 @@ class Quickheadlines::Services::ClusteringService
     return nil if title.empty?
     return nil if ClusteringUtilities.word_count(title) < ClusteringUtilities::MIN_WORDS_FOR_CLUSTERING
 
-    norm_title = ClusteringUtilities.normalize_headline(title)
-    keywords = ClusteringUtilities.extract_keywords(norm_title)
+    # Compute MinHash signature
+    document = LexisMinhash::SimpleDocument.new(title)
+    signature = LexisMinhash::Engine.compute_signature(document)
 
-    candidates = if keywords.size >= 2
-                   cache.find_by_keywords(keywords, item_id)
-                 else
-                   [] of Int64
-                 end
+    # Store the signature
+    cache.store_item_signature(item_id, signature)
+
+    # Generate LSH bands and extract band hashes (tuples contain {band_index, band_hash})
+    bands = LexisMinhash::Engine.generate_bands(signature)
+    band_hashes = bands.map { |band| band[1] }
+    cache.store_lsh_bands(item_id, band_hashes)
+
+    # Find candidates via LSH
+    candidates = cache.find_lsh_candidates(signature)
 
     if candidates.empty?
       cache.assign_cluster(item_id, item_id)
@@ -160,25 +180,20 @@ class Quickheadlines::Services::ClusteringService
     best_title = ""
 
     candidates.each do |candidate_id|
-      candidate_title = cache.get_item_title(candidate_id)
-      next unless candidate_title
+      next if candidate_id == item_id
 
-      similarity = ClusteringUtilities.hybrid_similarity(title, candidate_title)
+      candidate_signature = cache.get_item_signature(candidate_id)
+      next unless candidate_signature
+
+      similarity = LexisMinhash::Engine.similarity(signature, candidate_signature)
       if similarity > best_similarity
         best_similarity = similarity
         best_match = candidate_id
-        best_title = candidate_title
+        best_title = cache.get_item_title(candidate_id) || ""
       end
     end
 
-    word_count_value = ClusteringUtilities.word_count(title)
-    threshold = if word_count_value < 5
-      SHORT_HEADLINE_THRESHOLD
-    elsif word_count_value <= 7
-      0.80_f64
-    else
-      0.25_f64
-    end
+    threshold = 0.75_f64
 
     STDERR.puts "[Clustering] Best match similarity: #{best_similarity.round(2)} (threshold: #{threshold})" if ENV["DEBUG_CLUSTERING"]?
 

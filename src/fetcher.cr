@@ -464,8 +464,8 @@ private def handle_feed_response(feed : Feed, response : HTTP::Client::Response,
 end
 
 def fetch_feed(feed : Feed, display_item_limit : Int32, db_fetch_limit : Int32, previous_data : FeedData? = nil) : FeedData
-    # Use feed-specific item limit or global default for display
-    effective_item_limit = feed.item_limit || display_item_limit
+  # Use feed-specific item limit or global default for display
+  effective_item_limit = feed.item_limit || display_item_limit
 
   # Check cache first
   if cached_data = get_cached_feed(feed, effective_item_limit, previous_data)
@@ -658,7 +658,7 @@ CLUSTERING_JOBS = Atomic(Int32).new(0)
 
 def async_clustering(feeds : Array(FeedData))
   clustering_channel = Channel(Nil).new(10) # Max 10 concurrent clustering jobs
-  
+
   STATE.is_clustering = true
   CLUSTERING_JOBS.set(feeds.size)
 
@@ -669,7 +669,7 @@ def async_clustering(feeds : Array(FeedData))
         begin
           process_feed_item_clustering(feed_data)
         ensure
-          clustering_channel.receive    # Release slot
+          clustering_channel.receive # Release slot
           if CLUSTERING_JOBS.sub(1) <= 1
             STATE.is_clustering = false
           end
@@ -709,12 +709,12 @@ def start_refresh_loop(config_path : String)
   active_config = load_config(config_path)
   last_mtime = File.info(config_path).modification_time
 
-   # Do an initial refresh with active config
-   refresh_all(active_config)
-   puts "[#{Time.local}] Initial refresh complete"
+  # Do an initial refresh with active config
+  refresh_all(active_config)
+  puts "[#{Time.local}] Initial refresh complete"
 
-   # Save initial cache
-   save_feed_cache(FeedCache.instance, active_config.cache_retention_hours, active_config.max_cache_size_mb)
+  # Save initial cache
+  save_feed_cache(FeedCache.instance, active_config.cache_retention_hours, active_config.max_cache_size_mb)
 
   spawn do
     loop do
@@ -738,8 +738,8 @@ def start_refresh_loop(config_path : String)
           puts "[#{Time.local}] Refreshed feeds and ran GC"
         end
 
-  # Save cache after each refresh
-  save_feed_cache(FeedCache.instance, active_config.cache_retention_hours, active_config.max_cache_size_mb)
+        # Save cache after each refresh
+        save_feed_cache(FeedCache.instance, active_config.cache_retention_hours, active_config.max_cache_size_mb)
 
         # Check if refresh took too long (potential hang)
         refresh_duration = (Time.monotonic - refresh_start_time).total_seconds

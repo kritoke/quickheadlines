@@ -1,4 +1,4 @@
-module Pages.Home_ exposing (Model, Msg(..), init, update, view, subscriptions)
+port module Pages.Home_ exposing (Model, Msg(..), init, update, view, subscriptions)
 
 import Api exposing (Feed, FeedItem, fetchFeeds, sortFeedItems)
 import Element exposing (..)
@@ -7,6 +7,7 @@ import Element.Border as Border
 import Element.Font as Font
 import Element.Input as Input
 import Html.Attributes
+import Html as Html
 import Http
 import Shared exposing (Model, Msg(..), Theme(..))
 import Theme exposing (cardColor, errorColor, surfaceColor, tabActiveBg, tabActiveText, tabHoverBg, tabInactiveText, textColor, themeToColors)
@@ -16,6 +17,9 @@ import Task
 import Process
 import Responsive exposing (Breakpoint(..), breakpointFromWidth, isMobile, uniformPadding, containerMaxWidth)
 import Set exposing (Set)
+
+
+port saveActiveTab : String -> Cmd msg
 
 
 type alias Model =
@@ -34,14 +38,14 @@ init : Shared.Model -> ( Model, Cmd Msg )
 init shared =
     ( { feeds = []
       , tabs = []
-      , activeTab = "all"
+      , activeTab = Maybe.withDefault "all" shared.savedTab
       , loading = True
       , error = Nothing
       , loadingFeed = Nothing
       , insertedIds = Set.empty
       , isClustering = False
       }
-    , fetchFeeds "all" GotFeeds
+    , fetchFeeds (Maybe.withDefault "all" shared.savedTab) GotFeeds
     )
 
 
@@ -78,7 +82,7 @@ update shared msg model =
 
         SwitchTab tab ->
             ( { model | activeTab = tab, loading = True, feeds = [] }
-            , fetchFeeds tab GotFeeds
+            , Cmd.batch [ fetchFeeds tab GotFeeds, saveActiveTab tab ]
             )
 
         LoadMoreFeed url ->
@@ -620,18 +624,22 @@ feedHeader theme feed =
                             )
 
                         Nothing ->
+                            let
+                                defaultTextColor =
+                                    case theme of
+                                        Dark ->
+                                            "rgb(255, 255, 255)"
+
+                                        Light ->
+                                            "rgb(17, 24, 39)"
+                            in
                             ( case theme of
                                 Dark ->
                                     Background.color (rgb255 30 30 30)
 
                                 Light ->
                                     Background.color (rgb255 243 244 246)
-                            , case theme of
-                                Dark ->
-                                    "rgb(255, 255, 255)"
-
-                                Light ->
-                                    "rgb(17, 24, 39)"
+                            , defaultTextColor
                             , [ htmlAttribute (Html.Attributes.attribute "data-use-adaptive-colors" "true") ]
                             )
     in

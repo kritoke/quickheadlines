@@ -32,6 +32,9 @@ port saveCurrentPage : String -> Cmd msg
 port saveTimelineState : String -> Cmd msg
 
 
+port saveActiveTab : String -> Cmd msg
+
+
 port onNearBottom : (Bool -> msg) -> Sub msg
 
 port switchTab : (String -> msg) -> Sub msg
@@ -42,6 +45,7 @@ type alias Flags =
     , height : Int
     , prefersDark : Bool
     , timestamp : Int
+    , savedTab : Maybe String
     }
 
 
@@ -78,7 +82,7 @@ init flags url key =
             Time.utc
 
         shared =
-            Shared.init flags.width flags.height flags.prefersDark (Time.millisToPosix (flags.timestamp * 1000)) zone
+            Shared.init flags.width flags.height flags.prefersDark (Time.millisToPosix (flags.timestamp * 1000)) zone flags.savedTab
 
         ( homeModel, homeCmd ) =
             Home.init shared

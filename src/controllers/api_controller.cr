@@ -159,12 +159,11 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
                          end
                        end
 
-                        all_feeds_with_tabs.map { |entry| Api.feed_to_response(entry[:feed], entry[:tab_name], cache.item_count(entry[:feed].url), STATE.config.try(&.item_limit) || 20) }
-                      else
-                        active_feeds = STATE.feeds_for_tab(active_tab)
-                        active_feeds.map { |feed| Api.feed_to_response(feed, active_tab, cache.item_count(feed.url), STATE.config.try(&.item_limit) || 20) }
-                      end
-
+                       all_feeds_with_tabs.map { |entry| Api.feed_to_response(entry[:feed], entry[:tab_name], cache.item_count(entry[:feed].url), STATE.config.try(&.item_limit) || 20) }
+                     else
+                       active_feeds = STATE.feeds_for_tab(active_tab)
+                       active_feeds.map { |feed| Api.feed_to_response(feed, active_tab, cache.item_count(feed.url), STATE.config.try(&.item_limit) || 20) }
+                     end
 
     FeedsPageResponse.new(
       tabs: tabs_response,
@@ -765,10 +764,10 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
     spawn do
       begin
         STDERR.puts "[#{Time.local}] Starting manual clustering..."
-
+        
         cache = FeedCache.instance
         db = cache.db
-
+        
         uncategorized_items = [] of {id: Int64, title: String, link: String, pub_date: Time?}
         db.query("SELECT id, title, link, pub_date FROM items WHERE cluster_id IS NULL OR cluster_id = id ORDER BY pub_date DESC LIMIT 5000") do |rows|
           rows.each do
@@ -780,9 +779,9 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
             uncategorized_items << {id: id, title: title, link: link, pub_date: pub_date}
           end
         end
-
+        
         STDERR.puts "[#{Time.local}] Found #{uncategorized_items.size} uncategorized items"
-
+        
         STATE.is_clustering = true
         begin
           clustered_count = 0
@@ -805,8 +804,153 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
         STDERR.puts ex.backtrace.join("\n")
       end
     end
-
+    
     ATH::Response.new("Clustering started in background", 202, HTTP::Headers{"content-type" => "text/plain"})
+  end
+
+  # POST /api/recluster - Clear cluster metadata and re-cluster all items
+  @[ARTA::Post(path: "/api/recluster")]
+  def recluster : ATH::Response
+    spawn do
+      begin
+        STDERR.puts "[#{Time.local}] Clearing clustering metadata and re-clustering..."
+        
+        cache = FeedCache.instance
+        cache.clear_clustering_metadata
+        
+        # Now trigger clustering on all items
+        db = cache.db
+        
+        all_items = [] of {id: Int64, title: String, link: String, pub_date: Time?}
+        db.query("SELECT id, title, link, pub_date FROM items ORDER BY pub_date DESC LIMIT 5000") do |rows|
+          rows.each do
+            id = rows.read(Int64)
+            title = rows.read(String)
+            link = rows.read(String)
+            pub_date_str = rows.read(String?)
+            pub_date = pub_date_str.try { |str| Time.parse(str, "%Y-%m-%d %H:%M:%S", Time::Location::UTC) }
+            all_items << {id: id, title: title, link: link, pub_date: pub_date}
+          end
+        end
+        
+        STDERR.puts "[#{Time.local}] Found #{all_items.size} items to re-cluster"
+        
+        STATE.is_clustering = true
+        begin
+          clustered_count = 0
+          all_items.each do |item|
+            if item[:title].empty?
+              next
+            end
+            result = compute_cluster_for_item(item[:id], item[:title])
+            clustered_count += 1
+            if clustered_count % 50 == 0
+              STDERR.puts "[#{Time.local}] Processed #{clustered_count} items..."
+            end
+          end
+          STDERR.puts "[#{Time.local}] Re-clustering complete: #{clustered_count} items processed"
+        ensure
+          STATE.is_clustering = false
+        end
+      rescue ex
+        STDERR.puts "[#{Time.local}] Re-clustering error: #{ex.message}"
+        STDERR.puts ex.backtrace.join("\n")
+      end
+    end
+    
+    ATH::Response.new("Re-clustering started in background", 202, HTTP::Headers{"content-type" => "text/plain"})
+  end
+
+  # POST /api/cleanup-orphaned - Remove feeds from database that are no longer in config
+  @[ARTA::Post(path: "/api/cleanup-orphaned")]
+  def cleanup_orphaned_feeds : ATH::Response
+    spawn do
+      begin
+        cache = FeedCache.instance
+        db = cache.db
+
+        # Get all feed URLs currently in the database
+        db_urls = Set(String).new
+        db.query("SELECT DISTINCT url FROM feeds") do |rows|
+          rows.each do
+            url = rows.read(String)
+            db_urls << url
+          end
+        end
+
+        # Get all feed URLs from current config
+        config_urls = Set(String).new
+        STATE.feeds.each { |feed| config_urls << feed.url }
+        STATE.tabs.each do |tab|
+          tab.feeds.each { |feed| config_urls << feed.url }
+        end
+
+        # Find orphaned URLs (in DB but not in config)
+        orphaned = db_urls - config_urls
+
+        if orphaned.empty?
+          STDERR.puts "[#{Time.local}] No orphaned feeds to clean up"
+          next
+        end
+
+        orphaned_count = 0
+        deleted_items = 0
+        orphaned.each do |url|
+          # Delete items from this feed
+          result = db.exec("DELETE FROM items WHERE feed_id IN (SELECT id FROM feeds WHERE url = ?)", url)
+          deleted_items += result.rows_affected
+
+          # Delete the feed
+          result = db.exec("DELETE FROM feeds WHERE url = ?", url)
+          orphaned_count += 1
+        end
+
+        # Clean up orphaned LSH band entries
+        cache.clear_clustering_metadata
+
+        STDERR.puts "[#{Time.local}] Cleaned up #{orphaned_count} orphaned feeds (#{deleted_items} items deleted)"
+      rescue ex
+        STDERR.puts "[#{Time.local}] Cleanup error: #{ex.message}"
+        STDERR.puts ex.backtrace.join("\n") if ex.backtrace
+      end
+    end
+
+    ATH::Response.new("Cleanup started in background", 202, HTTP::Headers{"content-type" => "text/plain"})
+  end
+
+  # POST /api/clear-cache - Clear all cached data (feeds, items, favicons, colors)
+  # This resets the database to initial state, useful when feeds config changes
+  @[ARTA::Post(path: "/api/clear-cache")]
+  def clear_cache : ATH::Response
+    spawn do
+      begin
+        cache = FeedCache.instance
+        db = cache.db
+
+        # Get counts before deletion
+        feed_count = db.query_one("SELECT COUNT(*) FROM feeds", as: Int64)
+        item_count = db.query_one("SELECT COUNT(*) FROM items", as: Int64)
+
+        # Delete all items first (foreign key constraint)
+        db.exec("DELETE FROM items")
+
+        # Delete all feeds
+        db.exec("DELETE FROM feeds")
+
+        # Reset clustering tables
+        cache.clear_clustering_metadata
+
+        # Clear in-memory state
+        cache.clear_all
+
+        STDERR.puts "[#{Time.local}] Cache cleared: #{feed_count} feeds, #{item_count} items deleted"
+      rescue ex
+        STDERR.puts "[#{Time.local}] Clear cache error: #{ex.message}"
+        STDERR.puts ex.backtrace.join("\n") if ex.backtrace
+      end
+    end
+
+    ATH::Response.new("Cache clear started in background", 202, HTTP::Headers{"content-type" => "text/plain"})
   end
 
   # GET /api/status - Get current system status
@@ -815,6 +959,17 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
     Quickheadlines::DTOs::StatusResponse.new(
       is_clustering: STATE.is_clustering,
       active_jobs: 0 # We don't track background fiber count yet
+    )
+  end
+
+  # GET /.well-known/appspecific/com.chrome.devtools.json - Chrome DevTools config
+  # This endpoint is requested by Chrome DevTools but we don't use it, so return 404
+  @[ARTA::Get(path: "/.well-known/appspecific/com.chrome.devtools.json")]
+  def chrome_devtools_config : ATH::Response
+    ATH::Response.new(
+      "Not Found",
+      status: :not_found,
+      headers: HTTP::Headers{"Content-Type" => "text/plain"}
     )
   end
 end

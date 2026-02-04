@@ -3,6 +3,7 @@ module Api exposing (Cluster, ClusterItem, Feed, FeedItem, FeedsResponse, Tab, T
 import Http
 import Json.Decode as Decode exposing (Decoder, field, list, nullable, string, succeed)
 import Time
+import Url
 
 
 type alias Tab =
@@ -349,7 +350,7 @@ fetchTimeline limit offset tagger =
 fetchFeedMore : String -> Int -> Int -> (Result Http.Error Feed -> msg) -> Cmd msg
 fetchFeedMore url limit offset tagger =
     Http.get
-        { url = "/api/feed_more?url=" ++ url ++ "&limit=" ++ String.fromInt limit ++ "&offset=" ++ String.fromInt offset
+        { url = "/api/feed_more?url=" ++ Url.percentEncode url ++ "&limit=" ++ String.fromInt limit ++ "&offset=" ++ String.fromInt offset
         , expect = Http.expectJson tagger feedDecoder
         }
 
@@ -357,6 +358,6 @@ fetchFeedMore url limit offset tagger =
 fetchFeeds : String -> (Result Http.Error FeedsResponse -> msg) -> Cmd msg
 fetchFeeds tab tagger =
     Http.get
-        { url = "/api/feeds?tab=" ++ tab
+        { url = "/api/feeds?tab=" ++ Url.percentEncode tab
         , expect = Http.expectJson tagger feedsDecoder
         }

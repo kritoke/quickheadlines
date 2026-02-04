@@ -8,6 +8,12 @@
       * { box-sizing: border-box; }
       html, body { margin: 0; padding: 0; height: 100%; overflow-x: hidden !important; overflow-y: auto; }
       #app { width: 100vw; min-height: 100vh; background: #ffffff; overflow-x: hidden !important; }
+      :root {
+        --header-text-color: #111827;
+      }
+      [data-theme="dark"] {
+        --header-text-color: #ffffff;
+      }
      [data-timeline-page="true"] { overflow-x: hidden; }
     @media (min-width: 1024px) {
       [data-timeline-page="true"] [data-semantic="main-content-scroll"] > *:first-child {
@@ -43,38 +49,40 @@
     }
      @media only screen and (max-width: 768px) {
        [data-timeline-header="true"] {
-         font-size: 1.125rem !important;
+         font-size: 1.25rem !important;
        }
      }
      [data-timeline-header="true"] {
-       font-size: 1.5rem !important;
+       font-size: 1.75rem !important;
        font-weight: 700 !important;
+       margin-bottom: 8px;
      }
      [data-timeline-header="true"] .qh-header-highlight {
        position: relative;
        display: inline-block;
        z-index: 1;
        color: #FF8C00 !important;
+       font-weight: 700;
      }
      [data-timeline-header="true"] .qh-header-highlight::before {
        content: '';
        position: absolute;
        width: 100%;
-       height: 14px;
-       bottom: 0;
+       height: 16px;
+       bottom: 2px;
        left: 0;
-       background-color: rgba(255, 140, 0, 0.4);
+       background-color: rgba(255, 140, 0, 0.35);
        z-index: -1;
-       border-radius: 2px;
+       border-radius: 3px;
      }
-     @media (prefers-color-scheme: dark) {
-       [data-timeline-header="true"] .qh-header-highlight {
-         color: #FFB347 !important;
-       }
-       [data-timeline-header="true"] .qh-header-highlight::before {
-         background-color: rgba(255, 140, 0, 0.25);
-       }
-     }
+      @media (prefers-color-scheme: dark) {
+        [data-timeline-header="true"] .qh-header-highlight {
+          color: #FFB347 !important;
+        }
+        [data-timeline-header="true"] .qh-header-highlight::before {
+          background-color: rgba(255, 140, 0, 0.2);
+        }
+      }
     /\* Auto-hide scrollbars - cannot be done in Elm due to pseudo-elements \*/
     .auto-hide-scroll {
       overflow-y: auto;
@@ -479,24 +487,37 @@
           setTimeout(window.fixAllHeaders, 200);
         }
       
-      // Check if we should restore a previously saved page
-      var savedPage = localStorage.getItem('quickheadlines-page');
-      if (savedPage && savedPage !== window.location.pathname) {
-        console.log('Restoring saved page:', savedPage);
-        window.history.replaceState(null, '', savedPage);
-      }
+       // Check if we should restore a previously saved page
+       var savedPage = localStorage.getItem('quickheadlines-page');
+       if (savedPage && savedPage !== window.location.pathname) {
+         console.log('Restoring saved page:', savedPage);
+         window.history.replaceState(null, '', savedPage);
+       }
 
-       try {
-          console.log('Initializing Elm...');
-           var app = Elm.Main.init({
-             node: appElement,
-             flags: {
-               width: window.innerWidth,
-               height: window.innerHeight,
-               prefersDark: prefersDark,
-               timestamp: Date.now()
-             }
-           });
+       // Get saved tab from localStorage
+       var savedTab = localStorage.getItem('quickheadlines-tab');
+
+       // Extract the tab from the URL path
+       var pathTab = null;
+       if (window.location.pathname !== '/' && window.location.pathname !== '') {
+         var segments = window.location.pathname.split('/').filter(s => s);
+         if (segments.length > 0) {
+           pathTab = decodeURIComponent(segments[segments.length - 1]);
+         }
+       }
+
+        try {
+           console.log('Initializing Elm...');
+            var app = Elm.Main.init({
+              node: appElement,
+              flags: {
+                width: window.innerWidth,
+                height: window.innerHeight,
+                prefersDark: prefersDark,
+                timestamp: Date.now(),
+                savedTab: pathTab || savedTab
+              }
+            });
           console.log('Elm initialized successfully');
           window.app = app; // Expose for debugging
 
@@ -507,27 +528,47 @@
           }
           
            if (app.ports && app.ports.saveCurrentPage) {
-             app.ports.saveCurrentPage.subscribe(function(page) {
-               console.log('Saving current page:', page);
-               localStorage.setItem('quickheadlines-page', page);
-             });
-           }
+              app.ports.saveCurrentPage.subscribe(function(page) {
+                console.log('Saving current page:', page);
+                localStorage.setItem('quickheadlines-page', page);
+              });
+            }
+
+            if (app.ports && app.ports.saveActiveTab) {
+              app.ports.saveActiveTab.subscribe(function(tab) {
+                console.log('Saving active tab:', tab);
+                localStorage.setItem('quickheadlines-tab', tab);
+                // Extract colors after tab switch
+                setTimeout(function() {
+                  window.extractHeaderColors();
+                  if (window.fixAllHeaders) window.fixAllHeaders();
+                }, 500);
+              });
+            }
 
           window.addEventListener('resize', function() {
             // Handle resize if needed
           });
 
            // Extract colors after Elm renders
-          setTimeout(window.extractHeaderColors, 500);
-          setTimeout(window.extractHeaderColors, 1500);
+           setTimeout(window.extractHeaderColors, 500);
+           setTimeout(window.extractHeaderColors, 1500);
+           setTimeout(window.extractHeaderColors, 3000);
+           setTimeout(window.extractHeaderColors, 5000);
 
            // Fix header colors after color extraction
-          setTimeout(function() {
-            if (window.fixAllHeaders) window.fixAllHeaders();
-          }, 1000);
-          setTimeout(function() {
-            if (window.fixAllHeaders) window.fixAllHeaders();
-          }, 2500);
+           setTimeout(function() {
+             if (window.fixAllHeaders) window.fixAllHeaders();
+           }, 1000);
+           setTimeout(function() {
+             if (window.fixAllHeaders) window.fixAllHeaders();
+           }, 2500);
+           setTimeout(function() {
+             if (window.fixAllHeaders) window.fixAllHeaders();
+           }, 4000);
+           setTimeout(function() {
+             if (window.fixAllHeaders) window.fixAllHeaders();
+           }, 6000);
 
           // Watch for theme changes
           new MutationObserver(function(mutations) {
