@@ -21,18 +21,25 @@ module ColorExtractor
   end
 
   private def self.extract_from_file(path : String) : {bg: String, text: String}?
-    return nil unless File.exists?(path)
+    full_path = "public#{path}"
+    return nil unless File.exists?(full_path)
 
-    canvas = StumpyPNG.read(path)
+    begin
+      canvas = StumpyPNG.read(full_path)
+      width = canvas.width
+      height = canvas.height
 
-    dominant = calculate_dominant_color(canvas)
-    text_color = calculate_contrasting_text(dominant)
+      return nil if width == 0 || height == 0
 
-    bg_rgb = "rgb(#{dominant[0]}, #{dominant[1]}, #{dominant[2]})"
+      dominant = calculate_dominant_color(canvas)
+      text_color = calculate_contrasting_text(dominant)
 
-    {bg: bg_rgb, text: text_color}
-  rescue ex
-    nil
+      bg_rgb = "rgb(#{dominant[0]}, #{dominant[1]}, #{dominant[2]})"
+
+      {bg: bg_rgb, text: text_color}
+    rescue ex
+      nil
+    end
   end
 
   private def self.calculate_dominant_color(canvas : StumpyPNG::Canvas) : Array(Int32)
