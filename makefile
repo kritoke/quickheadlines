@@ -52,8 +52,9 @@ ifeq ($(OS_NAME),linux)
 	CRYSTAL_DIR = $(CACHE_DIR)/crystal-$(CRYSTAL_VERSION)-1
 	CRYSTAL_BIN = $(CRYSTAL_DIR)/bin/crystal
 else ifeq ($(OS_NAME),macos)
-	CRYSTAL_DIR = $(CACHE_DIR)/crystal-$(CRYSTAL_VERSION)-1
-	CRYSTAL_BIN = $(CRYSTAL_DIR)/bin/crystal
+	# macOS: Use Homebrew or GitHub Action installed Crystal
+	# Don't build from source - use system-installed version
+	CRYSTAL_BIN = $(shell which crystal 2>/dev/null || echo "/usr/local/bin/crystal")
 else ifeq ($(OS_NAME),freebsd)
 	# FreeBSD: Use system Crystal 1.18.2 (Athena-compatible)
 	CRYSTAL_BIN = $(shell which crystal)
@@ -144,6 +145,12 @@ check-deps:
 		if [ "$(OS_NAME)" = "freebsd" ]; then \
 			echo "Crystal compiler not found, building Crystal $(CRYSTAL_VERSION) from source..."; \
 			$(MAKE) download-crystal; \
+		elif [ "$(OS_NAME)" = "macos" ]; then \
+			echo "❌ Error: Crystal compiler not found"; \
+			echo ""; \
+			echo "Install Crystal on macOS:"; \
+			echo "  brew install crystal"; \
+			exit 1; \
 		else \
 			echo "Crystal compiler not found, downloading..."; \
 			$(MAKE) download-crystal; \
