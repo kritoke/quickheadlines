@@ -15982,32 +15982,24 @@ var $author$project$Pages$Timeline$parseHexColor = function (input) {
 	return A2($elm$core$String$startsWith, '#', cleanInput) ? $author$project$Pages$Timeline$parseHexClean(
 		A3($elm$core$String$replace, '#', '', cleanInput)) : (A2($elm$core$String$startsWith, 'rgb(', cleanInput) ? $author$project$Pages$Timeline$parseRgb(cleanInput) : $elm$core$Maybe$Nothing);
 };
-var $author$project$Pages$Timeline$getFeedTitleColor = F2(
-	function (theme, headerColor) {
-		var _v0 = _Utils_Tuple2(
-			$author$project$Pages$Timeline$parseHexColor(headerColor),
-			theme);
-		_v0$1:
-		while (true) {
-			if (_v0.a.$ === 'Just') {
-				if (_v0.b.$ === 'Light') {
-					var color = _v0.a.a;
-					var _v1 = _v0.b;
-					return color;
-				} else {
-					break _v0$1;
-				}
+var $author$project$Pages$Timeline$parseColor = function (input) {
+	return $author$project$Pages$Timeline$parseHexColor(input);
+};
+var $author$project$Pages$Timeline$getFeedTitleColor = F3(
+	function (theme, headerColor, headerTextColor) {
+		var _v0 = $author$project$Pages$Timeline$parseColor(headerTextColor);
+		if (_v0.$ === 'Just') {
+			var textColor = _v0.a;
+			return textColor;
+		} else {
+			var _v1 = $author$project$Pages$Timeline$parseColor(headerColor);
+			if (_v1.$ === 'Just') {
+				var bgColor = _v1.a;
+				return bgColor;
 			} else {
-				if (_v0.b.$ === 'Dark') {
-					break _v0$1;
-				} else {
-					var _v3 = _v0.a;
-					return $author$project$Theme$mutedColor(theme);
-				}
+				return $author$project$Theme$mutedColor(theme);
 			}
 		}
-		var _v2 = _v0.b;
-		return $author$project$Theme$mutedColor(theme);
 	});
 var $author$project$ThemeTypography$meta = $mdgriffith$elm_ui$Element$Font$size(11);
 var $author$project$Pages$ViewIcon$viewIcon = F2(
@@ -16031,7 +16023,8 @@ var $author$project$Pages$ViewIcon$viewIcon = F2(
 var $author$project$Pages$Timeline$clusterOtherItem = F3(
 	function (now, theme, item) {
 		var mutedTxt = $author$project$Theme$mutedColor(theme);
-		var itemHeaderColor = A2($elm$core$Maybe$withDefault, '', item.headerTextColor);
+		var itemHeaderTextColor = A2($elm$core$Maybe$withDefault, '', item.headerTextColor);
+		var itemHeaderColor = A2($elm$core$Maybe$withDefault, '', item.headerColor);
 		var faviconImg = A2(
 			$elm$core$Maybe$withDefault,
 			$mdgriffith$elm_ui$Element$text(''),
@@ -16064,7 +16057,7 @@ var $author$project$Pages$Timeline$clusterOtherItem = F3(
 						[
 							$author$project$ThemeTypography$meta,
 							$mdgriffith$elm_ui$Element$Font$color(
-							A2($author$project$Pages$Timeline$getFeedTitleColor, theme, itemHeaderColor))
+							A3($author$project$Pages$Timeline$getFeedTitleColor, theme, itemHeaderColor, itemHeaderTextColor))
 						]),
 					$mdgriffith$elm_ui$Element$text(item.feedTitle)),
 					A2(
@@ -16180,6 +16173,7 @@ var $author$project$Pages$Timeline$clusterItem = F7(
 		}();
 		var mutedTxt = $author$project$Theme$mutedColor(theme);
 		var headerTextColor = A2($elm$core$Maybe$withDefault, '', cluster.representative.headerTextColor);
+		var headerColor = A2($elm$core$Maybe$withDefault, '', cluster.representative.headerColor);
 		var faviconImg = A2(
 			$author$project$Pages$ViewIcon$viewIcon,
 			A2($elm$core$Maybe$withDefault, '', cluster.representative.favicon),
@@ -16279,7 +16273,7 @@ var $author$project$Pages$Timeline$clusterItem = F7(
 												[
 													$mdgriffith$elm_ui$Element$Font$size(12),
 													$mdgriffith$elm_ui$Element$Font$color(
-													A2($author$project$Pages$Timeline$getFeedTitleColor, theme, headerTextColor))
+													A3($author$project$Pages$Timeline$getFeedTitleColor, theme, headerColor, headerTextColor))
 												]),
 											$mdgriffith$elm_ui$Element$text(cluster.representative.feedTitle)),
 											A2(

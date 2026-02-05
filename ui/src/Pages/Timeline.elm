@@ -88,17 +88,26 @@ parseRgb input =
             Nothing
 
 
-getFeedTitleColor : Shared.Theme -> String -> Element.Color
-getFeedTitleColor theme headerColor =
-    case ( parseHexColor headerColor, theme ) of
-        ( Just color, Shared.Light ) ->
-            color
+getFeedTitleColor : Shared.Theme -> String -> String -> Element.Color
+getFeedTitleColor theme headerColor headerTextColor =
+    -- If we have a pre-calculated text color from the server, use it
+    case parseColor headerTextColor of
+        Just textColor ->
+            textColor
 
-        ( _, Shared.Dark ) ->
-            mutedColor theme
+        Nothing ->
+            -- Fallback: calculate from background color
+            case parseColor headerColor of
+                Just bgColor ->
+                    bgColor
 
-        ( Nothing, _ ) ->
-            mutedColor theme
+                Nothing ->
+                    mutedColor theme
+
+
+parseColor : String -> Maybe Element.Color
+parseColor input =
+    parseHexColor input
 
 
 type alias Model =
@@ -730,6 +739,9 @@ clusterItem breakpoint zone now theme expandedClusters insertedIds cluster =
 
         headerTextColor =
             Maybe.withDefault "" cluster.representative.headerTextColor
+
+        headerColor =
+            Maybe.withDefault "" cluster.representative.headerColor
     in
     let
         isExpanded =
@@ -788,7 +800,7 @@ clusterItem breakpoint zone now theme expandedClusters insertedIds cluster =
             ]
             [ paragraph [ width fill, Ty.size13 ]
                 [ faviconImg
-                , el [ Font.size 12, Font.color (getFeedTitleColor theme headerTextColor) ]
+                , el [ Font.size 12, Font.color (getFeedTitleColor theme headerColor headerTextColor) ]
                      (text cluster.representative.feedTitle)
                 , el [ Font.color mutedTxt, paddingXY 4 0 ] (text "•")
                 , link
@@ -830,6 +842,9 @@ clusterOtherItem now theme item =
             mutedColor theme
 
         itemHeaderColor =
+            Maybe.withDefault "" item.headerColor
+
+        itemHeaderTextColor =
             Maybe.withDefault "" item.headerTextColor
 
         faviconImg =
@@ -848,7 +863,7 @@ clusterOtherItem now theme item =
         , Font.color (textColor theme)
         ]
         [ faviconImg
-        , el [ Ty.meta, Font.color (getFeedTitleColor theme itemHeaderColor) ]
+        , el [ Ty.meta, Font.color (getFeedTitleColor theme itemHeaderColor itemHeaderTextColor) ]
              (text item.feedTitle)
         , el [ Ty.meta, Font.color mutedTxt, paddingXY 4 0 ] (text "•")
         , link
