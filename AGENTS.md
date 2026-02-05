@@ -15,7 +15,7 @@ All work must be structured as an OpenSpec Change within `openspec/changes/`.
 ### 1. The Core Agent Directive
 
 > Execution Context:
-> This project is a Nix Spoke. You are running inside a persistent Hub, but the project-specific tools (Crystal 1.19.1, Elm, Shards) are isolated.
+> This project is a Nix Spoke. You are running inside a persistent Hub, but the project-specific tools (Crystal 1.18.2, Elm, Shards) are isolated.
 > Rule: For ANY shell command execution (compiling, testing, formatting), you MUST prefix the command with `nix develop . --command`.
 > - Incorrect: `crystal spec`
 > - Correct: `nix develop . --command crystal spec`
@@ -24,7 +24,7 @@ All work must be structured as an OpenSpec Change within `openspec/changes/`.
 
 ### 2. The Library/Linker Workaround
 
-Because Crystal 1.19.1 is manually derived and requires specific library paths:
+Because Crystal 1.18.2 is manually derived and requires specific library paths:
 
 > Library Path Handling:
 > If a command fails with a "library not found" error (e.g., libgc.so.1 or libevent), do not attempt to install packages via apt. Instead, verify that the command is being run through the nix develop wrapper, as the flake handles the LD_LIBRARY_PATH internally.
@@ -37,7 +37,7 @@ Because Crystal 1.19.1 is manually derived and requires specific library paths:
 ### 4. Why This Is Necessary
 
 OpenCode agents often try to be "helpful" by running commands directly in the shell they find themselves in. In this setup:
-- The Base Shell is your "Hub" (which has Go, Node, but NOT Crystal 1.19.1)
+- The Base Shell is your "Hub" (which has Go, Node, but NOT Crystal 1.18.2)
 - The Sub-Shell created by `nix develop . --command` has the "Spoke" tools
 
 If you don't use the prefix, you will get a `command not found: crystal` error, even though the file is right there in the project.
@@ -283,4 +283,54 @@ nix develop . --command cd ui && elm-format src/
 nix develop . --command cd ui && elm make src/Main.elm 2>&1 | head -50
 ```
 
+## Crystal Versioning & Platform Compatibility
+
+### Crystal 1.18.2 Requirement
+
+This project requires **Crystal 1.18.2** for FreeBSD compatibility. The Athena framework dependency requires this specific version.
+
+**Why 1.18.2?**
+- FreeBSD's package system only has Crystal 1.18.2 available
+- Athena framework v0.21.x is compatible with Crystal 1.18.x
+- Crystal 1.19.x deprecates `Time.monotonic` (warnings only, still compiles)
+
+**GitHub Actions Configuration:**
+- Must use `crystal: 1.18.2` (not `latest`) in all workflow files
+- Both `crystal-lang/install-crystal@v1` and `crystal-lang/setup-crystal@v2` support version pinning
+- CI jobs for Ubuntu, macOS, and tests.yml all use 1.18.2
+
+### Platform-Specific Crystal Handling
+
+| Platform | Installation | Makefile Behavior |
+|----------|--------------|-------------------|
+| Linux | `crystal-lang/install-crystal@v1` with version | Downloads from official tarball |
+| macOS | Homebrew or GitHub Action | Uses `which crystal` (system-installed) |
+| FreeBSD | `pkg install crystal` | Uses system Crystal directly |
+
+**macOS-specific fix:**
+- The Makefile previously tried to download Crystal from source on macOS
+- This failed because `CRYSTAL_TARBALL` and `CRYSTAL_URL` were undefined
+- Solution: macOS now uses system-installed Crystal via `which crystal`
+- CI macOS job uses `crystal-lang/install-crystal@v1` to install to PATH
+
+### Time.monotonic Deprecation
+
+Crystal 1.19.x warns about `Time.monotonic` deprecation, recommending `Time.instant` instead:
+
+```
+Warning: Deprecated Time.monotonic. Use `Time.instant` instead.
+```
+
+**Current policy:** Keep `Time.monotonic` for FreeBSD compatibility. The warnings are harmless and the code compiles and runs correctly on all platforms.
+
+**If FreeBSD support is dropped in the future**, migrate to `Time.instant`:
+```crystal
+# Before
+start_time = Time.monotonic
+elapsed = (Time.monotonic - start_time).total_seconds
+
+# After
+start_time = Time.instant
+elapsed = (Time.instant - start_time).total_seconds
+```
 
