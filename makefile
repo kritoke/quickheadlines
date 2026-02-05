@@ -141,22 +141,29 @@ download-crystal:
 # Check for required dependencies
 check-deps:
 	@echo "Checking dependencies..."
-	@if [ ! -x "$(CRYSTAL)" ]; then \
-		if [ "$(OS_NAME)" = "freebsd" ]; then \
-			echo "Crystal compiler not found, building Crystal $(CRYSTAL_VERSION) from source..."; \
-			$(MAKE) download-crystal; \
-		elif [ "$(OS_NAME)" = "macos" ]; then \
-			echo "❌ Error: Crystal compiler not found"; \
-			echo ""; \
-			echo "Install Crystal on macOS:"; \
-			echo "  brew install crystal"; \
-			exit 1; \
-		else \
-			echo "Crystal compiler not found, downloading..."; \
-			$(MAKE) download-crystal; \
-		fi; \
+	@# First check for system-installed Crystal (GitHub Actions, Homebrew, etc.)
+	@SYSTEM_CRYSTAL=$$(which crystal 2>/dev/null || echo ""); \
+	if [ -n "$$SYSTEM_CRYSTAL" ] && [ -x "$$SYSTEM_CRYSTAL" ]; then \
+		echo "Found system Crystal: $$SYSTEM_CRYSTAL"; \
+	elif [ -x "$(CRYSTAL)" ]; then \
+		echo "Found project Crystal: $(CRYSTAL)"; \
+	elif [ "$(OS_NAME)" = "freebsd" ]; then \
+		echo "Crystal compiler not found, building Crystal $(CRYSTAL_VERSION) from source..."; \
+		$(MAKE) download-crystal; \
+	elif [ "$(OS_NAME)" = "macos" ]; then \
+		echo "❌ Error: Crystal compiler not found"; \
+		echo ""; \
+		echo "Install Crystal on macOS:"; \
+		echo "  brew install crystal"; \
+		exit 1; \
+	else \
+		echo "Crystal compiler not found, downloading..."; \
+		$(MAKE) download-crystal; \
 	fi
-	@echo "✓ Crystal compiler: $$($(CRYSTAL) --version)"
+	@# Use system crystal if available, otherwise fall back to CRYSTAL variable
+	@SYSTEM_CRYSTAL=$$(which crystal 2>/dev/null || echo ""); \
+	FINAL_CRYSTAL=$$(if [ -n "$$SYSTEM_CRYSTAL" ] && [ -x "$$SYSTEM_CRYSTAL" ]; then echo "$$SYSTEM_CRYSTAL"; else echo "$(CRYSTAL)"; fi); \
+	echo "✓ Crystal compiler: $$($$FINAL_CRYSTAL --version)"
 	@if [ "$(OS_NAME)" = "freebsd" ] || ([ "$(OS_NAME)" = "linux" ] && [ "$(ARCH_NAME)" = "aarch64" ]); then \
 		if [ -f "public/elm.js" ]; then \
 			echo "✓ Using pre-compiled public/elm.js"; \
@@ -369,18 +376,21 @@ test-frontend:
 
 # --- Crystal Tasks ---
 
+# Determine Crystal binary - prefer system crystal if available
+FINAL_CRYSTAL := $(shell if command -v crystal >/dev/null 2>&1; then echo "crystal"; else echo "$(CRYSTAL)"; fi)
+
 # 6. Build Release Binary (no embedding needed)
 build: check-deps elm-build
 	@echo "Compiling release binary for $(OS_NAME)-$(ARCH_NAME)..."
 	@mkdir -p bin
 	@echo "Note: elm.js is served from disk with GitHub fallback"
-	APP_ENV=production $(CRYSTAL) build --release --no-debug $(CRYSTAL_BUILD_OPTS) src/quickheadlines.cr -o bin/$(NAME)
+	APP_ENV=production $(FINAL_CRYSTAL) build --release --no-debug $(CRYSTAL_BUILD_OPTS) src/quickheadlines.cr -o bin/$(NAME)
 
 # 6.5 Build with specific OS/Arch naming for GitHub Releases
 build-release: check-deps elm-build
 	@echo "Compiling release binary: bin/$(NAME)-$(BUILD_REV)-$(OS_NAME)-$(ARCH_NAME)"
 	@mkdir -p bin
-	APP_ENV=production $(CRYSTAL) build --release --no-debug $(CRYSTAL_BUILD_OPTS) -Dversion=$(BUILD_REV) src/quickheadlines.cr -o bin/$(NAME)-$(BUILD_REV)-$(OS_NAME)-$(ARCH_NAME)
+	APP_ENV=production $(FINAL_CRYSTAL) build --release --no-debug $(CRYSTAL_BUILD_OPTS) -Dversion=$(BUILD_REV) src/quickheadlines.cr -o bin/$(NAME)-$(BUILD_REV)-$(OS_NAME)-$(ARCH_NAME)
 
 # 7. Run in Development Mode
 run: check-deps
@@ -390,7 +400,7 @@ run: check-deps
 		$(MAKE) elm-land-build; \
 	fi
 	@echo "Starting server in development mode..."
-	APP_ENV=development $(CRYSTAL) run src/quickheadlines.cr -- config=feeds.yml
+	APP_ENV=development $(FINAL_CRYSTAL) run src/quickheadlines.cr -- config=feeds.yml
 
 clean:
 	rm -rf bin
