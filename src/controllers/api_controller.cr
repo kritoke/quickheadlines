@@ -276,11 +276,13 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
   # GET /api/timeline - Get timeline items
   @[ARTA::Get(path: "/api/timeline")]
   def timeline(request : ATH::Request) : TimelinePageResponse
-    limit = request.query_params["limit"]?.try(&.to_i?) || 35
+    default_limit = STATE.config.try(&.db_fetch_limit) || 500
+    default_days = (STATE.config.try(&.cache_retention_hours) || 168) / 24
+    limit = request.query_params["limit"]?.try(&.to_i?) || default_limit
     offset = request.query_params["offset"]?.try(&.to_i?) || 0
-    days = request.query_params["days"]?.try(&.to_i?) || 7
+    days = request.query_params["days"]?.try(&.to_i?) || default_days.to_i32
 
-    # Query database directly for items from the last N days
+    # Query database directly for items - use days from config if not specified
     db_items = @db_service.get_timeline_items(limit, offset, days)
 
     total_count = @db_service.count_timeline_items(days)
@@ -803,15 +805,16 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
         cache = FeedCache.instance
         db = cache.db
         
-        uncategorized_items = [] of {id: Int64, title: String, link: String, pub_date: Time?}
-        db.query("SELECT id, title, link, pub_date FROM items WHERE cluster_id IS NULL OR cluster_id = id ORDER BY pub_date DESC LIMIT 5000") do |rows|
+        uncategorized_items = [] of {id: Int64, title: String, link: String, pub_date: Time?, feed_id: Int64}
+        db.query("SELECT id, title, link, pub_date, feed_id FROM items WHERE cluster_id IS NULL OR cluster_id = id ORDER BY pub_date DESC LIMIT 5000") do |rows|
           rows.each do
             id = rows.read(Int64)
             title = rows.read(String)
             link = rows.read(String)
             pub_date_str = rows.read(String?)
+            feed_id = rows.read(Int64)
             pub_date = pub_date_str.try { |str| Time.parse(str, "%Y-%m-%d %H:%M:%S", Time::Location::UTC) }
-            uncategorized_items << {id: id, title: title, link: link, pub_date: pub_date}
+            uncategorized_items << {id: id, title: title, link: link, pub_date: pub_date, feed_id: feed_id}
           end
         end
         
@@ -824,7 +827,7 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
             if item[:title].empty?
               next
             end
-            result = compute_cluster_for_item(item[:id], item[:title])
+            result = compute_cluster_for_item(item[:id], item[:title], item[:feed_id])
             clustered_count += 1
             if clustered_count % 50 == 0
               STDERR.puts "[#{Time.local}] Processed #{clustered_count} items..."
@@ -856,15 +859,16 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
         # Now trigger clustering on all items
         db = cache.db
         
-        all_items = [] of {id: Int64, title: String, link: String, pub_date: Time?}
-        db.query("SELECT id, title, link, pub_date FROM items ORDER BY pub_date DESC LIMIT 5000") do |rows|
+        all_items = [] of {id: Int64, title: String, link: String, pub_date: Time?, feed_id: Int64}
+        db.query("SELECT id, title, link, pub_date, feed_id FROM items ORDER BY pub_date DESC LIMIT 5000") do |rows|
           rows.each do
             id = rows.read(Int64)
             title = rows.read(String)
             link = rows.read(String)
             pub_date_str = rows.read(String?)
+            feed_id = rows.read(Int64)
             pub_date = pub_date_str.try { |str| Time.parse(str, "%Y-%m-%d %H:%M:%S", Time::Location::UTC) }
-            all_items << {id: id, title: title, link: link, pub_date: pub_date}
+            all_items << {id: id, title: title, link: link, pub_date: pub_date, feed_id: feed_id}
           end
         end
         
@@ -877,7 +881,7 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
             if item[:title].empty?
               next
             end
-            result = compute_cluster_for_item(item[:id], item[:title])
+            result = compute_cluster_for_item(item[:id], item[:title], item[:feed_id])
             clustered_count += 1
             if clustered_count % 50 == 0
               STDERR.puts "[#{Time.local}] Processed #{clustered_count} items..."

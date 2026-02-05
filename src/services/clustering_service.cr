@@ -151,7 +151,7 @@ class Quickheadlines::Services::ClusteringService
   def initialize(@db : DB::Database)
   end
 
-  def compute_cluster_for_item(item_id : Int64, title : String, cache : FeedCache) : Int64?
+  def compute_cluster_for_item(item_id : Int64, title : String, cache : FeedCache, item_feed_id : Int64? = nil) : Int64?
     return nil if title.empty?
     return nil if ClusteringUtilities.word_count(title) < ClusteringUtilities::MIN_WORDS_FOR_CLUSTERING
 
@@ -178,6 +178,7 @@ class Quickheadlines::Services::ClusteringService
     best_match = nil
     best_similarity = 0.0_f64
     best_title = ""
+    best_feed_id = nil
 
     candidates.each do |candidate_id|
       next if candidate_id == item_id
@@ -185,11 +186,18 @@ class Quickheadlines::Services::ClusteringService
       candidate_signature = cache.get_item_signature(candidate_id)
       next unless candidate_signature
 
+      # Skip if candidate is from the same feed (likely a duplicate)
+      candidate_feed_id = cache.get_item_feed_id(candidate_id)
+      if item_feed_id && candidate_feed_id == item_feed_id
+        next
+      end
+
       similarity = LexisMinhash::Engine.similarity(signature, candidate_signature)
       if similarity > best_similarity
         best_similarity = similarity
         best_match = candidate_id
         best_title = cache.get_item_title(candidate_id) || ""
+        best_feed_id = candidate_feed_id
       end
     end
 

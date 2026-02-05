@@ -680,10 +680,10 @@ def async_clustering(feeds : Array(FeedData))
 end
 
 # Compute cluster assignment for a single item
-def compute_cluster_for_item(item_id : Int64, title : String) : Int64?
+def compute_cluster_for_item(item_id : Int64, title : String, item_feed_id : Int64? = nil) : Int64?
   cache = FeedCache.instance
   service = clustering_service
-  service.compute_cluster_for_item(item_id, title, cache)
+  service.compute_cluster_for_item(item_id, title, cache, item_feed_id)
 end
 
 # Process clustering for all items in a feed
@@ -692,6 +692,9 @@ def process_feed_item_clustering(feed_data : FeedData) : Nil
 
   cache = FeedCache.instance
 
+  # Get feed_id for this feed
+  feed_id = cache.get_feed_id(feed_data.url)
+
   # Process each item
   feed_data.items.each do |item|
     # Get the item_id from the database
@@ -699,8 +702,8 @@ def process_feed_item_clustering(feed_data : FeedData) : Nil
 
     next unless item_id
 
-    # Compute and assign cluster
-    compute_cluster_for_item(item_id, item.title)
+    # Compute and assign cluster (pass feed_id to skip same-feed duplicates)
+    compute_cluster_for_item(item_id, item.title, feed_id)
   end
 end
 

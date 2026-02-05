@@ -81,7 +81,7 @@ init : Flags -> Url.Url -> Nav.Key -> ( Model, Cmd Msg )
 init flags url key =
     let
         zone =
-            Time.utc
+            Time.customZone -360 []
 
         shared =
             Shared.init flags.width flags.height flags.prefersDark (Time.millisToPosix (flags.timestamp * 1000)) zone flags.savedTab

@@ -1255,6 +1255,28 @@ class FeedCache
     end
   end
 
+  # Get item feed_id by ID (for clustering - skip same-feed candidates)
+  def get_item_feed_id(item_id : Int64) : Int64?
+    @mutex.synchronize do
+      @db.query_one?(
+        "SELECT feed_id FROM items WHERE id = ?",
+        item_id,
+        as: Int64
+      )
+    end
+  end
+
+  # Get feed_id by URL (for clustering)
+  def get_feed_id(feed_url : String) : Int64?
+    @mutex.synchronize do
+      @db.query_one?(
+        "SELECT id FROM feeds WHERE url = ?",
+        feed_url,
+        as: Int64
+      )
+    end
+  end
+
   # Public getter for database (for cluster queries)
   def db : DB::Database
     @db

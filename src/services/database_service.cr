@@ -165,14 +165,20 @@ class DatabaseService
   end
 
   # Get timeline items from the last N days with cluster information
-  def get_timeline_items(limit : Int32, offset : Int32, days_back : Int32 = 7) : Array({id: Int64, title: String, link: String, pub_date: Time?, feed_title: String, feed_url: String, feed_link: String, favicon: String?, header_color: String?, cluster_id: Int64?, is_representative: Bool, cluster_size: Int32})
+  def get_timeline_items(limit : Int32, offset : Int32, days_back : Int32?) : Array({id: Int64, title: String, link: String, pub_date: Time?, feed_title: String, feed_url: String, feed_link: String, favicon: String?, header_color: String?, cluster_id: Int64?, is_representative: Bool, cluster_size: Int32})
+
     items = [] of {id: Int64, title: String, link: String, pub_date: Time?, feed_title: String, feed_url: String, feed_link: String, favicon: String?, header_color: String?, cluster_id: Int64?, is_representative: Bool, cluster_size: Int32}
 
-    cutoff_date = Time.local - days_back.days
+    cutoff_clause = days_back ? "AND i.pub_date >= ?" : ""
 
-    # Order rows deterministically: prefer pub_date (newest first), but
-    # coalesce NULL pub_date to the epoch so they sort last. Use id as a
-    # tiebreaker to ensure stable ordering when pub_date values are equal.
+    where_clause = <<-SQL
+      FROM items i
+      JOIN feeds f ON i.feed_id = f.id
+      #{cutoff_clause}
+      ORDER BY COALESCE(i.pub_date, '1970-01-01 00:00:00') DESC, i.id DESC
+      LIMIT ? OFFSET ?
+      SQL
+
     query = <<-SQL
       SELECT
         i.id,
@@ -187,14 +193,12 @@ class DatabaseService
         i.cluster_id,
         CASE WHEN i.id = (SELECT MIN(id) FROM items WHERE cluster_id = i.cluster_id AND cluster_id IS NOT NULL) THEN 1 ELSE 0 END as is_representative,
         (SELECT COUNT(*) FROM items WHERE cluster_id = i.cluster_id AND cluster_id IS NOT NULL) as cluster_size
-      FROM items i
-      JOIN feeds f ON i.feed_id = f.id
-      WHERE i.pub_date >= ?
-      ORDER BY COALESCE(i.pub_date, '1970-01-01 00:00:00') DESC, i.id DESC
-      LIMIT ? OFFSET ?
+      #{where_clause}
       SQL
 
-    @db.query(query, cutoff_date, limit, offset) do |rows|
+    query_args = days_back ? [Time.local - days_back.days, limit, offset] : [limit, offset]
+
+    @db.query(query, args: query_args) do |rows|
       rows.each do
         id = rows.read(Int64)
         title = rows.read(String)
@@ -231,10 +235,13 @@ class DatabaseService
     items
   end
 
-  # Count total timeline items in date range
-  def count_timeline_items(days_back : Int32 = 7) : Int32
-    cutoff_date = Time.local - days_back.days
-
-    @db.query_one("SELECT COUNT(*) FROM items WHERE pub_date >= ?", cutoff_date, as: Int32)
+  # Count total timeline items in date range (nil days_back = no limit)
+  def count_timeline_items(days_back : Int32?) : Int32
+    if days_back
+      cutoff_date = Time.local - days_back.days
+      @db.query_one("SELECT COUNT(*) FROM items WHERE pub_date >= ?", cutoff_date, as: Int32)
+    else
+      @db.query_one("SELECT COUNT(*) FROM items", as: Int32)
+    end
   end
 end

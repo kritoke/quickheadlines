@@ -148,8 +148,10 @@ update shared msg model =
                 newItemsFromResponse =
                     response.items |> List.filter (\it -> not (Set.member it.id existingIds))
 
+                -- Append new items to existing - backend returns already sorted items
+                -- No resort needed to avoid scroll position jumps
                 newItems =
-                    Api.sortTimelineItems (model.items ++ newItemsFromResponse)
+                    model.items ++ newItemsFromResponse
 
                 newClusters =
                     clusterItemsFromTimeline newItems
@@ -178,7 +180,7 @@ update shared msg model =
 
         LoadMore ->
             ( { model | loadingMore = True }
-            , fetchTimeline 35 model.offset GotMoreTimeline
+            , fetchTimeline 500 model.offset GotMoreTimeline
             )
 
         ClearInserted ->
@@ -192,7 +194,7 @@ update shared msg model =
             in
             if nearBottom && model.hasMore && not model.loadingMore && not model.loading then
                 ( { newModel | loadingMore = True }
-                , fetchTimeline 35 model.offset GotMoreTimeline
+                , fetchTimeline 500 model.offset GotMoreTimeline
                 )
 
             else
@@ -337,14 +339,51 @@ type alias DayClusterGroup =
 groupClustersByDay : Zone -> Posix -> List Cluster -> List DayClusterGroup
 groupClustersByDay zone now clusters =
     let
-        -- Keep API order (items already sorted by pub_date DESC in backend)
+        -- API returns newest -> oldest, preserve that order
         sortedClusters =
             clusters
 
         groups =
             groupClustersByDayHelp zone [] sortedClusters
+
+        monthToInt : Time.Month -> Int
+        monthToInt m =
+            case m of
+                Time.Jan -> 1
+                Time.Feb -> 2
+                Time.Mar -> 3
+                Time.Apr -> 4
+                Time.May -> 5
+                Time.Jun -> 6
+                Time.Jul -> 7
+                Time.Aug -> 8
+                Time.Sep -> 9
+                Time.Oct -> 10
+                Time.Nov -> 11
+                Time.Dec -> 12
+
+        -- Sort days: newest day first
+        sortedGroups =
+            List.sortWith
+                (\( ( y1, m1, d1 ), _ ) ( ( y2, m2, d2 ), _ ) ->
+                    if y1 == y2 then
+                        if m1 == m2 then
+                            Basics.compare d2 d1
+                        else
+                            Basics.compare (monthToInt m2) (monthToInt m1)
+                    else
+                        Basics.compare y2 y1
+                )
+                groups
     in
-    List.map (\( key, dayClusters ) -> { date = getClusterDateFromKey zone key dayClusters, clusters = dayClusters }) (List.reverse groups)
+    -- Keep clusters within each day in API order (newest -> oldest), reverse each day's clusters to match
+    List.map
+        (\( key, dayClusters ) ->
+            { date = getClusterDateFromKey zone key dayClusters
+            , clusters = List.reverse dayClusters
+            }
+        )
+        sortedGroups
 
 
 groupClustersByDayHelp : Zone -> List ( ( Int, Time.Month, Int ), List Cluster ) -> List Cluster -> List ( ( Int, Time.Month, Int ), List Cluster )
