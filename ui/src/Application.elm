@@ -383,9 +383,23 @@ homeIconView model target =
                 , HA.style "height" "28px"
                 ]
                 []
+
+        breakpoint =
+            Responsive.breakpointFromWidth model.shared.windowWidth
+
+        iconPadding =
+            case breakpoint of
+                VeryNarrowBreakpoint ->
+                    4
+
+                MobileBreakpoint ->
+                    6
+
+                _ ->
+                    10
     in
     Element.el
-        [ Element.padding 10
+        [ Element.padding iconPadding
         , Border.widthEach { bottom = if isActive then 2 else 0, left = 0, right = 0, top = 0 }
         , Border.color lumeOrange
         , Element.mouseOver [ Font.color lumeOrange ]
@@ -417,9 +431,23 @@ timelineIconView model target =
                 , HA.style "height" "28px"
                 ]
                 []
+
+        breakpoint =
+            Responsive.breakpointFromWidth model.shared.windowWidth
+
+        iconPadding =
+            case breakpoint of
+                VeryNarrowBreakpoint ->
+                    4
+
+                MobileBreakpoint ->
+                    6
+
+                _ ->
+                    10
     in
     Element.el
-        [ Element.padding 10
+        [ Element.padding iconPadding
         , Border.widthEach { bottom = if isActive then 2 else 0, left = 0, right = 0, top = 0 }
         , Border.color lumeOrange
         , Element.mouseOver [ Font.color lumeOrange ]
