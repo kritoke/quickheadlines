@@ -334,3 +334,23 @@ start_time = Time.instant
 elapsed = (Time.instant - start_time).total_seconds
 ```
 
+### Makefile System Crystal Discovery
+
+**Problem:** GitHub Actions uses `crystal-lang/install-crystal@v1` which installs Crystal to system PATH (`/usr/local/bin/crystal`), but the Makefile only checked for `bin/crystal` and tried to download from source. This failed because `CRYSTAL_TARBALL` and `CRYSTAL_URL` were undefined.
+
+**Solution:** Added system Crystal detection to Makefile:
+```makefile
+FINAL_CRYSTAL := $(shell if command -v crystal >/dev/null 2>&1; then echo "crystal"; else echo "$(CRYSTAL)"; fi)
+```
+
+**Key pattern:**
+- Check `which crystal` or `command -v crystal` first for system-installed Crystal
+- Fall back to project `bin/crystal` only if system Crystal not found
+- This allows GitHub Actions to work without modifying the Makefile per-runner
+
+**Platform precedence:**
+1. Linux CI: Uses system crystal from `crystal-lang/install-crystal`
+2. macOS: Uses system crystal from Homebrew or `crystal-lang/install-crystal`
+3. FreeBSD: Falls back to `download-crystal` if no system crystal
+4. Local development: Uses `bin/crystal` (nix or manually managed)
+
