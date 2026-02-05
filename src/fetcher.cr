@@ -4,6 +4,7 @@ require "./software_fetcher"
 require "./favicon_storage"
 require "./health_monitor"
 require "./config"
+require "./color_extractor"
 require "./services/clustering_service"
 
 # ----- Favicon cache with size limits and expiration -----
@@ -167,7 +168,7 @@ def fetch_favicon_uri(url : String) : String?
             else
               # For non-Google URLs, try the Google fallback
               debug_log("Trying Google fallback for gray placeholder")
-              return nil  # Trigger Google fallback in try_favicon_fallbacks
+              return nil # Trigger Google fallback in try_favicon_fallbacks
             end
           end
 
@@ -175,7 +176,7 @@ def fetch_favicon_uri(url : String) : String?
           # Some servers lie about content-type, so we check magic bytes
           unless valid_image?(memory.to_slice)
             debug_log("Invalid favicon content (not an image): #{current_url}")
-            return nil  # Trigger fallback
+            return nil # Trigger fallback
           end
 
           debug_log("Favicon fetched: #{current_url}, size=#{memory.size}, type=#{content_type}")
@@ -465,6 +466,8 @@ private def handle_success_response(feed : Feed, response : HTTP::Client::Respon
 
   favicon, favicon_data = get_favicon(feed, site_link, parsed[:favicon], previous_data)
 
+  header_color, header_text_color = extract_header_colors(feed, favicon_data)
+
   # Capture caching headers
   etag = response.headers["ETag"]?
   last_modified = response.headers["Last-Modified"]?
@@ -474,7 +477,16 @@ private def handle_success_response(feed : Feed, response : HTTP::Client::Respon
     items = [Item.new("No items found (or unsupported format)", feed.url, nil)]
   end
 
-  FeedData.new(feed.title, feed.url, site_link, feed.header_color, feed.header_text_color, items, etag, last_modified, favicon, favicon_data)
+  FeedData.new(feed.title, feed.url, site_link, header_color, header_text_color, items, etag, last_modified, favicon, favicon_data)
+end
+
+private def extract_header_colors(feed : Feed, favicon_data : String?) : {String?, String?}
+  if favicon_data && favicon_data.starts_with?("/favicons/")
+    result = ColorExtractor.extract_from_favicon(favicon_data, feed.url, feed.header_color)
+    {result[:bg], result[:text]}
+  else
+    {feed.header_color, feed.header_text_color}
+  end
 end
 
 private def error_feed_data(feed : Feed, message : String) : FeedData
@@ -482,6 +494,8 @@ private def error_feed_data(feed : Feed, message : String) : FeedData
 
   # Attempt to fetch favicon even on error
   favicon, favicon_data = get_favicon(feed, site_link, nil, nil)
+
+  header_color, header_text_color = extract_header_colors(feed, favicon_data)
 
   # If all fallbacks failed, use Google favicon service URL directly
   if favicon.nil? && favicon_data.nil?
@@ -492,8 +506,8 @@ private def error_feed_data(feed : Feed, message : String) : FeedData
     feed.title,
     feed.url,
     site_link,
-    feed.header_color,
-    feed.header_text_color,
+    header_color,
+    header_text_color,
     [Item.new(message, feed.url, nil)],
     nil, # etag
     nil, # last_modified

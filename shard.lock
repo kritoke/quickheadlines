@@ -64,3 +64,11 @@ shards:
     git: https://github.com/crystal-lang/crystal-sqlite3.git
     version: 0.19.0
 
+  stumpy_core:
+    git: https://github.com/stumpycr/stumpy_core.git
+    version: 1.9.1
+
+  stumpy_png:
+    git: https://github.com/stumpycr/stumpy_png.git
+    version: 5.0.1
+
