@@ -20,11 +20,25 @@ import Responsive exposing (Breakpoint, breakpointFromWidth, isMobile, isVeryNar
 
 
 parseHexColor : String -> Maybe Element.Color
-parseHexColor hex =
+parseHexColor input =
     let
-        cleanHex =
-            String.replace "#" "" hex
+        cleanInput =
+            String.trim input
     in
+    case cleanInput of
+        _ ->
+            if String.startsWith "#" cleanInput then
+                parseHexClean (String.replace "#" "" cleanInput)
+
+            else if String.startsWith "rgb(" cleanInput then
+                parseRgb cleanInput
+
+            else
+                Nothing
+
+
+parseHexClean : String -> Maybe Element.Color
+parseHexClean cleanHex =
     case String.length cleanHex of
         6 ->
             let
@@ -47,6 +61,28 @@ parseHexColor hex =
                     String.slice 2 3 cleanHex |> (\x -> x ++ x) |> String.toInt |> Maybe.withDefault 0
             in
             Just (rgb255 r g b)
+
+        _ ->
+            Nothing
+
+
+parseRgb : String -> Maybe Element.Color
+parseRgb input =
+    let
+        withoutRgb =
+            String.dropLeft 4 input |> String.dropRight 1
+
+        parts =
+            String.split "," withoutRgb |> List.map String.trim
+    in
+    case parts of
+        [ rStr, gStr, bStr ] ->
+            case ( String.toInt rStr, String.toInt gStr, String.toInt bStr ) of
+                ( Just r, Just g, Just b ) ->
+                    Just (rgb255 r g b)
+
+                _ ->
+                    Nothing
 
         _ ->
             Nothing

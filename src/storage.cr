@@ -457,8 +457,10 @@ class FeedCache
           existing_text_color = @db.query_one?("SELECT header_text_color FROM feeds WHERE id = ?", feed_id, as: {String?})
 
           # Use new color if provided, otherwise keep existing
-          header_color_to_save = (feed_data.header_color.nil? || feed_data.header_color.try(&.empty?) == true) ? existing_color : feed_data.header_color
-          header_text_color_to_save = (feed_data.header_text_color.nil? || feed_data.header_text_color.try(&.empty?) == true) ? existing_text_color : feed_data.header_text_color
+          # Only preserve existing color if feed_data.header_color is nil
+          # Extracted colors should be saved; nil means extraction failed/skipped
+          header_color_to_save = feed_data.header_color.nil? ? existing_color : feed_data.header_color
+          header_text_color_to_save = feed_data.header_text_color.nil? ? existing_text_color : feed_data.header_text_color
 
           @db.exec(
             "UPDATE feeds SET title = ?, site_link = ?, header_color = ?, header_text_color = ?, etag = ?, last_modified = ?, favicon = ?, favicon_data = ?, last_fetched = ? WHERE id = ?",
