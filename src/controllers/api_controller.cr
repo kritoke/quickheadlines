@@ -299,7 +299,7 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
         feed_link: item[:feed_link],
         favicon: item[:favicon],
         header_color: item[:header_color],
-        header_text_color: nil,
+        header_text_color: item[:header_text_color],
         cluster_id: item[:cluster_id].try(&.to_s),
         is_representative: item[:is_representative],
         cluster_size: item[:cluster_size]
