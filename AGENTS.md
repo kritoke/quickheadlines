@@ -164,9 +164,123 @@ The nix develop shell sets these automatically:
 - **Prevent with `overflow-x: hidden`**: Add to `html`, `body`, `#app`, and scroll containers to prevent horizontal overflow
 - **Use `!important`**: `overflow-x: hidden !important` ensures the rule takes precedence over other CSS
 
+### Clustering System
+
+- **How it works**: Uses MinHash/LSH (Locality Sensitive Hashing) for efficient similarity detection
+  - MinHash computes signatures that preserve Jaccard similarity
+  - LSH bands bucket similar signatures for fast candidate retrieval
+  - Threshold: 0.75 similarity score required to cluster
+  - Minimum 5 words required for clustering eligibility
+
+- **Same-feed duplicate prevention**: Critical to skip candidates from the same feed
+  - Without this, identical articles from re-fetches get clustered together
+  - Pass `feed_id` to `compute_cluster_for_item` and skip if candidate has same feed_id
+  - Added `get_item_feed_id` and `get_feed_id` methods to storage.cr
+
+- **Database schema**:
+  - `items.cluster_id` - Points to representative item ID (or self if singleton)
+  - Representative = lowest ID in cluster (deterministic)
+  - `lsh_bands` table - Stores band hashes for LSH lookups
+  - `item_signatures` table - Stores MinHash signatures
+
+- **Clustering verification query**:
+  ```sql
+  SELECT cluster_id, COUNT(*) as cnt FROM items GROUP BY cluster_id HAVING cnt > 1
+  ```
+
+### Timeline & Sorting
+
+- **Timezone handling**: Elm frontend uses `Time.customZone -360 []` for US Central (CST/CDT)
+  - Change in `ui/src/Application.elm:84`
+  - Times stored as UTC in DB, displayed in user's timezone
+
+- **Day grouping**: Elm groups items by date, displays newest day first
+  - `groupClustersByDay` in Timeline.elm sorts days newest-first
+  - Items within each day sorted newest-first
+
+- **Infinite scroll pagination**:
+  - Initial load: 35 items (fast page load)
+  - Load More: 500 items per batch
+  - Default timeline window: 14 days (`cache_retention_hours: 336` in feeds.yml)
+  - NO resort on merge - prevents scroll position jumps
+  - Backend returns already-sorted items (pub_date DESC, id DESC)
+
+- **Common issues**:
+  - Items split across pages = clusters appear incomplete
+  - Increase `cache_retention_hours` or `db_fetch_limit` to see more clusters
+  - `?limit=1000` query param overrides defaults
+
 ### When NOT to Fix
 
 - Leave working features alone. If color thief produces readable results, don't override it with aggressive fixes
 - Simple is better. Over-engineering causes new bugs (like breaking previously working colors)
+
+### Elm UI Styling Best Practices
+
+- **Keep styles in Elm**: Use Elm UI attributes for all styling (Background, Font, Border, padding). This avoids CSS specificity wars and keeps styles theme-aware.
+- **Minimal CSS**: Only use CSS for `@font-face`, scrollbar styling, and pseudo-elements that Elm can't express. Everything else belongs in Elm.
+- **Avoid `htmlAttribute (HA.style ...)` for core styles**: Use dedicated Elm attributes (e.g., `Background.color`, `Border.rounded`) instead of inline style strings. This keeps styles centralized and themeable.
+- **Theme tokens over hardcoded values**: Add tokens to `Theme.elm` for colors, surfaces, and backgrounds. This ensures dark/light mode consistency without scattered conditionals.
+
+### Typography Helpers Pattern
+
+- **Centralized responsive typography**: Create helper functions in `ThemeTypography.elm` (e.g., `hero`, `dayHeader`) that return responsive font attributes based on `Breakpoint`.
+- **Pattern example**:
+  ```elm
+  hero : Breakpoint -> List (Attribute msg)
+  hero breakpoint =
+      let
+          size =
+              case breakpoint of
+                  VeryNarrowBreakpoint -> 20
+                  MobileBreakpoint -> 20
+                  TabletBreakpoint -> 28
+                  DesktopBreakpoint -> 36
+      in
+      [ Font.size size, Font.semiBold, Font.letterSpacing 0.6 ]
+  ```
+- **Use `Ty.hero breakpoint` in views**: Pass the current breakpoint to get the right size. Keeps all size logic in one place.
+
+### Visual Regression Testing
+
+- **Snapshot tests fail on UI changes**: When modifying styles, visual regression tests (`timeline-favicon.spec.ts`) will fail with pixel differences. This is expected.
+- **Update snapshots after design changes**:
+  ```bash
+  npx playwright test --update-snapshots
+  ```
+- **Commit snapshots**: Always commit updated snapshot files with the design change so tests pass for future commits.
+- **Minor pixel differences are OK**: Small height/width changes (8-16px) are normal when adding padding or changing fonts. Update snapshots rather than debugging pixel-perfect matches.
+
+### Font Integration
+
+- **Self-host variable fonts**: Download WOFF2 files to `public/fonts/` and serve locally. This avoids CDN dependencies and ensures offline support.
+- **Pattern for adding fonts**:
+  1. Download font to `public/fonts/<name>.woff2`
+  2. Add `@font-face` in `views/index.html` `<style>` block
+  3. Use in Elm: `Font.family [ Font.name "Font Name", Font.system ]`
+- **Variable fonts simplify weights**: Use `font-weight: 100 900` in CSS and `Font.semiBold` (600) in Elm for clean weight handling.
+- **Font fallback stack**: Always include system fonts after custom fonts: `Font.family [ Font.name "Inter var", Font.system ]` where `Font.system` expands to `-apple-system, BlinkMacSystemFont, ...`
+
+### OpenSpec Workflow Notes
+
+- **Change creation**: Use `openspec new change "name"` to create change directory with proposal/design/specs/tasks.
+- **Manual spec sync**: When `openspec archive` times out or fails, manually copy spec files:
+  ```bash
+  cp openspec/changes/<change>/specs/<cap>/spec.md openspec/specs/<cap>/spec.md
+  ```
+- **Tasks tracking**: Tasks.md uses `- [ ] 1.1 Description` format. Check off as you complete. OpenSpec reads this format during verification.
+
+### Quick Reference for Elm Changes
+
+```bash
+# Rebuild Elm after changes
+nix develop . --command cd ui && elm make src/Main.elm --output=../public/elm.js
+
+# Format Elm code
+nix develop . --command cd ui && elm-format src/
+
+# Check Elm compiler errors
+nix develop . --command cd ui && elm make src/Main.elm 2>&1 | head -50
+```
 
 
