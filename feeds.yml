@@ -254,12 +254,8 @@ tabs:
         url: "https://www.caranddriver.com/rss/all.xml"
       - title: "Car Scoops"
         url: "https://www.carscoops.com/feed/"
-      - title: "Autoblog"
-        url: "https://www.autoblog.com/rss.xml"
       - title: "InsideEVs"
         url: "https://insideevs.com/feed/"
       - title: "Electrek"
         url: "https://electrek.co/feed/"
-      - title: "Top Gear"
-        url: "https://www.topgear.com/feed"
 
