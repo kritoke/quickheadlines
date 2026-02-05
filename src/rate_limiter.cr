@@ -3,7 +3,7 @@ require "mutex"
 
 module Quickheadlines
   module RateLimiting
-    struct RateLimitInfo
+    class RateLimitInfo
       property request_count : Int32
       property window_start : Time
       property category : String
@@ -72,7 +72,7 @@ module Quickheadlines
       end
 
       def should_rate_limit?(ip : String, category : String) : Bool
-        !check_limit(ip, category).first
+        !check_limit(ip, category)[:allowed]
       end
 
       def stop
@@ -139,11 +139,17 @@ module Quickheadlines
       end
 
       def self.limit(category : String) : Int32
-        @@custom_limits.try(&.[category]) || DEFAULT_LIMITS[category]
+        if limits = @@custom_limits
+          return limits[category] if limits.has_key?(category)
+        end
+        DEFAULT_LIMITS[category]
       end
 
       def self.window_size(category : String) : Time::Span
-        @@custom_windows.try(&.[category]) || DEFAULT_WINDOWS[category]
+        if windows = @@custom_windows
+          return windows[category] if windows.has_key?(category)
+        end
+        DEFAULT_WINDOWS[category]
       end
 
       def self.get_category(endpoint : String) : String
