@@ -3,11 +3,31 @@ require "uri"
 
 # ----- HTTP client pooling and concurrency control -----
 
-# ----- HTTP client pooling and concurrency control -----
+# Debug mode helper - only logs if debug is enabled
+def debug_log(message : String) : Nil
+  if config = STATE.config
+    if config.debug
+      STDOUT.puts "[DEBUG] #{message}"
+    end
+  end
+end
+
+# Try HTTPS first for HTTP URLs (upgrades URLs for security)
+def try_https_first(url : String) : String
+  if url.starts_with?("http://")
+    https_url = "https://" + url[7..-1]
+    debug_log("Trying HTTPS first for: #{https_url}")
+    https_url
+  else
+    url
+  end
+end
 
 # Create HTTP client with optional configuration from STATE.config
 def create_client(url : String) : HTTP::Client
-  uri = URI.parse(url)
+  # Try HTTPS first for HTTP URLs
+  uri_url = try_https_first(url)
+  uri = URI.parse(uri_url)
   client = HTTP::Client.new(uri)
   client.compress = true
 

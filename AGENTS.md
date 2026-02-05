@@ -354,3 +354,141 @@ FINAL_CRYSTAL := $(shell if command -v crystal >/dev/null 2>&1; then echo "cryst
 3. FreeBSD: Falls back to `download-crystal` if no system crystal
 4. Local development: Uses `bin/crystal` (nix or manually managed)
 
+## Debug Mode & Favicon Troubleshooting
+
+### Enabling Debug Mode
+
+Add `debug: true` to your `feeds.yml` config file to enable verbose logging:
+
+```yaml
+refresh_minutes: 30
+debug: true  # Enable verbose debug logging
+item_limit: 20
+...
+```
+
+Debug mode outputs detailed information about:
+- Favicon fetching attempts and successes
+- Redirect chains for feeds and favicons
+- HTTP status codes (404, 403, etc.)
+- Fallback chain usage (HTML parsing, Google favicon service)
+- Cache hits and misses
+
+### Testing Debug Mode
+
+```bash
+# Clear stale cache before testing
+rm -rf ~/.cache/quickheadlines/feed_cache.db*
+
+# Start server with debug mode
+nix develop . --command make run
+
+# In another terminal, check feeds with favicons
+curl -s "http://127.0.0.1:8080/api/feeds" | python3 -c "
+import json, sys
+data = json.load(sys.stdin)
+for feed in data.get('feeds', []):
+    title = feed.get('title', '')
+    fav = feed.get('favicon', 'MISSING')
+    print(f'{title}: favicon={fav}')
+"
+```
+
+### Favicon Fetching Debug Output
+
+When debug mode is enabled, you'll see output like:
+```
+[DEBUG] Fetching favicon: https://www.google.com/s2/favicons?domain=www.nasa.gov&sz=64
+[DEBUG] Favicon redirect 1: https://www.nasa.gov/favicon.ico
+[DEBUG] Favicon fetched: https://www.nasa.gov/favicon.ico, size=4286, type=image/x-icon
+[DEBUG] Favicon saved: /favicons/725ba8bbaf1ef9bd.ico
+[DEBUG] Google fallback for: https://www.nasa.gov/rss/dyn/breaking_news.rss
+```
+
+### Common Favicon Issues
+
+| Issue | Cause | Solution |
+|-------|-------|----------|
+| Favicon shows 404 in browser | Stale database cache | `rm -rf ~/.cache/quickheadlines/feed_cache.db*` |
+| Favicon missing from UI | Feed redirect changed URL hash | Refresh feed to re-fetch favicon |
+| Gray/fallback icon displayed | All fetching methods failed | Check debug output for network errors |
+| Favicon file exists but 404 | Server serving from wrong directory | Ensure running from project root |
+| 198-byte gray placeholder | Site returns "not found" icon | System auto-retries with larger Google favicon (256px) |
+| Feed returns bot protection | Site blocks automated access | May need manual favicon or feed removal |
+
+### Gray Placeholder Detection
+
+The system detects 198-byte favicon files (the common "not found" size from both sites and Google's service) and automatically:
+1. Skips saving the gray placeholder
+2. For Google favicon URLs: retries with larger size (256px instead of 64px)
+3. For direct site favicons: triggers Google fallback
+
+### Sites That Block Favicon Fetching
+
+Some sites use bot protection that blocks favicon extraction:
+- **AI News** (artificialintelligence-news.com): Returns bot protection page
+- **OpenAI** (openai.com): Blocks HTML parsing with 403
+- **Science.org**: Blocks HTML parsing with 403
+- **ItsFOSS**: Blocks HTML parsing with 403
+
+For these sites, the Google fallback will still work but may return generic icons.
+
+### HTTPS First for HTTP URLs
+
+The codebase now automatically upgrades HTTP URLs to HTTPS for security:
+
+```yaml
+# Before (HTTP)
+- url: "http://example.com/feed"
+
+# After (automatic upgrade)
+# The system tries https://example.com/feed first
+# Falls back to http:// only if HTTPS fails
+```
+
+This applies to:
+- Feed URL fetching
+- Favicon URL fetching
+- HTML parsing for favicon links
+
+### Checking Favicon Status
+
+```bash
+# Check if a specific favicon is serving
+curl -I "http://127.0.0.1:8080/favicons/<hash>.png"
+
+# Verify all favicons from feeds
+bash scripts/check_favicons.sh
+
+# Check feeds.json for missing favicons
+curl -s "http://127.0.0.1:8080/api/feeds" | grep -o '"favicon":"[^"]*"' | sort | uniq -c
+```
+
+### Debugging Missing Favicons
+
+1. Enable debug mode in feeds.yml
+2. Clear cache: `rm -rf ~/.cache/quickheadlines/feed_cache.db*`
+3. Restart server
+4. Watch console output for favicon fetch attempts
+5. Check if the feed's site_link is accessible
+6. Verify the site's homepage has a favicon link tag
+
+```bash
+# Test if a site's homepage returns a favicon
+curl -s "https://www.nasa.gov/" | grep -i "link.*icon"
+curl -sI "https://www.nasa.gov/favicon.ico"
+```
+
+### Code Quality Tools
+
+```bash
+# Run Ameba linter (auto-fix issues)
+nix develop . --command ameba --fix
+
+# Check formatting only
+nix develop . --command crystal tool format --check src/
+
+# Run unreachable code check
+nix develop . --command crystal tool unreachable src/quickheadlines.cr
+```
+

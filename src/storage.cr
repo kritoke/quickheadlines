@@ -656,25 +656,25 @@ class FeedCache
           pub_date_str = rows.read(String?)
           version = rows.read(String?)
 
-           pub_date = pub_date_str.try { |date_str| Time.parse(date_str, "%Y-%m-%d %H:%M:%S", Time::Location::UTC) }
-           items << Item.new(title, link, pub_date, version)
-         end
-       end
-     end
+          pub_date = pub_date_str.try { |date_str| Time.parse(date_str, "%Y-%m-%d %H:%M:%S", Time::Location::UTC) }
+          items << Item.new(title, link, pub_date, version)
+        end
+      end
+    end
 
-     FeedData.new(
-       feed_result[:title],
-       feed_result[:url],
-       feed_result[:site_link],
-       feed_result[:header_color],
-       feed_result[:header_text_color],
-       items,
-       feed_result[:etag],
-       feed_result[:last_modified],
-       feed_result[:favicon],
-       feed_result[:favicon_data]
-     )
-   end
+    FeedData.new(
+      feed_result[:title],
+      feed_result[:url],
+      feed_result[:site_link],
+      feed_result[:header_color],
+      feed_result[:header_text_color],
+      items,
+      feed_result[:etag],
+      feed_result[:last_modified],
+      feed_result[:favicon],
+      feed_result[:favicon_data]
+    )
+  end
 
   # Update header_color for a feed (extracted from favicon via color-thief)
   # Update header_color and header_text_color for a feed (extracted from favicon via color-thief)

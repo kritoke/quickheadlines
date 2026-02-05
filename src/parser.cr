@@ -48,16 +48,16 @@ end
 private def parse_rss(xml : XML::Node, limit : Int32) : {site_link: String, items: Array(Item), favicon: String?}
   site_link = "#"
   items = [] of Item
-  
+
   # Check if this is an RDF/RSS feed (items are siblings of channel, not children)
   is_rdf = xml.root.try(&.name) == "RDF"
-  
+
   if is_rdf
     # For RDF/RSS format, find channel and items at root level
     if channel = xml.xpath_node("//*[local-name()='channel']")
       site_link = resolve_rss_site_link(channel)
     end
-    
+
     # In RDF, items are at root level, not inside channel
     xml.xpath_nodes("//*[local-name()='item']").each do |node|
       items << parse_rss_item(node)
@@ -67,14 +67,14 @@ private def parse_rss(xml : XML::Node, limit : Int32) : {site_link: String, item
     # Standard RSS format
     if channel = xml.xpath_node("//*[local-name()='channel']")
       site_link = resolve_rss_site_link(channel)
-      
+
       channel.xpath_nodes("./*[local-name()='item']").each do |node|
         items << parse_rss_item(node)
         break if items.size >= limit
       end
     end
   end
-  
+
   favicon = xml.xpath_node("//*[local-name()='channel']/*[local-name()='image']/*[local-name()='url']").try(&.text)
   {site_link: site_link, items: items, favicon: favicon}
 end

@@ -104,6 +104,9 @@ end
 struct Config
   include YAML::Serializable
 
+  # Debug mode (optional, default: false) - enables verbose logging for troubleshooting
+  property debug : Bool = false
+
   # Global refresh interval in minutes (default: 10)
   property refresh_minutes : Int32 = 10
 

@@ -22,7 +22,7 @@ module Quickheadlines
       @@instance : RateLimiter?
       @@mutex = Mutex.new
 
-      MAX_ENTRIES = 10_000
+      MAX_ENTRIES      = 10_000
       CLEANUP_INTERVAL = 5.minutes
 
       def self.instance : RateLimiter
@@ -82,7 +82,7 @@ module Quickheadlines
       def stats : {total_entries: Int32, by_category: Hash(String, Int32)}
         categories = Hash(String, Int32).new(0)
         @@mutex.synchronize do
-          @limits.each do |key, info|
+          @limits.each do |_, info|
             categories[info.category] += 1
           end
           {total_entries: @limits.size, by_category: categories}
@@ -102,7 +102,7 @@ module Quickheadlines
       private def cleanup_expired_entries
         removed = 0
         @@mutex.synchronize do
-          @limits.reject! do |key, info|
+          @limits.reject! do |_, info|
             window_size = RateLimitConfig.window_size(info.category)
             info.expired?(window_size)
           end
@@ -116,8 +116,8 @@ module Quickheadlines
       DEFAULT_LIMITS = {
         "expensive"      => 5,
         "moderately"     => 10,
-        "read"          => 60,
-        "very_expensive"=> 3,
+        "read"           => 60,
+        "very_expensive" => 3,
       }
 
       DEFAULT_WINDOWS = {

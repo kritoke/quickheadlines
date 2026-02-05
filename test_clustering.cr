@@ -16,7 +16,7 @@ module ClusteringUtilities
   ])
 
   SHORT_HEADLINE_THRESHOLD = 0.85
-  MIN_WORDS_FOR_CLUSTERING = 4
+  MIN_WORDS_FOR_CLUSTERING =    4
 
   def self.normalize_headline(text : String) : String
     return "" if text.empty?

@@ -166,7 +166,6 @@ class DatabaseService
 
   # Get timeline items from the last N days with cluster information
   def get_timeline_items(limit : Int32, offset : Int32, days_back : Int32?) : Array({id: Int64, title: String, link: String, pub_date: Time?, feed_title: String, feed_url: String, feed_link: String, favicon: String?, header_color: String?, cluster_id: Int64?, is_representative: Bool, cluster_size: Int32})
-
     items = [] of {id: Int64, title: String, link: String, pub_date: Time?, feed_title: String, feed_url: String, feed_link: String, favicon: String?, header_color: String?, cluster_id: Int64?, is_representative: Bool, cluster_size: Int32}
 
     cutoff_clause = days_back ? "AND i.pub_date >= ?" : ""

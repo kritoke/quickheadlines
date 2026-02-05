@@ -9,6 +9,31 @@ require "./services/clustering_service"
 # ----- Favicon cache with size limits and expiration -----
 # Only caches local file paths (not base64 data URIs) to reduce memory usage
 
+# Validates that data is actually an image by checking magic bytes
+# Some servers lie about content-type, so we verify the actual content
+private def valid_image?(data : Bytes) : Bool
+  return false if data.size < 4
+
+  # Check for common image magic bytes
+  # PNG: 89 50 4E 47 0D 0A 1A 0A
+  return true if data[0..7] == Bytes[0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]
+
+  # JPEG: FF D8 FF
+  return true if data[0..2] == Bytes[0xFF, 0xD8, 0xFF]
+
+  # ICO: 00 00 01 00 or 00 00 02 00
+  return true if data[0] == 0x00 && data[1] == 0x00 && (data[2] == 0x01 || data[2] == 0x02) && data[3] == 0x00
+
+  # SVG: <?xml or <svg
+  return true if data[0..4] == Bytes[0x3C, 0x3F, 0x78, 0x6D, 0x6C] # <?xml
+  return true if data[0..3] == Bytes[0x3C, 0x73, 0x76, 0x67]       # <svg
+
+  # WebP: RIFF....WEBP
+  return true if data[0..3] == Bytes[0x52, 0x49, 0x46, 0x46] && data[8..11] == Bytes[0x57, 0x45, 0x42, 0x50]
+
+  false
+end
+
 # Helper module for generating favicon URLs
 module FaviconHelper
   # Generate Google favicon service URL for a given domain
@@ -80,6 +105,7 @@ end
 FAVICON_CACHE = FaviconCache.new
 
 def fetch_favicon_uri(url : String) : String?
+  debug_log("Fetching favicon: #{url}")
   current_url = url
   redirects = 0
   start_time = Time.monotonic
@@ -91,12 +117,18 @@ def fetch_favicon_uri(url : String) : String?
       return
     end
 
-    return if redirects > 10
+    if redirects > 10
+      debug_log("Too many redirects (#{redirects}) for favicon: #{url}")
+      return
+    end
 
     # Check if we already have this favicon saved (using current URL after redirects)
     if cached_url = FaviconStorage.get_or_fetch(current_url)
+      debug_log("Favicon cache hit: #{current_url}")
       return cached_url
     end
+
+    debug_log("Fetching favicon from: #{current_url}")
 
     uri = URI.parse(current_url)
     client = create_client(current_url)
@@ -111,26 +143,64 @@ def fetch_favicon_uri(url : String) : String?
         if response.status.redirection? && (location = response.headers["Location"]?)
           current_url = uri.resolve(location).to_s
           redirects += 1
+          debug_log("Favicon redirect #{redirects}: #{current_url}")
           next
         elsif response.status.success?
           content_type = response.content_type || "image/png"
           memory = IO::Memory.new
-          # Limit favicon downloads to 100KB to prevent memory exhaustion
           IO.copy(response.body_io, memory, limit: 100 * 1024)
-          return if memory.size == 0
-
-          # Save favicon to disk using the final URL (after redirects)
-          # This ensures the filename matches the actual image source
-          # Always return local path, never base64 data URI
-          if saved_url = FaviconStorage.save_favicon(current_url, memory.to_slice, content_type)
-            return saved_url
+          if memory.size == 0
+            debug_log("Empty favicon response: #{current_url}")
+            return
           end
+
+          # Skip saving tiny gray placeholder icons (198 bytes is the common "not found" size)
+          # For Google favicon URLs, try larger size instead
+          if memory.size == 198
+            debug_log("Gray placeholder detected (#{memory.size} bytes) for #{current_url}")
+            if current_url.includes?("google.com/s2/favicons")
+              larger_url = current_url.gsub(/sz=\d+/, "sz=256")
+              if cached = FaviconStorage.get_or_fetch(larger_url)
+                return cached
+              end
+              return fetch_favicon_uri(larger_url)
+            else
+              # For non-Google URLs, try the Google fallback
+              debug_log("Trying Google fallback for gray placeholder")
+              return nil  # Trigger Google fallback in try_favicon_fallbacks
+            end
+          end
+
+          # Validate that response is actually an image (not HTML or other content)
+          # Some servers lie about content-type, so we check magic bytes
+          unless valid_image?(memory.to_slice)
+            debug_log("Invalid favicon content (not an image): #{current_url}")
+            return nil  # Trigger fallback
+          end
+
+          debug_log("Favicon fetched: #{current_url}, size=#{memory.size}, type=#{content_type}")
+
+          if saved_url = FaviconStorage.save_favicon(current_url, memory.to_slice, content_type)
+            debug_log("Favicon saved: #{saved_url}")
+            return saved_url
+          else
+            debug_log("Favicon save failed: #{current_url}")
+            return
+          end
+        elsif response.status.not_found?
+          debug_log("Favicon 404: #{current_url}")
+          return
+        elsif response.status.forbidden?
+          debug_log("Favicon 403: #{current_url}")
+          return
         else
+          debug_log("Favicon error #{response.status_code}: #{current_url}")
           return
         end
       end
     rescue ex
       HealthMonitor.log_error("fetch_favicon_uri(#{url})", ex)
+      debug_log("Favicon fetch error: #{url} - #{ex.message}")
       return
     end
   end
@@ -148,13 +218,29 @@ private def resolve_favicon(feed : Feed, site_link : String?, parsed_favicon : S
     begin
       # Clean up the site link to find a valid host for the favicon fallback
       if host = URI.parse(site_link.gsub(/\/feed\/?$/, "")).host
-        # Try favicon.ico directly from the site first
-        favicon = "https://#{host}/favicon.ico"
+        # Try multiple favicon locations in order of preference
+        favicon_urls = [
+          "https://#{host}/favicon.ico",
+          "https://#{host}/favicon.png",
+          "https://#{host}/apple-touch-icon.png",
+          "https://#{host}/apple-touch-icon-180x180.png",
+        ]
 
-        # Note: We don't pre-check if favicon.ico exists here
-        # The fetch_favicon_uri function will handle the actual fetching
-        # and will return nil if it fails, allowing fallback to HTML parsing
-        # and finally to Google favicon service if needed
+        # Try to fetch from each location
+        favicon_urls.each do |url|
+          debug_log("Trying favicon URL: #{url}")
+          if existing = FaviconStorage.get_or_fetch(url)
+            debug_log("Found cached favicon: #{url}")
+            favicon = url
+            break
+          end
+        end
+
+        # If no cached favicon found, use the first URL as starting point
+        # The fetch will fail and trigger HTML parsing fallback
+        if favicon.nil?
+          favicon = favicon_urls[0]
+        end
       end
     rescue ex
       HealthMonitor.log_error("resolve_favicon(#{feed.url})", ex)
@@ -165,11 +251,12 @@ end
 
 # Extract favicon URL from HTML by parsing link tags
 private def extract_favicon_from_html(site_link : String) : String?
+  debug_log("Extracting favicon from HTML: #{site_link}")
   begin
     # Clean up the site link
     clean_link = site_link.gsub(/\/feed\/?$/, "")
+    debug_log("Fetching HTML from: #{clean_link}")
     uri = URI.parse(clean_link)
-
     client = create_client(clean_link)
     headers = HTTP::Headers{
       "User-Agent" => "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
@@ -179,31 +266,40 @@ private def extract_favicon_from_html(site_link : String) : String?
     client.get(uri.request_target, headers: headers) do |response|
       if response.status.success?
         html = response.body_io.gets_to_end
+        debug_log("HTML fetched: #{html.size} bytes")
 
-        # Parse HTML to find favicon links
-        # Look for: <link rel="icon">, <link rel="shortcut icon">, <link rel="apple-touch-icon">
         favicon_patterns = [
           /<link[^>]+rel=["'](?:shortcut )?icon["'][^>]+href=["']([^"']+)["']/i,
           /<link[^>]+href=["']([^"']+)["'][^>]+rel=["'](?:shortcut )?icon["']/i,
           /<link[^>]+rel=["']apple-touch-icon["'][^>]+href=["']([^"']+)["']/i,
+          /<link[^>]+rel=["']apple-touch-icon-precomposed["'][^>]+href=["']([^"']+)["']/i,
+          /<link[^>]+type=["']image\/x-icon["'][^>]+href=["']([^"']+)["']/i,
+          /<link[^>]+href=["']([^"']+\.ico)["'][^>]+rel=["']icon["']/i,
+          /<link[^>]+rel=["']icon["'][^>]+type=["']image\/x-icon["'][^>]+href=["']([^"']+)["']/i,
         ]
 
         favicon_patterns.each do |pattern|
           if match = html.match(pattern)
             favicon_url = match[1]
-            # Resolve relative URLs
             if favicon_url.starts_with?("//")
               favicon_url = "https:#{favicon_url}"
             elsif !favicon_url.starts_with?("http")
               favicon_url = resolve_url(favicon_url, clean_link)
             end
+            debug_log("Found favicon in HTML: #{favicon_url}")
             return favicon_url
           end
         end
+        debug_log("No favicon link found in HTML")
+      elsif response.status.not_found?
+        debug_log("HTML fetch 404: #{clean_link}")
+      else
+        debug_log("HTML fetch error #{response.status_code}: #{clean_link}")
       end
     end
   rescue ex
     HealthMonitor.log_error("extract_favicon_from_html(#{site_link})", ex)
+    debug_log("Error extracting favicon: #{ex.message}")
   end
 
   nil
@@ -212,14 +308,17 @@ end
 # Try to fetch favicon from HTML as a fallback
 # Returns {favicon_url, favicon_data} tuple
 private def try_html_fallback(site_link : String) : {String?, String?}
+  debug_log("HTML fallback for: #{site_link}")
   begin
-    # Try parsing HTML for favicon links
     html_favicon = extract_favicon_from_html(site_link)
     if html_favicon
+      debug_log("Found HTML favicon: #{html_favicon}")
       if html_data = fetch_favicon_uri(html_favicon)
         FAVICON_CACHE.set(html_favicon, html_data)
         return {html_favicon, html_data}
       end
+    else
+      debug_log("No HTML favicon found for: #{site_link}")
     end
   rescue ex
     HealthMonitor.log_error("try_html_fallback(#{site_link})", ex)
@@ -230,12 +329,17 @@ end
 # Try to fetch favicon from Google service as final fallback
 # Returns {favicon_url, favicon_data} tuple
 private def try_google_fallback(site_link : String) : {String?, String?}
+  debug_log("Google fallback for: #{site_link}")
   begin
     if host = URI.parse(site_link.gsub(/\/feed\/?$/, "")).host
-      google_favicon = "https://www.google.com/s2/favicons?domain=#{host}&sz=64"
+      # Use larger size (256) to get better quality icons and avoid gray placeholders
+      google_favicon = "https://www.google.com/s2/favicons?domain=#{host}&sz=256"
+      debug_log("Google favicon URL: #{google_favicon}")
       if google_data = fetch_favicon_uri(google_favicon)
         FAVICON_CACHE.set(google_favicon, google_data)
         return {google_favicon, google_data}
+      else
+        debug_log("Google fallback failed for: #{host}")
       end
     end
   rescue ex

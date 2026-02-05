@@ -801,10 +801,10 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
     spawn do
       begin
         STDERR.puts "[#{Time.local}] Starting manual clustering..."
-        
+
         cache = FeedCache.instance
         db = cache.db
-        
+
         uncategorized_items = [] of {id: Int64, title: String, link: String, pub_date: Time?, feed_id: Int64}
         db.query("SELECT id, title, link, pub_date, feed_id FROM items WHERE cluster_id IS NULL OR cluster_id = id ORDER BY pub_date DESC LIMIT 5000") do |rows|
           rows.each do
@@ -817,9 +817,9 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
             uncategorized_items << {id: id, title: title, link: link, pub_date: pub_date, feed_id: feed_id}
           end
         end
-        
+
         STDERR.puts "[#{Time.local}] Found #{uncategorized_items.size} uncategorized items"
-        
+
         STATE.is_clustering = true
         begin
           clustered_count = 0
@@ -842,7 +842,7 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
         STDERR.puts ex.backtrace.join("\n")
       end
     end
-    
+
     ATH::Response.new("Clustering started in background", 202, HTTP::Headers{"content-type" => "text/plain"})
   end
 
@@ -852,13 +852,13 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
     spawn do
       begin
         STDERR.puts "[#{Time.local}] Clearing clustering metadata and re-clustering..."
-        
+
         cache = FeedCache.instance
         cache.clear_clustering_metadata
-        
+
         # Now trigger clustering on all items
         db = cache.db
-        
+
         all_items = [] of {id: Int64, title: String, link: String, pub_date: Time?, feed_id: Int64}
         db.query("SELECT id, title, link, pub_date, feed_id FROM items ORDER BY pub_date DESC LIMIT 5000") do |rows|
           rows.each do
@@ -871,9 +871,9 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
             all_items << {id: id, title: title, link: link, pub_date: pub_date, feed_id: feed_id}
           end
         end
-        
+
         STDERR.puts "[#{Time.local}] Found #{all_items.size} items to re-cluster"
-        
+
         STATE.is_clustering = true
         begin
           clustered_count = 0
@@ -896,7 +896,7 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
         STDERR.puts ex.backtrace.join("\n")
       end
     end
-    
+
     ATH::Response.new("Re-clustering started in background", 202, HTTP::Headers{"content-type" => "text/plain"})
   end
 

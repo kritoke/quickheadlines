@@ -60,20 +60,20 @@ describe LexisMinhash::Engine do
       sig = LexisMinhash::Engine.compute_signature(doc)
       bands1 = LexisMinhash::Engine.generate_bands(sig)
       bands2 = LexisMinhash::Engine.generate_bands(sig)
-      
+
       bands1.should eq(bands2)
     end
 
     it "produces matching bands for similar content" do
       doc1 = LexisMinhash::SimpleDocument.new("Python 3.14 released with performance improvements")
       doc2 = LexisMinhash::SimpleDocument.new("Python 3.14 brings new performance enhancements")
-      
+
       sig1 = LexisMinhash::Engine.compute_signature(doc1)
       sig2 = LexisMinhash::Engine.compute_signature(doc2)
-      
+
       bands1 = LexisMinhash::Engine.generate_bands(sig1)
       bands2 = LexisMinhash::Engine.generate_bands(sig2)
-      
+
       # At least some bands should match for similar content
       matching_bands = bands1.each_index.count { |i| bands1[i] == bands2[i] }
       matching_bands.should be >= 1
@@ -82,13 +82,13 @@ describe LexisMinhash::Engine do
     it "produces fewer matching bands for different content" do
       doc1 = LexisMinhash::SimpleDocument.new("Bitcoin hits new all-time high")
       doc2 = LexisMinhash::SimpleDocument.new("New Rust book released for beginners")
-      
+
       sig1 = LexisMinhash::Engine.compute_signature(doc1)
       sig2 = LexisMinhash::Engine.compute_signature(doc2)
-      
+
       bands1 = LexisMinhash::Engine.generate_bands(sig1)
       bands2 = LexisMinhash::Engine.generate_bands(sig2)
-      
+
       matching_bands = bands1.each_index.count { |i| bands1[i] == bands2[i] }
       matching_bands.should be <= 2
     end
@@ -123,15 +123,15 @@ describe LexisMinhash::Engine do
       story1 = "OpenAI releases GPT-5 with improved reasoning capabilities"
       story2 = "OpenAI announces GPT-5 with improved reasoning"
       story3 = "OpenAI GPT-5 brings improved reasoning capabilities"
-      
+
       doc1 = LexisMinhash::SimpleDocument.new(story1)
       doc2 = LexisMinhash::SimpleDocument.new(story2)
       doc3 = LexisMinhash::SimpleDocument.new(story3)
-      
+
       sig1 = LexisMinhash::Engine.compute_signature(doc1)
       sig2 = LexisMinhash::Engine.compute_signature(doc2)
       sig3 = LexisMinhash::Engine.compute_signature(doc3)
-      
+
       # All three variations should have moderate pairwise similarity
       LexisMinhash::Engine.similarity(sig1, sig2).should be > 0.4
       LexisMinhash::Engine.similarity(sig2, sig3).should be > 0.4
@@ -142,13 +142,13 @@ describe LexisMinhash::Engine do
       # Same topic (AI) but different stories
       story1 = "OpenAI releases GPT-5 with improved reasoning"
       story2 = "Anthropic releases Claude 4 with better safety"
-      
+
       doc1 = LexisMinhash::SimpleDocument.new(story1)
       doc2 = LexisMinhash::SimpleDocument.new(story2)
-      
+
       sig1 = LexisMinhash::Engine.compute_signature(doc1)
       sig2 = LexisMinhash::Engine.compute_signature(doc2)
-      
+
       # Should have some similarity (both about AI) but not too high
       similarity = LexisMinhash::Engine.similarity(sig1, sig2)
       similarity.should be < 0.7
@@ -157,15 +157,14 @@ describe LexisMinhash::Engine do
     it "handles very different stories with near-zero similarity" do
       story1 = "SpaceX launches new Starlink satellites"
       story2 = "New dental study shows coffee prevents cavities"
-      
+
       doc1 = LexisMinhash::SimpleDocument.new(story1)
       doc2 = LexisMinhash::SimpleDocument.new(story2)
-      
+
       sig1 = LexisMinhash::Engine.compute_signature(doc1)
       sig2 = LexisMinhash::Engine.compute_signature(doc2)
-      
+
       LexisMinhash::Engine.similarity(sig1, sig2).should be < 0.2
     end
   end
 end
-
