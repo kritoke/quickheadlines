@@ -13,7 +13,7 @@ jobs:
       - name: Setup Crystal
         uses: crystal-lang/setup-crystal@v2
         with:
-          crystal_version: latest
+          crystal_version: 1.18.2
 
       - name: Install system dependencies
         run: sudo apt-get install -y libsqlite3-dev libssl-dev libmagic-dev
@@ -49,7 +49,7 @@ jobs:
       - name: Build Crystal binary
         uses: crystal-lang/setup-crystal@v2
         with:
-          crystal_version: latest
+          crystal_version: 1.18.2
         run: shards install && crystal build --release --no-debug src/quickheadlines.cr -o bin/quickheadlines
 
       - name: Start app
