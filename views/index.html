@@ -35,13 +35,13 @@
        [data-timeline-item="true"] a {
          text-decoration: underline !important;
        }
-       [data-timeline-item="true"] a {
-         color: inherit !important;
-       }
-       .feed-header a {
-         color: inherit !important;
-         text-decoration: underline;
-       }
+        [data-timeline-item="true"] a {
+          color: inherit;
+        }
+        .feed-header a {
+          color: inherit;
+          text-decoration: underline;
+        }
      /\* Auto-hide scrollbars - cannot be done in Elm due to pseudo-elements \*/
     .auto-hide-scroll {
       overflow-y: auto;
@@ -210,14 +210,18 @@
               const yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
               const textColor = yiq >= 128 ? '#1f2937' : '#ffffff';
 
-              // Apply to header and links
-              header.style.color = textColor;
+               // Don't override server-provided colors
+               if (header.getAttribute('data-use-server-colors') === 'true') return;
+
+               // Apply to header and links
+               header.style.color = textColor;
 
               const link = header.querySelector('a');
-              if (link) {
-                link.style.color = textColor;
-                link.style.setProperty('color', textColor, 'important');
-              }
+                  if (link) {
+                    // Set inline color on the link without using !important so Elm
+                    // and stylesheet rules still control when server colors are present.
+                    link.style.color = textColor;
+                  }
 
               const subText = header.querySelector('[data-display-link="true"]');
               if (subText) {
@@ -257,10 +261,10 @@
                header.style.backgroundColor = cached.bg;
                header.style.color = cached.text;
                const link = header.querySelector('a');
-               if (link) {
-                 link.style.setProperty('color', cached.text, 'important');
-                 link.style.textDecoration = 'none';
-               }
+                if (link) {
+                  link.style.color = cached.text;
+                  link.style.textDecoration = 'none';
+                }
                header.dataset.adaptive = 'true';
                return;
              }
@@ -284,10 +288,10 @@
 
                  header.style.backgroundColor = bgColor;
                  header.style.color = textColor;
-                 if (link) {
-                   link.style.setProperty('color', textColor, 'important');
-                   link.style.textDecoration = 'none';
-                 }
+                  if (link) {
+                    link.style.color = textColor;
+                    link.style.textDecoration = 'none';
+                  }
 
                  if (faviconKey) {
                    window.feedHeaderCache[faviconKey] = { bg: bgColor, text: textColor };
@@ -354,16 +358,18 @@
         Object.keys(cached).forEach(key => {
           const entry = cached[key];
           // Find headers without server colors (data-use-server-colors is NOT set)
-          const headers = document.querySelectorAll('.feed-header:not([data-use-server-colors="true"])');
+           const headers = document.querySelectorAll('.feed-header:not([data-use-server-colors="true"])');
           headers.forEach(header => {
             const img = header.querySelector('img');
             if (img && img.getAttribute('src') === key) {
               header.style.backgroundColor = entry.bg;
               header.style.color = entry.text;
               const link = header.querySelector('a');
-              if (link) {
-                link.style.setProperty('color', entry.text, 'important');
-              }
+               if (link) {
+                 // Avoid using !important from JS; use inline style which can be
+                 // overridden by server-provided colors and respects later re-renders.
+                 link.style.color = entry.text;
+               }
             }
           });
         });
@@ -412,10 +418,10 @@
              header.style.backgroundColor = cached.bg;
              header.style.color = cached.text;
              const link = header.querySelector('a');
-             if (link) {
-               link.style.setProperty('color', cached.text, 'important');
-               link.style.textDecoration = 'none';
-             }
+                if (link) {
+                  link.style.color = cached.text;
+                  link.style.textDecoration = 'none';
+                }
              header.dataset.adaptive = 'true';
              return;
            }
@@ -442,10 +448,10 @@
 
                header.style.backgroundColor = bgColor;
                header.style.color = textColor;
-               if (link) {
-                 link.style.setProperty('color', textColor, 'important');
-                 link.style.textDecoration = 'none';
-               }
+                if (link) {
+                  link.style.color = textColor;
+                  link.style.textDecoration = 'none';
+                }
 
                // Save to localStorage cache
                if (faviconKey && faviconKey !== 'default') {

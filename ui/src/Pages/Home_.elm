@@ -621,9 +621,14 @@ feedHeader theme feed =
                                 Just tc -> tc
                                 Nothing -> calculatedTextColor
                     in
-                    ( Element.htmlAttribute (Html.Attributes.style "background-color" bgColor)
+                    let
+                        headerBgAttr = Element.htmlAttribute (Html.Attributes.style "background-color" bgColor)
+                        headerColorAttr = htmlAttribute (Html.Attributes.style "color" textColor)
+                        serverFlag = htmlAttribute (Html.Attributes.attribute "data-use-server-colors" "true")
+                    in
+                    ( headerBgAttr
                     , textColor
-                    , [ htmlAttribute (Html.Attributes.attribute "data-use-server-colors" "true") ]
+                    , [ serverFlag, headerColorAttr ]
                     )
 
                 Nothing ->
