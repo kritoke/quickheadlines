@@ -160,7 +160,7 @@ textColorFromBgString bgColor =
                     0
     in
     if luminance >= 128 then
-        "rgb(31,41,35)"
+        "rgb(31,55,35)"
     else
         "rgb(255,255,255)"
 
@@ -956,7 +956,7 @@ clusterOtherItem now theme item =
                 item.favicon
                 |> Maybe.withDefault (text "")
     in
-    paragraph
+         paragraph
         [ width fill
         , paddingEach { top = 4, bottom = 4, left = 0, right = 0 }
         , htmlAttribute (Html.Attributes.attribute "data-timeline-item" "true")

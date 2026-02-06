@@ -16143,8 +16143,8 @@ var $author$project$Pages$Timeline$clusterOtherItem = F3(
 					A2($elm$html$Html$Attributes$attribute, 'data-timeline-item', 'true')),
 					$mdgriffith$elm_ui$Element$Background$color(
 					A4($mdgriffith$elm_ui$Element$rgba, 0, 0, 0, 0)),
-					$mdgriffith$elm_ui$Element$Font$color(
-					$author$project$Theme$textColor(theme))
+					$mdgriffith$elm_ui$Element$htmlAttribute(
+					A2($elm$html$Html$Attributes$attribute, 'style', 'color: rgb(17, 24, 39);'))
 				]),
 			_List_fromArray(
 				[
