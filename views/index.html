@@ -221,31 +221,32 @@
          });
        }
 
-       window.extractHeaderColors = function() {
-        if (typeof ColorThief === 'undefined') return;
-        const colorThief = new ColorThief();
+        window.extractHeaderColors = function() {
+         if (typeof ColorThief === 'undefined') return;
+         const colorThief = new ColorThief();
 
-        document.querySelectorAll('.feed-header[data-use-adaptive-colors="true"]').forEach(header => {
-          if (header.dataset.adaptive === 'true') return;
-          if (header.closest('[data-timeline-item="true"]')) {
-            header.dataset.adaptive = 'true';
-            return;
-          }
-          if (header.dataset.timelineHeader === 'true') {
-            header.dataset.adaptive = 'true';
-            return;
-          }
-          if (!header.classList.contains('feed-header')) return;
+         // Only extract colors for headers that DON'T have server-provided colors
+         document.querySelectorAll('.feed-header:not([data-use-adaptive-colors="true"])').forEach(header => {
+           if (header.dataset.adaptive === 'true') return;
+           if (header.closest('[data-timeline-item="true"]')) {
+             header.dataset.adaptive = 'true';
+             return;
+           }
+           if (header.dataset.timelineHeader === 'true') {
+             header.dataset.adaptive = 'true';
+             return;
+           }
+           if (!header.classList.contains('feed-header')) return;
 
-          const img = header.querySelector('img');
-          const imgSrc = img ? img.getAttribute('src') : null;
-          const faviconKey = imgSrc || 'default';
+           const img = header.querySelector('img');
+           const imgSrc = img ? img.getAttribute('src') : null;
+           const faviconKey = imgSrc || 'default';
 
-          if (window.feedHeaderCache[faviconKey]) {
-            const cached = window.feedHeaderCache[faviconKey];
-            header.style.backgroundColor = cached.bg;
-            header.style.color = cached.text;
-            const link = header.querySelector('a');
+           if (window.feedHeaderCache[faviconKey]) {
+             const cached = window.feedHeaderCache[faviconKey];
+             header.style.backgroundColor = cached.bg;
+             header.style.color = cached.text;
+             const link = header.querySelector('a');
             if (link) {
               link.style.setProperty('color', cached.text, 'important');
               link.style.textDecoration = 'none';
