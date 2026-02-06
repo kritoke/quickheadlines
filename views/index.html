@@ -382,60 +382,67 @@
        }
      };
 
-     window.extractHeaderColors = function() {
-      if (typeof ColorThief === 'undefined') return;
-      const colorThief = new ColorThief();
+      window.extractHeaderColors = function() {
+       if (typeof ColorThief === 'undefined') return;
+       const colorThief = new ColorThief();
 
-       var allHeaders = document.querySelectorAll('.feed-header[data-use-adaptive-colors="true"]');
+        // Only extract colors for headers that DON'T have server-provided colors
+        var allHeaders = document.querySelectorAll('.feed-header[data-use-adaptive-colors="true"]');
 
-      allHeaders.forEach(header => {
-        var inTimeline = header.closest('[data-timeline-item="true"]') !== null;
+       allHeaders.forEach(header => {
+         var inTimeline = header.closest('[data-timeline-item="true"]') !== null;
 
-        // Skip if already processed
-        if (header.dataset.adaptive === 'true') {
-          header.dataset.adaptive = 'true';
-          return;
-        }
+         // Skip if already processed
+         if (header.dataset.adaptive === 'true') {
+           header.dataset.adaptive = 'true';
+           return;
+         }
 
-        // Skip ANY header that's inside a timeline item - use theme colors instead
-        if (inTimeline) {
-          header.dataset.adaptive = 'true';
-          return;
-        }
+         // Skip ANY header that's inside a timeline item - use theme colors instead
+         if (inTimeline) {
+           header.dataset.adaptive = 'true';
+           return;
+         }
 
-        // Skip timeline headers explicitly
-        if (header.dataset.timelineHeader === 'true') {
-          header.dataset.adaptive = 'true';
-          return;
-        }
+         // Skip timeline headers explicitly
+         if (header.dataset.timelineHeader === 'true') {
+           header.dataset.adaptive = 'true';
+           return;
+         }
 
-        // Ensure element has .feed-header class (defense in depth)
-        if (!header.classList.contains('feed-header')) {
-          return;
-        }
+         // Ensure element has .feed-header class (defense in depth)
+         if (!header.classList.contains('feed-header')) {
+           return;
+         }
 
-        // Use favicon src as cache key (more reliable than URL matching)
-        const img = header.querySelector('img');
-        const imgSrc = img ? img.getAttribute('src') : null;
-        const faviconKey = imgSrc || 'default';
+         // Skip if already has inline background color from server
+         if (header.style.backgroundColor && header.style.backgroundColor !== 'transparent') {
+           header.dataset.adaptive = 'true';
+           return;
+         }
 
-        // Check cache by favicon path
-        if (window.feedHeaderCache[faviconKey]) {
-          const cached = window.feedHeaderCache[faviconKey];
-          header.style.backgroundColor = cached.bg;
-          header.style.color = cached.text;
-          const link = header.querySelector('a');
-          if (link) {
-            link.style.setProperty('color', cached.text, 'important');
-            link.style.textDecoration = 'none';
-          }
-          header.dataset.adaptive = 'true';
-          return;
-        }
+         // Use favicon src as cache key (more reliable than URL matching)
+         const img = header.querySelector('img');
+         const imgSrc = img ? img.getAttribute('src') : null;
+         const faviconKey = imgSrc || 'default';
 
-        // Search for image in the header row
-        if (!img) return;
-        if (!imgSrc) return;
+         // Check cache by favicon path
+         if (window.feedHeaderCache[faviconKey]) {
+           const cached = window.feedHeaderCache[faviconKey];
+           header.style.backgroundColor = cached.bg;
+           header.style.color = cached.text;
+           const link = header.querySelector('a');
+           if (link) {
+             link.style.setProperty('color', cached.text, 'important');
+             link.style.textDecoration = 'none';
+           }
+           header.dataset.adaptive = 'true';
+           return;
+         }
+
+         // Search for image in the header row
+         if (!img) return;
+         if (!imgSrc) return;
 
         // Create a temporary image to extract colors from
         const tempImg = new Image();
