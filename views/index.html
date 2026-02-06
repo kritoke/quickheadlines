@@ -182,69 +182,57 @@
         </style>
      <script src="https://cdnjs.cloudflare.com/ajax/libs/color-thief/2.3.2/color-thief.umd.js"></script>
         <script>
-          let fixHeaderColorsDebounced = null;
-
           function fixHeaderColors() {
-            // Debounce to prevent multiple rapid calls
-            if (fixHeaderColorsDebounced) return;
-            fixHeaderColorsDebounced = setTimeout(function() {
-              fixHeaderColorsDebounced = null;
-              fixHeaderColorsInner();
-            }, 200);
-          }
-
-          function fixHeaderColorsInner() {
-            // Fix text colors for headers that DON'T have valid inline colors
             document.querySelectorAll('.feed-header').forEach(header => {
-              const currentColor = header.style.color;
-
-              // Skip if we have a valid hex/rgb inline color (not a CSS variable)
-              if (currentColor && 
-                  (currentColor.startsWith('#') || 
-                   currentColor.startsWith('rgb') ||
-                   currentColor.startsWith('hsl'))) {
-                return;
-              }
-
-              // If color is a CSS variable or empty, calculate and set it
               const bgColor = header.style.backgroundColor;
               if (!bgColor || bgColor === 'transparent') return;
 
-             // Extract RGB from any rgb() format
-             const match = bgColor.match(/(\d+),\s*(\d+),\s*(\d+)/);
-             if (!match) return;
+              // Check if text color is missing or invalid (CSS variable, empty)
+              const currentColor = header.style.color;
+              if (currentColor && currentColor.startsWith('var(')) {
+                // CSS variable - will be invisible, so fix it
+              } else if (!currentColor) {
+                // Empty - fix it
+              } else {
+                // Has valid color, skip
+                return;
+              }
 
-             const r = parseInt(match[1]);
-             const g = parseInt(match[2]);
-             const b = parseInt(match[3]);
+              // Extract RGB
+              const match = bgColor.match(/(\d+),\s*(\d+),\s*(\d+)/);
+              if (!match) return;
 
-             // Calculate readable text color using YIQ
-             const yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
-             const textColor = yiq >= 128 ? '#1f2937' : '#ffffff';
+              const r = parseInt(match[1]);
+              const g = parseInt(match[2]);
+              const b = parseInt(match[3]);
 
-             // Apply to header
-             header.style.color = textColor;
+              // Calculate YIQ contrast
+              const yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
+              const textColor = yiq >= 128 ? '#1f2937' : '#ffffff';
 
-             const link = header.querySelector('a');
-             if (link) {
-               link.style.color = textColor;
-               link.style.setProperty('color', textColor, 'important');
-             }
+              // Apply to header and links
+              header.style.color = textColor;
 
-             const subText = header.querySelector('[data-display-link="true"]');
-             if (subText) {
-               subText.style.color = textColor;
-               subText.style.opacity = '';
-             }
-           });
-         }
+              const link = header.querySelector('a');
+              if (link) {
+                link.style.color = textColor;
+                link.style.setProperty('color', textColor, 'important');
+              }
 
-         // Run once after Elm renders
-         document.addEventListener('DOMContentLoaded', function() {
-           setTimeout(window.fixHeaderColors, 300);
-         });
+              const subText = header.querySelector('[data-display-link="true"]');
+              if (subText) {
+                subText.style.color = textColor;
+                subText.style.opacity = '';
+              }
+            });
+          }
 
-         window.extractHeaderColors = function() {
+          // Run immediately after DOM loads
+          document.addEventListener('DOMContentLoaded', function() {
+            setTimeout(fixHeaderColors, 100);
+          });
+
+          window.extractHeaderColors = function() {
          if (typeof ColorThief === 'undefined') return;
          const colorThief = new ColorThief();
 
@@ -565,26 +553,22 @@
             // Handle resize if needed
           });
 
-           // Extract colors after Elm renders
-          setTimeout(window.extractHeaderColors, 500);
-          setTimeout(window.extractHeaderColors, 1500);
+            // Extract colors after Elm renders
+           setTimeout(window.extractHeaderColors, 500);
+           setTimeout(window.extractHeaderColors, 1500);
 
-            // Fix header colors after color extraction (debounced)
-           setTimeout(function() {
-             if (window.fixHeaderColors) window.fixHeaderColors();
-           }, 1500);
-           setTimeout(function() {
-             if (window.fixHeaderColors) window.fixHeaderColors();
-           }, 3000);
+             // Fix header colors after color extraction
+            setTimeout(fixHeaderColors, 1500);
+            setTimeout(fixHeaderColors, 3000);
 
-          // Watch for theme changes
-          new MutationObserver(function(mutations) {
-            mutations.forEach(function(mutation) {
-              if (mutation.attributeName === 'data-theme' && window.fixHeaderColors) {
-                window.fixHeaderColors();
-              }
-            });
-          }).observe(document.documentElement, { attributes: true });
+           // Watch for theme changes
+           new MutationObserver(function(mutations) {
+             mutations.forEach(function(mutation) {
+               if (mutation.attributeName === 'data-theme') {
+                 fixHeaderColors();
+               }
+             });
+           }).observe(document.documentElement, { attributes: true });
 
           // Listen for OS theme changes and sync to Elm when no user preference is saved
           var themeMediaQuery = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)');
