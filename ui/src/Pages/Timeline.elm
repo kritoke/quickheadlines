@@ -862,19 +862,20 @@ clusterItem breakpoint zone now theme expandedClusters insertedIds cluster =
                 [ faviconImg
                 , let
                     titleAttrsBase = [ Font.size 12, Font.color (getFeedTitleColor theme headerColor headerTextColor), htmlAttribute (Html.Attributes.attribute "data-use-server-colors" (if headerColor /= "" || headerTextColor /= "" then "true" else "false")) ]
+                    -- When a server-provided headerColor exists, render a small
+                    -- background pill around the feed title and compute a readable
+                    -- title color from that background. This makes the title
+                    -- visually consistent across light/dark modes.
                     titleColorAttr =
-                        if theme == Shared.Dark then
-                            if headerTextColor /= "" then
-                                [ htmlAttribute (Html.Attributes.style "color" headerTextColor) ]
-                            else if headerColor /= "" then
-                                [ htmlAttribute (Html.Attributes.style "color" (textColorFromBgString headerColor)) ]
-                            else
-                                []
+                        if headerTextColor /= "" then
+                            [ htmlAttribute (Html.Attributes.style "color" headerTextColor) ]
+                        else if headerColor /= "" then
+                            [ htmlAttribute (Html.Attributes.style "color" (textColorFromBgString headerColor)) ]
                         else
                             []
 
                     titleBgAttr =
-                        if theme == Shared.Dark && headerColor /= "" then
+                        if headerColor /= "" then
                             [ htmlAttribute (Html.Attributes.style "background-color" headerColor)
                             , htmlAttribute (Html.Attributes.style "padding" "2px 6px")
                             , htmlAttribute (Html.Attributes.style "border-radius" "6px")
