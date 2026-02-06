@@ -886,21 +886,31 @@ clusterItem breakpoint zone now theme expandedClusters insertedIds cluster =
                   el (titleAttrsBase ++ titleBgAttr ++ titleColorAttr)
                       (text cluster.representative.feedTitle)
                 , el [ Font.color mutedTxt, paddingXY 4 0 ] (text "•")
-                , let
-                    linkAttrsBase = [ htmlAttribute (Html.Attributes.attribute "data-display-link" "true"), Font.color txtColor, htmlAttribute (Html.Attributes.attribute "data-use-server-colors" (if headerColor /= "" || headerTextColor /= "" then "true" else "false")), Font.semiBold, mouseOver [ Font.color lumeOrange ] ]
-                    -- Always apply an inline readable color for links when the server
-                    -- provides headerColor or headerTextColor. This makes Elm the
-                    -- authoritative renderer for server-provided colors and avoids
-                    -- relying on JS timing to patch links after render.
+                 , let
+                    linkAttrsBase = [ htmlAttribute (Html.Attributes.attribute "data-display-link" "true"), Font.semiBold, mouseOver [ Font.color lumeOrange ] ]
+                    -- Always apply an inline readable color for links. This makes Elm the
+                    -- authoritative renderer for all link colors, eliminating inherited color
+                    -- confusion and ensuring consistent readability across themes.
                     linkColorAttr =
                         if headerTextColor /= "" then
                             [ htmlAttribute (Html.Attributes.style "color" headerTextColor) ]
                         else if headerColor /= "" then
                             [ htmlAttribute (Html.Attributes.style "color" (textColorFromBgString headerColor)) ]
                         else
-                            []
+                            -- No server-provided colors: use theme-appropriate default that's readable
+                            let
+                                defaultLinkColor =
+                                    case theme of
+                                        Dark ->
+                                            "rgb(248, 250, 252)"
+                                        
+                                        Light ->
+                                            "rgb(17, 24, 39)"
+                            in
+                            [ htmlAttribute (Html.Attributes.style "color" defaultLinkColor) ]
+                    linkServerFlag = htmlAttribute (Html.Attributes.attribute "data-use-server-colors" (if headerColor /= "" || headerTextColor /= "" then "true" else "false"))
                   in
-                  link (linkAttrsBase ++ linkColorAttr) { url = cluster.representative.link, label = text cluster.representative.title }
+                  link (linkAttrsBase ++ linkColorAttr ++ [ linkServerFlag ]) { url = cluster.representative.link, label = text cluster.representative.title }
         , if cluster.count > 1 then
               Input.button
                   [ paddingEach { top = 0, right = 0, bottom = 0, left = 8 }
@@ -957,19 +967,30 @@ clusterOtherItem now theme item =
         , el [ Ty.meta, Font.color (getFeedTitleColor theme itemHeaderColor itemHeaderTextColor) ]
              (text item.feedTitle)
         , el [ Ty.meta, Font.color mutedTxt, paddingXY 4 0 ] (text "•")
-        , let
-            otherLinkBase = [ Font.size 11, htmlAttribute (Html.Attributes.attribute "data-display-link" "true"), Font.color (textColor theme), Font.medium, mouseOver [ Font.color lumeOrange ], htmlAttribute (Html.Attributes.attribute "data-use-server-colors" (if itemHeaderColor /= "" || itemHeaderTextColor /= "" then "true" else "false")) ]
-            -- Same behavior for "other" items: when server provides colors, render
-            -- an inline readable color so links remain accessible across themes.
+         , let
+            otherLinkBase = [ Font.size 11, htmlAttribute (Html.Attributes.attribute "data-display-link" "true"), Font.medium, mouseOver [ Font.color lumeOrange ] ]
+            -- Always apply an inline readable color for other items, ensuring consistency
+            -- with representative items and eliminating inherited color issues.
             otherLinkColor =
                 if itemHeaderTextColor /= "" then
                     [ htmlAttribute (Html.Attributes.style "color" itemHeaderTextColor) ]
                 else if itemHeaderColor /= "" then
                     [ htmlAttribute (Html.Attributes.style "color" (textColorFromBgString itemHeaderColor)) ]
                 else
-                    []
+                    -- No server-provided colors: use theme-appropriate default that's readable
+                    let
+                        defaultLinkColor =
+                            case theme of
+                                Dark ->
+                                    "rgb(248, 250, 252)"
+                                
+                                Light ->
+                                    "rgb(17, 24, 39)"
+                    in
+                    [ htmlAttribute (Html.Attributes.style "color" defaultLinkColor) ]
+            otherServerFlag = htmlAttribute (Html.Attributes.attribute "data-use-server-colors" (if itemHeaderColor /= "" || itemHeaderTextColor /= "" then "true" else "false"))
           in
-          link (otherLinkBase ++ otherLinkColor) { url = item.link, label = text item.title }
+          link (otherLinkBase ++ otherLinkColor ++ [ otherServerFlag ]) { url = item.link, label = text item.title }
         ]
 
 
