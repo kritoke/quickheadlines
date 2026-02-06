@@ -40,7 +40,8 @@ module FaviconHelper
   # Generate Google favicon service URL for a given domain
   # Returns nil if domain cannot be extracted
   def self.google_favicon_url(site_link : String, feed_url : String) : String?
-    host = site_link.empty? ? feed_url : site_link
+    # Use feed_url if site_link is empty or invalid (e.g., "#")
+    host = (site_link.empty? || site_link == "#") ? feed_url : site_link
     parsed = URI.parse(host)
     return unless parsed_host = parsed.host
 

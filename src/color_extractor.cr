@@ -24,6 +24,14 @@ module ColorExtractor
     full_path = "public#{path}"
     return nil unless File.exists?(full_path)
 
+    # Only process PNG files (StumpyPNG only handles PNG)
+    # For non-PNG files (GIF, etc.), skip server-side extraction
+    # and let JavaScript ColorThief handle it client-side
+    file_type = `file "#{full_path}"`.strip
+    unless file_type.includes?("PNG image data") || file_type.includes?("PNG")
+      return nil
+    end
+
     begin
       canvas = StumpyPNG.read(full_path)
       width = canvas.width
