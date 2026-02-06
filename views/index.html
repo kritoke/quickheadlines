@@ -239,7 +239,19 @@
                 document.querySelectorAll('[data-timeline-item="true"] a[data-display-link="true"]').forEach(link => {
                   try {
                     const linkComp = window.getComputedStyle(link).color;
-                    if (linkComp === 'rgb(0, 0, 0)' || linkComp === 'rgba(0, 0, 0, 1)') {
+                    // If the computed color is dark (black or dark gray), repair it.
+                    const compMatch = ('' + linkComp).match(/(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/);
+                    let compDark = false;
+                    if (compMatch) {
+                      const lr = parseInt(compMatch[1]);
+                      const lg = parseInt(compMatch[2]);
+                      const lb = parseInt(compMatch[3]);
+                      const lYiq = ((lr * 299) + (lg * 587) + (lb * 114)) / 1000;
+                      compDark = lYiq < 140; // threshold: anything noticeably dark
+                    } else {
+                      compDark = (linkComp === 'rgb(0, 0, 0)' || linkComp === 'rgba(0, 0, 0, 1)');
+                    }
+                    if (compDark) {
                       // Find a sensible background to compute contrast from
                       let parent = link.closest('[data-timeline-item="true"]');
                       let bg = parent ? window.getComputedStyle(parent).backgroundColor : null;
