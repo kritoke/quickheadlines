@@ -14732,15 +14732,17 @@ var $author$project$Pages$Home_$feedHeader = F2(
 						return calculatedTextColor;
 					}
 				}();
+				var serverFlag = $mdgriffith$elm_ui$Element$htmlAttribute(
+					A2($elm$html$Html$Attributes$attribute, 'data-use-server-colors', 'true'));
+				var headerColorAttr = $mdgriffith$elm_ui$Element$htmlAttribute(
+					A2($elm$html$Html$Attributes$style, 'color', textColor));
+				var headerBgAttr = $mdgriffith$elm_ui$Element$htmlAttribute(
+					A2($elm$html$Html$Attributes$style, 'background-color', bgColor));
 				return _Utils_Tuple3(
-					$mdgriffith$elm_ui$Element$htmlAttribute(
-						A2($elm$html$Html$Attributes$style, 'background-color', bgColor)),
+					headerBgAttr,
 					textColor,
 					_List_fromArray(
-						[
-							$mdgriffith$elm_ui$Element$htmlAttribute(
-							A2($elm$html$Html$Attributes$attribute, 'data-use-server-colors', 'true'))
-						]));
+						[serverFlag, headerColorAttr]));
 			} else {
 				var _v9 = feed.U;
 				if (!_v9.$) {
