@@ -28,16 +28,21 @@
          background-color: transparent !important;
          background: transparent !important;
        }
-       [data-timeline-item="true"] {
-         background-color: transparent !important;
-         background: transparent !important;
-       }
-       [data-timeline-item="true"] a {
-         text-decoration: underline !important;
-       }
-        [data-timeline-item="true"] a {
-          color: inherit;
+        [data-timeline-item="true"] {
+          background-color: transparent !important;
+          background: transparent !important;
         }
+        [data-timeline-item="true"] a {
+          text-decoration: underline !important;
+        }
+        /* Remove color: inherit to prevent CSS from overriding Elm's inline styles.
+           Elm now sets explicit colors for all links, so inheritance causes conflicts. */
+         [data-timeline-item="true"] a {
+           color: rgb(17, 24, 39);
+         }
+        html[data-theme="dark"] [data-timeline-item="true"] a {
+           color: rgb(248, 250, 252);
+         }
         .feed-header a {
           color: inherit;
           text-decoration: underline;
