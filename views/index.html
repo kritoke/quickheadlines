@@ -181,43 +181,62 @@
           }
         </style>
      <script src="https://cdnjs.cloudflare.com/ajax/libs/color-thief/2.3.2/color-thief.umd.js"></script>
-       <script>
-         function fixHeaderColors() {
-           // Fix text colors for ALL headers to ensure readable text
-           document.querySelectorAll('.feed-header').forEach(header => {
-             const bgColor = header.style.backgroundColor;
-             if (!bgColor || bgColor === 'transparent') return;
+        <script>
+          let fixHeaderColorsDebounced = null;
 
-            // Extract RGB from any rgb() format
-            const match = bgColor.match(/(\d+),\s*(\d+),\s*(\d+)/);
-            if (!match) return;
+          function fixHeaderColors() {
+            // Debounce to prevent multiple rapid calls
+            if (fixHeaderColorsDebounced) return;
+            fixHeaderColorsDebounced = setTimeout(function() {
+              fixHeaderColorsDebounced = null;
+              fixHeaderColorsInner();
+            }, 200);
+          }
 
-            const r = parseInt(match[1]);
-            const g = parseInt(match[2]);
-            const b = parseInt(match[3]);
+          function fixHeaderColorsInner() {
+            // Fix text colors ONLY for headers that don't have server-provided inline colors
+            document.querySelectorAll('.feed-header').forEach(header => {
+              // Skip if server already provided inline text color
+              if (header.style.color && header.style.color !== '') return;
 
-            // Calculate readable text color using YIQ
-            const yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
-            const textColor = yiq >= 128 ? '#1f2937' : '#ffffff';
+              const bgColor = header.style.backgroundColor;
+              if (!bgColor || bgColor === 'transparent') return;
 
-            // Apply to all text elements in the header - title, link, URL
-            header.style.color = textColor;
+             // Extract RGB from any rgb() format
+             const match = bgColor.match(/(\d+),\s*(\d+),\s*(\d+)/);
+             if (!match) return;
 
-            const link = header.querySelector('a');
-            if (link) {
-              link.style.color = textColor;
-              link.style.setProperty('color', textColor, 'important');
-            }
+             const r = parseInt(match[1]);
+             const g = parseInt(match[2]);
+             const b = parseInt(match[3]);
 
-            const subText = header.querySelector('[data-display-link="true"]');
-            if (subText) {
-              subText.style.color = textColor;
-              subText.style.opacity = '';
-            }
-          });
-        }
+             // Calculate readable text color using YIQ
+             const yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
+             const textColor = yiq >= 128 ? '#1f2937' : '#ffffff';
 
-        window.extractHeaderColors = function() {
+             // Apply to header
+             header.style.color = textColor;
+
+             const link = header.querySelector('a');
+             if (link) {
+               link.style.color = textColor;
+               link.style.setProperty('color', textColor, 'important');
+             }
+
+             const subText = header.querySelector('[data-display-link="true"]');
+             if (subText) {
+               subText.style.color = textColor;
+               subText.style.opacity = '';
+             }
+           });
+         }
+
+         // Run once after Elm renders to fix any headers without server text colors
+         document.addEventListener('DOMContentLoaded', function() {
+           setTimeout(window.fixHeaderColors, 300);
+         });
+
+         window.extractHeaderColors = function() {
          if (typeof ColorThief === 'undefined') return;
          const colorThief = new ColorThief();
 
@@ -479,26 +498,20 @@
       var savedTheme = localStorage.getItem('quickheadlines-theme');
       var prefersDark = false;
       if (savedTheme) {
-        prefersDark = savedTheme === 'dark';
-      } else {
-        prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-      }
-      
-        // Apply theme to document
-        if (prefersDark) {
-          document.documentElement.setAttribute('data-theme', 'dark');
-        } else {
-          document.documentElement.setAttribute('data-theme', 'light');
-        }
+         prefersDark = savedTheme === 'dark';
+       } else {
+         prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+       }
+       
+         // Apply theme to document
+         if (prefersDark) {
+           document.documentElement.setAttribute('data-theme', 'dark');
+         } else {
+           document.documentElement.setAttribute('data-theme', 'light');
+         }
 
-        // Apply cached header colors immediately to prevent flash
-        setTimeout(window.applyCachedHeaderColors, 10);
-
-         // Fix header colors for dark mode
-        if (prefersDark) {
-          setTimeout(window.fixHeaderColors, 100);
-          setTimeout(window.fixHeaderColors, 200);
-        }
+         // Fix header colors for headers without server-provided text colors
+         // Already scheduled via DOMContentLoaded above
       
        // Check if we should restore a previously saved page
         var savedPage = localStorage.getItem('quickheadlines-page');
@@ -548,13 +561,13 @@
           setTimeout(window.extractHeaderColors, 500);
           setTimeout(window.extractHeaderColors, 1500);
 
-           // Fix header colors after color extraction
-          setTimeout(function() {
-            if (window.fixHeaderColors) window.fixHeaderColors();
-          }, 1000);
-          setTimeout(function() {
-            if (window.fixHeaderColors) window.fixHeaderColors();
-          }, 2500);
+            // Fix header colors after color extraction (debounced)
+           setTimeout(function() {
+             if (window.fixHeaderColors) window.fixHeaderColors();
+           }, 1500);
+           setTimeout(function() {
+             if (window.fixHeaderColors) window.fixHeaderColors();
+           }, 3000);
 
           // Watch for theme changes
           new MutationObserver(function(mutations) {
@@ -777,10 +790,9 @@
 
         faviconObserver.observe(appElement, { childList: true, subtree: true });
 
-        // Fix header colors after initial load
-        setTimeout(fixHeaderColors, 2000);
-        setTimeout(fixHeaderColors, 4000);
+        // Final safety fix for any remaining headers
+        setTimeout(fixHeaderColors, 5000);
        })();
-     </script>
-</body>
+      </script>
+ </body>
 </html>
