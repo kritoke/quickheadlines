@@ -14671,22 +14671,80 @@ var $mdgriffith$elm_ui$Element$Font$underline = $mdgriffith$elm_ui$Internal$Mode
 var $author$project$Pages$Home_$feedHeader = F2(
 	function (theme, feed) {
 		var _v0 = function () {
-			var _v1 = feed.U;
+			var _v1 = feed.T;
 			if (!_v1.$) {
-				var textColor = _v1.a;
-				var _v2 = feed.T;
-				if (!_v2.$) {
-					var bgColor = _v2.a;
-					return _Utils_Tuple3(
-						$mdgriffith$elm_ui$Element$htmlAttribute(
-							A2($elm$html$Html$Attributes$style, 'background-color', bgColor)),
-						textColor,
-						_List_fromArray(
-							[
-								$mdgriffith$elm_ui$Element$htmlAttribute(
-								A2($elm$html$Html$Attributes$attribute, 'data-use-adaptive-colors', 'true'))
-							]));
-				} else {
+				var bgColor = _v1.a;
+				var parseRgb = function (str) {
+					var clean = A3(
+						$elm$core$String$replace,
+						' ',
+						'',
+						A3(
+							$elm$core$String$replace,
+							')',
+							'',
+							A3($elm$core$String$replace, 'rgb(', '', str)));
+					var parts = A2($elm$core$String$split, ',', clean);
+					if (((parts.b && parts.b.b) && parts.b.b.b) && (!parts.b.b.b.b)) {
+						var r = parts.a;
+						var _v7 = parts.b;
+						var g = _v7.a;
+						var _v8 = _v7.b;
+						var b = _v8.a;
+						return A4(
+							$elm$core$Maybe$map3,
+							F3(
+								function (ri, gi, bi) {
+									return _Utils_Tuple3(ri, gi, bi);
+								}),
+							$elm$core$String$toInt(r),
+							$elm$core$String$toInt(g),
+							$elm$core$String$toInt(b));
+					} else {
+						return $elm$core$Maybe$Nothing;
+					}
+				};
+				var luminance = function (rgb) {
+					var r = rgb.a;
+					var g = rgb.b;
+					var b = rgb.c;
+					return (((r * 299) + (g * 587)) + (b * 114)) / 1000;
+				};
+				var calculatedTextColor = function () {
+					var _v3 = parseRgb(bgColor);
+					if (!_v3.$) {
+						var rgb = _v3.a;
+						return (luminance(rgb) >= 128) ? 'rgb(17, 24, 39)' : 'rgb(255, 255, 255)';
+					} else {
+						if (!theme) {
+							return 'rgb(255, 255, 255)';
+						} else {
+							return 'rgb(17, 24, 39)';
+						}
+					}
+				}();
+				var textColor = function () {
+					var _v2 = feed.U;
+					if (!_v2.$) {
+						var tc = _v2.a;
+						return tc;
+					} else {
+						return calculatedTextColor;
+					}
+				}();
+				return _Utils_Tuple3(
+					$mdgriffith$elm_ui$Element$htmlAttribute(
+						A2($elm$html$Html$Attributes$style, 'background-color', bgColor)),
+					textColor,
+					_List_fromArray(
+						[
+							$mdgriffith$elm_ui$Element$htmlAttribute(
+							A2($elm$html$Html$Attributes$attribute, 'data-use-server-colors', 'true'))
+						]));
+			} else {
+				var _v9 = feed.U;
+				if (!_v9.$) {
+					var textColor = _v9.a;
 					return _Utils_Tuple3(
 						function () {
 							if (!theme) {
@@ -14699,69 +14757,6 @@ var $author$project$Pages$Home_$feedHeader = F2(
 						}(),
 						textColor,
 						_List_Nil);
-				}
-			} else {
-				var _v4 = feed.T;
-				if (!_v4.$) {
-					var bgColor = _v4.a;
-					var parseRgb = function (str) {
-						var clean = A3(
-							$elm$core$String$replace,
-							' ',
-							'',
-							A3(
-								$elm$core$String$replace,
-								')',
-								'',
-								A3($elm$core$String$replace, 'rgb(', '', str)));
-						var parts = A2($elm$core$String$split, ',', clean);
-						if (((parts.b && parts.b.b) && parts.b.b.b) && (!parts.b.b.b.b)) {
-							var r = parts.a;
-							var _v9 = parts.b;
-							var g = _v9.a;
-							var _v10 = _v9.b;
-							var b = _v10.a;
-							return A4(
-								$elm$core$Maybe$map3,
-								F3(
-									function (ri, gi, bi) {
-										return _Utils_Tuple3(ri, gi, bi);
-									}),
-								$elm$core$String$toInt(r),
-								$elm$core$String$toInt(g),
-								$elm$core$String$toInt(b));
-						} else {
-							return $elm$core$Maybe$Nothing;
-						}
-					};
-					var luminance = function (rgb) {
-						var r = rgb.a;
-						var g = rgb.b;
-						var b = rgb.c;
-						return (((r * 299) + (g * 587)) + (b * 114)) / 1000;
-					};
-					var calculatedTextColor = function () {
-						var _v5 = parseRgb(bgColor);
-						if (!_v5.$) {
-							var rgb = _v5.a;
-							return (luminance(rgb) >= 128) ? 'rgb(17, 24, 39)' : 'rgb(255, 255, 255)';
-						} else {
-							if (!theme) {
-								return 'rgb(255, 255, 255)';
-							} else {
-								return 'rgb(17, 24, 39)';
-							}
-						}
-					}();
-					return _Utils_Tuple3(
-						$mdgriffith$elm_ui$Element$htmlAttribute(
-							A2($elm$html$Html$Attributes$style, 'background-color', bgColor)),
-						calculatedTextColor,
-						_List_fromArray(
-							[
-								$mdgriffith$elm_ui$Element$htmlAttribute(
-								A2($elm$html$Html$Attributes$attribute, 'data-use-adaptive-colors', 'true'))
-							]));
 				} else {
 					var defaultTextColor = function () {
 						if (!theme) {
@@ -14781,17 +14776,13 @@ var $author$project$Pages$Home_$feedHeader = F2(
 							}
 						}(),
 						defaultTextColor,
-						_List_fromArray(
-							[
-								$mdgriffith$elm_ui$Element$htmlAttribute(
-								A2($elm$html$Html$Attributes$attribute, 'data-use-adaptive-colors', 'true'))
-							]));
+						_List_Nil);
 				}
 			}
 		}();
 		var headerBg = _v0.a;
 		var headerTextColor = _v0.b;
-		var adaptiveFlag = _v0.c;
+		var serverColorsFlag = _v0.c;
 		return A2(
 			$mdgriffith$elm_ui$Element$row,
 			_Utils_ap(
@@ -14805,7 +14796,7 @@ var $author$project$Pages$Home_$feedHeader = F2(
 						$mdgriffith$elm_ui$Element$Border$rounded(8),
 						headerBg
 					]),
-				adaptiveFlag),
+				serverColorsFlag),
 			_List_fromArray(
 				[
 					A2(

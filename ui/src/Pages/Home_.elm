@@ -581,17 +581,54 @@ feedCard now theme breakpoint loadingFeed insertedIds feed =
 feedHeader : Theme -> Feed -> Element Msg
 feedHeader theme feed =
     let
-        ( headerBg, headerTextColor, adaptiveFlag ) =
-            case feed.headerTextColor of
-                Just textColor ->
-                    case feed.headerColor of
-                        Just bgColor ->
-                            ( Element.htmlAttribute (Html.Attributes.style "background-color" bgColor)
-                            , textColor
-                            , [ htmlAttribute (Html.Attributes.attribute "data-use-adaptive-colors" "true") ]
-                            )
+        ( headerBg, headerTextColor, serverColorsFlag ) =
+            case feed.headerColor of
+                Just bgColor ->
+                    let
+                        luminance rgb =
+                            case rgb of
+                                (r, g, b) ->
+                                    ((toFloat r * 299) + (toFloat g * 587) + (toFloat b * 114)) / 1000
 
-                        Nothing ->
+                        parseRgb str =
+                            let
+                                clean = String.replace "rgb(" "" str |> String.replace ")" "" |> String.replace " " ""
+                                parts = String.split "," clean
+                            in
+                            case parts of
+                                r :: g :: b :: [] ->
+                                    Maybe.map3 (\ri gi bi -> (ri, gi, bi))
+                                        (String.toInt r)
+                                        (String.toInt g)
+                                        (String.toInt b)
+                                _ ->
+                                    Nothing
+
+                        calculatedTextColor =
+                            case parseRgb bgColor of
+                                Just rgb ->
+                                    if luminance rgb >= 128 then
+                                        "rgb(17, 24, 39)"
+                                    else
+                                        "rgb(255, 255, 255)"
+                                Nothing ->
+                                    case theme of
+                                        Dark -> "rgb(255, 255, 255)"
+                                        Light -> "rgb(17, 24, 39)"
+
+                        textColor =
+                            case feed.headerTextColor of
+                                Just tc -> tc
+                                Nothing -> calculatedTextColor
+                    in
+                    ( Element.htmlAttribute (Html.Attributes.style "background-color" bgColor)
+                    , textColor
+                    , [ htmlAttribute (Html.Attributes.attribute "data-use-server-colors" "true") ]
+                    )
+
+                Nothing ->
+                    case feed.headerTextColor of
+                        Just textColor ->
                             ( case theme of
                                 Dark ->
                                     Background.color (rgb255 30 30 30)
@@ -600,46 +637,6 @@ feedHeader theme feed =
                                     Background.color (rgb255 243 244 246)
                             , textColor
                             , []
-                            )
-
-                Nothing ->
-                    case feed.headerColor of
-                        Just bgColor ->
-                            let
-                                luminance rgb =
-                                    case rgb of
-                                        (r, g, b) ->
-                                            ((toFloat r * 299) + (toFloat g * 587) + (toFloat b * 114)) / 1000
-
-                                parseRgb str =
-                                    let
-                                        clean = String.replace "rgb(" "" str |> String.replace ")" "" |> String.replace " " ""
-                                        parts = String.split "," clean
-                                    in
-                                    case parts of
-                                        r :: g :: b :: [] ->
-                                            Maybe.map3 (\ri gi bi -> (ri, gi, bi))
-                                                (String.toInt r)
-                                                (String.toInt g)
-                                                (String.toInt b)
-                                        _ ->
-                                            Nothing
-
-                                calculatedTextColor =
-                                    case parseRgb bgColor of
-                                        Just rgb ->
-                                            if luminance rgb >= 128 then
-                                                "rgb(17, 24, 39)"
-                                            else
-                                                "rgb(255, 255, 255)"
-                                        Nothing ->
-                                            case theme of
-                                                Dark -> "rgb(255, 255, 255)"
-                                                Light -> "rgb(17, 24, 39)"
-                            in
-                            ( Element.htmlAttribute (Html.Attributes.style "background-color" bgColor)
-                            , calculatedTextColor
-                            , [ htmlAttribute (Html.Attributes.attribute "data-use-adaptive-colors" "true") ]
                             )
 
                         Nothing ->
@@ -659,7 +656,7 @@ feedHeader theme feed =
                                 Light ->
                                     Background.color (rgb255 243 244 246)
                             , defaultTextColor
-                            , [ htmlAttribute (Html.Attributes.attribute "data-use-adaptive-colors" "true") ]
+                            , []
                             )
     in
     row
@@ -669,7 +666,7 @@ feedHeader theme feed =
         , padding 8
         , Border.rounded 8
         , headerBg
-        ] ++ adaptiveFlag)
+        ] ++ serverColorsFlag)
         [ faviconView theme (Maybe.withDefault "" feed.favicon)
         , column [ spacing 2, htmlAttribute (Html.Attributes.style "flex" "1") ]
             [ link

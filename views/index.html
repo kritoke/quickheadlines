@@ -233,83 +233,82 @@
           });
 
           window.extractHeaderColors = function() {
-         if (typeof ColorThief === 'undefined') return;
-         const colorThief = new ColorThief();
+           if (typeof ColorThief === 'undefined') return;
+           const colorThief = new ColorThief();
 
-         // Only extract colors for headers that DON'T have server-provided colors
-         document.querySelectorAll('.feed-header:not([data-use-adaptive-colors="true"])').forEach(header => {
-           if (header.dataset.adaptive === 'true') return;
-           if (header.closest('[data-timeline-item="true"]')) {
-             header.dataset.adaptive = 'true';
-             return;
-           }
-           if (header.dataset.timelineHeader === 'true') {
-             header.dataset.adaptive = 'true';
-             return;
-           }
-           if (!header.classList.contains('feed-header')) return;
+           // Only extract colors for headers that DON'T have server-provided colors
+           // Headers with server colors have data-use-server-colors="true" set by Elm
+           document.querySelectorAll('.feed-header:not([data-use-server-colors="true"])').forEach(header => {
+             // Skip timeline headers - they use theme colors
+             if (header.dataset.timelineHeader === 'true') {
+               header.dataset.adaptive = 'true';
+               return;
+             }
 
-           const img = header.querySelector('img');
-           const imgSrc = img ? img.getAttribute('src') : null;
-           const faviconKey = imgSrc || 'default';
+             // Ensure element has .feed-header class (defense in depth)
+             if (!header.classList.contains('feed-header')) return;
 
-           if (window.feedHeaderCache[faviconKey]) {
-             const cached = window.feedHeaderCache[faviconKey];
-             header.style.backgroundColor = cached.bg;
-             header.style.color = cached.text;
-             const link = header.querySelector('a');
-            if (link) {
-              link.style.setProperty('color', cached.text, 'important');
-              link.style.textDecoration = 'none';
-            }
-            header.dataset.adaptive = 'true';
-            return;
-          }
+             const img = header.querySelector('img');
+             const imgSrc = img ? img.getAttribute('src') : null;
+             const faviconKey = imgSrc || 'default';
 
-          if (!img || !imgSrc) return;
+             if (window.feedHeaderCache[faviconKey]) {
+               const cached = window.feedHeaderCache[faviconKey];
+               header.style.backgroundColor = cached.bg;
+               header.style.color = cached.text;
+               const link = header.querySelector('a');
+               if (link) {
+                 link.style.setProperty('color', cached.text, 'important');
+                 link.style.textDecoration = 'none';
+               }
+               header.dataset.adaptive = 'true';
+               return;
+             }
 
-          const tempImg = new Image();
-          tempImg.crossOrigin = 'Anonymous';
-          tempImg.src = imgSrc;
+             if (!img || !imgSrc) return;
 
-          tempImg.onload = function() {
-            try {
-              const color = colorThief.getColor(tempImg);
-              if (!color || !color.length) return;
+             const tempImg = new Image();
+             tempImg.crossOrigin = 'Anonymous';
+             tempImg.src = imgSrc;
 
-              const [r, g, b] = color;
-              const yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
-              const textColor = (yiq >= 128) ? '#1f2937' : '#ffffff';
-              const bgColor = 'rgb(' + r + ',' + g + ',' + b + ')';
-              const link = header.querySelector('a');
+             tempImg.onload = function() {
+               try {
+                 const color = colorThief.getColor(tempImg);
+                 if (!color || !color.length) return;
 
-              header.style.backgroundColor = bgColor;
-              header.style.color = textColor;
-              if (link) {
-                link.style.setProperty('color', textColor, 'important');
-                link.style.textDecoration = 'none';
-              }
+                 const [r, g, b] = color;
+                 const yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
+                 const textColor = (yiq >= 128) ? '#1f2937' : '#ffffff';
+                 const bgColor = 'rgb(' + r + ',' + g + ',' + b + ')';
+                 const link = header.querySelector('a');
 
-              if (faviconKey) {
-                window.feedHeaderCache[faviconKey] = { bg: bgColor, text: textColor };
-              }
+                 header.style.backgroundColor = bgColor;
+                 header.style.color = textColor;
+                 if (link) {
+                   link.style.setProperty('color', textColor, 'important');
+                   link.style.textDecoration = 'none';
+                 }
 
-              const feedUrl = link ? link.href : null;
-              if (feedUrl) {
-                fetch('/api/header_color', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ feed_url: feedUrl, color: bgColor, text_color: textColor })
-                }).catch(e => {});
-              }
+                 if (faviconKey) {
+                   window.feedHeaderCache[faviconKey] = { bg: bgColor, text: textColor };
+                 }
 
-              header.dataset.adaptive = 'true';
-            } catch (e) {}
-          };
-        });
-      };
+                 const feedUrl = link ? link.href : null;
+                 if (feedUrl) {
+                   fetch('/api/header_color', {
+                     method: 'POST',
+                     headers: { 'Content-Type': 'application/json' },
+                     body: JSON.stringify({ feed_url: feedUrl, color: bgColor, text_color: textColor })
+                   }).catch(e => {});
+                 }
 
-      // Fix cached header colors in dark mode
+                 header.dataset.adaptive = 'true';
+               } catch (e) {}
+             };
+           });
+         };
+
+       // Fix cached header colors in dark mode
       window.fixHeaderColors = fixHeaderColors;
     </script>
   </head>
@@ -349,26 +348,26 @@
        return {};
      };
 
-     // Apply cached colors immediately on page load
-     window.applyCachedHeaderColors = function() {
-       const cached = window.loadHeaderColorsFromCache();
-       Object.keys(cached).forEach(key => {
-         const entry = cached[key];
-         // Find headers by favicon src matching the cache key
-         const headers = document.querySelectorAll('.feed-header[data-use-adaptive-colors="true"]');
-         headers.forEach(header => {
-           const img = header.querySelector('img');
-           if (img && img.getAttribute('src') === key) {
-             header.style.backgroundColor = entry.bg;
-             header.style.color = entry.text;
-             const link = header.querySelector('a');
-             if (link) {
-               link.style.setProperty('color', entry.text, 'important');
-             }
-           }
-         });
-       });
-     };
+      // Apply cached colors immediately on page load
+      window.applyCachedHeaderColors = function() {
+        const cached = window.loadHeaderColorsFromCache();
+        Object.keys(cached).forEach(key => {
+          const entry = cached[key];
+          // Find headers without server colors (data-use-server-colors is NOT set)
+          const headers = document.querySelectorAll('.feed-header:not([data-use-server-colors="true"])');
+          headers.forEach(header => {
+            const img = header.querySelector('img');
+            if (img && img.getAttribute('src') === key) {
+              header.style.backgroundColor = entry.bg;
+              header.style.color = entry.text;
+              const link = header.querySelector('a');
+              if (link) {
+                link.style.setProperty('color', entry.text, 'important');
+              }
+            }
+          });
+        });
+      };
 
      // Save extracted colors to localStorage
      window.saveHeaderColorToCache = function(key, bg, text) {
@@ -380,116 +379,96 @@
        } catch (e) {
          // localStorage unavailable or quota exceeded
        }
-     };
+      };
 
-      window.extractHeaderColors = function() {
-       if (typeof ColorThief === 'undefined') return;
-       const colorThief = new ColorThief();
+        window.extractHeaderColors = function() {
+         if (typeof ColorThief === 'undefined') return;
+         const colorThief = new ColorThief();
 
-        // Only extract colors for headers that DON'T have server-provided colors
-        var allHeaders = document.querySelectorAll('.feed-header[data-use-adaptive-colors="true"]');
+         // Only extract colors for headers that DON'T have server-provided colors
+         // Headers with server colors have data-use-server-colors="true" set by Elm
+         var allHeaders = document.querySelectorAll('.feed-header:not([data-use-server-colors="true"])');
 
-       allHeaders.forEach(header => {
-         var inTimeline = header.closest('[data-timeline-item="true"]') !== null;
-
-         // Skip if already processed
-         if (header.dataset.adaptive === 'true') {
-           header.dataset.adaptive = 'true';
-           return;
-         }
-
-         // Skip ANY header that's inside a timeline item - use theme colors instead
-         if (inTimeline) {
-           header.dataset.adaptive = 'true';
-           return;
-         }
-
-         // Skip timeline headers explicitly
-         if (header.dataset.timelineHeader === 'true') {
-           header.dataset.adaptive = 'true';
-           return;
-         }
-
-         // Ensure element has .feed-header class (defense in depth)
-         if (!header.classList.contains('feed-header')) {
-           return;
-         }
-
-         // Skip if already has inline background color from server
-         if (header.style.backgroundColor && header.style.backgroundColor !== 'transparent') {
-           header.dataset.adaptive = 'true';
-           return;
-         }
-
-         // Use favicon src as cache key (more reliable than URL matching)
-         const img = header.querySelector('img');
-         const imgSrc = img ? img.getAttribute('src') : null;
-         const faviconKey = imgSrc || 'default';
-
-         // Check cache by favicon path
-         if (window.feedHeaderCache[faviconKey]) {
-           const cached = window.feedHeaderCache[faviconKey];
-           header.style.backgroundColor = cached.bg;
-           header.style.color = cached.text;
-           const link = header.querySelector('a');
-           if (link) {
-             link.style.setProperty('color', cached.text, 'important');
-             link.style.textDecoration = 'none';
+         allHeaders.forEach(header => {
+           // Skip timeline headers - they use theme colors
+           if (header.dataset.timelineHeader === 'true') {
+             header.dataset.adaptive = 'true';
+             return;
            }
-           header.dataset.adaptive = 'true';
-           return;
-         }
 
-         // Search for image in the header row
-         if (!img) return;
-         if (!imgSrc) return;
+           // Ensure element has .feed-header class (defense in depth)
+           if (!header.classList.contains('feed-header')) {
+             return;
+           }
 
-        // Create a temporary image to extract colors from
-        const tempImg = new Image();
-        tempImg.crossOrigin = 'Anonymous';
-        tempImg.src = imgSrc;
+           // Use favicon src as cache key (more reliable than URL matching)
+           const img = header.querySelector('img');
+           const imgSrc = img ? img.getAttribute('src') : null;
+           const faviconKey = imgSrc || 'default';
 
-        tempImg.onload = function() {
-          try {
-            // Use getColor for single dominant color (works better with small images)
-            const color = colorThief.getColor(tempImg);
-            if (!color || !color.length) return;
-
-            const [r, g, b] = color;
-            const yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
-            const textColor = (yiq >= 128) ? '#1f2937' : '#ffffff';
-            const bgColor = 'rgb(' + r + ',' + g + ',' + b + ')';
-            const link = header.querySelector('a');
-
-             header.style.backgroundColor = bgColor;
-             header.style.color = textColor;
+           // Check cache by favicon path
+           if (window.feedHeaderCache[faviconKey]) {
+             const cached = window.feedHeaderCache[faviconKey];
+             header.style.backgroundColor = cached.bg;
+             header.style.color = cached.text;
+             const link = header.querySelector('a');
              if (link) {
-               link.style.setProperty('color', textColor, 'important');
+               link.style.setProperty('color', cached.text, 'important');
                link.style.textDecoration = 'none';
              }
-
-             // Save to localStorage cache
-             if (faviconKey && faviconKey !== 'default') {
-               window.saveHeaderColorToCache(faviconKey, bgColor, textColor);
-             }
-
-             // Save extracted colors to database using feed URL if available
-             const feedUrl = link ? link.href : null;
-             if (feedUrl) {
-               fetch('/api/header_color', {
-                 method: 'POST',
-                 headers: { 'Content-Type': 'application/json' },
-                 body: JSON.stringify({ feed_url: feedUrl, color: bgColor, text_color: textColor })
-               }).catch(e => {});
-             }
-
              header.dataset.adaptive = 'true';
-          } catch (e) {
-            // Silently fail - color extraction is optional
-          }
+             return;
+           }
+
+           // Skip if no favicon image
+           if (!img || !imgSrc) return;
+
+           // Create a temporary image to extract colors from
+           const tempImg = new Image();
+           tempImg.crossOrigin = 'Anonymous';
+           tempImg.src = imgSrc;
+
+           tempImg.onload = function() {
+             try {
+               // Use getColor for single dominant color (works better with small images)
+               const color = colorThief.getColor(tempImg);
+               if (!color || !color.length) return;
+
+               const [r, g, b] = color;
+               const yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
+               const textColor = (yiq >= 128) ? '#1f2937' : '#ffffff';
+               const bgColor = 'rgb(' + r + ',' + g + ',' + b + ')';
+               const link = header.querySelector('a');
+
+               header.style.backgroundColor = bgColor;
+               header.style.color = textColor;
+               if (link) {
+                 link.style.setProperty('color', textColor, 'important');
+                 link.style.textDecoration = 'none';
+               }
+
+               // Save to localStorage cache
+               if (faviconKey && faviconKey !== 'default') {
+                 window.saveHeaderColorToCache(faviconKey, bgColor, textColor);
+               }
+
+               // Save extracted colors to database using feed URL if available
+               const feedUrl = link ? link.href : null;
+               if (feedUrl) {
+                 fetch('/api/header_color', {
+                   method: 'POST',
+                   headers: { 'Content-Type': 'application/json' },
+                   body: JSON.stringify({ feed_url: feedUrl, color: bgColor, text_color: textColor })
+                 }).catch(e => {});
+               }
+
+               header.dataset.adaptive = 'true';
+             } catch (e) {
+               // Silently fail - color extraction is optional
+             }
+           };
+         });
         };
-       });
-     };
 
     (function() {
       var appElement = document.getElementById('app');
