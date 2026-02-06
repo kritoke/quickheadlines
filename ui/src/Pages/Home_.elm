@@ -581,20 +581,14 @@ feedCard now theme breakpoint loadingFeed insertedIds feed =
 feedHeader : Theme -> Feed -> Element Msg
 feedHeader theme feed =
     let
-        hasServerColors = feed.headerColor /= Nothing || feed.headerTextColor /= Nothing
-        adaptiveFlag =
-            if hasServerColors then
-                [ htmlAttribute (Html.Attributes.attribute "data-use-adaptive-colors" "true") ]
-            else
-                []
-
-        ( headerBg, headerTextColor ) =
+        ( headerBg, headerTextColor, adaptiveFlag ) =
             case feed.headerTextColor of
                 Just textColor ->
                     case feed.headerColor of
                         Just bgColor ->
                             ( Element.htmlAttribute (Html.Attributes.style "background-color" bgColor)
                             , textColor
+                            , [ htmlAttribute (Html.Attributes.attribute "data-use-adaptive-colors" "true") ]
                             )
 
                         Nothing ->
@@ -605,6 +599,7 @@ feedHeader theme feed =
                                 Light ->
                                     Background.color (rgb255 243 244 246)
                             , textColor
+                            , []
                             )
 
                 Nothing ->
@@ -644,6 +639,7 @@ feedHeader theme feed =
                             in
                             ( Element.htmlAttribute (Html.Attributes.style "background-color" bgColor)
                             , calculatedTextColor
+                            , [ htmlAttribute (Html.Attributes.attribute "data-use-adaptive-colors" "true") ]
                             )
 
                         Nothing ->
@@ -663,6 +659,7 @@ feedHeader theme feed =
                                 Light ->
                                     Background.color (rgb255 243 244 246)
                             , defaultTextColor
+                            , [ htmlAttribute (Html.Attributes.attribute "data-use-adaptive-colors" "true") ]
                             )
     in
     row

@@ -14697,12 +14697,6 @@ var $author$project$ThemeTypography$size13 = $mdgriffith$elm_ui$Element$Font$siz
 var $mdgriffith$elm_ui$Element$Font$underline = $mdgriffith$elm_ui$Internal$Model$htmlClass($mdgriffith$elm_ui$Internal$Style$classes.underline);
 var $author$project$Pages$Home_$feedHeader = F2(
 	function (theme, feed) {
-		var hasServerColors = (!_Utils_eq(feed.headerColor, $elm$core$Maybe$Nothing)) || (!_Utils_eq(feed.headerTextColor, $elm$core$Maybe$Nothing));
-		var adaptiveFlag = hasServerColors ? _List_fromArray(
-			[
-				$mdgriffith$elm_ui$Element$htmlAttribute(
-				A2($elm$html$Html$Attributes$attribute, 'data-use-adaptive-colors', 'true'))
-			]) : _List_Nil;
 		var _v0 = function () {
 			var _v1 = feed.headerTextColor;
 			if (_v1.$ === 'Just') {
@@ -14710,12 +14704,17 @@ var $author$project$Pages$Home_$feedHeader = F2(
 				var _v2 = feed.headerColor;
 				if (_v2.$ === 'Just') {
 					var bgColor = _v2.a;
-					return _Utils_Tuple2(
+					return _Utils_Tuple3(
 						$mdgriffith$elm_ui$Element$htmlAttribute(
 							A2($elm$html$Html$Attributes$style, 'background-color', bgColor)),
-						textColor);
+						textColor,
+						_List_fromArray(
+							[
+								$mdgriffith$elm_ui$Element$htmlAttribute(
+								A2($elm$html$Html$Attributes$attribute, 'data-use-adaptive-colors', 'true'))
+							]));
 				} else {
-					return _Utils_Tuple2(
+					return _Utils_Tuple3(
 						function () {
 							if (theme.$ === 'Dark') {
 								return $mdgriffith$elm_ui$Element$Background$color(
@@ -14725,7 +14724,8 @@ var $author$project$Pages$Home_$feedHeader = F2(
 									A3($mdgriffith$elm_ui$Element$rgb255, 243, 244, 246));
 							}
 						}(),
-						textColor);
+						textColor,
+						_List_Nil);
 				}
 			} else {
 				var _v4 = feed.headerColor;
@@ -14780,10 +14780,15 @@ var $author$project$Pages$Home_$feedHeader = F2(
 							}
 						}
 					}();
-					return _Utils_Tuple2(
+					return _Utils_Tuple3(
 						$mdgriffith$elm_ui$Element$htmlAttribute(
 							A2($elm$html$Html$Attributes$style, 'background-color', bgColor)),
-						calculatedTextColor);
+						calculatedTextColor,
+						_List_fromArray(
+							[
+								$mdgriffith$elm_ui$Element$htmlAttribute(
+								A2($elm$html$Html$Attributes$attribute, 'data-use-adaptive-colors', 'true'))
+							]));
 				} else {
 					var defaultTextColor = function () {
 						if (theme.$ === 'Dark') {
@@ -14792,7 +14797,7 @@ var $author$project$Pages$Home_$feedHeader = F2(
 							return 'rgb(17, 24, 39)';
 						}
 					}();
-					return _Utils_Tuple2(
+					return _Utils_Tuple3(
 						function () {
 							if (theme.$ === 'Dark') {
 								return $mdgriffith$elm_ui$Element$Background$color(
@@ -14802,12 +14807,18 @@ var $author$project$Pages$Home_$feedHeader = F2(
 									A3($mdgriffith$elm_ui$Element$rgb255, 243, 244, 246));
 							}
 						}(),
-						defaultTextColor);
+						defaultTextColor,
+						_List_fromArray(
+							[
+								$mdgriffith$elm_ui$Element$htmlAttribute(
+								A2($elm$html$Html$Attributes$attribute, 'data-use-adaptive-colors', 'true'))
+							]));
 				}
 			}
 		}();
 		var headerBg = _v0.a;
 		var headerTextColor = _v0.b;
+		var adaptiveFlag = _v0.c;
 		return A2(
 			$mdgriffith$elm_ui$Element$row,
 			_Utils_ap(
