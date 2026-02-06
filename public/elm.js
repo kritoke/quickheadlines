@@ -16168,18 +16168,18 @@ var $author$project$Pages$Timeline$clusterOtherItem = F3(
 						]),
 					$mdgriffith$elm_ui$Element$text('•')),
 					function () {
-					var otherLinkColor = (itemHeaderTextColor !== '') ? _List_fromArray(
+					var otherLinkColor = _Utils_eq(theme, $author$project$Shared$Dark) ? ((itemHeaderTextColor !== '') ? _List_fromArray(
 						[
 							$mdgriffith$elm_ui$Element$htmlAttribute(
 							A2($elm$html$Html$Attributes$style, 'color', itemHeaderTextColor))
-						]) : (((itemHeaderColor !== '') && _Utils_eq(theme, $author$project$Shared$Dark)) ? _List_fromArray(
+						]) : ((itemHeaderColor !== '') ? _List_fromArray(
 						[
 							$mdgriffith$elm_ui$Element$htmlAttribute(
 							A2(
 								$elm$html$Html$Attributes$style,
 								'color',
 								$author$project$Pages$Timeline$textColorFromBgString(itemHeaderColor)))
-						]) : _List_Nil);
+						]) : _List_Nil)) : _List_Nil;
 					var otherLinkBase = _List_fromArray(
 						[
 							$mdgriffith$elm_ui$Element$Font$size(11),
@@ -16386,18 +16386,18 @@ var $author$project$Pages$Timeline$clusterItem = F7(
 										[
 											faviconImg,
 											function () {
-											var titleColorAttr = (headerTextColor !== '') ? _List_fromArray(
+											var titleColorAttr = _Utils_eq(theme, $author$project$Shared$Dark) ? ((headerTextColor !== '') ? _List_fromArray(
 												[
 													$mdgriffith$elm_ui$Element$htmlAttribute(
 													A2($elm$html$Html$Attributes$style, 'color', headerTextColor))
-												]) : (((headerColor !== '') && _Utils_eq(theme, $author$project$Shared$Dark)) ? _List_fromArray(
+												]) : ((headerColor !== '') ? _List_fromArray(
 												[
 													$mdgriffith$elm_ui$Element$htmlAttribute(
 													A2(
 														$elm$html$Html$Attributes$style,
 														'color',
 														$author$project$Pages$Timeline$textColorFromBgString(headerColor)))
-												]) : _List_Nil);
+												]) : _List_Nil)) : _List_Nil;
 											var titleAttrsBase = _List_fromArray(
 												[
 													$mdgriffith$elm_ui$Element$Font$size(12),
@@ -16423,18 +16423,18 @@ var $author$project$Pages$Timeline$clusterItem = F7(
 												]),
 											$mdgriffith$elm_ui$Element$text('•')),
 											function () {
-											var linkColorAttr = (headerTextColor !== '') ? _List_fromArray(
+											var linkColorAttr = _Utils_eq(theme, $author$project$Shared$Dark) ? ((headerTextColor !== '') ? _List_fromArray(
 												[
 													$mdgriffith$elm_ui$Element$htmlAttribute(
 													A2($elm$html$Html$Attributes$style, 'color', headerTextColor))
-												]) : (((headerColor !== '') && _Utils_eq(theme, $author$project$Shared$Dark)) ? _List_fromArray(
+												]) : ((headerColor !== '') ? _List_fromArray(
 												[
 													$mdgriffith$elm_ui$Element$htmlAttribute(
 													A2(
 														$elm$html$Html$Attributes$style,
 														'color',
 														$author$project$Pages$Timeline$textColorFromBgString(headerColor)))
-												]) : _List_Nil);
+												]) : _List_Nil)) : _List_Nil;
 											var linkAttrsBase = _List_fromArray(
 												[
 													$mdgriffith$elm_ui$Element$htmlAttribute(
