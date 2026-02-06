@@ -181,45 +181,41 @@
           }
         </style>
      <script src="https://cdnjs.cloudflare.com/ajax/libs/color-thief/2.3.2/color-thief.umd.js"></script>
-      <script>
-        function fixHeaderColors() {
-          // Fix ALL headers to have consistent readable text colors
-          // Skip headers that already have data-use-adaptive-colors="true" (server-provided colors)
-          document.querySelectorAll('.feed-header').forEach(header => {
-            // Skip if server already provided colors
-            if (header.dataset.useAdaptiveColors === "true") return;
+       <script>
+         function fixHeaderColors() {
+           // Fix text colors for ALL headers to ensure readable text
+           document.querySelectorAll('.feed-header').forEach(header => {
+             const bgColor = header.style.backgroundColor;
+             if (!bgColor || bgColor === 'transparent') return;
 
-            const bgColor = header.style.backgroundColor;
-            if (!bgColor || bgColor === 'transparent') return;
+            // Extract RGB from any rgb() format
+            const match = bgColor.match(/(\d+),\s*(\d+),\s*(\d+)/);
+            if (!match) return;
 
-           // Extract RGB from any rgb() format
-           const match = bgColor.match(/(\d+),\s*(\d+),\s*(\d+)/);
-           if (!match) return;
+            const r = parseInt(match[1]);
+            const g = parseInt(match[2]);
+            const b = parseInt(match[3]);
 
-           const r = parseInt(match[1]);
-           const g = parseInt(match[2]);
-           const b = parseInt(match[3]);
+            // Calculate readable text color using YIQ
+            const yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
+            const textColor = yiq >= 128 ? '#1f2937' : '#ffffff';
 
-           // Calculate readable text color using YIQ
-           const yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
-           const textColor = yiq >= 128 ? '#1f2937' : '#ffffff';
+            // Apply to all text elements in the header - title, link, URL
+            header.style.color = textColor;
 
-           // Apply to all text elements in the header - title, link, URL
-           header.style.color = textColor;
+            const link = header.querySelector('a');
+            if (link) {
+              link.style.color = textColor;
+              link.style.setProperty('color', textColor, 'important');
+            }
 
-           const link = header.querySelector('a');
-           if (link) {
-             link.style.color = textColor;
-             link.style.setProperty('color', textColor, 'important');
-           }
-
-           const subText = header.querySelector('[data-display-link="true"]');
-           if (subText) {
-             subText.style.color = textColor;
-             subText.style.opacity = '';
-           }
-         });
-       }
+            const subText = header.querySelector('[data-display-link="true"]');
+            if (subText) {
+              subText.style.color = textColor;
+              subText.style.opacity = '';
+            }
+          });
+        }
 
         window.extractHeaderColors = function() {
          if (typeof ColorThief === 'undefined') return;
