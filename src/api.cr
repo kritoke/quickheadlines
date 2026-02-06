@@ -245,11 +245,20 @@ end
 module Api
   # Convert FeedData to FeedResponse
   def self.feed_to_response(feed : FeedData, tab_name : String = "", total_count : Int32? = nil, display_item_limit : Int32? = nil) : FeedResponse
-    # Load header colors from database to ensure we get the latest
     cache = FeedCache.instance
-    colors = cache.get_header_colors(feed.url)
-    header_color = colors[:bg_color] || feed.header_color
-    header_text_color = colors[:text_color] || feed.header_text_color
+
+    # Prefer freshly extracted colors from FeedData over database cache
+    # FeedData.header_color contains colors extracted during this refresh cycle
+    # Database colors are used as fallback for feeds without fresh colors
+    header_color = feed.header_color
+    header_text_color = feed.header_text_color
+
+    # Fall back to database only if FeedData doesn't have colors
+    if header_color.nil? || header_text_color.nil?
+      colors = cache.get_header_colors(feed.url)
+      header_color ||= colors[:bg_color]
+      header_text_color ||= colors[:text_color]
+    end
 
     # Limit items for initial display (controls how many items are shown in feed cards)
     limit = display_item_limit || 20
