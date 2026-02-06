@@ -194,11 +194,19 @@
           }
 
           function fixHeaderColorsInner() {
-            // Fix text colors ONLY for headers that don't have server-provided inline colors
+            // Fix text colors for headers that DON'T have valid inline colors
             document.querySelectorAll('.feed-header').forEach(header => {
-              // Skip if server already provided inline text color
-              if (header.style.color && header.style.color !== '') return;
+              const currentColor = header.style.color;
 
+              // Skip if we have a valid hex/rgb inline color (not a CSS variable)
+              if (currentColor && 
+                  (currentColor.startsWith('#') || 
+                   currentColor.startsWith('rgb') ||
+                   currentColor.startsWith('hsl'))) {
+                return;
+              }
+
+              // If color is a CSS variable or empty, calculate and set it
               const bgColor = header.style.backgroundColor;
               if (!bgColor || bgColor === 'transparent') return;
 
@@ -231,7 +239,7 @@
            });
          }
 
-         // Run once after Elm renders to fix any headers without server text colors
+         // Run once after Elm renders
          document.addEventListener('DOMContentLoaded', function() {
            setTimeout(window.fixHeaderColors, 300);
          });
