@@ -860,18 +860,30 @@ clusterItem breakpoint zone now theme expandedClusters insertedIds cluster =
             ]
                 [ paragraph [ width fill, Ty.size13 ]
                 [ faviconImg
-                , el [ Font.size 12, Font.color (getFeedTitleColor theme headerColor headerTextColor), htmlAttribute (Html.Attributes.attribute "data-use-server-colors" (if headerColor /= "" || headerTextColor /= "" then "true" else "false")), htmlAttribute (Html.Attributes.style "color" (if headerTextColor /= "" then headerTextColor else if headerColor /= "" then textColorFromBgString headerColor else "")) ]
+                , let
+                    titleAttrsBase = [ Font.size 12, Font.color (getFeedTitleColor theme headerColor headerTextColor), htmlAttribute (Html.Attributes.attribute "data-use-server-colors" (if headerColor /= "" || headerTextColor /= "" then "true" else "false")) ]
+                    titleColorAttr =
+                        if headerTextColor /= "" then
+                            [ htmlAttribute (Html.Attributes.style "color" headerTextColor) ]
+                        else if headerColor /= "" && theme == Shared.Dark then
+                            [ htmlAttribute (Html.Attributes.style "color" (textColorFromBgString headerColor)) ]
+                        else
+                            []
+                  in
+                  el (titleAttrsBase ++ titleColorAttr)
                      (text cluster.representative.feedTitle)
                 , el [ Font.color mutedTxt, paddingXY 4 0 ] (text "•")
-                , link
-                    [ htmlAttribute (Html.Attributes.attribute "data-display-link" "true")
-                    , Font.color txtColor
-                    , htmlAttribute (Html.Attributes.attribute "data-use-server-colors" (if headerColor /= "" || headerTextColor /= "" then "true" else "false"))
-                     , htmlAttribute (Html.Attributes.style "color" (if headerTextColor /= "" then headerTextColor else if headerColor /= "" then textColorFromBgString headerColor else ""))
-                    , Font.semiBold
-                    , mouseOver [ Font.color lumeOrange ]
-                    ]
-                    { url = cluster.representative.link, label = text cluster.representative.title }
+                , let
+                    linkAttrsBase = [ htmlAttribute (Html.Attributes.attribute "data-display-link" "true"), Font.color txtColor, htmlAttribute (Html.Attributes.attribute "data-use-server-colors" (if headerColor /= "" || headerTextColor /= "" then "true" else "false")), Font.semiBold, mouseOver [ Font.color lumeOrange ] ]
+                    linkColorAttr =
+                        if headerTextColor /= "" then
+                            [ htmlAttribute (Html.Attributes.style "color" headerTextColor) ]
+                        else if headerColor /= "" && theme == Shared.Dark then
+                            [ htmlAttribute (Html.Attributes.style "color" (textColorFromBgString headerColor)) ]
+                        else
+                            []
+                  in
+                  link (linkAttrsBase ++ linkColorAttr) { url = cluster.representative.link, label = text cluster.representative.title }
         , if cluster.count > 1 then
               Input.button
                   [ paddingEach { top = 0, right = 0, bottom = 0, left = 8 }
@@ -928,16 +940,17 @@ clusterOtherItem now theme item =
         , el [ Ty.meta, Font.color (getFeedTitleColor theme itemHeaderColor itemHeaderTextColor) ]
              (text item.feedTitle)
         , el [ Ty.meta, Font.color mutedTxt, paddingXY 4 0 ] (text "•")
-        , link
-            [ Font.size 11
-            , htmlAttribute (Html.Attributes.attribute "data-display-link" "true")
-            , Font.color (textColor theme)
-            , Font.medium
-            , mouseOver [ Font.color lumeOrange ]
-                    , htmlAttribute (Html.Attributes.attribute "data-use-server-colors" (if itemHeaderColor /= "" || itemHeaderTextColor /= "" then "true" else "false"))
-                    , htmlAttribute (Html.Attributes.style "color" (if itemHeaderTextColor /= "" then itemHeaderTextColor else if itemHeaderColor /= "" then textColorFromBgString itemHeaderColor else ""))
-            ]
-            { url = item.link, label = text item.title }
+        , let
+            otherLinkBase = [ Font.size 11, htmlAttribute (Html.Attributes.attribute "data-display-link" "true"), Font.color (textColor theme), Font.medium, mouseOver [ Font.color lumeOrange ], htmlAttribute (Html.Attributes.attribute "data-use-server-colors" (if itemHeaderColor /= "" || itemHeaderTextColor /= "" then "true" else "false")) ]
+            otherLinkColor =
+                if itemHeaderTextColor /= "" then
+                    [ htmlAttribute (Html.Attributes.style "color" itemHeaderTextColor) ]
+                else if itemHeaderColor /= "" && theme == Shared.Dark then
+                    [ htmlAttribute (Html.Attributes.style "color" (textColorFromBgString itemHeaderColor)) ]
+                else
+                    []
+          in
+          link (otherLinkBase ++ otherLinkColor) { url = item.link, label = text item.title }
         ]
 
 

@@ -16167,9 +16167,20 @@ var $author$project$Pages$Timeline$clusterOtherItem = F3(
 							A2($mdgriffith$elm_ui$Element$paddingXY, 4, 0)
 						]),
 					$mdgriffith$elm_ui$Element$text('•')),
-					A2(
-					$mdgriffith$elm_ui$Element$link,
-					_List_fromArray(
+					function () {
+					var otherLinkColor = (itemHeaderTextColor !== '') ? _List_fromArray(
+						[
+							$mdgriffith$elm_ui$Element$htmlAttribute(
+							A2($elm$html$Html$Attributes$style, 'color', itemHeaderTextColor))
+						]) : (((itemHeaderColor !== '') && _Utils_eq(theme, $author$project$Shared$Dark)) ? _List_fromArray(
+						[
+							$mdgriffith$elm_ui$Element$htmlAttribute(
+							A2(
+								$elm$html$Html$Attributes$style,
+								'color',
+								$author$project$Pages$Timeline$textColorFromBgString(itemHeaderColor)))
+						]) : _List_Nil);
+					var otherLinkBase = _List_fromArray(
 						[
 							$mdgriffith$elm_ui$Element$Font$size(11),
 							$mdgriffith$elm_ui$Element$htmlAttribute(
@@ -16186,17 +16197,16 @@ var $author$project$Pages$Timeline$clusterOtherItem = F3(
 							A2(
 								$elm$html$Html$Attributes$attribute,
 								'data-use-server-colors',
-								((itemHeaderColor !== '') || (itemHeaderTextColor !== '')) ? 'true' : 'false')),
-							$mdgriffith$elm_ui$Element$htmlAttribute(
-							A2(
-								$elm$html$Html$Attributes$style,
-								'color',
-								(itemHeaderTextColor !== '') ? itemHeaderTextColor : ((itemHeaderColor !== '') ? $author$project$Pages$Timeline$textColorFromBgString(itemHeaderColor) : '')))
-						]),
-					{
-						label: $mdgriffith$elm_ui$Element$text(item.title),
-						url: item.link
-					})
+								((itemHeaderColor !== '') || (itemHeaderTextColor !== '')) ? 'true' : 'false'))
+						]);
+					return A2(
+						$mdgriffith$elm_ui$Element$link,
+						_Utils_ap(otherLinkBase, otherLinkColor),
+						{
+							label: $mdgriffith$elm_ui$Element$text(item.title),
+							url: item.link
+						});
+				}()
 				]));
 	});
 var $mdgriffith$elm_ui$Element$Font$family = function (families) {
@@ -16375,9 +16385,20 @@ var $author$project$Pages$Timeline$clusterItem = F7(
 									_List_fromArray(
 										[
 											faviconImg,
-											A2(
-											$mdgriffith$elm_ui$Element$el,
-											_List_fromArray(
+											function () {
+											var titleColorAttr = (headerTextColor !== '') ? _List_fromArray(
+												[
+													$mdgriffith$elm_ui$Element$htmlAttribute(
+													A2($elm$html$Html$Attributes$style, 'color', headerTextColor))
+												]) : (((headerColor !== '') && _Utils_eq(theme, $author$project$Shared$Dark)) ? _List_fromArray(
+												[
+													$mdgriffith$elm_ui$Element$htmlAttribute(
+													A2(
+														$elm$html$Html$Attributes$style,
+														'color',
+														$author$project$Pages$Timeline$textColorFromBgString(headerColor)))
+												]) : _List_Nil);
+											var titleAttrsBase = _List_fromArray(
 												[
 													$mdgriffith$elm_ui$Element$Font$size(12),
 													$mdgriffith$elm_ui$Element$Font$color(
@@ -16386,14 +16407,13 @@ var $author$project$Pages$Timeline$clusterItem = F7(
 													A2(
 														$elm$html$Html$Attributes$attribute,
 														'data-use-server-colors',
-														((headerColor !== '') || (headerTextColor !== '')) ? 'true' : 'false')),
-													$mdgriffith$elm_ui$Element$htmlAttribute(
-													A2(
-														$elm$html$Html$Attributes$style,
-														'color',
-														(headerTextColor !== '') ? headerTextColor : ((headerColor !== '') ? $author$project$Pages$Timeline$textColorFromBgString(headerColor) : '')))
-												]),
-											$mdgriffith$elm_ui$Element$text(cluster.representative.feedTitle)),
+														((headerColor !== '') || (headerTextColor !== '')) ? 'true' : 'false'))
+												]);
+											return A2(
+												$mdgriffith$elm_ui$Element$el,
+												_Utils_ap(titleAttrsBase, titleColorAttr),
+												$mdgriffith$elm_ui$Element$text(cluster.representative.feedTitle));
+										}(),
 											A2(
 											$mdgriffith$elm_ui$Element$el,
 											_List_fromArray(
@@ -16402,9 +16422,20 @@ var $author$project$Pages$Timeline$clusterItem = F7(
 													A2($mdgriffith$elm_ui$Element$paddingXY, 4, 0)
 												]),
 											$mdgriffith$elm_ui$Element$text('•')),
-											A2(
-											$mdgriffith$elm_ui$Element$link,
-											_List_fromArray(
+											function () {
+											var linkColorAttr = (headerTextColor !== '') ? _List_fromArray(
+												[
+													$mdgriffith$elm_ui$Element$htmlAttribute(
+													A2($elm$html$Html$Attributes$style, 'color', headerTextColor))
+												]) : (((headerColor !== '') && _Utils_eq(theme, $author$project$Shared$Dark)) ? _List_fromArray(
+												[
+													$mdgriffith$elm_ui$Element$htmlAttribute(
+													A2(
+														$elm$html$Html$Attributes$style,
+														'color',
+														$author$project$Pages$Timeline$textColorFromBgString(headerColor)))
+												]) : _List_Nil);
+											var linkAttrsBase = _List_fromArray(
 												[
 													$mdgriffith$elm_ui$Element$htmlAttribute(
 													A2($elm$html$Html$Attributes$attribute, 'data-display-link', 'true')),
@@ -16414,22 +16445,21 @@ var $author$project$Pages$Timeline$clusterItem = F7(
 														$elm$html$Html$Attributes$attribute,
 														'data-use-server-colors',
 														((headerColor !== '') || (headerTextColor !== '')) ? 'true' : 'false')),
-													$mdgriffith$elm_ui$Element$htmlAttribute(
-													A2(
-														$elm$html$Html$Attributes$style,
-														'color',
-														(headerTextColor !== '') ? headerTextColor : ((headerColor !== '') ? $author$project$Pages$Timeline$textColorFromBgString(headerColor) : ''))),
 													$mdgriffith$elm_ui$Element$Font$semiBold,
 													$mdgriffith$elm_ui$Element$mouseOver(
 													_List_fromArray(
 														[
 															$mdgriffith$elm_ui$Element$Font$color($author$project$Theme$lumeOrange)
 														]))
-												]),
-											{
-												label: $mdgriffith$elm_ui$Element$text(cluster.representative.title),
-												url: cluster.representative.link
-											}),
+												]);
+											return A2(
+												$mdgriffith$elm_ui$Element$link,
+												_Utils_ap(linkAttrsBase, linkColorAttr),
+												{
+													label: $mdgriffith$elm_ui$Element$text(cluster.representative.title),
+													url: cluster.representative.link
+												});
+										}(),
 											(cluster.count > 1) ? A2(
 											$mdgriffith$elm_ui$Element$Input$button,
 											_List_fromArray(
