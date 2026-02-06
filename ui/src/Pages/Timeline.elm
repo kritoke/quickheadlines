@@ -134,6 +134,37 @@ textColorFromBg bgColor =
         rgb255 255 255 255
 
 
+textColorFromBgString : String -> String
+textColorFromBgString bgColor =
+    let
+        parseRgbValues str =
+            let
+                clean = String.replace "rgb(" "" str |> String.replace ")" "" |> String.replace " " ""
+                parts = String.split "," clean
+            in
+            case parts of
+                r :: g :: b :: [] ->
+                    case (String.toInt r, String.toInt g, String.toInt b) of
+                        (Just ri, Just gi, Just bi) ->
+                            Just (ri, gi, bi)
+                        _ ->
+                            Nothing
+                _ ->
+                    Nothing
+
+        luminance =
+            case parseRgbValues bgColor of
+                Just (r, g, b) ->
+                    ((toFloat r * 299) + (toFloat g * 587) + (toFloat b * 114)) / 1000
+                Nothing ->
+                    0
+    in
+    if luminance >= 128 then
+        "rgb(31,41,35)"
+    else
+        "rgb(255,255,255)"
+
+
 parseColor : String -> Maybe Element.Color
 parseColor input =
     parseHexColor input
@@ -827,27 +858,29 @@ clusterItem breakpoint zone now theme expandedClusters insertedIds cluster =
             , alignTop
             , Font.color txtColor
             ]
-            [ paragraph [ width fill, Ty.size13 ]
+                [ paragraph [ width fill, Ty.size13 ]
                 [ faviconImg
-                , el [ Font.size 12, Font.color (getFeedTitleColor theme headerColor headerTextColor) ]
+                , el [ Font.size 12, Font.color (getFeedTitleColor theme headerColor headerTextColor), htmlAttribute (Html.Attributes.attribute "data-use-server-colors" (if headerColor /= "" || headerTextColor /= "" then "true" else "false")), htmlAttribute (Html.Attributes.style "color" (if headerTextColor /= "" then headerTextColor else if headerColor /= "" then textColorFromBgString headerColor else "")) ]
                      (text cluster.representative.feedTitle)
                 , el [ Font.color mutedTxt, paddingXY 4 0 ] (text "•")
                 , link
                     [ htmlAttribute (Html.Attributes.attribute "data-display-link" "true")
                     , Font.color txtColor
+                    , htmlAttribute (Html.Attributes.attribute "data-use-server-colors" (if headerColor /= "" || headerTextColor /= "" then "true" else "false"))
+                     , htmlAttribute (Html.Attributes.style "color" (if headerTextColor /= "" then headerTextColor else if headerColor /= "" then textColorFromBgString headerColor else ""))
                     , Font.semiBold
                     , mouseOver [ Font.color lumeOrange ]
                     ]
                     { url = cluster.representative.link, label = text cluster.representative.title }
-                , if cluster.count > 1 then
-                      Input.button
-                          [ paddingEach { top = 0, right = 0, bottom = 0, left = 8 }
-                          , Font.color (if isExpanded then lumeOrange else mutedTxt)
-                          , mouseOver [ Font.color lumeOrange ]
-                          ]
-                          { onPress = Just (ToggleCluster cluster.id)
-                          , label = text (" ↩ " ++ String.fromInt cluster.count)
-                          }
+        , if cluster.count > 1 then
+              Input.button
+                  [ paddingEach { top = 0, right = 0, bottom = 0, left = 8 }
+                  , Font.color (if isExpanded then lumeOrange else mutedTxt)
+                  , mouseOver [ Font.color lumeOrange ]
+                  ]
+                  { onPress = Just (ToggleCluster cluster.id)
+                  , label = text (" ↩ " ++ String.fromInt cluster.count)
+                  }
                     else
                         Element.none
                 ]
@@ -901,6 +934,8 @@ clusterOtherItem now theme item =
             , Font.color (textColor theme)
             , Font.medium
             , mouseOver [ Font.color lumeOrange ]
+                    , htmlAttribute (Html.Attributes.attribute "data-use-server-colors" (if itemHeaderColor /= "" || itemHeaderTextColor /= "" then "true" else "false"))
+                    , htmlAttribute (Html.Attributes.style "color" (if itemHeaderTextColor /= "" then itemHeaderTextColor else if itemHeaderColor /= "" then textColorFromBgString itemHeaderColor else ""))
             ]
             { url = item.link, label = text item.title }
         ]
