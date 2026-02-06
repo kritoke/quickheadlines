@@ -872,9 +872,18 @@ clusterItem breakpoint zone now theme expandedClusters insertedIds cluster =
                                 []
                         else
                             []
+
+                    titleBgAttr =
+                        if theme == Shared.Dark && headerColor /= "" then
+                            [ htmlAttribute (Html.Attributes.style "background-color" headerColor)
+                            , htmlAttribute (Html.Attributes.style "padding" "2px 6px")
+                            , htmlAttribute (Html.Attributes.style "border-radius" "6px")
+                            ]
+                        else
+                            []
                   in
-                  el (titleAttrsBase ++ titleColorAttr)
-                     (text cluster.representative.feedTitle)
+                  el (titleAttrsBase ++ titleBgAttr ++ titleColorAttr)
+                      (text cluster.representative.feedTitle)
                 , el [ Font.color mutedTxt, paddingXY 4 0 ] (text "•")
                 , let
                     linkAttrsBase = [ htmlAttribute (Html.Attributes.attribute "data-display-link" "true"), Font.color txtColor, htmlAttribute (Html.Attributes.attribute "data-use-server-colors" (if headerColor /= "" || headerTextColor /= "" then "true" else "false")), Font.semiBold, mouseOver [ Font.color lumeOrange ] ]

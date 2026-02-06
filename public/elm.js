@@ -16398,6 +16398,15 @@ var $author$project$Pages$Timeline$clusterItem = F7(
 														'color',
 														$author$project$Pages$Timeline$textColorFromBgString(headerColor)))
 												]) : _List_Nil)) : _List_Nil;
+											var titleBgAttr = (_Utils_eq(theme, $author$project$Shared$Dark) && (headerColor !== '')) ? _List_fromArray(
+												[
+													$mdgriffith$elm_ui$Element$htmlAttribute(
+													A2($elm$html$Html$Attributes$style, 'background-color', headerColor)),
+													$mdgriffith$elm_ui$Element$htmlAttribute(
+													A2($elm$html$Html$Attributes$style, 'padding', '2px 6px')),
+													$mdgriffith$elm_ui$Element$htmlAttribute(
+													A2($elm$html$Html$Attributes$style, 'border-radius', '6px'))
+												]) : _List_Nil;
 											var titleAttrsBase = _List_fromArray(
 												[
 													$mdgriffith$elm_ui$Element$Font$size(12),
@@ -16411,7 +16420,9 @@ var $author$project$Pages$Timeline$clusterItem = F7(
 												]);
 											return A2(
 												$mdgriffith$elm_ui$Element$el,
-												_Utils_ap(titleAttrsBase, titleColorAttr),
+												_Utils_ap(
+													titleAttrsBase,
+													_Utils_ap(titleBgAttr, titleColorAttr)),
 												$mdgriffith$elm_ui$Element$text(cluster.representative.feedTitle));
 										}(),
 											A2(
