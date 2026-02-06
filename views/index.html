@@ -319,19 +319,17 @@
                   // Don't force a white text color in light theme (it will be unreadable
                   // unless there's a background pill). Only apply cached text color when
                   // it won't produce white-on-light or when we're in dark theme.
-                  try {
-                    const theme = document.documentElement.getAttribute('data-theme');
-                    const isWhite = /255,\s*255,\s*255/.test(cached.text) || /#fff/i.test(cached.text) || /white/i.test(cached.text);
-                    if (theme === 'dark' || !isWhite) {
-                      link.style.color = cached.text;
-                    } else {
-                      link.style.color = '';
-                    }
-                    link.style.textDecoration = 'none';
-                  } catch (e) {
-                    link.style.color = cached.text;
-                    link.style.textDecoration = 'none';
-                  }
+                   try {
+                     const theme = document.documentElement.getAttribute('data-theme');
+                     const isWhite = /255,\s*255,\s*255/.test(cached.text) || /#fff/i.test(cached.text) || /white/i.test(cached.text);
+                     if (theme === 'dark' || !isWhite) {
+                       link.style.color = cached.text;
+                     }
+                     link.style.textDecoration = 'none';
+                   } catch (e) {
+                     link.style.color = cached.text;
+                     link.style.textDecoration = 'none';
+                   }
                 }
                header.dataset.adaptive = 'true';
                return;
@@ -362,8 +360,6 @@
                       const isWhite = /255,\s*255,\s*255/.test(textColor) || /#fff/i.test(textColor) || /white/i.test(textColor);
                       if (theme === 'dark' || !isWhite) {
                         link.style.color = textColor;
-                      } else {
-                        link.style.color = '';
                       }
                       link.style.textDecoration = 'none';
                     } catch (e) {
@@ -611,19 +607,17 @@
                header.style.backgroundColor = bgColor;
                header.style.color = textColor;
                 if (link) {
-                  try {
-                    const theme = document.documentElement.getAttribute('data-theme');
-                    const isWhite = /255,\s*255,\s*255/.test(textColor) || /#fff/i.test(textColor) || /white/i.test(textColor);
-                    if (theme === 'dark' || !isWhite) {
-                      link.style.color = textColor;
-                    } else {
-                      link.style.color = '';
-                    }
-                    link.style.textDecoration = 'none';
-                  } catch (e) {
-                    link.style.color = textColor;
-                    link.style.textDecoration = 'none';
-                  }
+                      try {
+                        const theme = document.documentElement.getAttribute('data-theme');
+                        const isWhite = /255,\s*255,\s*255/.test(textColor) || /#fff/i.test(textColor) || /white/i.test(textColor);
+                        if (theme === 'dark' || !isWhite) {
+                          link.style.color = textColor;
+                        }
+                        link.style.textDecoration = 'none';
+                      } catch (e) {
+                        link.style.color = textColor;
+                        link.style.textDecoration = 'none';
+                      }
                 }
 
                // Save to localStorage cache
