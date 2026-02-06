@@ -290,7 +290,7 @@
             setTimeout(fixHeaderColors, 100);
           });
 
-          window.extractHeaderColors = function() {
+      window.extractHeaderColors = function() {
            if (typeof ColorThief === 'undefined') return;
            const colorThief = new ColorThief();
 
@@ -363,8 +363,74 @@
                  header.dataset.adaptive = 'true';
                } catch (e) {}
              };
-           });
-         };
+        });
+       };
+
+      // Extract timeline item colors similarly to header extraction, but keyed
+      // by the feed favicon or feed URL when possible. This ensures timeline
+      // links get deterministic readable colors without requiring a page
+      // refresh.
+      window.extractTimelineItemColors = function() {
+        if (typeof ColorThief === 'undefined') return;
+        const colorThief = new ColorThief();
+
+        document.querySelectorAll('[data-timeline-item="true"]').forEach(item => {
+          // Skip if already adaptive
+          if (item.dataset.adaptive === 'true') return;
+
+          const link = item.querySelector('a[data-display-link="true"]');
+          const img = item.querySelector('img');
+          const imgSrc = img ? img.getAttribute('src') : null;
+          const key = imgSrc || (item.getAttribute('data-feed-url') || 'default');
+
+          // If we have a cached color for the favicon, apply it
+          if (window.feedHeaderCache[key]) {
+            const cached = window.feedHeaderCache[key];
+            if (link) {
+              // Only apply in dark theme or when link currently looks dark
+              const comp = window.getComputedStyle(link).color;
+              const m = ('' + comp).match(/(\d+),\s*(\d+),\s*(\d+)/);
+              let shouldApply = false;
+              if (m) {
+                const lr = parseInt(m[1]);
+                const lg = parseInt(m[2]);
+                const lb = parseInt(m[3]);
+                const yiq = ((lr * 299) + (lg * 587) + (lb * 114)) / 1000;
+                shouldApply = (yiq < 140) || (document.documentElement.getAttribute('data-theme') === 'dark');
+              } else {
+                shouldApply = (comp === 'rgb(0, 0, 0)');
+              }
+
+              if (shouldApply) {
+                link.style.color = cached.text;
+              }
+            }
+            item.dataset.adaptive = 'true';
+            return;
+          }
+
+          if (!img || !imgSrc) return;
+
+          const tempImg = new Image();
+          tempImg.crossOrigin = 'Anonymous';
+          tempImg.src = imgSrc;
+          tempImg.onload = function() {
+            try {
+              const color = colorThief.getColor(tempImg);
+              if (!color || !color.length) return;
+              const [r,g,b] = color;
+              const bg = 'rgb(' + r + ',' + g + ',' + b + ')';
+              const yiq = ((r*299)+(g*587)+(b*114))/1000;
+              const textColor = yiq >= 128 ? '#1f2937' : '#ffffff';
+              if (link) {
+                link.style.color = textColor;
+              }
+              window.feedHeaderCache[key] = { bg: bg, text: textColor, timestamp: Date.now() };
+              item.dataset.adaptive = 'true';
+            } catch(e) {}
+          };
+        });
+      };
 
        // Fix cached header colors in dark mode
       window.fixHeaderColors = fixHeaderColors;
@@ -600,8 +666,10 @@
           });
 
             // Extract colors after Elm renders
-           setTimeout(window.extractHeaderColors, 500);
-           setTimeout(window.extractHeaderColors, 1500);
+            setTimeout(window.extractHeaderColors, 500);
+            setTimeout(window.extractHeaderColors, 1500);
+            setTimeout(window.extractTimelineItemColors, 500);
+            setTimeout(window.extractTimelineItemColors, 1500);
 
              // Fix header colors after color extraction
             setTimeout(fixHeaderColors, 1500);
@@ -751,14 +819,15 @@
            };
 
           // Debounce function for mutations
-         let mutationTimeout = null;
-         const debouncedMutation = () => {
-           if (mutationTimeout) clearTimeout(mutationTimeout);
-           mutationTimeout = setTimeout(() => {
-             window.extractHeaderColors();
-             observeSentinel();
-           }, 300);
-         };
+          let mutationTimeout = null;
+          const debouncedMutation = () => {
+            if (mutationTimeout) clearTimeout(mutationTimeout);
+            mutationTimeout = setTimeout(() => {
+              window.extractHeaderColors();
+              window.extractTimelineItemColors();
+              observeSentinel();
+            }, 300);
+          };
 
          // Single mutation observer for both color extraction and sentinel
          const mutationObserver = new MutationObserver(debouncedMutation);
