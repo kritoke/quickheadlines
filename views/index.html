@@ -182,11 +182,15 @@
         </style>
      <script src="https://cdnjs.cloudflare.com/ajax/libs/color-thief/2.3.2/color-thief.umd.js"></script>
       <script>
-       function fixHeaderColors() {
-         // Fix ALL headers to have consistent readable text colors
-         document.querySelectorAll('.feed-header').forEach(header => {
-           const bgColor = header.style.backgroundColor;
-           if (!bgColor || bgColor === 'transparent') return;
+        function fixHeaderColors() {
+          // Fix ALL headers to have consistent readable text colors
+          // Skip headers that already have data-use-adaptive-colors="true" (server-provided colors)
+          document.querySelectorAll('.feed-header').forEach(header => {
+            // Skip if server already provided colors
+            if (header.dataset.useAdaptiveColors === "true") return;
+
+            const bgColor = header.style.backgroundColor;
+            if (!bgColor || bgColor === 'transparent') return;
 
            // Extract RGB from any rgb() format
            const match = bgColor.match(/(\d+),\s*(\d+),\s*(\d+)/);
