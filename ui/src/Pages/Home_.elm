@@ -581,14 +581,20 @@ feedCard now theme breakpoint loadingFeed insertedIds feed =
 feedHeader : Theme -> Feed -> Element Msg
 feedHeader theme feed =
     let
-        ( headerBg, headerTextColor, adaptiveFlag ) =
+        hasServerColors = feed.headerColor /= Nothing || feed.headerTextColor /= Nothing
+        adaptiveFlag =
+            if hasServerColors then
+                [ htmlAttribute (Html.Attributes.attribute "data-use-adaptive-colors" "true") ]
+            else
+                []
+
+        ( headerBg, headerTextColor ) =
             case feed.headerTextColor of
                 Just textColor ->
                     case feed.headerColor of
                         Just bgColor ->
                             ( Element.htmlAttribute (Html.Attributes.style "background-color" bgColor)
                             , textColor
-                            , []
                             )
 
                         Nothing ->
@@ -599,7 +605,6 @@ feedHeader theme feed =
                                 Light ->
                                     Background.color (rgb255 243 244 246)
                             , textColor
-                            , []
                             )
 
                 Nothing ->
@@ -610,7 +615,7 @@ feedHeader theme feed =
                                     case rgb of
                                         (r, g, b) ->
                                             ((toFloat r * 299) + (toFloat g * 587) + (toFloat b * 114)) / 1000
-                                
+
                                 parseRgb str =
                                     let
                                         clean = String.replace "rgb(" "" str |> String.replace ")" "" |> String.replace " " ""
@@ -624,7 +629,7 @@ feedHeader theme feed =
                                                 (String.toInt b)
                                         _ ->
                                             Nothing
-                                
+
                                 calculatedTextColor =
                                     case parseRgb bgColor of
                                         Just rgb ->
@@ -639,7 +644,6 @@ feedHeader theme feed =
                             in
                             ( Element.htmlAttribute (Html.Attributes.style "background-color" bgColor)
                             , calculatedTextColor
-                            , []
                             )
 
                         Nothing ->
@@ -659,7 +663,6 @@ feedHeader theme feed =
                                 Light ->
                                     Background.color (rgb255 243 244 246)
                             , defaultTextColor
-                            , [ htmlAttribute (Html.Attributes.attribute "data-use-adaptive-colors" "true") ]
                             )
     in
     row
