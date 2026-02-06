@@ -888,14 +888,15 @@ clusterItem breakpoint zone now theme expandedClusters insertedIds cluster =
                 , el [ Font.color mutedTxt, paddingXY 4 0 ] (text "•")
                 , let
                     linkAttrsBase = [ htmlAttribute (Html.Attributes.attribute "data-display-link" "true"), Font.color txtColor, htmlAttribute (Html.Attributes.attribute "data-use-server-colors" (if headerColor /= "" || headerTextColor /= "" then "true" else "false")), Font.semiBold, mouseOver [ Font.color lumeOrange ] ]
+                    -- Always apply an inline readable color for links when the server
+                    -- provides headerColor or headerTextColor. This makes Elm the
+                    -- authoritative renderer for server-provided colors and avoids
+                    -- relying on JS timing to patch links after render.
                     linkColorAttr =
-                        if theme == Shared.Dark then
-                            if headerTextColor /= "" then
-                                [ htmlAttribute (Html.Attributes.style "color" headerTextColor) ]
-                            else if headerColor /= "" then
-                                [ htmlAttribute (Html.Attributes.style "color" (textColorFromBgString headerColor)) ]
-                            else
-                                []
+                        if headerTextColor /= "" then
+                            [ htmlAttribute (Html.Attributes.style "color" headerTextColor) ]
+                        else if headerColor /= "" then
+                            [ htmlAttribute (Html.Attributes.style "color" (textColorFromBgString headerColor)) ]
                         else
                             []
                   in
@@ -958,14 +959,13 @@ clusterOtherItem now theme item =
         , el [ Ty.meta, Font.color mutedTxt, paddingXY 4 0 ] (text "•")
         , let
             otherLinkBase = [ Font.size 11, htmlAttribute (Html.Attributes.attribute "data-display-link" "true"), Font.color (textColor theme), Font.medium, mouseOver [ Font.color lumeOrange ], htmlAttribute (Html.Attributes.attribute "data-use-server-colors" (if itemHeaderColor /= "" || itemHeaderTextColor /= "" then "true" else "false")) ]
+            -- Same behavior for "other" items: when server provides colors, render
+            -- an inline readable color so links remain accessible across themes.
             otherLinkColor =
-                if theme == Shared.Dark then
-                    if itemHeaderTextColor /= "" then
-                        [ htmlAttribute (Html.Attributes.style "color" itemHeaderTextColor) ]
-                    else if itemHeaderColor /= "" then
-                        [ htmlAttribute (Html.Attributes.style "color" (textColorFromBgString itemHeaderColor)) ]
-                    else
-                        []
+                if itemHeaderTextColor /= "" then
+                    [ htmlAttribute (Html.Attributes.style "color" itemHeaderTextColor) ]
+                else if itemHeaderColor /= "" then
+                    [ htmlAttribute (Html.Attributes.style "color" (textColorFromBgString itemHeaderColor)) ]
                 else
                     []
           in
