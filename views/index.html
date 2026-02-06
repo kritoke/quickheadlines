@@ -283,10 +283,12 @@
             } catch (e) {}
           }
 
-          // Run immediately after DOM loads
-          document.addEventListener('DOMContentLoaded', function() {
-            setTimeout(fixHeaderColors, 100);
-          });
+          // Run immediately after DOM loads and after Elm renders
+           document.addEventListener('DOMContentLoaded', function() {
+             setTimeout(fixHeaderColors, 100);
+             setTimeout(fixHeaderColors, 500);
+             setTimeout(fixHeaderColors, 1500);
+           });
 
       window.extractHeaderColors = function() {
            if (typeof ColorThief === 'undefined') return;
