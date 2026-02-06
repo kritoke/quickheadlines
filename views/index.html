@@ -183,7 +183,7 @@
      <script src="https://cdnjs.cloudflare.com/ajax/libs/color-thief/2.3.2/color-thief.umd.js"></script>
         <script>
           function fixHeaderColors() {
-            document.querySelectorAll('.feed-header').forEach(header => {
+          document.querySelectorAll('.feed-header').forEach(header => {
               const bgColor = header.style.backgroundColor;
               if (!bgColor || bgColor === 'transparent') return;
 
@@ -229,6 +229,48 @@
                 subText.style.opacity = '';
               }
             });
+
+            // Defensive fix: timeline links can sometimes end up with computed black text
+            // in dark theme due to rendering/timing races. Fix any timeline links that
+            // are black when the document is in dark theme by computing a readable
+            // color from a nearby background and applying it inline.
+            try {
+              if (document.documentElement.getAttribute('data-theme') === 'dark') {
+                document.querySelectorAll('[data-timeline-item="true"] a[data-display-link="true"]').forEach(link => {
+                  try {
+                    const linkComp = window.getComputedStyle(link).color;
+                    if (linkComp === 'rgb(0, 0, 0)' || linkComp === 'rgba(0, 0, 0, 1)') {
+                      // Find a sensible background to compute contrast from
+                      let parent = link.closest('[data-timeline-item="true"]');
+                      let bg = parent ? window.getComputedStyle(parent).backgroundColor : null;
+
+                      if (!bg || bg === 'rgba(0, 0, 0, 0)' || bg === 'transparent') {
+                        const feedHeader = parent ? parent.querySelector('.feed-header') : null;
+                        if (feedHeader) bg = window.getComputedStyle(feedHeader).backgroundColor;
+                      }
+
+                      if (!bg || bg === 'rgba(0, 0, 0, 0)' || bg === 'transparent') {
+                        // Fallback to document background or a dark default
+                        const docBg = window.getComputedStyle(document.documentElement).backgroundColor;
+                        bg = docBg && docBg !== 'rgba(0, 0, 0, 0)' ? docBg : 'rgb(17,24,39)';
+                      }
+
+                      const m = ('' + bg).match(/(\d+),\s*(\d+),\s*(\d+)/);
+                      let textColor = '#ffffff';
+                      if (m) {
+                        const r = parseInt(m[1]);
+                        const g = parseInt(m[2]);
+                        const b = parseInt(m[3]);
+                        const yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
+                        textColor = yiq >= 128 ? '#1f2937' : '#ffffff';
+                      }
+
+                      link.style.color = textColor;
+                    }
+                  } catch (e) {}
+                });
+              }
+            } catch (e) {}
           }
 
           // Run immediately after DOM loads
