@@ -676,7 +676,7 @@ feedHeader theme feed =
                 [ Font.size 18
                 , Font.bold
                 , (case headerTextColor of
-                    "" -> htmlAttribute (Html.Attributes.style "color" "var(--header-text-color)")
+                    "" -> Font.color (rgb255 31 41 35) -- dark gray default, JavaScript will fix
                     _ -> htmlAttribute (Html.Attributes.style "color" headerTextColor))
                 , Font.underline
                 , htmlAttribute (Html.Attributes.style "word-wrap" "break-word")
@@ -687,7 +687,7 @@ feedHeader theme feed =
                     [ htmlAttribute (Html.Attributes.attribute "data-display-link" "true")
                     , Ty.size13
                     , (case headerTextColor of
-                        "" -> htmlAttribute (Html.Attributes.style "color" "var(--header-text-color)")
+                        "" -> Font.color (rgb255 55 65 75) -- slightly lighter gray for display link
                         _ -> htmlAttribute (Html.Attributes.style "color" headerTextColor))
                     , htmlAttribute (Html.Attributes.style "opacity" "0.8")
                     ]

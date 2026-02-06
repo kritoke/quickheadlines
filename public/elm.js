@@ -14857,8 +14857,8 @@ var $author$project$Pages$Home_$feedHeader = F2(
 									$mdgriffith$elm_ui$Element$Font$bold,
 									function () {
 									if (headerTextColor === '') {
-										return $mdgriffith$elm_ui$Element$htmlAttribute(
-											A2($elm$html$Html$Attributes$style, 'color', 'var(--header-text-color)'));
+										return $mdgriffith$elm_ui$Element$Font$color(
+											A3($mdgriffith$elm_ui$Element$rgb255, 31, 41, 35));
 									} else {
 										return $mdgriffith$elm_ui$Element$htmlAttribute(
 											A2($elm$html$Html$Attributes$style, 'color', headerTextColor));
@@ -14881,8 +14881,8 @@ var $author$project$Pages$Home_$feedHeader = F2(
 									$author$project$ThemeTypography$size13,
 									function () {
 									if (headerTextColor === '') {
-										return $mdgriffith$elm_ui$Element$htmlAttribute(
-											A2($elm$html$Html$Attributes$style, 'color', 'var(--header-text-color)'));
+										return $mdgriffith$elm_ui$Element$Font$color(
+											A3($mdgriffith$elm_ui$Element$rgb255, 55, 65, 75));
 									} else {
 										return $mdgriffith$elm_ui$Element$htmlAttribute(
 											A2($elm$html$Html$Attributes$style, 'color', headerTextColor));
