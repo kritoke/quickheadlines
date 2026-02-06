@@ -21,8 +21,11 @@
          padding-top: 0 !important;
        }
      }
-       [data-page="home"] { overflow-y: auto; height: auto; overflow-x: hidden; }
-       .feed-header { transition: background-color 0.3s ease, color 0.3s ease; }
+        [data-page="home"] { overflow-y: auto; height: auto; overflow-x: hidden; }
+        .feed-header { 
+          transition: background-color 0.3s ease, color 0.3s ease;
+          --header-text-color: #1f2937; /* default text color */
+        }
 
        [data-timeline-page="true"] [data-adaptive]:not(.feed-header) {
          background-color: transparent !important;

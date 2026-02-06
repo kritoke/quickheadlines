@@ -744,6 +744,28 @@ class FeedCache
     end
   end
 
+  # Find feed URL by pattern (handles URL variations like with/without /feed suffix)
+  def find_feed_url_by_pattern(url_pattern : String) : String?
+    @mutex.synchronize do
+      # Try exact match first
+      result = @db.query_one?("SELECT url FROM feeds WHERE url = ?", url_pattern, as: {String?})
+      return result if result
+
+      # Try without /feed or /rss suffix
+      normalized = url_pattern.rstrip('/')
+        .gsub(/\/rss(\.xml)?$/i, "")
+        .gsub(/\/feed(\.xml)?$/i, "")
+
+      result = @db.query_one?("SELECT url FROM feeds WHERE url = ? OR url = ? OR url LIKE ? || '/%'",
+        normalized,
+        url_pattern,
+        normalized) do |row|
+        row.read(String?)
+      end
+      result
+    end
+  end
+
   # Get the total count of items for a specific feed URL from the database
   def item_count(url : String) : Int32
     @mutex.synchronize do

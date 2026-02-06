@@ -347,6 +347,12 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
       return ATH::Response.new("Missing feed_url, color, or text_color", 400)
     end
 
+    # Normalize URL to match database format (remove trailing slashes, /feed, etc.)
+    normalized_url = feed_url.strip
+      .rstrip('/')
+      .gsub(/\/rss(\.xml)?$/i, "")
+      .gsub(/\/feed(\.xml)?$/i, "")
+
     # Check if this feed has a manual header_color in config (takes priority)
     config = STATE.config
     if config.nil?
@@ -354,18 +360,24 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
     end
 
     all_feeds = config.feeds + config.tabs.flat_map(&.feeds)
-    has_manual_color = all_feeds.any? do |feed|
-      feed.url == feed_url && !feed.header_color.nil? && feed.header_color != ""
+    has_manual_color = all_feeds.any? do |f|
+      f.url == feed_url && !f.header_color.nil? && f.header_color != ""
     end
 
     if has_manual_color
-      # Manual config takes priority, don't override
       return ATH::Response.new("Skipped: manual config exists", 200)
     end
 
-    # Save extracted colors to database
+    # Try to find matching feed in database with normalized URL
     cache = FeedCache.instance
-    cache.update_header_colors(feed_url, color, text_color)
+    db_url = cache.find_feed_url_by_pattern(normalized_url)
+
+    if db_url.nil?
+      # Fallback: try original URL
+      db_url = feed_url
+    end
+
+    cache.update_header_colors(db_url, color, text_color)
 
     ATH::Response.new("OK", 200)
   rescue ex
