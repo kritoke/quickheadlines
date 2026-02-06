@@ -35,14 +35,7 @@
         [data-timeline-item="true"] a {
           text-decoration: underline !important;
         }
-        /* Remove color: inherit to prevent CSS from overriding Elm's inline styles.
-           Elm now sets explicit colors for all links, so inheritance causes conflicts. */
-        html[data-theme="light"] [data-timeline-item="true"] a:not([style*="color"]) {
-           color: rgb(17, 24, 39);
-         }
-        html[data-theme="dark"] [data-timeline-item="true"] a:not([style*="color"]) {
-           color: rgb(248, 250, 252);
-         }
+
         .feed-header a {
           color: inherit;
           text-decoration: underline;
@@ -235,59 +228,56 @@
               }
             });
 
-            // Defensive fix: timeline links can sometimes end up with computed black text
-            // in dark theme due to rendering/timing races. Fix any timeline links that
-            // are black when the document is in dark theme by computing a readable
-            // color from a nearby background and applying it inline.
-            try {
-              if (document.documentElement.getAttribute('data-theme') === 'dark') {
-                document.querySelectorAll('[data-timeline-item="true"] a[data-display-link="true"]').forEach(link => {
-                  try {
-                    const linkComp = window.getComputedStyle(link).color;
-                    // If the computed color is dark (black or dark gray), repair it.
-                    const compMatch = ('' + linkComp).match(/(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/);
-                    let compDark = false;
-                    if (compMatch) {
-                      const lr = parseInt(compMatch[1]);
-                      const lg = parseInt(compMatch[2]);
-                      const lb = parseInt(compMatch[3]);
-                      const lYiq = ((lr * 299) + (lg * 587) + (lb * 114)) / 1000;
-                      compDark = lYiq < 140; // threshold: anything noticeably dark
-                    } else {
-                      compDark = (linkComp === 'rgb(0, 0, 0)' || linkComp === 'rgba(0, 0, 0, 1)');
-                    }
-                    if (compDark) {
-                      // Find a sensible background to compute contrast from
-                      let parent = link.closest('[data-timeline-item="true"]');
-                      let bg = parent ? window.getComputedStyle(parent).backgroundColor : null;
-
-                      if (!bg || bg === 'rgba(0, 0, 0, 0)' || bg === 'transparent') {
-                        const feedHeader = parent ? parent.querySelector('.feed-header') : null;
-                        if (feedHeader) bg = window.getComputedStyle(feedHeader).backgroundColor;
-                      }
-
-                      if (!bg || bg === 'rgba(0, 0, 0, 0)' || bg === 'transparent') {
-                        // Fallback to document background or a dark default
-                        const docBg = window.getComputedStyle(document.documentElement).backgroundColor;
-                        bg = docBg && docBg !== 'rgba(0, 0, 0, 0)' ? docBg : 'rgb(17,24,39)';
-                      }
-
-                      const m = ('' + bg).match(/(\d+),\s*(\d+),\s*(\d+)/);
-                      let textColor = '#ffffff';
-                      if (m) {
-                        const r = parseInt(m[1]);
-                        const g = parseInt(m[2]);
-                        const b = parseInt(m[3]);
-                        const yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
-                        textColor = yiq >= 128 ? '#1f2937' : '#ffffff';
-                      }
-
-                       // Respect Elm server-provided colors on the link
-                       if (link.getAttribute && link.getAttribute('data-use-server-colors') !== 'true') {
-                         link.style.color = textColor;
-                       }
-                    }
-                  } catch (e) {}
+             // Defensive fix: timeline links can sometimes end up with computed white text
+             // in light theme or black text in dark theme. Fix by checking
+             // the theme and applying an appropriate readable color inline.
+             try {
+               const theme = document.documentElement.getAttribute('data-theme');
+               const isLight = theme === 'light';
+               const isDark = theme === 'dark';
+               
+               document.querySelectorAll('[data-timeline-item="true"] a[data-display-link="true"]').forEach(link => {
+                 try {
+                   const linkComp = window.getComputedStyle(link).color;
+                   // In light mode: fix white links (unreadable on light background)
+                   // In dark mode: fix black links (unreadable on dark background)
+                   const compMatch = ('' + linkComp).match(/(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/);
+                   let needsFix = false;
+                   let targetColor = '';
+                   
+                   if (compMatch) {
+                     const lr = parseInt(compMatch[1]);
+                     const lg = parseInt(compMatch[2]);
+                     const lb = parseInt(compMatch[3]);
+                     const lYiq = ((lr * 299) + (lg * 587) + (lb * 114)) / 1000;
+                     
+                     // Light mode: white is unreadable (YIQ >= 200)
+                     // Dark mode: black/dark gray is unreadable (YIQ < 140)
+                     if (isLight && lYiq >= 200) {
+                       needsFix = true;
+                       targetColor = 'rgb(17, 24, 39)'; // Dark gray for light mode
+                     } else if (isDark && lYiq < 140) {
+                       needsFix = true;
+                       targetColor = 'rgb(248, 250, 252)'; // Light gray for dark mode
+                     }
+                   } else {
+                     needsFix = (linkComp === 'rgb(0, 0, 0)' || linkComp === 'rgba(0, 0, 0, 1)' || linkComp === 'rgb(255, 255, 255)' || linkComp === 'rgba(255, 255, 255, 1)');
+                     if (isLight && linkComp === 'rgb(255, 255, 255)') {
+                       needsFix = true;
+                       targetColor = 'rgb(17, 24, 39)';
+                     } else if (isDark && linkComp === 'rgb(0, 0, 0)') {
+                       needsFix = true;
+                       targetColor = 'rgb(248, 250, 252)';
+                     }
+                   }
+                   
+                   // Respect Elm server-provided colors on link
+                   if (needsFix && link.getAttribute && link.getAttribute('data-use-server-colors') !== 'true') {
+                     link.style.color = targetColor;
+                   }
+                 } catch (e) {}
+               });
+             } catch (e) {}
                 });
               }
             } catch (e) {}
