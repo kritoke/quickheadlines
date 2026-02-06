@@ -90,19 +90,48 @@ parseRgb input =
 
 getFeedTitleColor : Shared.Theme -> String -> String -> Element.Color
 getFeedTitleColor theme headerColor headerTextColor =
-    -- If we have a pre-calculated text color from the server, use it
     case parseColor headerTextColor of
         Just textColor ->
             textColor
 
         Nothing ->
-            -- Fallback: calculate from background color
             case parseColor headerColor of
-                Just bgColor ->
-                    bgColor
+                Just _ ->
+                    textColorFromBg headerColor
 
                 Nothing ->
                     mutedColor theme
+
+
+textColorFromBg : String -> Element.Color
+textColorFromBg bgColor =
+    let
+        parseRgbValues str =
+            let
+                clean = String.replace "rgb(" "" str |> String.replace ")" "" |> String.replace " " ""
+                parts = String.split "," clean
+            in
+            case parts of
+                r :: g :: b :: [] ->
+                    case (String.toInt r, String.toInt g, String.toInt b) of
+                        (Just ri, Just gi, Just bi) ->
+                            Just (ri, gi, bi)
+                        _ ->
+                            Nothing
+                _ ->
+                    Nothing
+
+        luminance =
+            case parseRgbValues bgColor of
+                Just (r, g, b) ->
+                    ((toFloat r * 299) + (toFloat g * 587) + (toFloat b * 114)) / 1000
+                Nothing ->
+                    0
+    in
+    if luminance >= 128 then
+        rgb255 31 41 35
+    else
+        rgb255 255 255 255
 
 
 parseColor : String -> Maybe Element.Color
