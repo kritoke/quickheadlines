@@ -316,8 +316,22 @@
                header.style.color = cached.text;
                const link = header.querySelector('a');
                 if (link) {
-                  link.style.color = cached.text;
-                  link.style.textDecoration = 'none';
+                  // Don't force a white text color in light theme (it will be unreadable
+                  // unless there's a background pill). Only apply cached text color when
+                  // it won't produce white-on-light or when we're in dark theme.
+                  try {
+                    const theme = document.documentElement.getAttribute('data-theme');
+                    const isWhite = /255,\s*255,\s*255/.test(cached.text) || /#fff/i.test(cached.text) || /white/i.test(cached.text);
+                    if (theme === 'dark' || !isWhite) {
+                      link.style.color = cached.text;
+                    } else {
+                      link.style.color = '';
+                    }
+                    link.style.textDecoration = 'none';
+                  } catch (e) {
+                    link.style.color = cached.text;
+                    link.style.textDecoration = 'none';
+                  }
                 }
                header.dataset.adaptive = 'true';
                return;
@@ -340,11 +354,22 @@
                  const bgColor = 'rgb(' + r + ',' + g + ',' + b + ')';
                  const link = header.querySelector('a');
 
-                 header.style.backgroundColor = bgColor;
-                 header.style.color = textColor;
+                  header.style.backgroundColor = bgColor;
+                  header.style.color = textColor;
                   if (link) {
-                    link.style.color = textColor;
-                    link.style.textDecoration = 'none';
+                    try {
+                      const theme = document.documentElement.getAttribute('data-theme');
+                      const isWhite = /255,\s*255,\s*255/.test(textColor) || /#fff/i.test(textColor) || /white/i.test(textColor);
+                      if (theme === 'dark' || !isWhite) {
+                        link.style.color = textColor;
+                      } else {
+                        link.style.color = '';
+                      }
+                      link.style.textDecoration = 'none';
+                    } catch (e) {
+                      link.style.color = textColor;
+                      link.style.textDecoration = 'none';
+                    }
                   }
 
                  if (faviconKey) {
@@ -378,6 +403,14 @@
           // Skip if already adaptive
           if (item.dataset.adaptive === 'true') return;
 
+          // If Elm already rendered server-provided colors anywhere inside
+          // this timeline item, do not touch it. Elm sets
+          // `data-use-server-colors="true"` on title/link elements.
+          if (item.querySelector('[data-use-server-colors="true"]')) {
+            item.dataset.adaptive = 'true';
+            return;
+          }
+
           const link = item.querySelector('a[data-display-link="true"]');
           const img = item.querySelector('img');
           const imgSrc = img ? img.getAttribute('src') : null;
@@ -387,6 +420,12 @@
           if (window.feedHeaderCache[key]) {
             const cached = window.feedHeaderCache[key];
             if (link) {
+              // Respect server-provided flag on the link itself (do not override).
+              if (link.getAttribute('data-use-server-colors') === 'true') {
+                item.dataset.adaptive = 'true';
+                return;
+              }
+
               // Only apply in dark theme or when link currently looks dark
               const comp = window.getComputedStyle(link).color;
               const m = ('' + comp).match(/(\d+),\s*(\d+),\s*(\d+)/);
@@ -422,9 +461,12 @@
               const bg = 'rgb(' + r + ',' + g + ',' + b + ')';
               const yiq = ((r*299)+(g*587)+(b*114))/1000;
               const textColor = yiq >= 128 ? '#1f2937' : '#ffffff';
-              if (link) {
-                link.style.color = textColor;
-              }
+               if (link) {
+                 // Do not override if Elm already applied server colors on the link
+                 if (link.getAttribute('data-use-server-colors') !== 'true') {
+                   link.style.color = textColor;
+                 }
+               }
               window.feedHeaderCache[key] = { bg: bg, text: textColor, timestamp: Date.now() };
               item.dataset.adaptive = 'true';
             } catch(e) {}
@@ -569,8 +611,19 @@
                header.style.backgroundColor = bgColor;
                header.style.color = textColor;
                 if (link) {
-                  link.style.color = textColor;
-                  link.style.textDecoration = 'none';
+                  try {
+                    const theme = document.documentElement.getAttribute('data-theme');
+                    const isWhite = /255,\s*255,\s*255/.test(textColor) || /#fff/i.test(textColor) || /white/i.test(textColor);
+                    if (theme === 'dark' || !isWhite) {
+                      link.style.color = textColor;
+                    } else {
+                      link.style.color = '';
+                    }
+                    link.style.textDecoration = 'none';
+                  } catch (e) {
+                    link.style.color = textColor;
+                    link.style.textDecoration = 'none';
+                  }
                 }
 
                // Save to localStorage cache
