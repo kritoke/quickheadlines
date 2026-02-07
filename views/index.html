@@ -38,8 +38,10 @@
         /* Force readable timeline link colors per theme to protect against
            inline styles applied by Elm during re-renders. This uses !important
            so it overrides accidental inline colors (without needing JS). */
-        html[data-theme="light"] [data-timeline-item="true"] a { color: rgb(17, 24, 39) !important; }
-        html[data-theme="dark"] [data-timeline-item="true"] a { color: rgb(248, 250, 252) !important; }
+        html[data-theme="light"] [data-timeline-item="true"] a,
+        html[data-theme="light"] [data-timeline-item="true"] [data-server-fallback-color] { color: rgb(17, 24, 39) !important; }
+        html[data-theme="dark"] [data-timeline-item="true"] a,
+        html[data-theme="dark"] [data-timeline-item="true"] [data-server-fallback-color] { color: rgb(248, 250, 252) !important; }
 
         .feed-header a {
           color: inherit;
@@ -186,145 +188,91 @@
      <script src="https://cdnjs.cloudflare.com/ajax/libs/color-thief/2.3.2/color-thief.umd.js"></script>
         <script>
           function fixHeaderColors() {
-          document.querySelectorAll('.feed-header').forEach(header => {
-              const bgColor = header.style.backgroundColor;
-              if (!bgColor || bgColor === 'transparent') return;
-
-              // Check if text color is missing or invalid (CSS variable, empty)
-              const currentColor = header.style.color;
-              if (currentColor && currentColor.startsWith('var(')) {
-                // CSS variable - will be invisible, so fix it
-              } else if (!currentColor) {
-                // Empty - fix it
-              } else {
-                // Has valid color, skip
-                return;
-              }
-
-              // Extract RGB
-              const match = bgColor.match(/(\d+),\s*(\d+),\s*(\d+)/);
-              if (!match) return;
-
-              const r = parseInt(match[1]);
-              const g = parseInt(match[2]);
-              const b = parseInt(match[3]);
-
-              // Calculate YIQ contrast
-              const yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
-              const textColor = yiq >= 128 ? '#1f2937' : '#ffffff';
-
-              // Don't override server-provided colors unless they fail contrast.
-              if (header.getAttribute && header.getAttribute('data-use-server-colors') === 'true') {
-                // Verify contrast; if server-provided colors are unreadable, allow JS to apply a readable inline override.
+            try {
+              // Fix feed headers that lack readable text colors
+              document.querySelectorAll('.feed-header').forEach(header => {
                 try {
-                  const comp = window.getComputedStyle(header).color;
-                  // Find nearest non-transparent background for header
-                  let node = header;
-                  let bg = '';
-                  while (node) {
-                    const st = window.getComputedStyle(node);
-                    const bc = st.backgroundColor;
-                    if (bc && bc !== 'rgba(0, 0, 0, 0)' && bc !== 'transparent') { bg = bc; break; }
-                    node = node.parentElement;
-                  }
-                  if (bg) {
-                    function pRGB(s) { const m = s.match(/(\d+),\s*(\d+),\s*(\d+)/); return m ? [parseInt(m[1]), parseInt(m[2]), parseInt(m[3])] : null; }
-                    function toLin(c){ const v = c/255; return v<=0.03928 ? v/12.92 : Math.pow((v+0.055)/1.055,2.4); }
-                    const fg = pRGB(comp);
-                    const bgRgb = pRGB(bg);
-                    if (fg && bgRgb) {
-                      const Lf = 0.2126*toLin(fg[0])+0.7152*toLin(fg[1])+0.0722*toLin(fg[2]);
-                      const Lb = 0.2126*toLin(bgRgb[0])+0.7152*toLin(bgRgb[1])+0.0722*toLin(bgRgb[2]);
-                      const ratio = (Math.max(Lf,Lb)+0.05)/(Math.min(Lf,Lb)+0.05);
-                      if (ratio >= 4.5) {
-                        return; // server colors are fine
+                  const bgColor = header.style.backgroundColor;
+                  if (!bgColor || bgColor === 'transparent') return;
+
+                  // If header already has a usable non-variable color, skip
+                  const currentColor = header.style.color;
+                  if (currentColor && !currentColor.startsWith('var(') && currentColor !== '') return;
+
+                  const match = ('' + bgColor).match(/(\d+),\s*(\d+),\s*(\d+)/);
+                  if (!match) return;
+                  const r = parseInt(match[1]), g = parseInt(match[2]), b = parseInt(match[3]);
+                  const yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
+                  const textColor = yiq >= 128 ? '#1f2937' : '#ffffff';
+
+                  // If server-provided colors are enabled, verify contrast first
+                  if (header.getAttribute && header.getAttribute('data-use-server-colors') === 'true') {
+                    try {
+                      const comp = window.getComputedStyle(header).color;
+                      let node = header, bg = '';
+                      while (node) {
+                        const st = window.getComputedStyle(node);
+                        const bc = st.backgroundColor;
+                        if (bc && bc !== 'rgba(0, 0, 0, 0)' && bc !== 'transparent') { bg = bc; break; }
+                        node = node.parentElement;
                       }
-                    }
+                      if (bg) {
+                        const pRGB = s => { const m = ('' + s).match(/(\d+),\s*(\d+),\s*(\d+)/); return m ? [parseInt(m[1]),parseInt(m[2]),parseInt(m[3])] : null; };
+                        const toLin = c => { const v = c/255; return v <= 0.03928 ? v/12.92 : Math.pow((v+0.055)/1.055,2.4); };
+                        const fg = pRGB(comp);
+                        const bgRgb = pRGB(bg);
+                        if (fg && bgRgb) {
+                          const Lf = 0.2126*toLin(fg[0]) + 0.7152*toLin(fg[1]) + 0.0722*toLin(fg[2]);
+                          const Lb = 0.2126*toLin(bgRgb[0]) + 0.7152*toLin(bgRgb[1]) + 0.0722*toLin(bgRgb[2]);
+                          const ratio = (Math.max(Lf,Lb) + 0.05) / (Math.min(Lf,Lb) + 0.05);
+                          if (ratio >= 4.5) return; // server colors are acceptable
+                        }
+                      }
+                    } catch (e) {}
                   }
+
+                  header.style.color = textColor;
+                  const link = header.querySelector('a');
+                  if (link) link.style.color = textColor;
+                  const subText = header.querySelector('[data-display-link="true"]');
+                  if (subText) { subText.style.color = textColor; subText.style.opacity = ''; }
                 } catch (e) {}
-                // fallthrough to apply fix when contrast is insufficient
-              }
+              });
 
-               // Apply to header and links
-               header.style.color = textColor;
-
-              const link = header.querySelector('a');
-                  if (link) {
-                    // Set inline color on the link without using !important so Elm
-                    // and stylesheet rules still control when server colors are present.
-                    link.style.color = textColor;
-                  }
-
-              const subText = header.querySelector('[data-display-link="true"]');
-              if (subText) {
-                subText.style.color = textColor;
-                subText.style.opacity = '';
-              }
-            });
-
-             // Defensive fix: timeline links can sometimes end up with computed white text
-             // in light theme or black text in dark theme. Fix by checking
-             // the theme and applying an appropriate readable color inline.
-             try {
-               const theme = document.documentElement.getAttribute('data-theme');
-               const isLight = theme === 'light';
-               const isDark = theme === 'dark';
-               
+              // Defensive fix for timeline item links
+              try {
+                const theme = document.documentElement.getAttribute('data-theme');
+                const isLight = theme === 'light';
+                const isDark = theme === 'dark';
                 document.querySelectorAll('[data-timeline-item="true"] a').forEach(link => {
-                 try {
-                   const linkComp = window.getComputedStyle(link).color;
-                   // In light mode: fix white links (unreadable on light background)
-                   // In dark mode: fix black links (unreadable on dark background)
-                   const compMatch = ('' + linkComp).match(/(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/);
-                   let needsFix = false;
-                   let targetColor = '';
-                   
-                   if (compMatch) {
-                     const lr = parseInt(compMatch[1]);
-                     const lg = parseInt(compMatch[2]);
-                     const lb = parseInt(compMatch[3]);
-                     const lYiq = ((lr * 299) + (lg * 587) + (lb * 114)) / 1000;
-                     
-                     // Light mode: white is unreadable (YIQ >= 200)
-                     // Dark mode: black/dark gray is unreadable (YIQ < 140)
-                     if (isLight && lYiq >= 200) {
-                       needsFix = true;
-                       targetColor = 'rgb(17, 24, 39)'; // Dark gray for light mode
-                     } else if (isDark && lYiq < 140) {
-                       needsFix = true;
-                       targetColor = 'rgb(248, 250, 252)'; // Light gray for dark mode
-                     }
-                   } else {
-                     needsFix = (linkComp === 'rgb(0, 0, 0)' || linkComp === 'rgba(0, 0, 0, 1)' || linkComp === 'rgb(255, 255, 255)' || linkComp === 'rgba(255, 255, 255, 1)');
-                     if (isLight && linkComp === 'rgb(255, 255, 255)') {
-                       needsFix = true;
-                       targetColor = 'rgb(17, 24, 39)';
-                     } else if (isDark && linkComp === 'rgb(0, 0, 0)') {
-                       needsFix = true;
-                       targetColor = 'rgb(248, 250, 252)';
-                     }
-                   }
-                   
-                    // If contrast is insufficient, apply readable color inline even
-                    // when Elm marked this element as using server-provided colors.
-                    if (needsFix) {
-                      try { link.style.color = targetColor; } catch (e) {}
+                  try {
+                    const linkComp = window.getComputedStyle(link).color;
+                    const compMatch = ('' + linkComp).match(/(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/);
+                    let needsFix = false;
+                    let targetColor = '';
+                    if (compMatch) {
+                      const lr = parseInt(compMatch[1]), lg = parseInt(compMatch[2]), lb = parseInt(compMatch[3]);
+                      const lYiq = ((lr * 299) + (lg * 587) + (lb * 114)) / 1000;
+                      if (isLight && lYiq >= 200) { needsFix = true; targetColor = 'rgb(17, 24, 39)'; }
+                      else if (isDark && lYiq < 140) { needsFix = true; targetColor = 'rgb(248, 250, 252)'; }
+                    } else {
+                      if (isLight && linkComp === 'rgb(255, 255, 255)') { needsFix = true; targetColor = 'rgb(17, 24, 39)'; }
+                      else if (isDark && linkComp === 'rgb(0, 0, 0)') { needsFix = true; targetColor = 'rgb(248, 250, 252)'; }
                     }
-                 } catch (e) {}
-               });
-             } catch (e) {}
+                    if (needsFix) link.style.color = targetColor;
+                  } catch (e) {}
                 });
-              }
+              } catch (e) {}
             } catch (e) {}
           }
 
           // Run immediately after DOM loads and after Elm renders
-           document.addEventListener('DOMContentLoaded', function() {
-              setTimeout(function() { if (typeof window.fixHeaderColors === 'function') window.fixHeaderColors(); }, 100);
-              setTimeout(function() { if (typeof window.fixHeaderColors === 'function') window.fixHeaderColors(); }, 500);
-              setTimeout(function() { if (typeof window.fixHeaderColors === 'function') window.fixHeaderColors(); }, 1500);
-              setTimeout(function() { if (typeof window.fixHeaderColors === 'function') window.fixHeaderColors(); }, 3000);
-            });
+          document.addEventListener('DOMContentLoaded', function() {
+            setTimeout(function() { if (typeof window.fixHeaderColors === 'function') window.fixHeaderColors(); }, 100);
+            setTimeout(function() { if (typeof window.fixHeaderColors === 'function') window.fixHeaderColors(); }, 500);
+            setTimeout(function() { if (typeof window.fixHeaderColors === 'function') window.fixHeaderColors(); }, 1500);
+            setTimeout(function() { if (typeof window.fixHeaderColors === 'function') window.fixHeaderColors(); }, 3000);
+          });
 
       window.extractHeaderColors = function() {
            if (typeof ColorThief === 'undefined') return;
@@ -474,7 +422,9 @@
           const serverElem = item.querySelector('[data-use-server-colors="true"]');
           if (serverElem) {
             try {
-              const comp = window.getComputedStyle(serverElem).color;
+              // Prefer reading declared server color attribute if Elm provided it.
+              const attrColor = serverElem.getAttribute('data-server-header-text-color') || serverElem.dataset.serverHeaderTextColor;
+              const comp = attrColor || window.getComputedStyle(serverElem).color;
               // Find nearest non-transparent background for contrast check
               let node = serverElem;
               let bg = '';
@@ -553,7 +503,23 @@
             return;
           }
 
-          if (!img || !imgSrc) return;
+          // If there is no favicon image, still mark adaptive if a fallback
+          // color is provided by Elm via data-server-fallback-color so we
+          // can apply readable colors without needing to extract from an image.
+          if (!img || !imgSrc) {
+            const fallback = item.querySelector('[data-server-fallback-color]');
+            if (fallback && link) {
+              try {
+                const fb = fallback.getAttribute('data-server-fallback-color');
+                if (fb) {
+                  // Apply via CSS priority so Elm inline styles (if any) don't win.
+                  link.style.setProperty('color', fb, 'important');
+                }
+              } catch(e) {}
+            }
+            item.dataset.adaptive = 'true';
+            return;
+          }
 
           const tempImg = new Image();
           tempImg.crossOrigin = 'Anonymous';
@@ -597,14 +563,23 @@
             const fgComp = window.getComputedStyle(link).color;
             const fg = parseRGB(fgComp) || [0,0,0];
 
-            // Find nearest ancestor with non-transparent background
+            // Find nearest ancestor with non-transparent background. If the
+            // timeline item itself is transparent, try to locate the feed
+            // header/card background (feed-header) which may provide the true
+            // visual background for contrast purposes.
             let node = link;
             let bg = null;
             while (node) {
               const st = window.getComputedStyle(node);
               const bc = st.backgroundColor;
               if (bc && bc !== 'rgba(0, 0, 0, 0)' && bc !== 'transparent') { bg = bc; break; }
+              // Prefer feed-header ancestor if present
+              if (node.classList && node.classList.contains('feed-header')) { bg = window.getComputedStyle(node).backgroundColor; break; }
               node = node.parentElement;
+            }
+            if (!bg) {
+              const header = link.closest('.feed-header');
+              if (header) bg = window.getComputedStyle(header).backgroundColor;
             }
             if (!bg) bg = window.getComputedStyle(document.body).backgroundColor || 'rgb(255,255,255)';
             const bgRgb = parseRGB(bg) || [255,255,255];
@@ -620,17 +595,35 @@
         });
       };
 
-      // Observe mutations to re-run enforcement when Elm updates DOM
+      // Observe mutations to re-run enforcement when Elm updates DOM.
+      // Guard against running before <body> exists (some platforms execute
+      // this script in the <head> early). If document.body is not available
+      // yet, wait for DOMContentLoaded and then start observing.
       (function() {
         const mo = new MutationObserver(function() { try { window.enforceReadableTimelineLinks(); } catch(e) {} });
-        mo.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['style', 'class', 'data-use-server-colors'] });
+
+        function startObserver() {
+          const target = document.body || document.documentElement;
+          if (!target || target.nodeType !== 1) return;
+          try {
+            mo.observe(target, { childList: true, subtree: true, attributes: true, attributeFilter: ['style', 'class', 'data-use-server-colors'] });
+          } catch (e) {
+            // observing failed for some reason - silently ignore
+          }
+        }
+
+        if (document.body) {
+          startObserver();
+        } else {
+          document.addEventListener('DOMContentLoaded', startObserver);
+        }
 
         // Also run repeatedly for a short window to cover Elm re-renders
         let enforcementRuns = 0;
         const enforceInterval = setInterval(function() {
           try { window.enforceReadableTimelineLinks(); } catch(e) {}
           enforcementRuns++;
-          if (enforcementRuns > 40) { clearInterval(enforceInterval); mo.disconnect(); }
+          if (enforcementRuns > 40) { clearInterval(enforceInterval); try { mo.disconnect(); } catch(e) {} }
         }, 100);
       })();
     </script>
@@ -853,7 +846,7 @@
                 savedTab: savedTab
               }
             });
-           window.app = app; // Expose for debugging
+            window.app = app; // Expose for debugging
 
            if (app.ports && app.ports.saveTheme) {
              app.ports.saveTheme.subscribe(function(theme) {
@@ -886,6 +879,39 @@
              // Fix header colors after color extraction
             setTimeout(fixHeaderColors, 1500);
             setTimeout(fixHeaderColors, 3000);
+
+            // Wait for timeline items to stabilize before doing a final enforcement pass.
+            // Elm may re-render multiple times; instead of racing with timeouts, wait
+            // until the number of timeline items has been stable for a short window
+            // then run extraction and enforcement. This reduces the need to refresh.
+            function waitForStableCount(selector, timeoutMs, stableWindowMs, cb) {
+              const start = Date.now();
+              let lastCount = -1;
+              let stableSince = Date.now();
+              (function check() {
+                try {
+                  const nodes = document.querySelectorAll(selector);
+                  const count = nodes ? nodes.length : 0;
+                  if (count === lastCount) {
+                    if (Date.now() - stableSince >= stableWindowMs) return cb();
+                  } else {
+                    lastCount = count;
+                    stableSince = Date.now();
+                  }
+                  if (Date.now() - start > timeoutMs) return cb();
+                } catch (e) {
+                  // ignore
+                }
+                setTimeout(check, 150);
+              })();
+            }
+
+            // Run a final enforcement when the timeline items stop changing for 600ms
+            waitForStableCount('[data-timeline-item="true"]', 15000, 600, function() {
+              try { window.extractTimelineItemColors(); } catch(e) {}
+              try { window.enforceReadableTimelineLinks(); } catch(e) {}
+              try { window.fixHeaderColors(); } catch(e) {}
+            });
 
            // Watch for theme changes
            new MutationObserver(function(mutations) {
