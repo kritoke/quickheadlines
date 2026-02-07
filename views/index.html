@@ -550,6 +550,15 @@
       
       // Enforce readable timeline link colors repeatedly until Elm settles.
       window.enforceReadableTimelineLinks = function() {
+        // Debug logger (enabled via localStorage key 'qh-debug-colors' === '1')
+        window.qhColorDebug = window.qhColorDebug || (function() {
+          function enabled() { try { return localStorage.getItem('qh-debug-colors') === '1'; } catch (e) { return false; } }
+          function fmtRgb(a) { return a && a.length ? 'rgb(' + a.join(',') + ')' : String(a); }
+          function short(el) { try { return el && el.href ? el.href : (el && el.textContent ? el.textContent.trim().slice(0,80) : String(el)); } catch(e) { return String(el); } }
+          function log() { if (!enabled()) return; try { console.groupCollapsed('[qh-color-debug]', new Date().toISOString()); console.log.apply(console, arguments); console.groupEnd(); } catch (e) {} }
+          return { enabled: enabled, log: log, fmtRgb: fmtRgb, short: short };
+        })();
+
         function parseRGB(s) {
           if (!s) return null;
           s = ('' + s).trim();
@@ -610,8 +619,10 @@
                     const yiq = ((bgRgb[0]*299)+(bgRgb[1]*587)+(bgRgb[2]*114))/1000;
                     const target = yiq >= 128 ? 'rgb(17, 24, 39)' : 'rgb(248, 250, 252)';
                     try { link.style.setProperty('color', target, 'important'); link.setAttribute('data-js-override','true'); } catch(e) {}
+                    try { window.qhColorDebug && window.qhColorDebug.log('override-link-server-failing', { href: link.href, serverProvided: serverProvided, serverRgb: window.qhColorDebug.fmtRgb(serverRgb), bg: bg, bgRgb: window.qhColorDebug.fmtRgb(bgRgb), target: target, srvRatio: srvRatio }); } catch(e) {}
                   }
                   // skip the rest of checks since server color was authoritative
+                  else { try { window.qhColorDebug && window.qhColorDebug.log('server-color-ok', { href: link.href, serverProvided: serverProvided, srvRatio: srvRatio }); } catch(e) {} }
                   return;
                 }
               } catch(e) {}
@@ -623,6 +634,7 @@
               const yiq = ((bgRgb[0]*299)+(bgRgb[1]*587)+(bgRgb[2]*114))/1000;
               const target = yiq >= 128 ? 'rgb(17, 24, 39)' : 'rgb(248, 250, 252)';
               try { link.style.setProperty('color', target, 'important'); link.setAttribute('data-js-override','true'); } catch(e) {}
+              try { window.qhColorDebug && window.qhColorDebug.log('override-link-contrast', { href: link.href, comp: fgComp, bg: bg, bgRgb: window.qhColorDebug.fmtRgb(bgRgb), target: target, ratio: ratio }); } catch(e) {}
             }
           } catch(e) {}
         });
@@ -661,6 +673,7 @@
                   const yiq = ((bgRgb[0]*299)+(bgRgb[1]*587)+(bgRgb[2]*114))/1000;
                   const target = yiq >= 128 ? 'rgb(17, 24, 39)' : 'rgb(248, 250, 252)';
                   try { el.style.setProperty('color', target, 'important'); el.setAttribute('data-js-override','true'); } catch(e) {}
+                  try { window.qhColorDebug && window.qhColorDebug.log('override-chip-server-failing', { text: el.textContent && el.textContent.trim().slice(0,80), serverAttr: serverAttr, srvRgb: window.qhColorDebug.fmtRgb(srvRgb), bg: bg, bgRgb: window.qhColorDebug.fmtRgb(bgRgb), target: target, srvRatio: srvRatio }); } catch(e) {}
                 }
                 return;
               }
@@ -671,6 +684,7 @@
               const yiq = ((bgRgb[0]*299)+(bgRgb[1]*587)+(bgRgb[2]*114))/1000;
               const target = yiq >= 128 ? 'rgb(17, 24, 39)' : 'rgb(248, 250, 252)';
               try { el.style.setProperty('color', target, 'important'); el.setAttribute('data-js-override','true'); } catch(e) {}
+              try { window.qhColorDebug && window.qhColorDebug.log('override-chip-contrast', { text: el.textContent && el.textContent.trim().slice(0,80), compColor: compColor, bg: bg, bgRgb: window.qhColorDebug.fmtRgb(bgRgb), target: target, ratio: ratio }); } catch(e) {}
             }
           } catch(e) {}
         });
