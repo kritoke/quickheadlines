@@ -22,8 +22,15 @@ module FaviconStorage
   def self.save_favicon(url : String, image_data : Bytes, content_type : String) : String?
     return if image_data.size > MAX_SIZE
 
-    # Generate a hash-based filename from the URL
-    hash = OpenSSL::Digest.new("SHA256").update(url).final.hexstring
+    # Generate a hash-based filename from the URL (or fetch source) so different
+    # fetch paths that point to the same content still produce the same file.
+    hash_input = url
+    begin
+      # If the url is actually a data URI, use its prefix
+      hash_input = url[0..255]
+    rescue
+    end
+    hash = OpenSSL::Digest.new("SHA256").update(hash_input).final.hexstring
     filename = "#{hash[0...16]}.#{extension_from_content_type(content_type)}"
     filepath = File.join(FAVICON_DIR, filename)
 

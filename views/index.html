@@ -32,9 +32,14 @@
           background-color: transparent !important;
           background: transparent !important;
         }
-        [data-timeline-item="true"] a {
+       [data-timeline-item="true"] a {
           text-decoration: underline !important;
         }
+        /* Force readable timeline link colors per theme to protect against
+           inline styles applied by Elm during re-renders. This uses !important
+           so it overrides accidental inline colors (without needing JS). */
+        html[data-theme="light"] [data-timeline-item="true"] a { color: rgb(17, 24, 39) !important; }
+        html[data-theme="dark"] [data-timeline-item="true"] a { color: rgb(248, 250, 252) !important; }
 
         .feed-header a {
           color: inherit;
@@ -208,8 +213,37 @@
               const yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
               const textColor = yiq >= 128 ? '#1f2937' : '#ffffff';
 
-               // Don't override server-provided colors
-               if (header.getAttribute('data-use-server-colors') === 'true') return;
+              // Don't override server-provided colors unless they fail contrast.
+              if (header.getAttribute && header.getAttribute('data-use-server-colors') === 'true') {
+                // Verify contrast; if server-provided colors are unreadable, allow JS to apply a readable inline override.
+                try {
+                  const comp = window.getComputedStyle(header).color;
+                  // Find nearest non-transparent background for header
+                  let node = header;
+                  let bg = '';
+                  while (node) {
+                    const st = window.getComputedStyle(node);
+                    const bc = st.backgroundColor;
+                    if (bc && bc !== 'rgba(0, 0, 0, 0)' && bc !== 'transparent') { bg = bc; break; }
+                    node = node.parentElement;
+                  }
+                  if (bg) {
+                    function pRGB(s) { const m = s.match(/(\d+),\s*(\d+),\s*(\d+)/); return m ? [parseInt(m[1]), parseInt(m[2]), parseInt(m[3])] : null; }
+                    function toLin(c){ const v = c/255; return v<=0.03928 ? v/12.92 : Math.pow((v+0.055)/1.055,2.4); }
+                    const fg = pRGB(comp);
+                    const bgRgb = pRGB(bg);
+                    if (fg && bgRgb) {
+                      const Lf = 0.2126*toLin(fg[0])+0.7152*toLin(fg[1])+0.0722*toLin(fg[2]);
+                      const Lb = 0.2126*toLin(bgRgb[0])+0.7152*toLin(bgRgb[1])+0.0722*toLin(bgRgb[2]);
+                      const ratio = (Math.max(Lf,Lb)+0.05)/(Math.min(Lf,Lb)+0.05);
+                      if (ratio >= 4.5) {
+                        return; // server colors are fine
+                      }
+                    }
+                  }
+                } catch (e) {}
+                // fallthrough to apply fix when contrast is insufficient
+              }
 
                // Apply to header and links
                header.style.color = textColor;
@@ -236,7 +270,7 @@
                const isLight = theme === 'light';
                const isDark = theme === 'dark';
                
-               document.querySelectorAll('[data-timeline-item="true"] a[data-display-link="true"]').forEach(link => {
+                document.querySelectorAll('[data-timeline-item="true"] a').forEach(link => {
                  try {
                    const linkComp = window.getComputedStyle(link).color;
                    // In light mode: fix white links (unreadable on light background)
@@ -271,10 +305,11 @@
                      }
                    }
                    
-                   // Respect Elm server-provided colors on link
-                   if (needsFix && link.getAttribute && link.getAttribute('data-use-server-colors') !== 'true') {
-                     link.style.color = targetColor;
-                   }
+                    // If contrast is insufficient, apply readable color inline even
+                    // when Elm marked this element as using server-provided colors.
+                    if (needsFix) {
+                      try { link.style.color = targetColor; } catch (e) {}
+                    }
                  } catch (e) {}
                });
              } catch (e) {}
@@ -285,11 +320,11 @@
 
           // Run immediately after DOM loads and after Elm renders
            document.addEventListener('DOMContentLoaded', function() {
-             setTimeout(fixHeaderColors, 100);
-             setTimeout(fixHeaderColors, 500);
-             setTimeout(fixHeaderColors, 1500);
-             setTimeout(fixHeaderColors, 3000);
-           });
+              setTimeout(function() { if (typeof window.fixHeaderColors === 'function') window.fixHeaderColors(); }, 100);
+              setTimeout(function() { if (typeof window.fixHeaderColors === 'function') window.fixHeaderColors(); }, 500);
+              setTimeout(function() { if (typeof window.fixHeaderColors === 'function') window.fixHeaderColors(); }, 1500);
+              setTimeout(function() { if (typeof window.fixHeaderColors === 'function') window.fixHeaderColors(); }, 3000);
+            });
 
       window.extractHeaderColors = function() {
            if (typeof ColorThief === 'undefined') return;
@@ -409,14 +444,56 @@
           if (item.dataset.adaptive === 'true') return;
 
           // If Elm already rendered server-provided colors anywhere inside
-          // this timeline item, do not touch it. Elm sets
-          // `data-use-server-colors="true"` on title/link elements.
-          if (item.querySelector('[data-use-server-colors="true"]')) {
+          // this timeline item, verify contrast and only override when
+          // the server-provided color is insufficient. Elm marks elements
+          // with `data-use-server-colors="true"` when it intentionally
+          // applies server-side themes; we must not blindly skip them.
+          const serverElem = item.querySelector('[data-use-server-colors="true"]');
+          if (serverElem) {
+            try {
+              const comp = window.getComputedStyle(serverElem).color;
+              // Find nearest non-transparent background for contrast check
+              let node = serverElem;
+              let bg = '';
+              while (node) {
+                const st = window.getComputedStyle(node);
+                const bc = st.backgroundColor;
+                if (bc && bc !== 'rgba(0, 0, 0, 0)' && bc !== 'transparent') { bg = bc; break; }
+                node = node.parentElement;
+              }
+              if (!bg) bg = window.getComputedStyle(document.body).backgroundColor || 'rgb(255,255,255)';
+
+              function pRGB(s){ const m = (''+s).match(/(\d+),\s*(\d+),\s*(\d+)/); return m ? [parseInt(m[1]),parseInt(m[2]),parseInt(m[3])] : null; }
+              function toLin(c){ const v = c/255; return v <= 0.03928 ? v/12.92 : Math.pow((v+0.055)/1.055, 2.4); }
+
+              const fg = pRGB(comp);
+              const bgRgb = pRGB(bg);
+              if (fg && bgRgb) {
+                const Lf = 0.2126*toLin(fg[0]) + 0.7152*toLin(fg[1]) + 0.0722*toLin(fg[2]);
+                const Lb = 0.2126*toLin(bgRgb[0]) + 0.7152*toLin(bgRgb[1]) + 0.0722*toLin(bgRgb[2]);
+                const ratio = (Math.max(Lf, Lb) + 0.05) / (Math.min(Lf, Lb) + 0.05);
+                if (ratio < 4.5) {
+                  // Pick a readable color based on background brightness (YIQ)
+                  const yiq = ((bgRgb[0] * 299) + (bgRgb[1] * 587) + (bgRgb[2] * 114)) / 1000;
+                  const target = yiq >= 128 ? 'rgb(17, 24, 39)' : 'rgb(248, 250, 252)';
+                  try {
+                    // Apply with !important so Elm re-renders are less likely to override
+                    serverElem.style.setProperty('color', target, 'important');
+                    serverElem.setAttribute('data-js-override', 'true');
+                    // Also try to find a nearby link and apply the same override
+                    const nearbyLink = serverElem.closest('a') || serverElem.querySelector('a');
+                    if (nearbyLink) {
+                      try { nearbyLink.style.setProperty('color', target, 'important'); nearbyLink.setAttribute('data-js-override', 'true'); } catch(e) {}
+                    }
+                  } catch(e) {}
+                }
+              }
+            } catch (e) {}
             item.dataset.adaptive = 'true';
             return;
           }
 
-          const link = item.querySelector('a[data-display-link="true"]');
+          const link = item.querySelector('a');
           const img = item.querySelector('img');
           const imgSrc = img ? img.getAttribute('src') : null;
           const key = imgSrc || (item.getAttribute('data-feed-url') || 'default');
@@ -479,8 +556,60 @@
         });
       };
 
-       // Fix cached header colors in dark mode
+        // Fix cached header colors in dark mode
       window.fixHeaderColors = fixHeaderColors;
+      
+      // Enforce readable timeline link colors repeatedly until Elm settles.
+      window.enforceReadableTimelineLinks = function() {
+        function parseRGB(s) { const m = (''+s).match(/(\d+),\s*(\d+),\s*(\d+)/); return m ? [parseInt(m[1]),parseInt(m[2]),parseInt(m[3])] : null; }
+        function toLin(c){ const v = c/255; return v <= 0.03928 ? v/12.92 : Math.pow((v+0.055)/1.055, 2.4); }
+        function luminance(rgb){ return 0.2126*toLin(rgb[0]) + 0.7152*toLin(rgb[1]) + 0.0722*toLin(rgb[2]); }
+        function contrastRatio(fg, bg){ const Lf = luminance(fg); const Lb = luminance(bg); const l1 = Math.max(Lf,Lb); const l2 = Math.min(Lf,Lb); return (l1+0.05)/(l2+0.05); }
+
+        document.querySelectorAll('[data-timeline-item="true"] a[data-display-link="true"]').forEach(link => {
+          try {
+            // If JS already overrode this link, skip
+            if (link.getAttribute && link.getAttribute('data-js-override') === 'true') return;
+
+            const fgComp = window.getComputedStyle(link).color;
+            const fg = parseRGB(fgComp) || [0,0,0];
+
+            // Find nearest ancestor with non-transparent background
+            let node = link;
+            let bg = null;
+            while (node) {
+              const st = window.getComputedStyle(node);
+              const bc = st.backgroundColor;
+              if (bc && bc !== 'rgba(0, 0, 0, 0)' && bc !== 'transparent') { bg = bc; break; }
+              node = node.parentElement;
+            }
+            if (!bg) bg = window.getComputedStyle(document.body).backgroundColor || 'rgb(255,255,255)';
+            const bgRgb = parseRGB(bg) || [255,255,255];
+
+            const ratio = contrastRatio(fg, bgRgb);
+            if (ratio < 4.5) {
+              // Pick readable color based on background brightness (YIQ)
+              const yiq = ((bgRgb[0]*299)+(bgRgb[1]*587)+(bgRgb[2]*114))/1000;
+              const target = yiq >= 128 ? 'rgb(17, 24, 39)' : 'rgb(248, 250, 252)';
+              try { link.style.setProperty('color', target, 'important'); link.setAttribute('data-js-override','true'); } catch(e) {}
+            }
+          } catch(e) {}
+        });
+      };
+
+      // Observe mutations to re-run enforcement when Elm updates DOM
+      (function() {
+        const mo = new MutationObserver(function() { try { window.enforceReadableTimelineLinks(); } catch(e) {} });
+        mo.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['style', 'class', 'data-use-server-colors'] });
+
+        // Also run repeatedly for a short window to cover Elm re-renders
+        let enforcementRuns = 0;
+        const enforceInterval = setInterval(function() {
+          try { window.enforceReadableTimelineLinks(); } catch(e) {}
+          enforcementRuns++;
+          if (enforcementRuns > 40) { clearInterval(enforceInterval); mo.disconnect(); }
+        }, 100);
+      })();
     </script>
   </head>
   <body>
@@ -686,10 +815,14 @@
         // Get saved tab from localStorage
         var savedTab = localStorage.getItem('quickheadlines-tab');
 
-         try {
-             var app = Elm.Main.init({
-              node: appElement,
-              flags: {
+          try {
+              // Apply any cached header colors immediately so feed headers
+              // render with readable colors before Elm finishes its first render.
+              try { if (window.applyCachedHeaderColors) window.applyCachedHeaderColors(); } catch(e) {}
+
+              var app = Elm.Main.init({
+               node: appElement,
+               flags: {
                 width: window.innerWidth,
                 height: window.innerHeight,
                 prefersDark: prefersDark,

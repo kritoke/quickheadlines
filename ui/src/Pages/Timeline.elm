@@ -280,15 +280,16 @@ themeTextFor maybeVal theme =
             Nothing
 
         Just v ->
-            -- Only honor server-provided theme values when the server marked them
-            -- as auto-corrected. This prevents the UI from blindly using unsafe
-            -- server colors; we prefer to use server-canonical corrected values.
-            let
-                decodeSource = Decode.field "source" (Decode.nullable Decode.string)
-                srcRes = Decode.decodeValue decodeSource v
-                sourceOk =
-                    case srcRes of
-                        Ok (Just s) -> s == "auto-corrected"
+                -- Honor server-provided theme values when the server marked them
+                -- as either `auto-corrected` or `auto`. We still validate contrast
+                -- later (see `themeTextSafe`) so accepting `auto` here allows the
+                -- UI to use server colors when they are present and safe.
+                let
+                    decodeSource = Decode.field "source" (Decode.nullable Decode.string)
+                    srcRes = Decode.decodeValue decodeSource v
+                    sourceOk =
+                        case srcRes of
+                        Ok (Just s) -> s == "auto-corrected" || s == "auto"
                         _ -> False
             in
             if not sourceOk then

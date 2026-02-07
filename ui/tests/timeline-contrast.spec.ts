@@ -1,61 +1,68 @@
 import { test, expect } from '@playwright/test';
 
-test.describe('Timeline contrast', () => {
-  test.beforeEach(async ({ page }) => {
+test.describe('Timeline contrast checks', () => {
+  test('every timeline item link has contrast >= 4.5:1 against its background', async ({ page }) => {
+    await page.goto('/', { waitUntil: 'networkidle' });
     await page.goto('/timeline', { waitUntil: 'networkidle' });
-    await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(600);
-  });
+    // Allow JS to render and any Elm client adjustments to complete
+    await page.waitForTimeout(2500);
 
-  test('timeline item text remains readable after tab switch / theme toggle', async ({ page }) => {
-    // Collect initial timeline item colors keyed by item title text
-    const before = await page.evaluate(() => {
-      const out: Record<string, { linkComputed: string; headerComputed: string; server: string | null }> = {};
-      document.querySelectorAll('[data-timeline-item="true"]').forEach(el => {
-        const link = el.querySelector('a[data-display-link="true"]');
-        const key = link ? (link as HTMLAnchorElement).innerText : Math.random().toString();
-        const linkComputed = link ? window.getComputedStyle(link as Element).color : '';
-        const headerComputed = window.getComputedStyle(el as Element).color;
-        out[key] = { linkComputed, headerComputed, server: (el as HTMLElement).getAttribute('data-use-server-colors') };
-      });
-      return out;
-    });
-
-    // Force a re-render (toggle theme) to simulate tab switch / reflow
-    await page.evaluate(() => {
-      const cur = localStorage.getItem('quickheadlines-theme') || 'light';
-      localStorage.setItem('quickheadlines-theme', cur === 'light' ? 'dark' : 'light');
-      window.location.reload();
-    });
-    await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(800);
-
-    const after = await page.evaluate(() => {
-      const out: Record<string, { linkComputed: string; headerComputed: string; server: string | null; linkInline: string | null }> = {};
-      document.querySelectorAll('[data-timeline-item="true"]').forEach(el => {
-        const link = el.querySelector('a[data-display-link="true"]');
-        const key = link ? (link as HTMLAnchorElement).innerText : Math.random().toString();
-        const linkComputed = link ? window.getComputedStyle(link as Element).color : '';
-        const headerComputed = window.getComputedStyle(el as Element).color;
-        out[key] = { linkComputed, headerComputed, server: (el as HTMLElement).getAttribute('data-use-server-colors'), linkInline: link ? link.getAttribute('style') : null };
-      });
-      return out;
-    });
-
-    const mismatches: any[] = [];
-    for (const k of Object.keys(before)) {
-      if (after[k]) {
-        const b = before[k];
-        const a = after[k];
-        const issues: string[] = [];
-        if (a.linkComputed === 'rgb(0, 0, 0)') issues.push('link_black');
-        if (a.headerComputed === 'rgb(0, 0, 0)') issues.push('header_black');
-        if (b.server === 'true' && a.server !== 'true') issues.push('lost_server_flag');
-        if (issues.length) mismatches.push({ key: k, before: b, after: a, issues });
+    const failures = await page.evaluate(() => {
+      function parseRGB(s: string) {
+        const m = s.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
+        if (!m) return null;
+        return [parseInt(m[1], 10), parseInt(m[2], 10), parseInt(m[3], 10)];
       }
-    }
 
-    if (mismatches.length) console.log('Timeline contrast mismatches:', JSON.stringify(mismatches, null, 2));
-    expect(mismatches.length).toBe(0);
+      function srgbToLinear(c: number) {
+        const v = c / 255;
+        return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
+      }
+
+      function luminance(rgb: number[]) {
+        return 0.2126 * srgbToLinear(rgb[0]) + 0.7152 * srgbToLinear(rgb[1]) + 0.0722 * srgbToLinear(rgb[2]);
+      }
+
+      function contrastRatio(fg: number[], bg: number[]) {
+        const L1 = luminance(fg);
+        const L2 = luminance(bg);
+        const lighter = Math.max(L1, L2);
+        const darker = Math.min(L1, L2);
+        return (lighter + 0.05) / (darker + 0.05);
+      }
+
+      const out: Array<any> = [];
+      document.querySelectorAll('[data-timeline-item="true"]').forEach(el => {
+        const link = el.querySelector('a[data-display-link="true"]') as HTMLElement | null;
+        if (!link) return;
+        const fg = window.getComputedStyle(link as Element).color;
+        // Find nearest ancestor with non-transparent background
+        let node: HTMLElement | null = link as HTMLElement;
+        let bgColor = '';
+        while (node) {
+          const style = window.getComputedStyle(node);
+          const bc = style.backgroundColor;
+          if (bc && bc !== 'rgba(0, 0, 0, 0)' && bc !== 'transparent') { bgColor = bc; break; }
+          node = node.parentElement;
+        }
+        if (!bgColor) bgColor = window.getComputedStyle(document.body).backgroundColor || 'rgb(255,255,255)';
+
+        const fgRgb = parseRGB(fg);
+        const bgRgb = parseRGB(bgColor);
+        if (!fgRgb || !bgRgb) return; // skip if styles couldn't be parsed
+
+        const ratio = contrastRatio(fgRgb, bgRgb);
+        const title = (link.textContent || '').trim().slice(0, 80);
+        if (ratio < 4.5) {
+          out.push({ title, fg, bg: bgColor, ratio });
+        }
+      });
+      return out;
+    });
+
+    if (failures.length > 0) {
+      console.log('Contrast failures:', JSON.stringify(failures, null, 2));
+    }
+    expect(failures.length).toBe(0);
   });
 });

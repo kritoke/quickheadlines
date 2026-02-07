@@ -226,7 +226,7 @@ module ColorExtractor
         return parse_hex_string(s)
       else
         # Try hex without #
-        return parse_hex_string("#" + s) if s.match?(/^[0-9a-fA-F]{6}$/)
+        return parse_hex_string("#" + s) if s =~ /^[0-9a-fA-F]{6}$/
       end
       nil
     end
@@ -526,6 +526,15 @@ module ColorExtractor
           end
         end
 
+        # If the parsed payload already contains both explicit `light` and
+        # `dark` text roles, preserve the incoming JSON unchanged. Auto-correction
+        # should not overwrite an explicit two-role payload at write-time; callers
+        # that wish to upgrade `source` from "auto" to "auto-corrected" should
+        # use `auto_upgrade_to_auto_corrected` instead.
+        if parsed && text_hash.has_key?("light") && text_hash.has_key?("dark")
+          return nil
+        end
+
         # Fallback to legacy header_color/header_text_color
         if !bg_rgb && legacy_bg
           bg_rgb = parse_color_to_rgb(legacy_bg)
@@ -588,6 +597,68 @@ module ColorExtractor
         final["source"] = final_source
 
         final.to_json
+      rescue
+        nil
+      end
+    end
+
+    # Upgrade existing theme JSON entries that were marked as "auto" to
+    # "auto-corrected" when their light/dark text roles already meet
+    # contrast requirements relative to the bg. Returns a JSON string with
+    # source set to "auto-corrected" when an upgrade is performed, or nil
+    # otherwise.
+    def self.auto_upgrade_to_auto_corrected(theme_json : String?) : String?
+      begin
+        return nil unless theme_json && !theme_json.empty?
+        parsed = JSON.parse(theme_json) rescue nil
+        return nil unless parsed.is_a?(JSON::Any)
+        h = parsed.as_h rescue nil
+        return nil unless h
+
+        src = h["source"]? ? h["source"].to_s : nil
+        return nil unless src == "auto"
+
+        bg_val = h["bg"] || h["background"]
+        return nil unless bg_val
+        bg_rgb = parse_color_to_rgb(bg_val.to_s)
+        return nil unless bg_rgb
+
+        txt = h["text"]
+        txt_h = {} of String => String
+        if txt.is_a?(Hash) || txt.is_a?(JSON::Any)
+          begin
+            tmp = txt.is_a?(JSON::Any) ? txt.as_h : txt.as_h
+            tmp.each do |k, v|
+              txt_h[k.to_s] = v.to_s
+            end
+          rescue
+          end
+        elsif txt
+          txt_h["light"] = txt.to_s
+          txt_h["dark"] = txt.to_s
+        end
+
+        # Ensure both roles present and meet contrast
+        light_ok = false
+        dark_ok = false
+        if l = txt_h["light"]
+          if lrgb = parse_color_to_rgb(l)
+            light_ok = contrast_ratio(lrgb, bg_rgb) >= 4.5
+          end
+        end
+        if d = txt_h["dark"]
+          if drgb = parse_color_to_rgb(d)
+            dark_ok = contrast_ratio(drgb, bg_rgb) >= 4.5
+          end
+        end
+
+        if light_ok && dark_ok
+          # Build upgraded payload preserving original bg string
+          final = {"bg" => bg_val.to_s, "text" => {"light" => txt_h["light"], "dark" => txt_h["dark"]}, "source" => "auto-corrected"}
+          return final.to_json
+        end
+
+        nil
       rescue
         nil
       end

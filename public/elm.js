@@ -16386,12 +16386,28 @@ var $author$project$Pages$Timeline$themeBgFor = function (maybeVal) {
 			$elm$json$Json$Decode$decodeValue,
 			A2(
 				$elm$json$Json$Decode$field,
-				'bg',
+				'source',
 				$elm$json$Json$Decode$nullable($elm$json$Json$Decode$string)),
 			v);
-		if (!_v1.$) {
-			var bg = _v1.a;
-			return bg;
+		if ((!_v1.$) && (!_v1.a.$)) {
+			var s = _v1.a.a;
+			if (s === 'auto-corrected') {
+				var _v2 = A2(
+					$elm$json$Json$Decode$decodeValue,
+					A2(
+						$elm$json$Json$Decode$field,
+						'bg',
+						$elm$json$Json$Decode$nullable($elm$json$Json$Decode$string)),
+					v);
+				if (!_v2.$) {
+					var bg = _v2.a;
+					return bg;
+				} else {
+					return $elm$core$Maybe$Nothing;
+				}
+			} else {
+				return $elm$core$Maybe$Nothing;
+			}
 		} else {
 			return $elm$core$Maybe$Nothing;
 		}
@@ -16403,51 +16419,68 @@ var $author$project$Pages$Timeline$themeTextFor = F2(
 			return $elm$core$Maybe$Nothing;
 		} else {
 			var v = maybeVal.a;
-			var decodeLight = A2(
+			var decodeSource = A2(
 				$elm$json$Json$Decode$field,
-				'text',
-				A2(
-					$elm$json$Json$Decode$field,
-					'light',
-					$elm$json$Json$Decode$nullable($elm$json$Json$Decode$string)));
-			var lightRes = A2($elm$json$Json$Decode$decodeValue, decodeLight, v);
-			var light = function () {
-				if (!lightRes.$) {
-					var l = lightRes.a;
-					return l;
+				'source',
+				$elm$json$Json$Decode$nullable($elm$json$Json$Decode$string));
+			var srcRes = A2($elm$json$Json$Decode$decodeValue, decodeSource, v);
+			var sourceOk = function () {
+				if ((!srcRes.$) && (!srcRes.a.$)) {
+					var s = srcRes.a.a;
+					return (s === 'auto-corrected') || (s === 'auto');
 				} else {
-					return $elm$core$Maybe$Nothing;
+					return false;
 				}
 			}();
-			var decodeDark = A2(
-				$elm$json$Json$Decode$field,
-				'text',
-				A2(
-					$elm$json$Json$Decode$field,
-					'dark',
-					$elm$json$Json$Decode$nullable($elm$json$Json$Decode$string)));
-			var darkRes = A2($elm$json$Json$Decode$decodeValue, decodeDark, v);
-			var dark = function () {
-				if (!darkRes.$) {
-					var d = darkRes.a;
-					return d;
-				} else {
-					return $elm$core$Maybe$Nothing;
-				}
-			}();
-			if (!theme) {
-				if (!dark.$) {
-					var d = dark.a;
-					return $elm$core$Maybe$Just(d);
-				} else {
-					return light;
-				}
+			if (!sourceOk) {
+				return $elm$core$Maybe$Nothing;
 			} else {
-				if (!light.$) {
-					var l = light.a;
-					return $elm$core$Maybe$Just(l);
+				var decodeLight = A2(
+					$elm$json$Json$Decode$field,
+					'text',
+					A2(
+						$elm$json$Json$Decode$field,
+						'light',
+						$elm$json$Json$Decode$nullable($elm$json$Json$Decode$string)));
+				var lightRes = A2($elm$json$Json$Decode$decodeValue, decodeLight, v);
+				var light = function () {
+					if (!lightRes.$) {
+						var l = lightRes.a;
+						return l;
+					} else {
+						return $elm$core$Maybe$Nothing;
+					}
+				}();
+				var decodeDark = A2(
+					$elm$json$Json$Decode$field,
+					'text',
+					A2(
+						$elm$json$Json$Decode$field,
+						'dark',
+						$elm$json$Json$Decode$nullable($elm$json$Json$Decode$string)));
+				var darkRes = A2($elm$json$Json$Decode$decodeValue, decodeDark, v);
+				var dark = function () {
+					if (!darkRes.$) {
+						var d = darkRes.a;
+						return d;
+					} else {
+						return $elm$core$Maybe$Nothing;
+					}
+				}();
+				if (!theme) {
+					if (!dark.$) {
+						var d = dark.a;
+						return $elm$core$Maybe$Just(d);
+					} else {
+						return light;
+					}
 				} else {
-					return dark;
+					if (!light.$) {
+						var l = light.a;
+						return $elm$core$Maybe$Just(l);
+					} else {
+						return dark;
+					}
 				}
 			}
 		}

@@ -21,6 +21,10 @@ I wanted it to be as simple as dropping an executable and a YAML file with feeds
 - **Health Monitoring**: Built-in health monitoring with CPU spike detection and error logging.
 - **Lightweight**: Single binary deployment with minimal dependencies.
 
+Backfill tool (optional)
+ - The repository contains an optional backfill script that can scan your existing cache database and upgrade feed theme metadata to the newer "auto-corrected" format. This is a migration convenience only — it is not required for deployment or runtime.
+ - Deployments only need the application executable and `feeds.yml` (and `public/elm.js` for FreeBSD builds). You do not need the backfill binary or script to run the service; runtime color extraction and auto-correction happen during normal operation.
+
 ## Screenshots
 
 Mobile (Dark Mode)           |  Mobile (Light Mode)
