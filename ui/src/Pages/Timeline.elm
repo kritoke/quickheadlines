@@ -536,56 +536,6 @@ view shared model =
 
         clustersByDay =
             groupClustersByDay shared.zone shared.now model.clusters
-
-        -- Small debug panel to help reproduce theme toggle/color issues.
-        maybeFirstRep =
-            case model.clusters of
-                first :: _ -> Just first.representative
-                [] -> Nothing
-
-        debugPanel =
-            case maybeFirstRep of
-                Nothing -> Element.none
-
-                Just rep ->
-                    let
-                        repEffectiveBg =
-                            case themeBgFor rep.headerTheme of
-                                Just repBg -> repBg
-                                Nothing -> Maybe.withDefault "" rep.headerColor
-
-                        titleTextColor =
-                            case themeTextSafe rep.headerTheme theme repEffectiveBg of
-                                Just t -> t
-                                Nothing ->
-                                    if Maybe.withDefault "" rep.headerTextColor /= "" then
-                                        let raw = Maybe.withDefault "" rep.headerTextColor in
-                                        case ( getRgbTupleFromString raw, getRgbTupleFromString repEffectiveBg ) of
-                                            ( Just fg, Just repBg2 ) ->
-                                                if contrastRatio fg repBg2 >= 4.5 then raw else readableColorForTheme repEffectiveBg theme
-                                            _ -> readableColorForTheme repEffectiveBg theme
-                                    else if Maybe.withDefault "" rep.headerColor /= "" then
-                                        readableColorForTheme (Maybe.withDefault "" rep.headerColor) theme
-                                    else
-                                        readableColorForTheme repEffectiveBg theme
-
-                        linkTextColor =
-                            titleTextColor
-                    in
-                    el
-                        [ paddingXY 8 12
-                        , Border.rounded 6
-                        , Background.color (
-                              case parseColor repEffectiveBg of
-                                  Just c -> c
-                                  Nothing -> rgba 0 0 0 0
-                          )
-                        , htmlAttribute (Html.Attributes.id "debug-theme-panel")
-                        , Font.size 12
-                        , Font.color (textColor theme)
-                        , htmlAttribute (Html.Attributes.attribute "data-debug-theme" (if theme == Shared.Dark then "dark" else "light"))
-                        ]
-                        (text ("Theme: " ++ (if theme == Shared.Dark then "Dark" else "Light") ++ " | effectiveBg: " ++ repEffectiveBg ++ " | titleColor: " ++ titleTextColor ++ " | linkColor: " ++ linkTextColor))
     in
       column
           [ width fill

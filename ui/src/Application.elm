@@ -363,7 +363,7 @@ headerView model =
             , timelineIconView model Timeline
             ]
         , -- Actions Section
-          Element.el [ alignRight, centerY ] (themeToggle model)
+          Element.el [ alignRight, centerY, htmlAttribute (HA.style "padding-right" "8px") ] (themeToggle model)
         ]
 
 
