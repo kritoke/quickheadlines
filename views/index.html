@@ -184,6 +184,27 @@
           @media (min-width: 640px) {
             .qh-site-header { padding-left: 24px; padding-right: 24px; }
           }
+
+          /* Mobile-specific adjustments to prevent the site title from
+             overlapping timeline content and to avoid the theme toggle
+             clipping on narrow viewports. Targets both Elm-provided
+             attribute selectors and common class names used for the brand
+             and header actions. */
+          @media (max-width: 640px) {
+            .qh-site-header [data-brand],
+            .qh-site-header .brand,
+            .qh-site-header .site-brand {
+              padding: 0 6px !important;
+              line-height: 1 !important;
+            }
+
+            /* Ensure header actions (theme toggle, etc.) have a bit more
+               right-side spacing so icons don't get clipped. */
+            .qh-site-header .header-actions,
+            .qh-site-header [data-header-actions] {
+              padding-right: 8px !important;
+            }
+          }
         </style>
       <script>
         // Removed aggressive color-extraction/enforcement JS to make Elm the
