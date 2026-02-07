@@ -190,18 +190,46 @@ module ColorExtractor
     end
 
    private def self.parse_rgb_string(str : String) : Array(Int32)?
-     return nil unless str.starts_with?("rgb(")
+      return nil unless str.starts_with?("rgb(")
 
-     clean = str.sub("rgb(", "").sub(")", "").sub(" ", "")
-     parts = clean.split(",")
-     return nil unless parts.size == 3
+      clean = str.sub("rgb(", "").sub(")", "").sub(" ", "")
+      parts = clean.split(",")
+      return nil unless parts.size == 3
 
-     r = parts[0].to_i32?
-     g = parts[1].to_i32?
-     b = parts[2].to_i32?
-     return nil unless r && g && b
-     [r, g, b]
-  end
+      r = parts[0].to_i32?
+      g = parts[1].to_i32?
+      b = parts[2].to_i32?
+      return nil unless r && g && b
+      [r, g, b]
+   end
+
+    private def self.parse_hex_string(str : String) : Array(Int32)?
+      s = str.strip
+      s = s[1..-1] if s.starts_with?("#")
+      return nil unless s.size == 6
+      begin
+        r = s[0..1].to_i(16).to_i32
+        g = s[2..3].to_i(16).to_i32
+        b = s[4..5].to_i(16).to_i32
+        [r, g, b]
+      rescue
+        nil
+      end
+    end
+
+    private def self.parse_color_to_rgb(str : String) : Array(Int32)?
+      return nil if str.nil? || str.empty?
+      s = str.to_s.strip
+      if s.starts_with?("rgb(")
+        return parse_rgb_string(s)
+      elsif s.starts_with?("#")
+        return parse_hex_string(s)
+      else
+        # Try hex without #
+        return parse_hex_string("#" + s) if s.match?(/^[0-9a-fA-F]{6}$/)
+      end
+      nil
+    end
 
     private def self.cache_result_theme_aware(path : String, result : Hash(String, String | Hash(String, String)))
       @@cache_mutex.synchronize do
@@ -445,15 +473,125 @@ module ColorExtractor
     rgb_to_hex(rgb)
   end
 
-   private def self.calculate_contrasting_text(rgb : Array(Int32)) : String
-     lum = calculate_luminance(rgb)
+    private def self.calculate_contrasting_text(rgb : Array(Int32)) : String
+      lum = calculate_luminance(rgb)
 
-     if lum >= 128
-       "#1f2937"
-     else
-       "#ffffff"
-     end
-  end
+      if lum >= 128
+        "#1f2937"
+      else
+        "#ffffff"
+      end
+   end
+
+    # Ensure theme JSON contains readable text colors relative to bg.
+    # Accepts theme_json (String) or nil and optional legacy header_color/text_color.
+    # Returns possibly-modified theme JSON string (or nil).
+    def self.auto_correct_theme_json(theme_json : String?, legacy_bg : String?, legacy_text : String?) : String?
+      begin
+        parsed = nil.as(JSON::Any?)
+        if theme_json && !theme_json.empty?
+          parsed = JSON.parse(theme_json) rescue nil
+        end
+
+        # Build a canonical structure: {"bg": "rgb(...)" or "#rrggbb", "text": {"light": "#..","dark":"#.."}, "source": "..."}
+        bg_rgb = nil.as(Array(Int32)?)
+        text_hash = {} of String => String
+        source = nil.as(String?)
+
+        if parsed
+          # parsed may be JSON::Any wrapping object
+          if parsed.is_a?(JSON::Any)
+            h = parsed.as_h rescue nil
+            if h
+              bg_val = h["bg"] || h["background"]
+              source = h["source"]? ? h["source"].to_s : nil
+              if bg_val
+                bg_rgb = parse_color_to_rgb(bg_val.to_s)
+              end
+              txt = h["text"]
+              if txt.is_a?(Hash) || txt.is_a?(JSON::Any)
+                begin
+                  txt_h = txt.is_a?(JSON::Any) ? txt.as_h : txt.as_h
+                  txt_h.each do |k, v|
+                    text_hash[k.to_s] = v.to_s
+                  end
+                rescue
+                end
+              elsif txt
+                # single string
+                text_hash["light"] = txt.to_s
+                text_hash["dark"] = txt.to_s
+              end
+            end
+          end
+        end
+
+        # Fallback to legacy header_color/header_text_color
+        if !bg_rgb && legacy_bg
+          bg_rgb = parse_color_to_rgb(legacy_bg)
+        end
+        if text_hash.empty? && legacy_text
+          text_hash["light"] = legacy_text
+          text_hash["dark"] = legacy_text
+        end
+
+        return nil unless bg_rgb
+
+        # Normalize candidate list: try header_text_color, then theme text candidates
+        candidates = [] of {key: String, rgb: Array(Int32)}
+        if legacy_text
+          if rgb = parse_color_to_rgb(legacy_text)
+            candidates << {key: "legacy", rgb: rgb}
+          end
+        end
+        text_hash.each do |k, v|
+          if rgb = parse_color_to_rgb(v)
+            candidates << {key: k, rgb: rgb}
+          end
+        end
+
+        # Evaluate contrasts
+        good_candidates = [] of {key: String, rgb: Array(Int32), contrast: Float64}
+        candidates.each do |c|
+          cr = contrast_ratio(c[:rgb], bg_rgb)
+          if cr >= 4.5
+            good_candidates << {key: c[:key], rgb: c[:rgb], contrast: cr}
+          end
+        end
+
+        corrected = false
+        if good_candidates.size > 0
+          # Prefer legacy if it's good; otherwise pick the highest contrast
+          pick = good_candidates.find { |g| g[:key] == "legacy" } || good_candidates.max_by { |g| g[:contrast] }
+          chosen_hex = rgb_to_hex(pick[:rgb])
+          # Ensure both roles are filled: light/dark
+          out_text = {"light" => chosen_hex, "dark" => chosen_hex}
+        else
+          # No candidate meets threshold — generate best dark and light and pick the one with higher contrast
+          dark_rgb = find_dark_text_for_bg(bg_rgb)
+          light_rgb = find_light_text_for_bg(bg_rgb)
+          dark_contrast = contrast_ratio(dark_rgb, bg_rgb)
+          light_contrast = contrast_ratio(light_rgb, bg_rgb)
+          if dark_contrast >= light_contrast
+            chosen_hex = rgb_to_hex(dark_rgb)
+          else
+            chosen_hex = rgb_to_hex(light_rgb)
+          end
+          out_text = {"light" => chosen_hex, "dark" => chosen_hex}
+          corrected = true
+        end
+
+        # Build final payload
+        final = {"bg" => (bg_rgb ? rgb_to_hex(bg_rgb) : nil), "text" => out_text}
+        # If original source was already auto-corrected/backfill, keep it unless we just corrected
+        final_source = corrected ? "auto-corrected" : (source || "auto")
+        final["source"] = final_source
+
+        final.to_json
+      rescue
+        nil
+      end
+    end
 
    private def self.theme_aware_text_color(bg_rgb : Array(Int32)) : Hash(String, String)
      # bg_rgb is [r,g,b]
