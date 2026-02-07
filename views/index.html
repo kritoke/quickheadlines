@@ -240,15 +240,20 @@
            const headers = document.querySelectorAll('.feed-header:not([data-use-server-colors="true"])');
           headers.forEach(header => {
             const img = header.querySelector('img');
-            if (img && img.getAttribute('src') === key) {
-              header.style.backgroundColor = entry.bg;
-              header.style.color = entry.text;
-              const link = header.querySelector('a');
-               if (link) {
-                 // Avoid using !important from JS; use inline style which can be
-                 // overridden by server-provided colors and respects later re-renders.
-                 link.style.color = entry.text;
-               }
+              if (img && img.getAttribute('src') === key) {
+               header.style.backgroundColor = entry.bg;
+               header.style.color = entry.text;
+               // Mark this element as JS-overridden so observers can remove the
+               // inline styles when the user switches theme. This prevents stale
+               // inline colors from persisting across theme changes.
+               try { header.setAttribute('data-js-override', 'true'); } catch(e) {}
+               const link = header.querySelector('a');
+                if (link) {
+                  // Avoid using !important from JS; use inline style which can be
+                  // overridden by CSS. Also mark the link so it can be cleared on theme change.
+                  link.style.color = entry.text;
+                  try { link.setAttribute('data-js-override', 'true'); } catch(e) {}
+                }
             }
           });
         });
