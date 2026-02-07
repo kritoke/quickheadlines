@@ -7,6 +7,7 @@ require "openssl"
 require "./config"
 require "./models"
 require "./favicon_storage"
+require "./color_extractor"
 require "./health_monitor"
 
 CACHE_RETENTION_HOURS = 168
@@ -473,40 +474,57 @@ class FeedCache
            header_text_color_to_save = feed_data.header_text_color.nil? ? existing_text_color : feed_data.header_text_color
            header_theme_to_save = feed_data.header_theme_colors.nil? ? existing_theme : feed_data.header_theme_colors
 
-           @db.exec(
-             "UPDATE feeds SET title = ?, site_link = ?, header_color = ?, header_text_color = ?, header_theme_colors = ?, etag = ?, last_modified = ?, favicon = ?, favicon_data = ?, last_fetched = ? WHERE id = ?",
-             feed_data.title,
-             feed_data.site_link,
-             header_color_to_save,
-             header_text_color_to_save,
-             header_theme_to_save,
-             feed_data.etag,
-             feed_data.last_modified,
-             feed_data.favicon,
-             feed_data.favicon_data,
-             Time.utc.to_s("%Y-%m-%d %H:%M:%S"),
-             feed_id
-           )
+           # Auto-correct theme JSON before persisting. Use legacy header_color/text as fallbacks.
+           begin
+             corrected = ColorExtractor.auto_correct_theme_json(header_theme_to_save, header_color_to_save, header_text_color_to_save)
+             header_theme_to_save = corrected if corrected
+           rescue
+             # On failure, keep the original payload
+           end
+
+            @db.exec(
+              "UPDATE feeds SET title = ?, site_link = ?, header_color = ?, header_text_color = ?, header_theme_colors = ?, etag = ?, last_modified = ?, favicon = ?, favicon_data = ?, last_fetched = ? WHERE id = ?",
+              feed_data.title,
+              feed_data.site_link,
+              header_color_to_save,
+              header_text_color_to_save,
+              header_theme_to_save,
+              feed_data.etag,
+              feed_data.last_modified,
+              feed_data.favicon,
+              feed_data.favicon_data,
+              Time.utc.to_s("%Y-%m-%d %H:%M:%S"),
+              feed_id
+            )
 
           # NOTE: We do NOT delete old items here anymore.
           # The system is designed to accumulate items over time (7 days retention).
           # Old items are cleaned up by cleanup_old_articles() based on pub_date.
         else
           # Insert new feed
-           @db.exec(
-             "INSERT INTO feeds (url, title, site_link, header_color, header_text_color, header_theme_colors, etag, last_modified, favicon, favicon_data, last_fetched) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-             feed_data.url,
-             feed_data.title,
-             feed_data.site_link,
-             feed_data.header_color,
-             feed_data.header_text_color,
-             feed_data.header_theme_colors,
-             feed_data.etag,
-             feed_data.last_modified,
-             feed_data.favicon,
-             feed_data.favicon_data,
-             Time.utc.to_s("%Y-%m-%d %H:%M:%S")
-           )
+            # Auto-correct theme JSON for new inserts as well
+            begin
+              incoming_theme = feed_data.header_theme_colors
+              corrected_incoming = ColorExtractor.auto_correct_theme_json(incoming_theme, feed_data.header_color, feed_data.header_text_color)
+              theme_to_insert = corrected_incoming || incoming_theme
+            rescue
+              theme_to_insert = feed_data.header_theme_colors
+            end
+
+            @db.exec(
+              "INSERT INTO feeds (url, title, site_link, header_color, header_text_color, header_theme_colors, etag, last_modified, favicon, favicon_data, last_fetched) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+              feed_data.url,
+              feed_data.title,
+              feed_data.site_link,
+              feed_data.header_color,
+              feed_data.header_text_color,
+              theme_to_insert,
+              feed_data.etag,
+              feed_data.last_modified,
+              feed_data.favicon,
+              feed_data.favicon_data,
+              Time.utc.to_s("%Y-%m-%d %H:%M:%S")
+            )
 
           feed_id = @db.scalar("SELECT last_insert_rowid()").as(Int64)
         end
