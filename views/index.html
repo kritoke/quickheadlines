@@ -550,13 +550,36 @@
       
       // Enforce readable timeline link colors repeatedly until Elm settles.
       window.enforceReadableTimelineLinks = function() {
-        // Debug logger (enabled via localStorage key 'qh-debug-colors' === '1')
+        // Debug recorder (enabled via localStorage key 'qh-debug-colors' === '1')
+        // Records only override/relevant events and prints a concise summary at
+        // the end of each enforcement run to avoid flooding the console.
         window.qhColorDebug = window.qhColorDebug || (function() {
           function enabled() { try { return localStorage.getItem('qh-debug-colors') === '1'; } catch (e) { return false; } }
           function fmtRgb(a) { return a && a.length ? 'rgb(' + a.join(',') + ')' : String(a); }
-          function short(el) { try { return el && el.href ? el.href : (el && el.textContent ? el.textContent.trim().slice(0,80) : String(el)); } catch(e) { return String(el); } }
-          function log() { if (!enabled()) return; try { console.groupCollapsed('[qh-color-debug]', new Date().toISOString()); console.log.apply(console, arguments); console.groupEnd(); } catch (e) {} }
-          return { enabled: enabled, log: log, fmtRgb: fmtRgb, short: short };
+          function shortText(el) { try { return el && el.textContent ? el.textContent.trim().slice(0,80) : ''; } catch(e) { return ''; } }
+          const entries = [];
+          function record(obj) { if (!enabled()) return; try { entries.push(obj); } catch(e) {} }
+          function flush() {
+            try {
+              if (!enabled() || !entries.length) return;
+              // Summary counts
+              const summary = entries.reduce((acc, e) => { acc[e.type] = (acc[e.type]||0) + 1; return acc; }, {});
+              console.groupCollapsed('[qh-color-debug] enforcement summary', new Date().toISOString());
+              console.log('total events:', entries.length, 'summary:', summary);
+              // Show a concise table of up to 40 events
+              const table = entries.slice(0,40).map(e => ({type: e.type, who: e.href || e.text || shortText(e.el) || '', reason: e.reason || '', target: e.target || '', ratio: e.ratio || e.srvRatio || '' }));
+              console.table(table);
+              if (entries.length > 40) console.log('...+' + (entries.length - 40) + ' more events');
+              // If verbose flag set, dump full entries grouped
+              if (localStorage.getItem('qh-debug-colors-detailed') === '1') {
+                entries.forEach(e => { console.groupCollapsed('[qh-color-debug]', e.type); console.log(e); console.groupEnd(); });
+              }
+              console.groupEnd();
+            } catch(e) {}
+            // clear after flush
+            entries.length = 0;
+          }
+          return { enabled: enabled, record: record, flush: flush, fmtRgb: fmtRgb, shortText: shortText };
         })();
 
         function parseRGB(s) {
@@ -619,10 +642,10 @@
                     const yiq = ((bgRgb[0]*299)+(bgRgb[1]*587)+(bgRgb[2]*114))/1000;
                     const target = yiq >= 128 ? 'rgb(17, 24, 39)' : 'rgb(248, 250, 252)';
                     try { link.style.setProperty('color', target, 'important'); link.setAttribute('data-js-override','true'); } catch(e) {}
-                    try { window.qhColorDebug && window.qhColorDebug.log('override-link-server-failing', { href: link.href, serverProvided: serverProvided, serverRgb: window.qhColorDebug.fmtRgb(serverRgb), bg: bg, bgRgb: window.qhColorDebug.fmtRgb(bgRgb), target: target, srvRatio: srvRatio }); } catch(e) {}
+                    try { window.qhColorDebug && window.qhColorDebug.record({ type: 'override-link-server-failing', href: link.href, serverProvided: serverProvided, serverRgb: window.qhColorDebug.fmtRgb(serverRgb), bg: bg, bgRgb: window.qhColorDebug.fmtRgb(bgRgb), target: target, srvRatio: srvRatio, reason: 'server-fails-contrast' }); } catch(e) {}
                   }
                   // skip the rest of checks since server color was authoritative
-                  else { try { window.qhColorDebug && window.qhColorDebug.log('server-color-ok', { href: link.href, serverProvided: serverProvided, srvRatio: srvRatio }); } catch(e) {} }
+                  else { try { window.qhColorDebug && window.qhColorDebug.record({ type: 'server-color-ok', href: link.href, serverProvided: serverProvided, srvRatio: srvRatio, reason: 'server-ok' }); } catch(e) {} }
                   return;
                 }
               } catch(e) {}
@@ -634,7 +657,7 @@
               const yiq = ((bgRgb[0]*299)+(bgRgb[1]*587)+(bgRgb[2]*114))/1000;
               const target = yiq >= 128 ? 'rgb(17, 24, 39)' : 'rgb(248, 250, 252)';
               try { link.style.setProperty('color', target, 'important'); link.setAttribute('data-js-override','true'); } catch(e) {}
-              try { window.qhColorDebug && window.qhColorDebug.log('override-link-contrast', { href: link.href, comp: fgComp, bg: bg, bgRgb: window.qhColorDebug.fmtRgb(bgRgb), target: target, ratio: ratio }); } catch(e) {}
+              try { window.qhColorDebug && window.qhColorDebug.record({ type: 'override-link-contrast', href: link.href, comp: fgComp, bg: bg, bgRgb: window.qhColorDebug.fmtRgb(bgRgb), target: target, ratio: ratio, reason: 'link-contrast' }); } catch(e) {}
             }
           } catch(e) {}
         });
@@ -673,7 +696,7 @@
                   const yiq = ((bgRgb[0]*299)+(bgRgb[1]*587)+(bgRgb[2]*114))/1000;
                   const target = yiq >= 128 ? 'rgb(17, 24, 39)' : 'rgb(248, 250, 252)';
                   try { el.style.setProperty('color', target, 'important'); el.setAttribute('data-js-override','true'); } catch(e) {}
-                  try { window.qhColorDebug && window.qhColorDebug.log('override-chip-server-failing', { text: el.textContent && el.textContent.trim().slice(0,80), serverAttr: serverAttr, srvRgb: window.qhColorDebug.fmtRgb(srvRgb), bg: bg, bgRgb: window.qhColorDebug.fmtRgb(bgRgb), target: target, srvRatio: srvRatio }); } catch(e) {}
+                  try { window.qhColorDebug && window.qhColorDebug.record({ type: 'override-chip-server-failing', text: el.textContent && el.textContent.trim().slice(0,80), serverAttr: serverAttr, srvRgb: window.qhColorDebug.fmtRgb(srvRgb), bg: bg, bgRgb: window.qhColorDebug.fmtRgb(bgRgb), target: target, srvRatio: srvRatio, reason: 'chip-server-fails' }); } catch(e) {}
                 }
                 return;
               }
@@ -684,7 +707,7 @@
               const yiq = ((bgRgb[0]*299)+(bgRgb[1]*587)+(bgRgb[2]*114))/1000;
               const target = yiq >= 128 ? 'rgb(17, 24, 39)' : 'rgb(248, 250, 252)';
               try { el.style.setProperty('color', target, 'important'); el.setAttribute('data-js-override','true'); } catch(e) {}
-              try { window.qhColorDebug && window.qhColorDebug.log('override-chip-contrast', { text: el.textContent && el.textContent.trim().slice(0,80), compColor: compColor, bg: bg, bgRgb: window.qhColorDebug.fmtRgb(bgRgb), target: target, ratio: ratio }); } catch(e) {}
+              try { window.qhColorDebug && window.qhColorDebug.record({ type: 'override-chip-contrast', text: el.textContent && el.textContent.trim().slice(0,80), compColor: compColor, bg: bg, bgRgb: window.qhColorDebug.fmtRgb(bgRgb), target: target, ratio: ratio, reason: 'chip-contrast' }); } catch(e) {}
             }
           } catch(e) {}
         });
@@ -716,11 +739,13 @@
         // Also run repeatedly for a short window to cover Elm re-renders
         let enforcementRuns = 0;
         const enforceInterval = setInterval(function() {
-          try { window.enforceReadableTimelineLinks(); } catch(e) {}
-          enforcementRuns++;
-          if (enforcementRuns > 40) { clearInterval(enforceInterval); try { mo.disconnect(); } catch(e) {} }
-        }, 100);
-      })();
+            try { window.enforceReadableTimelineLinks(); } catch(e) {}
+            enforcementRuns++;
+            if (enforcementRuns > 40) { clearInterval(enforceInterval); try { mo.disconnect(); } catch(e) {} }
+          }, 100);
+        })();
+        // Flush any recorded debug entries after each enforcement window
+        try { setInterval(function(){ try { window.qhColorDebug && window.qhColorDebug.flush(); } catch(e) {} }, 1000); } catch(e) {}
     </script>
   </head>
   <body>
