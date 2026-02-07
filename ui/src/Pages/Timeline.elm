@@ -280,28 +280,42 @@ themeTextFor maybeVal theme =
             Nothing
 
         Just v ->
+            -- Only honor server-provided theme values when the server marked them
+            -- as auto-corrected. This prevents the UI from blindly using unsafe
+            -- server colors; we prefer to use server-canonical corrected values.
             let
-                decodeLight = Decode.field "text" (Decode.field "light" (Decode.nullable Decode.string))
-                decodeDark = Decode.field "text" (Decode.field "dark" (Decode.nullable Decode.string))
-                lightRes = Decode.decodeValue decodeLight v
-                darkRes = Decode.decodeValue decodeDark v
-                light = case lightRes of
-                    Ok l -> l
-                    Err _ -> Nothing
-                dark = case darkRes of
-                    Ok d -> d
-                    Err _ -> Nothing
+                decodeSource = Decode.field "source" (Decode.nullable Decode.string)
+                srcRes = Decode.decodeValue decodeSource v
+                sourceOk =
+                    case srcRes of
+                        Ok (Just s) -> s == "auto-corrected"
+                        _ -> False
             in
-            case theme of
-                Shared.Dark ->
-                    case dark of
-                        Just d -> Just d
-                        Nothing -> light
+            if not sourceOk then
+                Nothing
+            else
+                let
+                    decodeLight = Decode.field "text" (Decode.field "light" (Decode.nullable Decode.string))
+                    decodeDark = Decode.field "text" (Decode.field "dark" (Decode.nullable Decode.string))
+                    lightRes = Decode.decodeValue decodeLight v
+                    darkRes = Decode.decodeValue decodeDark v
+                    light = case lightRes of
+                        Ok l -> l
+                        Err _ -> Nothing
+                    dark = case darkRes of
+                        Ok d -> d
+                        Err _ -> Nothing
+                in
+                case theme of
+                    Shared.Dark ->
+                        case dark of
+                            Just d -> Just d
+                            Nothing -> light
 
-                Shared.Light ->
-                    case light of
-                        Just l -> Just l
-                        Nothing -> dark
+                    Shared.Light ->
+                        case light of
+                            Just l -> Just l
+                            Nothing -> dark
 
 
 themeBgFor : Maybe Decode.Value -> Maybe String
@@ -311,9 +325,18 @@ themeBgFor maybeVal =
             Nothing
 
         Just v ->
-            case Decode.decodeValue (Decode.field "bg" (Decode.nullable Decode.string)) v of
-                Ok bg -> bg
-                Err _ -> Nothing
+            -- Only return background when server provided an auto-corrected theme
+            case Decode.decodeValue (Decode.field "source" (Decode.nullable Decode.string)) v of
+                Ok (Just s) ->
+                    if s == "auto-corrected" then
+                        case Decode.decodeValue (Decode.field "bg" (Decode.nullable Decode.string)) v of
+                            Ok bg -> bg
+                            Err _ -> Nothing
+                    else
+                        Nothing
+
+                _ ->
+                    Nothing
 
 
 themeTextSafe : Maybe Decode.Value -> Shared.Theme -> String -> Maybe String
