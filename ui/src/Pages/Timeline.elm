@@ -603,19 +603,31 @@ view shared model =
 
                                 Shared.Light ->
                                     "rgb(100, 116, 139)"
-                    in
-                    Input.button
-                         [ centerX
-                         , paddingXY 4 12
-                         , Border.rounded 6
-                         , Ty.small
-                         , Font.medium
-                         , htmlAttribute (Html.Attributes.class "qh-load-more")
-                         , htmlAttribute (Html.Attributes.style "background-color" bgColor)
-                         , htmlAttribute (Html.Attributes.style "color" textColor)
-                         , htmlAttribute (Html.Attributes.style "border-color" "rgba(0,0,0,0.08)")
-                         , htmlAttribute (Html.Attributes.attribute "data-load-more" "true")
-                         ]
+                     in
+                     let
+                         maybeBg = parseColor bgColor
+                         maybeText = parseColor textColor
+                         baseAttrs =
+                             [ centerX
+                             , paddingXY 4 12
+                             , Border.rounded 6
+                             , Ty.small
+                             , Font.medium
+                             , htmlAttribute (Html.Attributes.class "qh-load-more")
+                             , Border.color (rgba 0 0 0 0.08)
+                             , htmlAttribute (Html.Attributes.attribute "data-load-more" "true")
+                             ]
+                         loadMoreAttrs =
+                             baseAttrs
+                                 ++ (case maybeBg of
+                                         Just c -> [ Background.color c ]
+                                         Nothing -> [])
+                                 ++ (case maybeText of
+                                         Just c -> [ Font.color c ]
+                                         Nothing -> [])
+                     in
+                     Input.button
+                         loadMoreAttrs
                          { onPress = Just LoadMore
                          , label = text "Load More"
                          }
@@ -1108,17 +1120,24 @@ clusterItem breakpoint zone now theme expandedClusters insertedIds cluster =
                             ]
                         else
                             [ Font.size 12
-                            , htmlAttribute (Html.Attributes.style "color" titleTextColor)
+                            -- Use a data attribute for fallback colors so client-side
+                            -- CSS/JS can apply them deterministically (avoids inline style races).
+                            , htmlAttribute (Html.Attributes.attribute "data-server-fallback-color" titleTextColor)
+                            , case parseColor titleTextColor of
+                                Just c -> Font.color c
+                                Nothing -> Font.color (textColor theme)
                             ]
 
                     titleBgAttrs =
-                        if effectiveBg /= "" then
-                            [ htmlAttribute (Html.Attributes.style "background-color" effectiveBg)
-                            , htmlAttribute (Html.Attributes.style "padding" "2px 6px")
-                            , htmlAttribute (Html.Attributes.style "border-radius" "6px")
-                            ]
-                        else
-                            []
+                        case parseColor effectiveBg of
+                            Just c ->
+                                [ Background.color c
+                                , paddingXY 2 6
+                                , Border.rounded 6
+                                ]
+
+                            Nothing ->
+                                []
 
                     -- Link attributes
                     linkAttrs =
@@ -1133,12 +1152,11 @@ clusterItem breakpoint zone now theme expandedClusters insertedIds cluster =
                             [ htmlAttribute (Html.Attributes.attribute "data-display-link" "true")
                             , Font.semiBold
                             , mouseOver [ Font.color lumeOrange ]
-                            , htmlAttribute (Html.Attributes.style "color" linkTextColor)
+                            , htmlAttribute (Html.Attributes.attribute "data-server-fallback-color" linkTextColor)
                             ])
                   in
                   [ faviconImg
-                  , el ( ( [ Ty.meta, Font.size 12 ] ++ (if headerColor /= "" || headerTextColor /= "" || headerTheme /= Nothing then [ htmlAttribute (Html.Attributes.attribute "data-use-server-colors" "true"), htmlAttribute (Html.Attributes.attribute "data-server-header-text-color" titleTextColor) ] else [ htmlAttribute (Html.Attributes.style "color" titleTextColor) ]) ) ++ titleBgAttrs )
-                      (text cluster.representative.feedTitle)
+                  , el ( [ Ty.meta ] ++ titleAttrs ++ titleBgAttrs ) (text cluster.representative.feedTitle)
                   , el [ Font.color mutedTxt, paddingXY 4 0 ] (text "•")
                   , link linkAttrs { url = cluster.representative.link, label = text cluster.representative.title }
                   , (if cluster.count > 1 then
@@ -1194,7 +1212,20 @@ clusterOtherItem now theme item =
         , Font.color (textColor theme)
         ]
         [ faviconImg
-        , el [ Ty.meta, Font.color (getFeedTitleColor theme itemHeaderColor itemHeaderTextColor) ]
+        , el [ Ty.meta
+             -- Prefer data attributes for header text colors instead of inline styles
+             , (if itemHeaderTextColor /= "" || itemHeaderColor /= "" then
+                    htmlAttribute (Html.Attributes.attribute "data-server-header-text-color" (if itemHeaderTextColor /= "" then itemHeaderTextColor else textColorFromBgString itemHeaderColor))
+                else
+                    htmlAttribute (Html.Attributes.attribute "data-server-fallback-color"
+                        (case theme of
+                            Dark -> "rgb(255, 255, 255)"
+                            Light -> "rgb(17, 24, 39)"
+                        )
+                    )
+               )
+           , Font.color (getFeedTitleColor theme itemHeaderColor itemHeaderTextColor)
+          ]
              (text item.feedTitle)
         , el [ Ty.meta, Font.color mutedTxt, paddingXY 4 0 ] (text "•")
          , let
@@ -1214,7 +1245,7 @@ clusterOtherItem now theme item =
                                 Light ->
                                     "rgb(17, 24, 39)"
                     in
-                    [ htmlAttribute (Html.Attributes.style "color" defaultLinkColor) ]
+                    [ htmlAttribute (Html.Attributes.attribute "data-server-fallback-color" defaultLinkColor) ]
           in
           link (otherLinkBase ++ otherLinkAttrs) { url = item.link, label = text item.title }
         ]
