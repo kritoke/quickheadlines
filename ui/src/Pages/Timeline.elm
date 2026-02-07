@@ -815,15 +815,13 @@ dayHeader breakpoint zone now theme date =
             , height (px 8)
             , Background.color Theme.lumeOrange
             , Border.rounded 999
-            , htmlAttribute (Html.Attributes.style "flex-shrink" "0")
-            , htmlAttribute (Html.Attributes.style "margin-top" "6px")
+            , centerY
             ]
             Element.none
         , el
             [ Background.color (dayHeaderBg theme)
             , Border.rounded 999
             , paddingXY 8 12
-            , htmlAttribute (Html.Attributes.style "display" "inline-block")
             ]
             (el
                 (Ty.dayHeader breakpoint

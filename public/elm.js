@@ -16972,10 +16972,7 @@ var $author$project$Pages$Timeline$dayHeader = F5(
 							$mdgriffith$elm_ui$Element$px(8)),
 							$mdgriffith$elm_ui$Element$Background$color($author$project$Theme$lumeOrange),
 							$mdgriffith$elm_ui$Element$Border$rounded(999),
-							$mdgriffith$elm_ui$Element$htmlAttribute(
-							A2($elm$html$Html$Attributes$style, 'flex-shrink', '0')),
-							$mdgriffith$elm_ui$Element$htmlAttribute(
-							A2($elm$html$Html$Attributes$style, 'margin-top', '6px'))
+							$mdgriffith$elm_ui$Element$centerY
 						]),
 					$mdgriffith$elm_ui$Element$none),
 					A2(
@@ -16985,9 +16982,7 @@ var $author$project$Pages$Timeline$dayHeader = F5(
 							$mdgriffith$elm_ui$Element$Background$color(
 							$author$project$Theme$dayHeaderBg(theme)),
 							$mdgriffith$elm_ui$Element$Border$rounded(999),
-							A2($mdgriffith$elm_ui$Element$paddingXY, 8, 12),
-							$mdgriffith$elm_ui$Element$htmlAttribute(
-							A2($elm$html$Html$Attributes$style, 'display', 'inline-block'))
+							A2($mdgriffith$elm_ui$Element$paddingXY, 8, 12)
 						]),
 					A2(
 						$mdgriffith$elm_ui$Element$el,
