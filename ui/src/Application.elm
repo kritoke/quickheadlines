@@ -319,7 +319,7 @@ headerView model =
                         (Ty.hero breakpoint
                             ++ [ Font.color txtColor
                                , centerY
-                               , htmlAttribute (HA.style "padding" "6px 8px")
+                                , htmlAttribute (HA.style "padding" "2px 8px")
                                ]
                         )
                         (text "Quick Headlines")
