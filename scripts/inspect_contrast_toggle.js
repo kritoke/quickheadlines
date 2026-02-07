@@ -41,7 +41,12 @@ function pRGB(s) {
   }
 
   const before = await snapshot();
-  console.log('Before: anchors:', before.length, 'failing:', before.filter(r=> r.ratio !== null && r.ratio < 4.5).length);
+  const beforeFail = before.filter(r=> r.ratio !== null && r.ratio < 4.5);
+  console.log('Before: anchors:', before.length, 'failing:', beforeFail.length);
+  if (beforeFail.length>0) {
+    console.log('Sample before failures:');
+    beforeFail.slice(0,10).forEach(f=> console.log('-', f.text, 'fg=', f.fg, 'bg=', f.bg, 'ratio=', f.ratio, 'inline=', f.inlineStyle, 'js_override=', f.js_override));
+  }
 
   // Toggle theme
   await page.evaluate(()=>{
@@ -56,7 +61,12 @@ function pRGB(s) {
   await page.waitForTimeout(800);
 
   const after = await snapshot();
-  console.log('After: anchors:', after.length, 'failing:', after.filter(r=> r.ratio !== null && r.ratio < 4.5).length);
+  const afterFail = after.filter(r=> r.ratio !== null && r.ratio < 4.5);
+  console.log('After: anchors:', after.length, 'failing:', afterFail.length);
+  if (afterFail.length>0) {
+    console.log('Sample after failures:');
+    afterFail.slice(0,10).forEach(f=> console.log('-', f.text, 'fg=', f.fg, 'bg=', f.bg, 'ratio=', f.ratio, 'inline=', f.inlineStyle, 'js_override=', f.js_override));
+  }
 
   // Count anchors with inline styles or js_override after toggle
   const inlineAfter = after.filter(a=> a.inlineStyle && a.inlineStyle.trim() !== '');

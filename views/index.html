@@ -394,7 +394,7 @@
             });
 
            // Watch for theme changes
-            new MutationObserver(function(mutations) {
+              new MutationObserver(function(mutations) {
               mutations.forEach(function(mutation) {
                 if (mutation.attributeName === 'data-theme') {
                   // On theme change, clear any JS overrides and re-apply cached header
@@ -406,6 +406,13 @@
                     });
                   } catch(e) {}
                   setTimeout(function() { try { window.applyCachedHeaderColors(); } catch(e) {} }, 50);
+                  // Notify Elm about the theme change so Elm's model stays in sync
+                  try {
+                    var isDarkNow = document.documentElement.getAttribute('data-theme') === 'dark';
+                    if (window.app && window.app.ports && window.app.ports.envThemeChanged) {
+                      try { window.app.ports.envThemeChanged.send(isDarkNow); } catch(e) {}
+                    }
+                  } catch(e) {}
                 }
               });
             }).observe(document.documentElement, { attributes: true });
