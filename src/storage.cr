@@ -159,6 +159,7 @@ def create_schema(db : DB::Database, db_path : String)
       title TEXT NOT NULL,
       site_link TEXT,
       header_color TEXT,
+      header_theme_colors TEXT,
       header_text_color TEXT,
       etag TEXT,
       last_modified TEXT,
@@ -181,6 +182,14 @@ def create_schema(db : DB::Database, db_path : String)
   begin
     db.exec("ALTER TABLE feeds ADD COLUMN header_text_color TEXT")
     STDERR.puts "[Cache] Added header_text_color column to existing database"
+  rescue ex : SQLite3::Exception
+    # Column already exists, ignore error
+  end
+
+  # Migration: Add header_theme_colors column if it doesn't exist (for existing databases)
+  begin
+    db.exec("ALTER TABLE feeds ADD COLUMN header_theme_colors TEXT")
+    STDERR.puts "[Cache] Added header_theme_colors column to existing database"
   rescue ex : SQLite3::Exception
     # Column already exists, ignore error
   end
@@ -326,7 +335,7 @@ def repair_database(config : Config?, backup_path : String? = nil) : DbRepairRes
   STDERR.puts "[#{repair_time}] Attempting to repair corrupted database..."
 
   # Determine backup path (use provided or generate new)
-  actual_backup_path = backup_path || "#{db_path}.corrupted.#{repair_time.to_s("%Y%m%d%H%M%S")}"
+  actual_backup_path = backup_path || "#{db_path}.corrupted.#{repair_time.to_s("%Y%m%d%H%M%S") }"
 
   # Backup corrupted database
   unless File.exists?(actual_backup_path)
@@ -452,48 +461,52 @@ class FeedCache
           # Update existing feed
           feed_id = result
 
-          # Preserve existing header_color unless explicitly set in feed_data
+          # Preserve existing header_color/text and header_theme_colors unless explicitly set in feed_data
           existing_color = @db.query_one?("SELECT header_color FROM feeds WHERE id = ?", feed_id, as: {String?})
           existing_text_color = @db.query_one?("SELECT header_text_color FROM feeds WHERE id = ?", feed_id, as: {String?})
+          existing_theme = @db.query_one?("SELECT header_theme_colors FROM feeds WHERE id = ?", feed_id, as: {String?})
 
           # Use new color if provided, otherwise keep existing
           # Only preserve existing color if feed_data.header_color is nil
           # Extracted colors should be saved; nil means extraction failed/skipped
-          header_color_to_save = feed_data.header_color.nil? ? existing_color : feed_data.header_color
-          header_text_color_to_save = feed_data.header_text_color.nil? ? existing_text_color : feed_data.header_text_color
+           header_color_to_save = feed_data.header_color.nil? ? existing_color : feed_data.header_color
+           header_text_color_to_save = feed_data.header_text_color.nil? ? existing_text_color : feed_data.header_text_color
+           header_theme_to_save = feed_data.header_theme_colors.nil? ? existing_theme : feed_data.header_theme_colors
 
-          @db.exec(
-            "UPDATE feeds SET title = ?, site_link = ?, header_color = ?, header_text_color = ?, etag = ?, last_modified = ?, favicon = ?, favicon_data = ?, last_fetched = ? WHERE id = ?",
-            feed_data.title,
-            feed_data.site_link,
-            header_color_to_save,
-            header_text_color_to_save,
-            feed_data.etag,
-            feed_data.last_modified,
-            feed_data.favicon,
-            feed_data.favicon_data,
-            Time.utc.to_s("%Y-%m-%d %H:%M:%S"),
-            feed_id
-          )
+           @db.exec(
+             "UPDATE feeds SET title = ?, site_link = ?, header_color = ?, header_text_color = ?, header_theme_colors = ?, etag = ?, last_modified = ?, favicon = ?, favicon_data = ?, last_fetched = ? WHERE id = ?",
+             feed_data.title,
+             feed_data.site_link,
+             header_color_to_save,
+             header_text_color_to_save,
+             header_theme_to_save,
+             feed_data.etag,
+             feed_data.last_modified,
+             feed_data.favicon,
+             feed_data.favicon_data,
+             Time.utc.to_s("%Y-%m-%d %H:%M:%S"),
+             feed_id
+           )
 
           # NOTE: We do NOT delete old items here anymore.
           # The system is designed to accumulate items over time (7 days retention).
           # Old items are cleaned up by cleanup_old_articles() based on pub_date.
         else
           # Insert new feed
-          @db.exec(
-            "INSERT INTO feeds (url, title, site_link, header_color, header_text_color, etag, last_modified, favicon, favicon_data, last_fetched) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-            feed_data.url,
-            feed_data.title,
-            feed_data.site_link,
-            feed_data.header_color,
-            feed_data.header_text_color,
-            feed_data.etag,
-            feed_data.last_modified,
-            feed_data.favicon,
-            feed_data.favicon_data,
-            Time.utc.to_s("%Y-%m-%d %H:%M:%S")
-          )
+           @db.exec(
+             "INSERT INTO feeds (url, title, site_link, header_color, header_text_color, header_theme_colors, etag, last_modified, favicon, favicon_data, last_fetched) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+             feed_data.url,
+             feed_data.title,
+             feed_data.site_link,
+             feed_data.header_color,
+             feed_data.header_text_color,
+             feed_data.header_theme_colors,
+             feed_data.etag,
+             feed_data.last_modified,
+             feed_data.favicon,
+             feed_data.favicon_data,
+             Time.utc.to_s("%Y-%m-%d %H:%M:%S")
+           )
 
           feed_id = @db.scalar("SELECT last_insert_rowid()").as(Int64)
         end
@@ -542,13 +555,14 @@ class FeedCache
   def get(url : String) : FeedData?
     start_time = Time.monotonic
     feed_data = @mutex.synchronize do
-      result = @db.query_one?("SELECT title, url, site_link, header_color, header_text_color, etag, last_modified, favicon, favicon_data FROM feeds WHERE url = ?", url) do |row|
+      result = @db.query_one?("SELECT title, url, site_link, header_color, header_text_color, header_theme_colors, etag, last_modified, favicon, favicon_data FROM feeds WHERE url = ?", url) do |row|
         {
           title:             row.read(String),
           url:               row.read(String),
           site_link:         row.read(String),
           header_color:      row.read(String?),
           header_text_color: row.read(String?),
+          header_theme_colors: row.read(String?),
           etag:              row.read(String?),
           last_modified:     row.read(String?),
           favicon:           row.read(String?),
@@ -567,15 +581,16 @@ class FeedCache
         if favicon = result[:favicon]
           if favicon.starts_with?("/favicons/")
             result = {
-              title:             result[:title],
-              url:               result[:url],
-              site_link:         result[:site_link],
-              header_color:      result[:header_color],
-              header_text_color: result[:header_text_color],
-              etag:              result[:etag],
-              last_modified:     result[:last_modified],
-              favicon:           result[:favicon],
-              favicon_data:      favicon,
+              title:                result[:title],
+              url:                  result[:url],
+              site_link:            result[:site_link],
+              header_color:         result[:header_color],
+              header_text_color:    result[:header_text_color],
+              header_theme_colors:  result[:header_theme_colors],
+              etag:                 result[:etag],
+              last_modified:        result[:last_modified],
+              favicon:              result[:favicon],
+              favicon_data:         favicon,
             }
           end
         end
@@ -600,7 +615,7 @@ class FeedCache
         end
       end
 
-      FeedData.new(
+      fd = FeedData.new(
         result[:title],
         result[:url],
         result[:site_link],
@@ -612,6 +627,9 @@ class FeedCache
         result[:favicon],
         result[:favicon_data]
       )
+      # Restore theme-aware JSON into the FeedData instance
+      fd.header_theme_colors = result[:header_theme_colors] if result[:header_theme_colors]
+      fd
     end
     query_time = (Time.monotonic - start_time).total_milliseconds
     HealthMonitor.record_db_query(query_time)
@@ -632,13 +650,14 @@ class FeedCache
   def get_slice(url : String, limit : Int32, offset : Int32) : FeedData?
     @mutex.synchronize do
       # Get feed metadata
-      feed_result = @db.query_one?("SELECT title, url, site_link, header_color, header_text_color, etag, last_modified, favicon, favicon_data FROM feeds WHERE url = ?", url) do |row|
+      feed_result = @db.query_one?("SELECT title, url, site_link, header_color, header_text_color, header_theme_colors, etag, last_modified, favicon, favicon_data FROM feeds WHERE url = ?", url) do |row|
         {
           title:             row.read(String),
           url:               row.read(String),
           site_link:         row.read(String),
           header_color:      row.read(String?),
           header_text_color: row.read(String?),
+          header_theme_colors: row.read(String?),
           etag:              row.read(String?),
           last_modified:     row.read(String?),
           favicon:           row.read(String?),
@@ -664,7 +683,7 @@ class FeedCache
       end
     end
 
-    FeedData.new(
+    fd = FeedData.new(
       feed_result[:title],
       feed_result[:url],
       feed_result[:site_link],
@@ -676,6 +695,8 @@ class FeedCache
       feed_result[:favicon],
       feed_result[:favicon_data]
     )
+    fd.header_theme_colors = feed_result[:header_theme_colors] if feed_result[:header_theme_colors]
+    fd
   end
 
   # Update header_color for a feed (extracted from favicon via color-thief)
@@ -744,6 +765,48 @@ class FeedCache
     end
   end
 
+  # Persist theme-aware header colors JSON for a feed (mutex-protected)
+  def update_feed_theme_colors(feed_url : String, theme_json : String)
+    @mutex.synchronize do
+      normalized_url = normalize_feed_url(feed_url)
+
+      # Try to find the feed by normalized URL first
+      existing = @db.query_one?("SELECT id FROM feeds WHERE url = ?", normalized_url, as: {Int64})
+
+      if existing.nil?
+        # Try with original URL
+        existing = @db.query_one?("SELECT id FROM feeds WHERE url = ?", feed_url, as: {Int64})
+      end
+
+      unless existing
+        STDERR.puts "[#{Time.local}] Warning: Cannot save header_theme_colors - feed not found: #{feed_url}"
+        return
+      end
+
+      feed_id = existing
+      begin
+        @db.exec("UPDATE feeds SET header_theme_colors = ? WHERE id = ?", theme_json, feed_id)
+        STDERR.puts "[#{Time.local}] Saved header_theme_colors for #{feed_url}"
+      rescue ex
+        STDERR.puts "[#{Time.local}] Error saving header_theme_colors for #{feed_url}: #{ex.message}"
+      end
+    end
+  end
+
+  # Retrieve stored theme-aware header colors JSON string for a feed
+  def get_feed_theme_colors(feed_url : String) : String?
+    @mutex.synchronize do
+      normalized_url = normalize_feed_url(feed_url)
+      result = @db.query_one?("SELECT header_theme_colors FROM feeds WHERE url = ?", normalized_url, as: {String?})
+
+      if result.nil?
+        result = @db.query_one?("SELECT header_theme_colors FROM feeds WHERE url = ?", feed_url, as: {String?})
+      end
+
+      result
+    end
+  end
+
   # Find feed URL by pattern (handles URL variations like with/without /feed suffix)
   def find_feed_url_by_pattern(url_pattern : String) : String?
     @mutex.synchronize do
@@ -752,9 +815,7 @@ class FeedCache
       return result if result
 
       # Try without /feed or /rss suffix
-      normalized = url_pattern.rstrip('/')
-        .gsub(/\/rss(\.xml)?$/i, "")
-        .gsub(/\/feed(\.xml)?$/i, "")
+      normalized = url_pattern.rstrip('/').gsub(/\/rss(\.xml)?$/i, "").gsub(/\/feed(\.xml)?$/i, "")
 
       result = @db.query_one?("SELECT url FROM feeds WHERE url = ? OR url = ? OR url LIKE ? || '/%'",
         normalized,
@@ -888,63 +949,6 @@ class FeedCache
   # Sync favicon paths to ensure database points to local files
   def sync_favicon_paths
     @mutex.synchronize do
-      current_size = get_db_size(@db_path)
-
-      return if current_size <= max_size
-
-      STDERR.puts "[#{Time.local}] Database size (#{format_bytes(current_size)}) exceeds limit (#{format_bytes(max_size)}), cleaning up oldest entries..."
-
-      # Delete oldest items first, regardless of age
-      # We delete items in batches to avoid long-running transactions
-      total_deleted = 0
-
-      while current_size > max_size
-        # Delete oldest 1000 items
-        result = @db.exec(<<-SQL
-          DELETE FROM items
-          WHERE id IN (
-            SELECT id FROM items
-            ORDER BY pub_date ASC
-            LIMIT 1000
-          )
-          SQL
-        )
-        deleted = result.rows_affected
-        total_deleted += deleted
-
-        # Break if no more items to delete
-        break if deleted == 0
-
-        # Check size again
-        current_size = get_db_size(@db_path)
-
-        # Also clean up feeds with no items
-        @db.exec(<<-SQL
-          DELETE FROM feeds
-          WHERE id NOT IN (SELECT DISTINCT feed_id FROM items)
-          SQL
-        )
-      end
-
-      STDERR.puts "[#{Time.local}] Cleaned up #{total_deleted} items to reduce database size to #{format_bytes(current_size)}"
-      log_db_size(@db_path, "after size cleanup")
-    end
-  end
-
-  # Vacuum database to reclaim space
-  def vacuum
-    @mutex.synchronize do
-      @db.exec("VACUUM")
-    end
-  end
-
-  # Sync favicon paths to ensure database points to local files
-  # This is an aggressive cleanup that:
-  # 1. Clears favicon_data if it contains external URLs
-  # 2. Copies local paths from favicon to favicon_data where missing
-  # 3. Ensures both columns point to local paths when possible
-  def sync_favicon_paths
-    @mutex.synchronize do
       # Collect all feed data first to avoid modifying DB while iterating
       feeds_data = [] of {Int64, String, String, String?}
 
@@ -1016,6 +1020,19 @@ class FeedCache
     end
   rescue ex
     # Ignore errors - indexes might already exist
+  end
+
+  # Run VACUUM to optimize the SQLite database file
+  def vacuum
+    @mutex.synchronize do
+      begin
+        STDERR.puts "[#{Time.local}] Running VACUUM on database"
+        @db.exec("VACUUM")
+        STDERR.puts "[#{Time.local}] VACUUM completed"
+      rescue ex
+        STDERR.puts "[#{Time.local}] VACUUM failed: #{ex.message}"
+      end
+    end
   end
 
   # Normalize pub_date values stored in the database.
@@ -1436,13 +1453,14 @@ class FeedCache
 
   # Private helper to get feed without acquiring lock (already in mutex)
   private def get_without_lock(url : String) : FeedData?
-    result = @db.query_one?("SELECT title, url, site_link, header_color, header_text_color, etag, last_modified, favicon, favicon_data FROM feeds WHERE url = ?", url) do |row|
+    result = @db.query_one?("SELECT title, url, site_link, header_color, header_text_color, header_theme_colors, etag, last_modified, favicon, favicon_data FROM feeds WHERE url = ?", url) do |row|
       {
         title:             row.read(String),
         url:               row.read(String),
         site_link:         row.read(String),
         header_color:      row.read(String?),
         header_text_color: row.read(String?),
+        header_theme_colors: row.read(String?),
         etag:              row.read(String?),
         last_modified:     row.read(String?),
         favicon:           row.read(String?),
@@ -1457,15 +1475,16 @@ class FeedCache
       if favicon = result[:favicon]
         if favicon.starts_with?("/favicons/")
           result = {
-            title:             result[:title],
-            url:               result[:url],
-            site_link:         result[:site_link],
-            header_color:      result[:header_color],
-            header_text_color: result[:header_text_color],
-            etag:              result[:etag],
-            last_modified:     result[:last_modified],
-            favicon:           result[:favicon],
-            favicon_data:      favicon,
+            title:                result[:title],
+            url:                  result[:url],
+            site_link:            result[:site_link],
+            header_color:         result[:header_color],
+            header_text_color:    result[:header_text_color],
+            header_theme_colors:  result[:header_theme_colors],
+            etag:                 result[:etag],
+            last_modified:        result[:last_modified],
+            favicon:              result[:favicon],
+            favicon_data:         favicon,
           }
         end
       end
@@ -1490,7 +1509,7 @@ class FeedCache
       end
     end
 
-    FeedData.new(
+    fd = FeedData.new(
       result[:title],
       result[:url],
       result[:site_link],
@@ -1502,6 +1521,8 @@ class FeedCache
       result[:favicon],
       result[:favicon_data]
     )
+    fd.header_theme_colors = result[:header_theme_colors] if result[:header_theme_colors]
+    fd
   end
 end
 

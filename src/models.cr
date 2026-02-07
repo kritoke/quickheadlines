@@ -1,5 +1,6 @@
 record Item, title : String, link : String, pub_date : Time?, version : String? = nil
-record TimelineItem, item : Item, feed_title : String, feed_url : String, feed_link : String, favicon : String?, favicon_data : String?, header_color : String?, header_text_color : String?
+# Add header_theme_colors to TimelineItem so timeline responses can include theme-aware JSON
+record TimelineItem, item : Item, feed_title : String, feed_url : String, feed_link : String, favicon : String?, favicon_data : String?, header_color : String?, header_text_color : String?, header_theme_colors : String?
 
 # Extended TimelineItem with cluster information for story grouping
 record ClusteredTimelineItem,
@@ -11,6 +12,7 @@ record ClusteredTimelineItem,
   favicon_data : String?,
   header_color : String?,
   header_text_color : String?,
+  header_theme_colors : String?,
   cluster_id : Int64?,
   is_representative : Bool,
   cluster_size : Int32?
@@ -26,6 +28,7 @@ def to_clustered(item : TimelineItem, cluster_id : Int64?, is_representative : B
     item.favicon_data,
     item.header_color,
     item.header_text_color,
+    item.header_theme_colors,
     cluster_id,
     is_representative,
     cluster_size
@@ -48,6 +51,16 @@ record FeedData, title : String, url : String, site_link : String, header_color 
 
   def display_link
     site_link.empty? ? url : site_link
+  end
+
+  # Backwards-compatible accessor for theme-aware header colors.
+  # Stored separately from the record initializer to avoid changing many call sites.
+  def header_theme_colors : String?
+    @header_theme_colors
+  end
+
+  def header_theme_colors=(val : String?)
+    @header_theme_colors = val
   end
 end
 
@@ -96,7 +109,8 @@ class AppState
           feed.favicon,
           feed.favicon_data,
           feed.header_color,
-          feed.header_text_color
+          feed.header_text_color,
+          feed.header_theme_colors
         )
       end
     end
@@ -113,7 +127,8 @@ class AppState
             feed.favicon,
             feed.favicon_data,
             feed.header_color,
-            feed.header_text_color
+            feed.header_text_color,
+            feed.header_theme_colors
           )
         end
       end
@@ -157,4 +172,8 @@ class FeedCache
   end
 end
 
-FEED_CACHE = FeedCache.instance
+FEED_CACHE = if ENV["SKIP_FEED_CACHE_INIT"] == "1"
+  nil
+else
+  FeedCache.instance
+end

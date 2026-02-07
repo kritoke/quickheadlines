@@ -15,6 +15,7 @@ import Shared exposing (Model, Msg(..), Theme(..))
 import Theme exposing (borderColor, cardColor, dayHeaderBg, errorColor, lumeOrange, mutedColor, surfaceColor, textColor)
 import ThemeTypography as Ty
 import Time exposing (Posix, Zone, toDay, toMonth, toYear)
+import Json.Decode as Decode
 import Pages.ViewIcon exposing (viewIcon)
 import Responsive exposing (Breakpoint, breakpointFromWidth, isMobile, isVeryNarrow, horizontalPadding, verticalPadding, containerMaxWidth, timelineTimeColumnWidth, timelineClusterPadding)
 
@@ -165,9 +166,172 @@ textColorFromBgString bgColor =
         "rgb(255,255,255)"
 
 
+{-| Theme-aware readable color selection
+
+    Compute which text color (light or dark) will be most readable against a
+    given background color, taking the current UI theme into account and
+    preferring colors that meet WCAG contrast >= 4.5:1 when possible.
+-}
+
+getRgbTupleFromString : String -> Maybe ( Int, Int, Int )
+getRgbTupleFromString str =
+    let
+        clean = String.trim str
+        withoutRgb = String.dropLeft 4 str |> String.dropRight 1
+        hex = String.replace "#" "" clean
+    in
+    if String.startsWith "rgb(" clean then
+        let
+            parts = String.split "," (String.replace "rgb(" "" (String.replace ")" "" clean)) |> List.map String.trim
+        in
+        case parts of
+            [ r, g, b ] ->
+                case ( String.toInt r, String.toInt g, String.toInt b ) of
+                    ( Just ri, Just gi, Just bi ) -> Just ( ri, gi, bi )
+                    _ -> Nothing
+
+            _ ->
+                Nothing
+
+    else if String.length hex == 6 then
+        case ( String.toInt (String.slice 0 2 hex), String.toInt (String.slice 2 4 hex), String.toInt (String.slice 4 6 hex) ) of
+            ( Just ri, Just gi, Just bi ) ->
+                Just ( ri, gi, bi )
+
+            _ ->
+                Nothing
+
+    else
+        Nothing
+
+
+srgbChannelLinear : Int -> Float
+srgbChannelLinear c =
+    let
+        v = toFloat c / 255
+    in
+    if v <= 0.03928 then
+        v / 12.92
+    else
+        ((v + 0.055) / 1.055) ^ 2.4
+
+
+relativeLuminance : ( Int, Int, Int ) -> Float
+relativeLuminance ( r, g, b ) =
+    0.2126 * srgbChannelLinear r + 0.7152 * srgbChannelLinear g + 0.0722 * srgbChannelLinear b
+
+
+contrastRatio : ( Int, Int, Int ) -> ( Int, Int, Int ) -> Float
+contrastRatio fg bg =
+    let
+        lf = relativeLuminance fg
+        lb = relativeLuminance bg
+        ( l1, l2 ) = if lf > lb then ( lf, lb ) else ( lb, lf )
+    in
+    (l1 + 0.05) / (l2 + 0.05)
+
+
+readableColorForTheme : String -> Shared.Theme -> String
+readableColorForTheme bgStr theme =
+    case getRgbTupleFromString bgStr of
+        Nothing ->
+            -- Fallback to dark text if we can't parse the bg
+            "rgb(31,41,35)"
+
+        Just bg ->
+            let
+                white = ( 255, 255, 255 )
+                dark = ( 31, 41, 35 )
+                contrastWhite = contrastRatio white bg
+                contrastDark = contrastRatio dark bg
+            in
+            case theme of
+                Shared.Light ->
+                    if contrastDark >= 4.5 then
+                        "rgb(31,41,35)"
+                    else if contrastWhite >= 4.5 then
+                        "rgb(255,255,255)"
+                    else if contrastDark >= contrastWhite then
+                        "rgb(31,41,35)"
+                    else
+                        "rgb(255,255,255)"
+
+                Shared.Dark ->
+                    if contrastWhite >= 4.5 then
+                        "rgb(255,255,255)"
+                    else if contrastDark >= 4.5 then
+                        "rgb(31,41,35)"
+                    else if contrastWhite >= contrastDark then
+                        "rgb(255,255,255)"
+                    else
+                        "rgb(31,41,35)"
+
+
 parseColor : String -> Maybe Element.Color
 parseColor input =
     parseHexColor input
+
+
+-- Helpers to extract theme-aware colors from server-provided JSON
+themeTextFor : Maybe Decode.Value -> Shared.Theme -> Maybe String
+themeTextFor maybeVal theme =
+    case maybeVal of
+        Nothing ->
+            Nothing
+
+        Just v ->
+            let
+                decodeLight = Decode.field "text" (Decode.field "light" (Decode.nullable Decode.string))
+                decodeDark = Decode.field "text" (Decode.field "dark" (Decode.nullable Decode.string))
+                lightRes = Decode.decodeValue decodeLight v
+                darkRes = Decode.decodeValue decodeDark v
+                light = case lightRes of
+                    Ok l -> l
+                    Err _ -> Nothing
+                dark = case darkRes of
+                    Ok d -> d
+                    Err _ -> Nothing
+            in
+            case theme of
+                Shared.Dark ->
+                    case dark of
+                        Just d -> Just d
+                        Nothing -> light
+
+                Shared.Light ->
+                    case light of
+                        Just l -> Just l
+                        Nothing -> dark
+
+
+themeBgFor : Maybe Decode.Value -> Maybe String
+themeBgFor maybeVal =
+    case maybeVal of
+        Nothing ->
+            Nothing
+
+        Just v ->
+            case Decode.decodeValue (Decode.field "bg" (Decode.nullable Decode.string)) v of
+                Ok bg -> bg
+                Err _ -> Nothing
+
+
+themeTextSafe : Maybe Decode.Value -> Shared.Theme -> String -> Maybe String
+themeTextSafe maybeVal theme bgStr =
+    case themeTextFor maybeVal theme of
+        Nothing ->
+            Nothing
+
+        Just t ->
+            case ( getRgbTupleFromString t, getRgbTupleFromString bgStr ) of
+                ( Just fg, Just bg ) ->
+                    if contrastRatio fg bg >= 4.5 then
+                        Just t
+                    else
+                        Nothing
+
+                _ ->
+                    Nothing
 
 
 type alias Model =
@@ -802,6 +966,10 @@ clusterItem breakpoint zone now theme expandedClusters insertedIds cluster =
 
         headerColor =
             Maybe.withDefault "" cluster.representative.headerColor
+
+        -- Theme-aware JSON (if provided by server)
+        headerTheme =
+            cluster.representative.headerTheme
     in
     let
         isExpanded =
@@ -852,78 +1020,104 @@ clusterItem breakpoint zone now theme expandedClusters insertedIds cluster =
                  , Font.center
                  ]
                  (text timeStr)
-        , column
+                , column
             [ width fill
             , spacing 0
             , alignTop
             , Font.color txtColor
             ]
                 [ paragraph [ width fill, Ty.size13 ]
-                [ faviconImg
-                , let
-                    titleAttrsBase = [ Font.size 12, Font.color (getFeedTitleColor theme headerColor headerTextColor), htmlAttribute (Html.Attributes.attribute "data-use-server-colors" (if headerColor /= "" || headerTextColor /= "" then "true" else "false")) ]
-                    -- When a server-provided headerColor exists, render a small
-                    -- background pill around the feed title and compute a readable
-                    -- title color from that background. This makes the title
-                    -- visually consistent across light/dark modes.
-                    titleColorAttr =
-                        if headerTextColor /= "" then
-                            [ htmlAttribute (Html.Attributes.style "color" headerTextColor) ]
-                        else if headerColor /= "" then
-                            [ htmlAttribute (Html.Attributes.style "color" (textColorFromBgString headerColor)) ]
-                        else
-                            []
+                (let
+                    -- Determine background color (prefer theme-aware, fallback to legacy)
+                    effectiveBg =
+                        case themeBgFor headerTheme of
+                            Just bg -> bg
+                            Nothing -> headerColor
 
-                    titleBgAttr =
-                        if headerColor /= "" then
-                            [ htmlAttribute (Html.Attributes.style "background-color" headerColor)
+                    -- Determine text colors (contrast-safe selection)
+                    titleTextColor =
+                        case themeTextSafe headerTheme theme effectiveBg of
+                            Just t -> t
+                            Nothing ->
+                                -- If server provided a header_text_color, validate its contrast
+                                if headerTextColor /= "" then
+                                    case ( getRgbTupleFromString headerTextColor, getRgbTupleFromString effectiveBg ) of
+                                        ( Just fg, Just bg ) ->
+                                            if contrastRatio fg bg >= 4.5 then
+                                                headerTextColor
+                                            else
+                                                -- fallback to readable color computed from bg
+                                                readableColorForTheme effectiveBg theme
+
+                                        -- Could not parse one of the colors: fallback to readableColorForTheme
+                                        _ -> readableColorForTheme effectiveBg theme
+
+                                else if headerColor /= "" then
+                                    readableColorForTheme headerColor theme
+                                else
+                                    -- final fallback: readable color for effectiveBg
+                                    readableColorForTheme effectiveBg theme
+
+                    linkTextColor =
+                        case themeTextSafe headerTheme theme effectiveBg of
+                            Just t -> t
+                            Nothing ->
+                                if headerTextColor /= "" then
+                                    case ( getRgbTupleFromString headerTextColor, getRgbTupleFromString effectiveBg ) of
+                                        ( Just fg, Just bg ) ->
+                                            if contrastRatio fg bg >= 4.5 then
+                                                headerTextColor
+                                            else
+                                                readableColorForTheme effectiveBg theme
+                                        _ -> readableColorForTheme effectiveBg theme
+                                else if headerColor /= "" then
+                                    readableColorForTheme headerColor theme
+                                else
+                                    readableColorForTheme effectiveBg theme
+
+                    -- Title element with background pill
+                    titleAttrs =
+                        [ Font.size 12
+                        , htmlAttribute (Html.Attributes.style "color" titleTextColor)
+                        , htmlAttribute (Html.Attributes.attribute "data-use-server-colors" (if headerColor /= "" || headerTextColor /= "" then "true" else "false"))
+                        ]
+
+                    titleBgAttrs =
+                        if effectiveBg /= "" then
+                            [ htmlAttribute (Html.Attributes.style "background-color" effectiveBg)
                             , htmlAttribute (Html.Attributes.style "padding" "2px 6px")
                             , htmlAttribute (Html.Attributes.style "border-radius" "6px")
                             ]
                         else
                             []
+
+                    -- Link attributes
+                    linkAttrs =
+                        [ htmlAttribute (Html.Attributes.attribute "data-display-link" "true")
+                        , Font.semiBold
+                        , mouseOver [ Font.color lumeOrange ]
+                        , htmlAttribute (Html.Attributes.style "color" linkTextColor)
+                        , htmlAttribute (Html.Attributes.attribute "data-use-server-colors" (if headerColor /= "" || headerTextColor /= "" then "true" else "false"))
+                        ]
                   in
-                  el (titleAttrsBase ++ titleBgAttr ++ titleColorAttr)
+                  [ faviconImg
+                  , el ( [ Ty.meta, Font.size 12, htmlAttribute (Html.Attributes.attribute "data-use-server-colors" (if headerColor /= "" || headerTextColor /= "" then "true" else "false")), htmlAttribute (Html.Attributes.style "color" titleTextColor) ] ++ titleBgAttrs )
                       (text cluster.representative.feedTitle)
-                , el [ Font.color mutedTxt, paddingXY 4 0 ] (text "•")
-                 , let
-                    linkAttrsBase = [ htmlAttribute (Html.Attributes.attribute "data-display-link" "true"), Font.semiBold, mouseOver [ Font.color lumeOrange ] ]
-                    -- Always apply an inline readable color for links. This makes Elm the
-                    -- authoritative renderer for all link colors, eliminating inherited color
-                    -- confusion and ensuring consistent readability across themes.
-                    linkColorAttr =
-                        if headerTextColor /= "" then
-                            [ htmlAttribute (Html.Attributes.style "color" headerTextColor) ]
-                        else if headerColor /= "" then
-                            [ htmlAttribute (Html.Attributes.style "color" (textColorFromBgString headerColor)) ]
-                        else
-                            -- No server-provided colors: use theme-appropriate default that's readable
-                            let
-                                defaultLinkColor =
-                                    case theme of
-                                        Dark ->
-                                            "rgb(248, 250, 252)"
-                                        
-                                        Light ->
-                                            "rgb(17, 24, 39)"
-                            in
-                            [ htmlAttribute (Html.Attributes.style "color" defaultLinkColor) ]
-                    linkServerFlag = htmlAttribute (Html.Attributes.attribute "data-use-server-colors" (if headerColor /= "" || headerTextColor /= "" then "true" else "false"))
-                  in
-                  link (linkAttrsBase ++ linkColorAttr ++ [ linkServerFlag ]) { url = cluster.representative.link, label = text cluster.representative.title }
-        , if cluster.count > 1 then
-              Input.button
-                  [ paddingEach { top = 0, right = 0, bottom = 0, left = 8 }
-                  , Font.color (if isExpanded then lumeOrange else mutedTxt)
-                  , mouseOver [ Font.color lumeOrange ]
-                  ]
-                  { onPress = Just (ToggleCluster cluster.id)
-                  , label = text (" ↩ " ++ String.fromInt cluster.count)
-                  }
-                    else
-                        Element.none
+                  , el [ Font.color mutedTxt, paddingXY 4 0 ] (text "•")
+                  , link linkAttrs { url = cluster.representative.link, label = text cluster.representative.title }
+                  , (if cluster.count > 1 then
+                        Input.button
+                            [ paddingEach { top = 0, right = 0, bottom = 0, left = 8 }
+                            , Font.color (if isExpanded then lumeOrange else mutedTxt)
+                            , mouseOver [ Font.color lumeOrange ]
+                            ]
+                            { onPress = Just (ToggleCluster cluster.id)
+                            , label = text (" ↩ " ++ String.fromInt cluster.count)
+                            }
+                      else
+                        Element.none)
+                  ] )
                 ]
-            ]
             ]
         , if clusterCount > 1 && isExpanded then
              column

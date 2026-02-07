@@ -21,6 +21,8 @@ dependencies:
   stumpy_png:
     github: stumpycr/stumpy_png
     version: "~> 5.0"
+  crimage:
+    github: naqvis/crimage
 
 development_dependencies:
   ameba:

@@ -1,9 +1,11 @@
 require "stumpy_png"
+require "crimage"
+require "json"
 
 module ColorExtractor
    VERSION = "2.0.0"
 
-   @@extraction_cache = Hash(String, {bg: String, text: String, timestamp: Time}).new
+    @@extraction_cache = Hash(String, {bg: String, text: String | Hash(String, String), timestamp: Time}).new
    @@cache_mutex = Mutex.new
 
    def self.extract_from_favicon(favicon_path : String, feed_url : String, config_header_color : String?) : {bg: String?, text: String?}
@@ -20,43 +22,172 @@ module ColorExtractor
      extracted
   end
 
-   def self.theme_aware_extract_from_favicon(favicon_path : String, feed_url : String, config_header_color : String?) : Hash(String, String)
-     # Check manual override (same as before)
-     has_manual_override = !config_header_color.nil? && config_header_color != ""
-     return {"dark" => "", "light" => ""} if has_manual_override
+    def self.theme_aware_extract_from_favicon(favicon_path : String, feed_url : String, config_header_color : String?) : Hash(String, String | Hash(String, String))?
+      # If a manual header color override is configured, don't compute theme-aware colors here.
+      # Return nil so callers fall back to legacy override handling.
+      has_manual_override = !config_header_color.nil? && config_header_color != ""
+      return nil if has_manual_override
 
      cached = get_cached_theme_aware(favicon_path)
      return cached if cached
 
-     extracted = extract_from_file_theme_aware(favicon_path)
-     return {"dark" => "", "light" => ""} unless extracted
+      extracted = extract_from_file_theme_aware(favicon_path)
+      return nil unless extracted
 
-     cache_result_theme_aware(favicon_path, extracted)
-     extracted
+      cache_result_theme_aware(favicon_path, extracted)
+      extracted
+  end
+
+    private def self.get_cached_theme_aware(path : String) : Hash(String, String | Hash(String, String))?
+     @@cache_mutex.synchronize do
+       if entry = @@extraction_cache[path]?
+         # entry[:timestamp] is Time
+         if (Time.local - entry[:timestamp]).to_i < 7 * 24 * 60 * 60
+            # entry[:text] may be a Hash(String, String) (new format) or a String (legacy)
+            text_val = entry[:text]
+
+            text_hash = if text_val.is_a?(Hash)
+              # Already canonical
+              text_val.as(Hash(String, String))
+            elsif text_val.is_a?(String)
+              # Try to parse JSON string produced by older code paths
+              begin
+                tmp = JSON.parse(text_val.to_s).as_h
+                normalized = {} of String => String
+                tmp.each do |k, v|
+                  normalized[k.to_s] = v.to_s
+                end
+                normalized
+              rescue
+                # If parsing fails, fall back to mapping the legacy text into both roles
+                {"light" => text_val.to_s, "dark" => text_val.to_s}
+              end
+            else
+              {"light" => "", "dark" => ""}
+            end
+
+            return {"bg" => entry[:bg], "text" => text_hash}
+          else
+            @@extraction_cache.delete(path)
+          end
+       end
+     end
+     nil
    end
 
-   private def self.extract_from_file_theme_aware(path : String) : Hash(String, String)?
+    private def self.extract_from_file_theme_aware(path : String) : Hash(String, String | Hash(String, String))?
      full_path = "public#{path}"
      return nil unless File.exists?(full_path)
 
-     file_type = `file "#{full_path}"`.strip
-     return nil unless file_type.includes?("PNG image data") || file_type.includes?("PNG")
-     end
+      begin
+        # If ICO, iterate frames and pick the best (most opaque / largest) frame.
+        if full_path.downcase.ends_with?(".ico")
+          begin
+            icon = CrImage::ICO.read_all(full_path)
+          rescue
+            # Fall back to generic read if ICO reader fails
+            icon = nil
+          end
 
-     begin
-       canvas = StumpyPNG.read(full_path)
-       return nil if canvas.width == 0 || canvas.height == 0
+          if icon
+            best_rgb : Array(Int32)? = nil
+            best_opaque : Int32 = -1
+            best_area : Int32 = -1
 
-       dominant = calculate_dominant_color(canvas)
-       text_colors = theme_aware_text_color(dominant)
+            icon.images.each do |img|
+              rgb, opaque = dominant_from_crimage(img)
+              next if rgb.nil?
 
-       bg_rgb = "rgb(#{dominant[0]}, #{dominant[1]}, #{dominant[2]})"
+              area = img.bounds.width * img.bounds.height
+              if opaque > best_opaque || (opaque == best_opaque && area > best_area)
+                best_rgb = rgb
+                best_opaque = opaque
+                best_area = area
+              end
+            end
 
-       {"bg" => bg_rgb, "text" => text_colors.to_json}
-    rescue ex
-       nil
-     end
-  end
+            return nil if best_rgb.nil?
+
+            text_colors = theme_aware_text_color(best_rgb)
+            bg_rgb = "rgb(#{best_rgb[0]}, #{best_rgb[1]}, #{best_rgb[2]})"
+            return {"bg" => bg_rgb, "text" => text_colors}
+          end
+        end
+
+        # Generic image path: read with CrImage and compute dominant color
+        img = CrImage.read(full_path)
+        w = img.bounds.width
+        h = img.bounds.height
+        return nil if w == 0 || h == 0
+
+        dominant, _opaque = dominant_from_crimage(img)
+        return nil if dominant.nil?
+
+        text_colors = theme_aware_text_color(dominant) # Hash(String, String)
+        bg_rgb = "rgb(#{dominant[0]}, #{dominant[1]}, #{dominant[2]})"
+        {"bg" => bg_rgb, "text" => text_colors}
+      rescue e
+        nil
+      end
+    end
+
+    # Compute an (r,g,b) dominant color and count of opaque-ish pixels from a CrImage image.
+    private def self.dominant_from_crimage(img) : Tuple(Array(Int32)?, Int32)
+      w = img.bounds.width
+      h = img.bounds.height
+      return {nil, 0} if w == 0 || h == 0
+
+      sample_size = 1000
+      step = ((w * h) / sample_size).to_i32
+      step = 1 if step < 1
+
+      r_total = 0_i32
+      g_total = 0_i32
+      b_total = 0_i32
+      count = 0_i32
+      opaque_count = 0_i32
+
+      i = 0_i32
+      (0...h).each do |y|
+        (0...w).each do |x|
+          if (i % step) == 0
+            r32, g32, b32, a32 = img.at(x + img.bounds.min.x, y + img.bounds.min.y).rgba
+            r8 = ((r32 >> 8) & 0xff).to_u8
+            g8 = ((g32 >> 8) & 0xff).to_u8
+            b8 = ((b32 >> 8) & 0xff).to_u8
+            a8 = ((a32 >> 8) & 0xff).to_u8
+
+            # count opaque-ish pixels (threshold to consider a pixel solid)
+            opaque_count += 1 if a8 >= 200_u8
+
+            next if a8 == 0_u8
+
+            r = r8.to_i32
+            g = g8.to_i32
+            b = b8.to_i32
+
+            if a8 != 255_u8
+              af = a8.to_f / 255.0
+              if af > 0.0
+                r = (r.to_f / af).to_i32.clamp(0, 255)
+                g = (g.to_f / af).to_i32.clamp(0, 255)
+                b = (b.to_f / af).to_i32.clamp(0, 255)
+              end
+            end
+
+            r_total += r
+            g_total += g
+            b_total += b
+            count += 1
+          end
+          i += 1
+        end
+      end
+
+      return {nil, opaque_count} if count == 0
+
+      {[(r_total / count).to_i32, (g_total / count).to_i32, (b_total / count).to_i32], opaque_count}
+    end
 
    private def self.parse_rgb_string(str : String) : Array(Int32)?
      return nil unless str.starts_with?("rgb(")
@@ -72,51 +203,86 @@ module ColorExtractor
      [r, g, b]
   end
 
-   private def self.get_cached_theme_aware(path : String) : Hash(String, String)?
+    private def self.cache_result_theme_aware(path : String, result : Hash(String, String | Hash(String, String)))
+      @@cache_mutex.synchronize do
+        # Normalize stored bg/text types for backward compatibility
+        bg_val = result["bg"] ? result["bg"].to_s : ""
+        text_val = result["text"]
+
+        # If text_val is JSON::Any wrapping a Hash, attempt to convert to Hash(String, String)
+        stored_text = if text_val.is_a?(JSON::Any)
+          begin
+            h = text_val.as_h
+            normalized = {} of String => String
+            h.each do |k, v|
+              normalized[k.to_s] = v.to_s
+            end
+            normalized
+          rescue
+            text_val.to_s
+          end
+        elsif text_val.is_a?(Hash)
+          text_val.as(Hash(String, String))
+        else
+          text_val.to_s
+        end
+
+        @@extraction_cache[path] = {bg: bg_val, text: stored_text, timestamp: Time.local}
+      end
+    end
+
+   private def self.cache_result(path : String, result : {bg: String, text: String})
      @@cache_mutex.synchronize do
-       if entry = @@extraction_cache[path]?
-         if Time.local - entry[:timestamp] < 7.days
-           # Transform old cache format to new format
-           if entry[:text] && !entry[:text].includes?("{")
-             bg_rgb = parse_rgb_string(entry[:bg] || "")
-             if bg_rgb
-               entry[:text] = theme_aware_text_color(bg_rgb).to_json
-                 @@extraction_cache[path] = entry
-             end
-           end
-         return JSON.parse(entry[:text]).as_h
-       else
-         @@extraction_cache.delete(path)
-       end
+       @@extraction_cache[path] = {bg: result[:bg], text: result[:text], timestamp: Time.local}
      end
-     nil
-  end
+   end
 
    private def self.get_cached(path : String) : {bg: String?, text: String?}?
      @@cache_mutex.synchronize do
        if entry = @@extraction_cache[path]?
-         if Time.local - entry[:timestamp] < 7.days
+         if (Time.local - entry[:timestamp]).to_i < 7 * 24 * 60 * 60
+           # Return stored strings directly. If entry[:text] contains a JSON
+           # theme-aware payload, callers will handle parsing as needed.
            return {bg: entry[:bg], text: entry[:text]}
          else
            @@extraction_cache.delete(path)
          end
        end
+     end
      nil
+   end
+
+   private def self.extract_from_file(path : String) : {bg: String, text: String}?
+     full_path = "public#{path}"
+     return nil unless File.exists?(full_path)
+
+     # Only process PNG files (StumpyPNG only handles PNG)
+     # For non-PNG files (GIF, etc.), skip server-side extraction
+     # and let JavaScript ColorThief handle it client-side
+     file_type = `file "#{full_path}"`.strip
+     unless file_type.includes?("PNG image data") || file_type.includes?("PNG")
+       return nil
+     end
+
+     begin
+       canvas = StumpyPNG.read(full_path)
+       width = canvas.width
+       height = canvas.height
+
+       return nil if width == 0 || height == 0
+
+       dominant = calculate_dominant_color(canvas)
+       text_color = calculate_contrasting_text(dominant)
+
+       bg_rgb = "rgb(#{dominant[0]}, #{dominant[1]}, #{dominant[2]})"
+
+       {bg: bg_rgb, text: text_color}
+     rescue ex
+       nil
+     end
   end
 
-   private def self.cache_result_theme_aware(path : String, result : Hash(String, String))
-     @@cache_mutex.synchronize do
-       @@extraction_cache[path] = {bg: result[:bg], text: result[:text], timestamp: Time.local}
-    end
-  end
-
-   private def self.cache_result(path : String, result : {bg: String, text: String})
-     @@cache_mutex.synchronize do
-       @@extraction_cache[path] = {bg: result[:bg], text: result[:text], timestamp: Time.local}
-    end
-  end
-
-   private def self.calculate_dominant_color(canvas : StumpyPNG::Canvas) : Array(Int32)
+    private def self.calculate_dominant_color(canvas : StumpyPNG::Canvas) : Array(Int32)
      width = canvas.width
      height = canvas.height
 
@@ -147,16 +313,136 @@ module ColorExtractor
 
      return [0, 0, 0] of Int32 if count == 0
 
-     r_avg = (r_total / count).to_i32
-     g_avg = (g_total / count).to_i32
-     b_avg = (b_total / count).to_i32
+      r_avg = (r_total / count).to_i32
+      g_avg = (g_total / count).to_i32
+      b_avg = (b_total / count).to_i32
 
-     [r_avg, g_avg, b_avg]
+      [r_avg, g_avg, b_avg]
+    end
+
+    private def self.calculate_dominant_color_from_buffer(pixels : Array(UInt8), width : Int32, height : Int32) : Array(Int32)
+      return [0,0,0] of Int32 if width == 0 || height == 0
+
+      total = 0
+      r_total = 0
+      g_total = 0
+      b_total = 0
+
+      sample_size = 1000
+      step = ((width * height) / sample_size).to_i32
+      step = 1 if step < 1
+
+      i = 0
+      (0...height).each do |y|
+        (0...width).each do |x|
+          if (i % step) == 0
+            idx = (y * width + x) * 4
+            a = pixels[idx + 3]
+            # skip fully transparent pixels
+            next if a == 0_u8
+            r = pixels[idx].to_i32
+            g = pixels[idx + 1].to_i32
+            b = pixels[idx + 2].to_i32
+            # If alpha not 255, un-premultiply
+            if a != 255_u8
+              af = a.to_f / 255.0
+              r = (r.to_f / af).to_i32.clamp(0, 255)
+              g = (g.to_f / af).to_i32.clamp(0, 255)
+              b = (b.to_f / af).to_i32.clamp(0, 255)
+            end
+            r_total += r
+            g_total += g
+            b_total += b
+            total += 1
+          end
+          i += 1
+        end
+      end
+
+      return [0,0,0] of Int32 if total == 0
+      [(r_total / total).to_i32, (g_total / total).to_i32, (b_total / total).to_i32]
+    end
+
+    private def self.calculate_luminance(rgb : Array(Int32)) : Float64
+      r, g, b = rgb
+      # Use WCAG relative luminance (linearized sRGB)
+      to_linear = ->(c : Int32) do
+        v = c.to_f / 255.0
+        if v <= 0.03928
+          v / 12.92
+        else
+          ((v + 0.055) / 1.055) ** 2.4
+        end
+      end
+
+      r_l = to_linear.call(r)
+      g_l = to_linear.call(g)
+      b_l = to_linear.call(b)
+
+      0.2126 * r_l + 0.7152 * g_l + 0.0722 * b_l
    end
 
-   private def self.calculate_luminance(rgb : Array(Int32)) : Float64
-     r, g, b = rgb
-     (r * 299.0 + g * 587.0 + b * 114.0) / 1000.0
+   private def self.contrast_ratio(fg : Array(Int32), bg : Array(Int32)) : Float64
+     lf = calculate_luminance(fg)
+     lb = calculate_luminance(bg)
+     l1 = lf > lb ? lf : lb
+     l2 = lf > lb ? lb : lf
+     (l1 + 0.05) / (l2 + 0.05)
+   end
+
+   private def self.rgb_to_hex(rgb : Array(Int32)) : String
+     sprintf("#%02x%02x%02x", rgb[0], rgb[1], rgb[2])
+   end
+
+   private def self.gray_rgb(v : Int32) : Array(Int32)
+     [v, v, v]
+   end
+
+   private def self.find_dark_text_for_bg(bg : Array(Int32), threshold : Float64 = 4.5) : Array(Int32)
+     # dark text: search from black upwards until contrast >= threshold
+     (0..255).step(5) do |val|
+       candidate = gray_rgb(val)
+       if contrast_ratio(candidate, bg) >= threshold
+         return candidate
+       end
+     end
+     # fallback to nearly-black
+     gray_rgb(17)
+   end
+
+  private def self.find_light_text_for_bg(bg : Array(Int32), threshold : Float64 = 4.5) : Array(Int32)
+     # light text: search from white downwards until contrast >= threshold
+    val = 255
+    while val >= 0
+      candidate = gray_rgb(val)
+      if contrast_ratio(candidate, bg) >= threshold
+        return candidate
+      end
+      val -= 5
+    end
+     # fallback to nearly-white
+    gray_rgb(238)
+  end
+
+  # Public wrappers for testing/consumers
+  def self.luminance(rgb : Array(Int32)) : Float64
+    calculate_luminance(rgb)
+  end
+
+  def self.contrast(fg : Array(Int32), bg : Array(Int32)) : Float64
+    contrast_ratio(fg, bg)
+  end
+
+  def self.find_dark_text_for_bg_public(bg : Array(Int32)) : String
+    rgb_to_hex(find_dark_text_for_bg(bg))
+  end
+
+  def self.find_light_text_for_bg_public(bg : Array(Int32)) : String
+    rgb_to_hex(find_light_text_for_bg(bg))
+  end
+
+  def self.rgb_to_hex_public(rgb : Array(Int32)) : String
+    rgb_to_hex(rgb)
   end
 
    private def self.calculate_contrasting_text(rgb : Array(Int32)) : String
@@ -170,15 +456,14 @@ module ColorExtractor
   end
 
    private def self.theme_aware_text_color(bg_rgb : Array(Int32)) : Hash(String, String)
-     lum = calculate_luminance(bg_rgb)
-     is_light_bg = lum >= 128
+     # bg_rgb is [r,g,b]
+     # For light theme (we render dark text on light backgrounds): choose dark text
+     dark_text_rgb = find_dark_text_for_bg(bg_rgb)
+     # For dark theme (we render light text on dark backgrounds): choose light text
+     light_text_rgb = find_light_text_for_bg(bg_rgb)
 
-     # Use same dark text for both themes (no white-on-light issue)
-     text_dark = "#ffffff"
-     text_light = "#1f2937"
-
-     {"dark" => text_dark, "light" => text_light}
-  end
+     {"dark" => rgb_to_hex(light_text_rgb), "light" => rgb_to_hex(dark_text_rgb)}
+   end
 
    def self.clear_cache
      @@cache_mutex.synchronize do

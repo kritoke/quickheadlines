@@ -165,8 +165,8 @@ class DatabaseService
   end
 
   # Get timeline items from the last N days with cluster information
-  def get_timeline_items(limit : Int32, offset : Int32, days_back : Int32?) : Array({id: Int64, title: String, link: String, pub_date: Time?, feed_title: String, feed_url: String, feed_link: String, favicon: String?, header_color: String?, header_text_color: String?, cluster_id: Int64?, is_representative: Bool, cluster_size: Int32})
-    items = [] of {id: Int64, title: String, link: String, pub_date: Time?, feed_title: String, feed_url: String, feed_link: String, favicon: String?, header_color: String?, header_text_color: String?, cluster_id: Int64?, is_representative: Bool, cluster_size: Int32}
+  def get_timeline_items(limit : Int32, offset : Int32, days_back : Int32?) : Array({id: Int64, title: String, link: String, pub_date: Time?, feed_title: String, feed_url: String, feed_link: String, favicon: String?, header_color: String?, header_text_color: String?, header_theme_colors: String?, cluster_id: Int64?, is_representative: Bool, cluster_size: Int32})
+    items = [] of {id: Int64, title: String, link: String, pub_date: Time?, feed_title: String, feed_url: String, feed_link: String, favicon: String?, header_color: String?, header_text_color: String?, header_theme_colors: String?, cluster_id: Int64?, is_representative: Bool, cluster_size: Int32}
 
     cutoff_clause = days_back ? "AND i.pub_date >= ?" : ""
 
@@ -190,6 +190,7 @@ class DatabaseService
         f.favicon,
         f.header_color,
         f.header_text_color,
+        f.header_theme_colors,
         i.cluster_id,
         CASE WHEN i.id = (SELECT MIN(id) FROM items WHERE cluster_id = i.cluster_id AND cluster_id IS NOT NULL) THEN 1 ELSE 0 END as is_representative,
         (SELECT COUNT(*) FROM items WHERE cluster_id = i.cluster_id AND cluster_id IS NOT NULL) as cluster_size
@@ -210,6 +211,7 @@ class DatabaseService
         favicon = rows.read(String?)
         header_color = rows.read(String?)
         header_text_color = rows.read(String?)
+        header_theme_colors = rows.read(String?)
         cluster_id = rows.read(Int64?)
         is_representative = rows.read(Int32) == 1
         cluster_size = rows.read(Int32)
@@ -227,6 +229,7 @@ class DatabaseService
           favicon:           favicon,
           header_color:      header_color,
           header_text_color: header_text_color,
+          header_theme_colors: header_theme_colors,
           cluster_id:        cluster_id,
           is_representative: is_representative,
           cluster_size:      cluster_size,

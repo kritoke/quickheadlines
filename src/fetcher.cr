@@ -467,7 +467,9 @@ private def handle_success_response(feed : Feed, response : HTTP::Client::Respon
 
   favicon, favicon_data = get_favicon(feed, site_link, parsed[:favicon], previous_data)
 
-  header_color, header_text_color = extract_header_colors(feed, favicon_data)
+  # Pass whichever local favicon path we have (favicon_data preferred, otherwise favicon)
+  local_favicon_path = favicon_data || (favicon && favicon.starts_with?("/favicons/") ? favicon : nil)
+  header_color, header_text_color, header_theme_json = extract_header_colors(feed, local_favicon_path)
 
   # Capture caching headers
   etag = response.headers["ETag"]?
@@ -478,16 +480,131 @@ private def handle_success_response(feed : Feed, response : HTTP::Client::Respon
     items = [Item.new("No items found (or unsupported format)", feed.url, nil)]
   end
 
-  FeedData.new(feed.title, feed.url, site_link, header_color, header_text_color, items, etag, last_modified, favicon, favicon_data)
+  # Compute final legacy header fields (prefer explicitly extracted values,
+  # otherwise fall back to values from the theme-aware JSON). Avoid mutating
+  # FeedData after construction because records/structs don't expose setters.
+  final_header_color : String? = header_color
+  final_header_text : String? = header_text_color
+
+  if header_theme_json
+    begin
+      parsed = JSON.parse(header_theme_json).as_h
+      if parsed_text = parsed["text"]
+        # prefer light variant for legacy header_text_color
+        if final_header_text.nil? || final_header_text == ""
+          begin
+            new_text = (parsed_text.is_a?(Hash) && parsed_text["light"] ? parsed_text["light"] : parsed_text["dark"]) 
+            final_header_text = new_text.to_s if new_text
+          rescue
+            # ignore parse errors
+          end
+        end
+      end
+
+      if parsed_bg = parsed["bg"]
+        if final_header_color.nil? || final_header_color == ""
+          final_header_color = parsed_bg.to_s
+        end
+      end
+    rescue
+      # ignore parse errors
+    end
+  end
+
+  fd = FeedData.new(
+    feed.title,
+    feed.url,
+    site_link,
+    final_header_color,
+    final_header_text,
+    items,
+    etag,
+    last_modified,
+    favicon,
+    favicon_data
+  )
+
+  # Persist theme-aware JSON on the FeedData instance so FeedCache.add can store it atomically
+  fd.header_theme_colors = header_theme_json if header_theme_json
+
+  fd
 end
 
-private def extract_header_colors(feed : Feed, favicon_data : String?) : {String?, String?}
-  if favicon_data && favicon_data.starts_with?("/favicons/")
-    result = ColorExtractor.extract_from_favicon(favicon_data, feed.url, feed.header_color)
-    {result[:bg], result[:text]}
-  else
-    {feed.header_color, feed.header_text_color}
+private def extract_header_colors(feed : Feed, favicon_path : String?) : {String?, String?, String?}
+  if favicon_path && favicon_path.starts_with?("/favicons/")
+    # Prefer theme-aware extraction when we have a local favicon file
+    begin
+      extracted = ColorExtractor.theme_aware_extract_from_favicon(favicon_path, feed.url, feed.header_color)
+
+      # Ensure extracted contains a text entry before indexing to avoid KeyError
+      if extracted && extracted.is_a?(Hash) && extracted.has_key?("text")
+        text_val = extracted["text"]
+
+        # Ensure text_val is non-empty (either Hash or String)
+        has_text = (text_val.is_a?(Hash) && !text_val.empty?) || (text_val.is_a?(String) && !text_val.empty?)
+
+        if has_text
+          # Parse the inner text JSON (may already be a Hash or a JSON string)
+          parsed_text = nil.as(Hash(String, String)?)
+          if text_val.is_a?(Hash)
+            parsed_text = {} of String => String
+            text_val.each do |k, v|
+              parsed_text[k.to_s] = v.to_s
+            end
+          else
+            begin
+              # JSON.parse(...).as_h returns Hash(String, JSON::Any) - normalize values to String
+              tmp = JSON.parse(text_val.to_s).as_h
+              parsed_text = {} of String => String
+              tmp.each do |k, v|
+                parsed_text[k.to_s] = v.to_s
+              end
+            rescue
+              parsed_text = {"light" => text_val.to_s, "dark" => text_val.to_s}
+            end
+          end
+
+          # Build canonical theme JSON to persist: {bg: ..., text: {light:..., dark:...}, source: "auto"}
+          theme_payload = {
+            "bg" => (extracted.has_key?("bg") ? extracted["bg"] : nil),
+            "text" => parsed_text || {"light" => nil, "dark" => nil},
+            "source" => "auto"
+          }
+
+          # Build theme JSON string to return to caller; persistence will be handled
+          # by FeedCache.add to ensure atomic insert/update with the feed row.
+          header_theme_json = theme_payload.to_json
+
+          # For legacy return, pick the "light" theme text color when available, otherwise fallback to "dark"
+          legacy_text = parsed_text && parsed_text["light"] ? parsed_text["light"] : (parsed_text && parsed_text["dark"] ? parsed_text["dark"] : nil)
+
+          # Normalize bg value to String? (extractor may return JSON::Any or String)
+          bg_val = nil.as(String?)
+          if extracted.has_key?("bg")
+            raw_bg = extracted["bg"]
+            if raw_bg.is_a?(String)
+              bg_val = raw_bg
+            elsif raw_bg.is_a?(JSON::Any)
+              begin
+                bg_val = raw_bg.as_s
+              rescue
+                bg_val = raw_bg.to_s
+              end
+            else
+              bg_val = raw_bg.to_s
+            end
+          end
+
+          return {bg_val, legacy_text, header_theme_json}
+        end
+      end
+    rescue ex
+      # Log and fall through to legacy behavior
+      HealthMonitor.log_error("extract_header_colors(theme-aware)", ex)
+    end
   end
+
+  {feed.header_color, feed.header_text_color, nil}
 end
 
 private def error_feed_data(feed : Feed, message : String) : FeedData

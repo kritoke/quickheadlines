@@ -3,6 +3,7 @@ module Api exposing (Cluster, ClusterItem, Feed, FeedItem, FeedsResponse, Tab, T
 import Http
 import Json.Decode as Decode exposing (Decoder, field, list, nullable, string, succeed)
 import Time
+import Json.Decode as JD exposing (Value)
 import Url
 
 
@@ -26,6 +27,7 @@ type alias Feed =
     , favicon : Maybe String
     , headerColor : Maybe String
     , headerTextColor : Maybe String
+    , headerTheme : Maybe Decode.Value
     , items : List FeedItem
     , totalItemCount : Int
     }
@@ -56,6 +58,7 @@ type alias TimelineItem =
     , favicon : Maybe String
     , headerColor : Maybe String
     , headerTextColor : Maybe String
+    , headerTheme : Maybe Decode.Value
     , clusterId : Maybe String
     , isRepresentative : Bool
     , clusterSize : Int
@@ -70,6 +73,7 @@ type alias ClusterItem =
     , favicon : Maybe String
     , headerColor : Maybe String
     , headerTextColor : Maybe String
+    , headerTheme : Maybe Decode.Value
     , id : String
     }
 
@@ -219,6 +223,7 @@ buildCluster ( clusterId, clusterItems ) =
                             , favicon = Nothing
                             , headerColor = Nothing
                             , headerTextColor = Nothing
+                            , headerTheme = Nothing
                             , clusterId = Nothing
                             , isRepresentative = True
                             , clusterSize = 1
@@ -244,6 +249,7 @@ toClusterItem item =
     , favicon = item.favicon
     , headerColor = item.headerColor
     , headerTextColor = item.headerTextColor
+    , headerTheme = item.headerTheme
     , id = item.id
     }
 
@@ -274,24 +280,30 @@ feedDecoder =
                                                                                         Decode.field "header_text_color" (nullable string)
                                                                                             |> Decode.andThen
                                                                                                 (\headerTextColor ->
-                                                                                                    Decode.field "items" (list feedItemDecoder)
+                                                                                                    -- Parse optional header_theme_colors as a raw JSON value
+                                                                                                    decodeNullableValueField "header_theme_colors"
                                                                                                         |> Decode.andThen
-                                                                                                            (\items ->
-                                                                                                                Decode.field "total_item_count" Decode.int
+                                                                                                            (\headerTheme ->
+                                                                                                                Decode.field "items" (list feedItemDecoder)
                                                                                                                     |> Decode.andThen
-                                                                                                                        (\totalItemCount ->
-                                                                                                                            Decode.succeed
-                                                                                                                                { tab = tab
-                                                                                                                                , url = url
-                                                                                                                                , title = title
-                                                                                                                                , displayLink = displayLink
-                                                                                                                                , siteLink = siteLink
-                                                                                                                                , favicon = favicon
-                                                                                                                                , headerColor = headerColor
-                                                                                                                                , headerTextColor = headerTextColor
-                                                                                                                                , items = items
-                                                                                                                                , totalItemCount = totalItemCount
-                                                                                                                                }
+                                                                                                                        (\items ->
+                                                                                                                            Decode.field "total_item_count" Decode.int
+                                                                                                                                |> Decode.andThen
+                                                                                                                                    (\totalItemCount ->
+                                                                                                                                        Decode.succeed
+                                                                                                                                            { tab = tab
+                                                                                                                                            , url = url
+                                                                                                                                            , title = title
+                                                                                                                                            , displayLink = displayLink
+                                                                                                                                            , siteLink = siteLink
+                                                                                                                                            , favicon = favicon
+                                                                                                                                            , headerColor = headerColor
+                                                                                                                                            , headerTextColor = headerTextColor
+                                                                                                                                            , headerTheme = headerTheme
+                                                                                                                                            , items = items
+                                                                                                                                            , totalItemCount = totalItemCount
+                                                                                                                                            }
+                                                                                                                                    )
                                                                                                                         )
                                                                                                             )
                                                                                                 )
@@ -311,6 +323,13 @@ feedItemDecoder =
         (field "link" string)
         (field "pub_date" (nullable (Decode.map Time.millisToPosix Decode.int)))
 
+decodeNullableValueField : String -> Decoder (Maybe JD.Value)
+decodeNullableValueField name =
+    Decode.oneOf
+        [ Decode.field name (nullable Decode.value)
+        , Decode.succeed Nothing
+        ]
+
 
 timelineItemDecoder : Decoder TimelineItem
 timelineItemDecoder =
@@ -323,6 +342,7 @@ timelineItemDecoder =
         |> Decode.andThen (\f -> Decode.field "favicon" (nullable string) |> Decode.map f)
         |> Decode.andThen (\f -> Decode.field "header_color" (nullable string) |> Decode.map f)
         |> Decode.andThen (\f -> Decode.field "header_text_color" (nullable string) |> Decode.map f)
+        |> Decode.andThen (\f -> decodeNullableValueField "header_theme_colors" |> Decode.map f)
         |> Decode.andThen (\f -> Decode.field "cluster_id" (nullable string) |> Decode.map f)
         |> Decode.andThen (\f -> Decode.field "is_representative" Decode.bool |> Decode.map f)
         |> Decode.andThen (\f -> Decode.field "cluster_size" (Decode.oneOf [ Decode.int, Decode.succeed 1 ]) |> Decode.map f)

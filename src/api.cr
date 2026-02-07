@@ -23,6 +23,13 @@ class FeedResponse
   @[JSON::Field(emit_null: true)]
   property header_text_color : String?
 
+  @[JSON::Field(emit_null: true)]
+  property header_theme_colors : JSON::Any?
+
+  # Theme-aware header colors (JSON object) - when present this should be preferred by clients
+  @[JSON::Field(emit_null: true)]
+  property header_theme_colors : JSON::Any?
+
   property tab : String
   property url : String
   property title : String
@@ -51,6 +58,7 @@ class FeedResponse
     @favicon_data : String? = nil,
     @header_color : String? = nil,
     @header_text_color : String? = nil,
+    @header_theme_colors : JSON::Any? = nil,
     @items : Array(ItemResponse) = [] of ItemResponse,
     @total_item_count : Int32 = 0,
     @has_more : Bool? = nil,
@@ -122,6 +130,7 @@ class TimelineItemResponse
     @favicon_data : String? = nil,
     @header_color : String? = nil,
     @header_text_color : String? = nil,
+    @header_theme_colors : JSON::Any? = nil,
     @cluster_id : String? = nil,
     @is_representative : Bool = false,
     @cluster_size : Int32? = nil,
@@ -254,10 +263,19 @@ module Api
     header_text_color = feed.header_text_color
 
     # Fall back to database only if FeedData doesn't have colors
+    header_theme_colors_json = nil.as(String?)
     if header_color.nil? || header_text_color.nil?
       colors = cache.get_header_colors(feed.url)
       header_color ||= colors[:bg_color]
       header_text_color ||= colors[:text_color]
+    end
+
+    # Try to get theme-aware JSON from DB (preferred). This is a JSON string stored in feeds.header_theme_colors
+    begin
+      theme_json = cache.get_feed_theme_colors(feed.url)
+      header_theme_colors_json = theme_json if theme_json && !theme_json.empty?
+    rescue
+      header_theme_colors_json = nil
     end
 
     # Limit items for initial display (controls how many items are shown in feed cards)
@@ -291,6 +309,7 @@ module Api
       favicon_data: feed.favicon_data,
       header_color: header_color,
       header_text_color: header_text_color,
+      header_theme_colors: header_theme_colors_json ? JSON.parse(header_theme_colors_json) : nil,
       items: items_response,
       total_item_count: total_count || feed.items.size.to_i32
     )
@@ -339,6 +358,7 @@ module Api
       favicon_data: item.favicon_data,
       header_color: item.header_color,
       header_text_color: item.header_text_color,
+      header_theme_colors: item.header_theme_colors ? (JSON.parse(item.header_theme_colors) rescue nil) : nil,
       cluster_id: cluster_id_str,
       is_representative: is_representative,
       cluster_size: cluster_size
