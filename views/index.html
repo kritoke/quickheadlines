@@ -352,10 +352,20 @@
                header.style.color = cached.text;
                const link = header.querySelector('a');
                 if (link) {
-                   // Don't override links where Elm already applied server colors
-                   if (link.getAttribute && link.getAttribute('data-use-server-colors') === 'true') {
-                     // let Elm own it
-                   } else {
+                    // Respect server-provided color flags; however Elm now passes
+                    // server colors via `data-server-header-text-color` to avoid
+                    // inline inheritance issues. Prefer that attribute if present.
+                    const serverColor = (link.getAttribute && link.getAttribute('data-server-header-text-color')) || (link.getAttribute && link.getAttribute('data-use-server-colors') === 'true' ? link.style.color : null);
+                    if (serverColor) {
+                      try {
+                        const theme = document.documentElement.getAttribute('data-theme');
+                        const isWhite = /255,\s*255,\s*255/.test(serverColor) || /#fff/i.test(serverColor) || /white/i.test(serverColor);
+                        if (theme === 'dark' || !isWhite) {
+                          link.style.color = serverColor;
+                        }
+                        link.style.textDecoration = 'none';
+                      } catch(e) { link.style.color = serverColor; }
+                    } else {
                      // Don't force a white text color in light theme (it will be unreadable
                      // unless there's a background pill). Only apply cached text color when
                      // it won't produce white-on-light or when we're in dark theme.
@@ -396,18 +406,31 @@
                   header.style.backgroundColor = bgColor;
                   header.style.color = textColor;
                 if (link) {
-                  // Do not override if Elm already applied server colors on the link
-                  if (!(link.getAttribute && link.getAttribute('data-use-server-colors') === 'true')) {
+                  // Prefer a server-provided text color attribute if Elm supplied it
+                  const serverColor = link.getAttribute && link.getAttribute('data-server-header-text-color');
+                  if (serverColor) {
                     try {
                       const theme = document.documentElement.getAttribute('data-theme');
-                      const isWhite = /255,\s*255,\s*255/.test(textColor) || /#fff/i.test(textColor) || /white/i.test(textColor);
+                      const isWhite = /255,\s*255,\s*255/.test(serverColor) || /#fff/i.test(serverColor) || /white/i.test(serverColor);
                       if (theme === 'dark' || !isWhite) {
-                        link.style.color = textColor;
+                        link.style.color = serverColor;
                       }
                       link.style.textDecoration = 'none';
-                    } catch (e) {
-                      link.style.color = textColor;
-                      link.style.textDecoration = 'none';
+                    } catch (e) { link.style.color = serverColor; }
+                  } else {
+                    // Do not override if Elm already applied server colors on the link
+                    if (!(link.getAttribute && link.getAttribute('data-use-server-colors') === 'true')) {
+                      try {
+                        const theme = document.documentElement.getAttribute('data-theme');
+                        const isWhite = /255,\s*255,\s*255/.test(textColor) || /#fff/i.test(textColor) || /white/i.test(textColor);
+                        if (theme === 'dark' || !isWhite) {
+                          link.style.color = textColor;
+                        }
+                        link.style.textDecoration = 'none';
+                      } catch (e) {
+                        link.style.color = textColor;
+                        link.style.textDecoration = 'none';
+                      }
                     }
                   }
                 }

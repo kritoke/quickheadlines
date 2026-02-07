@@ -1101,10 +1101,15 @@ clusterItem breakpoint zone now theme expandedClusters insertedIds cluster =
 
                     -- Title element with background pill
                     titleAttrs =
-                        [ Font.size 12
-                        , htmlAttribute (Html.Attributes.style "color" titleTextColor)
-                        , htmlAttribute (Html.Attributes.attribute "data-use-server-colors" (if headerColor /= "" || headerTextColor /= "" then "true" else "false"))
-                        ]
+                        if headerColor /= "" || headerTextColor /= "" || headerTheme /= Nothing then
+                            [ Font.size 12
+                            , htmlAttribute (Html.Attributes.attribute "data-server-header-text-color" titleTextColor)
+                            , htmlAttribute (Html.Attributes.attribute "data-use-server-colors" "true")
+                            ]
+                        else
+                            [ Font.size 12
+                            , htmlAttribute (Html.Attributes.style "color" titleTextColor)
+                            ]
 
                     titleBgAttrs =
                         if effectiveBg /= "" then
@@ -1117,15 +1122,22 @@ clusterItem breakpoint zone now theme expandedClusters insertedIds cluster =
 
                     -- Link attributes
                     linkAttrs =
-                        [ htmlAttribute (Html.Attributes.attribute "data-display-link" "true")
-                        , Font.semiBold
-                        , mouseOver [ Font.color lumeOrange ]
-                        , htmlAttribute (Html.Attributes.style "color" linkTextColor)
-                        , htmlAttribute (Html.Attributes.attribute "data-use-server-colors" (if headerColor /= "" || headerTextColor /= "" then "true" else "false"))
-                        ]
+                        (if headerColor /= "" || headerTextColor /= "" || headerTheme /= Nothing then
+                            [ htmlAttribute (Html.Attributes.attribute "data-display-link" "true")
+                            , Font.semiBold
+                            , mouseOver [ Font.color lumeOrange ]
+                            , htmlAttribute (Html.Attributes.attribute "data-server-header-text-color" linkTextColor)
+                            , htmlAttribute (Html.Attributes.attribute "data-use-server-colors" "true")
+                            ]
+                         else
+                            [ htmlAttribute (Html.Attributes.attribute "data-display-link" "true")
+                            , Font.semiBold
+                            , mouseOver [ Font.color lumeOrange ]
+                            , htmlAttribute (Html.Attributes.style "color" linkTextColor)
+                            ])
                   in
                   [ faviconImg
-                  , el ( [ Ty.meta, Font.size 12, htmlAttribute (Html.Attributes.attribute "data-use-server-colors" (if headerColor /= "" || headerTextColor /= "" then "true" else "false")), htmlAttribute (Html.Attributes.style "color" titleTextColor) ] ++ titleBgAttrs )
+                  , el ( ( [ Ty.meta, Font.size 12 ] ++ (if headerColor /= "" || headerTextColor /= "" || headerTheme /= Nothing then [ htmlAttribute (Html.Attributes.attribute "data-use-server-colors" "true"), htmlAttribute (Html.Attributes.attribute "data-server-header-text-color" titleTextColor) ] else [ htmlAttribute (Html.Attributes.style "color" titleTextColor) ]) ) ++ titleBgAttrs )
                       (text cluster.representative.feedTitle)
                   , el [ Font.color mutedTxt, paddingXY 4 0 ] (text "•")
                   , link linkAttrs { url = cluster.representative.link, label = text cluster.representative.title }
@@ -1187,15 +1199,12 @@ clusterOtherItem now theme item =
         , el [ Ty.meta, Font.color mutedTxt, paddingXY 4 0 ] (text "•")
          , let
             otherLinkBase = [ Font.size 11, htmlAttribute (Html.Attributes.attribute "data-display-link" "true"), Font.medium, mouseOver [ Font.color lumeOrange ] ]
-            -- Always apply an inline readable color for other items, ensuring consistency
-            -- with representative items and eliminating inherited color issues.
-            otherLinkColor =
-                if itemHeaderTextColor /= "" then
-                    [ htmlAttribute (Html.Attributes.style "color" itemHeaderTextColor) ]
-                else if itemHeaderColor /= "" then
-                    [ htmlAttribute (Html.Attributes.style "color" (textColorFromBgString itemHeaderColor)) ]
+            otherLinkAttrs =
+                if itemHeaderTextColor /= "" || itemHeaderColor /= "" then
+                    [ htmlAttribute (Html.Attributes.attribute "data-server-header-text-color" (if itemHeaderTextColor /= "" then itemHeaderTextColor else textColorFromBgString itemHeaderColor))
+                    , htmlAttribute (Html.Attributes.attribute "data-use-server-colors" "true")
+                    ]
                 else
-                    -- No server-provided colors: use theme-appropriate default that's readable
                     let
                         defaultLinkColor =
                             case theme of
@@ -1206,9 +1215,8 @@ clusterOtherItem now theme item =
                                     "rgb(17, 24, 39)"
                     in
                     [ htmlAttribute (Html.Attributes.style "color" defaultLinkColor) ]
-            otherServerFlag = htmlAttribute (Html.Attributes.attribute "data-use-server-colors" (if itemHeaderColor /= "" || itemHeaderTextColor /= "" then "true" else "false"))
           in
-          link (otherLinkBase ++ otherLinkColor ++ [ otherServerFlag ]) { url = item.link, label = text item.title }
+          link (otherLinkBase ++ otherLinkAttrs) { url = item.link, label = text item.title }
         ]
 
 
