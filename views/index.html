@@ -326,11 +326,19 @@
             });
             window.app = app; // Expose for debugging
 
-           if (app.ports && app.ports.saveTheme) {
-             app.ports.saveTheme.subscribe(function(theme) {
-               localStorage.setItem('quickheadlines-theme', theme);
-             });
-           }
+            if (app.ports && app.ports.saveTheme) {
+              app.ports.saveTheme.subscribe(function(theme) {
+                localStorage.setItem('quickheadlines-theme', theme);
+                try {
+                  // Keep the DOM in sync when Elm toggles theme so CSS that
+                  // relies on `html[data-theme]` updates immediately.
+                  document.documentElement.setAttribute('data-theme', theme);
+                } catch(e) {}
+                // Re-apply any cached header colors so they remain readable
+                // after a theme change.
+                try { if (window.applyCachedHeaderColors) window.applyCachedHeaderColors(); } catch(e) {}
+              });
+            }
 
              if (app.ports && app.ports.saveCurrentPage) {
                app.ports.saveCurrentPage.subscribe(function(page) {
