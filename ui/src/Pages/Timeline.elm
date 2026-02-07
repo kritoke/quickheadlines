@@ -536,24 +536,75 @@ view shared model =
 
         clustersByDay =
             groupClustersByDay shared.zone shared.now model.clusters
+
+        -- Small debug panel to help reproduce theme toggle/color issues.
+        maybeFirstRep =
+            case model.clusters of
+                first :: _ -> Just first.representative
+                [] -> Nothing
+
+        debugPanel =
+            case maybeFirstRep of
+                Nothing -> Element.none
+
+                Just rep ->
+                    let
+                        repEffectiveBg =
+                            case themeBgFor rep.headerTheme of
+                                Just repBg -> repBg
+                                Nothing -> Maybe.withDefault "" rep.headerColor
+
+                        titleTextColor =
+                            case themeTextSafe rep.headerTheme theme repEffectiveBg of
+                                Just t -> t
+                                Nothing ->
+                                    if Maybe.withDefault "" rep.headerTextColor /= "" then
+                                        let raw = Maybe.withDefault "" rep.headerTextColor in
+                                        case ( getRgbTupleFromString raw, getRgbTupleFromString repEffectiveBg ) of
+                                            ( Just fg, Just repBg2 ) ->
+                                                if contrastRatio fg repBg2 >= 4.5 then raw else readableColorForTheme repEffectiveBg theme
+                                            _ -> readableColorForTheme repEffectiveBg theme
+                                    else if Maybe.withDefault "" rep.headerColor /= "" then
+                                        readableColorForTheme (Maybe.withDefault "" rep.headerColor) theme
+                                    else
+                                        readableColorForTheme repEffectiveBg theme
+
+                        linkTextColor =
+                            titleTextColor
+                    in
+                    el
+                        [ paddingXY 8 12
+                        , Border.rounded 6
+                        , Background.color (
+                              case parseColor repEffectiveBg of
+                                  Just c -> c
+                                  Nothing -> rgba 0 0 0 0
+                          )
+                        , htmlAttribute (Html.Attributes.id "debug-theme-panel")
+                        , Font.size 12
+                        , Font.color (textColor theme)
+                        , htmlAttribute (Html.Attributes.attribute "data-debug-theme" (if theme == Shared.Dark then "dark" else "light"))
+                        ]
+                        (text ("Theme: " ++ (if theme == Shared.Dark then "Dark" else "Light") ++ " | effectiveBg: " ++ repEffectiveBg ++ " | titleColor: " ++ titleTextColor ++ " | linkColor: " ++ linkTextColor))
     in
       column
-         [ width fill
-         , height fill
-         , Background.color bg
+          [ width fill
+          , height fill
+          , Background.color bg
          , Font.color txtColor
          , htmlAttribute (Html.Attributes.attribute "data-timeline-page" "true")
          , htmlAttribute (Html.Attributes.class "auto-hide-scroll")
          ]
-         [ el
-               [ width fill
-               , height (px 2)
-               , Background.color (case shared.theme of
-                   Shared.Dark -> rgb255 100 100 100
-                   Shared.Light -> rgb255 200 200 200
-                 )
-               ]
-               Element.none
+          [ el
+                [ width fill
+                , height (px 2)
+                , Background.color (case shared.theme of
+                    Shared.Dark -> rgb255 100 100 100
+                    Shared.Light -> rgb255 200 200 200
+                  )
+                ]
+                Element.none
+          , debugPanel
           , if model.loading && List.isEmpty model.clusters then
             el
                 [ centerX
@@ -1111,8 +1162,17 @@ clusterItem breakpoint zone now theme expandedClusters insertedIds cluster =
 
                     -- Title element with background pill
                     titleAttrs =
+                        let
+                            computedColor =
+                                case parseColor titleTextColor of
+                                    Just c -> c
+                                    Nothing -> case parseColor (textColorFromBgString effectiveBg) of
+                                        Just c2 -> c2
+                                        Nothing -> textColor theme
+                        in
                         if headerColor /= "" || headerTextColor /= "" || headerTheme /= Nothing then
                             [ Font.size 12
+                            , Font.color computedColor
                             , htmlAttribute (Html.Attributes.attribute "data-server-header-text-color" titleTextColor)
                             , htmlAttribute (Html.Attributes.attribute "data-use-server-colors" "true")
                             ]
@@ -1121,9 +1181,7 @@ clusterItem breakpoint zone now theme expandedClusters insertedIds cluster =
                             -- Use a data attribute for fallback colors so client-side
                             -- CSS/JS can apply them deterministically (avoids inline style races).
                             , htmlAttribute (Html.Attributes.attribute "data-server-fallback-color" titleTextColor)
-                            , case parseColor titleTextColor of
-                                Just c -> Font.color c
-                                Nothing -> Font.color (textColor theme)
+                            , Font.color computedColor
                             ]
 
                     titleBgAttrs =
@@ -1139,9 +1197,18 @@ clusterItem breakpoint zone now theme expandedClusters insertedIds cluster =
 
                     -- Link attributes
                     linkAttrs =
+                        let
+                            computedLinkColor =
+                                case parseColor linkTextColor of
+                                    Just c -> c
+                                    Nothing -> case parseColor (textColorFromBgString effectiveBg) of
+                                        Just c2 -> c2
+                                        Nothing -> textColor theme
+                        in
                         (if headerColor /= "" || headerTextColor /= "" || headerTheme /= Nothing then
                             [ htmlAttribute (Html.Attributes.attribute "data-display-link" "true")
                             , Font.semiBold
+                            , Font.color computedLinkColor
                             , mouseOver [ Font.color lumeOrange ]
                             , htmlAttribute (Html.Attributes.attribute "data-server-header-text-color" linkTextColor)
                             , htmlAttribute (Html.Attributes.attribute "data-use-server-colors" "true")
@@ -1149,6 +1216,7 @@ clusterItem breakpoint zone now theme expandedClusters insertedIds cluster =
                          else
                             [ htmlAttribute (Html.Attributes.attribute "data-display-link" "true")
                             , Font.semiBold
+                            , Font.color computedLinkColor
                             , mouseOver [ Font.color lumeOrange ]
                             , htmlAttribute (Html.Attributes.attribute "data-server-fallback-color" linkTextColor)
                             ])

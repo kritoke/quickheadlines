@@ -15911,6 +15911,26 @@ var $author$project$Pages$Home_$view = F2(
 	});
 var $author$project$Pages$Timeline$LoadMore = {$: 'LoadMore'};
 var $author$project$ThemeTypography$body = $mdgriffith$elm_ui$Element$Font$size(16);
+var $elm$core$Basics$pow = _Basics_pow;
+var $author$project$Pages$Timeline$srgbChannelLinear = function (c) {
+	var v = c / 255;
+	return (v <= 0.03928) ? (v / 12.92) : A2($elm$core$Basics$pow, (v + 0.055) / 1.055, 2.4);
+};
+var $author$project$Pages$Timeline$relativeLuminance = function (_v0) {
+	var r = _v0.a;
+	var g = _v0.b;
+	var b = _v0.c;
+	return ((0.2126 * $author$project$Pages$Timeline$srgbChannelLinear(r)) + (0.7152 * $author$project$Pages$Timeline$srgbChannelLinear(g))) + (0.0722 * $author$project$Pages$Timeline$srgbChannelLinear(b));
+};
+var $author$project$Pages$Timeline$contrastRatio = F2(
+	function (fg, bg) {
+		var lf = $author$project$Pages$Timeline$relativeLuminance(fg);
+		var lb = $author$project$Pages$Timeline$relativeLuminance(bg);
+		var _v0 = (_Utils_cmp(lf, lb) > 0) ? _Utils_Tuple2(lf, lb) : _Utils_Tuple2(lb, lf);
+		var l1 = _v0.a;
+		var l2 = _v0.b;
+		return (l1 + 0.05) / (l2 + 0.05);
+	});
 var $author$project$Pages$Timeline$ToggleCluster = function (a) {
 	return {$: 'ToggleCluster', a: a};
 };
@@ -16259,26 +16279,6 @@ var $author$project$Pages$Timeline$clusterOtherItem = F3(
 				}()
 				]));
 	});
-var $elm$core$Basics$pow = _Basics_pow;
-var $author$project$Pages$Timeline$srgbChannelLinear = function (c) {
-	var v = c / 255;
-	return (v <= 0.03928) ? (v / 12.92) : A2($elm$core$Basics$pow, (v + 0.055) / 1.055, 2.4);
-};
-var $author$project$Pages$Timeline$relativeLuminance = function (_v0) {
-	var r = _v0.a;
-	var g = _v0.b;
-	var b = _v0.c;
-	return ((0.2126 * $author$project$Pages$Timeline$srgbChannelLinear(r)) + (0.7152 * $author$project$Pages$Timeline$srgbChannelLinear(g))) + (0.0722 * $author$project$Pages$Timeline$srgbChannelLinear(b));
-};
-var $author$project$Pages$Timeline$contrastRatio = F2(
-	function (fg, bg) {
-		var lf = $author$project$Pages$Timeline$relativeLuminance(fg);
-		var lb = $author$project$Pages$Timeline$relativeLuminance(bg);
-		var _v0 = (_Utils_cmp(lf, lb) > 0) ? _Utils_Tuple2(lf, lb) : _Utils_Tuple2(lb, lf);
-		var l1 = _v0.a;
-		var l2 = _v0.b;
-		return (l1 + 0.05) / (l2 + 0.05);
-	});
 var $mdgriffith$elm_ui$Element$Font$family = function (families) {
 	return A2(
 		$mdgriffith$elm_ui$Internal$Model$StyleClass,
@@ -16554,9 +16554,9 @@ var $author$project$Pages$Timeline$clusterItem = F7(
 			}
 		}();
 		var timeStr = function () {
-			var _v9 = cluster.representative.pubDate;
-			if (_v9.$ === 'Just') {
-				var pd = _v9.a;
+			var _v12 = cluster.representative.pubDate;
+			if (_v12.$ === 'Just') {
+				var pd = _v12.a;
 				return A2($author$project$Pages$Timeline$formatTime, zone, pd);
 			} else {
 				return '???';
@@ -16665,27 +16665,27 @@ var $author$project$Pages$Timeline$clusterItem = F7(
 										]),
 									function () {
 										var effectiveBg = function () {
-											var _v6 = $author$project$Pages$Timeline$themeBgFor(headerTheme);
-											if (_v6.$ === 'Just') {
-												var bg = _v6.a;
+											var _v9 = $author$project$Pages$Timeline$themeBgFor(headerTheme);
+											if (_v9.$ === 'Just') {
+												var bg = _v9.a;
 												return bg;
 											} else {
 												return headerColor;
 											}
 										}();
 										var linkTextColor = function () {
-											var _v4 = A3($author$project$Pages$Timeline$themeTextSafe, headerTheme, theme, effectiveBg);
-											if (_v4.$ === 'Just') {
-												var t = _v4.a;
+											var _v7 = A3($author$project$Pages$Timeline$themeTextSafe, headerTheme, theme, effectiveBg);
+											if (_v7.$ === 'Just') {
+												var t = _v7.a;
 												return t;
 											} else {
 												if (headerTextColor !== '') {
-													var _v5 = _Utils_Tuple2(
+													var _v8 = _Utils_Tuple2(
 														$author$project$Pages$Timeline$getRgbTupleFromString(headerTextColor),
 														$author$project$Pages$Timeline$getRgbTupleFromString(effectiveBg));
-													if ((_v5.a.$ === 'Just') && (_v5.b.$ === 'Just')) {
-														var fg = _v5.a.a;
-														var bg = _v5.b.a;
+													if ((_v8.a.$ === 'Just') && (_v8.b.$ === 'Just')) {
+														var fg = _v8.a.a;
+														var bg = _v8.b.a;
 														return (A2($author$project$Pages$Timeline$contrastRatio, fg, bg) >= 4.5) ? headerTextColor : A2($author$project$Pages$Timeline$readableColorForTheme, effectiveBg, theme);
 													} else {
 														return A2($author$project$Pages$Timeline$readableColorForTheme, effectiveBg, theme);
@@ -16699,37 +16699,57 @@ var $author$project$Pages$Timeline$clusterItem = F7(
 												}
 											}
 										}();
-										var linkAttrs = ((headerColor !== '') || ((headerTextColor !== '') || (!_Utils_eq(headerTheme, $elm$core$Maybe$Nothing)))) ? _List_fromArray(
-											[
-												$mdgriffith$elm_ui$Element$htmlAttribute(
-												A2($elm$html$Html$Attributes$attribute, 'data-display-link', 'true')),
-												$mdgriffith$elm_ui$Element$Font$semiBold,
-												$mdgriffith$elm_ui$Element$mouseOver(
-												_List_fromArray(
-													[
-														$mdgriffith$elm_ui$Element$Font$color($author$project$Theme$lumeOrange)
-													])),
-												$mdgriffith$elm_ui$Element$htmlAttribute(
-												A2($elm$html$Html$Attributes$attribute, 'data-server-header-text-color', linkTextColor)),
-												$mdgriffith$elm_ui$Element$htmlAttribute(
-												A2($elm$html$Html$Attributes$attribute, 'data-use-server-colors', 'true'))
-											]) : _List_fromArray(
-											[
-												$mdgriffith$elm_ui$Element$htmlAttribute(
-												A2($elm$html$Html$Attributes$attribute, 'data-display-link', 'true')),
-												$mdgriffith$elm_ui$Element$Font$semiBold,
-												$mdgriffith$elm_ui$Element$mouseOver(
-												_List_fromArray(
-													[
-														$mdgriffith$elm_ui$Element$Font$color($author$project$Theme$lumeOrange)
-													])),
-												$mdgriffith$elm_ui$Element$htmlAttribute(
-												A2($elm$html$Html$Attributes$attribute, 'data-server-fallback-color', linkTextColor))
-											]);
+										var linkAttrs = function () {
+											var computedLinkColor = function () {
+												var _v5 = $author$project$Pages$Timeline$parseColor(linkTextColor);
+												if (_v5.$ === 'Just') {
+													var c = _v5.a;
+													return c;
+												} else {
+													var _v6 = $author$project$Pages$Timeline$parseColor(
+														$author$project$Pages$Timeline$textColorFromBgString(effectiveBg));
+													if (_v6.$ === 'Just') {
+														var c2 = _v6.a;
+														return c2;
+													} else {
+														return $author$project$Theme$textColor(theme);
+													}
+												}
+											}();
+											return ((headerColor !== '') || ((headerTextColor !== '') || (!_Utils_eq(headerTheme, $elm$core$Maybe$Nothing)))) ? _List_fromArray(
+												[
+													$mdgriffith$elm_ui$Element$htmlAttribute(
+													A2($elm$html$Html$Attributes$attribute, 'data-display-link', 'true')),
+													$mdgriffith$elm_ui$Element$Font$semiBold,
+													$mdgriffith$elm_ui$Element$Font$color(computedLinkColor),
+													$mdgriffith$elm_ui$Element$mouseOver(
+													_List_fromArray(
+														[
+															$mdgriffith$elm_ui$Element$Font$color($author$project$Theme$lumeOrange)
+														])),
+													$mdgriffith$elm_ui$Element$htmlAttribute(
+													A2($elm$html$Html$Attributes$attribute, 'data-server-header-text-color', linkTextColor)),
+													$mdgriffith$elm_ui$Element$htmlAttribute(
+													A2($elm$html$Html$Attributes$attribute, 'data-use-server-colors', 'true'))
+												]) : _List_fromArray(
+												[
+													$mdgriffith$elm_ui$Element$htmlAttribute(
+													A2($elm$html$Html$Attributes$attribute, 'data-display-link', 'true')),
+													$mdgriffith$elm_ui$Element$Font$semiBold,
+													$mdgriffith$elm_ui$Element$Font$color(computedLinkColor),
+													$mdgriffith$elm_ui$Element$mouseOver(
+													_List_fromArray(
+														[
+															$mdgriffith$elm_ui$Element$Font$color($author$project$Theme$lumeOrange)
+														])),
+													$mdgriffith$elm_ui$Element$htmlAttribute(
+													A2($elm$html$Html$Attributes$attribute, 'data-server-fallback-color', linkTextColor))
+												]);
+										}();
 										var titleBgAttrs = function () {
-											var _v3 = $author$project$Pages$Timeline$parseColor(effectiveBg);
-											if (_v3.$ === 'Just') {
-												var c = _v3.a;
+											var _v4 = $author$project$Pages$Timeline$parseColor(effectiveBg);
+											if (_v4.$ === 'Just') {
+												var c = _v4.a;
 												return _List_fromArray(
 													[
 														$mdgriffith$elm_ui$Element$Background$color(c),
@@ -16741,18 +16761,18 @@ var $author$project$Pages$Timeline$clusterItem = F7(
 											}
 										}();
 										var titleTextColor = function () {
-											var _v1 = A3($author$project$Pages$Timeline$themeTextSafe, headerTheme, theme, effectiveBg);
-											if (_v1.$ === 'Just') {
-												var t = _v1.a;
+											var _v2 = A3($author$project$Pages$Timeline$themeTextSafe, headerTheme, theme, effectiveBg);
+											if (_v2.$ === 'Just') {
+												var t = _v2.a;
 												return t;
 											} else {
 												if (headerTextColor !== '') {
-													var _v2 = _Utils_Tuple2(
+													var _v3 = _Utils_Tuple2(
 														$author$project$Pages$Timeline$getRgbTupleFromString(headerTextColor),
 														$author$project$Pages$Timeline$getRgbTupleFromString(effectiveBg));
-													if ((_v2.a.$ === 'Just') && (_v2.b.$ === 'Just')) {
-														var fg = _v2.a.a;
-														var bg = _v2.b.a;
+													if ((_v3.a.$ === 'Just') && (_v3.b.$ === 'Just')) {
+														var fg = _v3.a.a;
+														var bg = _v3.b.a;
 														return (A2($author$project$Pages$Timeline$contrastRatio, fg, bg) >= 4.5) ? headerTextColor : A2($author$project$Pages$Timeline$readableColorForTheme, effectiveBg, theme);
 													} else {
 														return A2($author$project$Pages$Timeline$readableColorForTheme, effectiveBg, theme);
@@ -16766,29 +16786,39 @@ var $author$project$Pages$Timeline$clusterItem = F7(
 												}
 											}
 										}();
-										var titleAttrs = ((headerColor !== '') || ((headerTextColor !== '') || (!_Utils_eq(headerTheme, $elm$core$Maybe$Nothing)))) ? _List_fromArray(
-											[
-												$mdgriffith$elm_ui$Element$Font$size(12),
-												$mdgriffith$elm_ui$Element$htmlAttribute(
-												A2($elm$html$Html$Attributes$attribute, 'data-server-header-text-color', titleTextColor)),
-												$mdgriffith$elm_ui$Element$htmlAttribute(
-												A2($elm$html$Html$Attributes$attribute, 'data-use-server-colors', 'true'))
-											]) : _List_fromArray(
-											[
-												$mdgriffith$elm_ui$Element$Font$size(12),
-												$mdgriffith$elm_ui$Element$htmlAttribute(
-												A2($elm$html$Html$Attributes$attribute, 'data-server-fallback-color', titleTextColor)),
-												function () {
+										var titleAttrs = function () {
+											var computedColor = function () {
 												var _v0 = $author$project$Pages$Timeline$parseColor(titleTextColor);
 												if (_v0.$ === 'Just') {
 													var c = _v0.a;
-													return $mdgriffith$elm_ui$Element$Font$color(c);
+													return c;
 												} else {
-													return $mdgriffith$elm_ui$Element$Font$color(
-														$author$project$Theme$textColor(theme));
+													var _v1 = $author$project$Pages$Timeline$parseColor(
+														$author$project$Pages$Timeline$textColorFromBgString(effectiveBg));
+													if (_v1.$ === 'Just') {
+														var c2 = _v1.a;
+														return c2;
+													} else {
+														return $author$project$Theme$textColor(theme);
+													}
 												}
-											}()
-											]);
+											}();
+											return ((headerColor !== '') || ((headerTextColor !== '') || (!_Utils_eq(headerTheme, $elm$core$Maybe$Nothing)))) ? _List_fromArray(
+												[
+													$mdgriffith$elm_ui$Element$Font$size(12),
+													$mdgriffith$elm_ui$Element$Font$color(computedColor),
+													$mdgriffith$elm_ui$Element$htmlAttribute(
+													A2($elm$html$Html$Attributes$attribute, 'data-server-header-text-color', titleTextColor)),
+													$mdgriffith$elm_ui$Element$htmlAttribute(
+													A2($elm$html$Html$Attributes$attribute, 'data-use-server-colors', 'true'))
+												]) : _List_fromArray(
+												[
+													$mdgriffith$elm_ui$Element$Font$size(12),
+													$mdgriffith$elm_ui$Element$htmlAttribute(
+													A2($elm$html$Html$Attributes$attribute, 'data-server-fallback-color', titleTextColor)),
+													$mdgriffith$elm_ui$Element$Font$color(computedColor)
+												]);
+										}();
 										return _List_fromArray(
 											[
 												faviconImg,
@@ -17188,6 +17218,91 @@ var $author$project$Pages$Timeline$view = F2(
 		var theme = shared.theme;
 		var txtColor = $author$project$Theme$textColor(theme);
 		var mutedTxt = $author$project$Theme$mutedColor(theme);
+		var maybeFirstRep = function () {
+			var _v10 = model.clusters;
+			if (_v10.b) {
+				var first = _v10.a;
+				return $elm$core$Maybe$Just(first.representative);
+			} else {
+				return $elm$core$Maybe$Nothing;
+			}
+		}();
+		var debugPanel = function () {
+			if (maybeFirstRep.$ === 'Nothing') {
+				return $mdgriffith$elm_ui$Element$none;
+			} else {
+				var rep = maybeFirstRep.a;
+				var repEffectiveBg = function () {
+					var _v9 = $author$project$Pages$Timeline$themeBgFor(rep.headerTheme);
+					if (_v9.$ === 'Just') {
+						var repBg = _v9.a;
+						return repBg;
+					} else {
+						return A2($elm$core$Maybe$withDefault, '', rep.headerColor);
+					}
+				}();
+				var titleTextColor = function () {
+					var _v7 = A3($author$project$Pages$Timeline$themeTextSafe, rep.headerTheme, theme, repEffectiveBg);
+					if (_v7.$ === 'Just') {
+						var t = _v7.a;
+						return t;
+					} else {
+						if (A2($elm$core$Maybe$withDefault, '', rep.headerTextColor) !== '') {
+							var raw = A2($elm$core$Maybe$withDefault, '', rep.headerTextColor);
+							var _v8 = _Utils_Tuple2(
+								$author$project$Pages$Timeline$getRgbTupleFromString(raw),
+								$author$project$Pages$Timeline$getRgbTupleFromString(repEffectiveBg));
+							if ((_v8.a.$ === 'Just') && (_v8.b.$ === 'Just')) {
+								var fg = _v8.a.a;
+								var repBg2 = _v8.b.a;
+								return (A2($author$project$Pages$Timeline$contrastRatio, fg, repBg2) >= 4.5) ? raw : A2($author$project$Pages$Timeline$readableColorForTheme, repEffectiveBg, theme);
+							} else {
+								return A2($author$project$Pages$Timeline$readableColorForTheme, repEffectiveBg, theme);
+							}
+						} else {
+							if (A2($elm$core$Maybe$withDefault, '', rep.headerColor) !== '') {
+								return A2(
+									$author$project$Pages$Timeline$readableColorForTheme,
+									A2($elm$core$Maybe$withDefault, '', rep.headerColor),
+									theme);
+							} else {
+								return A2($author$project$Pages$Timeline$readableColorForTheme, repEffectiveBg, theme);
+							}
+						}
+					}
+				}();
+				var linkTextColor = titleTextColor;
+				return A2(
+					$mdgriffith$elm_ui$Element$el,
+					_List_fromArray(
+						[
+							A2($mdgriffith$elm_ui$Element$paddingXY, 8, 12),
+							$mdgriffith$elm_ui$Element$Border$rounded(6),
+							$mdgriffith$elm_ui$Element$Background$color(
+							function () {
+								var _v6 = $author$project$Pages$Timeline$parseColor(repEffectiveBg);
+								if (_v6.$ === 'Just') {
+									var c = _v6.a;
+									return c;
+								} else {
+									return A4($mdgriffith$elm_ui$Element$rgba, 0, 0, 0, 0);
+								}
+							}()),
+							$mdgriffith$elm_ui$Element$htmlAttribute(
+							$elm$html$Html$Attributes$id('debug-theme-panel')),
+							$mdgriffith$elm_ui$Element$Font$size(12),
+							$mdgriffith$elm_ui$Element$Font$color(
+							$author$project$Theme$textColor(theme)),
+							$mdgriffith$elm_ui$Element$htmlAttribute(
+							A2(
+								$elm$html$Html$Attributes$attribute,
+								'data-debug-theme',
+								_Utils_eq(theme, $author$project$Shared$Dark) ? 'dark' : 'light'))
+						]),
+					$mdgriffith$elm_ui$Element$text(
+						'Theme: ' + ((_Utils_eq(theme, $author$project$Shared$Dark) ? 'Dark' : 'Light') + (' | effectiveBg: ' + (repEffectiveBg + (' | titleColor: ' + (titleTextColor + (' | linkColor: ' + linkTextColor))))))));
+			}
+		}();
 		var clustersByDay = A3($author$project$Pages$Timeline$groupClustersByDay, shared.zone, shared.now, model.clusters);
 		var breakpoint = $author$project$Responsive$breakpointFromWidth(shared.windowWidth);
 		var horizontalPadding = $author$project$Responsive$horizontalPadding(breakpoint);
@@ -17226,6 +17341,7 @@ var $author$project$Pages$Timeline$view = F2(
 							}())
 						]),
 					$mdgriffith$elm_ui$Element$none),
+					debugPanel,
 					(model.loading && $elm$core$List$isEmpty(model.clusters)) ? A2(
 					$mdgriffith$elm_ui$Element$el,
 					_List_fromArray(
