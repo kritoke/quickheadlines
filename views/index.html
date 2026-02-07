@@ -550,7 +550,20 @@
       
       // Enforce readable timeline link colors repeatedly until Elm settles.
       window.enforceReadableTimelineLinks = function() {
-        function parseRGB(s) { const m = (''+s).match(/(\d+),\s*(\d+),\s*(\d+)/); return m ? [parseInt(m[1]),parseInt(m[2]),parseInt(m[3])] : null; }
+        function parseRGB(s) {
+          if (!s) return null;
+          s = ('' + s).trim();
+          // rgb(...) or rgba(...)
+          let m = s.match(/(\d+),\s*(\d+),\s*(\d+)/);
+          if (m) return [parseInt(m[1]), parseInt(m[2]), parseInt(m[3])];
+          // hex #rrggbb
+          m = s.match(/^#?([0-9a-fA-F]{6})$/);
+          if (m) {
+            const hex = m[1];
+            return [parseInt(hex.substr(0,2),16), parseInt(hex.substr(2,2),16), parseInt(hex.substr(4,2),16)];
+          }
+          return null;
+        }
         function toLin(c){ const v = c/255; return v <= 0.03928 ? v/12.92 : Math.pow((v+0.055)/1.055, 2.4); }
         function luminance(rgb){ return 0.2126*toLin(rgb[0]) + 0.7152*toLin(rgb[1]) + 0.0722*toLin(rgb[2]); }
         function contrastRatio(fg, bg){ const Lf = luminance(fg); const Lb = luminance(bg); const l1 = Math.max(Lf,Lb); const l2 = Math.min(Lf,Lb); return (l1+0.05)/(l2+0.05); }
@@ -584,12 +597,80 @@
             if (!bg) bg = window.getComputedStyle(document.body).backgroundColor || 'rgb(255,255,255)';
             const bgRgb = parseRGB(bg) || [255,255,255];
 
+            // If a server-provided text color exists on the link or nearby
+            // element, prefer checking its contrast first and override if needed.
+            const serverProvided = (link.getAttribute && (link.getAttribute('data-server-header-text-color') || link.dataset.serverHeaderTextColor));
+            if (serverProvided) {
+              try {
+                const serverRgb = parseRGB(serverProvided);
+                if (serverRgb) {
+                  const srvRatio = contrastRatio(serverRgb, bgRgb);
+                  if (srvRatio < 4.5) {
+                    // server color fails contrast; pick readable target and force it
+                    const yiq = ((bgRgb[0]*299)+(bgRgb[1]*587)+(bgRgb[2]*114))/1000;
+                    const target = yiq >= 128 ? 'rgb(17, 24, 39)' : 'rgb(248, 250, 252)';
+                    try { link.style.setProperty('color', target, 'important'); link.setAttribute('data-js-override','true'); } catch(e) {}
+                  }
+                  // skip the rest of checks since server color was authoritative
+                  return;
+                }
+              } catch(e) {}
+            }
+
             const ratio = contrastRatio(fg, bgRgb);
             if (ratio < 4.5) {
               // Pick readable color based on background brightness (YIQ)
               const yiq = ((bgRgb[0]*299)+(bgRgb[1]*587)+(bgRgb[2]*114))/1000;
               const target = yiq >= 128 ? 'rgb(17, 24, 39)' : 'rgb(248, 250, 252)';
               try { link.style.setProperty('color', target, 'important'); link.setAttribute('data-js-override','true'); } catch(e) {}
+            }
+          } catch(e) {}
+        });
+
+        // Also enforce readable colors for other server-provided elements inside
+        // timeline items (site name chips, badges) which may not be links.
+        document.querySelectorAll('[data-timeline-item="true"] [data-use-server-colors="true"], [data-timeline-item="true"] [data-server-fallback-color]').forEach(el => {
+          try {
+            // Skip links already handled
+            if (el.tagName && el.tagName.toLowerCase() === 'a') return;
+
+            // Prefer explicit server-provided color attribute when present
+            const serverAttr = (el.getAttribute && (el.getAttribute('data-server-header-text-color') || el.getAttribute('data-server-fallback-color')));
+            const compColor = serverAttr || window.getComputedStyle(el).color;
+            const fg = parseRGB(compColor) || [0,0,0];
+
+            // Find nearest non-transparent background
+            let node = el;
+            let bg = null;
+            while (node) {
+              const st = window.getComputedStyle(node);
+              const bc = st.backgroundColor;
+              if (bc && bc !== 'rgba(0, 0, 0, 0)' && bc !== 'transparent') { bg = bc; break; }
+              if (node.classList && node.classList.contains('feed-header')) { bg = window.getComputedStyle(node).backgroundColor; break; }
+              node = node.parentElement;
+            }
+            if (!bg) bg = window.getComputedStyle(document.body).backgroundColor || 'rgb(255,255,255)';
+            const bgRgb = parseRGB(bg) || [255,255,255];
+
+            // If serverAttr exists, check its contrast first and override if insufficient
+            if (serverAttr) {
+              const srvRgb = parseRGB(serverAttr);
+              if (srvRgb) {
+                const srvRatio = contrastRatio(srvRgb, bgRgb);
+                if (srvRatio < 4.5) {
+                  const yiq = ((bgRgb[0]*299)+(bgRgb[1]*587)+(bgRgb[2]*114))/1000;
+                  const target = yiq >= 128 ? 'rgb(17, 24, 39)' : 'rgb(248, 250, 252)';
+                  try { el.style.setProperty('color', target, 'important'); el.setAttribute('data-js-override','true'); } catch(e) {}
+                }
+                return;
+              }
+            }
+
+            const ratio = contrastRatio(fg, bgRgb);
+            if (ratio < 4.5) {
+              const yiq = ((bgRgb[0]*299)+(bgRgb[1]*587)+(bgRgb[2]*114))/1000;
+              const target = yiq >= 128 ? 'rgb(17, 24, 39)' : 'rgb(248, 250, 252)';
+              try { el.style.setProperty('color', target, 'important'); el.setAttribute('data-js-override','true'); } catch(e) {}
             }
           } catch(e) {}
         });
@@ -914,13 +995,25 @@
             });
 
            // Watch for theme changes
-           new MutationObserver(function(mutations) {
-             mutations.forEach(function(mutation) {
-               if (mutation.attributeName === 'data-theme') {
-                 fixHeaderColors();
-               }
-             });
-           }).observe(document.documentElement, { attributes: true });
+            new MutationObserver(function(mutations) {
+              mutations.forEach(function(mutation) {
+                if (mutation.attributeName === 'data-theme') {
+                  // When theme changes, re-run all color enforcement paths.
+                  // Use timeouts to allow Elm and CSS to settle before computing contrast.
+                  try { 
+                    // Clear any JS-applied overrides so we can re-evaluate for the new theme
+                    document.querySelectorAll('[data-js-override="true"]').forEach(function(el){
+                      try { el.style.removeProperty('color'); } catch(e) {}
+                      try { el.removeAttribute('data-js-override'); } catch(e) {}
+                    });
+                    fixHeaderColors(); 
+                  } catch(e) {}
+                  setTimeout(function() { try { window.extractHeaderColors(); } catch(e) {} }, 50);
+                  setTimeout(function() { try { window.extractTimelineItemColors(); } catch(e) {} }, 100);
+                  setTimeout(function() { try { window.enforceReadableTimelineLinks(); } catch(e) {} }, 150);
+                }
+              });
+            }).observe(document.documentElement, { attributes: true });
 
           // Listen for OS theme changes and sync to Elm when no user preference is saved
           var themeMediaQuery = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)');
