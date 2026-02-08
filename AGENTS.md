@@ -283,14 +283,18 @@ The nix develop shell sets these automatically:
 ### Quick Reference for Elm Changes
 
 ```bash
-# Rebuild Elm after changes
-nix develop . --command cd ui && elm make src/Main.elm --output=../public/elm.js
+# Rebuild Elm after changes (preferred: use Makefile target inside devshell)
+nix develop . --command make elm-build
 
-# Format Elm code
-nix develop . --command cd ui && elm-format src/
+# Alternatively, run Elm from the ui/ directory using the devshell workdir
+# workdir=ui nix develop . --command 'elm make src/Main.elm --optimize --output=../public/elm.js'
 
-# Check Elm compiler errors
-nix develop . --command cd ui && elm make src/Main.elm 2>&1 | head -50
+# Format Elm code (use workdir or make wrapper)
+# workdir=ui nix develop . --command elm-format src/
+nix develop . --command make elm-format
+
+# Check Elm compiler errors (short): run from ui/ via workdir
+# workdir=ui nix develop . --command 'elm make src/Main.elm 2>&1 | head -50'
 ```
 
 ## Crystal Versioning & Platform Compatibility
