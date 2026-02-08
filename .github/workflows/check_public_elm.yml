@@ -12,6 +12,15 @@ jobs:
     name: Verify public/elm.js exists
     steps:
       - uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Setup Elm (0.19.1)
+        uses: avh4/setup-elm@v1
+        with:
+          elm-version: '0.19.1'
       - name: Verify public/elm.js
         run: |
           echo "Checking for public/elm.js..."
