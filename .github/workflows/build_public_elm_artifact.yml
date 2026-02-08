@@ -21,10 +21,10 @@ jobs:
         with:
           node-version: '18'
 
-      - name: Setup Elm (0.19.1)
-        uses: avh4/setup-elm@v1
-        with:
-          elm-version: '0.19.1'
+      - name: Install Elm 0.19.1
+        run: |
+          echo "Installing Elm 0.19.1 via installer"
+          curl -sL https://github.com/avh4/setup-elm/releases/latest/download/install-elm.sh | bash -s -- 0.19.1
 
       - name: Build public/elm.js (optimized)
         id: build
