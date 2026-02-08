@@ -51,6 +51,10 @@
       function updateFeedBoxClass(feedBox) {
         try {
           var body = feedBox.querySelector('.feed-body');
+          if (!body) {
+            // fallback: try to find a scrollable descendant
+            body = findScrollableDescendant(feedBox);
+          }
           if (!body) return;
           if (isAtBottom(body)) feedBox.classList.add('is-at-bottom'); else feedBox.classList.remove('is-at-bottom');
         } catch (e) { /* ignore */ }
@@ -58,6 +62,9 @@
 
       function setupScrollForFeedBox(feedBox) {
         var body = feedBox.querySelector('.feed-body');
+        if (!body) {
+          body = findScrollableDescendant(feedBox);
+        }
         if (!body) return;
         // initial state
         updateFeedBoxClass(feedBox);
@@ -68,6 +75,20 @@
         // also update on resize (content height may change)
         var ro = new ResizeObserver(function () { updateFeedBoxClass(feedBox); });
         ro.observe(body);
+      }
+
+      // Heuristic: find a descendant element that is scrollable (overflow-y auto/scroll or has scrollHeight>clientHeight)
+      function findScrollableDescendant(el) {
+        try {
+          var candidates = el.querySelectorAll('*');
+          for (var i = 0; i < candidates.length; i++) {
+            var c = candidates[i];
+            var style = window.getComputedStyle(c);
+            if (style && (style.overflowY === 'auto' || style.overflowY === 'scroll')) return c;
+            if (c.scrollHeight - c.clientHeight > 10) return c;
+          }
+        } catch (e) { /* ignore */ }
+        return null;
       }
 
       function scanAndAttach() {

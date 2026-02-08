@@ -568,11 +568,14 @@ feedCard now theme breakpoint loadingFeed insertedIds feed =
         , Border.color border
         , spacing 8
         , padding 12
+        , Theme.semantic "feed-card"
+        , Theme.testId "feed-card"
         ]
         [ feedHeader theme feed
         , column
             ([ width fill
              , spacing 4
+             , Theme.semantic "feed-body"
              ] ++ scrollAttributes)
             (List.map (feedItem now theme insertedIds) displayedItems ++ [ loadMoreButton ])
         ]
@@ -753,6 +756,13 @@ feedItem now theme insertedIds item =
             ]
             ++ (if isInserted then [ htmlAttribute (Html.Attributes.class "timeline-inserted") ] else [])
     in
+    let
+        linkAttrs =
+            [ Font.color txtColor
+            , htmlAttribute (Html.Attributes.style "text-decoration" "none")
+            ]
+            ++ (if isInserted then [ htmlAttribute (Html.Attributes.class "timeline-inserted") ] else [])
+    in
     row
         ([ width fill ] ++ wrapperAttrs)
         [ el
@@ -773,9 +783,7 @@ feedItem now theme insertedIds item =
             , htmlAttribute (Html.Attributes.style "line-height" "1.3")
             ]
             [ link
-                [ Font.color txtColor
-                , htmlAttribute (Html.Attributes.style "text-decoration" "none")
-                ]
+                linkAttrs
                 { url = item.link, label = text item.title }
             ]
         , el
