@@ -119,14 +119,14 @@ def main
         bg = extracted["bg"] ? extracted["bg"].to_s : nil
         text = extracted["text"]
         text_hash = if text.is_a?(Hash)
-          normalized = {} of String => String
-          text.each do |k, v|
-            normalized[k.to_s] = v.to_s
-          end
-          normalized
-        else
-          {"light" => text.to_s, "dark" => text.to_s}
-        end
+                      normalized = {} of String => String
+                      text.each do |k, v|
+                        normalized[k.to_s] = v.to_s
+                      end
+                      normalized
+                    else
+                      {"light" => text.to_s, "dark" => text.to_s}
+                    end
 
         payload = {"bg" => bg, "text" => text_hash, "source" => "backfill"}
         theme_json = payload.to_json

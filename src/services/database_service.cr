@@ -219,20 +219,20 @@ class DatabaseService
         pub_date = pub_date_str.try { |str| Time.parse(str, "%Y-%m-%d %H:%M:%S", Time::Location::UTC) }
 
         items << {
-          id:                id,
-          title:             title,
-          link:              link,
-          pub_date:          pub_date,
-          feed_title:        feed_title,
-          feed_url:          feed_url,
-          feed_link:         feed_link,
-          favicon:           favicon,
-          header_color:      header_color,
-          header_text_color: header_text_color,
+          id:                  id,
+          title:               title,
+          link:                link,
+          pub_date:            pub_date,
+          feed_title:          feed_title,
+          feed_url:            feed_url,
+          feed_link:           feed_link,
+          favicon:             favicon,
+          header_color:        header_color,
+          header_text_color:   header_text_color,
           header_theme_colors: header_theme_colors,
-          cluster_id:        cluster_id,
-          is_representative: is_representative,
-          cluster_size:      cluster_size,
+          cluster_id:          cluster_id,
+          is_representative:   is_representative,
+          cluster_size:        cluster_size,
         }
       end
     end

@@ -336,7 +336,7 @@ def repair_database(config : Config?, backup_path : String? = nil) : DbRepairRes
   STDERR.puts "[#{repair_time}] Attempting to repair corrupted database..."
 
   # Determine backup path (use provided or generate new)
-  actual_backup_path = backup_path || "#{db_path}.corrupted.#{repair_time.to_s("%Y%m%d%H%M%S") }"
+  actual_backup_path = backup_path || "#{db_path}.corrupted.#{repair_time.to_s("%Y%m%d%H%M%S")}"
 
   # Backup corrupted database
   unless File.exists?(actual_backup_path)
@@ -470,61 +470,61 @@ class FeedCache
           # Use new color if provided, otherwise keep existing
           # Only preserve existing color if feed_data.header_color is nil
           # Extracted colors should be saved; nil means extraction failed/skipped
-           header_color_to_save = feed_data.header_color.nil? ? existing_color : feed_data.header_color
-           header_text_color_to_save = feed_data.header_text_color.nil? ? existing_text_color : feed_data.header_text_color
-           header_theme_to_save = feed_data.header_theme_colors.nil? ? existing_theme : feed_data.header_theme_colors
+          header_color_to_save = feed_data.header_color.nil? ? existing_color : feed_data.header_color
+          header_text_color_to_save = feed_data.header_text_color.nil? ? existing_text_color : feed_data.header_text_color
+          header_theme_to_save = feed_data.header_theme_colors.nil? ? existing_theme : feed_data.header_theme_colors
 
-           # Auto-correct theme JSON before persisting. Use legacy header_color/text as fallbacks.
-           begin
-             corrected = ColorExtractor.auto_correct_theme_json(header_theme_to_save, header_color_to_save, header_text_color_to_save)
-             header_theme_to_save = corrected if corrected
-           rescue
-             # On failure, keep the original payload
-           end
+          # Auto-correct theme JSON before persisting. Use legacy header_color/text as fallbacks.
+          begin
+            corrected = ColorExtractor.auto_correct_theme_json(header_theme_to_save, header_color_to_save, header_text_color_to_save)
+            header_theme_to_save = corrected if corrected
+          rescue
+            # On failure, keep the original payload
+          end
 
-            @db.exec(
-              "UPDATE feeds SET title = ?, site_link = ?, header_color = ?, header_text_color = ?, header_theme_colors = ?, etag = ?, last_modified = ?, favicon = ?, favicon_data = ?, last_fetched = ? WHERE id = ?",
-              feed_data.title,
-              feed_data.site_link,
-              header_color_to_save,
-              header_text_color_to_save,
-              header_theme_to_save,
-              feed_data.etag,
-              feed_data.last_modified,
-              feed_data.favicon,
-              feed_data.favicon_data,
-              Time.utc.to_s("%Y-%m-%d %H:%M:%S"),
-              feed_id
-            )
+          @db.exec(
+            "UPDATE feeds SET title = ?, site_link = ?, header_color = ?, header_text_color = ?, header_theme_colors = ?, etag = ?, last_modified = ?, favicon = ?, favicon_data = ?, last_fetched = ? WHERE id = ?",
+            feed_data.title,
+            feed_data.site_link,
+            header_color_to_save,
+            header_text_color_to_save,
+            header_theme_to_save,
+            feed_data.etag,
+            feed_data.last_modified,
+            feed_data.favicon,
+            feed_data.favicon_data,
+            Time.utc.to_s("%Y-%m-%d %H:%M:%S"),
+            feed_id
+          )
 
           # NOTE: We do NOT delete old items here anymore.
           # The system is designed to accumulate items over time (7 days retention).
           # Old items are cleaned up by cleanup_old_articles() based on pub_date.
         else
           # Insert new feed
-            # Auto-correct theme JSON for new inserts as well
-            begin
-              incoming_theme = feed_data.header_theme_colors
-              corrected_incoming = ColorExtractor.auto_correct_theme_json(incoming_theme, feed_data.header_color, feed_data.header_text_color)
-              theme_to_insert = corrected_incoming || incoming_theme
-            rescue
-              theme_to_insert = feed_data.header_theme_colors
-            end
+          # Auto-correct theme JSON for new inserts as well
+          begin
+            incoming_theme = feed_data.header_theme_colors
+            corrected_incoming = ColorExtractor.auto_correct_theme_json(incoming_theme, feed_data.header_color, feed_data.header_text_color)
+            theme_to_insert = corrected_incoming || incoming_theme
+          rescue
+            theme_to_insert = feed_data.header_theme_colors
+          end
 
-            @db.exec(
-              "INSERT INTO feeds (url, title, site_link, header_color, header_text_color, header_theme_colors, etag, last_modified, favicon, favicon_data, last_fetched) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-              feed_data.url,
-              feed_data.title,
-              feed_data.site_link,
-              feed_data.header_color,
-              feed_data.header_text_color,
-              theme_to_insert,
-              feed_data.etag,
-              feed_data.last_modified,
-              feed_data.favicon,
-              feed_data.favicon_data,
-              Time.utc.to_s("%Y-%m-%d %H:%M:%S")
-            )
+          @db.exec(
+            "INSERT INTO feeds (url, title, site_link, header_color, header_text_color, header_theme_colors, etag, last_modified, favicon, favicon_data, last_fetched) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            feed_data.url,
+            feed_data.title,
+            feed_data.site_link,
+            feed_data.header_color,
+            feed_data.header_text_color,
+            theme_to_insert,
+            feed_data.etag,
+            feed_data.last_modified,
+            feed_data.favicon,
+            feed_data.favicon_data,
+            Time.utc.to_s("%Y-%m-%d %H:%M:%S")
+          )
 
           feed_id = @db.scalar("SELECT last_insert_rowid()").as(Int64)
         end
@@ -575,16 +575,16 @@ class FeedCache
     feed_data = @mutex.synchronize do
       result = @db.query_one?("SELECT title, url, site_link, header_color, header_text_color, header_theme_colors, etag, last_modified, favicon, favicon_data FROM feeds WHERE url = ?", url) do |row|
         {
-          title:             row.read(String),
-          url:               row.read(String),
-          site_link:         row.read(String),
-          header_color:      row.read(String?),
-          header_text_color: row.read(String?),
+          title:               row.read(String),
+          url:                 row.read(String),
+          site_link:           row.read(String),
+          header_color:        row.read(String?),
+          header_text_color:   row.read(String?),
           header_theme_colors: row.read(String?),
-          etag:              row.read(String?),
-          last_modified:     row.read(String?),
-          favicon:           row.read(String?),
-          favicon_data:      row.read(String?),
+          etag:                row.read(String?),
+          last_modified:       row.read(String?),
+          favicon:             row.read(String?),
+          favicon_data:        row.read(String?),
         }
       end
 
@@ -599,16 +599,16 @@ class FeedCache
         if favicon = result[:favicon]
           if favicon.starts_with?("/favicons/")
             result = {
-              title:                result[:title],
-              url:                  result[:url],
-              site_link:            result[:site_link],
-              header_color:         result[:header_color],
-              header_text_color:    result[:header_text_color],
-              header_theme_colors:  result[:header_theme_colors],
-              etag:                 result[:etag],
-              last_modified:        result[:last_modified],
-              favicon:              result[:favicon],
-              favicon_data:         favicon,
+              title:               result[:title],
+              url:                 result[:url],
+              site_link:           result[:site_link],
+              header_color:        result[:header_color],
+              header_text_color:   result[:header_text_color],
+              header_theme_colors: result[:header_theme_colors],
+              etag:                result[:etag],
+              last_modified:       result[:last_modified],
+              favicon:             result[:favicon],
+              favicon_data:        favicon,
             }
           end
         end
@@ -670,16 +670,16 @@ class FeedCache
       # Get feed metadata
       feed_result = @db.query_one?("SELECT title, url, site_link, header_color, header_text_color, header_theme_colors, etag, last_modified, favicon, favicon_data FROM feeds WHERE url = ?", url) do |row|
         {
-          title:             row.read(String),
-          url:               row.read(String),
-          site_link:         row.read(String),
-          header_color:      row.read(String?),
-          header_text_color: row.read(String?),
+          title:               row.read(String),
+          url:                 row.read(String),
+          site_link:           row.read(String),
+          header_color:        row.read(String?),
+          header_text_color:   row.read(String?),
           header_theme_colors: row.read(String?),
-          etag:              row.read(String?),
-          last_modified:     row.read(String?),
-          favicon:           row.read(String?),
-          favicon_data:      row.read(String?),
+          etag:                row.read(String?),
+          last_modified:       row.read(String?),
+          favicon:             row.read(String?),
+          favicon_data:        row.read(String?),
         }
       end
       return unless feed_result
@@ -1473,16 +1473,16 @@ class FeedCache
   private def get_without_lock(url : String) : FeedData?
     result = @db.query_one?("SELECT title, url, site_link, header_color, header_text_color, header_theme_colors, etag, last_modified, favicon, favicon_data FROM feeds WHERE url = ?", url) do |row|
       {
-        title:             row.read(String),
-        url:               row.read(String),
-        site_link:         row.read(String),
-        header_color:      row.read(String?),
-        header_text_color: row.read(String?),
+        title:               row.read(String),
+        url:                 row.read(String),
+        site_link:           row.read(String),
+        header_color:        row.read(String?),
+        header_text_color:   row.read(String?),
         header_theme_colors: row.read(String?),
-        etag:              row.read(String?),
-        last_modified:     row.read(String?),
-        favicon:           row.read(String?),
-        favicon_data:      row.read(String?),
+        etag:                row.read(String?),
+        last_modified:       row.read(String?),
+        favicon:             row.read(String?),
+        favicon_data:        row.read(String?),
       }
     end
 
@@ -1493,16 +1493,16 @@ class FeedCache
       if favicon = result[:favicon]
         if favicon.starts_with?("/favicons/")
           result = {
-            title:                result[:title],
-            url:                  result[:url],
-            site_link:            result[:site_link],
-            header_color:         result[:header_color],
-            header_text_color:    result[:header_text_color],
-            header_theme_colors:  result[:header_theme_colors],
-            etag:                 result[:etag],
-            last_modified:        result[:last_modified],
-            favicon:              result[:favicon],
-            favicon_data:         favicon,
+            title:               result[:title],
+            url:                 result[:url],
+            site_link:           result[:site_link],
+            header_color:        result[:header_color],
+            header_text_color:   result[:header_text_color],
+            header_theme_colors: result[:header_theme_colors],
+            etag:                result[:etag],
+            last_modified:       result[:last_modified],
+            favicon:             result[:favicon],
+            favicon_data:        favicon,
           }
         end
       end

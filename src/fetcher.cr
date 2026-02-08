@@ -493,7 +493,7 @@ private def handle_success_response(feed : Feed, response : HTTP::Client::Respon
         # prefer light variant for legacy header_text_color
         if final_header_text.nil? || final_header_text == ""
           begin
-            new_text = (parsed_text.is_a?(Hash) && parsed_text["light"] ? parsed_text["light"] : parsed_text["dark"]) 
+            new_text = (parsed_text.is_a?(Hash) && parsed_text["light"] ? parsed_text["light"] : parsed_text["dark"])
             final_header_text = new_text.to_s if new_text
           rescue
             # ignore parse errors
@@ -566,9 +566,9 @@ private def extract_header_colors(feed : Feed, favicon_path : String?) : {String
 
           # Build canonical theme JSON to persist: {bg: ..., text: {light:..., dark:...}, source: "auto"}
           theme_payload = {
-            "bg" => (extracted.has_key?("bg") ? extracted["bg"] : nil),
-            "text" => parsed_text || {"light" => nil, "dark" => nil},
-            "source" => "auto"
+            "bg"     => (extracted.has_key?("bg") ? extracted["bg"] : nil),
+            "text"   => parsed_text || {"light" => nil, "dark" => nil},
+            "source" => "auto",
           }
 
           # Build theme JSON string to return to caller; persistence will be handled

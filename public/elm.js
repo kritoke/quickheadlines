@@ -15172,19 +15172,27 @@ var $author$project$Pages$Home_$feedItem = F4(
 	function (now, theme, insertedIds, item) {
 		var txtColor = $author$project$Theme$textColor(theme);
 		var mutedTxt = $author$project$Theme$mutedColor(theme);
+		var wrapperAttrs = _List_fromArray(
+			[
+				$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill),
+				$mdgriffith$elm_ui$Element$spacing(8),
+				$mdgriffith$elm_ui$Element$htmlAttribute(
+				A2($elm$html$Html$Attributes$style, 'min-width', '0'))
+			]);
 		var isInserted = A2($elm$core$Set$member, item.H, insertedIds);
-		var wrapperAttrs = _Utils_ap(
+		var linkAttrs = _Utils_ap(
 			_List_fromArray(
 				[
-					$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill),
-					$mdgriffith$elm_ui$Element$spacing(8),
+					$mdgriffith$elm_ui$Element$Font$color(txtColor),
 					$mdgriffith$elm_ui$Element$htmlAttribute(
-					A2($elm$html$Html$Attributes$style, 'min-width', '0'))
+					A2($elm$html$Html$Attributes$style, 'text-decoration', 'none'))
 				]),
 			isInserted ? _List_fromArray(
 				[
 					$mdgriffith$elm_ui$Element$htmlAttribute(
-					$elm$html$Html$Attributes$class('timeline-inserted'))
+					A2($elm$html$Html$Attributes$style, 'animation', 'qh-insert 300ms ease-out both, qh-flash-light 180ms ease-out')),
+					$mdgriffith$elm_ui$Element$htmlAttribute(
+					A2($elm$html$Html$Attributes$style, 'will-change', 'opacity, transform, background-color'))
 				]) : _List_Nil);
 		return A2(
 			$mdgriffith$elm_ui$Element$row,
@@ -15229,12 +15237,7 @@ var $author$project$Pages$Home_$feedItem = F4(
 						[
 							A2(
 							$mdgriffith$elm_ui$Element$link,
-							_List_fromArray(
-								[
-									$mdgriffith$elm_ui$Element$Font$color(txtColor),
-									$mdgriffith$elm_ui$Element$htmlAttribute(
-									A2($elm$html$Html$Attributes$style, 'text-decoration', 'none'))
-								]),
+							linkAttrs,
 							{
 								aN: $mdgriffith$elm_ui$Element$text(item.O),
 								aD: item.H
@@ -15254,6 +15257,10 @@ var $author$project$Pages$Home_$feedItem = F4(
 				]));
 	});
 var $mdgriffith$elm_ui$Element$Font$medium = A2($mdgriffith$elm_ui$Internal$Model$Class, $mdgriffith$elm_ui$Internal$Flag$fontWeight, $mdgriffith$elm_ui$Internal$Style$classes.d1);
+var $author$project$Theme$testId = function (name) {
+	return $mdgriffith$elm_ui$Element$htmlAttribute(
+		A2($elm$html$Html$Attributes$attribute, 'data-name', name));
+};
 var $author$project$Theme$themeToColors = function (theme) {
 	if (!theme) {
 		return {
@@ -15382,7 +15389,9 @@ var $author$project$Pages$Home_$feedCard = F6(
 					$mdgriffith$elm_ui$Element$Border$width(1),
 					$mdgriffith$elm_ui$Element$Border$color(border),
 					$mdgriffith$elm_ui$Element$spacing(8),
-					$mdgriffith$elm_ui$Element$padding(12)
+					$mdgriffith$elm_ui$Element$padding(12),
+					$author$project$Theme$semantic('feed-card'),
+					$author$project$Theme$testId('feed-card')
 				]),
 			_List_fromArray(
 				[
@@ -15393,7 +15402,8 @@ var $author$project$Pages$Home_$feedCard = F6(
 						_List_fromArray(
 							[
 								$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill),
-								$mdgriffith$elm_ui$Element$spacing(4)
+								$mdgriffith$elm_ui$Element$spacing(4),
+								$author$project$Theme$semantic('feed-body')
 							]),
 						scrollAttributes),
 					_Utils_ap(
@@ -16602,13 +16612,7 @@ var $author$project$Pages$Timeline$clusterItem = F7(
 				$mdgriffith$elm_ui$Element$htmlAttribute(
 				A2($elm$html$Html$Attributes$attribute, 'data-timeline-item', 'true'))
 			]);
-		var rowAttrs = isInserted ? _Utils_ap(
-			baseAttrs,
-			_List_fromArray(
-				[
-					$mdgriffith$elm_ui$Element$htmlAttribute(
-					$elm$html$Html$Attributes$class('timeline-inserted'))
-				])) : baseAttrs;
+		var rowAttrs = baseAttrs;
 		return A2(
 			$mdgriffith$elm_ui$Element$column,
 			_List_fromArray(
@@ -16858,7 +16862,15 @@ var $author$project$Pages$Timeline$clusterItem = F7(
 												$mdgriffith$elm_ui$Element$text('•')),
 												A2(
 												$mdgriffith$elm_ui$Element$link,
-												linkAttrs,
+												_Utils_ap(
+													linkAttrs,
+													isInserted ? _List_fromArray(
+														[
+															$mdgriffith$elm_ui$Element$htmlAttribute(
+															A2($elm$html$Html$Attributes$style, 'animation', 'qh-insert 300ms ease-out both, qh-flash-light 180ms ease-out')),
+															$mdgriffith$elm_ui$Element$htmlAttribute(
+															A2($elm$html$Html$Attributes$style, 'will-change', 'opacity, transform, background-color'))
+														]) : _List_Nil),
 												{
 													aN: $mdgriffith$elm_ui$Element$text(cluster.b_.O),
 													aD: cluster.b_.H
