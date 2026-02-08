@@ -1,5 +1,5 @@
 .timeline-inserted {
-  animation: qh-insert 300ms cubic-bezier(.22,.9,.29,1) both;
+  animation: qh-insert 220ms ease-out both;
   /* subtle highlight while animating */
   box-shadow: 0 6px 18px rgba(16,24,40,0.06);
 }
@@ -9,17 +9,16 @@
 }
 
 @keyframes qh-insert {
-  from { opacity: 0; transform: translateY(12px) scale(0.997); }
-  60% { opacity: 1; transform: translateY(-2px) scale(1.001); }
-  to { opacity: 1; transform: translateY(0) scale(1); }
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 /* Scroll shadow to indicate more content in feed boxes (matches v0.4.0 behavior) */
-.feed-box {
+.feed-box, [data-semantic="feed-card"] {
   position: relative; /* required for the ::after gradient */
 }
 
-.feed-box::after {
+.feed-box::after, [data-semantic="feed-card"]::after {
   content: "";
   position: absolute;
   bottom: 0;
@@ -38,7 +37,7 @@
   }
 }
 
-.feed-box.is-at-bottom::after {
+.feed-box.is-at-bottom::after, [data-semantic="feed-card"].is-at-bottom::after {
   opacity: 0;
 }
 

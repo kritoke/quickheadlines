@@ -49,8 +49,8 @@
       }
 
       function updateFeedBoxClass(feedBox) {
-        try {
-          var body = feedBox.querySelector('.feed-body');
+          try {
+           var body = feedBox.querySelector('[data-semantic="feed-body"]') || feedBox.querySelector('.feed-body');
           if (!body) {
             // fallback: try to find a scrollable descendant
             body = findScrollableDescendant(feedBox);
@@ -60,8 +60,8 @@
         } catch (e) { /* ignore */ }
       }
 
-      function setupScrollForFeedBox(feedBox) {
-        var body = feedBox.querySelector('.feed-body');
+       function setupScrollForFeedBox(feedBox) {
+         var body = feedBox.querySelector('[data-semantic="feed-body"]') || feedBox.querySelector('.feed-body');
         if (!body) {
           body = findScrollableDescendant(feedBox);
         }
@@ -91,9 +91,12 @@
         return null;
       }
 
-      function scanAndAttach() {
-        document.querySelectorAll('.feed-box').forEach(setupScrollForFeedBox);
-      }
+       function scanAndAttach() {
+         // Prefer semantic attribute selector, fall back to legacy class
+         var nodes = document.querySelectorAll('[data-semantic="feed-card"]');
+         if (!nodes.length) nodes = document.querySelectorAll('.feed-box');
+         nodes.forEach(setupScrollForFeedBox);
+       }
 
       // Watch for feed-box additions/removals
       var mo = new MutationObserver(function () { scanAndAttach(); });

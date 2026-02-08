@@ -754,14 +754,18 @@ feedItem now theme insertedIds item =
             , spacing 8
             , htmlAttribute (Html.Attributes.style "min-width" "0")
             ]
-            ++ (if isInserted then [ htmlAttribute (Html.Attributes.class "timeline-inserted") ] else [])
     in
     let
         linkAttrs =
             [ Font.color txtColor
             , htmlAttribute (Html.Attributes.style "text-decoration" "none")
             ]
-            ++ (if isInserted then [ htmlAttribute (Html.Attributes.class "timeline-inserted") ] else [])
+            ++ (if isInserted then
+                    [ htmlAttribute (Html.Attributes.style "animation" "qh-insert 220ms ease-out both")
+                    , htmlAttribute (Html.Attributes.style "will-change" "opacity, transform")
+                    ]
+                else
+                    [])
     in
     row
         ([ width fill ] ++ wrapperAttrs)
