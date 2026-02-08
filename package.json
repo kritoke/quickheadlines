@@ -1,8 +1,10 @@
 {
   "devDependencies": {
     "@playwright/test": "^1.57.0",
+    "elm-optimize-level-2": "^0.3.5",
+    "elm-pages": "^3.0.0",
     "elm-review": "^2.13.0",
-    "elm-pages": "^3.0.0"
+    "lamdera": "^0.19.1-1.4.0"
   },
   "optionalDependencies": {
     "jsdom": "^27.4.0",

@@ -26,7 +26,7 @@
                nodejs
               git curl gnumake gcc
               openspec.packages.${system}.default
-              pkgs.playwright-driver.browsers
+               pkgs.playwright-driver.browsers
               ameba
             ];
 
@@ -37,6 +37,13 @@
             ln -sf ${pkgs.crystal}/bin/crystal ~/.local/bin/crystal
             ln -sf ${pkgs.crystal}/bin/shards ~/.local/bin/shards
             ln -sf ${openspec.packages.${system}.default}/bin/openspec ~/.local/bin/openspec
+            # Ensure node/npm/npx are available on PATH via local symlinks
+            if [ -x "${pkgs.nodejs}/bin/npm" ]; then
+              ln -sf ${pkgs.nodejs}/bin/npm ~/.local/bin/npm || true
+            fi
+            if [ -x "${pkgs.nodejs}/bin/npx" ]; then
+              ln -sf ${pkgs.nodejs}/bin/npx ~/.local/bin/npx || true
+            fi
 
             # Ensure the openspec package's bin directory is first on PATH so the
             # binary is resolvable in all subsequent shell commands.
