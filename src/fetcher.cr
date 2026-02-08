@@ -12,27 +12,31 @@ require "./services/clustering_service"
 
 # Validates that data is actually an image by checking magic bytes
 # Some servers lie about content-type, so we verify the actual content
+private def png_magic?(data : Bytes) : Bool
+  data.size >= 8 && data[0..7] == Bytes[0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]
+end
+
+private def jpeg_magic?(data : Bytes) : Bool
+  data.size >= 3 && data[0..2] == Bytes[0xFF, 0xD8, 0xFF]
+end
+
+private def ico_magic?(data : Bytes) : Bool
+  data.size >= 4 && data[0] == 0x00 && data[1] == 0x00 && (data[2] == 0x01 || data[2] == 0x02) && data[3] == 0x00
+end
+
+private def svg_magic?(data : Bytes) : Bool
+  (data.size >= 5 && data[0..4] == Bytes[0x3C, 0x3F, 0x78, 0x6D, 0x6C]) ||
+    (data.size >= 4 && data[0..3] == Bytes[0x3C, 0x73, 0x76, 0x67])
+end
+
+private def webp_magic?(data : Bytes) : Bool
+  data.size >= 12 && data[0..3] == Bytes[0x52, 0x49, 0x46, 0x46] && data[8..11] == Bytes[0x57, 0x45, 0x42, 0x50]
+end
+
 private def valid_image?(data : Bytes) : Bool
   return false if data.size < 4
 
-  # Check for common image magic bytes
-  # PNG: 89 50 4E 47 0D 0A 1A 0A
-  return true if data[0..7] == Bytes[0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]
-
-  # JPEG: FF D8 FF
-  return true if data[0..2] == Bytes[0xFF, 0xD8, 0xFF]
-
-  # ICO: 00 00 01 00 or 00 00 02 00
-  return true if data[0] == 0x00 && data[1] == 0x00 && (data[2] == 0x01 || data[2] == 0x02) && data[3] == 0x00
-
-  # SVG: <?xml or <svg
-  return true if data[0..4] == Bytes[0x3C, 0x3F, 0x78, 0x6D, 0x6C] # <?xml
-  return true if data[0..3] == Bytes[0x3C, 0x73, 0x76, 0x67]       # <svg
-
-  # WebP: RIFF....WEBP
-  return true if data[0..3] == Bytes[0x52, 0x49, 0x46, 0x46] && data[8..11] == Bytes[0x57, 0x45, 0x42, 0x50]
-
-  false
+  png_magic?(data) || jpeg_magic?(data) || ico_magic?(data) || svg_magic?(data) || webp_magic?(data)
 end
 
 # Helper module for generating favicon URLs
