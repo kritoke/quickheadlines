@@ -40,11 +40,11 @@ elm-pages-init:
 
 elm-pages-build:
 	@echo "Building elm-pages (requires node & elm-pages)."
-	@npx elm-pages v3 build --output=public || (echo "elm-pages build failed. If running in nix devshell, run 'npm install' in project root to install node deps." && exit 1)
+	@npx elm-pages build --output=public || (echo "elm-pages build failed. If running in nix devshell, run 'npm install' in project root to install node deps." && exit 1)
 
 elm-pages-serve:
 	@echo "Serving elm-pages (requires node & elm-pages)."
-	@npx elm-pages v3 serve
+	@npx elm-pages serve
 
 elm-format:
 	@echo "Format Elm sources (requires npx elm-format)"
