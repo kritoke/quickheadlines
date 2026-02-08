@@ -154,33 +154,18 @@ def fetch_favicon_uri(url : String) : String?
           next
         elsif response.status.success?
           content_type = response.content_type || "image/png"
-          memory = IO::Memory.new
-          IO.copy(response.body_io, memory, limit: 100 * 1024)
-          if memory.size == 0
+          memory = read_response_memory(response, 100 * 1024)
+          if memory.nil?
             debug_log("Empty favicon response: #{current_url}")
             return
           end
 
-          # Skip saving tiny gray placeholder icons (198 bytes is the common "not found" size)
-          # For Google favicon URLs, try larger size instead
-              if memory.size == 198
-                debug_log("Gray placeholder detected (#{memory.size} bytes) for #{current_url}")
-                if current_url.includes?("google.com/s2/favicons")
-                  larger_url = current_url.gsub(/sz=\d+/, "sz=256")
-                  cached = FaviconStorage.get_or_fetch(larger_url)
-                  if cached
-                    return cached
-                  end
-                  return fetch_favicon_uri(larger_url)
-                else
-                  # For non-Google URLs, try the Google fallback
-                  debug_log("Trying Google fallback for gray placeholder")
-                  return nil # Trigger Google fallback in try_favicon_fallbacks
-                end
-              end
+          # Handle small gray placeholders (may trigger Google larger size or fallback)
+          if handled = try_handle_gray_placeholder(current_url, memory)
+            return handled
+          end
 
           # Validate that response is actually an image (not HTML or other content)
-          # Some servers lie about content-type, so we check magic bytes
           unless valid_image?(memory.to_slice)
             debug_log("Invalid favicon content (not an image): #{current_url}")
             return nil # Trigger fallback
@@ -188,7 +173,7 @@ def fetch_favicon_uri(url : String) : String?
 
           debug_log("Favicon fetched: #{current_url}, size=#{memory.size}, type=#{content_type}")
 
-          if saved_url = FaviconStorage.save_favicon(current_url, memory.to_slice, content_type)
+          if saved_url = save_favicon_memory(current_url, memory, content_type)
             debug_log("Favicon saved: #{saved_url}")
             return saved_url
           else
@@ -212,6 +197,35 @@ def fetch_favicon_uri(url : String) : String?
       return
     end
   end
+end
+
+private def read_response_memory(response : HTTP::Client::Response, max_bytes : Int32) : IO::Memory?
+  memory = IO::Memory.new
+  IO.copy(response.body_io, memory, limit: max_bytes)
+  return memory if memory.size > 0
+  nil
+end
+
+private def try_handle_gray_placeholder(current_url : String, memory : IO::Memory) : String?
+  # Skip saving tiny gray placeholder icons (198 bytes is the common "not found" size)
+  if memory.size == 198
+    debug_log("Gray placeholder detected (#{memory.size} bytes) for #{current_url}")
+    if current_url.includes?("google.com/s2/favicons")
+      larger_url = current_url.gsub(/sz=\d+/, "sz=256")
+      cached = FaviconStorage.get_or_fetch(larger_url)
+      return cached if cached
+      return fetch_favicon_uri(larger_url)
+    else
+      # For non-Google URLs, try the Google fallback
+      debug_log("Trying Google fallback for gray placeholder")
+      return nil # Trigger Google fallback in try_favicon_fallbacks
+    end
+  end
+  nil
+end
+
+private def save_favicon_memory(current_url : String, memory : IO::Memory, content_type : String) : String?
+  FaviconStorage.save_favicon(current_url, memory.to_slice, content_type)
 end
 
 private def resolve_favicon(feed : Feed, site_link : String?, parsed_favicon : String?) : String?
