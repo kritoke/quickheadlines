@@ -83,9 +83,9 @@ module ColorExtractor
     # cyclomatic complexity and make behavior easier to test.
     begin
       if full_path.downcase.ends_with?(".ico")
-        return handle_ico_file(full_path)
+        handle_ico_file(full_path)
       else
-        return handle_generic_crimage(full_path)
+        handle_generic_crimage(full_path)
       end
     rescue
       nil
@@ -554,7 +554,7 @@ module ColorExtractor
   # source set to "auto-corrected" when an upgrade is performed, or nil
   # otherwise.
   def self.auto_upgrade_to_auto_corrected(theme_json : String?) : String?
-    return nil unless theme_json && !theme_json.empty?
+    return nil if theme_json.nil? || theme_json.empty?
 
     parsed = JSON.parse(theme_json) rescue nil
     return nil unless parsed.is_a?(JSON::Any)
@@ -570,40 +570,48 @@ module ColorExtractor
     return nil unless bg_rgb
 
     txt = h["text"]
-    txt_h = {} of String => String
-    if txt.is_a?(Hash) || txt.is_a?(JSON::Any)
-      begin
-        tmp = txt.is_a?(JSON::Any) ? txt.as_h : txt.as_h
-        tmp.each do |k, v|
-          txt_h[k.to_s] = v.to_s
-        end
-      rescue
-      end
-    elsif txt
-      txt_h["light"] = txt.to_s
-      txt_h["dark"] = txt.to_s
-    end
+    txt_h = parse_text_hash(txt)
 
-    # Ensure both roles present and meet contrast
-    light_ok = false
-    dark_ok = false
-    if l = txt_h["light"]
-      if lrgb = parse_color_to_rgb(l)
-        light_ok = contrast_ratio(lrgb, bg_rgb) >= 4.5
-      end
-    end
-    if d = txt_h["dark"]
-      if drgb = parse_color_to_rgb(d)
-        dark_ok = contrast_ratio(drgb, bg_rgb) >= 4.5
-      end
-    end
-
-    if light_ok && dark_ok
+    if roles_meet_contrast(txt_h, bg_rgb)
       final = {"bg" => bg_val.to_s, "text" => {"light" => txt_h["light"], "dark" => txt_h["dark"]}, "source" => "auto-corrected"}
       return final.to_json
     end
 
     nil
+  end
+
+  private def self.parse_text_hash(txt : JSON::Any | Hash(String, JSON::Any) | String?) : Hash(String, String)
+    res = {} of String => String
+    if txt.is_a?(Hash) || txt.is_a?(JSON::Any)
+      begin
+        tmp = txt.is_a?(JSON::Any) ? txt.as_h : txt.as_h
+        tmp.each do |k, v|
+          res[k.to_s] = v.to_s
+        end
+      rescue
+      end
+    elsif txt
+      res["light"] = txt.to_s
+      res["dark"] = txt.to_s
+    end
+    res
+  end
+
+  private def self.roles_meet_contrast(text_hash : Hash(String, String), bg_rgb : Array(Int32)) : Bool
+    return false unless text_hash.key?("light") && text_hash.key?("dark")
+    light_ok = false
+    dark_ok = false
+    if l = text_hash["light"]
+      if lrgb = parse_color_to_rgb(l)
+        light_ok = contrast_ratio(lrgb, bg_rgb) >= 4.5
+      end
+    end
+    if d = text_hash["dark"]
+      if drgb = parse_color_to_rgb(d)
+        dark_ok = contrast_ratio(drgb, bg_rgb) >= 4.5
+      end
+    end
+    light_ok && dark_ok
   end
 
   # Parse incoming theme JSON into canonical pieces.
