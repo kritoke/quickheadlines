@@ -3,6 +3,7 @@ require "uri"
 require "mutex"
 require "./favicon_storage"
 require "./health_monitor"
+require "./utils"
 
 # Validates that data is actually an image by checking magic bytes
 private def png_magic?(data : Bytes) : Bool
@@ -122,17 +123,23 @@ private def handle_favicon_success(current_url : String, response : HTTP::Client
   memory = read_response_memory(response, 100 * 1024)
   return if memory.nil?
 
+  debug_log("handle_favicon_success: #{current_url} content_type=#{content_type} size=#{memory.size}")
+
   if handled = try_handle_gray_placeholder(current_url, memory)
+    debug_log("Gray placeholder handled for #{current_url} -> #{handled}")
     return handled
   end
 
   unless valid_image?(memory.to_slice)
-    debug_log("Invalid favicon content (not an image): #{current_url}")
+    debug_log("Invalid favicon content (not an image): #{current_url} size=#{memory.size} content_type=#{content_type}")
     return nil
   end
 
   if saved_url = save_favicon_memory(current_url, memory, content_type)
+    debug_log("Saved favicon for #{current_url} -> #{saved_url}")
     return saved_url
+  else
+    debug_log("Failed to save favicon for #{current_url}")
   end
   nil
 end
@@ -173,13 +180,18 @@ private def perform_fetch_once(current_url : String) : Tuple(Symbol, String?)
 
   begin
     client.get(uri.request_target, headers: headers) do |response|
+      debug_log("perform_fetch_once: #{current_url} -> status=#{response.status_code}")
       if response.status.redirection? && (location = response.headers["Location"]?)
-        return {:redirect, uri.resolve(location).to_s}
+        resolved = uri.resolve(location).to_s
+        debug_log("perform_fetch_once: redirect to #{resolved}")
+        return {:redirect, resolved}
       elsif response.status.success?
         saved = handle_favicon_success(current_url, response)
+        debug_log("perform_fetch_once: final saved=#{saved.inspect}")
         return {:final, saved}
       else
         # For not_found, forbidden, server errors, or others we treat as final nil
+        debug_log("perform_fetch_once: final nil status=#{response.status_code}")
         return {:final, nil}
       end
     end
@@ -191,7 +203,8 @@ end
 
 def fetch_favicon_uri(url : String) : String?
   debug_log("Fetching favicon: #{url}")
-  current_url = url
+  # normalize to https first where appropriate to match cached keys and avoid plain-http fetches
+  current_url = try_https_first(url)
   redirects = 0
   start_time = Time.monotonic
 
@@ -219,7 +232,8 @@ def fetch_favicon_uri(url : String) : String?
     case action
     when :redirect
       if value
-        current_url = value
+        # ensure we try https variants on redirect as well
+        current_url = try_https_first(value)
         redirects += 1
         debug_log("Favicon redirect #{redirects}: #{current_url}")
         next
