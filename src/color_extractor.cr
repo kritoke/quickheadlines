@@ -616,37 +616,10 @@ module ColorExtractor
 
   # Parse incoming theme JSON into canonical pieces.
   private def self.parse_theme_payload(theme_json : String?, legacy_bg : String?, legacy_text : String?) : Tuple(Array(Int32)?, Hash(String, String), String?)
-    bg_rgb = nil.as(Array(Int32)?)
-    text_hash = {} of String => String
-    source = nil.as(String?)
+    # Try parsing the theme JSON first (extract bg_rgb, text_hash, source)
+    bg_rgb, text_hash, source = parse_theme_json(theme_json)
 
-    if theme_json && !theme_json.empty?
-      parsed = JSON.parse(theme_json) rescue nil
-      if parsed.is_a?(JSON::Any)
-        h = parsed.as_h rescue nil
-        if h
-          bg_val = h["bg"] || h["background"]
-          source = h["source"]? ? h["source"].to_s : nil
-          bg_rgb = parse_color_to_rgb(bg_val.to_s) if bg_val
-
-          txt = h["text"]
-          if txt.is_a?(Hash) || txt.is_a?(JSON::Any)
-            begin
-              tmp = txt.is_a?(JSON::Any) ? txt.as_h : txt.as_h
-              tmp.each do |k, v|
-                text_hash[k.to_s] = v.to_s
-              end
-            rescue
-            end
-          elsif txt
-            text_hash["light"] = txt.to_s
-            text_hash["dark"] = txt.to_s
-          end
-        end
-      end
-    end
-
-    # Fallback to legacy values
+    # Fallback to legacy values if JSON did not provide them
     if !bg_rgb && legacy_bg
       bg_rgb = parse_color_to_rgb(legacy_bg)
     end
@@ -654,6 +627,29 @@ module ColorExtractor
       text_hash["light"] = legacy_text
       text_hash["dark"] = legacy_text
     end
+
+    {bg_rgb, text_hash, source}
+  end
+
+  private def self.parse_theme_json(theme_json : String?) : Tuple(Array(Int32)?, Hash(String, String), String?)
+    bg_rgb = nil.as(Array(Int32)?)
+    text_hash = {} of String => String
+    source = nil.as(String?)
+
+    return {bg_rgb, text_hash, source} if theme_json.nil? || theme_json.empty?
+
+    parsed = JSON.parse(theme_json) rescue nil
+    return {bg_rgb, text_hash, source} unless parsed.is_a?(JSON::Any)
+
+    h = parsed.as_h rescue nil
+    return {bg_rgb, text_hash, source} unless h
+
+    bg_val = h["bg"] || h["background"]
+    source = h["source"]? ? h["source"].to_s : nil
+    bg_rgb = parse_color_to_rgb(bg_val.to_s) if bg_val
+
+    txt = h["text"]
+    text_hash = parse_text_hash(txt)
 
     {bg_rgb, text_hash, source}
   end
