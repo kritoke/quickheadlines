@@ -29,7 +29,7 @@
 ## 6. Build and Verify
 
 - [ ] 6.1 Run `nix develop . --command crystal build src/quickheadlines.cr` (must succeed)
-- [ ] 6.2 Run `nix develop . --command cd ui && elm make src/Main.elm --output=../public/elm.js`
+ - [ ] 6.2 Run `nix develop . --command make elm-build` (or use `workdir=ui nix develop . --command 'elm make src/Main.elm --output=../public/elm.js')`
 - [ ] 6.3 Run `nix develop . --command npx playwright test` (must pass)
 - [ ] 6.4 Manually verify header and day headers in light/dark modes
 - [ ] 6.5 Manually verify mobile responsive sizing (360px, 768px)

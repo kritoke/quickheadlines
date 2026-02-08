@@ -31,7 +31,7 @@ The UI timeline view places a small "pill" with the feed/site title next to each
 
 1. Implement Elm edits with mobile-only conditional padding and line-height.
 2. Add CSS fallback in `views/index.html` under existing `@media (max-width: 640px)` block.
-3. Rebuild Elm (`nix develop . --command cd ui && elm make src/Main.elm --output=../public/elm.js`) and run the dev server (`nix develop . --command make run`).
+3. Rebuild Elm (`nix develop . --command make elm-build`) and run the dev server (`nix develop . --command make run`).
 4. Verify visually and with Playwright tests. If snapshots fail, update them after human review.
 
 ## Open Questions

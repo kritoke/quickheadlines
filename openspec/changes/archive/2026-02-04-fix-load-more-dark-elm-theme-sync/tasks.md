@@ -13,7 +13,7 @@
 
 ## 3. Build and Verify
 
-- [x] 3.1 Build Elm bundle: `nix develop . --command cd ui && elm make src/Main.elm --output=../public/elm.js`
+ - [x] 3.1 Build Elm bundle: `nix develop . --command make elm-build` (or use `workdir=ui nix develop . --command 'elm make src/Main.elm --output=../public/elm.js')`
 - [x] 3.2 Compile backend: `nix develop . --command crystal build src/quickheadlines.cr`
 - [x] 3.3 Run all Playwright tests: `nix develop . --command npx playwright test`
 - [x] 3.4 Manual verification: server runs without errors (Playwright tests cover the behavior)
