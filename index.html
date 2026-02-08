@@ -107,6 +107,118 @@
       // Also run at intervals briefly to catch late renders
       var _count = 0; var _int = setInterval(function () { scanAndAttach(); _count++; if (_count > 20) clearInterval(_int); }, 250);
     })();
+
+    // Debug panel: visible when ?debug=true is in the URL. Non-destructive helper to
+    // inspect feed-card counts, inserted animations, and ::after background.
+    (function () {
+      function makeDebugPanel() {
+        var panel = document.createElement('div');
+        panel.id = 'qh-debug-panel';
+        panel.style.position = 'fixed';
+        panel.style.left = '12px';
+        panel.style.bottom = '12px';
+        panel.style.zIndex = '99999';
+        panel.style.background = 'rgba(0,0,0,0.75)';
+        panel.style.color = 'white';
+        panel.style.padding = '8px 10px';
+        panel.style.borderRadius = '8px';
+        panel.style.fontSize = '12px';
+        panel.style.fontFamily = 'system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial';
+        panel.style.maxWidth = '320px';
+        panel.style.boxShadow = '0 8px 30px rgba(2,6,23,0.5)';
+
+        var title = document.createElement('div');
+        title.textContent = 'QuickHeadlines Debug';
+        title.style.fontWeight = '600';
+        title.style.marginBottom = '6px';
+        panel.appendChild(title);
+
+        var content = document.createElement('pre');
+        content.id = 'qh-debug-content';
+        content.style.whiteSpace = 'pre-wrap';
+        content.style.margin = '0';
+        content.style.maxHeight = '260px';
+        content.style.overflow = 'auto';
+        content.textContent = 'Initializing...';
+        panel.appendChild(content);
+
+        var btnRow = document.createElement('div');
+        btnRow.style.display = 'flex';
+        btnRow.style.gap = '6px';
+        btnRow.style.marginTop = '8px';
+
+        var copyBtn = document.createElement('button');
+        copyBtn.textContent = 'Copy';
+        copyBtn.style.flex = '1';
+        copyBtn.style.padding = '6px';
+        copyBtn.style.borderRadius = '6px';
+        copyBtn.style.border = 'none';
+        copyBtn.style.cursor = 'pointer';
+        copyBtn.onclick = function () {
+          navigator.clipboard && navigator.clipboard.writeText(content.textContent || '');
+        };
+        btnRow.appendChild(copyBtn);
+
+        var closeBtn = document.createElement('button');
+        closeBtn.textContent = 'Hide';
+        closeBtn.style.flex = '1';
+        closeBtn.style.padding = '6px';
+        closeBtn.style.borderRadius = '6px';
+        closeBtn.style.border = 'none';
+        closeBtn.style.cursor = 'pointer';
+        closeBtn.onclick = function () { panel.style.display = 'none'; };
+        btnRow.appendChild(closeBtn);
+
+        panel.appendChild(btnRow);
+        document.body.appendChild(panel);
+        return { panel: panel, content: content };
+      }
+
+      function readDiagnostics() {
+        var card = document.querySelector('[data-semantic="feed-card"]') || document.querySelector('.feed-box');
+        var cards = document.querySelectorAll('[data-semantic="feed-card"]');
+        if (!cards.length) cards = document.querySelectorAll('.feed-box');
+        var feedBody = card ? (card.querySelector('[data-semantic="feed-body"]') || card.querySelector('.feed-body')) : null;
+
+        function pseudoProp(el, pseudo, prop) {
+          try { if (!el) return null; return window.getComputedStyle(el, pseudo).getPropertyValue(prop) || null; } catch (e) { return null; }
+        }
+
+        var afterBg = pseudoProp(card, '::after', 'background-image') || pseudoProp(card, '::after', 'background');
+
+        var inserted = Array.from(document.querySelectorAll('.timeline-inserted'));
+        var insertedSample = inserted.slice(0,5).map(function (el) { return { tag: el.tagName, classes: el.className }; });
+
+        var anims = inserted.map(function (el) {
+          try { return window.getComputedStyle(el as any).getPropertyValue('animation-name'); } catch (e) { return null; }
+        });
+
+        var isAtBottomCount = 0;
+        cards.forEach(function (c) { if (c.classList && c.classList.contains('is-at-bottom')) isAtBottomCount++; });
+
+        return {
+          timestamp: new Date().toLocaleTimeString(),
+          cards: cards.length,
+          hasFeedBody: !!feedBody,
+          insertedCount: inserted.length,
+          insertedSample: insertedSample,
+          animationNames: anims.filter(Boolean).slice(0,5),
+          afterBg: afterBg,
+          isAtBottomCount: isAtBottomCount
+        };
+      }
+
+      function renderDiagnostics(contentEl, obj) {
+        contentEl.textContent = JSON.stringify(obj, null, 2);
+      }
+
+      if (location.search.indexOf('debug=true') !== -1) {
+        var dbg = makeDebugPanel();
+        function tick() { var d = readDiagnostics(); renderDiagnostics(dbg.content, d); }
+        tick();
+        var dbgInterval = setInterval(tick, 700);
+      }
+    })();
   </script>
 </body>
 </html>
