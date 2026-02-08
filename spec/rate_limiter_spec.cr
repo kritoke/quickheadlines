@@ -79,7 +79,7 @@ end
 describe Quickheadlines::RateLimiting::RateLimiter do
   describe "#check_limit" do
     it "allows first request within limit" do
-      ip = "unique-test-#{__LINE__}-#{Time.utc.to_unix}"
+    ip = "unique-test-#{Time.utc.to_unix}"
       result = Quickheadlines::RateLimiting::RateLimiter.new.check_limit(ip, "read")
 
       result[:allowed].should be_true
@@ -88,7 +88,7 @@ describe Quickheadlines::RateLimiting::RateLimiter do
     end
 
     it "denies request when limit exceeded for expensive category" do
-      ip = "unique-exceeded-#{__LINE__}-#{Time.utc.to_unix}"
+      ip = "unique-exceeded-#{Time.utc.to_unix}"
       limiter = Quickheadlines::RateLimiting::RateLimiter.new
 
       6.times do
@@ -101,8 +101,8 @@ describe Quickheadlines::RateLimiting::RateLimiter do
     end
 
     it "tracks requests per IP separately" do
-      ip1 = "unique-ip1-#{__LINE__}-#{Time.utc.to_unix}"
-      ip2 = "unique-ip2-#{__LINE__}-#{Time.utc.to_unix}"
+      ip1 = "unique-ip1-#{Time.utc.to_unix}"
+      ip2 = "unique-ip2-#{Time.utc.to_unix}"
       limiter = Quickheadlines::RateLimiting::RateLimiter.new
 
       6.times { limiter.check_limit(ip1, "expensive") }
@@ -114,7 +114,7 @@ describe Quickheadlines::RateLimiting::RateLimiter do
     end
 
     it "tracks requests per category separately" do
-      ip = "unique-cat-#{__LINE__}-#{Time.utc.to_unix}"
+      ip = "unique-cat-#{Time.utc.to_unix}"
       limiter = Quickheadlines::RateLimiting::RateLimiter.new
 
       6.times { limiter.check_limit(ip, "expensive") }
@@ -126,7 +126,7 @@ describe Quickheadlines::RateLimiting::RateLimiter do
     end
 
     it "returns reset_at timestamp" do
-      ip = "unique-reset-#{__LINE__}-#{Time.utc.to_unix}"
+      ip = "unique-reset-#{Time.utc.to_unix}"
       result = Quickheadlines::RateLimiting::RateLimiter.new.check_limit(ip, "read")
 
       result[:reset_at].should be > Time.utc.to_unix
@@ -135,13 +135,13 @@ describe Quickheadlines::RateLimiting::RateLimiter do
 
   describe "#should_rate_limit?" do
     it "returns false when under limit" do
-      ip = "unique-under-#{__LINE__}-#{Time.utc.to_unix}"
+      ip = "unique-under-#{Time.utc.to_unix}"
       limiter = Quickheadlines::RateLimiting::RateLimiter.new
       limiter.should_rate_limit?(ip, "expensive").should be_false
     end
 
     it "returns true when limit exceeded" do
-      ip = "unique-limit-#{__LINE__}-#{Time.utc.to_unix}"
+      ip = "unique-limit-#{Time.utc.to_unix}"
       limiter = Quickheadlines::RateLimiting::RateLimiter.new
 
       6.times { limiter.check_limit(ip, "expensive") }
@@ -152,7 +152,7 @@ describe Quickheadlines::RateLimiting::RateLimiter do
 
   describe "#stats" do
     it "returns hash with expected structure" do
-      ip = "unique-stats-#{__LINE__}-#{Time.utc.to_unix}"
+      ip = "unique-stats-#{Time.utc.to_unix}"
       limiter = Quickheadlines::RateLimiting::RateLimiter.new
 
       limiter.check_limit(ip, "expensive")

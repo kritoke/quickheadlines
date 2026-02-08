@@ -561,17 +561,17 @@ module ColorExtractor
 
       # Evaluate contrasts
       good_candidates = [] of {key: String, rgb: Array(Int32), contrast: Float64}
-      candidates.each do |c|
-        cr = contrast_ratio(c[:rgb], bg_rgb)
+      candidates.each do |candidate|
+        cr = contrast_ratio(candidate[:rgb], bg_rgb)
         if cr >= 4.5
-          good_candidates << {key: c[:key], rgb: c[:rgb], contrast: cr}
+          good_candidates << {key: candidate[:key], rgb: candidate[:rgb], contrast: cr}
         end
       end
 
       corrected = false
       if good_candidates.size > 0
         # Prefer legacy if it's good; otherwise pick the highest contrast
-        pick = good_candidates.find { |g| g[:key] == "legacy" } || good_candidates.max_by { |g| g[:contrast] }
+        pick = good_candidates.find { |g| g[:key] == "legacy" } || good_candidates.max_by { |cand| cand[:contrast] }
         chosen_hex = rgb_to_hex(pick[:rgb])
         # Ensure both roles are filled: light/dark
         out_text = {"light" => chosen_hex, "dark" => chosen_hex}

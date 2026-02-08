@@ -12,7 +12,7 @@ FaviconStorage.init
 
 def update_feed_theme_colors_db(feed_url : String, theme_json : String)
   db_path = get_cache_db_path(nil)
-  DB.open("sqlite3://#{db_path}") do |db|
+  DB.open("sqlite3://#{db_path}") do |db_conn|
     normalized = normalize_feed_url(feed_url)
     existing = db.query_one?("SELECT id FROM feeds WHERE url = ?", normalized, as: {Int64})
     if existing.nil?
@@ -32,7 +32,7 @@ def main
 
   feeds = {} of String => FeedData
   db_path = get_cache_db_path(nil)
-  DB.open("sqlite3://#{db_path}") do |db|
+  DB.open("sqlite3://#{db_path}") do |db_conn|
     db.query("SELECT url, title, site_link, header_color, header_text_color, header_theme_colors, favicon, favicon_data FROM feeds") do |rows|
       rows.each do
         url = rows.read(String)
@@ -55,7 +55,7 @@ def main
   processed = 0
   updated = 0
 
-  feeds.each do |url, feed_data|
+  feeds.each do |_url, feed_data|
     processed += 1
     begin
       # Skip if already present

@@ -1,3 +1,3 @@
 require "./spec_helper"
 
-# TODO: Write tests for favicon caching and storage
+# Tests for favicon caching and storage are TODO — they are intentionally omitted for now.

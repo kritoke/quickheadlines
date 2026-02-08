@@ -33,11 +33,11 @@ if File.exists?(db_path)
     puts "Total feeds: #{count || 0}"
 
     db.query("SELECT id, url, favicon, favicon_data FROM feeds") do |rows|
-      rows.each do
-        id = rows.read(Int64)
-        url = rows.read(String)
-        favicon = rows.read(String?)
-        favicon_data = rows.read(String?)
+      rows.each do |row|
+        id = row.read(Int64)
+        url = row.read(String)
+        favicon = row.read(String?)
+        favicon_data = row.read(String?)
         puts "- #{id} | #{url} | favicon=#{favicon.inspect} | favicon_data=#{favicon_data.inspect}"
       end
     end
