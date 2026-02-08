@@ -140,6 +140,16 @@ module ColorExtractor
     return {nil, 0} if w == 0 || h == 0
 
     sample_size = 1000
+    r_total, g_total, b_total, count, opaque_count = sample_pixels_from_crimage(img, sample_size)
+
+    return {nil, opaque_count} if count == 0
+
+    {[(r_total / count).to_i32, (g_total / count).to_i32, (b_total / count).to_i32], opaque_count}
+  end
+
+  private def self.sample_pixels_from_crimage(img, sample_size : Int32) : Tuple(Int32, Int32, Int32, Int32, Int32)
+    w = img.bounds.width
+    h = img.bounds.height
     step = ((w * h) / sample_size).to_i32
     step = 1 if step < 1
 
@@ -186,9 +196,7 @@ module ColorExtractor
       end
     end
 
-    return {nil, opaque_count} if count == 0
-
-    {[(r_total / count).to_i32, (g_total / count).to_i32, (b_total / count).to_i32], opaque_count}
+    {r_total, g_total, b_total, count, opaque_count}
   end
 
   private def self.parse_rgb_string(str : String) : Array(Int32)?
