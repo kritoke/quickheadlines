@@ -554,7 +554,7 @@ view shared model =
                   )
                 ]
                 Element.none
-          , debugPanel
+          
           , if model.loading && List.isEmpty model.clusters then
             el
                 [ centerX
@@ -751,7 +751,7 @@ dayClusterSection breakpoint zone now theme expandedClusters insertedIds dayGrou
     , column
         [ width fill
         , spacing 0
-        , paddingEach { top = 16, bottom = 32, left = 0, right = 0 }
+        , paddingEach { top = 24, bottom = 32, left = 0, right = 0 }
         ]
         (List.map (clusterItem breakpoint zone now theme expandedClusters insertedIds) dayGroup.clusters)
     ]
