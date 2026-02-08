@@ -319,7 +319,7 @@ headerView model =
                         (Ty.hero breakpoint
                             ++ [ Font.color txtColor
                                , centerY
-                                , htmlAttribute (HA.style "padding" "0px 6px")
+                               , paddingEach { top = 0, bottom = 0, left = 6, right = 6 }
                                ]
                         )
                         (text "Quick Headlines")
@@ -363,7 +363,7 @@ headerView model =
             , timelineIconView model Timeline
             ]
         , -- Actions Section
-          Element.el [ alignRight, centerY, htmlAttribute (HA.style "padding-right" "8px") ] (themeToggle model)
+          Element.el [ alignRight, centerY, paddingEach { top = 0, bottom = 0, left = 0, right = 8 } ] (themeToggle model)
         ]
 
 
