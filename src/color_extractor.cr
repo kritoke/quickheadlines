@@ -96,6 +96,25 @@ module ColorExtractor
     icon = CrImage::ICO.read_all(full_path) rescue nil
     return nil unless icon
 
+    if best_rgb = select_best_icon_rgb(icon)
+      build_theme_aware_result(best_rgb)
+    else
+      nil
+    end
+  end
+
+  private def self.handle_generic_crimage(full_path : String) : Hash(String, String | Hash(String, String))?
+    img = CrImage.read(full_path)
+    w = img.bounds.width
+    h = img.bounds.height
+    return nil if w == 0 || h == 0
+
+    dominant, _opaque = dominant_from_crimage(img)
+    return nil if dominant.nil?
+    build_theme_aware_result(dominant)
+  end
+
+  private def self.select_best_icon_rgb(icon) : Array(Int32)?
     best_rgb : Array(Int32)? = nil
     best_opaque : Int32 = -1
     best_area : Int32 = -1
@@ -112,24 +131,12 @@ module ColorExtractor
       end
     end
 
-    return nil if best_rgb.nil?
-
-    text_colors = theme_aware_text_color(best_rgb)
-    bg_rgb = "rgb(#{best_rgb[0]}, #{best_rgb[1]}, #{best_rgb[2]})"
-    {"bg" => bg_rgb, "text" => text_colors}
+    best_rgb
   end
 
-  private def self.handle_generic_crimage(full_path : String) : Hash(String, String | Hash(String, String))?
-    img = CrImage.read(full_path)
-    w = img.bounds.width
-    h = img.bounds.height
-    return nil if w == 0 || h == 0
-
-    dominant, _opaque = dominant_from_crimage(img)
-    return nil if dominant.nil?
-
-    text_colors = theme_aware_text_color(dominant)
-    bg_rgb = "rgb(#{dominant[0]}, #{dominant[1]}, #{dominant[2]})"
+  private def self.build_theme_aware_result(rgb : Array(Int32)) : Hash(String, String | Hash(String, String))?
+    text_colors = theme_aware_text_color(rgb)
+    bg_rgb = "rgb(#{rgb[0]}, #{rgb[1]}, #{rgb[2]})"
     {"bg" => bg_rgb, "text" => text_colors}
   end
 
