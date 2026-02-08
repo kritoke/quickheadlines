@@ -1,8 +1,7 @@
 .timeline-inserted {
-  /* Slightly slower insert to be more noticeable */
+  /* Slightly slower insert to be more noticeable; only animate opacity/transform to avoid color flashes */
   animation: qh-insert 300ms ease-out both;
-  /* subtle highlight while animating */
-  box-shadow: 0 6px 18px rgba(16,24,40,0.06);
+  will-change: opacity, transform;
 }
 
 .timeline-inserted-wrapper {
@@ -37,11 +36,46 @@
 }
 
 @media (prefers-color-scheme: dark), [data-theme="dark"] {
-  .feed-box::after, [data-semantic="feed-card"]::after {
+.feed-box::after, [data-semantic="feed-card"]::after {
     /* darker shadow in dark mode for contrast */
     background: linear-gradient(to bottom, rgba(0,0,0,0), rgba(0,0,0,0.6));
     box-shadow: inset 0 -8px 18px -10px rgba(0,0,0,0.5);
   }
+}
+
+/* Additional explicit visual affordance: a small "More" pill centered at the bottom of feed cards
+   This complements the gradient and is helpful on low-contrast backgrounds. Hidden when scrolled to bottom. */
+[data-semantic="feed-card"]::before {
+  content: "More";
+  position: absolute;
+  bottom: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(255,255,255,0.85);
+  color: #111;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  line-height: 1;
+  opacity: 0.95;
+  transition: opacity 0.25s ease, transform 0.25s ease;
+  z-index: 12;
+  pointer-events: none;
+  box-shadow: 0 6px 18px rgba(2,6,23,0.06);
+}
+
+@media (prefers-color-scheme: dark), [data-theme="dark"] {
+  [data-semantic="feed-card"]::before {
+    background: rgba(17,24,39,0.9);
+    color: #fff;
+    box-shadow: 0 8px 22px rgba(0,0,0,0.6);
+  }
+}
+
+[data-semantic="feed-card"].is-at-bottom::before,
+.feed-box.is-at-bottom::before {
+  opacity: 0;
+  transform: translateX(-50%) translateY(6px);
 }
 
 .feed-box.is-at-bottom::after, [data-semantic="feed-card"].is-at-bottom::after {
