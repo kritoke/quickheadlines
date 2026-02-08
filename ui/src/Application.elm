@@ -344,7 +344,7 @@ headerView model =
         , htmlAttribute (HA.class "qh-site-header")
         ]
         [ -- Brand Section
-          Element.link [ centerY ]
+          Element.link [ centerY, paddingEach { top = 0, bottom = 0, left = 6, right = 6 } ]
             { url = "/"
             , label =
                 Element.row [ spacing 10, centerY ]
