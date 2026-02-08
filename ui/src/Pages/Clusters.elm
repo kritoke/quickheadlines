@@ -1,5 +1,4 @@
-
-module Pages.Home exposing (Model, Msg, main)
+module Pages.Clusters exposing (Model, Msg(..), init, update, view)
 
 import Api.News exposing (Cluster, fetchClustersCmd)
 import Browser
@@ -40,7 +39,3 @@ view model =
             Nothing ->
                 div []
                     [ ul [] (List.map (\c -> li [] [ text c.headline ]) model.clusters) ]
-
-main : Program () Model Msg
-main =
-    Browser.element { init = \_ -> init, update = update, subscriptions = \_ -> Sub.none, view = view }

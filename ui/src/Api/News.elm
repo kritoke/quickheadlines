@@ -4,7 +4,7 @@ import Http
 import Json.Decode as Decode exposing (Decoder)
 
 type alias Cluster =
-    { id : Int
+    { id : String
     , headline : String
     , articleCount : Int
     }
@@ -12,7 +12,7 @@ type alias Cluster =
 clusterDecoder : Decoder Cluster
 clusterDecoder =
     Decode.map3 Cluster
-        (Decode.field "id" Decode.int)
+        (Decode.field "id" Decode.string)
         (Decode.field "headline" Decode.string)
         (Decode.field "article_count" Decode.int)
 

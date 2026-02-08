@@ -12,6 +12,7 @@ import Html
 import Html.Attributes as HA
 import Layouts.Shared as Layout
 import Pages.Home_ as Home
+import Pages.Home as HomeClusters
 import Pages.Timeline as Timeline
 import Responsive exposing (Breakpoint(..))
 import Shared exposing (Model, Msg(..))
@@ -197,13 +198,18 @@ view model =
 
         ( title, content ) =
             case model.page of
-                Home ->
+        Home ->
                     let
+                        -- Keep existing home (feeds) view as primary content
                         homeContent =
                             Home.view model.shared model.home
+
+                        -- Also provide a small clusters component (elm-pages page) below
+                        clustersContent =
+                            HomeClusters.view model.shared { clusters = [], loading = True, error = Nothing }
                     in
                     ( "QuickHeadlines"
-                    , Element.map HomeMsg homeContent
+                    , Element.column [] [ Element.map HomeMsg homeContent, Element.map (\_ -> HomeMsg (Home.SwitchTab "all")) clustersContent ]
                     )
 
                 Timeline ->

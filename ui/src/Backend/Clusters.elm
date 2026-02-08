@@ -1,4 +1,3 @@
-
 module Backend.Clusters exposing (fetchClustersTask, fetchClustersTaskWithRetry)
 
 import Api.News exposing (Cluster)
@@ -18,18 +17,12 @@ fetchClustersTaskWithRetry : Int -> String -> Task Http.Error (List Cluster)
 fetchClustersTaskWithRetry retries url =
     let
         attempt n =
-            if n <= 0 then
-                fetchClustersTask url
-            else
-                Task.andThen
-                    (es ->
-                        case res of
-                            Ok v ->
-                                Task.succeed v
-
-                            Err _ ->
-                                attempt (n - 1)
-                    )
-                    (Task.attempt identity (fetchClustersTask url))
+            fetchClustersTask url
+                |> Task.onError (\err ->
+                    if n <= 0 then
+                        Task.fail err
+                    else
+                        attempt (n - 1)
+                )
     in
     attempt retries
