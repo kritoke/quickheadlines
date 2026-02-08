@@ -487,119 +487,54 @@ module ColorExtractor
   # Accepts theme_json (String) or nil and optional legacy header_color/text_color.
   # Returns possibly-modified theme JSON string (or nil).
   def self.auto_correct_theme_json(theme_json : String?, legacy_bg : String?, legacy_text : String?) : String?
-    begin
-      parsed = nil.as(JSON::Any?)
-      if theme_json && !theme_json.empty?
-        parsed = JSON.parse(theme_json) rescue nil
-      end
+    # Parse incoming theme JSON and fallbacks (returns bg_rgb, text_hash, source)
+    bg_rgb, text_hash, source = parse_theme_payload(theme_json, legacy_bg, legacy_text)
 
-      # Build a canonical structure: {"bg": "rgb(...)" or "#rrggbb", "text": {"light": "#..","dark":"#.."}, "source": "..."}
-      bg_rgb = nil.as(Array(Int32)?)
-      text_hash = {} of String => String
-      source = nil.as(String?)
+    # If we don't have a bg color we can't auto-correct
+    return nil unless bg_rgb
 
-      if parsed
-        # parsed may be JSON::Any wrapping object
-        if parsed.is_a?(JSON::Any)
-          h = parsed.as_h rescue nil
-          if h
-            bg_val = h["bg"] || h["background"]
-            source = h["source"]? ? h["source"].to_s : nil
-            if bg_val
-              bg_rgb = parse_color_to_rgb(bg_val.to_s)
-            end
-            txt = h["text"]
-            if txt.is_a?(Hash) || txt.is_a?(JSON::Any)
-              begin
-                txt_h = txt.is_a?(JSON::Any) ? txt.as_h : txt.as_h
-                txt_h.each do |k, v|
-                  text_hash[k.to_s] = v.to_s
-                end
-              rescue
-              end
-            elsif txt
-              # single string
-              text_hash["light"] = txt.to_s
-              text_hash["dark"] = txt.to_s
-            end
-          end
-        end
-      end
-
-      # If the parsed payload already contains both explicit `light` and
-      # `dark` text roles, preserve the incoming JSON unchanged. Auto-correction
-      # should not overwrite an explicit two-role payload at write-time; callers
-      # that wish to upgrade `source` from "auto" to "auto-corrected" should
-      # use `auto_upgrade_to_auto_corrected` instead.
-      if parsed && text_hash.has_key?("light") && text_hash.has_key?("dark")
-        return nil
-      end
-
-      # Fallback to legacy header_color/header_text_color
-      if !bg_rgb && legacy_bg
-        bg_rgb = parse_color_to_rgb(legacy_bg)
-      end
-      if text_hash.empty? && legacy_text
-        text_hash["light"] = legacy_text
-        text_hash["dark"] = legacy_text
-      end
-
-      return nil unless bg_rgb
-
-      # Normalize candidate list: try header_text_color, then theme text candidates
-      candidates = [] of {key: String, rgb: Array(Int32)}
-      if legacy_text
-        if rgb = parse_color_to_rgb(legacy_text)
-          candidates << {key: "legacy", rgb: rgb}
-        end
-      end
-      text_hash.each do |k, v|
-        if rgb = parse_color_to_rgb(v)
-          candidates << {key: k, rgb: rgb}
-        end
-      end
-
-      # Evaluate contrasts
-      good_candidates = [] of {key: String, rgb: Array(Int32), contrast: Float64}
-      candidates.each do |candidate|
-        cr = contrast_ratio(candidate[:rgb], bg_rgb)
-        if cr >= 4.5
-          good_candidates << {key: candidate[:key], rgb: candidate[:rgb], contrast: cr}
-        end
-      end
-
-      corrected = false
-      if good_candidates.size > 0
-        # Prefer legacy if it's good; otherwise pick the highest contrast
-        pick = good_candidates.find { |g| g[:key] == "legacy" } || good_candidates.max_by { |cand| cand[:contrast] }
-        chosen_hex = rgb_to_hex(pick[:rgb])
-        # Ensure both roles are filled: light/dark
-        out_text = {"light" => chosen_hex, "dark" => chosen_hex}
-      else
-        # No candidate meets threshold — generate best dark and light and pick the one with higher contrast
-        dark_rgb = find_dark_text_for_bg(bg_rgb)
-        light_rgb = find_light_text_for_bg(bg_rgb)
-        dark_contrast = contrast_ratio(dark_rgb, bg_rgb)
-        light_contrast = contrast_ratio(light_rgb, bg_rgb)
-        if dark_contrast >= light_contrast
-          chosen_hex = rgb_to_hex(dark_rgb)
-        else
-          chosen_hex = rgb_to_hex(light_rgb)
-        end
-        out_text = {"light" => chosen_hex, "dark" => chosen_hex}
-        corrected = true
-      end
-
-      # Build final payload
-      final = {"bg" => (bg_rgb ? rgb_to_hex(bg_rgb) : nil), "text" => out_text}
-      # If original source was already auto-corrected/backfill, keep it unless we just corrected
-      final_source = corrected ? "auto-corrected" : (source || "auto")
-      final["source"] = final_source
-
-      final.to_json
-    rescue
-      nil
+    # If incoming payload already contains explicit light/dark roles, do nothing
+    if text_hash.has_key?("light") && text_hash.has_key?("dark")
+      return nil
     end
+
+    # Build candidate list (legacy header_text first, then any parsed candidates)
+    candidates = [] of {key: String, rgb: Array(Int32)}
+    if legacy_text
+      if rgb = parse_color_to_rgb(legacy_text)
+        candidates << {key: "legacy", rgb: rgb}
+      end
+    end
+    text_hash.each do |k, v|
+      if rgb = parse_color_to_rgb(v)
+        candidates << {key: k, rgb: rgb}
+      end
+    end
+
+    # Choose any candidate that meets contrast threshold
+    good_candidates = candidates.select do |candidate|
+      contrast_ratio(candidate[:rgb], bg_rgb) >= 4.5
+    end
+
+    corrected = false
+    out_text = nil.as(Hash(String, String)?)
+
+    if good_candidates.size > 0
+      pick = good_candidates.find { |g| g[:key] == "legacy" } || good_candidates.max_by { |c| c[:contrast] rescue contrast_ratio(c[:rgb], bg_rgb) }
+      chosen_hex = rgb_to_hex(pick[:rgb])
+      out_text = {"light" => chosen_hex, "dark" => chosen_hex}
+    else
+      dark_rgb = find_dark_text_for_bg(bg_rgb)
+      light_rgb = find_light_text_for_bg(bg_rgb)
+      dark_contrast = contrast_ratio(dark_rgb, bg_rgb)
+      light_contrast = contrast_ratio(light_rgb, bg_rgb)
+      chosen_hex = dark_contrast >= light_contrast ? rgb_to_hex(dark_rgb) : rgb_to_hex(light_rgb)
+      out_text = {"light" => chosen_hex, "dark" => chosen_hex}
+      corrected = true
+    end
+
+    final = {"bg" => rgb_to_hex(bg_rgb), "text" => out_text, "source" => (corrected ? "auto-corrected" : (source || "auto"))}
+    final.to_json
   end
 
   # Upgrade existing theme JSON entries that were marked as "auto" to
@@ -608,60 +543,100 @@ module ColorExtractor
   # source set to "auto-corrected" when an upgrade is performed, or nil
   # otherwise.
   def self.auto_upgrade_to_auto_corrected(theme_json : String?) : String?
-    begin
-      return nil unless theme_json && !theme_json.empty?
-      parsed = JSON.parse(theme_json) rescue nil
-      return nil unless parsed.is_a?(JSON::Any)
-      h = parsed.as_h rescue nil
-      return nil unless h
+    return nil unless theme_json && !theme_json.empty?
 
-      src = h["source"]? ? h["source"].to_s : nil
-      return nil unless src == "auto"
+    parsed = JSON.parse(theme_json) rescue nil
+    return nil unless parsed.is_a?(JSON::Any)
+    h = parsed.as_h rescue nil
+    return nil unless h
 
-      bg_val = h["bg"] || h["background"]
-      return nil unless bg_val
-      bg_rgb = parse_color_to_rgb(bg_val.to_s)
-      return nil unless bg_rgb
+    src = h["source"]? ? h["source"].to_s : nil
+    return nil unless src == "auto"
 
-      txt = h["text"]
-      txt_h = {} of String => String
-      if txt.is_a?(Hash) || txt.is_a?(JSON::Any)
-        begin
-          tmp = txt.is_a?(JSON::Any) ? txt.as_h : txt.as_h
-          tmp.each do |k, v|
-            txt_h[k.to_s] = v.to_s
-          end
-        rescue
+    bg_val = h["bg"] || h["background"]
+    return nil unless bg_val
+    bg_rgb = parse_color_to_rgb(bg_val.to_s)
+    return nil unless bg_rgb
+
+    txt = h["text"]
+    txt_h = {} of String => String
+    if txt.is_a?(Hash) || txt.is_a?(JSON::Any)
+      begin
+        tmp = txt.is_a?(JSON::Any) ? txt.as_h : txt.as_h
+        tmp.each do |k, v|
+          txt_h[k.to_s] = v.to_s
         end
-      elsif txt
-        txt_h["light"] = txt.to_s
-        txt_h["dark"] = txt.to_s
+      rescue
       end
-
-      # Ensure both roles present and meet contrast
-      light_ok = false
-      dark_ok = false
-      if l = txt_h["light"]
-        if lrgb = parse_color_to_rgb(l)
-          light_ok = contrast_ratio(lrgb, bg_rgb) >= 4.5
-        end
-      end
-      if d = txt_h["dark"]
-        if drgb = parse_color_to_rgb(d)
-          dark_ok = contrast_ratio(drgb, bg_rgb) >= 4.5
-        end
-      end
-
-      if light_ok && dark_ok
-        # Build upgraded payload preserving original bg string
-        final = {"bg" => bg_val.to_s, "text" => {"light" => txt_h["light"], "dark" => txt_h["dark"]}, "source" => "auto-corrected"}
-        return final.to_json
-      end
-
-      nil
-    rescue
-      nil
+    elsif txt
+      txt_h["light"] = txt.to_s
+      txt_h["dark"] = txt.to_s
     end
+
+    # Ensure both roles present and meet contrast
+    light_ok = false
+    dark_ok = false
+    if l = txt_h["light"]
+      if lrgb = parse_color_to_rgb(l)
+        light_ok = contrast_ratio(lrgb, bg_rgb) >= 4.5
+      end
+    end
+    if d = txt_h["dark"]
+      if drgb = parse_color_to_rgb(d)
+        dark_ok = contrast_ratio(drgb, bg_rgb) >= 4.5
+      end
+    end
+
+    if light_ok && dark_ok
+      final = {"bg" => bg_val.to_s, "text" => {"light" => txt_h["light"], "dark" => txt_h["dark"]}, "source" => "auto-corrected"}
+      return final.to_json
+    end
+
+    nil
+  end
+
+  # Parse incoming theme JSON into canonical pieces.
+  private def self.parse_theme_payload(theme_json : String?, legacy_bg : String?, legacy_text : String?) : Tuple(Array(Int32)?, Hash(String, String), String?)
+    bg_rgb = nil.as(Array(Int32)?)
+    text_hash = {} of String => String
+    source = nil.as(String?)
+
+    if theme_json && !theme_json.empty?
+      parsed = JSON.parse(theme_json) rescue nil
+      if parsed.is_a?(JSON::Any)
+        h = parsed.as_h rescue nil
+        if h
+          bg_val = h["bg"] || h["background"]
+          source = h["source"]? ? h["source"].to_s : nil
+          bg_rgb = parse_color_to_rgb(bg_val.to_s) if bg_val
+
+          txt = h["text"]
+          if txt.is_a?(Hash) || txt.is_a?(JSON::Any)
+            begin
+              tmp = txt.is_a?(JSON::Any) ? txt.as_h : txt.as_h
+              tmp.each do |k, v|
+                text_hash[k.to_s] = v.to_s
+              end
+            rescue
+            end
+          elsif txt
+            text_hash["light"] = txt.to_s
+            text_hash["dark"] = txt.to_s
+          end
+        end
+      end
+    end
+
+    # Fallback to legacy values
+    if !bg_rgb && legacy_bg
+      bg_rgb = parse_color_to_rgb(legacy_bg)
+    end
+    if text_hash.empty? && legacy_text
+      text_hash["light"] = legacy_text
+      text_hash["dark"] = legacy_text
+    end
+
+    {bg_rgb, text_hash, source}
   end
 
   private def self.theme_aware_text_color(bg_rgb : Array(Int32)) : Hash(String, String)
