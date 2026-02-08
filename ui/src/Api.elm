@@ -1,9 +1,8 @@
-module Api exposing (Cluster, ClusterItem, Feed, FeedItem, FeedsResponse, Tab, TimelineItem, TimelineResponse, clusterItemsFromTimeline, sortTimelineItems, sortFeedItems, fetchFeeds, fetchTimeline, fetchFeedMore)
+module Api exposing (Cluster, ClusterItem, Feed, FeedItem, FeedsResponse, Tab, TimelineItem, TimelineResponse, clusterItemsFromTimeline, fetchFeedMore, fetchFeeds, fetchTimeline, sortFeedItems, sortTimelineItems)
 
 import Http
-import Json.Decode as Decode exposing (Decoder, field, list, nullable, string, succeed)
+import Json.Decode as JD exposing (Decoder, Value, field, list, nullable, string, succeed)
 import Time
-import Json.Decode as JD exposing (Value)
 import Url
 
 
@@ -92,11 +91,17 @@ clusterItemsFromTimeline items =
         sortedItems =
             List.sortWith
                 (\a b ->
-                    case (a.pubDate, b.pubDate) of
-                        (Nothing, Nothing) -> EQ
-                        (Nothing, _) -> GT
-                        (_, Nothing) -> LT
-                        (Just pa, Just pb) ->
+                    case ( a.pubDate, b.pubDate ) of
+                        ( Nothing, Nothing ) ->
+                            EQ
+
+                        ( Nothing, _ ) ->
+                            GT
+
+                        ( _, Nothing ) ->
+                            LT
+
+                        ( Just pa, Just pb ) ->
                             compare (Time.posixToMillis pb) (Time.posixToMillis pa)
                 )
                 items
@@ -109,7 +114,7 @@ clusterItemsFromTimeline items =
                             Maybe.withDefault item.id item.clusterId
 
                         existing =
-                            List.filter (\(k, _) -> k == key) acc
+                            List.filter (\( k, _ ) -> k == key) acc
                     in
                     case existing of
                         [] ->
@@ -117,7 +122,7 @@ clusterItemsFromTimeline items =
 
                         _ ->
                             List.map
-                                (\(k, v) ->
+                                (\( k, v ) ->
                                     if k == key then
                                         ( k, v ++ [ item ] )
 
@@ -136,16 +141,23 @@ clusterItemsFromTimeline items =
 
     Defensive helper to ensure a list of TimelineItem is ordered newest -> oldest
     by pubDate. The UI uses this when merging pages to avoid ordering regressions.
+
 -}
 sortTimelineItems : List TimelineItem -> List TimelineItem
 sortTimelineItems items =
     let
         comparePub a b =
-            case (a.pubDate, b.pubDate) of
-                (Nothing, Nothing) -> Basics.compare 0 0
-                (Nothing, _) -> Basics.GT
-                (_, Nothing) -> Basics.LT
-                (Just pa, Just pb) ->
+            case ( a.pubDate, b.pubDate ) of
+                ( Nothing, Nothing ) ->
+                    EQ
+
+                ( Nothing, _ ) ->
+                    Basics.GT
+
+                ( _, Nothing ) ->
+                    Basics.LT
+
+                ( Just pa, Just pb ) ->
                     -- Compare milliseconds descending (newest first)
                     Basics.compare (Time.posixToMillis pb) (Time.posixToMillis pa)
     in
@@ -156,7 +168,8 @@ sortTimelineItems items =
 
     Ensure feed items are ordered newest -> oldest by pubDate. Used by the
     Home view when merging or displaying feed items inside feed cards.
- -}
+
+-}
 sortFeedItems : List FeedItem -> List FeedItem
 sortFeedItems items =
     let
@@ -323,6 +336,7 @@ feedItemDecoder =
         (field "link" string)
         (field "pub_date" (nullable (Decode.map Time.millisToPosix Decode.int)))
 
+
 decodeNullableValueField : String -> Decoder (Maybe JD.Value)
 decodeNullableValueField name =
     Decode.oneOf
@@ -364,8 +378,8 @@ feedsDecoder =
 
 timelineDecoder : Decoder TimelineResponse
 timelineDecoder =
-    Decode.succeed TimelineResponse
-        |> Decode.andThen (\f -> Decode.field "items" (list timelineItemDecoder) |> Decode.map f)
+    TimelineResponse
+        |> (\f -> Decode.field "items" (list timelineItemDecoder) |> Decode.map f)
         |> Decode.andThen (\f -> Decode.field "has_more" Decode.bool |> Decode.map f)
         |> Decode.andThen (\f -> Decode.field "total_count" Decode.int |> Decode.map f)
         |> Decode.andThen (\f -> Decode.field "is_clustering" (Decode.oneOf [ Decode.bool, Decode.succeed False ]) |> Decode.map f)

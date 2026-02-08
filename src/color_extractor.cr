@@ -96,6 +96,25 @@ module ColorExtractor
     icon = CrImage::ICO.read_all(full_path) rescue nil
     return nil unless icon
 
+    if best_rgb = select_best_icon_rgb(icon)
+      build_theme_aware_result(best_rgb)
+    else
+      nil
+    end
+  end
+
+  private def self.handle_generic_crimage(full_path : String) : Hash(String, String | Hash(String, String))?
+    img = CrImage.read(full_path)
+    w = img.bounds.width
+    h = img.bounds.height
+    return nil if w == 0 || h == 0
+
+    dominant, _opaque = dominant_from_crimage(img)
+    return nil if dominant.nil?
+    build_theme_aware_result(dominant)
+  end
+
+  private def self.select_best_icon_rgb(icon) : Array(Int32)?
     best_rgb : Array(Int32)? = nil
     best_opaque : Int32 = -1
     best_area : Int32 = -1
@@ -112,25 +131,16 @@ module ColorExtractor
       end
     end
 
-    return nil if best_rgb.nil?
-
-    text_colors = theme_aware_text_color(best_rgb)
-    bg_rgb = "rgb(#{best_rgb[0]}, #{best_rgb[1]}, #{best_rgb[2]})"
-    {"bg" => bg_rgb, "text" => text_colors}
+    best_rgb
   end
 
-  private def self.handle_generic_crimage(full_path : String) : Hash(String, String | Hash(String, String))?
-    img = CrImage.read(full_path)
-    w = img.bounds.width
-    h = img.bounds.height
-    return nil if w == 0 || h == 0
+  private def self.build_theme_aware_result(rgb : Array(Int32)) : Hash(String, String | Hash(String, String))?
+    text_colors = theme_aware_text_color(rgb)
+    {"bg" => rgb_array_to_css(rgb), "text" => text_colors}
+  end
 
-    dominant, _opaque = dominant_from_crimage(img)
-    return nil if dominant.nil?
-
-    text_colors = theme_aware_text_color(dominant)
-    bg_rgb = "rgb(#{dominant[0]}, #{dominant[1]}, #{dominant[2]})"
-    {"bg" => bg_rgb, "text" => text_colors}
+  private def self.rgb_array_to_css(rgb : Array(Int32)) : String
+    "rgb(#{rgb[0]}, #{rgb[1]}, #{rgb[2]})"
   end
 
   # Compute an (r,g,b) dominant color and count of opaque-ish pixels from a CrImage image.
@@ -140,6 +150,16 @@ module ColorExtractor
     return {nil, 0} if w == 0 || h == 0
 
     sample_size = 1000
+    r_total, g_total, b_total, count, opaque_count = sample_pixels_from_crimage(img, sample_size)
+
+    return {nil, opaque_count} if count == 0
+
+    {[(r_total / count).to_i32, (g_total / count).to_i32, (b_total / count).to_i32], opaque_count}
+  end
+
+  private def self.sample_pixels_from_crimage(img, sample_size : Int32) : Tuple(Int32, Int32, Int32, Int32, Int32)
+    w = img.bounds.width
+    h = img.bounds.height
     step = ((w * h) / sample_size).to_i32
     step = 1 if step < 1
 
@@ -186,9 +206,7 @@ module ColorExtractor
       end
     end
 
-    return {nil, opaque_count} if count == 0
-
-    {[(r_total / count).to_i32, (g_total / count).to_i32, (b_total / count).to_i32], opaque_count}
+    {r_total, g_total, b_total, count, opaque_count}
   end
 
   private def self.parse_rgb_string(str : String) : Array(Int32)?
@@ -319,27 +337,7 @@ module ColorExtractor
     return [0, 0, 0] of Int32 if width == 0 || height == 0
 
     sample_size = 1000
-    step_x = ((width * height) / sample_size).to_i32
-    step_x = 1 if step_x < 1
-
-    r_total = 0
-    g_total = 0
-    b_total = 0
-    count = 0
-
-    (0...width).each do |x|
-      (0...height).each do |y|
-        next unless (x + y * width) % step_x == 0
-
-        pixel = canvas[x, y]
-        r, g, b = pixel.to_rgb8
-
-        r_total += r
-        g_total += g
-        b_total += b
-        count += 1
-      end
-    end
+    r_total, g_total, b_total, count = sample_pixels_from_canvas(canvas, sample_size)
 
     return [0, 0, 0] of Int32 if count == 0
 
@@ -348,6 +346,34 @@ module ColorExtractor
     b_avg = (b_total / count).to_i32
 
     [r_avg, g_avg, b_avg]
+  end
+
+  private def self.sample_pixels_from_canvas(canvas : StumpyPNG::Canvas, sample_size : Int32) : Tuple(Int32, Int32, Int32, Int32)
+    width = canvas.width
+    height = canvas.height
+    step = ((width * height) / sample_size).to_i32
+    step = 1 if step < 1
+
+    r_total = 0_i32
+    g_total = 0_i32
+    b_total = 0_i32
+    count = 0_i32
+
+    (0...width).each do |x|
+      (0...height).each do |y|
+        next unless (x + y * width) % step == 0
+
+        pixel = canvas[x, y]
+        r, g, b = pixel.to_rgb8
+
+        r_total += r.to_i32
+        g_total += g.to_i32
+        b_total += b.to_i32
+        count += 1
+      end
+    end
+
+    {r_total, g_total, b_total, count}
   end
 
   private def self.calculate_dominant_color_from_buffer(pixels : Array(UInt8), width : Int32, height : Int32) : Array(Int32)
@@ -473,6 +499,11 @@ module ColorExtractor
 
   def self.rgb_to_hex_public(rgb : Array(Int32)) : String
     rgb_to_hex(rgb)
+  end
+
+  # Test helper to expose internal buffer sampling for specs
+  def self.test_calculate_dominant_color_from_buffer(pixels : Array(UInt8), width : Int32, height : Int32) : Array(Int32)
+    calculate_dominant_color_from_buffer(pixels, width, height)
   end
 
   private def self.calculate_contrasting_text(rgb : Array(Int32)) : String
@@ -602,7 +633,7 @@ module ColorExtractor
   end
 
   private def self.roles_meet_contrast(text_hash : Hash(String, String), bg_rgb : Array(Int32)) : Bool
-    return false unless text_hash.key?("light") && text_hash.key?("dark")
+    return false unless text_hash.has_key?("light") && text_hash.has_key?("dark")
     light_ok = false
     dark_ok = false
     if l = text_hash["light"]
