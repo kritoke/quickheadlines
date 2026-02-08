@@ -16644,7 +16644,12 @@ var $author$project$Pages$Timeline$clusterItem = F7(
 				[
 					$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill),
 					$mdgriffith$elm_ui$Element$paddingEach(
-					{bottom: 4, left: 0, right: 0, top: 4}),
+					{
+						bottom: $author$project$Responsive$isMobile(breakpoint) ? 1 : 4,
+						left: 0,
+						right: 0,
+						top: $author$project$Responsive$isMobile(breakpoint) ? 1 : 4
+					}),
 					$mdgriffith$elm_ui$Element$Border$widthEach(
 					{bottom: 1, left: 0, right: 0, top: 0}),
 					$mdgriffith$elm_ui$Element$Border$color(border),
@@ -16783,10 +16788,11 @@ var $author$project$Pages$Timeline$clusterItem = F7(
 											var _v4 = $author$project$Pages$Timeline$parseColor(effectiveBg);
 											if (_v4.$ === 'Just') {
 												var c = _v4.a;
+												var pad = $author$project$Responsive$isMobile(breakpoint) ? A2($mdgriffith$elm_ui$Element$paddingXY, 0, 4) : A2($mdgriffith$elm_ui$Element$paddingXY, 2, 6);
 												return _List_fromArray(
 													[
 														$mdgriffith$elm_ui$Element$Background$color(c),
-														A2($mdgriffith$elm_ui$Element$paddingXY, 2, 6),
+														pad,
 														$mdgriffith$elm_ui$Element$Border$rounded(6)
 													]);
 											} else {
@@ -16820,6 +16826,11 @@ var $author$project$Pages$Timeline$clusterItem = F7(
 											}
 										}();
 										var titleAttrs = function () {
+											var mobileLineHeight = $author$project$Responsive$isMobile(breakpoint) ? _List_fromArray(
+												[
+													$mdgriffith$elm_ui$Element$htmlAttribute(
+													A2($elm$html$Html$Attributes$style, 'line-height', '1.10'))
+												]) : _List_Nil;
 											var computedColor = function () {
 												var _v0 = $author$project$Pages$Timeline$parseColor(titleTextColor);
 												if (_v0.$ === 'Just') {
@@ -16836,21 +16847,25 @@ var $author$project$Pages$Timeline$clusterItem = F7(
 													}
 												}
 											}();
-											return ((headerColor !== '') || ((headerTextColor !== '') || (!_Utils_eq(headerTheme, $elm$core$Maybe$Nothing)))) ? _List_fromArray(
-												[
-													$mdgriffith$elm_ui$Element$Font$size(12),
-													$mdgriffith$elm_ui$Element$Font$color(computedColor),
-													$mdgriffith$elm_ui$Element$htmlAttribute(
-													A2($elm$html$Html$Attributes$attribute, 'data-server-header-text-color', titleTextColor)),
-													$mdgriffith$elm_ui$Element$htmlAttribute(
-													A2($elm$html$Html$Attributes$attribute, 'data-use-server-colors', 'true'))
-												]) : _List_fromArray(
-												[
-													$mdgriffith$elm_ui$Element$Font$size(12),
-													$mdgriffith$elm_ui$Element$htmlAttribute(
-													A2($elm$html$Html$Attributes$attribute, 'data-server-fallback-color', titleTextColor)),
-													$mdgriffith$elm_ui$Element$Font$color(computedColor)
-												]);
+											return ((headerColor !== '') || ((headerTextColor !== '') || (!_Utils_eq(headerTheme, $elm$core$Maybe$Nothing)))) ? _Utils_ap(
+												_List_fromArray(
+													[
+														$mdgriffith$elm_ui$Element$Font$size(12),
+														$mdgriffith$elm_ui$Element$Font$color(computedColor),
+														$mdgriffith$elm_ui$Element$htmlAttribute(
+														A2($elm$html$Html$Attributes$attribute, 'data-server-header-text-color', titleTextColor)),
+														$mdgriffith$elm_ui$Element$htmlAttribute(
+														A2($elm$html$Html$Attributes$attribute, 'data-use-server-colors', 'true'))
+													]),
+												mobileLineHeight) : _Utils_ap(
+												_List_fromArray(
+													[
+														$mdgriffith$elm_ui$Element$Font$size(12),
+														$mdgriffith$elm_ui$Element$htmlAttribute(
+														A2($elm$html$Html$Attributes$attribute, 'data-server-fallback-color', titleTextColor)),
+														$mdgriffith$elm_ui$Element$Font$color(computedColor)
+													]),
+												mobileLineHeight);
 										}();
 										return _List_fromArray(
 											[
