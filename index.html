@@ -214,6 +214,8 @@
       }
 
       if (location.search.indexOf('debug=true') !== -1) {
+        // expose debug styles globally
+        try { document.body.classList.add('qh-debug-enabled'); } catch (e) {}
         var dbg = makeDebugPanel();
         function tick() { var d = readDiagnostics(); renderDiagnostics(dbg.content, d); }
         tick();
