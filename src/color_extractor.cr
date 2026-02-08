@@ -136,8 +136,11 @@ module ColorExtractor
 
   private def self.build_theme_aware_result(rgb : Array(Int32)) : Hash(String, String | Hash(String, String))?
     text_colors = theme_aware_text_color(rgb)
-    bg_rgb = "rgb(#{rgb[0]}, #{rgb[1]}, #{rgb[2]})"
-    {"bg" => bg_rgb, "text" => text_colors}
+    {"bg" => rgb_array_to_css(rgb), "text" => text_colors}
+  end
+
+  private def self.rgb_array_to_css(rgb : Array(Int32)) : String
+    "rgb(#{rgb[0]}, #{rgb[1]}, #{rgb[2]})"
   end
 
   # Compute an (r,g,b) dominant color and count of opaque-ish pixels from a CrImage image.
