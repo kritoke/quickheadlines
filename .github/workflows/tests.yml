@@ -43,8 +43,10 @@ jobs:
 
       - name: Build Elm
         run: |
-          npm install -g elm
-          cd ui && rm -f elm.js && elm make src/Main.elm --output=elm.js
+          # Install a known Elm 0.19.1 reliably and build optimized bundle for tests
+          echo "Setting up Elm 0.19.1"
+          curl -sL https://github.com/avh4/setup-elm/releases/latest/download/install-elm.sh | bash -s -- 0.19.1
+          cd ui && rm -f elm.js && elm make src/Main.elm --optimize --output=elm.js
 
       - name: Build Crystal binary
         uses: crystal-lang/setup-crystal@v2
