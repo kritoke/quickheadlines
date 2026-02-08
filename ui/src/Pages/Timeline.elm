@@ -1023,10 +1023,7 @@ clusterItem breakpoint zone now theme expandedClusters insertedIds cluster =
             ]
 
         rowAttrs =
-            if isInserted then
-                baseAttrs ++ [ htmlAttribute (Html.Attributes.class "timeline-inserted") ]
-            else
-                baseAttrs
+            baseAttrs
     in
     column
         [ width fill
@@ -1189,7 +1186,7 @@ clusterItem breakpoint zone now theme expandedClusters insertedIds cluster =
                   [ faviconImg
                   , el ( [ Ty.meta ] ++ titleAttrs ++ titleBgAttrs ) (text cluster.representative.feedTitle)
                   , el [ Font.color mutedTxt, paddingXY 4 0 ] (text "•")
-                  , link linkAttrs { url = cluster.representative.link, label = text cluster.representative.title }
+                        , link (linkAttrs ++ (if isInserted then [ htmlAttribute (Html.Attributes.style "animation" "qh-insert 220ms ease-out both"), htmlAttribute (Html.Attributes.style "will-change" "opacity, transform") ] else [])) { url = cluster.representative.link, label = text cluster.representative.title }
                   , (if cluster.count > 1 then
                         Input.button
                             [ paddingEach { top = 0, right = 0, bottom = 0, left = 8 }
