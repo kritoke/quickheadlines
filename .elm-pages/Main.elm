@@ -33,7 +33,9 @@ import Pages.Navigation
 import Pages.PageUrl
 import PagesMsg
 import Route
+import Route.Clusters
 import Route.Index
+import Route.Timeline
 import Server.Request
 import Server.Response
 import Shared
@@ -61,13 +63,17 @@ type alias Model =
 
 
 type PageModel
-    = ModelIndex Route.Index.Model
+    = ModelClusters Route.Clusters.Model
+    | ModelTimeline Route.Timeline.Model
+    | ModelIndex Route.Index.Model
     | ModelErrorPage____ ErrorPage.Model
     | NotFound
 
 
 type Msg
-    = MsgIndex Route.Index.Msg
+    = MsgClusters Route.Clusters.Msg
+    | MsgTimeline Route.Timeline.Msg
+    | MsgIndex Route.Index.Msg
     | MsgGlobal Shared.Msg
     | OnPageChange
         { protocol : Url.Protocol
@@ -82,13 +88,17 @@ type Msg
 
 
 type PageData
-    = DataIndex Route.Index.Data
+    = DataClusters Route.Clusters.Data
+    | DataTimeline Route.Timeline.Data
+    | DataIndex Route.Index.Data
     | Data404NotFoundPage____
     | DataErrorPage____ ErrorPage.ErrorPage
 
 
 type ActionData
-    = ActionDataIndex Route.Index.ActionData
+    = ActionDataClusters Route.Clusters.ActionData
+    | ActionDataTimeline Route.Timeline.ActionData
+    | ActionDataIndex Route.Index.ActionData
 
 
 main :
@@ -152,6 +162,16 @@ dataForRoute requestPayload maybeRoute =
     
         Just justRoute ->
             case justRoute of
+                Route.Clusters ->
+                    BackendTask.map
+                        (Server.Response.map DataClusters)
+                        (Route.Clusters.route.data requestPayload {})
+            
+                Route.Timeline ->
+                    BackendTask.map
+                        (Server.Response.map DataTimeline)
+                        (Route.Timeline.route.data requestPayload {})
+            
                 Route.Index ->
                     BackendTask.map
                         (Server.Response.map DataIndex)
@@ -174,6 +194,16 @@ action requestPayload maybeRoute =
     
         Just justRoute ->
             case justRoute of
+                Route.Clusters ->
+                    BackendTask.map
+                        (Server.Response.map ActionDataClusters)
+                        (Route.Clusters.route.action requestPayload {})
+            
+                Route.Timeline ->
+                    BackendTask.map
+                        (Server.Response.map ActionDataTimeline)
+                        (Route.Timeline.route.action requestPayload {})
+            
                 Route.Index ->
                     BackendTask.map
                         (Server.Response.map ActionDataIndex)
@@ -209,6 +239,36 @@ templateSubscriptions route path model =
     
         Just justRoute ->
             case justRoute of
+                Route.Clusters ->
+                    case model.page of
+                        ModelClusters templateModel ->
+                            Sub.map
+                                MsgClusters
+                                (Route.Clusters.route.subscriptions
+                                     {}
+                                     path
+                                     templateModel
+                                     model.global
+                                )
+                    
+                        _ ->
+                            Sub.none
+            
+                Route.Timeline ->
+                    case model.page of
+                        ModelTimeline templateModel ->
+                            Sub.map
+                                MsgTimeline
+                                (Route.Timeline.route.subscriptions
+                                     {}
+                                     path
+                                     templateModel
+                                     model.global
+                                )
+                    
+                        _ ->
+                            Sub.none
+            
                 Route.Index ->
                     case model.page of
                         ModelIndex templateModel ->
@@ -228,6 +288,16 @@ templateSubscriptions route path model =
 onActionData : ActionData -> Maybe Msg
 onActionData actionData =
     case actionData of
+        ActionDataClusters thisActionData ->
+            Maybe.map
+                (\mapUnpack -> MsgClusters (mapUnpack thisActionData))
+                Route.Clusters.route.onAction
+    
+        ActionDataTimeline thisActionData ->
+            Maybe.map
+                (\mapUnpack -> MsgTimeline (mapUnpack thisActionData))
+                Route.Timeline.route.onAction
+    
         ActionDataIndex thisActionData ->
             Maybe.map
                 (\mapUnpack -> MsgIndex (mapUnpack thisActionData))
@@ -243,6 +313,12 @@ byteEncodePageData pageData =
         Data404NotFoundPage____ ->
             Bytes.Encode.unsignedInt8 0
     
+        DataClusters thisPageData ->
+            Route.Clusters.w3_encode_Data thisPageData
+    
+        DataTimeline thisPageData ->
+            Route.Timeline.w3_encode_Data thisPageData
+    
         DataIndex thisPageData ->
             Route.Index.w3_encode_Data thisPageData
 
@@ -255,6 +331,12 @@ byteDecodePageData maybeRoute =
     
         Just route ->
             case route of
+                Route.Clusters ->
+                    Bytes.Decode.map DataClusters Route.Clusters.w3_decode_Data
+            
+                Route.Timeline ->
+                    Bytes.Decode.map DataTimeline Route.Timeline.w3_decode_Data
+            
                 Route.Index ->
                     Bytes.Decode.map DataIndex Route.Index.w3_decode_Data
 
@@ -321,6 +403,72 @@ init currentGlobalModel userFlags sharedData pageData actionData maybePagePath =
             
                 Just justRouteAndPath ->
                     case ( Tuple.first justRouteAndPath, pageData ) of
+                        ( Route.Clusters, DataClusters thisPageData ) ->
+                            Tuple.mapBoth
+                                ModelClusters
+                                (Effect.map MsgClusters)
+                                (Route.Clusters.route.init
+                                     sharedModel
+                                     { data = thisPageData
+                                     , sharedData = sharedData
+                                     , action =
+                                         Maybe.andThen
+                                             (\andThenUnpack ->
+                                                  case andThenUnpack of
+                                                      ActionDataClusters thisActionData ->
+                                                          Just thisActionData
+                                                  
+                                                      _ ->
+                                                          Nothing
+                                             )
+                                             actionData
+                                     , routeParams = {}
+                                     , path =
+                                         (Tuple.second justRouteAndPath).path
+                                     , url =
+                                         Maybe.andThen .pageUrl maybePagePath
+                                     , submit =
+                                         Pages.Fetcher.submit
+                                             Route.Clusters.w3_decode_ActionData
+                                     , navigation = Nothing
+                                     , concurrentSubmissions = Dict.empty
+                                     , pageFormState = Dict.empty
+                                     }
+                                )
+                    
+                        ( Route.Timeline, DataTimeline thisPageData ) ->
+                            Tuple.mapBoth
+                                ModelTimeline
+                                (Effect.map MsgTimeline)
+                                (Route.Timeline.route.init
+                                     sharedModel
+                                     { data = thisPageData
+                                     , sharedData = sharedData
+                                     , action =
+                                         Maybe.andThen
+                                             (\andThenUnpack ->
+                                                  case andThenUnpack of
+                                                      ActionDataTimeline thisActionData ->
+                                                          Just thisActionData
+                                                  
+                                                      _ ->
+                                                          Nothing
+                                             )
+                                             actionData
+                                     , routeParams = {}
+                                     , path =
+                                         (Tuple.second justRouteAndPath).path
+                                     , url =
+                                         Maybe.andThen .pageUrl maybePagePath
+                                     , submit =
+                                         Pages.Fetcher.submit
+                                             Route.Timeline.w3_decode_ActionData
+                                     , navigation = Nothing
+                                     , concurrentSubmissions = Dict.empty
+                                     , pageFormState = Dict.empty
+                                     }
+                                )
+                    
                         ( Route.Index, DataIndex thisPageData ) ->
                             Tuple.mapBoth
                                 ModelIndex
@@ -335,6 +483,9 @@ init currentGlobalModel userFlags sharedData pageData actionData maybePagePath =
                                                   case andThenUnpack of
                                                       ActionDataIndex thisActionData ->
                                                           Just thisActionData
+                                                  
+                                                      _ ->
+                                                          Nothing
                                              )
                                              actionData
                                      , routeParams = {}
@@ -447,6 +598,140 @@ update pageFormState concurrentSubmissions navigation sharedData pageData naviga
                     , Effect.batch [ cmd, Effect.map MsgGlobal globalCmd ]
                     )
     
+        MsgClusters msg_ ->
+            case
+                ( model.page
+                , pageData
+                , Maybe.map3
+                    toTriple
+                    (Maybe.andThen .metadata model.current)
+                    (Maybe.andThen .pageUrl model.current)
+                    (Maybe.map .path model.current)
+                )
+            of
+                ( ModelClusters pageModel, DataClusters thisPageData, Just ( Route.Clusters, pageUrl, justPage ) ) ->
+                    let
+                        ( updatedPageModel, pageCmd, globalModelAndCmd ) =
+                            fooFn
+                                ModelClusters
+                                MsgClusters
+                                model
+                                (Route.Clusters.route.update
+                                     { data = thisPageData
+                                     , sharedData = sharedData
+                                     , action = Nothing
+                                     , routeParams = {}
+                                     , path = justPage.path
+                                     , url = Just pageUrl
+                                     , submit =
+                                         \options ->
+                                             Pages.Fetcher.submit
+                                                 Route.Clusters.w3_decode_ActionData
+                                                 options
+                                     , navigation = navigation
+                                     , concurrentSubmissions =
+                                         Dict.map
+                                             (\mapUnpack ->
+                                                  Pages.ConcurrentSubmission.map
+                                                      (\mapUnpack0 ->
+                                                           case mapUnpack0 of
+                                                               ActionDataClusters justActionData ->
+                                                                   Just
+                                                                       justActionData
+                                                           
+                                                               _ ->
+                                                                   Nothing
+                                                      )
+                                             )
+                                             concurrentSubmissions
+                                     , pageFormState = pageFormState
+                                     }
+                                     msg_
+                                     pageModel
+                                     model.global
+                                )
+                        
+                        ( newGlobalModel, newGlobalCmd ) =
+                            globalModelAndCmd
+                    in
+                    ( { model
+                        | page = updatedPageModel
+                        , global = newGlobalModel
+                      }
+                    , Effect.batch
+                        [ pageCmd, Effect.map MsgGlobal newGlobalCmd ]
+                    )
+            
+                _ ->
+                    ( model, Effect.none )
+    
+        MsgTimeline msg_ ->
+            case
+                ( model.page
+                , pageData
+                , Maybe.map3
+                    toTriple
+                    (Maybe.andThen .metadata model.current)
+                    (Maybe.andThen .pageUrl model.current)
+                    (Maybe.map .path model.current)
+                )
+            of
+                ( ModelTimeline pageModel, DataTimeline thisPageData, Just ( Route.Timeline, pageUrl, justPage ) ) ->
+                    let
+                        ( updatedPageModel, pageCmd, globalModelAndCmd ) =
+                            fooFn
+                                ModelTimeline
+                                MsgTimeline
+                                model
+                                (Route.Timeline.route.update
+                                     { data = thisPageData
+                                     , sharedData = sharedData
+                                     , action = Nothing
+                                     , routeParams = {}
+                                     , path = justPage.path
+                                     , url = Just pageUrl
+                                     , submit =
+                                         \options ->
+                                             Pages.Fetcher.submit
+                                                 Route.Timeline.w3_decode_ActionData
+                                                 options
+                                     , navigation = navigation
+                                     , concurrentSubmissions =
+                                         Dict.map
+                                             (\mapUnpack ->
+                                                  Pages.ConcurrentSubmission.map
+                                                      (\mapUnpack0 ->
+                                                           case mapUnpack0 of
+                                                               ActionDataTimeline justActionData ->
+                                                                   Just
+                                                                       justActionData
+                                                           
+                                                               _ ->
+                                                                   Nothing
+                                                      )
+                                             )
+                                             concurrentSubmissions
+                                     , pageFormState = pageFormState
+                                     }
+                                     msg_
+                                     pageModel
+                                     model.global
+                                )
+                        
+                        ( newGlobalModel, newGlobalCmd ) =
+                            globalModelAndCmd
+                    in
+                    ( { model
+                        | page = updatedPageModel
+                        , global = newGlobalModel
+                      }
+                    , Effect.batch
+                        [ pageCmd, Effect.map MsgGlobal newGlobalCmd ]
+                    )
+            
+                _ ->
+                    ( model, Effect.none )
+    
         MsgIndex msg_ ->
             case
                 ( model.page
@@ -487,6 +772,9 @@ update pageFormState concurrentSubmissions navigation sharedData pageData naviga
                                                                ActionDataIndex justActionData ->
                                                                    Just
                                                                        justActionData
+                                                           
+                                                               _ ->
+                                                                   Nothing
                                                       )
                                              )
                                              concurrentSubmissions
@@ -551,12 +839,123 @@ view pageFormState concurrentSubmissions navigation page maybePageUrl globalData
             , head = []
             }
     
+        ( Just Route.Clusters, DataClusters data ) ->
+            let
+                actionDataOrNothing thisActionData =
+                    case thisActionData of
+                        ActionDataClusters justActionData ->
+                            Just justActionData
+                    
+                        _ ->
+                            Nothing
+            in
+            { view =
+                \model ->
+                    case model.page of
+                        ModelClusters subModel ->
+                            Shared.template.view
+                                globalData
+                                page
+                                model.global
+                                (\myMsg -> PagesMsg.fromMsg (MsgGlobal myMsg))
+                                (View.map
+                                     (PagesMsg.map MsgClusters)
+                                     (Route.Clusters.route.view
+                                          model.global
+                                          subModel
+                                          { data = data
+                                          , sharedData = globalData
+                                          , routeParams = {}
+                                          , action =
+                                              Maybe.andThen
+                                                  actionDataOrNothing
+                                                  actionData
+                                          , path = page.path
+                                          , url = maybePageUrl
+                                          , submit =
+                                              Pages.Fetcher.submit
+                                                  Route.Clusters.w3_decode_ActionData
+                                          , navigation = navigation
+                                          , concurrentSubmissions =
+                                              Dict.map
+                                                  (\mapUnpack ->
+                                                       Pages.ConcurrentSubmission.map
+                                                           actionDataOrNothing
+                                                  )
+                                                  concurrentSubmissions
+                                          , pageFormState = pageFormState
+                                          }
+                                     )
+                                )
+                    
+                        _ ->
+                            modelMismatchView
+            , head = []
+            }
+    
+        ( Just Route.Timeline, DataTimeline data ) ->
+            let
+                actionDataOrNothing thisActionData =
+                    case thisActionData of
+                        ActionDataTimeline justActionData ->
+                            Just justActionData
+                    
+                        _ ->
+                            Nothing
+            in
+            { view =
+                \model ->
+                    case model.page of
+                        ModelTimeline subModel ->
+                            Shared.template.view
+                                globalData
+                                page
+                                model.global
+                                (\myMsg -> PagesMsg.fromMsg (MsgGlobal myMsg))
+                                (View.map
+                                     (PagesMsg.map MsgTimeline)
+                                     (Route.Timeline.route.view
+                                          model.global
+                                          subModel
+                                          { data = data
+                                          , sharedData = globalData
+                                          , routeParams = {}
+                                          , action =
+                                              Maybe.andThen
+                                                  actionDataOrNothing
+                                                  actionData
+                                          , path = page.path
+                                          , url = maybePageUrl
+                                          , submit =
+                                              Pages.Fetcher.submit
+                                                  Route.Timeline.w3_decode_ActionData
+                                          , navigation = navigation
+                                          , concurrentSubmissions =
+                                              Dict.map
+                                                  (\mapUnpack ->
+                                                       Pages.ConcurrentSubmission.map
+                                                           actionDataOrNothing
+                                                  )
+                                                  concurrentSubmissions
+                                          , pageFormState = pageFormState
+                                          }
+                                     )
+                                )
+                    
+                        _ ->
+                            modelMismatchView
+            , head = []
+            }
+    
         ( Just Route.Index, DataIndex data ) ->
             let
                 actionDataOrNothing thisActionData =
                     case thisActionData of
                         ActionDataIndex justActionData ->
                             Just justActionData
+                    
+                        _ ->
+                            Nothing
             in
             { view =
                 \model ->
@@ -685,7 +1084,13 @@ routePatterns =
                                             )
                                           ]
                                  )
-                                 [ { pathPattern = "/"
+                                 [ { pathPattern = "/clusters"
+                                   , kind = Route.Clusters.route.kind
+                                   }
+                                 , { pathPattern = "/timeline"
+                                   , kind = Route.Timeline.route.kind
+                                   }
+                                 , { pathPattern = "/"
                                    , kind = Route.Index.route.kind
                                    }
                                  ]
@@ -751,6 +1156,12 @@ getStaticRoutes =
         List.concat
         (BackendTask.combine
              [ BackendTask.map
+                 (List.map (\_ -> Route.Clusters))
+                 Route.Clusters.route.staticRoutes
+             , BackendTask.map
+                 (List.map (\_ -> Route.Timeline))
+                 Route.Timeline.route.staticRoutes
+             , BackendTask.map
                  (List.map (\_ -> Route.Index))
                  Route.Index.route.staticRoutes
              ]
@@ -767,6 +1178,34 @@ handleRoute maybeRoute =
     
         Just route ->
             case route of
+                Route.Clusters ->
+                    Route.Clusters.route.handleRoute
+                        { moduleName = [ "Clusters" ]
+                        , routePattern =
+                            { segments =
+                                [ Pages.Internal.RoutePattern.StaticSegment
+                                    "clusters"
+                                ]
+                            , ending = Nothing
+                            }
+                        }
+                        (\param -> [])
+                        {}
+            
+                Route.Timeline ->
+                    Route.Timeline.route.handleRoute
+                        { moduleName = [ "Timeline" ]
+                        , routePattern =
+                            { segments =
+                                [ Pages.Internal.RoutePattern.StaticSegment
+                                    "timeline"
+                                ]
+                            , ending = Nothing
+                            }
+                        }
+                        (\param -> [])
+                        {}
+            
                 Route.Index ->
                     Route.Index.route.handleRoute
                         { moduleName = [ "Index" ]
@@ -785,6 +1224,12 @@ handleRoute maybeRoute =
 encodeActionData : ActionData -> Bytes.Encode.Encoder
 encodeActionData actionData =
     case actionData of
+        ActionDataClusters thisActionData ->
+            Route.Clusters.w3_encode_ActionData thisActionData
+    
+        ActionDataTimeline thisActionData ->
+            Route.Timeline.w3_encode_ActionData thisActionData
+    
         ActionDataIndex thisActionData ->
             Route.Index.w3_encode_ActionData thisActionData
 
@@ -835,7 +1280,13 @@ encodeResponse =
 
 routePatterns3 : List Pages.Internal.RoutePattern.RoutePattern
 routePatterns3 =
-    [ { segments = [ Pages.Internal.RoutePattern.StaticSegment "index" ]
+    [ { segments = [ Pages.Internal.RoutePattern.StaticSegment "clusters" ]
+      , ending = Nothing
+      }
+    , { segments = [ Pages.Internal.RoutePattern.StaticSegment "timeline" ]
+      , ending = Nothing
+      }
+    , { segments = [ Pages.Internal.RoutePattern.StaticSegment "index" ]
       , ending = Nothing
       }
     ]
