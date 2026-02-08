@@ -1,17 +1,17 @@
-module Responsive exposing 
-  ( Breakpoint(..)
-  , breakpointFromWidth
-  , isMobile
-  , isVeryNarrow
-  , horizontalPadding
-  , verticalPadding
-  , uniformPadding
-  , containerMaxWidth
-  , timelineTimeColumnWidth
-  , timelineClusterPadding
-  )
+module Responsive exposing
+    ( Breakpoint(..)
+    , breakpointFromWidth
+    , containerMaxWidth
+    , horizontalPadding
+    , isMobile
+    , isVeryNarrow
+    , timelineClusterPadding
+    , timelineTimeColumnWidth
+    , uniformPadding
+    , verticalPadding
+    )
 
-import Element exposing (Element, Length)
+import Element
 
 
 type Breakpoint

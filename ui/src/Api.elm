@@ -1,7 +1,7 @@
 module Api exposing (Cluster, ClusterItem, Feed, FeedItem, FeedsResponse, Tab, TimelineItem, TimelineResponse, clusterItemsFromTimeline, fetchFeedMore, fetchFeeds, fetchTimeline, sortFeedItems, sortTimelineItems)
 
 import Http
-import Json.Decode as JD exposing (Decoder, Value, field, list, nullable, string, succeed)
+import Json.Decode as JD exposing (Decoder, field, list, nullable, string)
 import Time
 import Url
 
@@ -26,7 +26,7 @@ type alias Feed =
     , favicon : Maybe String
     , headerColor : Maybe String
     , headerTextColor : Maybe String
-    , headerTheme : Maybe Decode.Value
+    , headerTheme : Maybe JD.Value
     , items : List FeedItem
     , totalItemCount : Int
     }
@@ -57,7 +57,7 @@ type alias TimelineItem =
     , favicon : Maybe String
     , headerColor : Maybe String
     , headerTextColor : Maybe String
-    , headerTheme : Maybe Decode.Value
+    , headerTheme : Maybe JD.Value
     , clusterId : Maybe String
     , isRepresentative : Bool
     , clusterSize : Int
@@ -72,7 +72,7 @@ type alias ClusterItem =
     , favicon : Maybe String
     , headerColor : Maybe String
     , headerTextColor : Maybe String
-    , headerTheme : Maybe Decode.Value
+    , headerTheme : Maybe JD.Value
     , id : String
     }
 
@@ -269,53 +269,52 @@ toClusterItem item =
 
 feedDecoder : Decoder Feed
 feedDecoder =
-    Decode.field "tab" string
-        |> Decode.andThen
+    field "tab" string
+        |> JD.andThen
             (\tab ->
-                Decode.field "url" string
-                    |> Decode.andThen
+                field "url" string
+                    |> JD.andThen
                         (\url ->
-                            Decode.field "title" string
-                                |> Decode.andThen
+                            field "title" string
+                                |> JD.andThen
                                     (\title ->
-                                        Decode.field "display_link" string
-                                            |> Decode.andThen
+                                        field "display_link" string
+                                            |> JD.andThen
                                                 (\displayLink ->
-                                                    Decode.field "site_link" string
-                                                        |> Decode.andThen
+                                                    field "site_link" string
+                                                        |> JD.andThen
                                                             (\siteLink ->
-                                                                Decode.field "favicon" (nullable string)
-                                                                    |> Decode.andThen
+                                                                field "favicon" (nullable string)
+                                                                    |> JD.andThen
                                                                         (\favicon ->
-                                                                            Decode.field "header_color" (nullable string)
-                                                                                |> Decode.andThen
+                                                                            field "header_color" (nullable string)
+                                                                                |> JD.andThen
                                                                                     (\headerColor ->
-                                                                                        Decode.field "header_text_color" (nullable string)
-                                                                                            |> Decode.andThen
+                                                                                        field "header_text_color" (nullable string)
+                                                                                            |> JD.andThen
                                                                                                 (\headerTextColor ->
                                                                                                     -- Parse optional header_theme_colors as a raw JSON value
                                                                                                     decodeNullableValueField "header_theme_colors"
-                                                                                                        |> Decode.andThen
+                                                                                                        |> JD.andThen
                                                                                                             (\headerTheme ->
-                                                                                                                Decode.field "items" (list feedItemDecoder)
-                                                                                                                    |> Decode.andThen
+                                                                                                                field "items" (list feedItemDecoder)
+                                                                                                                    |> JD.andThen
                                                                                                                         (\items ->
-                                                                                                                            Decode.field "total_item_count" Decode.int
-                                                                                                                                |> Decode.andThen
+                                                                                                                            field "total_item_count" JD.int
+                                                                                                                                |> JD.map
                                                                                                                                     (\totalItemCount ->
-                                                                                                                                        Decode.succeed
-                                                                                                                                            { tab = tab
-                                                                                                                                            , url = url
-                                                                                                                                            , title = title
-                                                                                                                                            , displayLink = displayLink
-                                                                                                                                            , siteLink = siteLink
-                                                                                                                                            , favicon = favicon
-                                                                                                                                            , headerColor = headerColor
-                                                                                                                                            , headerTextColor = headerTextColor
-                                                                                                                                            , headerTheme = headerTheme
-                                                                                                                                            , items = items
-                                                                                                                                            , totalItemCount = totalItemCount
-                                                                                                                                            }
+                                                                                                                                        { tab = tab
+                                                                                                                                        , url = url
+                                                                                                                                        , title = title
+                                                                                                                                        , displayLink = displayLink
+                                                                                                                                        , siteLink = siteLink
+                                                                                                                                        , favicon = favicon
+                                                                                                                                        , headerColor = headerColor
+                                                                                                                                        , headerTextColor = headerTextColor
+                                                                                                                                        , headerTheme = headerTheme
+                                                                                                                                        , items = items
+                                                                                                                                        , totalItemCount = totalItemCount
+                                                                                                                                        }
                                                                                                                                     )
                                                                                                                         )
                                                                                                             )
@@ -331,58 +330,58 @@ feedDecoder =
 
 feedItemDecoder : Decoder FeedItem
 feedItemDecoder =
-    Decode.map3 FeedItem
+    JD.map3 FeedItem
         (field "title" string)
         (field "link" string)
-        (field "pub_date" (nullable (Decode.map Time.millisToPosix Decode.int)))
+        (field "pub_date" (nullable (JD.map Time.millisToPosix JD.int)))
 
 
 decodeNullableValueField : String -> Decoder (Maybe JD.Value)
 decodeNullableValueField name =
-    Decode.oneOf
-        [ Decode.field name (nullable Decode.value)
-        , Decode.succeed Nothing
+    JD.oneOf
+        [ field name (nullable JD.value)
+        , JD.succeed Nothing
         ]
 
 
 timelineItemDecoder : Decoder TimelineItem
 timelineItemDecoder =
-    Decode.succeed TimelineItem
-        |> Decode.andThen (\f -> Decode.field "id" string |> Decode.map f)
-        |> Decode.andThen (\f -> Decode.field "title" string |> Decode.map f)
-        |> Decode.andThen (\f -> Decode.field "link" string |> Decode.map f)
-        |> Decode.andThen (\f -> Decode.field "pub_date" (nullable (Decode.map Time.millisToPosix Decode.int)) |> Decode.map f)
-        |> Decode.andThen (\f -> Decode.field "feed_title" string |> Decode.map f)
-        |> Decode.andThen (\f -> Decode.field "favicon" (nullable string) |> Decode.map f)
-        |> Decode.andThen (\f -> Decode.field "header_color" (nullable string) |> Decode.map f)
-        |> Decode.andThen (\f -> Decode.field "header_text_color" (nullable string) |> Decode.map f)
-        |> Decode.andThen (\f -> decodeNullableValueField "header_theme_colors" |> Decode.map f)
-        |> Decode.andThen (\f -> Decode.field "cluster_id" (nullable string) |> Decode.map f)
-        |> Decode.andThen (\f -> Decode.field "is_representative" Decode.bool |> Decode.map f)
-        |> Decode.andThen (\f -> Decode.field "cluster_size" (Decode.oneOf [ Decode.int, Decode.succeed 1 ]) |> Decode.map f)
+    TimelineItem
+        |> (\f -> field "id" string |> JD.map f)
+        |> JD.andThen (\f -> field "title" string |> JD.map f)
+        |> JD.andThen (\f -> field "link" string |> JD.map f)
+        |> JD.andThen (\f -> field "pub_date" (nullable (JD.map Time.millisToPosix JD.int)) |> JD.map f)
+        |> JD.andThen (\f -> field "feed_title" string |> JD.map f)
+        |> JD.andThen (\f -> field "favicon" (nullable string) |> JD.map f)
+        |> JD.andThen (\f -> field "header_color" (nullable string) |> JD.map f)
+        |> JD.andThen (\f -> field "header_text_color" (nullable string) |> JD.map f)
+        |> JD.andThen (\f -> decodeNullableValueField "header_theme_colors" |> JD.map f)
+        |> JD.andThen (\f -> field "cluster_id" (nullable string) |> JD.map f)
+        |> JD.andThen (\f -> field "is_representative" JD.bool |> JD.map f)
+        |> JD.andThen (\f -> field "cluster_size" (JD.oneOf [ JD.int, JD.succeed 1 ]) |> JD.map f)
 
 
 tabDecoder : Decoder Tab
 tabDecoder =
-    Decode.map Tab (field "name" string)
+    JD.map Tab (field "name" string)
 
 
 feedsDecoder : Decoder FeedsResponse
 feedsDecoder =
-    Decode.succeed FeedsResponse
-        |> Decode.andThen (\f -> Decode.field "tabs" (list tabDecoder) |> Decode.map f)
-        |> Decode.andThen (\f -> Decode.field "active_tab" string |> Decode.map f)
-        |> Decode.andThen (\f -> Decode.field "feeds" (list feedDecoder) |> Decode.map f)
-        |> Decode.andThen (\f -> Decode.field "is_clustering" (Decode.oneOf [ Decode.bool, Decode.succeed False ]) |> Decode.map f)
+    FeedsResponse
+        |> (\f -> field "tabs" (list tabDecoder) |> JD.map f)
+        |> JD.andThen (\f -> field "active_tab" string |> JD.map f)
+        |> JD.andThen (\f -> field "feeds" (list feedDecoder) |> JD.map f)
+        |> JD.andThen (\f -> field "is_clustering" (JD.oneOf [ JD.bool, JD.succeed False ]) |> JD.map f)
 
 
 timelineDecoder : Decoder TimelineResponse
 timelineDecoder =
     TimelineResponse
-        |> (\f -> Decode.field "items" (list timelineItemDecoder) |> Decode.map f)
-        |> Decode.andThen (\f -> Decode.field "has_more" Decode.bool |> Decode.map f)
-        |> Decode.andThen (\f -> Decode.field "total_count" Decode.int |> Decode.map f)
-        |> Decode.andThen (\f -> Decode.field "is_clustering" (Decode.oneOf [ Decode.bool, Decode.succeed False ]) |> Decode.map f)
+        |> (\f -> field "items" (list timelineItemDecoder) |> JD.map f)
+        |> JD.andThen (\f -> field "has_more" JD.bool |> JD.map f)
+        |> JD.andThen (\f -> field "total_count" JD.int |> JD.map f)
+        |> JD.andThen (\f -> field "is_clustering" (JD.oneOf [ JD.bool, JD.succeed False ]) |> JD.map f)
 
 
 fetchTimeline : Int -> Int -> (Result Http.Error TimelineResponse -> msg) -> Cmd msg

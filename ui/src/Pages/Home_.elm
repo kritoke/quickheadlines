@@ -6,15 +6,14 @@ import Element.Background as Background
 import Element.Border as Border
 import Element.Font as Font
 import Element.Input as Input
-import Html
 import Html.Attributes
 import Http
 import Process
-import Responsive exposing (Breakpoint(..), breakpointFromWidth, containerMaxWidth, isMobile, uniformPadding)
+import Responsive exposing (Breakpoint(..))
 import Set exposing (Set)
-import Shared exposing (Model, Msg(..), Theme(..))
+import Shared exposing (Model, Theme(..))
 import Task
-import Theme exposing (cardColor, errorColor, surfaceColor, tabActiveBg, tabActiveText, tabHoverBg, tabInactiveText, textColor, themeToColors)
+import Theme exposing (cardColor, errorColor, surfaceColor, textColor)
 import ThemeTypography as Ty
 import Time
 
@@ -57,8 +56,8 @@ type Msg
     | ClearInserted
 
 
-update : Shared.Model -> Msg -> Model -> ( Model, Cmd Msg )
-update shared msg model =
+update : Msg -> Model -> ( Model, Cmd Msg )
+update msg model =
     case msg of
         GotFeeds (Ok response) ->
             ( { model
@@ -175,14 +174,8 @@ view shared model =
         theme =
             shared.theme
 
-        colors =
-            themeToColors theme
-
         bg =
             surfaceColor theme
-
-        breakpoint =
-            Responsive.breakpointFromWidth shared.windowWidth
     in
     column
         [ width fill
@@ -203,32 +196,11 @@ tabBar shared model =
 
     else
         let
-            theme =
-                shared.theme
-
-            colors =
-                themeToColors theme
-
             breakpoint =
                 Responsive.breakpointFromWidth shared.windowWidth
 
-            border =
-                case theme of
-                    Shared.Dark ->
-                        rgb255 55 55 55
-
-                    Shared.Light ->
-                        rgb255 229 231 235
-
             isMobile =
                 Responsive.isMobile breakpoint
-
-            tabPadding =
-                if isMobile then
-                    8
-
-                else
-                    16
 
             tabElements =
                 allTab shared model.activeTab :: List.map (tabButton shared model.activeTab) model.tabs ++ [ clusteringIndicator model.isClustering ]
@@ -519,17 +491,11 @@ splitAt n list =
 feedCard : Time.Posix -> Theme -> Responsive.Breakpoint -> Maybe String -> Set String -> Feed -> Element Msg
 feedCard now theme breakpoint loadingFeed insertedIds feed =
     let
-        colors =
-            themeToColors theme
-
         cardBg =
             cardColor theme
 
         border =
             Theme.borderColor theme
-
-        txtColor =
-            textColor theme
 
         scrollAttributes =
             case breakpoint of
@@ -984,6 +950,6 @@ monthToString month =
             "Dec"
 
 
-subscriptions : Model -> Sub Msg
-subscriptions _ =
+subscriptions : Sub Msg
+subscriptions =
     Sub.none

@@ -1,15 +1,13 @@
 module Layouts.Shared exposing (layout)
 
-import Element exposing (Attribute, Element, column, el, fill, height, htmlAttribute, padding, rgb255, row, spacing, width)
+import Element exposing (Element, column, el, fill, htmlAttribute, rgb255, width)
 import Element.Background as Background
 import Element.Border as Border
-import Element.Font as Font
 import Element.Region as Region
-import ThemeTypography as Ty
 import Html.Attributes
-import Shared exposing (Model, Theme(..))
-import Theme exposing (darkBg, surfaceColor, semantic)
-import Responsive exposing (Breakpoint(..), breakpointFromWidth, uniformPadding)
+import Responsive exposing (Breakpoint(..))
+import Shared exposing (Theme(..))
+import Theme exposing (semantic, surfaceColor)
 
 
 layout :
@@ -44,11 +42,18 @@ layout { theme, windowWidth, header, footer, main, isTimeline } =
                     "1600px"
 
         sidePadding =
-             case breakpoint of
-                 VeryNarrowBreakpoint -> 12
-                 MobileBreakpoint -> 16
-                 TabletBreakpoint -> 32
-                 DesktopBreakpoint -> 48
+            case breakpoint of
+                VeryNarrowBreakpoint ->
+                    12
+
+                MobileBreakpoint ->
+                    16
+
+                TabletBreakpoint ->
+                    32
+
+                DesktopBreakpoint ->
+                    48
 
         borderColor =
             case theme of
@@ -95,6 +100,7 @@ layout { theme, windowWidth, header, footer, main, isTimeline } =
                             Element.padding 0
                     ]
                     [ main ]
+
               else
                 el
                     [ width fill
@@ -115,44 +121,3 @@ layout { theme, windowWidth, header, footer, main, isTimeline } =
             , el [ semantic "main-footer" ] footer
             ]
         ]
-
-
-headerView : Theme -> Int -> Element msg -> Element msg
-headerView theme windowWidth content =
-    let
-        bg =
-            surfaceColor theme
-    in
-    row
-        [ width fill
-        , Background.color bg
-        , semantic "header-row"
-        ]
-        [ content ]
-
-
-mainView : Element msg -> Element msg
-mainView content =
-    el
-        [ width fill
-        , height fill
-        , htmlAttribute (Html.Attributes.style "overflow-y" "auto")
-        , htmlAttribute (Html.Attributes.id "main-content")
-        , Region.mainContent
-        , semantic "content-view"
-        ]
-        content
-
-
-footerView : Element msg -> Element msg
-footerView content =
-    row
-        [ width fill
-        , padding 16
-        , spacing 8
-        , Ty.small
-        , Font.color (rgb255 150 150 150)
-        , Region.footer
-        , semantic "main-footer"
-        ]
-        [ content ]

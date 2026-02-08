@@ -2,8 +2,6 @@ port module Main exposing (main)
 
 import Application
 import Browser
-import Browser.Navigation as Nav
-import Url
 
 
 port saveTheme : String -> Cmd msg
@@ -29,8 +27,3 @@ handleUrlRequest urlRequest =
 
         Browser.External href ->
             Application.NavigateExternal href
-
-
-subscriptions : Application.Model -> Sub Application.Msg
-subscriptions model =
-    Sub.none

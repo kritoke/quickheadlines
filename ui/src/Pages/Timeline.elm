@@ -11,11 +11,11 @@ import Http
 import Json.Decode as Decode
 import Pages.ViewIcon exposing (viewIcon)
 import Process
-import Responsive exposing (Breakpoint, breakpointFromWidth, containerMaxWidth, horizontalPadding, isMobile, isVeryNarrow, timelineClusterPadding, timelineTimeColumnWidth, verticalPadding)
+import Responsive
 import Set exposing (Set)
-import Shared exposing (Model, Msg(..), Theme(..))
+import Shared exposing (Model, Theme(..))
 import Task
-import Theme exposing (borderColor, cardColor, dayHeaderBg, errorColor, lumeOrange, mutedColor, surfaceColor, textColor)
+import Theme exposing (borderColor, dayHeaderBg, errorColor, lumeOrange, mutedColor, surfaceColor, textColor)
 import ThemeTypography as Ty
 import Time exposing (Posix, Zone, toDay, toMonth, toYear)
 
@@ -194,9 +194,6 @@ getRgbTupleFromString str =
     let
         clean =
             String.trim str
-
-        withoutRgb =
-            String.dropLeft 4 str |> String.dropRight 1
 
         hex =
             String.replace "#" "" clean
@@ -461,8 +458,8 @@ type alias Model =
     }
 
 
-init : Shared.Model -> ( Model, Cmd Msg )
-init shared =
+init : ( Model, Cmd Msg )
+init =
     ( { items = []
       , clusters = []
       , expandedClusters = Set.empty
@@ -485,12 +482,11 @@ type Msg
     | LoadMore
     | ClearInserted
     | ToggleCluster String
-    | ToggleTheme
     | NearBottom Bool
 
 
-update : Shared.Model -> Msg -> Model -> ( Model, Cmd Msg )
-update shared msg model =
+update : Msg -> Model -> ( Model, Cmd Msg )
+update msg model =
     case msg of
         GotTimeline (Ok response) ->
             let
@@ -595,9 +591,6 @@ update shared msg model =
             , Cmd.none
             )
 
-        ToggleTheme ->
-            ( model, Cmd.none )
-
 
 view : Shared.Model -> Model -> Element Msg
 view shared model =
@@ -607,12 +600,6 @@ view shared model =
 
         breakpoint =
             Responsive.breakpointFromWidth shared.windowWidth
-
-        horizontalPadding =
-            Responsive.horizontalPadding breakpoint
-
-        verticalPadding =
-            Responsive.verticalPadding breakpoint
 
         bg =
             surfaceColor theme
@@ -624,7 +611,7 @@ view shared model =
             mutedColor theme
 
         clustersByDay =
-            groupClustersByDay shared.zone shared.now model.clusters
+            groupClustersByDay shared.zone model.clusters
     in
     column
         [ width fill
@@ -748,8 +735,8 @@ type alias DayClusterGroup =
     }
 
 
-groupClustersByDay : Zone -> Posix -> List Cluster -> List DayClusterGroup
-groupClustersByDay zone now clusters =
+groupClustersByDay : Zone -> List Cluster -> List DayClusterGroup
+groupClustersByDay zone clusters =
     let
         -- API returns newest -> oldest, preserve that order
         sortedClusters =
@@ -815,8 +802,8 @@ groupClustersByDay zone now clusters =
     in
     -- Keep clusters within each day in API order (newest -> oldest), reverse each day's clusters to match
     List.map
-        (\( key, dayClusters ) ->
-            { date = getClusterDateFromKey zone key dayClusters
+        (\( _, dayClusters ) ->
+            { date = getClusterDateFromKey dayClusters
             , clusters = List.reverse dayClusters
             }
         )
@@ -861,8 +848,8 @@ groupClustersByDayHelp zone accum clusters =
                     groupClustersByDayHelp zone (( key, [ cluster ] ) :: accum) rest
 
 
-getClusterDateFromKey : Zone -> ( Int, Time.Month, Int ) -> List Cluster -> Posix
-getClusterDateFromKey zone key clusters =
+getClusterDateFromKey : List Cluster -> Posix
+getClusterDateFromKey clusters =
     case clusters of
         [] ->
             Time.millisToPosix 0
@@ -884,7 +871,7 @@ dayClusterSection breakpoint zone now theme expandedClusters insertedIds dayGrou
         , spacing 0
         , paddingEach { top = 24, bottom = 32, left = 0, right = 0 }
         ]
-        (List.map (clusterItem breakpoint zone now theme expandedClusters insertedIds) dayGroup.clusters)
+        (List.map (clusterItem breakpoint zone theme expandedClusters insertedIds) dayGroup.clusters)
     ]
 
 
@@ -1016,23 +1003,6 @@ formatTime zone date =
     String.fromInt hour12 ++ ":" ++ mm ++ " " ++ period
 
 
-clusteringIndicator : Bool -> Element msg
-clusteringIndicator isClustering =
-    if isClustering then
-        row
-            [ spacing 2
-            , htmlAttribute (Html.Attributes.class "clustering-indicator")
-            , htmlAttribute (Html.Attributes.title "Story clustering in progress...")
-            ]
-            [ el [ htmlAttribute (Html.Attributes.class "clustering-dot") ] (text ".")
-            , el [ htmlAttribute (Html.Attributes.class "clustering-dot") ] (text ".")
-            , el [ htmlAttribute (Html.Attributes.class "clustering-dot") ] (text ".")
-            ]
-
-    else
-        Element.none
-
-
 monthToString : Time.Month -> String
 monthToString month =
     case month of
@@ -1073,8 +1043,8 @@ monthToString month =
             "December"
 
 
-clusterItem : Responsive.Breakpoint -> Time.Zone -> Time.Posix -> Theme -> Set String -> Set String -> Cluster -> Element Msg
-clusterItem breakpoint zone now theme expandedClusters insertedIds cluster =
+clusterItem : Responsive.Breakpoint -> Time.Zone -> Theme -> Set String -> Set String -> Cluster -> Element Msg
+clusterItem breakpoint zone theme expandedClusters insertedIds cluster =
     let
         txtColor =
             textColor theme
@@ -1411,14 +1381,14 @@ clusterItem breakpoint zone now theme expandedClusters insertedIds cluster =
                 , spacing 8
                 , paddingEach { top = 0, bottom = 12, left = Responsive.timelineClusterPadding breakpoint, right = 8 }
                 ]
-                (List.map (\it -> clusterOtherItem now theme it) cluster.others)
+                (List.map (\it -> clusterOtherItem theme it) cluster.others)
 
           else
             Element.none
         ]
 
 
-clusterOtherItem now theme item =
+clusterOtherItem theme item =
     let
         mutedTxt =
             mutedColor theme
@@ -1509,48 +1479,6 @@ clusterOtherItem now theme item =
         ]
 
 
-relativeTime : Time.Posix -> Time.Zone -> Maybe Time.Posix -> String
-relativeTime now zone maybePubDate =
-    case maybePubDate of
-        Nothing ->
-            "unknown"
-
-        Just pubDate ->
-            let
-                nowMillis =
-                    Time.posixToMillis now
-
-                pubMillis =
-                    Time.posixToMillis pubDate
-
-                diffMillis =
-                    nowMillis - pubMillis
-
-                diffMinutes =
-                    diffMillis // 60000
-
-                diffHours =
-                    diffMinutes // 60
-
-                diffDays =
-                    diffHours // 24
-            in
-            if diffMinutes < 1 then
-                "0m"
-
-            else if diffMinutes < 60 then
-                String.fromInt diffMinutes ++ "m"
-
-            else if diffHours < 24 then
-                String.fromInt diffHours ++ "h"
-
-            else if diffDays < 7 then
-                String.fromInt diffDays ++ "d"
-
-            else
-                formatDate zone (Time.millisToPosix pubMillis)
-
-
-subscriptions : Model -> Sub Msg
-subscriptions model =
+subscriptions : Sub Msg
+subscriptions =
     Sub.none

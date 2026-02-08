@@ -1,4 +1,3 @@
-
 module ThemeTypography exposing (..)
 
 import Element exposing (Attribute)
@@ -6,12 +5,9 @@ import Element.Font as Font
 import Responsive exposing (Breakpoint(..))
 
 
-{-|
-  Centralized typography helpers.
-  Replace scattered `Font.size N` with these named helpers so desktop scaling is consistent.
-  -}
-
-
+{-| Centralized typography helpers.
+Replace scattered `Font.size N` with these named helpers so desktop scaling is consistent.
+-}
 title : Attribute msg
 title =
     Font.size 24

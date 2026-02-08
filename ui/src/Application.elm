@@ -3,20 +3,20 @@ port module Application exposing (Flags, Model, Msg(..), Page(..), init, subscri
 import Browser
 import Browser.Events
 import Browser.Navigation as Nav
-import Element exposing (Element, alignRight, alignTop, centerX, centerY, clip, el, fill, height, htmlAttribute, moveDown, padding, paddingEach, paddingXY, px, rgb255, rgba, row, spacing, text, width)
+import Element exposing (Element, alignRight, centerX, centerY, el, fill, height, htmlAttribute, padding, paddingEach, px, rgb255, rgba, row, spacing, text, width)
 import Element.Background as Background
 import Element.Border as Border
 import Element.Font as Font
 import Element.Input as Input
-import Html exposing (Html)
+import Html
 import Html.Attributes as HA
 import Layouts.Shared as Layout
 import Pages.Home_ as Home
 import Pages.Timeline as Timeline
-import Responsive exposing (Breakpoint(..), breakpointFromWidth)
-import Shared exposing (Model, Msg(..), Theme(..))
+import Responsive exposing (Breakpoint(..))
+import Shared exposing (Model, Msg(..))
 import Task
-import Theme exposing (headerSurface, lumeOrange, surfaceColor, textColor)
+import Theme exposing (lumeOrange, textColor)
 import ThemeTypography as Ty
 import Time
 import Url
@@ -26,9 +26,6 @@ port saveTheme : String -> Cmd msg
 
 
 port saveCurrentPage : String -> Cmd msg
-
-
-port saveTimelineState : String -> Cmd msg
 
 
 port saveActiveTab : String -> Cmd msg
@@ -61,7 +58,6 @@ type Msg
     = SharedMsg Shared.Msg
     | HomeMsg Home.Msg
     | TimelineMsg Timeline.Msg
-    | NavigateTo Page
     | NavigateExternal String
     | SwitchTab String
     | UrlChanged Url.Url
@@ -91,7 +87,7 @@ init flags url key =
             Home.init shared
 
         ( timelineModel, timelineCmd ) =
-            Timeline.init shared
+            Timeline.init
 
         page =
             if String.contains "/timeline" url.path then
@@ -132,7 +128,7 @@ update msg model =
         HomeMsg homeMsg ->
             let
                 ( newHomeModel, homeCmd ) =
-                    Home.update model.shared homeMsg model.home
+                    Home.update homeMsg model.home
             in
             ( { model | home = newHomeModel }
             , Cmd.map HomeMsg homeCmd
@@ -141,27 +137,10 @@ update msg model =
         TimelineMsg timelineMsg ->
             let
                 ( newTimelineModel, timelineCmd ) =
-                    Timeline.update model.shared timelineMsg model.timeline
+                    Timeline.update timelineMsg model.timeline
             in
             ( { model | timeline = newTimelineModel }
             , Cmd.map TimelineMsg timelineCmd
-            )
-
-        NavigateTo targetPage ->
-            let
-                newPath =
-                    case targetPage of
-                        Home ->
-                            "/"
-
-                        Timeline ->
-                            "/timeline"
-
-                cmd =
-                    Nav.pushUrl model.key newPath
-            in
-            ( { model | page = targetPage }
-            , cmd
             )
 
         NavigateExternal href ->
@@ -172,7 +151,7 @@ update msg model =
         SwitchTab tab ->
             let
                 ( newHomeModel, homeCmd ) =
-                    Home.update model.shared (Home.SwitchTab tab) model.home
+                    Home.update (Home.SwitchTab tab) model.home
             in
             ( { model | home = newHomeModel }
             , Cmd.map HomeMsg homeCmd
@@ -252,7 +231,7 @@ view model =
                 htmlAttribute (HA.attribute "data-page" "home")
 
         layoutContent =
-            Layout.layout { theme = theme, windowWidth = model.shared.windowWidth, header = header, footer = footerView model.shared, main = content, isTimeline = isTimeline }
+            Layout.layout { theme = theme, windowWidth = model.shared.windowWidth, header = header, footer = footerView, main = content, isTimeline = isTimeline }
     in
     Browser.Document title
         [ Element.layout [ pageDataAttr ] layoutContent
@@ -273,7 +252,7 @@ subscriptions model =
         , case model.page of
             Timeline ->
                 Sub.batch
-                    [ Sub.map TimelineMsg (Timeline.subscriptions model.timeline)
+                    [ Sub.map TimelineMsg Timeline.subscriptions
                     , Sub.map TimelineMsg (onNearBottom Timeline.NearBottom)
                     ]
 
@@ -282,8 +261,8 @@ subscriptions model =
         ]
 
 
-footerView : Shared.Model -> Element Msg
-footerView model =
+footerView : Element Msg
+footerView =
     row
         [ width fill
         , padding 16
@@ -305,9 +284,6 @@ headerView model =
 
         txtColor =
             textColor theme
-
-        border =
-            Theme.borderColor theme
 
         breakpoint =
             Responsive.breakpointFromWidth model.shared.windowWidth
@@ -388,16 +364,16 @@ headerView model =
             }
         , -- Navigation Section
           Element.row [ spacing 4, centerY, height fill ]
-            [ homeIconView model Home
-            , timelineIconView model Timeline
+            [ homeIconView model
+            , timelineIconView model
             ]
         , -- Actions Section
           Element.el [ alignRight, centerY, paddingEach { top = 0, bottom = 0, left = 0, right = 8 } ] (themeToggle model)
         ]
 
 
-homeIconView : Model -> Page -> Element Msg
-homeIconView model target =
+homeIconView : Model -> Element Msg
+homeIconView model =
     let
         isActive =
             model.page == Home
@@ -454,8 +430,8 @@ homeIconView model target =
         )
 
 
-timelineIconView : Model -> Page -> Element Msg
-timelineIconView model target =
+timelineIconView : Model -> Element Msg
+timelineIconView model =
     let
         isActive =
             model.page == Timeline
@@ -580,12 +556,3 @@ themeToggle model =
         { onPress = Just (SharedMsg ToggleTheme)
         , label = el [ centerX, centerY, htmlAttribute (HA.style "display" "flex") ] (Element.html iconHtml)
         }
-
-
-mainView : String -> Element Msg
-mainView title =
-    Element.el
-        [ width fill
-        , height fill
-        ]
-        (Element.text title)

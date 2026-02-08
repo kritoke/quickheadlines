@@ -1,9 +1,8 @@
 module Theme exposing (..)
 
-import Element exposing (Attribute, Color, rgb255, htmlAttribute)
+import Element exposing (Attribute, Color, htmlAttribute, rgb255)
 import Element.Font as Font
 import Html.Attributes
-import ThemeTypography as Ty
 import Shared exposing (Theme(..))
 
 
@@ -15,7 +14,6 @@ semantic name =
 testId : String -> Attribute msg
 testId name =
     htmlAttribute (Html.Attributes.attribute "data-name" name)
-
 
 
 type alias Colors =

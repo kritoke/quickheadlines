@@ -21,7 +21,6 @@ type alias Model =
 type Msg
     = ToggleTheme
     | WindowResized Int Int
-    | SetTime Time.Posix
     | SetSystemTheme Bool
 
 
@@ -59,15 +58,19 @@ update msg model =
         WindowResized width height ->
             { model | windowWidth = width, windowHeight = height }
 
-        SetTime posix ->
-            { model | now = posix }
-
         SetSystemTheme isDark ->
-            { model | theme = if isDark then Dark else Light }
+            { model
+                | theme =
+                    if isDark then
+                        Dark
+
+                    else
+                        Light
+            }
 
 
-getHeight : Time.Posix -> Maybe Int
-getHeight _ =
+getHeight : Maybe Int
+getHeight =
     Nothing
 
 
