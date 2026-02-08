@@ -204,6 +204,11 @@
             .qh-site-header [data-header-actions] {
               padding-right: 8px !important;
             }
+            /* Enforce padding on Elm-generated wrapper classes and direct
+               anchor children so the brand spacing is always present. */
+            .qh-site-header > a { padding: 0 6px !important; line-height: 1 !important; display: inline-flex; align-items: center; }
+            .qh-site-header .pad-0-6-0-6 { padding: 0 6px !important; }
+            .qh-site-header .pad-0-8-0-0 { padding: 0 8px 0 0 !important; }
           }
         </style>
       <script>
