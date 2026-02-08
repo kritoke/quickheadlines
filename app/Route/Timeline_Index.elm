@@ -278,40 +278,29 @@ monthToString : Time.Month -> String
 monthToString month =
     case month of
         Time.Jan ->
-            "January"
-
+            "01"
         Time.Feb ->
-            "February"
-
+            "02"
         Time.Mar ->
-            "March"
-
+            "03"
         Time.Apr ->
-            "April"
-
+            "04"
         Time.May ->
-            "May"
-
+            "05"
         Time.Jun ->
-            "June"
-
+            "06"
         Time.Jul ->
-            "July"
-
+            "07"
         Time.Aug ->
-            "August"
-
+            "08"
         Time.Sep ->
-            "September"
-
+            "09"
         Time.Oct ->
-            "October"
-
+            "10"
         Time.Nov ->
-            "November"
-
+            "11"
         Time.Dec ->
-            "December"
+            "12"
 
 
 type alias DayGroup =
