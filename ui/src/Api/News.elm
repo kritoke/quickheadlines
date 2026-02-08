@@ -22,3 +22,8 @@ fetchClustersCmd url toMsg =
         { url = url
         , expect = Http.expectJson toMsg (Decode.list clusterDecoder)
         }
+
+
+fetchClustersTask : String -> Task Http.Error (List Cluster)
+fetchClustersTask url =
+    Http.toTask (Http.get { url = url, expect = Http.expectJson identity (Decode.list clusterDecoder) })

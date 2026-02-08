@@ -28,5 +28,13 @@ view shared model =
     let
         bg = surfaceColor shared.theme
     in
-    el [ Background.color bg, Font.size 14 ]
-        (text "Clusters (server-rendered placeholder)")
+    if model.loading then
+        el [ Background.color bg, Font.size 14 ] (text "Loading clusters...")
+    else
+        case model.error of
+            Just err ->
+                el [ Background.color bg, Font.size 14 ] (text err)
+
+            Nothing ->
+                el [ Background.color bg, Font.size 14 ]
+                    (ul [] (List.map (\c -> li [] [ text c.headline ]) model.clusters))
