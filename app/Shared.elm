@@ -12,8 +12,8 @@ import Element.Background as Background
 import Element.Font as Font
 import Element.Input as Input
 import Html exposing (Html)
-import Json.Decode exposing (Decoder, andMap, field)
-import Json.Encode exposing (encodeString)
+import Json.Decode as Decode
+import Json.Encode as Encode
 import Theme exposing (cardColor, errorColor, mutedColor, surfaceColor, tabActiveBg, tabActiveText, tabInactiveText, tabHoverBg, textColor, themeToColors)
 
 
@@ -225,26 +225,23 @@ update msg model =
 -}
 
 
-flagsDecoder : Decoder Model
+flagsDecoder : Decode.Decoder Model
 flagsDecoder =
-    Json.Decode.map4 init
-        (field "width" Json.Decode.int
-            |> Json.Decode.map error (\_ -> 1024)
-        (field "height" Json.Decode.int
-            |> Json.Decode.map error (\_ -> 768)
-        (field "prefersDark" Json.Decode.bool
-        )
+    Decode.map3 init
+        (Decode.field "width" Decode.int)
+        (Decode.field "height" Decode.int)
+        (Decode.field "prefersDark" Decode.bool)
 
 
 {-| JSON encoding
 -}
 
 
-modelEncoder : Model -> Json.Encode.Value
+modelEncoder : Model -> Encode.Value
 modelEncoder model =
-    Json.Encode.object
-        [ ( "windowWidth", Json.Encode.int model.windowWidth )
-        , ( "windowHeight", Json.Encode.int model.windowHeight )
-        , ( "prefersDark", Json.Encode.bool model.prefersDark )
-        , ( "theme", Json.Encode.string (themeToString model.theme) )
+    Encode.object
+        [ ( "windowWidth", Encode.int model.windowWidth )
+        , ( "windowHeight", Encode.int model.windowHeight )
+        , ( "prefersDark", Encode.bool model.prefersDark )
+        , ( "theme", Encode.string (themeToString model.theme) )
         ]
