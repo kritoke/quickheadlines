@@ -1120,7 +1120,13 @@ clusterItem breakpoint zone now theme expandedClusters insertedIds cluster =
                                         Just c2 -> c2
                                         Nothing -> textColor theme
                             -- Tighten line-height on mobile to reduce natural text box height
-                            mobileLineHeight = if Responsive.isMobile breakpoint then [ htmlAttribute (Html.Attributes.style "line-height" "1.10") ] else []
+                            -- Use a semantic attribute instead of inline style so CSS in
+                            -- `views/index.html` can control rendering and avoid inline
+                            -- style specificity issues. The CSS already targets
+                            -- `[data-server-header-text-color]` and related selectors
+                            -- for mobile; set a marker attribute and let CSS apply
+                            -- `line-height` there.
+                            mobileLineHeight = if Responsive.isMobile breakpoint then [ htmlAttribute (Html.Attributes.attribute "data-mobile-tight" "true") ] else []
                         in
                         if headerColor /= "" || headerTextColor /= "" || headerTheme /= Nothing then
                             [ Font.size 12

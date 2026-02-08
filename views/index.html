@@ -210,11 +210,14 @@
             .qh-site-header .pad-0-6-0-6 { padding: 0 6px !important; }
             .qh-site-header .pad-0-8-0-0 { padding: 0 8px 0 0 !important; }
             /* Tighten timeline title pill spacing on mobile as a defensive fallback
-               in case Elm hydration or early render causes transient spacing. */
+               in case Elm hydration or early render causes transient spacing. Also
+               support the `data-mobile-tight` attribute applied by Elm so we can
+               avoid inline `style` attributes and control specificity from CSS. */
             [data-timeline-item="true"] [data-server-fallback-color],
             [data-timeline-item="true"] [data-server-header-text-color],
-            [data-timeline-item="true"] [data-display-link] {
-              line-height: 1.15 !important;
+            [data-timeline-item="true"] [data-display-link],
+            [data-timeline-item="true"] [data-mobile-tight="true"] {
+              line-height: 1.10 !important;
               padding-top: 2px !important;
               padding-bottom: 2px !important;
               display: inline-flex !important;
