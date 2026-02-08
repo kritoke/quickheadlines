@@ -83,13 +83,13 @@ elm-pages-init:
 	@echo "Run 'nix develop . --command make elm-pages-build' to build"
 
 elm-pages-build:
-	@echo "Build (wrapper): run inside nix devshell"
-	@nix develop . --command "npx elm-pages v3 build --output=public"
+	@echo "Build: run inside nix devshell (expects node & elm-pages available)"
+	@npx elm-pages v3 build --output=public || (echo "elm-pages build failed. Ensure you ran 'nix develop . --command npm install' to install node deps." && exit 1)
 
 elm-pages-serve:
-	@echo "Serve (wrapper): run inside nix devshell"
-	@nix develop . --command "npx elm-pages v3 serve"
+	@echo "Serve: run inside nix devshell (expects node & elm-pages available)"
+	@npx elm-pages v3 serve
 
 elm-format:
 	@echo "Format Elm sources (devshell)"
-	@nix develop . --command "npx elm-format ui/src --yes"
+	@npx elm-format ui/src --yes
