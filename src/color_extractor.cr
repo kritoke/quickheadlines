@@ -501,6 +501,11 @@ module ColorExtractor
     rgb_to_hex(rgb)
   end
 
+  # Test helper to expose internal buffer sampling for specs
+  def self.test_calculate_dominant_color_from_buffer(pixels : Array(UInt8), width : Int32, height : Int32) : Array(Int32)
+    calculate_dominant_color_from_buffer(pixels, width, height)
+  end
+
   private def self.calculate_contrasting_text(rgb : Array(Int32)) : String
     lum = calculate_luminance(rgb)
 
