@@ -500,7 +500,17 @@ module ColorExtractor
       return nil
     end
 
-    # Build candidate list (legacy header_text first, then any parsed candidates)
+    # Build candidate list and pick best candidate or generate corrected colors
+    candidates = build_candidates(legacy_text, text_hash)
+    chosen_hex, corrected = choose_candidate_or_generate(candidates, bg_rgb)
+
+    out_text = {"light" => chosen_hex, "dark" => chosen_hex}
+
+    final = {"bg" => rgb_to_hex(bg_rgb), "text" => out_text, "source" => (corrected ? "auto-corrected" : (source || "auto"))}
+    final.to_json
+  end
+
+  private def self.build_candidates(legacy_text : String?, text_hash : Hash(String, String)) : Array({key: String, rgb: Array(Int32)})
     candidates = [] of {key: String, rgb: Array(Int32)}
     if legacy_text
       if rgb = parse_color_to_rgb(legacy_text)
@@ -512,31 +522,30 @@ module ColorExtractor
         candidates << {key: k, rgb: rgb}
       end
     end
+    candidates
+  end
 
-    # Choose any candidate that meets contrast threshold
-    good_candidates = candidates.select do |candidate|
-      contrast_ratio(candidate[:rgb], bg_rgb) >= 4.5
+  private def self.choose_candidate_or_generate(candidates : Array({key: String, rgb: Array(Int32)}), bg_rgb : Array(Int32)) : Tuple(String, Bool)
+    # Find candidates meeting threshold
+    good_candidates = [] of {key: String, rgb: Array(Int32), contrast: Float64}
+    candidates.each do |candidate|
+      cr = contrast_ratio(candidate[:rgb], bg_rgb)
+      if cr >= 4.5
+        good_candidates << {key: candidate[:key], rgb: candidate[:rgb], contrast: cr}
+      end
     end
 
-    corrected = false
-    out_text = nil.as(Hash(String, String)?)
-
     if good_candidates.size > 0
-      pick = good_candidates.find { |g| g[:key] == "legacy" } || good_candidates.max_by { |c| c[:contrast] rescue contrast_ratio(c[:rgb], bg_rgb) }
-      chosen_hex = rgb_to_hex(pick[:rgb])
-      out_text = {"light" => chosen_hex, "dark" => chosen_hex}
+      pick = good_candidates.find { |cand| cand[:key] == "legacy" } || good_candidates.max_by { |cand| cand[:contrast] }
+      return {rgb_to_hex(pick[:rgb]), false}
     else
       dark_rgb = find_dark_text_for_bg(bg_rgb)
       light_rgb = find_light_text_for_bg(bg_rgb)
       dark_contrast = contrast_ratio(dark_rgb, bg_rgb)
       light_contrast = contrast_ratio(light_rgb, bg_rgb)
-      chosen_hex = dark_contrast >= light_contrast ? rgb_to_hex(dark_rgb) : rgb_to_hex(light_rgb)
-      out_text = {"light" => chosen_hex, "dark" => chosen_hex}
-      corrected = true
+      chosen = dark_contrast >= light_contrast ? dark_rgb : light_rgb
+      return {rgb_to_hex(chosen), true}
     end
-
-    final = {"bg" => rgb_to_hex(bg_rgb), "text" => out_text, "source" => (corrected ? "auto-corrected" : (source || "auto"))}
-    final.to_json
   end
 
   # Upgrade existing theme JSON entries that were marked as "auto" to
