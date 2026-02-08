@@ -1,6 +1,7 @@
 {
   "devDependencies": {
-    "@playwright/test": "^1.57.0"
+    "@playwright/test": "^1.57.0",
+    "elm-review": "^2.13.0"
   },
   "optionalDependencies": {
     "jsdom": "^27.4.0",

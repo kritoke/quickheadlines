@@ -14,12 +14,12 @@ def update_feed_theme_colors_db(feed_url : String, theme_json : String)
   db_path = get_cache_db_path(nil)
   DB.open("sqlite3://#{db_path}") do |db_conn|
     normalized = normalize_feed_url(feed_url)
-    existing = db.query_one?("SELECT id FROM feeds WHERE url = ?", normalized, as: {Int64})
+    existing = db_conn.query_one?("SELECT id FROM feeds WHERE url = ?", normalized, as: {Int64})
     if existing.nil?
-      existing = db.query_one?("SELECT id FROM feeds WHERE url = ?", feed_url, as: {Int64})
+      existing = db_conn.query_one?("SELECT id FROM feeds WHERE url = ?", feed_url, as: {Int64})
     end
     if existing
-      db.exec("UPDATE feeds SET header_theme_colors = ? WHERE id = ?", theme_json, existing)
+      db_conn.exec("UPDATE feeds SET header_theme_colors = ? WHERE id = ?", theme_json, existing)
       STDERR.puts "[Backfill] Saved header_theme_colors for #{feed_url}"
     else
       STDERR.puts "[Backfill] Warning: Cannot save header_theme_colors - feed not found: #{feed_url}"
@@ -33,7 +33,7 @@ def main
   feeds = {} of String => FeedData
   db_path = get_cache_db_path(nil)
   DB.open("sqlite3://#{db_path}") do |db_conn|
-    db.query("SELECT url, title, site_link, header_color, header_text_color, header_theme_colors, favicon, favicon_data FROM feeds") do |rows|
+    db_conn.query("SELECT url, title, site_link, header_color, header_text_color, header_theme_colors, favicon, favicon_data FROM feeds") do |rows|
       rows.each do
         url = rows.read(String)
         title = rows.read(String)

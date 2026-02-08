@@ -28,11 +28,11 @@ end
 
 puts "\nFeeds table rows (id, url, favicon, favicon_data):"
 if File.exists?(db_path)
-  DB.open("sqlite3://#{db_path}") do |db|
-    count = db.query_one?("SELECT COUNT(*) FROM feeds", as: {Int64})
+  DB.open("sqlite3://#{db_path}") do |db_conn|
+    count = db_conn.query_one?("SELECT COUNT(*) FROM feeds", as: {Int64})
     puts "Total feeds: #{count || 0}"
 
-    db.query("SELECT id, url, favicon, favicon_data FROM feeds") do |rows|
+    db_conn.query("SELECT id, url, favicon, favicon_data FROM feeds") do |rows|
       rows.each do |row|
         id = row.read(Int64)
         url = row.read(String)

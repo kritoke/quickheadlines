@@ -360,8 +360,8 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
     end
 
     all_feeds = config.feeds + config.tabs.flat_map(&.feeds)
-    has_manual_color = all_feeds.any? do |f|
-      f.url == feed_url && !f.header_color.nil? && f.header_color != ""
+    has_manual_color = all_feeds.any? do |feed|
+      feed.url == feed_url && !feed.header_color.nil? && feed.header_color != ""
     end
 
     if has_manual_color
