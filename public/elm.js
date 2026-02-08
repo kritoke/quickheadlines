@@ -17047,7 +17047,7 @@ var $author$project$Pages$Timeline$dayClusterSection = F7(
 						$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill),
 						$mdgriffith$elm_ui$Element$spacing(0),
 						$mdgriffith$elm_ui$Element$paddingEach(
-						{bottom: 32, left: 0, right: 0, top: 16})
+						{bottom: 32, left: 0, right: 0, top: 24})
 					]),
 				A2(
 					$elm$core$List$map,
