@@ -1,0 +1,8 @@
+name: fix-ameba-lint-fixes
+title: Fix Ameba lint failures
+owner: openspec-agent
+status: in_progress
+tags:
+  - lint
+  - ameba
+  - maintenance

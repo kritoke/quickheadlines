@@ -1,0 +1,9 @@
+- [ ] 1.0 Run discovery: `APP_ENV=production nix develop . --command "ameba --format progress 2>&1 | tee ameba-output.txt"` and `nix develop . --command crystal build src/quickheadlines.cr`
+- [ ] 1.1 Group Ameba findings by rule and file; attach `ameba-output.txt`
+- [ ] 2.0 Triage: classify findings into low/medium/high and create per-file tasks
+- [ ] 3.0 Implement low-risk fixes (naming, useless assigns, narrow rescues)
+- [ ] 4.0 Implement medium-risk fixes (NotNil handling, explicit types)
+- [ ] 5.0 Implement high-risk refactors (split large methods, reduce cyclomatic complexity)
+- [ ] 6.0 After each logical set: compile, spec, run ameba; remove `.ameba.yml` exclusions for fixed items
+- [ ] 7.0 Verify final: `crystal build`, `crystal spec`, `ameba`, `npx playwright test` (if applicable)
+- [ ] 8.0 Archive OpenSpec change and push branch/PR

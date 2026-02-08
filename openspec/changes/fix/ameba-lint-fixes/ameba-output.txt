@@ -1,0 +1,123 @@
+Inspecting 54 files
+
+F.F.F..F.. .. .F.. .. . . .F.. .. ..F.. .F.FFFFF.. .. ... .. .. .F F F..F..F..
+
+reset_colors.cr:12:36
+[C] Naming/BlockParameterName: Disallowed block parameter name found
+Quickheadlines::Storage.open do |db|
+                                   ^
+
+bin/crimage_probe.cr:21:16
+[W] Lint/UselessAssign: Useless assignment to variable `a`
+r, g, b, a = img.at(x + img.bounds.min.x, y + img.bounds.min.y).rgba
+           ^
+
+spec/feed_theme_persistence_spec.cr:31:9
+[W] Lint/NotNil: Avoid using `not_nil!`
+fd2.not_nil!.header_theme_colors = new_theme
+      ^      ^
+
+[W] Lint/NotNil: Avoid using `not_nil!`
+cache.add(fd2.not_nil!)
+                ^
+
+spec/rate_limiter_spec.cr:82:27
+[W] Lint/LiteralInInterpolation: Literal value found in interpolation
+ip = "unique-test-#{__LINE__}-#{Time.utc.to_unix}"
+                      ^      ^
+
+scripts/backfill_header_themes.cr:58:18
+[W] Lint/UnusedArgument: Unused argument `url`
+feeds.each do |url, feed_data|
+                 ^
+
+scripts/backfill_header_themes.cr:30:5
+[W] Metrics/CyclomaticComplexity: Cyclomatic complexity too high [20/10]
+def main
+    ^
+
+scripts/backfill_header_themes.cr:15:39
+[C] Naming/BlockParameterName: Disallowed block parameter name found
+DB.open("sqlite3://#{db_path}") do |db|
+                                      ^
+
+scripts/sync_diagnostics.cr:31:39
+[C] Naming/BlockParameterName: Disallowed block parameter name found
+DB.open("sqlite3://#{db_path}") do |db|
+                                      ^
+
+[W] Lint/UselessAssign: Useless assignment to variable `now`
+now = Time.utc
+  ^
+
+[C] Naming/BlockParameterName: Disallowed block parameter name found
+items.sort! do |a, b|
+                    ^
+
+[C] Naming/BlockParameterName: Disallowed block parameter name found
+items.sort! do |a, b|
+                       ^
+
+[C] Naming/QueryBoolMethods: Consider using 'property?' for 'is_clustering'
+property is_clustering : Bool = false
+           ^
+
+[W] Documentation/DocumentationAdmonition: Found a TODO admonition in a comment
+# TODO: Implement save heat
+  ^
+
+src/config.cr:91:12
+[C] Naming/QueryBoolMethods: Consider using 'property?' for 'enabled'
+property enabled : Bool = true
+           ^
+
+[W] Metrics/CyclomaticComplexity: Cyclomatic complexity too high [13/10]
+private def self.extract_from_file_theme_aware(path : String) : Hash(String, String | Hash(String, String))?
+                   ^
+
+[W] Metrics/CyclomaticComplexity: Cyclomatic complexity too high [34/10]
+def self.auto_correct_theme_json(theme_json : String?, legacy_bg : String?, legacy_text : String?) : String?
+           ^
+
+[C] Naming/BlockParameterName: Disallowed block parameter name found
+candidates.each do |c|
+                      ^
+
+[C] Style/NegatedConditionsInUnless: Avoid negated conditions in unless blocks
+return nil unless theme_json && !theme_json.empty?
+^
+
+[W] Lint/UselessAssign: Useless assignment to variable `existing`
+if existing = FaviconStorage.get_or_fetch(url)
+     ^
+
+[W] Metrics/CyclomaticComplexity: Cyclomatic complexity too high [13/10]
+private def valid_image?(data : Bytes) : Bool
+            ^
+
+[W] Metrics/CyclomaticComplexity: Cyclomatic complexity too high [16/10]
+def fetch_favicon_uri(url : String) : String?
+    ^
+
+[W] Metrics/CyclomaticComplexity: Cyclomatic complexity too high [19/10]
+private def handle_success_response(feed : Feed, response : HTTP::Client::Response, display_limit : Int32, db_fetch_ ...
+            ^
+
+[C] Naming/BlockParameterName: Disallowed block parameter name found
+all_items.sort! do |a, b|
+                      ^
+
+[W] Metrics/CyclomaticComplexity: Cyclomatic complexity too high [11/10]
+def feed_more(request : ATH::Request) : FeedResponse
+    ^
+
+[C] Naming/BlockParameterName: Disallowed block parameter name found
+has_manual_color = all_feeds.any? do |f|
+                                        ^
+
+[W] Metrics/CyclomaticComplexity: Cyclomatic complexity too high [15/10]
+def compute_cluster_for_item(item_id : Int64, title : String, cache : FeedCache, item_feed_id : Int64? = nil) : Int64?
+    ^
+
+Finished in 182.51 milliseconds
+54 inspected, 63 failures
