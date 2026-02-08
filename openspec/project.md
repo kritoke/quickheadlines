@@ -1,18 +1,15 @@
-# QuickHeadlines Project Constitution
+# Project: QuickHeadlines (Lumnitide)
 
-## 🛠️ Tech Stack & Patterns
-- **Language:** Crystal using the **Athena Framework**.
-- **Patterns:** - Use `Result(T, E)` for all fallible operations. 
-  - Prefer **Composition over Inheritance**.
-  - No "Simplification": Do not revert `Athena::Serializer` logic to standard JSON mapping.
-- **Frontend:** **Elm Land**. Maintain file-based routing; do not bypass Elm Land's architecture.
+## 🎯 Primary Goal
+A high-performance news aggregator built for FreeBSD Jails and NixOS, utilizing Crystal (Athena) and Elm (elm-pages v3).
 
-## 🏗️ Architecture Guardians
-- **Model Integrity:** Never revert refactored logic in `src/models`.
-- **Error Handling:** Avoid raising exceptions for flow control. Use the established `Result` pattern.
-- **Environment:** Must remain compatible with **FreeBSD Jails** and **NixOS**. Avoid Linux-only syscalls.
+## 🛠 Tech Stack
+- **Backend:** Crystal + Athena (Headless JSON API)
+- **Frontend:** Elm Pages v3 + elm-ui (Hybrid Rendering)
+- **Environment:** Nix Flakes (Mandatory for all `nix develop --command` execution)
 
-## 🧪 Quality Standards
-- **Testing:** 80% coverage minimum via `crystal spec`.
-- **E2E:** Playwright (using the Nix-native browsers defined in the Hub Flake).
-- **Documentation:** All public-facing methods in `src/services` must be documented.
+## 📜 Global Rules
+1. **No HTML/CSS:** All UI layout must use `Element` primitives from `elm-ui`.
+2. **Semantic Hooks:** Every component must have `Theme.semantic` attributes (`data-name`).
+3. **Spec-Driven:** Every code change MUST be preceded by an `/opsx` artifact.
+4. **Environment:** Assume aarch64-linux (NixOS) or FreeBSD. No glibc assumptions.

@@ -1,0 +1,174 @@
+🚀 Quickheadlines Loaded with Crystal
+🌐 Playwright ARM64 Environment Ready
+🚀 Quickheadlines DevShell Active | OpenSpec 1.1.1
+Inspecting 54 files
+
+[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[31mF[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[31mF[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[31mF[0m[32m.[0m[32m.[0m[31mF[0m[32m.[0m[31mF[0m[31mF[0m[31mF[0m[31mF[0m[31mF[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[31mF[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[31mF[0m[31mF[0m[32m.[0m[31mF[0m[32m.[0m[31mF[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m
+
+[36mspec/rate_limiter_spec.cr:1:1[0m[33m [Correctable][0m
+[31m[W] Lint/Formatting: Use built-in formatter to format this source[0m
+> [97mrequire "./spec_helper"[0m
+  [33m^[0m
+
+[36mscripts/backfill_header_themes.cr:30:5[0m
+[31m[W] Metrics/CyclomaticComplexity: Cyclomatic complexity too high [20/10][0m
+> [97mdef main[0m
+      [33m^[0m[90m--[0m[33m^[0m
+
+[36msrc/rate_limiter.cr:49:42[0m[33m [Correctable][0m
+[34m[C] Layout/TrailingWhitespace: Trailing whitespace detected[0m
+> [97mexisting = @limits[window_key]? [0m
+                                 [33m^[0m
+
+[36msrc/rate_limiter.cr:1:1[0m[33m [Correctable][0m
+[31m[W] Lint/Formatting: Use built-in formatter to format this source[0m
+> [97mrequire "time"[0m
+  [33m^[0m
+
+[36msrc/models.cr:83:12[0m
+[34m[C] Naming/QueryBoolMethods: Consider using 'property?' for 'is_clustering'[0m
+> [97mproperty is_clustering : Bool = false[0m
+           [33m^[0m[90m-----------[0m[33m^[0m
+
+[36msrc/repositories/heat_map_repository.cr:5:5[0m
+[31m[W] Documentation/DocumentationAdmonition: Found a TODO admonition in a comment[0m
+> [97m# TODO: Implement save heat[0m
+  [33m^[0m
+
+[36msrc/repositories/heat_map_repository.cr:9:5[0m
+[31m[W] Documentation/DocumentationAdmonition: Found a TODO admonition in a comment[0m
+> [97m# TODO: Implement find heat by story id[0m
+  [33m^[0m
+
+[36msrc/repositories/heat_map_repository.cr:14:5[0m
+[31m[W] Documentation/DocumentationAdmonition: Found a TODO admonition in a comment[0m
+> [97m# TODO: Implement find heat for multiple story ids[0m
+  [33m^[0m
+
+[36msrc/repositories/feed_repository.cr:5:5[0m
+[31m[W] Documentation/DocumentationAdmonition: Found a TODO admonition in a comment[0m
+> [97m# TODO: Implement find all feeds[0m
+  [33m^[0m
+
+[36msrc/repositories/feed_repository.cr:10:5[0m
+[31m[W] Documentation/DocumentationAdmonition: Found a TODO admonition in a comment[0m
+> [97m# TODO: Implement find feed by id[0m
+  [33m^[0m
+
+[36msrc/repositories/feed_repository.cr:15:5[0m
+[31m[W] Documentation/DocumentationAdmonition: Found a TODO admonition in a comment[0m
+> [97m# TODO: Implement find stories by feed id[0m
+  [33m^[0m
+
+[36msrc/repositories/feed_repository.cr:20:5[0m
+[31m[W] Documentation/DocumentationAdmonition: Found a TODO admonition in a comment[0m
+> [97m# TODO: Implement save feed[0m
+  [33m^[0m
+
+[36msrc/repositories/story_repository.cr:5:5[0m
+[31m[W] Documentation/DocumentationAdmonition: Found a TODO admonition in a comment[0m
+> [97m# TODO: Implement find all stories[0m
+  [33m^[0m
+
+[36msrc/repositories/story_repository.cr:10:5[0m
+[31m[W] Documentation/DocumentationAdmonition: Found a TODO admonition in a comment[0m
+> [97m# TODO: Implement find story by id[0m
+  [33m^[0m
+
+[36msrc/repositories/story_repository.cr:15:5[0m
+[31m[W] Documentation/DocumentationAdmonition: Found a TODO admonition in a comment[0m
+> [97m# TODO: Implement save story[0m
+  [33m^[0m
+
+[36msrc/config.cr:91:12[0m
+[34m[C] Naming/QueryBoolMethods: Consider using 'property?' for 'enabled'[0m
+> [97mproperty enabled : Bool = true[0m
+           [33m^[0m[90m-----[0m[33m^[0m
+
+[36msrc/config.cr:108:12[0m
+[34m[C] Naming/QueryBoolMethods: Consider using 'property?' for 'debug'[0m
+> [97mproperty debug : Bool = false[0m
+           [33m^[0m[90m---[0m[33m^[0m
+
+[36msrc/dtos/status_dto.cr:7:12[0m
+[34m[C] Naming/QueryBoolMethods: Consider using 'property?' for 'is_clustering'[0m
+> [97mproperty is_clustering : Bool[0m
+           [33m^[0m[90m-----------[0m[33m^[0m
+
+[36msrc/fetcher.cr:1:1[0m[33m [Correctable][0m
+[31m[W] Lint/Formatting: Use built-in formatter to format this source[0m
+> [97mrequire "base64"[0m
+  [33m^[0m
+
+[36msrc/fetcher.cr:15:13[0m
+[31m[W] Metrics/CyclomaticComplexity: Cyclomatic complexity too high [13/10][0m
+> [97mprivate def valid_image?(data : Bytes) : Bool[0m
+              [33m^[0m[90m----------[0m[33m^[0m
+
+[36msrc/fetcher.cr:109:5[0m
+[31m[W] Metrics/CyclomaticComplexity: Cyclomatic complexity too high [16/10][0m
+> [97mdef fetch_favicon_uri(url : String) : String?[0m
+      [33m^[0m[90m---------------[0m[33m^[0m
+
+[36msrc/fetcher.cr:466:13[0m
+[31m[W] Metrics/CyclomaticComplexity: Cyclomatic complexity too high [19/10][0m
+> [97mprivate def handle_success_response(feed : Feed, response : HTTP::Client::Response, display_limit : Int32, db_fetch_ ...[0m
+              [33m^[0m[90m---------------------[0m[33m^[0m
+
+[36msrc/fetcher.cr:536:13[0m
+[31m[W] Metrics/CyclomaticComplexity: Cyclomatic complexity too high [23/10][0m
+> [97mprivate def extract_header_colors(feed : Feed, favicon_path : String?) : {String?, String?, String?}[0m
+              [33m^[0m[90m-------------------[0m[33m^[0m
+
+[36msrc/fetcher.cr:705:5[0m
+[31m[W] Metrics/CyclomaticComplexity: Cyclomatic complexity too high [12/10][0m
+> [97mdef fetch_feed(feed : Feed, display_item_limit : Int32, db_fetch_limit : Int32, previous_data : FeedData? = nil) : FeedData[0m
+      [33m^[0m[90m--------[0m[33m^[0m
+
+[36msrc/api.cr:148:12[0m
+[34m[C] Naming/QueryBoolMethods: Consider using 'property?' for 'is_clustering'[0m
+> [97mproperty is_clustering : Bool = false[0m
+           [33m^[0m[90m-----------[0m[33m^[0m
+
+[36msrc/api.cr:159:12[0m
+[34m[C] Naming/QueryBoolMethods: Consider using 'property?' for 'has_more'[0m
+> [97mproperty has_more : Bool[0m
+           [33m^[0m[90m------[0m[33m^[0m
+
+[36msrc/api.cr:161:12[0m
+[34m[C] Naming/QueryBoolMethods: Consider using 'property?' for 'is_clustering'[0m
+> [97mproperty is_clustering : Bool = false[0m
+           [33m^[0m[90m-----------[0m[33m^[0m
+
+[36msrc/api.cr:171:12[0m
+[34m[C] Naming/QueryBoolMethods: Consider using 'property?' for 'is_clustering'[0m
+> [97mproperty is_clustering : Bool[0m
+           [33m^[0m[90m-----------[0m[33m^[0m
+
+[36msrc/controllers/api_controller.cr:203:7[0m
+[31m[W] Metrics/CyclomaticComplexity: Cyclomatic complexity too high [11/10][0m
+> [97mdef feed_more(request : ATH::Request) : FeedResponse[0m
+      [33m^[0m[90m-------[0m[33m^[0m
+
+[36msrc/controllers/api_controller.cr:335:7[0m
+[31m[W] Metrics/CyclomaticComplexity: Cyclomatic complexity too high [13/10][0m
+> [97mdef save_header_color(request : ATH::Request) : ATH::Response[0m
+      [33m^[0m[90m---------------[0m[33m^[0m
+
+[36msrc/services/heat_map_service.cr:7:5[0m
+[31m[W] Documentation/DocumentationAdmonition: Found a TODO admonition in a comment[0m
+> [97m# TODO: Implement heat map calculation[0m
+  [33m^[0m
+
+[36msrc/services/heat_map_service.cr:12:5[0m
+[31m[W] Documentation/DocumentationAdmonition: Found a TODO admonition in a comment[0m
+> [97m# TODO: Implement get heat by story id[0m
+  [33m^[0m
+
+[36msrc/services/clustering_service.cr:154:7[0m
+[31m[W] Metrics/CyclomaticComplexity: Cyclomatic complexity too high [15/10][0m
+> [97mdef compute_cluster_for_item(item_id : Int64, title : String, cache : FeedCache, item_feed_id : Int64? = nil) : Int64?[0m
+      [33m^[0m[90m----------------------[0m[33m^[0m
+
+Finished in 162.85 milliseconds
+[31m54 inspected, 33 failures[0m

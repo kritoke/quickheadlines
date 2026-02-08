@@ -1,84 +1,9 @@
-module Shared exposing (Model, Msg(..), Theme(..), getHeight, init, themeToString, update)
+module Shared exposing (layout)
 
-import Time
-
-
-type Theme
-    = Dark
-    | Light
+import Html exposing (Html, div)
+import Html.Attributes as Attr
 
 
-type alias Model =
-    { theme : Theme
-    , windowWidth : Int
-    , windowHeight : Int
-    , now : Time.Posix
-    , zone : Time.Zone
-    , savedTab : Maybe String
-    }
-
-
-type Msg
-    = ToggleTheme
-    | WindowResized Int Int
-    | SetSystemTheme Bool
-
-
-init : Int -> Int -> Bool -> Time.Posix -> Time.Zone -> Maybe String -> Model
-init width height prefersDark now zone savedTab =
-    { theme =
-        if prefersDark then
-            Dark
-
-        else
-            Light
-    , windowWidth = width
-    , windowHeight = height
-    , now = now
-    , zone = zone
-    , savedTab = savedTab
-    }
-
-
-update : Msg -> Model -> Model
-update msg model =
-    case msg of
-        ToggleTheme ->
-            let
-                newTheme =
-                    case model.theme of
-                        Dark ->
-                            Light
-
-                        Light ->
-                            Dark
-            in
-            { model | theme = newTheme }
-
-        WindowResized width height ->
-            { model | windowWidth = width, windowHeight = height }
-
-        SetSystemTheme isDark ->
-            { model
-                | theme =
-                    if isDark then
-                        Dark
-
-                    else
-                        Light
-            }
-
-
-getHeight : Maybe Int
-getHeight =
-    Nothing
-
-
-themeToString : Theme -> String
-themeToString theme =
-    case theme of
-        Dark ->
-            "dark"
-
-        Light ->
-            "light"
+layout : List (Html msg) -> Html msg
+layout children =
+    div [ Attr.class "qh-app" ] children

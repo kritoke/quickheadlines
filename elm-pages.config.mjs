@@ -5,6 +5,9 @@ export default {
   build: {
     rollupOptions: {
       external: ["/index"],
+      input: {
+        app: "./app/Route/Index.elm",
+      },
     },
   },
 };
