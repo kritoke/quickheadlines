@@ -1030,7 +1030,7 @@ clusterItem breakpoint zone now theme expandedClusters insertedIds cluster =
     in
     column
         [ width fill
-        , paddingEach { top = 4, bottom = 4, left = 0, right = 0 }
+        , paddingEach { top = (if Responsive.isMobile breakpoint then 1 else 4), bottom = (if Responsive.isMobile breakpoint then 1 else 4), left = 0, right = 0 }
         , Border.widthEach { bottom = 1, left = 0, right = 0, top = 0 }
         , Border.color border
         , Background.color
@@ -1119,26 +1119,31 @@ clusterItem breakpoint zone now theme expandedClusters insertedIds cluster =
                                     Nothing -> case parseColor (textColorFromBgString effectiveBg) of
                                         Just c2 -> c2
                                         Nothing -> textColor theme
+                            -- Tighten line-height on mobile to reduce natural text box height
+                            mobileLineHeight = if Responsive.isMobile breakpoint then [ htmlAttribute (Html.Attributes.style "line-height" "1.10") ] else []
                         in
                         if headerColor /= "" || headerTextColor /= "" || headerTheme /= Nothing then
                             [ Font.size 12
                             , Font.color computedColor
                             , htmlAttribute (Html.Attributes.attribute "data-server-header-text-color" titleTextColor)
                             , htmlAttribute (Html.Attributes.attribute "data-use-server-colors" "true")
-                            ]
+                            ] ++ mobileLineHeight
                         else
                             [ Font.size 12
                             -- Use a data attribute for fallback colors so client-side
                             -- CSS/JS can apply them deterministically (avoids inline style races).
                             , htmlAttribute (Html.Attributes.attribute "data-server-fallback-color" titleTextColor)
                             , Font.color computedColor
-                            ]
+                            ] ++ mobileLineHeight
 
                     titleBgAttrs =
                         case parseColor effectiveBg of
                             Just c ->
+                                let
+                                    pad = if Responsive.isMobile breakpoint then paddingXY 0 4 else paddingXY 2 6
+                                in
                                 [ Background.color c
-                                , paddingXY 2 6
+                                , pad
                                 , Border.rounded 6
                                 ]
 
