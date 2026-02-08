@@ -814,6 +814,12 @@ feedItem now theme insertedIds item =
             , spacing 8
             , htmlAttribute (Html.Attributes.style "min-width" "0")
             ]
+            ++ (if isInserted then
+                    [ htmlAttribute (Html.Attributes.style "animation" "qh-insert 300ms ease-out both, qh-flash-light 180ms ease-out")
+                    , htmlAttribute (Html.Attributes.style "will-change" "opacity, transform, background-color")
+                    ]
+                else
+                    [])
 
         linkAttrs =
             [ Font.color txtColor
