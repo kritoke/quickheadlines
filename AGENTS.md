@@ -16,11 +16,11 @@ All work must be structured as an OpenSpec Change within `openspec/changes/`.
 
 > Execution Context:
 > This project is a Nix Spoke. You are running inside a persistent Hub, but the project-specific tools (Crystal 1.18.2, Elm, Shards) are isolated.
-> Rule: For ANY shell command execution (compiling, testing, formatting), you MUST prefix the command with `nix develop . --command`.
-> - Incorrect: `crystal spec`
-> - Correct: `nix develop . --command crystal spec`
-> - Incorrect: `shards install`
-> - Correct: `nix develop . --command shards install`
+ > Rule: For ANY shell command execution (compiling, testing, formatting), you MUST run commands inside the nix devshell. Prefer either: (A) call `make` targets from inside the devshell (recommended), or (B) use the devshell `--command` with the working-directory semantics your tooling supports.
+ > - Recommended: `nix develop . --command make run` or `nix develop . --command make elm-build`
+ > - Avoid: `nix develop . --command "cd ui && elm make ..."` because some wrappers treat the whole quoted string as a program path and fail with posix_spawn/ENOENT. If you must run an exact program in a subdirectory, use the devshell's workdir parameter (e.g., `workdir=ui`) or run `make` targets that encapsulate directory changes.
+ > - Incorrect: `crystal spec` (without devshell)
+ > - Incorrect: `shards install` (without devshell)
 
 ### 2. The Library/Linker Workaround
 
@@ -89,21 +89,31 @@ This sets up the correct `LD_LIBRARY_PATH` for Crystal's dependencies (boehmgc, 
 
 ### Quick Reference
 
+Prefer running Makefile targets inside the devshell; they encapsulate environment setup and directory context.
+
 ```bash
-# Start development server (runs on port 8080)
+# Start development server (recommended)
 nix develop . --command make run
+
+# Build production Elm bundle (recommended)
+nix develop . --command make elm-build
 
 # Run Crystal tests
 nix develop . --command crystal spec
 
-# Rebuild Elm frontend (after UI changes)
-nix develop . --command cd ui && elm make src/Main.elm --output=../public/elm.js
+# Rebuild Elm frontend manually (avoid embedding `cd` inside --command)
+# Good: use the nix devshell workdir feature if available, or run make:
+#   workdir=ui nix develop . --command 'elm make src/Main.elm --optimize --output=../public/elm.js'
+# Better: use make
+nix develop . --command make elm-build
 
 # Install/update dependencies
 nix develop . --command shards install
 
 # Format Elm code
-nix develop . --command cd ui && elm-format src/
+# workdir=ui nix develop . --command elm-format src/
+# or using make wrapper:
+nix develop . --command make elm-format
 
 # Run Playwright tests
 nix develop . --command npx playwright test
@@ -491,4 +501,3 @@ nix develop . --command crystal tool format --check src/
 # Run unreachable code check
 nix develop . --command crystal tool unreachable src/quickheadlines.cr
 ```
-

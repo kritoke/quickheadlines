@@ -15,7 +15,10 @@ nix develop . --command shards install
 
 # Rebuild Elm
 echo "🎨 Rebuilding Elm..."
-nix develop . --command cd ui && elm make src/Main.elm --output=../public/elm.js
+# Use the Makefile's elm-build target which runs Elm inside the nix devshell
+# This avoids embedding `cd` inside the `--command` string which can be
+# interpreted incorrectly by some wrappers. Prefer `make elm-build`.
+nix develop . --command make elm-build
 
 # Run specs
 echo "🧪 Running specs..."
