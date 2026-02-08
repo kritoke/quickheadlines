@@ -13,6 +13,22 @@
   to { opacity: 1; transform: translateY(0); }
 }
 
+/* Subtle background flash animations for inserted items (light & dark themes) */
+@keyframes qh-flash-light {
+  from { background-color: rgba(255,165,0,0.16); }
+  to { background-color: transparent; }
+}
+
+@keyframes qh-flash-dark {
+  from { background-color: rgba(255,165,0,0.08); }
+  to { background-color: transparent; }
+}
+
+/* Use a CSS class to switch flash animation depending on theme; JS/HTML already sets data-theme or prefers-color-scheme will control media queries */
+[data-theme="dark"] .timeline-inserted, .dark .timeline-inserted {
+  animation: qh-insert 300ms ease-out both, qh-flash-dark 180ms ease-out;
+}
+
 /* Scroll shadow to indicate more content in feed boxes (matches v0.4.0 behavior) */
 .feed-box, [data-semantic="feed-card"] {
   position: relative; /* required for the ::after gradient */

@@ -761,8 +761,8 @@ feedItem now theme insertedIds item =
             , htmlAttribute (Html.Attributes.style "text-decoration" "none")
             ]
             ++ (if isInserted then
-                    [ htmlAttribute (Html.Attributes.style "animation" "qh-insert 220ms ease-out both")
-                    , htmlAttribute (Html.Attributes.style "will-change" "opacity, transform")
+                    [ htmlAttribute (Html.Attributes.style "animation" "qh-insert 300ms ease-out both, qh-flash-light 180ms ease-out")
+                    , htmlAttribute (Html.Attributes.style "will-change" "opacity, transform, background-color")
                     ]
                 else
                     [])
