@@ -23,8 +23,7 @@
               shards pkg-config openssl sqlite libxml2 libyaml
               libevent zlib pcre2 gmp boehmgc file
                elmPackages.elm elmPackages.elm-format elmPackages.elm-review
-               nodejs-20_x
-               nodePackages.npm
+               nodejs
               git curl gnumake gcc
               openspec.packages.${system}.default
               pkgs.playwright-driver.browsers
