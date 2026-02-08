@@ -1,4 +1,4 @@
-port module Pages.Home_ exposing (Model, Msg(..), init, update, view, subscriptions)
+port module Pages.Home_ exposing (Model, Msg(..), init, subscriptions, update, view)
 
 import Api exposing (Feed, FeedItem, fetchFeeds, sortFeedItems)
 import Element exposing (..)
@@ -6,17 +6,17 @@ import Element.Background as Background
 import Element.Border as Border
 import Element.Font as Font
 import Element.Input as Input
+import Html
 import Html.Attributes
-import Html as Html
 import Http
+import Process
+import Responsive exposing (Breakpoint(..), breakpointFromWidth, containerMaxWidth, isMobile, uniformPadding)
+import Set exposing (Set)
 import Shared exposing (Model, Msg(..), Theme(..))
+import Task
 import Theme exposing (cardColor, errorColor, surfaceColor, tabActiveBg, tabActiveText, tabHoverBg, tabInactiveText, textColor, themeToColors)
 import ThemeTypography as Ty
 import Time
-import Task
-import Process
-import Responsive exposing (Breakpoint(..), breakpointFromWidth, isMobile, uniformPadding, containerMaxWidth)
-import Set exposing (Set)
 
 
 port saveActiveTab : String -> Cmd msg
@@ -87,11 +87,16 @@ update shared msg model =
 
         LoadMoreFeed url ->
             let
-                maybeFeed = List.filter (\f -> f.url == url) model.feeds |> List.head
+                maybeFeed =
+                    List.filter (\f -> f.url == url) model.feeds |> List.head
+
                 offset =
                     case maybeFeed of
-                        Just f -> List.length f.items
-                        Nothing -> 0
+                        Just f ->
+                            List.length f.items
+
+                        Nothing ->
+                            0
             in
             ( { model | loadingFeed = Just url }
             , Api.fetchFeedMore url 15 offset (\res -> GotMoreFeed url res)
@@ -100,41 +105,52 @@ update shared msg model =
         GotMoreFeed url (Ok response) ->
             let
                 -- Existing links for the feed we loaded more for
-                maybeFeed = List.filter (\f -> f.url == url) model.feeds |> List.head
+                maybeFeed =
+                    List.filter (\f -> f.url == url) model.feeds |> List.head
 
                 existingLinks =
                     case maybeFeed of
-                        Just f -> Set.fromList (List.map .link f.items)
-                        Nothing -> Set.empty
+                        Just f ->
+                            Set.fromList (List.map .link f.items)
+
+                        Nothing ->
+                            Set.empty
 
                 addedLinksList =
                     response.items
                         |> List.filter (\i -> not (Set.member i.link existingLinks))
                         |> List.map .link
 
-                addedSet = Set.fromList addedLinksList
+                addedSet =
+                    Set.fromList addedLinksList
 
                 -- Merge existing items with newly fetched items, sort newest -> oldest,
                 -- and deduplicate by link (prefer the newest items).
                 dedupeByLink items =
                     let
-                        folder item (acc, seen) =
+                        folder item ( acc, seen ) =
                             if Set.member item.link seen then
                                 ( acc, seen )
+
                             else
                                 ( acc ++ [ item ], Set.insert item.link seen )
 
-                        (result, _) = List.foldl folder ([], Set.empty) items
+                        ( result, _ ) =
+                            List.foldl folder ( [], Set.empty ) items
                     in
                     result
 
                 updateFeed f =
                     if f.url == url then
                         let
-                            merged = Api.sortFeedItems (f.items ++ response.items)
-                            mergedDedup = dedupeByLink merged
+                            merged =
+                                Api.sortFeedItems (f.items ++ response.items)
+
+                            mergedDedup =
+                                dedupeByLink merged
                         in
                         { f | items = mergedDedup, totalItemCount = response.totalItemCount }
+
                     else
                         f
             in
@@ -155,199 +171,229 @@ update shared msg model =
 
 view : Shared.Model -> Model -> Element Msg
 view shared model =
-     let
-         theme =
-             shared.theme
+    let
+        theme =
+            shared.theme
 
-         colors =
-             themeToColors theme
+        colors =
+            themeToColors theme
 
-         bg =
-             surfaceColor theme
+        bg =
+            surfaceColor theme
 
-         breakpoint =
-             Responsive.breakpointFromWidth shared.windowWidth
-     in
-     column
-         [ width fill
-         , height fill
-         , spacing 20
-         , Background.color bg
-         , htmlAttribute (Html.Attributes.attribute "data-page" "home")
-         ]
-         [ tabBar shared model
-         , content shared model
-         ]
+        breakpoint =
+            Responsive.breakpointFromWidth shared.windowWidth
+    in
+    column
+        [ width fill
+        , height fill
+        , spacing 20
+        , Background.color bg
+        , htmlAttribute (Html.Attributes.attribute "data-page" "home")
+        ]
+        [ tabBar shared model
+        , content shared model
+        ]
 
 
 tabBar : Shared.Model -> Model -> Element Msg
 tabBar shared model =
-     if List.isEmpty model.tabs then
-         Element.none
+    if List.isEmpty model.tabs then
+        Element.none
 
-     else
-         let
-             theme =
-                 shared.theme
+    else
+        let
+            theme =
+                shared.theme
 
-             colors =
-                 themeToColors theme
+            colors =
+                themeToColors theme
 
-             breakpoint =
-                 Responsive.breakpointFromWidth shared.windowWidth
+            breakpoint =
+                Responsive.breakpointFromWidth shared.windowWidth
 
-             border =
-                 case theme of
-                     Shared.Dark ->
-                         rgb255 55 55 55
+            border =
+                case theme of
+                    Shared.Dark ->
+                        rgb255 55 55 55
 
-                     Shared.Light ->
-                         rgb255 229 231 235
+                    Shared.Light ->
+                        rgb255 229 231 235
 
-             isMobile =
-                 Responsive.isMobile breakpoint
+            isMobile =
+                Responsive.isMobile breakpoint
 
-             tabPadding =
-                 if isMobile then 8 else 16
+            tabPadding =
+                if isMobile then
+                    8
 
-             tabElements =
-                 allTab shared model.activeTab :: List.map (tabButton shared model.activeTab) model.tabs ++ [ clusteringIndicator model.isClustering ]
-         in
-         Element.column
-              [ Element.width Element.fill
-              , Element.spacing 0
-              , Element.paddingEach { top = 16, right = 0, bottom = 0, left = 4 }
-              ]
-          [ if isMobile then
-              row
-              [ width fill
-              , spacing 6
-              , Element.paddingEach { top = 4, right = 4, bottom = 12, left = 4 }
-              , htmlAttribute (Html.Attributes.style "overflow-x" "auto")
-              , htmlAttribute (Html.Attributes.style "white-space" "nowrap")
-              , htmlAttribute (Html.Attributes.style "-webkit-overflow-scrolling" "touch")
-              , Element.htmlAttribute (Html.Attributes.style "scrollbar-width" "none")
-              , Element.htmlAttribute (Html.Attributes.class "auto-hide-scroll")
-              ]
-              tabElements
-            else
-                  wrappedRow
-                      [ width fill
-                      , spacing 6
-                      ]
-                      tabElements
-              ]
+                else
+                    16
+
+            tabElements =
+                allTab shared model.activeTab :: List.map (tabButton shared model.activeTab) model.tabs ++ [ clusteringIndicator model.isClustering ]
+        in
+        Element.column
+            [ Element.width Element.fill
+            , Element.spacing 0
+            , Element.paddingEach { top = 16, right = 0, bottom = 0, left = 4 }
+            ]
+            [ if isMobile then
+                row
+                    [ width fill
+                    , spacing 6
+                    , Element.paddingEach { top = 4, right = 4, bottom = 12, left = 4 }
+                    , htmlAttribute (Html.Attributes.style "overflow-x" "auto")
+                    , htmlAttribute (Html.Attributes.style "white-space" "nowrap")
+                    , htmlAttribute (Html.Attributes.style "-webkit-overflow-scrolling" "touch")
+                    , Element.htmlAttribute (Html.Attributes.style "scrollbar-width" "none")
+                    , Element.htmlAttribute (Html.Attributes.class "auto-hide-scroll")
+                    ]
+                    tabElements
+
+              else
+                wrappedRow
+                    [ width fill
+                    , spacing 6
+                    ]
+                    tabElements
+            ]
 
 
 allTab : Shared.Model -> String -> Element Msg
 allTab shared activeTab =
-     let
-         theme =
-             shared.theme
+    let
+        theme =
+            shared.theme
 
-         breakpoint =
-             Responsive.breakpointFromWidth shared.windowWidth
+        breakpoint =
+            Responsive.breakpointFromWidth shared.windowWidth
 
-         isMobile =
-             Responsive.isMobile breakpoint
+        isMobile =
+            Responsive.isMobile breakpoint
 
-         isActive =
-             String.toLower activeTab == "all"
+        isActive =
+            String.toLower activeTab == "all"
 
-         txtColor =
-             if isActive then
-                 case theme of
-                     Shared.Dark -> rgb255 255 255 255
-                     Shared.Light -> rgb255 15 23 42
-             else
-                 case theme of
-                     Shared.Dark ->
-                         rgb255 148 163 184
-                     Shared.Light ->
-                         rgb255 100 116 139
+        txtColor =
+            if isActive then
+                case theme of
+                    Shared.Dark ->
+                        rgb255 255 255 255
 
-         bgColor =
-             if isActive then
-                 case theme of
-                     Shared.Dark -> rgb255 255 140 0
-                     Shared.Light -> rgb255 255 165 0
-             else
-                 Element.rgba 0 0 0 0
+                    Shared.Light ->
+                        rgb255 15 23 42
 
-         pad =
-             if isMobile then 10 else 16
-     in
-     Input.button
-         [ paddingXY pad 8
-         , Ty.small
-         , Font.medium
-         , Font.color txtColor
-         , Background.color bgColor
-         , Border.rounded 16
-         , htmlAttribute (Html.Attributes.style "cursor" "pointer")
-         , htmlAttribute (Html.Attributes.style "outline" "none")
-         , htmlAttribute (Html.Attributes.style "flex-shrink" "0")
-         , htmlAttribute (Html.Attributes.class "tab-link")
-         ]
-         { onPress = Just (SwitchTab "All")
-         , label = text "All"
-         }
+            else
+                case theme of
+                    Shared.Dark ->
+                        rgb255 148 163 184
+
+                    Shared.Light ->
+                        rgb255 100 116 139
+
+        bgColor =
+            if isActive then
+                case theme of
+                    Shared.Dark ->
+                        rgb255 255 140 0
+
+                    Shared.Light ->
+                        rgb255 255 165 0
+
+            else
+                Element.rgba 0 0 0 0
+
+        pad =
+            if isMobile then
+                10
+
+            else
+                16
+    in
+    Input.button
+        [ paddingXY pad 8
+        , Ty.small
+        , Font.medium
+        , Font.color txtColor
+        , Background.color bgColor
+        , Border.rounded 16
+        , htmlAttribute (Html.Attributes.style "cursor" "pointer")
+        , htmlAttribute (Html.Attributes.style "outline" "none")
+        , htmlAttribute (Html.Attributes.style "flex-shrink" "0")
+        , htmlAttribute (Html.Attributes.class "tab-link")
+        ]
+        { onPress = Just (SwitchTab "All")
+        , label = text "All"
+        }
 
 
 tabButton : Shared.Model -> String -> String -> Element Msg
 tabButton shared activeTab tab =
-     let
-         theme =
-             shared.theme
+    let
+        theme =
+            shared.theme
 
-         breakpoint =
-             Responsive.breakpointFromWidth shared.windowWidth
+        breakpoint =
+            Responsive.breakpointFromWidth shared.windowWidth
 
-         isMobile =
-             Responsive.isMobile breakpoint
+        isMobile =
+            Responsive.isMobile breakpoint
 
-         isActive =
-             String.toLower tab == String.toLower activeTab
+        isActive =
+            String.toLower tab == String.toLower activeTab
 
-         txtColor =
-             if isActive then
-                 case theme of
-                     Shared.Dark -> rgb255 255 255 255
-                     Shared.Light -> rgb255 15 23 42
-             else
-                 case theme of
-                     Shared.Dark ->
-                         rgb255 148 163 184
+        txtColor =
+            if isActive then
+                case theme of
+                    Shared.Dark ->
+                        rgb255 255 255 255
 
-                     Shared.Light ->
-                         rgb255 100 116 139
+                    Shared.Light ->
+                        rgb255 15 23 42
 
-         bgColor =
-             if isActive then
-                 case theme of
-                     Shared.Dark -> rgb255 255 140 0
-                     Shared.Light -> rgb255 255 165 0
-             else
-                 Element.rgba 0 0 0 0
+            else
+                case theme of
+                    Shared.Dark ->
+                        rgb255 148 163 184
 
-         pad =
-             if isMobile then 10 else 16
-     in
-     Input.button
-         [ paddingXY pad 8
-         , Ty.small
-         , Font.medium
-         , Font.color txtColor
-         , Background.color bgColor
-         , Border.rounded 16
-         , htmlAttribute (Html.Attributes.style "cursor" "pointer")
-         , htmlAttribute (Html.Attributes.style "outline" "none")
-         , htmlAttribute (Html.Attributes.style "flex-shrink" "0")
-         , htmlAttribute (Html.Attributes.class "tab-link")
-         ]
-         { onPress = Just (SwitchTab tab)
-         , label = text tab
-         }
+                    Shared.Light ->
+                        rgb255 100 116 139
+
+        bgColor =
+            if isActive then
+                case theme of
+                    Shared.Dark ->
+                        rgb255 255 140 0
+
+                    Shared.Light ->
+                        rgb255 255 165 0
+
+            else
+                Element.rgba 0 0 0 0
+
+        pad =
+            if isMobile then
+                10
+
+            else
+                16
+    in
+    Input.button
+        [ paddingXY pad 8
+        , Ty.small
+        , Font.medium
+        , Font.color txtColor
+        , Background.color bgColor
+        , Border.rounded 16
+        , htmlAttribute (Html.Attributes.style "cursor" "pointer")
+        , htmlAttribute (Html.Attributes.style "outline" "none")
+        , htmlAttribute (Html.Attributes.style "flex-shrink" "0")
+        , htmlAttribute (Html.Attributes.class "tab-link")
+        ]
+        { onPress = Just (SwitchTab tab)
+        , label = text tab
+        }
 
 
 clusteringIndicator : Bool -> Element msg
@@ -402,39 +448,39 @@ content shared model =
 feedGrid : Shared.Model -> Model -> Element Msg
 feedGrid shared model =
     let
-         theme =
-             shared.theme
+        theme =
+            shared.theme
 
-         breakpoint =
-             Responsive.breakpointFromWidth shared.windowWidth
+        breakpoint =
+            Responsive.breakpointFromWidth shared.windowWidth
 
-         columnCount =
-             case breakpoint of
-                 VeryNarrowBreakpoint ->
-                     1
+        columnCount =
+            case breakpoint of
+                VeryNarrowBreakpoint ->
+                    1
 
-                 MobileBreakpoint ->
-                     1
+                MobileBreakpoint ->
+                    1
 
-                 TabletBreakpoint ->
-                     2
+                TabletBreakpoint ->
+                    2
 
-                 DesktopBreakpoint ->
-                     3
+                DesktopBreakpoint ->
+                    3
 
-         gapValue =
-             case breakpoint of
-                 VeryNarrowBreakpoint ->
-                     16
+        gapValue =
+            case breakpoint of
+                VeryNarrowBreakpoint ->
+                    16
 
-                 MobileBreakpoint ->
-                     16
+                MobileBreakpoint ->
+                    16
 
-                 TabletBreakpoint ->
-                     20
+                TabletBreakpoint ->
+                    20
 
-                 DesktopBreakpoint ->
-                     24
+                DesktopBreakpoint ->
+                    24
     in
     column
         [ width fill
@@ -506,20 +552,36 @@ feedCard now theme breakpoint loadingFeed insertedIds feed =
                 _ ->
                     []
 
-        displayedItems = sortFeedItems feed.items
+        displayedItems =
+            sortFeedItems feed.items
 
         isLoadingThisFeed =
             case loadingFeed of
-                Just u -> u == feed.url
-                Nothing -> False
+                Just u ->
+                    u == feed.url
 
-        btnLabel = if isLoadingThisFeed then text "Loading..." else text "Load More"
+                Nothing ->
+                    False
 
-        btnOnPress = if isLoadingThisFeed then Nothing else Just (LoadMoreFeed feed.url)
+        btnLabel =
+            if isLoadingThisFeed then
+                text "Loading..."
+
+            else
+                text "Load More"
+
+        btnOnPress =
+            if isLoadingThisFeed then
+                Nothing
+
+            else
+                Just (LoadMoreFeed feed.url)
 
         shouldShowButton =
-            List.length feed.items < feed.totalItemCount
-            && feed.url /= "software://releases"
+            List.length feed.items
+                < feed.totalItemCount
+                && feed.url
+                /= "software://releases"
 
         loadMoreButton =
             if shouldShowButton then
@@ -556,6 +618,7 @@ feedCard now theme breakpoint loadingFeed insertedIds feed =
                     { onPress = btnOnPress
                     , label = btnLabel
                     }
+
             else
                 Element.none
     in
@@ -576,7 +639,9 @@ feedCard now theme breakpoint loadingFeed insertedIds feed =
             ([ width fill
              , spacing 4
              , Theme.semantic "feed-body"
-             ] ++ scrollAttributes)
+             ]
+                ++ scrollAttributes
+            )
             (List.map (feedItem now theme insertedIds) displayedItems ++ [ loadMoreButton ])
         ]
 
@@ -589,21 +654,27 @@ feedHeader theme feed =
                 Just bgColor ->
                     let
                         luminance rgb =
-                            case rgb of
-                                (r, g, b) ->
-                                    ((toFloat r * 299) + (toFloat g * 587) + (toFloat b * 114)) / 1000
+                            let
+                                ( r, g, b ) =
+                                    rgb
+                            in
+                            ((toFloat r * 299) + (toFloat g * 587) + (toFloat b * 114)) / 1000
 
                         parseRgb str =
                             let
-                                clean = String.replace "rgb(" "" str |> String.replace ")" "" |> String.replace " " ""
-                                parts = String.split "," clean
+                                clean =
+                                    String.replace "rgb(" "" str |> String.replace ")" "" |> String.replace " " ""
+
+                                parts =
+                                    String.split "," clean
                             in
                             case parts of
                                 r :: g :: b :: [] ->
-                                    Maybe.map3 (\ri gi bi -> (ri, gi, bi))
+                                    Maybe.map3 (\ri gi bi -> ( ri, gi, bi ))
                                         (String.toInt r)
                                         (String.toInt g)
                                         (String.toInt b)
+
                                 _ ->
                                     Nothing
 
@@ -612,22 +683,34 @@ feedHeader theme feed =
                                 Just rgb ->
                                     if luminance rgb >= 128 then
                                         "rgb(17, 24, 39)"
+
                                     else
                                         "rgb(255, 255, 255)"
+
                                 Nothing ->
                                     case theme of
-                                        Dark -> "rgb(255, 255, 255)"
-                                        Light -> "rgb(17, 24, 39)"
+                                        Dark ->
+                                            "rgb(255, 255, 255)"
+
+                                        Light ->
+                                            "rgb(17, 24, 39)"
 
                         textColor =
                             case feed.headerTextColor of
-                                Just tc -> tc
-                                Nothing -> calculatedTextColor
-                    in
-                    let
-                        headerBgAttr = Element.htmlAttribute (Html.Attributes.style "background-color" bgColor)
-                        headerColorAttr = htmlAttribute (Html.Attributes.style "color" textColor)
-                        serverFlag = htmlAttribute (Html.Attributes.attribute "data-use-server-colors" "true")
+                                Just tc ->
+                                    tc
+
+                                Nothing ->
+                                    calculatedTextColor
+
+                        headerBgAttr =
+                            Element.htmlAttribute (Html.Attributes.style "background-color" bgColor)
+
+                        headerColorAttr =
+                            htmlAttribute (Html.Attributes.style "color" textColor)
+
+                        serverFlag =
+                            htmlAttribute (Html.Attributes.attribute "data-use-server-colors" "true")
                     in
                     ( headerBgAttr
                     , textColor
@@ -669,20 +752,26 @@ feedHeader theme feed =
     in
     row
         ([ width fill
-        , spacing 8
-        , htmlAttribute (Html.Attributes.class "feed-header")
-        , padding 8
-        , Border.rounded 8
-        , headerBg
-        ] ++ serverColorsFlag)
+         , spacing 8
+         , htmlAttribute (Html.Attributes.class "feed-header")
+         , padding 8
+         , Border.rounded 8
+         , headerBg
+         ]
+            ++ serverColorsFlag
+        )
         [ faviconView theme (Maybe.withDefault "" feed.favicon)
         , column [ spacing 2, htmlAttribute (Html.Attributes.style "flex" "1") ]
             [ link
                 [ Font.size 18
                 , Font.bold
-                , (case headerTextColor of
-                    "" -> Font.color (rgb255 31 41 35) -- dark gray default, JavaScript will fix
-                    _ -> htmlAttribute (Html.Attributes.style "color" headerTextColor))
+                , case headerTextColor of
+                    "" ->
+                        Font.color (rgb255 31 41 35)
+
+                    -- dark gray default, JavaScript will fix
+                    _ ->
+                        htmlAttribute (Html.Attributes.style "color" headerTextColor)
                 , Font.underline
                 , htmlAttribute (Html.Attributes.style "word-wrap" "break-word")
                 ]
@@ -691,9 +780,13 @@ feedHeader theme feed =
                 el
                     [ htmlAttribute (Html.Attributes.attribute "data-display-link" "true")
                     , Ty.size13
-                    , (case headerTextColor of
-                        "" -> Font.color (rgb255 55 65 75) -- slightly lighter gray for display link
-                        _ -> htmlAttribute (Html.Attributes.style "color" headerTextColor))
+                    , case headerTextColor of
+                        "" ->
+                            Font.color (rgb255 55 65 75)
+
+                        -- slightly lighter gray for display link
+                        _ ->
+                            htmlAttribute (Html.Attributes.style "color" headerTextColor)
                     , htmlAttribute (Html.Attributes.style "opacity" "0.8")
                     ]
                     (text feed.displayLink)
@@ -746,29 +839,31 @@ feedItem now theme insertedIds item =
 
         mutedTxt =
             Theme.mutedColor theme
-    in
-    let
-        isInserted = Set.member item.link insertedIds
+
+        isInserted =
+            Set.member item.link insertedIds
+
         wrapperAttrs =
             [ width fill
             , spacing 8
             , htmlAttribute (Html.Attributes.style "min-width" "0")
             ]
-    in
-    let
+
         linkAttrs =
             [ Font.color txtColor
             , htmlAttribute (Html.Attributes.style "text-decoration" "none")
             ]
-            ++ (if isInserted then
-                    [ htmlAttribute (Html.Attributes.style "animation" "qh-insert 300ms ease-out both, qh-flash-light 180ms ease-out")
-                    , htmlAttribute (Html.Attributes.style "will-change" "opacity, transform, background-color")
-                    ]
-                else
-                    [])
+                ++ (if isInserted then
+                        [ htmlAttribute (Html.Attributes.style "animation" "qh-insert 300ms ease-out both, qh-flash-light 180ms ease-out")
+                        , htmlAttribute (Html.Attributes.style "will-change" "opacity, transform, background-color")
+                        ]
+
+                    else
+                        []
+                   )
     in
     row
-        ([ width fill ] ++ wrapperAttrs)
+        (width fill :: wrapperAttrs)
         [ el
             [ width (px 6)
             , height (px 6)

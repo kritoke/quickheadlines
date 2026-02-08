@@ -1,25 +1,24 @@
-port module Application exposing (Flags, Model, Msg(..), Page(..), init, update, view, subscriptions)
+port module Application exposing (Flags, Model, Msg(..), Page(..), init, subscriptions, update, view)
 
 import Browser
 import Browser.Events
 import Browser.Navigation as Nav
-import Element exposing (Element, rgb255, rgba, px, text, fill, width, height, spacing, padding, paddingXY, paddingEach, row, centerY, centerX, alignTop, alignRight, moveDown, htmlAttribute, el, clip)
+import Element exposing (Element, alignRight, alignTop, centerX, centerY, clip, el, fill, height, htmlAttribute, moveDown, padding, paddingEach, paddingXY, px, rgb255, rgba, row, spacing, text, width)
 import Element.Background as Background
 import Element.Border as Border
 import Element.Font as Font
 import Element.Input as Input
 import Html exposing (Html)
-import Html.Attributes
 import Html.Attributes as HA
 import Layouts.Shared as Layout
 import Pages.Home_ as Home
 import Pages.Timeline as Timeline
 import Responsive exposing (Breakpoint(..), breakpointFromWidth)
 import Shared exposing (Model, Msg(..), Theme(..))
+import Task
 import Theme exposing (headerSurface, lumeOrange, surfaceColor, textColor)
 import ThemeTypography as Ty
 import Time
-import Task
 import Url
 
 
@@ -37,7 +36,9 @@ port saveActiveTab : String -> Cmd msg
 
 port onNearBottom : (Bool -> msg) -> Sub msg
 
+
 port switchTab : (String -> msg) -> Sub msg
+
 
 port envThemeChanged : (Bool -> msg) -> Sub msg
 
@@ -155,6 +156,7 @@ update msg model =
 
                         Timeline ->
                             "/timeline"
+
                 cmd =
                     Nav.pushUrl model.key newPath
             in
@@ -236,12 +238,16 @@ view model =
 
         isTimeline =
             case model.page of
-                Timeline -> True
-                _ -> False
+                Timeline ->
+                    True
+
+                _ ->
+                    False
 
         pageDataAttr =
             if isTimeline then
                 htmlAttribute (HA.attribute "data-timeline-page" "true")
+
             else
                 htmlAttribute (HA.attribute "data-page" "home")
 
@@ -323,8 +329,7 @@ headerView model =
                                ]
                         )
                         (text "Quick Headlines")
-    in
-    let
+
         headerPaddingAttr =
             case breakpoint of
                 VeryNarrowBreakpoint ->
@@ -338,9 +343,14 @@ headerView model =
 
         logoSize =
             case breakpoint of
-                VeryNarrowBreakpoint -> 28
-                MobileBreakpoint -> 34
-                _ -> 36
+                VeryNarrowBreakpoint ->
+                    28
+
+                MobileBreakpoint ->
+                    34
+
+                _ ->
+                    36
     in
     Element.row
         [ width fill
@@ -375,7 +385,7 @@ headerView model =
                         { src = "/logo.svg", description = "Logo" }
                     , brandLabel
                     ]
-             }
+            }
         , -- Navigation Section
           Element.row [ spacing 4, centerY, height fill ]
             [ homeIconView model Home
@@ -419,7 +429,17 @@ homeIconView model target =
     in
     Element.el
         [ Element.padding iconPadding
-        , Border.widthEach { bottom = if isActive then 2 else 0, left = 0, right = 0, top = 0 }
+        , Border.widthEach
+            { bottom =
+                if isActive then
+                    2
+
+                else
+                    0
+            , left = 0
+            , right = 0
+            , top = 0
+            }
         , Border.color lumeOrange
         , Element.mouseOver [ Font.color lumeOrange ]
         , centerY
@@ -467,7 +487,17 @@ timelineIconView model target =
     in
     Element.el
         [ Element.padding iconPadding
-        , Border.widthEach { bottom = if isActive then 2 else 0, left = 0, right = 0, top = 0 }
+        , Border.widthEach
+            { bottom =
+                if isActive then
+                    2
+
+                else
+                    0
+            , left = 0
+            , right = 0
+            , top = 0
+            }
         , Border.color lumeOrange
         , Element.mouseOver [ Font.color lumeOrange ]
         , centerY
