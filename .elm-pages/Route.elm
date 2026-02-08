@@ -17,23 +17,23 @@ import UrlPath
 
 {-| . -}
 type Route
-    = Clusters
-    | Timeline
-    | Index
+    = Clusters_Index
+    | Index_Index
+    | Timeline_Index
 
 
 {-| . -}
 segmentsToRoute : List String -> Maybe Route
 segmentsToRoute segments =
     case segments of
-    [ "clusters" ] ->
-        Just Clusters
+    [ "clusters-index" ] ->
+        Just Clusters_Index
 
-    [ "timeline" ] ->
-        Just Timeline
+    [ "index-index" ] ->
+        Just Index_Index
 
-    [] ->
-        Just Index
+    [ "timeline-index" ] ->
+        Just Timeline_Index
 
     _ ->
         Nothing
@@ -56,14 +56,14 @@ routeToPath : Route -> List String
 routeToPath route =
     List.concat
         (case route of
-             Clusters ->
-                 [ [ "clusters" ] ]
+             Clusters_Index ->
+                 [ [ "clusters-index" ] ]
          
-             Timeline ->
-                 [ [ "timeline" ] ]
+             Index_Index ->
+                 [ [ "index-index" ] ]
          
-             Index ->
-                 [ [] ]
+             Timeline_Index ->
+                 [ [ "timeline-index" ] ]
         )
 
 

@@ -1,0 +1,293 @@
+.timeline-inserted {
+  /* Slightly slower insert to be more noticeable; only animate opacity/transform to avoid color flashes */
+  animation: qh-insert 300ms ease-out both;
+  will-change: opacity, transform;
+}
+
+.timeline-inserted-wrapper {
+  /* wrapper used for individual feed items when inserted */
+}
+
+@keyframes qh-insert {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Subtle background flash animations for inserted items (light & dark themes) */
+@keyframes qh-flash-light {
+  from { background-color: rgba(255,165,0,0.16); }
+  to { background-color: transparent; }
+}
+
+@keyframes qh-flash-dark {
+  from { background-color: rgba(255,165,0,0.08); }
+  to { background-color: transparent; }
+}
+
+/* Use a CSS class to switch flash animation depending on theme; JS/HTML already sets data-theme or prefers-color-scheme will control media queries */
+[data-theme="dark"] .timeline-inserted, .dark .timeline-inserted {
+  animation: qh-insert 300ms ease-out both, qh-flash-dark 180ms ease-out;
+}
+
+/* Scroll shadow to indicate more content in feed boxes (matches v0.4.0 behavior) */
+.feed-box, [data-semantic="feed-card"] {
+  position: relative; /* required for the ::after gradient */
+  overflow: visible; /* allow the pseudo-element to overlay */
+}
+
+.feed-box::after, [data-semantic="feed-card"]::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 2rem; /* slightly taller so the hint is visible */
+  pointer-events: none;
+  /* stronger gradient to make the affordance obvious across themes */
+  background: linear-gradient(to bottom, rgba(0,0,0,0), rgba(0,0,0,0.22));
+  transition: opacity 0.25s ease;
+  z-index: 6;
+  /* gentle inset shadow to increase depth at the card bottom */
+  box-shadow: inset 0 -8px 12px -8px rgba(0,0,0,0.10);
+}
+
+@media (prefers-color-scheme: dark), [data-theme="dark"] {
+.feed-box::after, [data-semantic="feed-card"]::after {
+    /* darker shadow in dark mode for contrast */
+    background: linear-gradient(to bottom, rgba(0,0,0,0), rgba(0,0,0,0.6));
+    box-shadow: inset 0 -8px 18px -10px rgba(0,0,0,0.5);
+  }
+}
+
+/* Additional explicit visual affordance: a small "More" pill centered at the bottom of feed cards
+   This complements the gradient and is helpful on low-contrast backgrounds. Hidden when scrolled to bottom. */
+[data-semantic="feed-card"]::before {
+  content: "More";
+  position: absolute;
+  bottom: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(255,255,255,0.85);
+  color: #111;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  line-height: 1;
+  opacity: 0.95;
+  transition: opacity 0.25s ease, transform 0.25s ease;
+  z-index: 12;
+  pointer-events: none;
+  box-shadow: 0 6px 18px rgba(2,6,23,0.06);
+}
+
+@media (prefers-color-scheme: dark), [data-theme="dark"] {
+  [data-semantic="feed-card"]::before {
+    background: rgba(17,24,39,0.9);
+    color: #fff;
+    box-shadow: 0 8px 22px rgba(0,0,0,0.6);
+  }
+}
+
+[data-semantic="feed-card"].is-at-bottom::before,
+.feed-box.is-at-bottom::before {
+  opacity: 0;
+  transform: translateX(-50%) translateY(6px);
+}
+
+.feed-box.is-at-bottom::after, [data-semantic="feed-card"].is-at-bottom::after {
+  opacity: 0;
+}
+
+/* Load more button styles - matches v0.4.0 styling with theme-specific colors */
+.qh-load-more {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #f1f5f9;
+  color: #64748b;
+  border-radius: 6px;
+  padding: 4px 12px;
+  border: none;
+  box-shadow: none;
+  transition: all 140ms ease;
+  cursor: pointer;
+  font-weight: 500;
+  font-size: 12px;
+  margin-top: 12px;
+  width: auto;
+  min-width: unset;
+}
+.qh-load-more:hover {
+  background: #e2e8f0;
+  color: #475569;
+}
+.qh-load-more:active {
+  background: #cbd5e1;
+}
+
+/* Dark theme adjustments for load more button - matches v0.4.0 */
+@media (prefers-color-scheme: dark), [data-theme="dark"] {
+  .qh-load-more {
+    background: #1e293b;
+    color: #94a3b8;
+    border: none;
+  }
+  .qh-load-more:hover {
+    background: #334155;
+    color: #cbd5e1;
+  }
+  .qh-load-more:active {
+    background: #475569;
+  }
+}
+
+/* Small, non-interactive debug indicator (doesn't block clicks) */
+/* Hidden by default so it doesn't sit on the page for regular users. Enable by adding
+   the `qh-debug-enabled` class on the document body (only for local/dev). */
+.qh-observer-indicator {
+  display: none;
+}
+
+.qh-debug-enabled .qh-observer-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  position: fixed !important;
+  right: 12px !important;
+  bottom: 12px !important;
+  z-index: 1200 !important;
+  background: rgba(17,24,39,0.9);
+  color: #fff;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  pointer-events: none; /* ensure it never captures clicks */
+  box-shadow: 0 6px 18px rgba(2,6,23,0.5);
+}
+
+/* Small dev debug panel (non-invasive) */
+.qh-debug-panel {
+  position: fixed !important;
+  right: 12px !important;
+  bottom: 56px !important;
+  z-index: 1200 !important;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  pointer-events: auto;
+}
+.qh-debug-btn {
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.06);
+  color: #fff;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  cursor: pointer;
+}
+.qh-debug-btn:active { transform: translateY(1px); }
+
+/* Tab link styles */
+.tab-link {
+  outline: none !important;
+  box-shadow: none !important;
+  position: relative;
+  border: 2px solid transparent !important;
+}
+.tab-link:focus {
+  outline: none !important;
+  box-shadow: none !important;
+  border-color: transparent !important;
+}
+.tab-link:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
+  border-color: transparent !important;
+}
+
+/* Hide default button focus ring in browsers */
+.tab-link::-moz-focus-inner {
+  border: 0 !important;
+  padding: 0 !important;
+}
+.tab-link::-moz-focus-outer {
+  border: 0 !important;
+  margin: 0 !important;
+}
+
+/* Also hide outline on the inner element */
+.tab-link > span {
+  outline: none !important;
+}
+.tab-link:focus > span {
+  outline: none !important;
+}
+
+/* Mobile-specific overrides - no scrollbars, no shadows, show all content */
+@media (max-width: 767px) {
+  .auto-hide-scroll {
+    max-height: none !important;
+    overflow-y: visible !important;
+    scrollbar-width: none !important;
+    -ms-overflow-style: none !important;
+  }
+  .auto-hide-scroll::-webkit-scrollbar {
+    display: none !important;
+  }
+
+  /* Remove card shadows and borders on mobile for cleaner look */
+  .feed-header,
+  .feed-item {
+    box-shadow: none !important;
+    border-radius: 0 !important;
+  }
+}
+
+/* Desktop scrollbar styling */
+.auto-hide-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(128,128,128,0.3) transparent;
+}
+
+.auto-hide-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+
+.auto-hide-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.auto-hide-scroll::-webkit-scrollbar-thumb {
+  background-color: rgba(128,128,128,0.3);
+  border-radius: 3px;
+}
+
+.auto-hide-scroll::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(128,128,128,0.5);
+}
+
+/* Animated dots indicator for background clustering */
+.clustering-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-weight: bold;
+  color: #f97316; /* lumeOrange */
+}
+
+.clustering-dot {
+  animation: qh-dot-pulse 1.4s infinite both;
+}
+
+.clustering-dot:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.clustering-dot:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+@keyframes qh-dot-pulse {
+  0%, 80%, 100% { opacity: 0.2; transform: scale(0.8); }
+  40% { opacity: 1; transform: scale(1.1); }
+}
