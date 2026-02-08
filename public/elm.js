@@ -13999,6 +13999,29 @@ var $author$project$Application$headerView = function (model) {
 	}();
 	var border = $author$project$Theme$borderColor(theme);
 	var bg = $author$project$Theme$headerSurface(theme);
+	var logoSize = function () {
+		switch (breakpoint.$) {
+			case 'VeryNarrowBreakpoint':
+				return 28;
+			case 'MobileBreakpoint':
+				return 34;
+			default:
+				return 36;
+		}
+	}();
+	var headerPaddingAttr = function () {
+		switch (breakpoint.$) {
+			case 'VeryNarrowBreakpoint':
+				return $mdgriffith$elm_ui$Element$paddingEach(
+					{bottom: 6, left: 0, right: 0, top: 6});
+			case 'MobileBreakpoint':
+				return $mdgriffith$elm_ui$Element$paddingEach(
+					{bottom: 8, left: 0, right: 0, top: 8});
+			default:
+				return $mdgriffith$elm_ui$Element$paddingEach(
+					{bottom: 12, left: 0, right: 0, top: 12});
+		}
+	}();
 	return A2(
 		$mdgriffith$elm_ui$Element$row,
 		_List_fromArray(
@@ -14006,6 +14029,7 @@ var $author$project$Application$headerView = function (model) {
 				$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill),
 				$mdgriffith$elm_ui$Element$Background$color(bg),
 				$mdgriffith$elm_ui$Element$spacing(12),
+				headerPaddingAttr,
 				$mdgriffith$elm_ui$Element$htmlAttribute(
 				A2($elm$html$Html$Attributes$style, 'flex-wrap', 'nowrap')),
 				$mdgriffith$elm_ui$Element$htmlAttribute(
@@ -14052,9 +14076,9 @@ var $author$project$Application$headerView = function (model) {
 								_List_fromArray(
 									[
 										$mdgriffith$elm_ui$Element$width(
-										$mdgriffith$elm_ui$Element$px(32)),
+										$mdgriffith$elm_ui$Element$px(logoSize)),
 										$mdgriffith$elm_ui$Element$height(
-										$mdgriffith$elm_ui$Element$px(32)),
+										$mdgriffith$elm_ui$Element$px(logoSize)),
 										$mdgriffith$elm_ui$Element$Border$rounded(8)
 									]),
 								{description: 'Logo', src: '/logo.svg'}),
