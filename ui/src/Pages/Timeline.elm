@@ -8,16 +8,16 @@ import Element.Font as Font
 import Element.Input as Input
 import Html.Attributes
 import Http
+import Json.Decode as Decode
+import Pages.ViewIcon exposing (viewIcon)
 import Process
-import Task
+import Responsive exposing (Breakpoint, breakpointFromWidth, containerMaxWidth, horizontalPadding, isMobile, isVeryNarrow, timelineClusterPadding, timelineTimeColumnWidth, verticalPadding)
 import Set exposing (Set)
 import Shared exposing (Model, Msg(..), Theme(..))
+import Task
 import Theme exposing (borderColor, cardColor, dayHeaderBg, errorColor, lumeOrange, mutedColor, surfaceColor, textColor)
 import ThemeTypography as Ty
 import Time exposing (Posix, Zone, toDay, toMonth, toYear)
-import Json.Decode as Decode
-import Pages.ViewIcon exposing (viewIcon)
-import Responsive exposing (Breakpoint, breakpointFromWidth, isMobile, isVeryNarrow, horizontalPadding, verticalPadding, containerMaxWidth, timelineTimeColumnWidth, timelineClusterPadding)
 
 
 parseHexColor : String -> Maybe Element.Color
@@ -26,16 +26,14 @@ parseHexColor input =
         cleanInput =
             String.trim input
     in
-    case cleanInput of
-        _ ->
-            if String.startsWith "#" cleanInput then
-                parseHexClean (String.replace "#" "" cleanInput)
+    if String.startsWith "#" cleanInput then
+        parseHexClean (String.replace "#" "" cleanInput)
 
-            else if String.startsWith "rgb(" cleanInput then
-                parseRgb cleanInput
+    else if String.startsWith "rgb(" cleanInput then
+        parseRgb cleanInput
 
-            else
-                Nothing
+    else
+        Nothing
 
 
 parseHexClean : String -> Maybe Element.Color
@@ -45,8 +43,10 @@ parseHexClean cleanHex =
             let
                 r =
                     String.slice 0 2 cleanHex |> String.toInt |> Maybe.withDefault 0
+
                 g =
                     String.slice 2 4 cleanHex |> String.toInt |> Maybe.withDefault 0
+
                 b =
                     String.slice 4 6 cleanHex |> String.toInt |> Maybe.withDefault 0
             in
@@ -56,8 +56,10 @@ parseHexClean cleanHex =
             let
                 r =
                     String.slice 0 1 cleanHex |> (\x -> x ++ x) |> String.toInt |> Maybe.withDefault 0
+
                 g =
                     String.slice 1 2 cleanHex |> (\x -> x ++ x) |> String.toInt |> Maybe.withDefault 0
+
                 b =
                     String.slice 2 3 cleanHex |> (\x -> x ++ x) |> String.toInt |> Maybe.withDefault 0
             in
@@ -109,28 +111,35 @@ textColorFromBg bgColor =
     let
         parseRgbValues str =
             let
-                clean = String.replace "rgb(" "" str |> String.replace ")" "" |> String.replace " " ""
-                parts = String.split "," clean
+                clean =
+                    String.replace "rgb(" "" str |> String.replace ")" "" |> String.replace " " ""
+
+                parts =
+                    String.split "," clean
             in
             case parts of
                 r :: g :: b :: [] ->
-                    case (String.toInt r, String.toInt g, String.toInt b) of
-                        (Just ri, Just gi, Just bi) ->
-                            Just (ri, gi, bi)
+                    case ( String.toInt r, String.toInt g, String.toInt b ) of
+                        ( Just ri, Just gi, Just bi ) ->
+                            Just ( ri, gi, bi )
+
                         _ ->
                             Nothing
+
                 _ ->
                     Nothing
 
         luminance =
             case parseRgbValues bgColor of
-                Just (r, g, b) ->
+                Just ( r, g, b ) ->
                     ((toFloat r * 299) + (toFloat g * 587) + (toFloat b * 114)) / 1000
+
                 Nothing ->
                     0
     in
     if luminance >= 128 then
         rgb255 31 41 35
+
     else
         rgb255 255 255 255
 
@@ -140,28 +149,35 @@ textColorFromBgString bgColor =
     let
         parseRgbValues str =
             let
-                clean = String.replace "rgb(" "" str |> String.replace ")" "" |> String.replace " " ""
-                parts = String.split "," clean
+                clean =
+                    String.replace "rgb(" "" str |> String.replace ")" "" |> String.replace " " ""
+
+                parts =
+                    String.split "," clean
             in
             case parts of
                 r :: g :: b :: [] ->
-                    case (String.toInt r, String.toInt g, String.toInt b) of
-                        (Just ri, Just gi, Just bi) ->
-                            Just (ri, gi, bi)
+                    case ( String.toInt r, String.toInt g, String.toInt b ) of
+                        ( Just ri, Just gi, Just bi ) ->
+                            Just ( ri, gi, bi )
+
                         _ ->
                             Nothing
+
                 _ ->
                     Nothing
 
         luminance =
             case parseRgbValues bgColor of
-                Just (r, g, b) ->
+                Just ( r, g, b ) ->
                     ((toFloat r * 299) + (toFloat g * 587) + (toFloat b * 114)) / 1000
+
                 Nothing ->
                     0
     in
     if luminance >= 128 then
         "rgb(31,55,35)"
+
     else
         "rgb(255,255,255)"
 
@@ -171,24 +187,33 @@ textColorFromBgString bgColor =
     Compute which text color (light or dark) will be most readable against a
     given background color, taking the current UI theme into account and
     preferring colors that meet WCAG contrast >= 4.5:1 when possible.
--}
 
+-}
 getRgbTupleFromString : String -> Maybe ( Int, Int, Int )
 getRgbTupleFromString str =
     let
-        clean = String.trim str
-        withoutRgb = String.dropLeft 4 str |> String.dropRight 1
-        hex = String.replace "#" "" clean
+        clean =
+            String.trim str
+
+        withoutRgb =
+            String.dropLeft 4 str |> String.dropRight 1
+
+        hex =
+            String.replace "#" "" clean
     in
     if String.startsWith "rgb(" clean then
         let
-            parts = String.split "," (String.replace "rgb(" "" (String.replace ")" "" clean)) |> List.map String.trim
+            parts =
+                String.split "," (String.replace "rgb(" "" (String.replace ")" "" clean)) |> List.map String.trim
         in
         case parts of
             [ r, g, b ] ->
                 case ( String.toInt r, String.toInt g, String.toInt b ) of
-                    ( Just ri, Just gi, Just bi ) -> Just ( ri, gi, bi )
-                    _ -> Nothing
+                    ( Just ri, Just gi, Just bi ) ->
+                        Just ( ri, gi, bi )
+
+                    _ ->
+                        Nothing
 
             _ ->
                 Nothing
@@ -208,10 +233,12 @@ getRgbTupleFromString str =
 srgbChannelLinear : Int -> Float
 srgbChannelLinear c =
     let
-        v = toFloat c / 255
+        v =
+            toFloat c / 255
     in
     if v <= 0.03928 then
         v / 12.92
+
     else
         ((v + 0.055) / 1.055) ^ 2.4
 
@@ -224,9 +251,18 @@ relativeLuminance ( r, g, b ) =
 contrastRatio : ( Int, Int, Int ) -> ( Int, Int, Int ) -> Float
 contrastRatio fg bg =
     let
-        lf = relativeLuminance fg
-        lb = relativeLuminance bg
-        ( l1, l2 ) = if lf > lb then ( lf, lb ) else ( lb, lf )
+        lf =
+            relativeLuminance fg
+
+        lb =
+            relativeLuminance bg
+
+        ( l1, l2 ) =
+            if lf > lb then
+                ( lf, lb )
+
+            else
+                ( lb, lf )
     in
     (l1 + 0.05) / (l2 + 0.05)
 
@@ -240,29 +276,42 @@ readableColorForTheme bgStr theme =
 
         Just bg ->
             let
-                white = ( 255, 255, 255 )
-                dark = ( 31, 41, 35 )
-                contrastWhite = contrastRatio white bg
-                contrastDark = contrastRatio dark bg
+                white =
+                    ( 255, 255, 255 )
+
+                dark =
+                    ( 31, 41, 35 )
+
+                contrastWhite =
+                    contrastRatio white bg
+
+                contrastDark =
+                    contrastRatio dark bg
             in
             case theme of
                 Shared.Light ->
                     if contrastDark >= 4.5 then
                         "rgb(31,41,35)"
+
                     else if contrastWhite >= 4.5 then
                         "rgb(255,255,255)"
+
                     else if contrastDark >= contrastWhite then
                         "rgb(31,41,35)"
+
                     else
                         "rgb(255,255,255)"
 
                 Shared.Dark ->
                     if contrastWhite >= 4.5 then
                         "rgb(255,255,255)"
+
                     else if contrastDark >= 4.5 then
                         "rgb(31,41,35)"
+
                     else if contrastWhite >= contrastDark then
                         "rgb(255,255,255)"
+
                     else
                         "rgb(31,41,35)"
 
@@ -272,7 +321,10 @@ parseColor input =
     parseHexColor input
 
 
+
 -- Helpers to extract theme-aware colors from server-provided JSON
+
+
 themeTextFor : Maybe Decode.Value -> Shared.Theme -> Maybe String
 themeTextFor maybeVal theme =
     case maybeVal of
@@ -280,43 +332,74 @@ themeTextFor maybeVal theme =
             Nothing
 
         Just v ->
-                -- Honor server-provided theme values when the server marked them
-                -- as either `auto-corrected` or `auto`. We still validate contrast
-                -- later (see `themeTextSafe`) so accepting `auto` here allows the
-                -- UI to use server colors when they are present and safe.
-                let
-                    decodeSource = Decode.field "source" (Decode.nullable Decode.string)
-                    srcRes = Decode.decodeValue decodeSource v
-                    sourceOk =
-                        case srcRes of
-                        Ok (Just s) -> s == "auto-corrected" || s == "auto"
-                        _ -> False
+            -- Honor server-provided theme values when the server marked them
+            -- as either `auto-corrected` or `auto`. We still validate contrast
+            -- later (see `themeTextSafe`) so accepting `auto` here allows the
+            -- UI to use server colors when they are present and safe.
+            let
+                decodeSource =
+                    Decode.field "source" (Decode.nullable Decode.string)
+
+                srcRes =
+                    Decode.decodeValue decodeSource v
+
+                sourceOk =
+                    case srcRes of
+                        Ok (Just s) ->
+                            s == "auto-corrected" || s == "auto"
+
+                        _ ->
+                            False
             in
             if not sourceOk then
                 Nothing
+
             else
                 let
-                    decodeLight = Decode.field "text" (Decode.field "light" (Decode.nullable Decode.string))
-                    decodeDark = Decode.field "text" (Decode.field "dark" (Decode.nullable Decode.string))
-                    lightRes = Decode.decodeValue decodeLight v
-                    darkRes = Decode.decodeValue decodeDark v
-                    light = case lightRes of
-                        Ok l -> l
-                        Err _ -> Nothing
-                    dark = case darkRes of
-                        Ok d -> d
-                        Err _ -> Nothing
+                    decodeLight =
+                        Decode.field "text" (Decode.field "light" (Decode.nullable Decode.string))
+
+                    decodeDark =
+                        Decode.field "text" (Decode.field "dark" (Decode.nullable Decode.string))
+
+                    lightRes =
+                        Decode.decodeValue decodeLight v
+
+                    darkRes =
+                        Decode.decodeValue decodeDark v
+
+                    light =
+                        case lightRes of
+                            Ok l ->
+                                l
+
+                            Err _ ->
+                                Nothing
+
+                    dark =
+                        case darkRes of
+                            Ok d ->
+                                d
+
+                            Err _ ->
+                                Nothing
                 in
                 case theme of
                     Shared.Dark ->
                         case dark of
-                            Just d -> Just d
-                            Nothing -> light
+                            Just d ->
+                                Just d
+
+                            Nothing ->
+                                light
 
                     Shared.Light ->
                         case light of
-                            Just l -> Just l
-                            Nothing -> dark
+                            Just l ->
+                                Just l
+
+                            Nothing ->
+                                dark
 
 
 themeBgFor : Maybe Decode.Value -> Maybe String
@@ -331,8 +414,12 @@ themeBgFor maybeVal =
                 Ok (Just s) ->
                     if s == "auto-corrected" then
                         case Decode.decodeValue (Decode.field "bg" (Decode.nullable Decode.string)) v of
-                            Ok bg -> bg
-                            Err _ -> Nothing
+                            Ok bg ->
+                                bg
+
+                            Err _ ->
+                                Nothing
+
                     else
                         Nothing
 
@@ -351,6 +438,7 @@ themeTextSafe maybeVal theme bgStr =
                 ( Just fg, Just bg ) ->
                     if contrastRatio fg bg >= 4.5 then
                         Just t
+
                     else
                         Nothing
 
@@ -483,7 +571,8 @@ update shared msg model =
 
         NearBottom nearBottom ->
             let
-                newModel = { model | sentinelNear = nearBottom }
+                newModel =
+                    { model | sentinelNear = nearBottom }
             in
             if nearBottom && model.hasMore && not model.loadingMore && not model.loading then
                 ( { newModel | loadingMore = True }
@@ -537,25 +626,28 @@ view shared model =
         clustersByDay =
             groupClustersByDay shared.zone shared.now model.clusters
     in
-      column
-          [ width fill
-          , height fill
-          , Background.color bg
-         , Font.color txtColor
-         , htmlAttribute (Html.Attributes.attribute "data-timeline-page" "true")
-         , htmlAttribute (Html.Attributes.class "auto-hide-scroll")
-         ]
-          [ el
-                [ width fill
-                , height (px 2)
-                , Background.color (case shared.theme of
-                    Shared.Dark -> rgb255 100 100 100
-                    Shared.Light -> rgb255 200 200 200
-                  )
-                ]
-                Element.none
-          
-          , if model.loading && List.isEmpty model.clusters then
+    column
+        [ width fill
+        , height fill
+        , Background.color bg
+        , Font.color txtColor
+        , htmlAttribute (Html.Attributes.attribute "data-timeline-page" "true")
+        , htmlAttribute (Html.Attributes.class "auto-hide-scroll")
+        ]
+        [ el
+            [ width fill
+            , height (px 2)
+            , Background.color
+                (case shared.theme of
+                    Shared.Dark ->
+                        rgb255 100 100 100
+
+                    Shared.Light ->
+                        rgb255 200 200 200
+                )
+            ]
+            Element.none
+        , if model.loading && List.isEmpty model.clusters then
             el
                 [ centerX
                 , centerY
@@ -585,8 +677,10 @@ view shared model =
                 , el [ htmlAttribute (Html.Attributes.id "scroll-sentinel"), height (px 1), width fill ] (text "")
                 , if model.loadingMore then
                     el [ centerX, padding 12 ] (text "Loading...")
+
                   else if not model.hasMore then
                     el [ centerX, padding 12, Font.color mutedTxt ] (text "End of feed")
+
                   else
                     let
                         bgColor =
@@ -604,36 +698,48 @@ view shared model =
 
                                 Shared.Light ->
                                     "rgb(100, 116, 139)"
-                     in
-                     let
-                         maybeBg = parseColor bgColor
-                         maybeText = parseColor textColor
-                         baseAttrs =
-                             [ centerX
-                             , paddingXY 4 12
-                             , Border.rounded 6
-                             , Ty.small
-                             , Font.medium
-                             , htmlAttribute (Html.Attributes.class "qh-load-more")
-                             , Border.color (rgba 0 0 0 0.08)
-                             , htmlAttribute (Html.Attributes.attribute "data-load-more" "true")
-                             ]
-                         loadMoreAttrs =
-                             baseAttrs
-                                 ++ (case maybeBg of
-                                         Just c -> [ Background.color c ]
-                                         Nothing -> [])
-                                 ++ (case maybeText of
-                                         Just c -> [ Font.color c ]
-                                         Nothing -> [])
-                     in
-                     Input.button
-                         loadMoreAttrs
-                         { onPress = Just LoadMore
-                         , label = text "Load More"
-                         }
+
+                        maybeBg =
+                            parseColor bgColor
+
+                        maybeText =
+                            parseColor textColor
+
+                        baseAttrs =
+                            [ centerX
+                            , paddingXY 4 12
+                            , Border.rounded 6
+                            , Ty.small
+                            , Font.medium
+                            , htmlAttribute (Html.Attributes.class "qh-load-more")
+                            , Border.color (rgba 0 0 0 0.08)
+                            , htmlAttribute (Html.Attributes.attribute "data-load-more" "true")
+                            ]
+
+                        loadMoreAttrs =
+                            baseAttrs
+                                ++ (case maybeBg of
+                                        Just c ->
+                                            [ Background.color c ]
+
+                                        Nothing ->
+                                            []
+                                   )
+                                ++ (case maybeText of
+                                        Just c ->
+                                            [ Font.color c ]
+
+                                        Nothing ->
+                                            []
+                                   )
+                    in
+                    Input.button
+                        loadMoreAttrs
+                        { onPress = Just LoadMore
+                        , label = text "Load More"
+                        }
                 ]
-            ]
+        ]
 
 
 type alias DayClusterGroup =
@@ -655,18 +761,41 @@ groupClustersByDay zone now clusters =
         monthToInt : Time.Month -> Int
         monthToInt m =
             case m of
-                Time.Jan -> 1
-                Time.Feb -> 2
-                Time.Mar -> 3
-                Time.Apr -> 4
-                Time.May -> 5
-                Time.Jun -> 6
-                Time.Jul -> 7
-                Time.Aug -> 8
-                Time.Sep -> 9
-                Time.Oct -> 10
-                Time.Nov -> 11
-                Time.Dec -> 12
+                Time.Jan ->
+                    1
+
+                Time.Feb ->
+                    2
+
+                Time.Mar ->
+                    3
+
+                Time.Apr ->
+                    4
+
+                Time.May ->
+                    5
+
+                Time.Jun ->
+                    6
+
+                Time.Jul ->
+                    7
+
+                Time.Aug ->
+                    8
+
+                Time.Sep ->
+                    9
+
+                Time.Oct ->
+                    10
+
+                Time.Nov ->
+                    11
+
+                Time.Dec ->
+                    12
 
         -- Sort days: newest day first
         sortedGroups =
@@ -675,8 +804,10 @@ groupClustersByDay zone now clusters =
                     if y1 == y2 then
                         if m1 == m2 then
                             Basics.compare d2 d1
+
                         else
                             Basics.compare (monthToInt m2) (monthToInt m1)
+
                     else
                         Basics.compare y2 y1
                 )
@@ -1005,15 +1136,13 @@ clusterItem breakpoint zone now theme expandedClusters insertedIds cluster =
         -- Theme-aware JSON (if provided by server)
         headerTheme =
             cluster.representative.headerTheme
-    in
-    let
+
         isExpanded =
             Set.member cluster.id expandedClusters
 
         isInserted =
             Set.member cluster.representative.id insertedIds
-    in
-    let
+
         baseAttrs =
             [ width fill
             , spacing 8
@@ -1027,7 +1156,22 @@ clusterItem breakpoint zone now theme expandedClusters insertedIds cluster =
     in
     column
         [ width fill
-        , paddingEach { top = (if Responsive.isMobile breakpoint then 1 else 4), bottom = (if Responsive.isMobile breakpoint then 1 else 4), left = 0, right = 0 }
+        , paddingEach
+            { top =
+                if Responsive.isMobile breakpoint then
+                    1
+
+                else
+                    4
+            , bottom =
+                if Responsive.isMobile breakpoint then
+                    1
+
+                else
+                    4
+            , left = 0
+            , right = 0
+            }
         , Border.widthEach { bottom = 1, left = 0, right = 0, top = 0 }
         , Border.color border
         , Background.color
@@ -1039,175 +1183,236 @@ clusterItem breakpoint zone now theme expandedClusters insertedIds cluster =
             )
         , Border.rounded 8
         ]
-         [ row rowAttrs
-             [ el
-                  [ width (px (Responsive.timelineTimeColumnWidth breakpoint))
-                 , Ty.meta
-                 , Font.color timeTxt
-                 , Font.family [ Font.monospace ]
-                 , alignTop
-                 , paddingXY 6 3
-                 , Background.color timeBg
-                 , Border.rounded 4
-                 , Font.center
-                 ]
-                 (text timeStr)
-                , column
-            [ width fill
-            , spacing 0
-            , alignTop
-            , Font.color txtColor
-            ]
+        [ row rowAttrs
+            [ el
+                [ width (px (Responsive.timelineTimeColumnWidth breakpoint))
+                , Ty.meta
+                , Font.color timeTxt
+                , Font.family [ Font.monospace ]
+                , alignTop
+                , paddingXY 6 3
+                , Background.color timeBg
+                , Border.rounded 4
+                , Font.center
+                ]
+                (text timeStr)
+            , column
+                [ width fill
+                , spacing 0
+                , alignTop
+                , Font.color txtColor
+                ]
                 [ paragraph [ width fill, Ty.size13 ]
-                (let
-                    -- Determine background color (prefer theme-aware, fallback to legacy)
-                    effectiveBg =
-                        case themeBgFor headerTheme of
-                            Just bg -> bg
-                            Nothing -> headerColor
+                    (let
+                        -- Determine background color (prefer theme-aware, fallback to legacy)
+                        effectiveBg =
+                            case themeBgFor headerTheme of
+                                Just bg ->
+                                    bg
 
-                    -- Determine text colors (contrast-safe selection)
-                    titleTextColor =
-                        case themeTextSafe headerTheme theme effectiveBg of
-                            Just t -> t
-                            Nothing ->
-                                -- If server provided a header_text_color, validate its contrast
-                                if headerTextColor /= "" then
-                                    case ( getRgbTupleFromString headerTextColor, getRgbTupleFromString effectiveBg ) of
-                                        ( Just fg, Just bg ) ->
-                                            if contrastRatio fg bg >= 4.5 then
-                                                headerTextColor
-                                            else
-                                                -- fallback to readable color computed from bg
+                                Nothing ->
+                                    headerColor
+
+                        -- Determine text colors (contrast-safe selection)
+                        titleTextColor =
+                            case themeTextSafe headerTheme theme effectiveBg of
+                                Just t ->
+                                    t
+
+                                Nothing ->
+                                    -- If server provided a header_text_color, validate its contrast
+                                    if headerTextColor /= "" then
+                                        case ( getRgbTupleFromString headerTextColor, getRgbTupleFromString effectiveBg ) of
+                                            ( Just fg, Just bg ) ->
+                                                if contrastRatio fg bg >= 4.5 then
+                                                    headerTextColor
+
+                                                else
+                                                    -- fallback to readable color computed from bg
+                                                    readableColorForTheme effectiveBg theme
+
+                                            -- Could not parse one of the colors: fallback to readableColorForTheme
+                                            _ ->
                                                 readableColorForTheme effectiveBg theme
 
-                                        -- Could not parse one of the colors: fallback to readableColorForTheme
-                                        _ -> readableColorForTheme effectiveBg theme
+                                    else if headerColor /= "" then
+                                        readableColorForTheme headerColor theme
 
-                                else if headerColor /= "" then
-                                    readableColorForTheme headerColor theme
-                                else
-                                    -- final fallback: readable color for effectiveBg
-                                    readableColorForTheme effectiveBg theme
+                                    else
+                                        -- final fallback: readable color for effectiveBg
+                                        readableColorForTheme effectiveBg theme
 
-                    linkTextColor =
-                        case themeTextSafe headerTheme theme effectiveBg of
-                            Just t -> t
-                            Nothing ->
-                                if headerTextColor /= "" then
-                                    case ( getRgbTupleFromString headerTextColor, getRgbTupleFromString effectiveBg ) of
-                                        ( Just fg, Just bg ) ->
-                                            if contrastRatio fg bg >= 4.5 then
-                                                headerTextColor
-                                            else
+                        linkTextColor =
+                            case themeTextSafe headerTheme theme effectiveBg of
+                                Just t ->
+                                    t
+
+                                Nothing ->
+                                    if headerTextColor /= "" then
+                                        case ( getRgbTupleFromString headerTextColor, getRgbTupleFromString effectiveBg ) of
+                                            ( Just fg, Just bg ) ->
+                                                if contrastRatio fg bg >= 4.5 then
+                                                    headerTextColor
+
+                                                else
+                                                    readableColorForTheme effectiveBg theme
+
+                                            _ ->
                                                 readableColorForTheme effectiveBg theme
-                                        _ -> readableColorForTheme effectiveBg theme
-                                else if headerColor /= "" then
-                                    readableColorForTheme headerColor theme
-                                else
-                                    readableColorForTheme effectiveBg theme
 
-                    -- Title element with background pill
-                    titleAttrs =
-                        let
-                            computedColor =
-                                case parseColor titleTextColor of
-                                    Just c -> c
-                                    Nothing -> case parseColor (textColorFromBgString effectiveBg) of
-                                        Just c2 -> c2
-                                        Nothing -> textColor theme
-                            -- Tighten line-height on mobile to reduce natural text box height
-                            -- Use a semantic attribute instead of inline style so CSS in
-                            -- `views/index.html` can control rendering and avoid inline
-                            -- style specificity issues. The CSS already targets
-                            -- `[data-server-header-text-color]` and related selectors
-                            -- for mobile; set a marker attribute and let CSS apply
-                            -- `line-height` there.
-                            mobileLineHeight = if Responsive.isMobile breakpoint then [ htmlAttribute (Html.Attributes.attribute "data-mobile-tight" "true") ] else []
-                        in
-                        if headerColor /= "" || headerTextColor /= "" || headerTheme /= Nothing then
-                            [ Font.size 12
-                            , Font.color computedColor
-                            , htmlAttribute (Html.Attributes.attribute "data-server-header-text-color" titleTextColor)
-                            , htmlAttribute (Html.Attributes.attribute "data-use-server-colors" "true")
-                            ] ++ mobileLineHeight
-                        else
-                            [ Font.size 12
-                            -- Use a data attribute for fallback colors so client-side
-                            -- CSS/JS can apply them deterministically (avoids inline style races).
-                            , htmlAttribute (Html.Attributes.attribute "data-server-fallback-color" titleTextColor)
-                            , Font.color computedColor
-                            ] ++ mobileLineHeight
+                                    else if headerColor /= "" then
+                                        readableColorForTheme headerColor theme
 
-                    titleBgAttrs =
-                        case parseColor effectiveBg of
-                            Just c ->
-                                let
-                                    -- Add extra horizontal padding so the site pill has more
-                                    -- left/right breathing room. Mobile gets slightly larger
-                                    -- horizontal padding to avoid cramped titles.
-                                    -- Align horizontal padding to match vertical for a more balanced pill
-                                    pad = if Responsive.isMobile breakpoint then paddingXY 6 6 else paddingXY 8 8
-                                in
-                                [ Background.color c
-                                , pad
-                                , Border.rounded 6
+                                    else
+                                        readableColorForTheme effectiveBg theme
+
+                        -- Title element with background pill
+                        titleAttrs =
+                            let
+                                computedColor =
+                                    case parseColor titleTextColor of
+                                        Just c ->
+                                            c
+
+                                        Nothing ->
+                                            case parseColor (textColorFromBgString effectiveBg) of
+                                                Just c2 ->
+                                                    c2
+
+                                                Nothing ->
+                                                    textColor theme
+
+                                -- Tighten line-height on mobile to reduce natural text box height
+                                -- Use a semantic attribute instead of inline style so CSS in
+                                -- `views/index.html` can control rendering and avoid inline
+                                -- style specificity issues. The CSS already targets
+                                -- `[data-server-header-text-color]` and related selectors
+                                -- for mobile; set a marker attribute and let CSS apply
+                                -- `line-height` there.
+                                mobileLineHeight =
+                                    if Responsive.isMobile breakpoint then
+                                        [ htmlAttribute (Html.Attributes.attribute "data-mobile-tight" "true") ]
+
+                                    else
+                                        []
+                            in
+                            if headerColor /= "" || headerTextColor /= "" || headerTheme /= Nothing then
+                                [ Font.size 12
+                                , Font.color computedColor
+                                , htmlAttribute (Html.Attributes.attribute "data-server-header-text-color" titleTextColor)
+                                , htmlAttribute (Html.Attributes.attribute "data-use-server-colors" "true")
+                                ]
+                                    ++ mobileLineHeight
+
+                            else
+                                [ Font.size 12
+
+                                -- Use a data attribute for fallback colors so client-side
+                                -- CSS/JS can apply them deterministically (avoids inline style races).
+                                , htmlAttribute (Html.Attributes.attribute "data-server-fallback-color" titleTextColor)
+                                , Font.color computedColor
+                                ]
+                                    ++ mobileLineHeight
+
+                        titleBgAttrs =
+                            case parseColor effectiveBg of
+                                Just c ->
+                                    let
+                                        -- Add extra horizontal padding so the site pill has more
+                                        -- left/right breathing room. Mobile gets slightly larger
+                                        -- horizontal padding to avoid cramped titles.
+                                        -- Align horizontal padding to match vertical for a more balanced pill
+                                        pad =
+                                            if Responsive.isMobile breakpoint then
+                                                paddingXY 6 6
+
+                                            else
+                                                paddingXY 8 8
+                                    in
+                                    [ Background.color c
+                                    , pad
+                                    , Border.rounded 6
+                                    ]
+
+                                Nothing ->
+                                    []
+
+                        -- Link attributes
+                        linkAttrs =
+                            let
+                                computedLinkColor =
+                                    case parseColor linkTextColor of
+                                        Just c ->
+                                            c
+
+                                        Nothing ->
+                                            case parseColor (textColorFromBgString effectiveBg) of
+                                                Just c2 ->
+                                                    c2
+
+                                                Nothing ->
+                                                    textColor theme
+                            in
+                            if headerColor /= "" || headerTextColor /= "" || headerTheme /= Nothing then
+                                [ htmlAttribute (Html.Attributes.attribute "data-display-link" "true")
+                                , Font.semiBold
+                                , Font.color computedLinkColor
+                                , mouseOver [ Font.color lumeOrange ]
+                                , htmlAttribute (Html.Attributes.attribute "data-server-header-text-color" linkTextColor)
+                                , htmlAttribute (Html.Attributes.attribute "data-use-server-colors" "true")
                                 ]
 
-                            Nothing ->
-                                []
+                            else
+                                [ htmlAttribute (Html.Attributes.attribute "data-display-link" "true")
+                                , Font.semiBold
+                                , Font.color computedLinkColor
+                                , mouseOver [ Font.color lumeOrange ]
+                                , htmlAttribute (Html.Attributes.attribute "data-server-fallback-color" linkTextColor)
+                                ]
+                     in
+                     [ faviconImg
+                     , el (Ty.meta :: titleAttrs ++ titleBgAttrs) (text cluster.representative.feedTitle)
+                     , el [ Font.color mutedTxt, paddingXY 4 0 ] (text "•")
+                     , link
+                        (linkAttrs
+                            ++ (if isInserted then
+                                    [ htmlAttribute (Html.Attributes.style "animation" "qh-insert 300ms ease-out both, qh-flash-light 180ms ease-out"), htmlAttribute (Html.Attributes.style "will-change" "opacity, transform, background-color") ]
 
-                    -- Link attributes
-                    linkAttrs =
-                        let
-                            computedLinkColor =
-                                case parseColor linkTextColor of
-                                    Just c -> c
-                                    Nothing -> case parseColor (textColorFromBgString effectiveBg) of
-                                        Just c2 -> c2
-                                        Nothing -> textColor theme
-                        in
-                        (if headerColor /= "" || headerTextColor /= "" || headerTheme /= Nothing then
-                            [ htmlAttribute (Html.Attributes.attribute "data-display-link" "true")
-                            , Font.semiBold
-                            , Font.color computedLinkColor
-                            , mouseOver [ Font.color lumeOrange ]
-                            , htmlAttribute (Html.Attributes.attribute "data-server-header-text-color" linkTextColor)
-                            , htmlAttribute (Html.Attributes.attribute "data-use-server-colors" "true")
-                            ]
-                         else
-                            [ htmlAttribute (Html.Attributes.attribute "data-display-link" "true")
-                            , Font.semiBold
-                            , Font.color computedLinkColor
-                            , mouseOver [ Font.color lumeOrange ]
-                            , htmlAttribute (Html.Attributes.attribute "data-server-fallback-color" linkTextColor)
-                            ])
-                  in
-                  [ faviconImg
-                  , el ( [ Ty.meta ] ++ titleAttrs ++ titleBgAttrs ) (text cluster.representative.feedTitle)
-                  , el [ Font.color mutedTxt, paddingXY 4 0 ] (text "•")
-                        , link (linkAttrs ++ (if isInserted then [ htmlAttribute (Html.Attributes.style "animation" "qh-insert 300ms ease-out both, qh-flash-light 180ms ease-out"), htmlAttribute (Html.Attributes.style "will-change" "opacity, transform, background-color") ] else [])) { url = cluster.representative.link, label = text cluster.representative.title }
-                  , (if cluster.count > 1 then
+                                else
+                                    []
+                               )
+                        )
+                        { url = cluster.representative.link, label = text cluster.representative.title }
+                     , if cluster.count > 1 then
                         Input.button
                             [ paddingEach { top = 0, right = 0, bottom = 0, left = 8 }
-                            , Font.color (if isExpanded then lumeOrange else mutedTxt)
+                            , Font.color
+                                (if isExpanded then
+                                    lumeOrange
+
+                                 else
+                                    mutedTxt
+                                )
                             , mouseOver [ Font.color lumeOrange ]
                             ]
                             { onPress = Just (ToggleCluster cluster.id)
                             , label = text (" ↩ " ++ String.fromInt cluster.count)
                             }
-                      else
-                        Element.none)
-                  ] )
+
+                       else
+                        Element.none
+                     ]
+                    )
                 ]
             ]
         , if clusterCount > 1 && isExpanded then
-             column
-                 [ width fill
-                 , spacing 8
-                  , paddingEach { top = 0, bottom = 12, left = (Responsive.timelineClusterPadding breakpoint), right = 8 }
-                 ]
-                 (List.map (\it -> clusterOtherItem now theme it) cluster.others)
+            column
+                [ width fill
+                , spacing 8
+                , paddingEach { top = 0, bottom = 12, left = Responsive.timelineClusterPadding breakpoint, right = 8 }
+                ]
+                (List.map (\it -> clusterOtherItem now theme it) cluster.others)
+
           else
             Element.none
         ]
@@ -1232,7 +1437,7 @@ clusterOtherItem now theme item =
                 item.favicon
                 |> Maybe.withDefault (text "")
     in
-         paragraph
+    paragraph
         [ width fill
         , paddingEach { top = 4, bottom = 4, left = 0, right = 0 }
         , htmlAttribute (Html.Attributes.attribute "data-timeline-item" "true")
@@ -1240,36 +1445,61 @@ clusterOtherItem now theme item =
         , Font.color (textColor theme)
         ]
         [ faviconImg
-        , el [ Ty.meta
-             -- Prefer data attributes for header text colors instead of inline styles
-             , (if itemHeaderTextColor /= "" || itemHeaderColor /= "" then
-                    htmlAttribute (Html.Attributes.attribute "data-server-header-text-color" (if itemHeaderTextColor /= "" then itemHeaderTextColor else textColorFromBgString itemHeaderColor))
-                else
-                    htmlAttribute (Html.Attributes.attribute "data-server-fallback-color"
-                        (case theme of
-                            Dark -> "rgb(255, 255, 255)"
-                            Light -> "rgb(17, 24, 39)"
+        , el
+            [ Ty.meta
+
+            -- Prefer data attributes for header text colors instead of inline styles
+            , if itemHeaderTextColor /= "" || itemHeaderColor /= "" then
+                htmlAttribute
+                    (Html.Attributes.attribute "data-server-header-text-color"
+                        (if itemHeaderTextColor /= "" then
+                            itemHeaderTextColor
+
+                         else
+                            textColorFromBgString itemHeaderColor
                         )
                     )
-               )
-           , Font.color (getFeedTitleColor theme itemHeaderColor itemHeaderTextColor)
-          ]
-             (text item.feedTitle)
+
+              else
+                htmlAttribute
+                    (Html.Attributes.attribute "data-server-fallback-color"
+                        (case theme of
+                            Dark ->
+                                "rgb(255, 255, 255)"
+
+                            Light ->
+                                "rgb(17, 24, 39)"
+                        )
+                    )
+            , Font.color (getFeedTitleColor theme itemHeaderColor itemHeaderTextColor)
+            ]
+            (text item.feedTitle)
         , el [ Ty.meta, Font.color mutedTxt, paddingXY 4 0 ] (text "•")
-         , let
-            otherLinkBase = [ Font.size 11, htmlAttribute (Html.Attributes.attribute "data-display-link" "true"), Font.medium, mouseOver [ Font.color lumeOrange ] ]
+        , let
+            otherLinkBase =
+                [ Font.size 11, htmlAttribute (Html.Attributes.attribute "data-display-link" "true"), Font.medium, mouseOver [ Font.color lumeOrange ] ]
+
             otherLinkAttrs =
                 if itemHeaderTextColor /= "" || itemHeaderColor /= "" then
-                    [ htmlAttribute (Html.Attributes.attribute "data-server-header-text-color" (if itemHeaderTextColor /= "" then itemHeaderTextColor else textColorFromBgString itemHeaderColor))
+                    [ htmlAttribute
+                        (Html.Attributes.attribute "data-server-header-text-color"
+                            (if itemHeaderTextColor /= "" then
+                                itemHeaderTextColor
+
+                             else
+                                textColorFromBgString itemHeaderColor
+                            )
+                        )
                     , htmlAttribute (Html.Attributes.attribute "data-use-server-colors" "true")
                     ]
+
                 else
                     let
                         defaultLinkColor =
                             case theme of
                                 Dark ->
                                     "rgb(248, 250, 252)"
-                                
+
                                 Light ->
                                     "rgb(17, 24, 39)"
                     in
