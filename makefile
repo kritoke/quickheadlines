@@ -19,6 +19,17 @@ ifeq ($(UNAME_M),aarch64)
 ARCH_NAME = arm64
 endif
 
+# OS name mapping (used by download helpers)
+ifeq ($(UNAME_S),Linux)
+OS_NAME = linux
+endif
+ifeq ($(UNAME_S),Darwin)
+OS_NAME = macos
+endif
+ifeq ($(UNAME_S),FreeBSD)
+OS_NAME = freebsd
+endif
+
 # Prefer a system-installed `crystal` when available. If not present, fall back
 # to a bundled `bin/crystal` (used in some developer setups) or the CRYSTAL var.
 ## Final crystal resolver with FreeBSD pin support
@@ -82,3 +93,32 @@ elm-pages-serve:
 elm-format:
 	@echo "Format Elm sources (requires npx elm-format)"
 	@npx elm-format ui/src --yes
+
+# --- Utilities ---
+# download-cli: download a platform-specific CLI into $(DOWNLOAD_DIR)
+# Usage:
+#   make download-cli NAME=tool-name URL="https://.../__OS__/.../__ARCH__/..." \
+#       DOWNLOAD_DIR=bin
+# The URL may include placeholders __OS__ and __ARCH__ that will be replaced.
+DOWNLOAD_DIR ?= bin
+
+.PHONY: download-cli ensure-crystal env
+
+download-cli:
+	@if [ -z "$(NAME)" -o -z "$(URL)" ]; then \
+		echo "Usage: make download-cli NAME=<name> URL='<url-with-__OS__ or __ARCH__ placeholders>' [DOWNLOAD_DIR=bin]"; exit 1; \
+	fi; \
+	mkdir -p $(DOWNLOAD_DIR); \
+	url=$$(echo "$(URL)" | sed "s/__OS__/$(OS_NAME)/g" | sed "s/__ARCH__/$(ARCH_NAME)/g"); \
+	echo "Downloading $$url -> $(DOWNLOAD_DIR)/$(NAME)"; \
+	curl -fsSL "$$url" -o "$(DOWNLOAD_DIR)/$(NAME)" || { echo "download failed"; exit 1; }; \
+	chmod +x "$(DOWNLOAD_DIR)/$(NAME)"; \
+	echo "Saved to $(DOWNLOAD_DIR)/$(NAME)"
+
+ensure-crystal:
+	@echo "OS: $(UNAME_S) $(UNAME_M) -> OS_NAME=$(OS_NAME) ARCH_NAME=$(ARCH_NAME)"
+	@echo "Using Crystal: $(FINAL_CRYSTAL)"
+	@$(FINAL_CRYSTAL) --version || echo "Crystal not found or not executable. Install a compatible Crystal or provide bin/crystal."
+
+env:
+	@echo "UNAME_S=$(UNAME_S) UNAME_M=$(UNAME_M) OS_NAME=$(OS_NAME) ARCH_NAME=$(ARCH_NAME)"
