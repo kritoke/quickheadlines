@@ -28,8 +28,12 @@ describe "Feed Theme Persistence" do
     new_theme = {"bg" => "rgb(100,110,120)", "text" => {"light" => "#f0f0f0", "dark" => "#0f0f0f"}, "source" => "override"}.to_json
     fd2 = cache.get("https://theme.example.com/feed.xml")
     fd2.should_not be_nil
-    fd2.not_nil!.header_theme_colors = new_theme
-    cache.add(fd2.not_nil!)
+    if fd2
+      fd2.header_theme_colors = new_theme
+      cache.add(fd2)
+    else
+      raise "FeedData missing after insert"
+    end
 
     updated = cache.get_feed_theme_colors("https://theme.example.com/feed.xml")
     updated.should eq(new_theme)

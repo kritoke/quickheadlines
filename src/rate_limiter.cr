@@ -43,7 +43,6 @@ module Quickheadlines
       def check_limit(ip : String, category : String) : {allowed: Bool, remaining: Int32, reset_at: Int64}
         window_size = RateLimitConfig.window_size(category)
         limit = RateLimitConfig.limit(category)
-        now = Time.utc
         window_key = "#{ip}:#{category}"
 
         info = @@mutex.synchronize do

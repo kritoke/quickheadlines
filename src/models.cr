@@ -135,15 +135,15 @@ class AppState
     end
 
     # Sort by publication date (newest first), items without dates go to end
-    items.sort! do |a, b|
-      date_a = a.item.pub_date
-      date_b = b.item.pub_date
-      if date_a && date_b
-        date_b <=> date_a # Descending order (newest first)
-      elsif date_a
-        -1 # a comes first if it has a date
-      elsif date_b
-        1 # b comes first if it has a date
+    items.sort! do |left, right|
+      date_left = left.item.pub_date
+      date_right = right.item.pub_date
+      if date_left && date_right
+        date_right <=> date_left # Descending order (newest first)
+      elsif date_left
+        -1 # left comes first if it has a date
+      elsif date_right
+        1 # right comes first if it has a date
       else
         0 # Both nil, maintain order
       end
@@ -173,7 +173,7 @@ class FeedCache
 end
 
 FEED_CACHE = if ENV["SKIP_FEED_CACHE_INIT"] == "1"
-  nil
-else
-  FeedCache.instance
-end
+               nil
+             else
+               FeedCache.instance
+             end
