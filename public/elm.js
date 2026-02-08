@@ -14032,7 +14032,11 @@ var $author$project$Application$headerView = function (model) {
 				A2(
 				$mdgriffith$elm_ui$Element$link,
 				_List_fromArray(
-					[$mdgriffith$elm_ui$Element$centerY]),
+					[
+						$mdgriffith$elm_ui$Element$centerY,
+						$mdgriffith$elm_ui$Element$paddingEach(
+						{bottom: 0, left: 6, right: 6, top: 0})
+					]),
 				{
 					label: A2(
 						$mdgriffith$elm_ui$Element$row,
