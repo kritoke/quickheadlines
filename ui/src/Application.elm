@@ -324,10 +324,29 @@ headerView model =
                         )
                         (text "Quick Headlines")
     in
+    let
+        headerPaddingAttr =
+            case breakpoint of
+                VeryNarrowBreakpoint ->
+                    paddingEach { top = 6, bottom = 6, left = 0, right = 0 }
+
+                MobileBreakpoint ->
+                    paddingEach { top = 8, bottom = 8, left = 0, right = 0 }
+
+                _ ->
+                    paddingEach { top = 12, bottom = 12, left = 0, right = 0 }
+
+        logoSize =
+            case breakpoint of
+                VeryNarrowBreakpoint -> 28
+                MobileBreakpoint -> 34
+                _ -> 36
+    in
     Element.row
         [ width fill
         , Background.color bg
         , spacing 12
+        , headerPaddingAttr
         , htmlAttribute (HA.style "flex-wrap" "nowrap")
         , htmlAttribute (HA.style "overflow-x" "hidden")
         , htmlAttribute (HA.style "justify-content" "space-between")
@@ -349,8 +368,8 @@ headerView model =
             , label =
                 Element.row [ spacing 10, centerY ]
                     [ Element.image
-                        [ Element.width (px 32)
-                        , Element.height (px 32)
+                        [ Element.width (px logoSize)
+                        , Element.height (px logoSize)
                         , Border.rounded 8
                         ]
                         { src = "/logo.svg", description = "Logo" }
