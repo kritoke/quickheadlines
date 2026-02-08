@@ -489,23 +489,27 @@ module ColorExtractor
   # Accepts theme_json (String) or nil and optional legacy header_color/text_color.
   # Returns possibly-modified theme JSON string (or nil).
   def self.auto_correct_theme_json(theme_json : String?, legacy_bg : String?, legacy_text : String?) : String?
-    # Parse incoming theme JSON and fallbacks (returns bg_rgb, text_hash, source)
     bg_rgb, text_hash, source = parse_theme_payload(theme_json, legacy_bg, legacy_text)
 
-    # If we don't have a bg color we can't auto-correct
     return nil unless bg_rgb
+    return nil if has_explicit_roles?(text_hash)
 
-    # If incoming payload already contains explicit light/dark roles, do nothing
-    if text_hash.has_key?("light") && text_hash.has_key?("dark")
-      return nil
-    end
+    chosen_hex, corrected = select_text_color_for_bg(text_hash, legacy_text, bg_rgb)
 
-    # Build candidate list and pick best candidate or generate corrected colors
+    build_theme_json(bg_rgb, chosen_hex, corrected, source)
+  end
+
+  private def self.has_explicit_roles?(text_hash : Hash(String, String)) : Bool
+    text_hash.has_key?("light") && text_hash.has_key?("dark")
+  end
+
+  private def self.select_text_color_for_bg(text_hash : Hash(String, String), legacy_text : String?, bg_rgb : Array(Int32)) : Tuple(String, Bool)
     candidates = build_candidates(legacy_text, text_hash)
-    chosen_hex, corrected = choose_candidate_or_generate(candidates, bg_rgb)
+    choose_candidate_or_generate(candidates, bg_rgb)
+  end
 
+  private def self.build_theme_json(bg_rgb : Array(Int32), chosen_hex : String, corrected : Bool, source : String?) : String
     out_text = {"light" => chosen_hex, "dark" => chosen_hex}
-
     final = {"bg" => rgb_to_hex(bg_rgb), "text" => out_text, "source" => (corrected ? "auto-corrected" : (source || "auto"))}
     final.to_json
   end
@@ -616,37 +620,10 @@ module ColorExtractor
 
   # Parse incoming theme JSON into canonical pieces.
   private def self.parse_theme_payload(theme_json : String?, legacy_bg : String?, legacy_text : String?) : Tuple(Array(Int32)?, Hash(String, String), String?)
-    bg_rgb = nil.as(Array(Int32)?)
-    text_hash = {} of String => String
-    source = nil.as(String?)
+    # Try parsing the theme JSON first (extract bg_rgb, text_hash, source)
+    bg_rgb, text_hash, source = parse_theme_json(theme_json)
 
-    if theme_json && !theme_json.empty?
-      parsed = JSON.parse(theme_json) rescue nil
-      if parsed.is_a?(JSON::Any)
-        h = parsed.as_h rescue nil
-        if h
-          bg_val = h["bg"] || h["background"]
-          source = h["source"]? ? h["source"].to_s : nil
-          bg_rgb = parse_color_to_rgb(bg_val.to_s) if bg_val
-
-          txt = h["text"]
-          if txt.is_a?(Hash) || txt.is_a?(JSON::Any)
-            begin
-              tmp = txt.is_a?(JSON::Any) ? txt.as_h : txt.as_h
-              tmp.each do |k, v|
-                text_hash[k.to_s] = v.to_s
-              end
-            rescue
-            end
-          elsif txt
-            text_hash["light"] = txt.to_s
-            text_hash["dark"] = txt.to_s
-          end
-        end
-      end
-    end
-
-    # Fallback to legacy values
+    # Fallback to legacy values if JSON did not provide them
     if !bg_rgb && legacy_bg
       bg_rgb = parse_color_to_rgb(legacy_bg)
     end
@@ -654,6 +631,29 @@ module ColorExtractor
       text_hash["light"] = legacy_text
       text_hash["dark"] = legacy_text
     end
+
+    {bg_rgb, text_hash, source}
+  end
+
+  private def self.parse_theme_json(theme_json : String?) : Tuple(Array(Int32)?, Hash(String, String), String?)
+    bg_rgb = nil.as(Array(Int32)?)
+    text_hash = {} of String => String
+    source = nil.as(String?)
+
+    return {bg_rgb, text_hash, source} if theme_json.nil? || theme_json.empty?
+
+    parsed = JSON.parse(theme_json) rescue nil
+    return {bg_rgb, text_hash, source} unless parsed.is_a?(JSON::Any)
+
+    h = parsed.as_h rescue nil
+    return {bg_rgb, text_hash, source} unless h
+
+    bg_val = h["bg"] || h["background"]
+    source = h["source"]? ? h["source"].to_s : nil
+    bg_rgb = parse_color_to_rgb(bg_val.to_s) if bg_val
+
+    txt = h["text"]
+    text_hash = parse_text_hash(txt)
 
     {bg_rgb, text_hash, source}
   end
