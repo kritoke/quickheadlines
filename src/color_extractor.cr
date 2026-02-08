@@ -628,7 +628,7 @@ module ColorExtractor
   end
 
   private def self.roles_meet_contrast(text_hash : Hash(String, String), bg_rgb : Array(Int32)) : Bool
-    return false unless text_hash.key?("light") && text_hash.key?("dark")
+    return false unless text_hash.has_key?("light") && text_hash.has_key?("dark")
     light_ok = false
     dark_ok = false
     if l = text_hash["light"]
