@@ -1,20 +1,11 @@
-module Backend.Clusters exposing (fetchClusters)
 
+module Backend.Clusters exposing (fetchClustersTask)
+
+import Api.News exposing (Cluster)
 import Http
-import Json.Decode as Decode exposing (Decoder)
+import Task exposing (Task)
 
-type alias Cluster = { id : Int, headline : String, articleCount : Int }
 
-clusterDecoder : Decoder Cluster
-clusterDecoder =
-    Decode.map3 Cluster
-        (Decode.field "id" Decode.int)
-        (Decode.field "headline" Decode.string)
-        (Decode.field "article_count" Decode.int)
-
-fetchClusters : String -> Cmd msg
-fetchClusters url =
-    Http.get
-        { url = url
-        , expect = Http.expectJson (\_ -> Debug.log "clusters" ()) (Decode.list clusterDecoder)
-        }
+fetchClustersTask : String -> Task Http.Error (List Cluster)
+fetchClustersTask url =
+    Http.toTask (Http.get { url = url, expect = Http.expectJson identity (Decode.list Api.News.clusterDecoder) })
