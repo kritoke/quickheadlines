@@ -21,15 +21,17 @@ jobs:
         with:
           node-version: '18'
 
-      - name: Install Elm
-        run: |
-          npm install -g elm@0.19.1
+      - name: Setup Elm (0.19.1)
+        uses: avh4/setup-elm@v1
+        with:
+          elm-version: '0.19.1'
 
-      - name: Build public/elm.js
+      - name: Build public/elm.js (optimized)
         id: build
         run: |
           mkdir -p public
-          elm make src/Main.elm --output=public/elm.js
+          cd ui
+          elm make src/Main.elm --optimize --output=../public/elm.js
           echo "built=true" >> $GITHUB_OUTPUT
 
       - name: Upload artifact

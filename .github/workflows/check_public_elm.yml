@@ -16,8 +16,20 @@ jobs:
         run: |
           echo "Checking for public/elm.js..."
           if [ ! -f public/elm.js ]; then
-            echo "Error: public/elm.js not found."
-            echo "Either commit a precompiled public/elm.js (recommended for FreeBSD/CI) or run 'make elm-build' to build it locally.";
+            echo "public/elm.js not found. Attempting to build it using Node + Elm (as a fallback)."
+            # Install Node and Elm locally and attempt to build from ui/
+            sudo apt-get update -y && sudo apt-get install -y nodejs npm || true
+            # Install Elm 0.19.1 locally
+            npm install -g elm@0.19.1 || true
+            if [ -d ui ]; then
+              cd ui
+              elm make src/Main.elm --optimize --output=../public/elm.js || true
+              cd - >/dev/null || true
+            fi
+          fi
+          if [ ! -f public/elm.js ]; then
+            echo "Error: public/elm.js still not found after fallback build."
+            echo "Either commit a precompiled public/elm.js (recommended for FreeBSD/CI) or fix the Elm build environment.";
             exit 1
           fi
           echo "public/elm.js found ($(wc -c < public/elm.js) bytes)"
