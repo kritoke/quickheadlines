@@ -14,6 +14,34 @@
   to { opacity: 1; transform: translateY(0) scale(1); }
 }
 
+/* Scroll shadow to indicate more content in feed boxes (matches v0.4.0 behavior) */
+.feed-box {
+  position: relative; /* required for the ::after gradient */
+}
+
+.feed-box::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 1.5rem;
+  pointer-events: none;
+  background: linear-gradient(to bottom, transparent, rgba(0,0,0,0.18));
+  transition: opacity 0.3s ease;
+  z-index: 10;
+}
+
+@media (prefers-color-scheme: dark), [data-theme="dark"] {
+  .feed-box::after {
+    background: linear-gradient(to bottom, transparent, rgba(0,0,0,0.55));
+  }
+}
+
+.feed-box.is-at-bottom::after {
+  opacity: 0;
+}
+
 /* Load more button styles - matches v0.4.0 styling with theme-specific colors */
 .qh-load-more {
   display: inline-flex;

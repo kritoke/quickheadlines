@@ -139,7 +139,7 @@ update shared msg model =
                         f
             in
             ( { model | feeds = List.map updateFeed model.feeds, loadingFeed = Nothing, insertedIds = Set.union model.insertedIds addedSet }
-            , Task.perform (\_ -> ClearInserted) (Process.sleep 320)
+            , Task.perform (\_ -> ClearInserted) (Process.sleep 300)
             )
 
         GotMoreFeed _ (Err _) ->
@@ -750,7 +750,6 @@ feedItem now theme insertedIds item =
             [ width fill
             , spacing 8
             , htmlAttribute (Html.Attributes.style "min-width" "0")
-            , htmlAttribute (Html.Attributes.class "timeline-inserted-wrapper")
             ]
             ++ (if isInserted then [ htmlAttribute (Html.Attributes.class "timeline-inserted") ] else [])
     in

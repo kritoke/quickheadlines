@@ -10,6 +10,6 @@ Files modified:
 - `views/index.html` — CSS and JS fixes
 
 Next steps:
-1. Rebuild Elm (`cd ui && elm make src/Main.elm --output=../public/elm.js`) so Elm changes that add `data-use-server-colors` and inline header text colors take effect.
+1. Rebuild Elm (`nix develop . --command make elm-build` or `workdir=ui nix develop . --command 'elm make src/Main.elm --output=../public/elm.js'`) so Elm changes that add `data-use-server-colors` and inline header text colors take effect.
 2. Run Playwright tests: `nix develop . --command npx playwright test ui/tests/tab-switch-colors.spec.ts`
 3. Iterate if tests show residual issues (add small debounces or defensive checks during mutation observer runs).

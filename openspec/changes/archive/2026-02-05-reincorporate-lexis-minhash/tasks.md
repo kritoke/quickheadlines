@@ -61,10 +61,10 @@
 
 - [x] 7.1 Remove or comment out obsolete ClusteringUtilities methods (hybrid_similarity, jaccard_similarity, word_coverage_similarity)
 - [x] 7.2 Update inline comments in ClusteringService to reference MinHash/LSH
-- [x] 7.3 Run `nix develop . --command nix develop . --command crystal tool format` to format code
+ - [x] 7.3 Run `nix develop . --command crystal tool format` to format code
 
 ## 8. Final Verification
 
 - [x] 8.1 Verify clustering works correctly in development environment
 - [x] 8.2 Monitor clustering performance (should be significantly faster with LSH)
-- [x] 8.3 Check for any ameba linting issues: `nix develop . --command nix develop . --command ameba`
+ - [x] 8.3 Check for any ameba linting issues: `nix develop . --command ameba`

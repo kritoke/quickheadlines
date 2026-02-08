@@ -39,5 +39,50 @@
       console.error('Elm initialization failed:', e);
     }
   </script>
+  <script>
+    // Attach scroll observers to feed bodies to toggle `.is-at-bottom` which
+    // controls the bottom shadow indicating more content. Also watch for
+    // dynamically added feed boxes so behavior works after Elm updates.
+    (function () {
+      function isAtBottom(el) {
+        return Math.abs(el.scrollHeight - el.scrollTop - el.clientHeight) <= 1;
+      }
+
+      function updateFeedBoxClass(feedBox) {
+        try {
+          var body = feedBox.querySelector('.feed-body');
+          if (!body) return;
+          if (isAtBottom(body)) feedBox.classList.add('is-at-bottom'); else feedBox.classList.remove('is-at-bottom');
+        } catch (e) { /* ignore */ }
+      }
+
+      function setupScrollForFeedBox(feedBox) {
+        var body = feedBox.querySelector('.feed-body');
+        if (!body) return;
+        // initial state
+        updateFeedBoxClass(feedBox);
+        // remove previous listener marker
+        if (body.__qh_scroll_attached) return;
+        body.__qh_scroll_attached = true;
+        body.addEventListener('scroll', function () { updateFeedBoxClass(feedBox); }, { passive: true });
+        // also update on resize (content height may change)
+        var ro = new ResizeObserver(function () { updateFeedBoxClass(feedBox); });
+        ro.observe(body);
+      }
+
+      function scanAndAttach() {
+        document.querySelectorAll('.feed-box').forEach(setupScrollForFeedBox);
+      }
+
+      // Watch for feed-box additions/removals
+      var mo = new MutationObserver(function () { scanAndAttach(); });
+      mo.observe(document.documentElement || document.body, { childList: true, subtree: true });
+
+      // Run initial attach after a short delay (Elm may finish rendering)
+      document.addEventListener('DOMContentLoaded', function () { setTimeout(scanAndAttach, 50); });
+      // Also run at intervals briefly to catch late renders
+      var _count = 0; var _int = setInterval(function () { scanAndAttach(); _count++; if (_count > 20) clearInterval(_int); }, 250);
+    })();
+  </script>
 </body>
 </html>

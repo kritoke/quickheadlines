@@ -1146,7 +1146,11 @@ clusterItem breakpoint zone now theme expandedClusters insertedIds cluster =
                         case parseColor effectiveBg of
                             Just c ->
                                 let
-                                    pad = if Responsive.isMobile breakpoint then paddingXY 0 4 else paddingXY 2 6
+                                    -- Add extra horizontal padding so the site pill has more
+                                    -- left/right breathing room. Mobile gets slightly larger
+                                    -- horizontal padding to avoid cramped titles.
+                                    -- Align horizontal padding to match vertical for a more balanced pill
+                                    pad = if Responsive.isMobile breakpoint then paddingXY 6 6 else paddingXY 8 8
                                 in
                                 [ Background.color c
                                 , pad

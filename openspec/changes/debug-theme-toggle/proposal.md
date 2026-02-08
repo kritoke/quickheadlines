@@ -20,5 +20,5 @@ The timeline's header and link colors are inconsistent when the user toggles the
 ## Impact
 
 - Files to change: `ui/src/Pages/Timeline.elm`, `ui/src/Application.elm`, `views/index.html` (remove JS overrides), `public/elm.js` (rebuilt), and Playwright tests under `ui/tests/`.
-- Requires rebuilding Elm (`cd ui && elm make`) and running Playwright tests.
+- Requires rebuilding Elm (`nix develop . --command make elm-build` or `workdir=ui nix develop . --command 'elm make src/Main.elm --output=../public/elm.js'`) and running Playwright tests.
 - Low risk: UI-only changes. No backend or API modifications required.
