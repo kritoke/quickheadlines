@@ -6,9 +6,7 @@ require "base64"
 # instead of embedding them as base64 data URIs in HTML.
 module FaviconStorage
   FAVICON_DIR = "public/favicons"
-  # Allow slightly larger ICO files (some multi-frame ICOs exceed 100KB)
-  # Quick experiment: increase to 200KB. If this causes issues, reduce back.
-  MAX_SIZE    = 200 * 1024 # 200KB limit per favicon
+  MAX_SIZE    = 100 * 1024 # 100KB limit per favicon
 
   @@mutex = Mutex.new
 
