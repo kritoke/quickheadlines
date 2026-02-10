@@ -516,9 +516,10 @@ nix develop . --command crystal tool unreachable src/quickheadlines.cr
 
 | Skill | Location | Purpose |
 |-------|----------|----------|
-| `crystal` | `/home/kritoke/.kilocode/skills/crystal/` | Crystal concurrency, Fiber/Channel patterns, JSON::Serializable |
-| `elm` | `/home/kritoke/.kilocode/skills/elm/` | Elm architecture, TEA patterns |
-| `openspec` | `/home/kritoke/.config/opencode/skills/openspec/` | Architecture standards, OpenSpec workflow |
+| `crystal` | `/workspaces/aiworkflow/skills/crystal/CRYSTAL_SKILLS.md` | Crystal concurrency, Fiber/Channel patterns, JSON::Serializable |
+| `elm` | `/workspaces/aiworkflow/skills/elm/ELM_SKILLS.md` | Elm architecture, TEA patterns |
+| `mint` | `/workspaces/quickheadlines/MINT_0_28_1_GUIDE.md` | Mint 0.28.1 syntax, component patterns, dynamic text |
+| `openspec` | `/home/kritoke/.config/opencode/skills/openspec/openspec/project.md` | Architecture standards, OpenSpec workflow |
 
 ### How to Load Skills
 
@@ -531,20 +532,28 @@ read /workspaces/aiworkflow/skills/crystal/CRYSTAL_SKILLS.md
 # Load Elm skill (for frontend development)
 read /workspaces/aiworkflow/skills/elm/ELM_SKILLS.md
 
+# Load Mint skill (for frontend development)
+read /workspaces/quickheadlines/MINT_0_28_1_GUIDE.md
+
 # Load OpenSpec skill (always needed)
 read /home/kritoke/.config/opencode/skills/openspec/openspec/project.md
 ```
 
 ### For This Project
 
-QuickHeadlines uses both Crystal (backend) and Mint (frontend). At the start of each session, you MUST:
+QuickHeadlines uses Crystal (backend) and Mint (frontend). At the start of each session, you MUST:
 
 1. **Load Crystal skill** - For feed processing, clustering, API endpoints
    ```bash
    read /workspaces/aiworkflow/skills/crystal/CRYSTAL_SKILLS.md
    ```
 
-2. **Load Elm skill** - For understanding legacy Elm code (ui/ directory)
+2. **Load Mint skill** - For Mint frontend development
+   ```bash
+   read /workspaces/quickheadlines/MINT_0_28_1_GUIDE.md
+   ```
+
+3. **Load Elm skill** - For understanding legacy Elm code (ui/ directory)
    ```bash
    read /workspaces/aiworkflow/skills/elm/ELM_SKILLS.md
    ```
@@ -556,9 +565,12 @@ QuickHeadlines uses both Crystal (backend) and Mint (frontend). At the start of 
 - Fan-In for collecting results: Use `WaitGroup` or result channel
 - "Zero-Any Rule": Use `JSON::Serializable::Strict` only
 
-**Elm patterns to follow:**
-- TEA architecture (Model, Update, View)
-- No architectural comments - keep code clean
+**Mint 0.28.1 patterns to use:**
+- Render function: `fun render : Html { }`
+- Dynamic text: `{ variable }` NOT `<{ variable }>`
+- For loops: `for item of array { }`
+- Style blocks with media queries
+- CSS classes: `<div::base>`
 
 ### What Happens If You Don't Load Skills
 
@@ -567,20 +579,21 @@ Without loading skills, you will:
 - ❌ Use `Any` types instead of strict JSON
 - ❌ Write imperative code instead of functional
 - ❌ Forget about Fiber/Channel patterns
+- ❌ Use wrong Mint syntax (`<{ }>` instead of `{ }`)
 
 ### Add to Your Session Startup
 
 When starting a new session, begin with:
 
 ```
-I will now load the Crystal and Elm skills for this QuickHeadlines project.
+I will now load the Crystal and Mint skills for this QuickHeadlines project.
 
 read /workspaces/aiworkflow/skills/crystal/CRYSTAL_SKILLS.md
-read /workspaces/aiworkflow/skills/elm/ELM_SKILLS.md
+read /workspaces/quickheadlines/MINT_0_28_1_GUIDE.md
 
 Skills loaded. Ready to work on Crystal backend and Mint frontend.
 ```
 
 This ensures you apply the knowledge from:
 - `/workspaces/aiworkflow/skills/crystal/CRYSTAL_SKILLS.md`
-- `/workspaces/aiworkflow/skills/elm/ELM_SKILLS.md`
+- `/workspaces/quickheadlines/MINT_0_28_1_GUIDE.md`
