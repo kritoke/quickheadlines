@@ -88,7 +88,23 @@ component Main {
 
 ---
 
-## State Management
+## Dynamic Text (CRITICAL - SYNTAX ISSUES)
+
+### ⚠️ KNOWN ISSUE: <{ }> and #{ } Do Not Work
+In this Mint 0.28.1 build, the documented dynamic text syntax fails:
+
+```mint
+/* FAILS with "HTML_ELEMENT_EXPECTED_CLOSING_TAG" */
+<{ name }>
+#{color}
+
+/* WORKS */
+<div>Text</div>
+```
+
+**Current Workaround:** Use plain text only in components.
+
+### State Management
 
 ### ❌ WRONG (Mutation)
 ```mint
@@ -187,6 +203,23 @@ component Main {
 
 ## Common Errors
 
+### Error: `HTML_ELEMENT_EXPECTED_CLOSING_TAG` with <{ }>
+
+**Cause:** Dynamic text syntax not working in this Mint 0.28.1 build.
+
+**Workaround:** Use plain text only. Do not use:
+- `<{ variable }>` for dynamic text
+- `#{ variable }` for style interpolation
+
+```mint
+/* WORKS */
+<div>Feed</div>
+
+/* FAILS */
+<div><{ name }></div>
+<div style="color: #{color}">Text</div>
+```
+
 ### Error: `APPLICATION_INVALID_KEY: start`
 
 **Cause:** Using deprecated `application.start` key.
@@ -220,7 +253,7 @@ mint install
 **Fix:** Use minimal component structure first:
 ```mint
 component Main {
-  render {
+  fun render : Html {
     <div>Hello</div>
   }
 }
