@@ -5,25 +5,25 @@ component Main {
     margin: 0;
     min-height: 100vh;
     box-sizing: border-box;
-    background: #f9fafb;
+    background: #1a1a1b;
   }
 
   style container {
     max-width: 800px;
     margin: 0 auto;
-    padding: 20px;
+    padding: 15px;
   }
 
   style header {
     padding: 16px 0;
-    border-bottom: 1px solid #e5e7eb;
-    margin-bottom: 20px;
+    border-bottom: 1px solid #343536;
+    margin-bottom: 15px;
   }
 
   style title {
     font-size: 24px;
     font-weight: 700;
-    color: #111827;
+    color: #d7dadc;
   }
 
   fun render : Html {

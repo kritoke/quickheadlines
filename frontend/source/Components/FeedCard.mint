@@ -1,12 +1,35 @@
 component FeedCard {
+  property item : TimelineItem
+
   style base {
     display: flex;
     gap: 12px;
     padding: 16px;
-    background: #ffffff;
+    background: white;
     border-radius: 8px;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
     margin-bottom: 12px;
+    text-decoration: none;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    cursor: pointer;
+    animation: slideUp 0.4s ease-out;
+    border: 1px solid #e5e7eb;
+
+    &:hover {
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      transform: translateX(4px);
+    }
+
+    @keyframes slideUp {
+      from {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
   }
 
   style favicon-container {
@@ -63,14 +86,14 @@ component FeedCard {
   }
 
   fun render : Html {
-    <a::link href={item.link} target="_blank" rel="noopener noreferrer">
+    <a::link href={item.link} target="_blank" rel="noopener noreferrer" data-name="feed-item-card">
       <div::base>
-        <div::favicon-container style="background-color: {item.headerColor}">
+        <div::favicon-container style="background-color: #{item.headerColor}">
           <img::favicon src={item.favicon} alt={item.feedTitle}/>
         </div>
         <div::content>
           <div::header>
-            <span::feed-title style="color: {item.headerTextColor}">
+            <span::feed-title style="color: #{item.headerTextColor}">
             </span>
           </div>
           <h3::title>

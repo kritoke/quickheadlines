@@ -4,21 +4,22 @@ component Button {
     align-items: center;
     justify-content: center;
     padding: 8px 16px;
-    border-radius: 6px;
-    font-size: 14px;
+    border-radius: #{DesignTokens.RADIUS};
+    font-size: #{DesignTokens.FONT_SIZE_BASE};
     font-weight: 500;
     cursor: pointer;
     border: none;
+    transition: all 0.2s ease;
   }
 
   style primary {
-    background: #2563eb;
-    color: #ffffff;
+    background: #{DesignTokens.ACCENT};
+    color: white;
   }
 
   style secondary {
-    background: #f3f4f6;
-    color: #1f2937;
+    background: #{DesignTokens.BORDER_DARK};
+    color: #{DesignTokens.TEXT_LIGHT};
   }
 
   style disabled {

@@ -2,7 +2,7 @@ component Layout {
   style container {
     max-width: 800px;
     margin: 0 auto;
-    padding: 20px;
+    padding: #{DesignTokens.GAP};
   }
 
   style header {
@@ -10,14 +10,14 @@ component Layout {
     align-items: center;
     justify-content: space-between;
     padding: 16px 0;
-    border-bottom: 1px solid #e5e7eb;
-    margin-bottom: 20px;
+    border-bottom: 1px solid #{DesignTokens.BORDER_DARK};
+    margin-bottom: #{DesignTokens.GAP};
   }
 
   style title {
-    font-size: 24px;
+    font-size: #{DesignTokens.FONT_SIZE_2XL};
     font-weight: 700;
-    color: #111827;
+    color: #{DesignTokens.TEXT_LIGHT};
   }
 
   style content {
@@ -26,11 +26,11 @@ component Layout {
 
   style footer {
     padding: 20px 0;
-    border-top: 1px solid #e5e7eb;
+    border-top: 1px solid #{DesignTokens.BORDER_DARK};
     margin-top: 40px;
     text-align: center;
-    color: #6b7280;
-    font-size: 12px;
+    color: #{DesignTokens.TEXT_GRAY};
+    font-size: #{DesignTokens.FONT_SIZE_SMALL};
   }
 
   fun render : Html {
