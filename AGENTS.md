@@ -505,3 +505,82 @@ nix develop . --command crystal tool format --check src/
 # Run unreachable code check
 nix develop . --command crystal tool unreachable src/quickheadlines.cr
 ```
+
+---
+
+## Skill Loading (IMPORTANT)
+
+**Skills are NOT loaded automatically.** You must load them at the start of each session.
+
+### Available Skills
+
+| Skill | Location | Purpose |
+|-------|----------|----------|
+| `crystal` | `/home/kritoke/.kilocode/skills/crystal/` | Crystal concurrency, Fiber/Channel patterns, JSON::Serializable |
+| `elm` | `/home/kritoke/.kilocode/skills/elm/` | Elm architecture, TEA patterns |
+| `openspec` | `/home/kritoke/.config/opencode/skills/openspec/` | Architecture standards, OpenSpec workflow |
+
+### How to Load Skills
+
+At the start of EVERY session, run:
+
+```bash
+# Load Crystal skill (for backend development)
+read /workspaces/aiworkflow/skills/crystal/CRYSTAL_SKILLS.md
+
+# Load Elm skill (for frontend development)
+read /workspaces/aiworkflow/skills/elm/ELM_SKILLS.md
+
+# Load OpenSpec skill (always needed)
+read /home/kritoke/.config/opencode/skills/openspec/openspec/project.md
+```
+
+### For This Project
+
+QuickHeadlines uses both Crystal (backend) and Mint (frontend). At the start of each session, you MUST:
+
+1. **Load Crystal skill** - For feed processing, clustering, API endpoints
+   ```bash
+   read /workspaces/aiworkflow/skills/crystal/CRYSTAL_SKILLS.md
+   ```
+
+2. **Load Elm skill** - For understanding legacy Elm code (ui/ directory)
+   ```bash
+   read /workspaces/aiworkflow/skills/elm/ELM_SKILLS.md
+   ```
+
+### Quick Reference
+
+**Crystal concurrency patterns to use:**
+- Worker-Pool for feed refresh: `Channel(FeedTask).new(100)` with multiple workers
+- Fan-In for collecting results: Use `WaitGroup` or result channel
+- "Zero-Any Rule": Use `JSON::Serializable::Strict` only
+
+**Elm patterns to follow:**
+- TEA architecture (Model, Update, View)
+- No architectural comments - keep code clean
+
+### What Happens If You Don't Load Skills
+
+Without loading skills, you will:
+- ❌ Miss Crystal concurrency best practices
+- ❌ Use `Any` types instead of strict JSON
+- ❌ Write imperative code instead of functional
+- ❌ Forget about Fiber/Channel patterns
+
+### Add to Your Session Startup
+
+When starting a new session, begin with:
+
+```
+I will now load the Crystal and Elm skills for this QuickHeadlines project.
+
+read /workspaces/aiworkflow/skills/crystal/CRYSTAL_SKILLS.md
+read /workspaces/aiworkflow/skills/elm/ELM_SKILLS.md
+
+Skills loaded. Ready to work on Crystal backend and Mint frontend.
+```
+
+This ensures you apply the knowledge from:
+- `/workspaces/aiworkflow/skills/crystal/CRYSTAL_SKILLS.md`
+- `/workspaces/aiworkflow/skills/elm/ELM_SKILLS.md`
