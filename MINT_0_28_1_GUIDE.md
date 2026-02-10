@@ -73,7 +73,7 @@ component Main {
 ### ✅ CORRECT (Minimal Main.mint)
 ```mint
 component Main {
-  render {
+  fun render : Html {
     <div>QuickHeadlines</div>
   }
 }
@@ -88,21 +88,26 @@ component Main {
 
 ---
 
-## Dynamic Text (CRITICAL - SYNTAX ISSUES)
+## Dynamic Text (CRITICAL - SYNTAX)
 
-### ⚠️ KNOWN ISSUE: <{ }> and #{ } Do Not Work
-In this Mint 0.28.1 build, the documented dynamic text syntax fails:
-
+### ✅ CORRECT: Use { } for String Values
 ```mint
-/* FAILS with "HTML_ELEMENT_EXPECTED_CLOSING_TAG" */
-<{ name }>
-#{color}
+/* String values in HTML content */
+<div>{ name }</div>
 
-/* WORKS */
-<div>Text</div>
+/* Dynamic style values */
+<div style="color: {color}">Text</div>
+
+/* Static string with quotes */
+<div>{"QuickHeadlines"}</div>
 ```
 
-**Current Workaround:** Use plain text only in components.
+### ❌ WRONG (causes HTML_ELEMENT_EXPECTED_CLOSING_TAG)
+```mint
+/* <{ }> syntax does NOT work */
+<{ name }>
+<{"Text"}>
+```
 
 ### State Management
 
@@ -147,7 +152,7 @@ Browser.Dom.onReady { || doSomething() }
 For Mint 0.28.1, use **minimal component structure**:
 ```mint
 component Main {
-  render {
+  fun render : Html {
     <div>Content</div>
   }
 }
@@ -259,6 +264,19 @@ component Main {
 }
 ```
 
+### Error: `HTML_ELEMENT_EXPECTED_CLOSING_TAG` with `<{ }>`
+
+**Cause:** Using wrong syntax for dynamic text.
+
+**Fix:** Use `{ }` instead of `<{ }>`:
+```mint
+/* CORRECT */
+<div>{ name }</div>
+
+/* WRONG - causes error */
+<div><{ name }></div>
+```
+
 ---
 
 ## Reference Projects
@@ -334,10 +352,11 @@ mint format source/
 2. [ ] `source-directories` is plural and an array
 3. [ ] Dependencies use `repository` + `constraint` format
 4. [ ] Component is named `Main` in `source-directories`
-5. [ ] Component uses `render` function (not `init`)
-6. [ ] State changes use `next` keyword
-7. [ ] Deleted `.mint` and `mint-packages.json` after schema changes
-8. [ ] Ran `mint install` after cache deletion
+5. [ ] Component uses `fun render : Html { }`
+6. [ ] Dynamic text uses `{ variable }` NOT `<{ variable }>`
+7. [ ] State changes use `next` keyword
+8. [ ] Deleted `.mint` and `mint-packages.json` after schema changes
+9. [ ] Ran `mint install` after cache deletion
 
 ---
 
