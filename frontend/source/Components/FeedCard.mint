@@ -88,17 +88,20 @@ component FeedCard {
   fun render : Html {
     <a::link href={item.link} target="_blank" rel="noopener noreferrer" data-name="feed-item-card">
       <div::base>
-        <div::favicon-container style="background-color: #{item.headerColor}">
+        <div::favicon-container style="background-color: {item.headerColor}">
           <img::favicon src={item.favicon} alt={item.feedTitle}/>
         </div>
         <div::content>
           <div::header>
-            <span::feed-title style="color: #{item.headerTextColor}">
+            <span::feed-title style="color: {item.headerTextColor}">
+              { item.feedTitle }
             </span>
           </div>
           <h3::title>
+            { item.title }
           </h3>
           <div::meta>
+            { item.pubDate }
           </div>
         </div>
       </div>

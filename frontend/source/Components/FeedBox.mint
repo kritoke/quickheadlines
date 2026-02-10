@@ -27,9 +27,7 @@ component FeedBox {
   fun render : Html {
     <div::box data-name="feed-box">
       <div::header>
-        <span style="font-weight: bold;">
-          Feed
-        </span>
+        { source.name }
       </div>
       <div::itemsList>
         for article of source.articles {

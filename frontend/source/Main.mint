@@ -29,6 +29,11 @@ component Main {
   fun render : Html {
     <div::base>
       <div::container>
+        <div::header>
+          <div::title>
+            { "QuickHeadlines" }
+          </div>
+        </div>
         <Timeline/>
       </div>
     </div>
