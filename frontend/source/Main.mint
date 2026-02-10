@@ -29,10 +29,6 @@ component Main {
   fun render : Html {
     <div::base>
       <div::container>
-        <div::header>
-          <div::title>
-          </div>
-        </div>
         <Timeline/>
       </div>
     </div>

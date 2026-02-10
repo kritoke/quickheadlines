@@ -1,5 +1,5 @@
-component Timeline {
-  state feeds : Array(FeedSource) = []
+component FeedGrid {
+  property feeds : Array(FeedSource)
 
   style gridContainer {
     display: grid;
@@ -32,6 +32,9 @@ component Timeline {
 
   fun render : Html {
     <div::gridContainer data-name="feed-grid-root">
+      for feed of feeds {
+        <FeedBox source={feed}/>
+      }
       <div::bottomShadow/>
     </div>
   }
