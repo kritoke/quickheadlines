@@ -1,5 +1,5 @@
 component Timeline {
-  state feeds : Array(FeedSource) = []
+  connect FeedStore exposing { feeds, loading }
 
   style gridContainer {
     display: grid;
@@ -9,6 +9,7 @@ component Timeline {
     overflow-y: auto;
     position: relative;
     grid-template-columns: repeat(3, 1fr);
+    background: #1a1a1b;
 
     @media (max-width: 1100px) {
       grid-template-columns: repeat(2, 1fr);
@@ -30,8 +31,21 @@ component Timeline {
     background: linear-gradient(transparent, rgba(0,0,0,0.8));
   }
 
+  style loading {
+    color: #d7dadc;
+    text-align: center;
+    padding: 40px;
+  }
+
   fun render : Html {
     <div::gridContainer data-name="feed-grid-root">
+      if loading {
+        <div::loading>
+          "Loading..."
+        </div>
+      } else {
+        <FeedGrid feeds={feeds}/>
+      }
       <div::bottomShadow/>
     </div>
   }

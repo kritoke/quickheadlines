@@ -32,9 +32,9 @@ component FeedGrid {
 
   fun render : Html {
     <div::gridContainer data-name="feed-grid-root">
-      for feed of feeds {
-        <FeedBox source={feed}/>
-      }
+      <FeedBox name="Feed 1"/>
+      <FeedBox name="Feed 2"/>
+      <FeedBox name="Feed 3"/>
       <div::bottomShadow/>
     </div>
   }
