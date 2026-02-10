@@ -360,6 +360,296 @@ mint format source/
 
 ---
 
+## Verified Working Patterns (QuickHeadlines Production Code)
+
+### Component Structure
+```mint
+component Main {
+  fun render : Html {
+    <div>Content</div>
+  }
+}
+```
+
+### Properties
+```mint
+component FeedCard {
+  property item : TimelineItem
+
+  fun render : Html {
+    <div>{ item.title }</div>
+  }
+}
+```
+
+### State
+```mint
+component Timeline {
+  state items : Array(TimelineItem) = []
+  state loading : Bool = False
+
+  fun loadItems : Promise(Void) {
+    next loading = True
+    next items = []
+  }
+}
+```
+
+### Dynamic Text in HTML
+```mint
+/* String variable */
+<div>{ item.title }</div>
+
+/* Static string with quotes */
+<div>{"QuickHeadlines"}</div>
+
+/* Property access */
+<div>{ source.name }</div>
+```
+
+### Dynamic Styles
+```mint
+/* Inline style with variable */
+<div style="background-color: {item.headerColor}">
+  Content
+</div>
+
+/* Multiple dynamic values */
+<img src={item.favicon} alt={item.feedTitle}/>
+```
+
+### For Loops
+```mint
+/* Rendering array items */
+for article of source.articles {
+  <FeedCard item={article}/>
+}
+```
+
+### Style Blocks
+```mint
+style base {
+  background: #272729;
+  border: 1px solid #343536;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  height: 500px;
+  overflow: hidden;
+}
+
+/* Media queries */
+@media (max-width: 1100px) {
+  grid-template-columns: repeat(2, 1fr);
+}
+```
+
+### CSS Classes with :: Syntax
+```mint
+<div::box data-name="feed-box">
+  Content
+</div>
+```
+
+---
+
+## Verified Non-Working Patterns
+
+### Dynamic Text
+```mint
+/* ❌ FAILS with HTML_ELEMENT_EXPECTED_CLOSING_TAG */
+<{ name }>
+<{"Text"}>
+#{ name }
+```
+
+### Style Interpolation in CSS
+```mint
+/* ❌ FAILS */
+color: #{variable};
+background: #{if theme == Dark { "black" } else { "white" }};
+```
+
+### Render Function Shorthand
+```mint
+/* ❌ FAILS - requires fun return type */
+render {
+  <div>Content</div>
+}
+```
+
+### Store Connection Syntax
+```mint
+/* ❌ FAILS - different pattern required */
+connect FeedStore exposing { theme }
+```
+
+---
+
+## QuickHeadlines Component Examples
+
+### FeedCard Component (Working)
+```mint
+component FeedCard {
+  property item : TimelineItem
+
+  style base {
+    display: flex;
+    gap: 12px;
+    padding: 16px;
+    background: #ffffff;
+    border-radius: 8px;
+  }
+
+  style favicon-container {
+    flex-shrink: 0;
+    width: 40px;
+    height: 40px;
+    border-radius: 6px;
+  }
+
+  style content {
+    flex: 1;
+    min-width: 0;
+  }
+
+  style title {
+    font-size: 16px;
+    font-weight: 600;
+    color: #111827;
+  }
+
+  style meta {
+    font-size: 12px;
+    color: #9ca3af;
+  }
+
+  fun render : Html {
+    <a href={item.link} target="_blank" rel="noopener noreferrer">
+      <div::base>
+        <div::favicon-container style="background-color: {item.headerColor}">
+          <img::favicon src={item.favicon} alt={item.feedTitle}/>
+        </div>
+        <div::content>
+          <h3::title>
+            { item.title }
+          </h3>
+          <div::meta>
+            { item.pubDate }
+          </div>
+        </div>
+      </div>
+    </a>
+  }
+}
+```
+
+### FeedBox Component (Working)
+```mint
+component FeedBox {
+  property source : FeedSource
+
+  style box {
+    background: #272729;
+    border: 1px solid #343536;
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    height: 500px;
+    overflow: hidden;
+  }
+
+  style header {
+    padding: 12px;
+    font-weight: bold;
+    border-bottom: 1px solid #343536;
+    background: #1a1a1b;
+  }
+
+  style itemsList {
+    flex: 1;
+    overflow-y: auto;
+  }
+
+  fun render : Html {
+    <div::box data-name="feed-box">
+      <div::header>
+        { source.name }
+      </div>
+      <div::itemsList>
+        for article of source.articles {
+          <FeedCard item={article}/>
+        }
+      </div>
+    </div>
+  }
+}
+```
+
+### FeedGrid with Responsive Layout (Working)
+```mint
+component FeedGrid {
+  property feeds : Array(FeedSource)
+
+  style gridContainer {
+    display: grid;
+    gap: 20px;
+    padding: 20px;
+    height: calc(100vh - 80px);
+    overflow-y: auto;
+    position: relative;
+    grid-template-columns: repeat(3, 1fr);
+
+    @media (max-width: 1100px) {
+      grid-template-columns: repeat(2, 1fr);
+    }
+
+    @media (max-width: 700px) {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  style bottomShadow {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 60px;
+    pointer-events: none;
+    z-index: 100;
+    background: linear-gradient(transparent, rgba(0,0,0,0.8));
+  }
+
+  fun render : Html {
+    <div::gridContainer data-name="feed-grid-root">
+      for feed of feeds {
+        <FeedBox source={feed}/>
+      }
+      <div::bottomShadow/>
+    </div>
+  }
+}
+```
+
+---
+
+## Syntax Summary Table
+
+| What | Syntax | Example |
+|------|--------|---------|
+| Render function | `fun render : Html { }` | `fun render : Html { <div>Text</div> }` |
+| String variable | `{ variable }` | `{ item.title }` |
+| Static string | `{"text"}` | `{"QuickHeadlines"}` |
+| Property access | `{ object.property }` | `{ source.name }` |
+| Inline style | `style="prop: {val}"` | `style="color: {color}"` |
+| Style reference | `::styleName` | `<div::base>` |
+| For loop | `for item of array { }` | `for article of articles { }` |
+| CSS block | `style name { }` | `style base { color: red; }` |
+| Media query | `@media (max-width) { }` | `@media (max-width: 700px) { ... }` |
+| State change | `next state = value` | `next loading = True` |
+
+---
+
 ## Last Updated
 
 February 10, 2026 - Mint 0.28.1
@@ -368,3 +658,4 @@ February 10, 2026 - Mint 0.28.1
 
 - QuickHeadlines Team
 - Based on guidance from mint-lang/mint-website repository
+- Verified with production QuickHeadlines code
