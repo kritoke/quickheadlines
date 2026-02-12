@@ -36,7 +36,7 @@ CMD sh -c "echo 'Checking for DEV mode...' && env | grep -E '(QUICKHEADLINES_|qu
 # Use system Crystal 1.18.2 (Athena-compatible)
 
 # Validate repository was cloned
-CMD sh -c "if [ ! -d '/tmp/qh' ] || [ ! -f '/tmp/qh/makefile' ]; then echo 'ERROR: Repository not cloned to /tmp/qh'; exit 1; fi"
+CMD sh -c "if [ ! -d '/tmp/qh' ] || [ ! -f '/tmp/qh/justfile' ]; then echo 'ERROR: Repository not cloned to /tmp/qh'; exit 1; fi"
 
 # Use system Crystal 1.18.2 (check version and report)
 CMD sh -c "echo 'Checking Crystal installation...' && crystal --version && echo 'Crystal OK - proceeding with build'"
@@ -45,7 +45,7 @@ CMD sh -c "echo 'Checking Crystal installation...' && crystal --version && echo 
 CMD sh -c "cd /tmp/qh && export HOME=/home/qh && echo 'Installing Crystal dependencies...' && sudo -u qh sh -c \"export HOME=/home/qh && shards install --production\" || { echo 'ERROR: Failed to install dependencies'; exit 1; }"
 
 # Build or skip based on configuration (disable Node.js on FreeBSD)
-CMD sh -c "cd /tmp/qh && export MAKE=gmake && export HOME=/home/qh && if [ -n \"\$QUICKHEADLINES_SKIP_BUILD\" ]; then echo 'SKIP_BUILD mode: Using existing binary'; if [ ! -f '/usr/local/share/quickheadlines/quickheadlines' ]; then echo 'ERROR: SKIP_BUILD specified but no existing binary found'; exit 1; fi; else echo 'Building quickheadlines binary...' && sudo -u qh sh -c \"export MAKE=gmake && export HOME=/home/qh && gmake build\" && echo 'Copying binary to installation directory...' && cp bin/quickheadlines /usr/local/share/quickheadlines/ && echo 'Binary updated successfully'; fi"
+CMD sh -c "cd /tmp/qh && export HOME=/home/qh && if [ -n \"\$QUICKHEADLINES_SKIP_BUILD\" ]; then echo 'SKIP_BUILD mode: Using existing binary'; if [ ! -f '/usr/local/share/quickheadlines/quickheadlines' ]; then echo 'ERROR: SKIP_BUILD specified but no existing binary found'; exit 1; fi; else echo 'Building quickheadlines binary...' && sudo -u qh sh -c \"export HOME=/home/qh && just build\" && echo 'Copying binary to installation directory...' && cp bin/quickheadlines /usr/local/share/quickheadlines/ && echo 'Binary updated successfully'; fi"
 
 # 6. Install Binary and Config (binary already copied during build, just ensure permissions)
 CMD [ ! -f '/usr/local/share/quickheadlines/feeds.yml' ] && cp /tmp/qh/feeds.yml /usr/local/share/quickheadlines/feeds.yml || true

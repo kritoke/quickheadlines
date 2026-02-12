@@ -10,7 +10,6 @@ require "./storage"
 require "./favicon_storage"
 require "./health_monitor"
 require "./minhash"
-require "./elm_js"
 require "./api"
 
 # Load entities, services, controllers, repositories, etc.
@@ -28,6 +27,10 @@ require "./repositories/heat_map_repository"
 
 require "./rate_limiter"
 require "./controllers/api_controller"
+
+# Svelte frontend with baked assets
+require "./web/assets"
+require "./web/static_controller"
 
 require "./events/story_fetched_event"
 require "./listeners/heat_map_listener"
@@ -72,13 +75,6 @@ begin
 
   # Initialize favicon storage directory
   FaviconStorage.init
-
-  # We only serve the canonical built bundle at public/elm.js. Do not rely on ui/elm.js.
-  # In production we should fail fast if the bundle is missing to avoid serving broken UI.
-  if ENV["APP_ENV"] == "production" && !File.exists?("./public/elm.js")
-    STDERR.puts "[ERROR] public/elm.js missing - build the frontend and include public/elm.js before starting in production"
-    exit 1
-  end
 
   # Clear in-memory favicon cache to prevent stale base64 data from previous runs
   FAVICON_CACHE.clear
