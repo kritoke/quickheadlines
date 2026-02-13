@@ -3,8 +3,7 @@
 	import TabBar from '$lib/components/TabBar.svelte';
 	import { fetchFeeds, fetchMoreFeedItems } from '$lib/api';
 	import type { FeedResponse, FeedsPageResponse } from '$lib/types';
-	import { onMount } from 'svelte';
-	import { themeStore } from '$lib/stores/theme.svelte';
+	import { isDark, toggleTheme } from '$lib/stores/theme.svelte';
 
 	let feeds = $state<FeedResponse[]>([]);
 	let tabs = $state<{ name: string }[]>([]);
@@ -17,18 +16,23 @@
 	);
 
 	async function loadFeeds(tab: string = activeTab) {
+		console.log('[+page] loadFeeds called, tab:', tab);
 		try {
 			loading = true;
 			error = null;
+			console.log('[+page] Fetching feeds...');
 			const response: FeedsPageResponse = await fetchFeeds(tab);
+			console.log('[+page] Got response, feeds:', response.feeds?.length, 'tabs:', response.tabs?.length);
 			feeds = response.feeds || [];
 			tabs = response.tabs || [];
 			activeTab = response.active_tab || 'all';
+			console.log('[+page] State updated, feeds length:', feeds.length);
 		} catch (e) {
 			error = e instanceof Error ? e.message : 'Failed to load feeds';
-			console.error('Failed to load feeds:', e);
+			console.error('[+page] Failed to load feeds:', e);
 		} finally {
 			loading = false;
+			console.log('[+page] Loading complete, loading:', loading);
 		}
 	}
 
@@ -55,7 +59,8 @@
 		}
 	}
 
-	onMount(() => {
+	$effect(() => {
+		console.log('[+page] $effect running, loading feeds...');
 		loadFeeds();
 	});
 </script>
@@ -82,11 +87,11 @@
 					Timeline
 				</a>
 				<button
-					onclick={() => themeStore.toggle()}
+					onclick={toggleTheme}
 					class="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
 					aria-label="Toggle theme"
 				>
-					{#if themeStore.isDark}
+					{#if isDark()}
 						<svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-yellow-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
 							<path stroke-linecap="round" stroke-linejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
 						</svg>

@@ -1,7 +1,7 @@
 <script lang="ts">
 	import type { TimelineItemResponse } from '$lib/types';
 	import { formatTimestamp } from '$lib/api';
-	import { themeStore } from '$lib/stores/theme.svelte';
+	import { isDark } from '$lib/stores/theme.svelte';
 
 	interface Props {
 		items: TimelineItemResponse[];
@@ -12,22 +12,15 @@
 	let { items, hasMore, onLoadMore }: Props = $props();
 
 	function getHeaderStyle(item: TimelineItemResponse): string {
-		const isDark = themeStore.isDark;
-		
 		if (item.header_color && item.header_text_color) {
 			return `background-color: ${item.header_color}; color: ${item.header_text_color};`;
 		}
-		
 		return '';
 	}
 
 	function getFaviconSrc(item: TimelineItemResponse): string {
-		if (item.favicon_data) {
-			return item.favicon_data;
-		}
-		if (item.favicon) {
-			return item.favicon;
-		}
+		if (item.favicon_data) return item.favicon_data;
+		if (item.favicon) return item.favicon;
 		return '/favicon.svg';
 	}
 
