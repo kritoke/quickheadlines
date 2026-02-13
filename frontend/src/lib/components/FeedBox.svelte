@@ -39,13 +39,14 @@
 	}
 
 	$effect(() => {
-		if (!scrollContainer) return;
+		const container = scrollContainer;
+		if (!container) return;
 		
-		scrollContainer.addEventListener('scroll', checkScrollPosition);
+		container.addEventListener('scroll', checkScrollPosition);
 		checkScrollPosition();
 		
 		return () => {
-			scrollContainer.removeEventListener('scroll', checkScrollPosition);
+			container.removeEventListener('scroll', checkScrollPosition);
 		};
 	});
 

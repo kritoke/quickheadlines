@@ -1,3 +1,4 @@
+// Theme store - must export as const object (not reassigned) for cross-module reactivity
 export const themeState = $state({
 	theme: 'light' as 'light' | 'dark',
 	mounted: false
@@ -14,12 +15,10 @@ export function initTheme() {
 	}
 	document.documentElement.classList.toggle('dark', themeState.theme === 'dark');
 	themeState.mounted = true;
-	console.log('[ThemeStore] Initialized, theme:', themeState.theme, 'mounted:', themeState.mounted);
 }
 
 export function toggleTheme() {
 	themeState.theme = themeState.theme === 'light' ? 'dark' : 'light';
 	document.documentElement.classList.toggle('dark', themeState.theme === 'dark');
 	localStorage.setItem('quickheadlines-theme', themeState.theme);
-	console.log('[ThemeStore] Toggled to:', themeState.theme);
 }

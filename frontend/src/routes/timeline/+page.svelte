@@ -11,10 +11,10 @@
 	let loadingMore = $state(false);
 	let error = $state<string | null>(null);
 	let offset = $state(0);
+	let mounted = $state(false);
 	const limit = 100;
 
 	async function loadTimeline(append: boolean = false) {
-		console.log('[Timeline] loadTimeline called, append:', append);
 		try {
 			if (append) {
 				loadingMore = true;
@@ -24,7 +24,6 @@
 			error = null;
 			
 			const response = await fetchTimeline(limit, offset);
-			console.log('[Timeline] Got response, items:', response.items?.length);
 			
 			if (append) {
 				const newItems = response.items.filter((item: TimelineItemResponse) => !itemIds.has(item.id));
@@ -39,7 +38,6 @@
 			offset += response.items.length;
 		} catch (e) {
 			error = e instanceof Error ? e.message : 'Failed to load timeline';
-			console.error('[Timeline] Failed to load timeline:', e);
 		} finally {
 			loading = false;
 			loadingMore = false;
@@ -64,10 +62,16 @@
 		}
 	}
 
+	// Load data when component mounts
 	$effect(() => {
-		console.log('[Timeline] $effect running, loading timeline...');
-		loadTimeline();
-		
+		if (!mounted) {
+			mounted = true;
+			loadTimeline();
+		}
+	});
+
+	// Setup scroll listener
+	$effect(() => {
 		window.addEventListener('scroll', handleScroll);
 		return () => window.removeEventListener('scroll', handleScroll);
 	});
