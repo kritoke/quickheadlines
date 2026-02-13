@@ -133,25 +133,17 @@ check-deps:
     @SYSTEM_CRYSTAL=$(which crystal 2>/dev/null || echo ""); \
     FINAL_CRYSTAL=$(if [ -n "$SYSTEM_CRYSTAL" ] && [ -x "$SYSTEM_CRYSTAL" ]; then echo "$SYSTEM_CRYSTAL"; else echo "crystal"; fi); \
     echo "✓ Crystal compiler: $$($FINAL_CRYSTAL --version | head -1)"
-    @if [ "{{os}}" = "FreeBSD" ] || ([ "{{os}}" = "Linux" ] && [ "{{arch}}" = "aarch64" ]); then \
-        if [ -f "public/elm.js" ]; then \
-            echo "✓ Using pre-compiled public/elm.js"; \
-        else \
-            echo "❌ Error: Elm compiler not found and public/elm.js missing"; \
-            echo ""; \
-            if [ "{{os}}" = "FreeBSD" ]; then \
-                echo "On FreeBSD, you need either:"; \
-            else \
-                echo "On Linux arm64, you need either:"; \
-            fi; \
-            echo "  1. The pre-compiled public/elm.js file (recommended)"; \
-            if [ "{{os}}" = "FreeBSD" ]; then \
-                echo "  2. Elm compiler: pkg install elm; npm install -g elm"; \
-            else \
-                echo "  2. Elm compiler: npm install -g elm"; \
-            fi; \
-            exit 1; \
-        fi; \
+    @if command -v node >/dev/null 2>&1; then \
+        echo "✓ Node.js: $$(node --version)"; \
+    else \
+        echo "❌ Error: Node.js not found (required for Svelte build)"; \
+        exit 1; \
+    fi
+    @if command -v npm >/dev/null 2>&1; then \
+        echo "✓ npm: $$(npm --version)"; \
+    else \
+        echo "❌ Error: npm not found"; \
+        exit 1; \
     fi
     @if [ "{{os}}" = "Linux" ]; then \
         pkg-config --exists sqlite3 || { \
