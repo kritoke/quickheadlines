@@ -92,7 +92,7 @@
 		class="flex-1 overflow-y-auto auto-hide-scroll relative"
 	>
 		<ul class="divide-y divide-slate-100 dark:divide-slate-700">
-			{#each feed.items as item (item.link)}
+			{#each feed.items as item, i (feed.url + '-' + i)}
 				<li>
 					<a
 						href={item.link}
