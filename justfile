@@ -273,8 +273,44 @@ svelte-install:
     cd frontend && npm install --legacy-peer-deps
     @echo "✓ Svelte dependencies installed"
 
+# Check if dist is stale (source files newer than dist)
+check-dist-fresh:
+    #!/usr/bin/env bash
+    set -e
+    
+    # If dist doesn't exist, it's stale
+    if [ ! -d "frontend/dist" ]; then
+        echo "❌ frontend/dist does not exist"
+        exit 1
+    fi
+    
+    # Get the newest file in dist
+    DIST_NEWEST=$(find frontend/dist -type f -printf '%T@\n' 2>/dev/null | sort -n | tail -1)
+    
+    # Get the newest source file
+    SRC_NEWEST=$(find frontend/src -type f \( -name "*.svelte" -o -name "*.ts" -o -name "*.js" \) -printf '%T@\n' 2>/dev/null | sort -n | tail -1)
+    
+    # If no source files found, skip check
+    if [ -z "$SRC_NEWEST" ]; then
+        echo "✓ No source files to compare"
+        exit 0
+    fi
+    
+    # Compare timestamps
+    if [ "$(echo "$SRC_NEWEST > $DIST_NEWEST" | bc -l 2>/dev/null || echo "0")" = "1" ]; then
+        echo "❌ Source files are newer than dist - rebuild needed"
+        echo ""
+        echo "Newest source file:"
+        find frontend/src -type f \( -name "*.svelte" -o -name "*.ts" -o -name "*.js" \) -printf '%T@ %p\n' 2>/dev/null | sort -n | tail -1 | cut -d' ' -f2-
+        echo ""
+        echo "Run 'just svelte-build' to rebuild"
+        exit 1
+    fi
+    
+    echo "✓ Dist is up to date"
+
 # Build Svelte frontend (outputs to frontend/dist/)
-svelte-build:
+svelte-build: check-dist-fresh
     @echo "Building Svelte frontend..."
     @if [ ! -d "frontend/node_modules" ]; then \
         cd frontend && npm install --legacy-peer-deps; \
@@ -283,6 +319,18 @@ svelte-build:
     @# Copy static assets
     @cp frontend/static/logo.svg frontend/dist/ 2>/dev/null || true
     @echo "✓ Svelte built to frontend/dist/"
+
+# Force Svelte rebuild (skip freshness check)
+svelte-build-force:
+    @echo "Force rebuilding Svelte frontend..."
+    @rm -rf frontend/dist frontend/.svelte-kit
+    @if [ ! -d "frontend/node_modules" ]; then \
+        cd frontend && npm install --legacy-peer-deps; \
+    fi
+    cd frontend && npm run build
+    @# Copy static assets
+    @cp frontend/static/logo.svg frontend/dist/ 2>/dev/null || true
+    @echo "✓ Svelte rebuilt to frontend/dist/"
 
 # Verify baked assets are present in binary
 verify-baked-assets *ARGS:
@@ -354,7 +402,18 @@ test-frontend:
 # --- Crystal Tasks ---
 
 # Build Release Binary (includes baked Svelte assets)
-build: check-deps svelte-build
+build: check-deps
+    @echo "Building Svelte frontend..."
+    @# Check if dist is stale and force rebuild if needed
+    @if [ ! -d "frontend/dist" ]; then \
+        echo "Dist not found, building..."; \
+        cd frontend && npm run build; \
+        cp frontend/static/logo.svg frontend/dist/ 2>/dev/null || true; \
+    elif [ -n "$(find frontend/src -newer frontend/dist -type f 2>/dev/null | head -1)" ]; then \
+        echo "Source files newer than dist, rebuilding..."; \
+        cd frontend && npm run build; \
+        cp frontend/static/logo.svg frontend/dist/ 2>/dev/null || true; \
+    fi
     @echo "Compiling release binary for {{os}}-{{arch}}..."
     @mkdir -p bin
     @# Force BakedFileSystem to pick up new assets
@@ -362,11 +421,20 @@ build: check-deps svelte-build
     @echo "Note: Frontend assets are baked into the binary"
     @APP_ENV=production {{FINAL_CRYSTAL}} build --release --no-debug src/quickheadlines.cr -o bin/{{NAME}}
     @echo "✓ Built bin/{{NAME}}"
-    @# Verify assets are baked in
-    @just verify-baked-assets 2>/dev/null || echo "⚠ Run 'just verify-baked-assets' to check baked assets"
 
 # Build with specific OS/Arch naming for GitHub Releases
-build-release: check-deps svelte-build
+build-release: check-deps
+    @echo "Building Svelte frontend..."
+    @# Check if dist is stale and force rebuild if needed
+    @if [ ! -d "frontend/dist" ]; then \
+        echo "Dist not found, building..."; \
+        cd frontend && npm run build; \
+        cp frontend/static/logo.svg frontend/dist/ 2>/dev/null || true; \
+    elif [ -n "$(find frontend/src -newer frontend/dist -type f 2>/dev/null | head -1)" ]; then \
+        echo "Source files newer than dist, rebuilding..."; \
+        cd frontend && npm run build; \
+        cp frontend/static/logo.svg frontend/dist/ 2>/dev/null || true; \
+    fi
     @echo "Compiling release binary: bin/{{NAME}}-{{BUILD_REV}}-{{os}}-{{arch}}"
     @mkdir -p bin
     @# Force BakedFileSystem to pick up new assets
