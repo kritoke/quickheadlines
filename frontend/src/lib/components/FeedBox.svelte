@@ -2,6 +2,7 @@
 	import type { FeedResponse, ItemResponse } from '$lib/types';
 	import { formatTimestamp } from '$lib/api';
 	import { onMount } from 'svelte';
+	import { cn } from '$lib/utils';
 
 	interface Props {
 		feed: FeedResponse;
@@ -12,7 +13,6 @@
 
 	let scrollContainer: HTMLDivElement | undefined = $state();
 	let isScrolledToBottom = $state(false);
-	let isNearBottom = $state(false);
 
 	function getHeaderStyle(): string {
 		const isDark = document.documentElement.classList.contains('dark');
@@ -38,7 +38,6 @@
 		const maxScroll = scrollHeight - clientHeight;
 		
 		isScrolledToBottom = maxScroll > 0 && scrollTop >= maxScroll - 10;
-		isNearBottom = maxScroll > 0 && scrollTop >= maxScroll - 100;
 	}
 
 	onMount(() => {
@@ -55,23 +54,19 @@
 	});
 
 	function getFaviconSrc(): string {
-		if (feed.favicon_data) {
-			return feed.favicon_data;
-		}
-		if (feed.favicon) {
-			return feed.favicon;
-		}
+		if (feed.favicon_data) return feed.favicon_data;
+		if (feed.favicon) return feed.favicon;
 		return '/favicon.svg';
 	}
 </script>
 
-<div class="feed-box bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden flex flex-col h-[400px]">
+<div class="rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-sm overflow-hidden flex flex-col h-[400px]">
 	<!-- Feed Header -->
 	<a
 		href={feed.site_link || '#'}
 		target="_blank"
 		rel="noopener noreferrer"
-		class="feed-header flex items-center gap-2 px-3 py-2 font-semibold text-sm hover:opacity-90 transition-opacity"
+		class="flex items-center gap-2 px-3 py-2 font-semibold text-sm hover:opacity-90 transition-opacity"
 		style={getHeaderStyle()}
 	>
 		{#if feed.favicon || feed.favicon_data}
@@ -88,14 +83,14 @@
 		<span class="truncate">{feed.title}</span>
 	</a>
 
-	<!-- Feed Items with Scroll Container -->
+	<!-- Feed Items -->
 	<div
 		bind:this={scrollContainer}
-		class="feed-items flex-1 overflow-y-auto auto-hide-scroll relative"
+		class="flex-1 overflow-y-auto auto-hide-scroll relative"
 	>
 		<ul class="divide-y divide-slate-100 dark:divide-slate-700">
 			{#each feed.items as item (item.link)}
-				<li class="item">
+				<li>
 					<a
 						href={item.link}
 						target="_blank"
@@ -115,20 +110,18 @@
 			{/each}
 		</ul>
 
-		<!-- Scroll Gradient Hint -->
+		<!-- Scroll Hint -->
 		{#if !isScrolledToBottom}
-			<div
-				class="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-white dark:from-slate-800 to-transparent pointer-events-none"
-			></div>
+			<div class="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-white dark:from-slate-800 to-transparent pointer-events-none"></div>
 		{/if}
 	</div>
 
-	<!-- Load More Button -->
+	<!-- Load More -->
 	{#if feed.total_item_count > feed.items.length}
 		<div class="p-2 border-t border-slate-200 dark:border-slate-700">
 			<button
 				onclick={onLoadMore}
-				class="w-full text-xs text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 py-1"
+				class="w-full text-xs text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 py-1 transition-colors"
 			>
 				+{feed.total_item_count - feed.items.length} more
 			</button>
