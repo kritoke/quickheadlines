@@ -4,7 +4,7 @@
 	import { fetchFeeds, fetchMoreFeedItems } from '$lib/api';
 	import type { FeedResponse, FeedsPageResponse } from '$lib/types';
 	import { onMount } from 'svelte';
-	import { getTheme, toggleTheme, isMounted } from '$lib/stores/theme.svelte';
+	import { themeStore } from '$lib/stores/theme.svelte';
 
 	let feeds = $state<FeedResponse[]>([]);
 	let tabs = $state<{ name: string }[]>([]);
@@ -64,7 +64,7 @@
 	<title>QuickHeadlines</title>
 </svelte:head>
 
-{#if isMounted()}
+{#if themeStore.isMounted}
 <div class="min-h-screen bg-white dark:bg-slate-900 transition-colors duration-200">
 	<!-- Header -->
 	<header class="sticky top-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur border-b border-slate-200 dark:border-slate-700 z-20">
@@ -83,11 +83,11 @@
 					Timeline
 				</a>
 				<button
-					onclick={toggleTheme}
+					onclick={() => themeStore.toggle()}
 					class="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
 					aria-label="Toggle theme"
 				>
-					{#if getTheme() === 'dark'}
+					{#if themeStore.isDark}
 						<svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-yellow-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
 							<path stroke-linecap="round" stroke-linejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
 						</svg>

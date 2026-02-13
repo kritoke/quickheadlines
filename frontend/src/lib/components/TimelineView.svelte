@@ -56,7 +56,7 @@
 			</h2>
 			
 			<div class="space-y-2">
-				{#each dateItems as item, j}
+				{#each dateItems as item (item.id)}
 					<div class="timeline-item bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
 						<!-- Item Header with Feed Info -->
 						<div
