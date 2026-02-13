@@ -4,6 +4,7 @@
 	import { fetchFeeds, fetchMoreFeedItems } from '$lib/api';
 	import type { FeedResponse, FeedsPageResponse } from '$lib/types';
 	import { themeState, toggleTheme } from '$lib/stores/theme.svelte';
+	import { onMount } from 'svelte';
 
 	let feeds = $state<FeedResponse[]>([]);
 	let tabs = $state<{ name: string }[]>([]);
@@ -55,9 +56,22 @@
 		}
 	}
 
-	$effect(() => {
-		console.log('[+page] $effect running, loading feeds...');
+	function handleToggleTheme() {
+		console.log('[+page] Toggle button clicked, current theme:', themeState.theme);
+		toggleTheme();
+		console.log('[+page] After toggle, theme:', themeState.theme);
+		console.log('[+page] HTML has dark class:', document.documentElement.classList.contains('dark'));
+	}
+
+	// Use onMount for initial data load - guaranteed to run once
+	onMount(() => {
+		console.log('[+page] onMount - loading feeds');
 		loadFeeds();
+	});
+
+	// Debug theme state changes
+	$effect(() => {
+		console.log('[+page] themeState.theme changed to:', themeState.theme);
 	});
 </script>
 
@@ -80,7 +94,7 @@
 					Timeline
 				</a>
 				<button
-					onclick={toggleTheme}
+					onclick={handleToggleTheme}
 					class="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
 					aria-label="Toggle theme"
 				>
