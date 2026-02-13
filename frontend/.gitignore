@@ -1,0 +1,10 @@
+node_modules/
+
+# Build output (generated at build time)
+dist/
+.svelte-kit/
+
+# Environment files
+.env
+.env.*
+!.env.example

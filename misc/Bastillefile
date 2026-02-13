@@ -1,13 +1,13 @@
-# Bastillefile for quickheadlines (Cross-Platform Fixes)
+# Bastillefile for quickheadlines (Svelte 5 Frontend)
 
 # 0. Clean up previous failed attempts
 CMD service quickheadlines stop 2>/dev/null || true
 CMD rm -rf /tmp/qh 2>/dev/null || true
 
-# 1. Install dependencies (including sudo for user switching)
-# Note: node/npm not needed - elm.js is pre-compiled in repo
+# 1. Install dependencies (including Node.js for Svelte build)
 # Note: FreeBSD uses Crystal 1.18.2 from ports (Athena-compatible)
-CMD pkg install -y crystal shards git openssl ca_root_nss gmake curl sqlite3 sudo libevent libyaml
+# Note: Node.js is required for building the Svelte 5 frontend
+CMD pkg install -y crystal shards git openssl ca_root_nss gmake curl sqlite3 sudo libevent libyaml node npm
 
 # Link SSL certificates (handle different FreeBSD versions)
 CMD sh -c "if [ -f /usr/local/share/certs/ca-root-nss.crt ]; then ln -sf /usr/local/share/certs/ca-root-nss.crt /etc/ssl/cert.pem 2>/dev/null || true; elif [ -f /etc/ssl/cert.pem ]; then echo 'SSL cert already linked'; fi"
@@ -32,22 +32,27 @@ CMD mkdir -p /tmp/qh
 CMD sh -c "echo 'Checking for DEV mode...' && env | grep -E '(QUICKHEADLINES_|quickheadlines_)' || echo 'No dev env vars found'; if [ -n \"\$QUICKHEADLINES_DEV\" ]; then echo 'DEV mode detected: Cloning main branch'; REPO_URL=\"\${QUICKHEADLINES_REPO_URL:-https://github.com/kritoke/quickheadlines.git}\"; git clone \$REPO_URL /tmp/qh || { echo 'ERROR: Failed to clone repository'; exit 1; }; elif [ -n \"\$QUICKHEADLINES_TAG\" ]; then echo \"TAG mode detected: Cloning tag \$QUICKHEADLINES_TAG\"; REPO_URL=\"\${QUICKHEADLINES_REPO_URL:-https://github.com/kritoke/quickheadlines.git}\"; git clone --branch \$QUICKHEADLINES_TAG \$REPO_URL /tmp/qh 2>/dev/null || { echo \"ERROR: Tag \$QUICKHEADLINES_TAG not found\"; exit 1; }; else echo 'PROD mode: Fetching latest release tag'; REPO_URL=\"\${QUICKHEADLINES_REPO_URL:-https://github.com/kritoke/quickheadlines.git}\"; LATEST_TAG=\$(git ls-remote --sort=v:refname --tags \$REPO_URL | tail -1 | cut -d/ -f3); echo \"Latest tag: \$LATEST_TAG\"; git clone --branch \$LATEST_TAG --depth 1 \$REPO_URL /tmp/qh || { echo 'ERROR: Failed to clone repository'; exit 1; }; fi && chown -R qh:qh /tmp/qh 2>/dev/null || true"
 
 # 5. Build quickheadlines
-# elm.js is pre-compiled in repository, so we don't need to compile it on FreeBSD
-# Use system Crystal 1.18.2 (Athena-compatible)
+# Svelte 5 frontend is built with Node.js/pnpm and embedded via BakedFileSystem
 
 # Validate repository was cloned
-CMD sh -c "if [ ! -d '/tmp/qh' ] || [ ! -f '/tmp/qh/makefile' ]; then echo 'ERROR: Repository not cloned to /tmp/qh'; exit 1; fi"
+CMD sh -c "if [ ! -d '/tmp/qh' ] || [ ! -f '/tmp/qh/justfile' ]; then echo 'ERROR: Repository not cloned to /tmp/qh'; exit 1; fi"
 
 # Use system Crystal 1.18.2 (check version and report)
 CMD sh -c "echo 'Checking Crystal installation...' && crystal --version && echo 'Crystal OK - proceeding with build'"
 
-# Install dependencies (production only, skip dev deps like ameba that may cause compilation issues with Crystal 1.18.2)
+# Install pnpm globally
+CMD npm install -g pnpm
+
+# Install Crystal dependencies (production only)
 CMD sh -c "cd /tmp/qh && export HOME=/home/qh && echo 'Installing Crystal dependencies...' && sudo -u qh sh -c \"export HOME=/home/qh && shards install --production\" || { echo 'ERROR: Failed to install dependencies'; exit 1; }"
 
-# Build or skip based on configuration (disable Node.js on FreeBSD)
-CMD sh -c "cd /tmp/qh && export MAKE=gmake && export HOME=/home/qh && if [ -n \"\$QUICKHEADLINES_SKIP_BUILD\" ]; then echo 'SKIP_BUILD mode: Using existing binary'; if [ ! -f '/usr/local/share/quickheadlines/quickheadlines' ]; then echo 'ERROR: SKIP_BUILD specified but no existing binary found'; exit 1; fi; else echo 'Building quickheadlines binary...' && sudo -u qh sh -c \"export MAKE=gmake && export HOME=/home/qh && gmake build\" && echo 'Copying binary to installation directory...' && cp bin/quickheadlines /usr/local/share/quickheadlines/ && echo 'Binary updated successfully'; fi"
+# Build Svelte frontend
+CMD sh -c "cd /tmp/qh/frontend && echo 'Installing Svelte dependencies...' && pnpm install && echo 'Building Svelte frontend...' && pnpm run build && cp static/logo.svg dist/ || { echo 'ERROR: Failed to build Svelte frontend'; exit 1; }"
 
-# 6. Install Binary and Config (binary already copied during build, just ensure permissions)
+# Build Crystal binary (with BakedFileSystem)
+CMD sh -c "cd /tmp/qh && export HOME=/home/qh && if [ -n \"\$QUICKHEADLINES_SKIP_BUILD\" ]; then echo 'SKIP_BUILD mode: Using existing binary'; if [ ! -f '/usr/local/share/quickheadlines/quickheadlines' ]; then echo 'ERROR: SKIP_BUILD specified but no existing binary found'; exit 1; fi; else echo 'Building quickheadlines binary...' && touch src/web/assets.cr && sudo -u qh sh -c \"export HOME=/home/qh && crystal build --release src/quickheadlines.cr -o bin/quickheadlines\" && echo 'Copying binary to installation directory...' && cp bin/quickheadlines /usr/local/share/quickheadlines/ && echo 'Binary updated successfully'; fi"
+
+# 6. Install Binary and Config
 CMD [ ! -f '/usr/local/share/quickheadlines/feeds.yml' ] && cp /tmp/qh/feeds.yml /usr/local/share/quickheadlines/feeds.yml || true
 CMD chown qh:qh /usr/local/share/quickheadlines/quickheadlines /usr/local/share/quickheadlines/feeds.yml 2>/dev/null || true
 

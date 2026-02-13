@@ -1,5 +1,5 @@
 {
-  description = "Quickheadlines Spoke - Crystal & Elm";
+  description = "Quickheadlines Spoke - Crystal & Svelte 5";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
@@ -22,7 +22,8 @@
               bash
               shards pkg-config openssl sqlite libxml2 libyaml
               libevent zlib pcre2 gmp boehmgc file
-              elmPackages.elm elmPackages.elm-format elmPackages.elm-review
+              # Svelte 5 build tools (replaced Elm)
+              nodejs_22 pnpm
               git curl gnumake gcc
               openspec.packages.${system}.default
               pkgs.playwright-driver.browsers
@@ -47,7 +48,7 @@
             # [ -f "/workspaces/aiworkflow/bin/env.sh" ] && source /workspaces/aiworkflow/bin/env.sh
 
             export APP_ENV=development
-            echo "🚀 Quickheadlines Loaded with Crystal"
+            echo "🚀 Quickheadlines Loaded with Crystal & Svelte 5"
 
             # Avoid creating aliases that interfere with command lookup; rely on PATH
             export OPEN_SPEC_PROJECT_DIR="$PWD"

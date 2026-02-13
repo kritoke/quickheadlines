@@ -31,19 +31,27 @@ jobs:
           pkg-config --exists sqlite3 && echo "SQLite3 found" || exit 1
           pkg-config --exists openssl && echo "OpenSSL found" || exit 1
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install pnpm
+        run: npm install -g pnpm
+
       - name: Install shards
         run: shards install
 
-      - name: Check dependencies
-        run: make check-deps
+      - name: Install Svelte dependencies
+        run: cd frontend && pnpm install
 
-      - name: Build
-        run: make build
+      - name: Build Svelte frontend
+        run: cd frontend && pnpm run build
 
-      - name: Run ameba linter
+      - name: Build Crystal binary
         run: |
-          shards install --development
-          APP_ENV=production crystal build src/quickheadlines.cr --no-codegen
+          touch src/web/assets.cr
+          crystal build --release src/quickheadlines.cr -o bin/quickheadlines
 
       - name: Test binary exists
         run: |
@@ -65,19 +73,27 @@ jobs:
       - name: Install OpenSSL and libmagic
         run: brew install openssl@3 libmagic
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install pnpm
+        run: npm install -g pnpm
+
       - name: Install shards
         run: shards install
 
-      - name: Check dependencies
-        run: make check-deps
+      - name: Install Svelte dependencies
+        run: cd frontend && pnpm install
 
-      - name: Build
-        run: make build
+      - name: Build Svelte frontend
+        run: cd frontend && pnpm run build
 
-      - name: Run ameba linter
+      - name: Build Crystal binary
         run: |
-          shards install --development
-          APP_ENV=production crystal build src/quickheadlines.cr --no-codegen
+          touch src/web/assets.cr
+          crystal build --release src/quickheadlines.cr -o bin/quickheadlines
 
       - name: Test binary exists
         run: |

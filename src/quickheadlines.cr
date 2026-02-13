@@ -1,7 +1,5 @@
 require "./application"
 
-# Start server using configured port from feeds.yml when available.
-# Fall back to 8080 if the config cannot be loaded for any reason.
 begin
   config_result = load_config_with_validation("feeds.yml")
   port = 8080
