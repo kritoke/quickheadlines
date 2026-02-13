@@ -341,3 +341,96 @@ nix develop . --command crystal tool format --check src/
 # Run unreachable code check
 nix develop . --command crystal tool unreachable src/quickheadlines.cr
 ```
+
+## Svelte 5 Testing with Vitest
+
+### Running Tests
+
+```bash
+# Run all tests once
+cd frontend && npm run test
+
+# Run tests in watch mode
+cd frontend && npm run test:watch
+
+# Run specific test file
+cd frontend && npx vitest run src/lib/stores/theme.test.ts
+```
+
+### Test Structure
+
+Tests are located in `frontend/src/lib/`:
+- `stores/theme.test.ts` - Theme store unit tests
+- `test/integration.test.ts` - API integration tests
+- `test/setup.ts` - Test environment setup (jest-dom)
+
+### Writing Component Tests
+
+```typescript
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render, screen } from '@testing-library/svelte';
+import MyComponent from './MyComponent.svelte';
+
+describe('MyComponent', () => {
+  it('renders correctly', () => {
+    render(MyComponent, { props: { title: 'Hello' } });
+    expect(screen.getByText('Hello')).toBeInTheDocument();
+  });
+});
+```
+
+### Mocking Browser APIs
+
+```typescript
+// Mock localStorage
+const localStorageMock = (() => {
+  let store: Record<string, string> = {};
+  return {
+    getItem: (key: string) => store[key] || null,
+    setItem: (key: string, value: string) => { store[key] = value; },
+    clear: () => { store = {}; }
+  };
+})();
+Object.defineProperty(window, 'localStorage', { value: localStorageMock });
+
+// Mock fetch
+global.fetch = vi.fn();
+```
+
+### Troubleshooting Svelte 5 Issues
+
+| Issue | Cause | Solution |
+|-------|-------|----------|
+| Theme not updating | Function calls in templates aren't tracked | Use property access: `themeState.theme` not `isDark()` |
+| Timeline stuck loading | `$effect` runs before mount | Use `mounted` flag or `$effect(() => { if (!mounted) { mounted = true; loadData(); } })` |
+| JS 404 errors | BakedFileSystem not rebuilt | `touch src/web/assets.cr && crystal build` |
+| `$state` not reactive across modules | Exporting reassigned primitives | Export as const object: `export const state = $state({...})` |
+| `$inspect` error in tests | Only works inside effects | Remove from module-level code |
+
+### Key Svelte 5 Patterns
+
+```svelte
+<!-- WRONG: Function calls aren't tracked -->
+{#if isDark()}
+
+<!-- CORRECT: Property access is tracked -->
+{#if themeState.theme === 'dark'}
+
+<!-- WRONG: Exporting reassigned primitive -->
+export let count = $state(0);
+
+<!-- CORRECT: Export const object -->
+export const state = $state({ count: 0 });
+
+<!-- WRONG: $effect with async that needs to run once -->
+$effect(() => { loadFeeds(); });
+
+<!-- CORRECT: Guard with mounted flag -->
+let mounted = $state(false);
+$effect(() => {
+  if (!mounted) {
+    mounted = true;
+    loadFeeds();
+  }
+});
+```
