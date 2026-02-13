@@ -11,12 +11,8 @@ begin
     STDERR.puts "[WARN] Could not load feeds.yml to determine server_port; defaulting to #{port}"
   end
 
-  static_handler = StaticAssetHandler.new
-  STDERR.puts "[DEBUG] Created StaticAssetHandler: #{static_handler.class}"
-  
-  ATH.run(port: port, prepend_handlers: [static_handler])
+  ATH.run(port: port)
 rescue ex
   STDERR.puts "[ERROR] Failed to start server: #{ex.message}"
-  STDERR.puts ex.backtrace.join("\n")
   exit 1
 end

@@ -74,4 +74,14 @@ class StaticController < Athena::Framework::Controller
   def fonts_inter : ATH::Response
     serve_asset("fonts/Inter-Variable.woff2")
   end
+
+  @[ARTA::Get(path: "/_app/immutable/{folder}/{filename}", requirements: {"folder" => /\w+/, "filename" => /.+/})]
+  def app_immutable_assets(folder : String, filename : String) : ATH::Response
+    serve_asset("_app/immutable/#{folder}/#{filename}")
+  end
+
+  @[ARTA::Get(path: "/_app/{filename}", requirements: {"filename" => /[^\/]+/})]
+  def app_root_assets(filename : String) : ATH::Response
+    serve_asset("_app/#{filename}")
+  end
 end
