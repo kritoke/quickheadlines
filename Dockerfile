@@ -1,5 +1,8 @@
 # Multi-stage build for QuickHeadlines with Svelte 5 frontend
-FROM node:22-alpine AS svelte-builder
+# Using Ubuntu-based images for ARM64 compatibility
+
+# Stage 1: Build Svelte frontend
+FROM node:22-slim AS svelte-builder
 
 WORKDIR /app/frontend
 
@@ -7,10 +10,10 @@ WORKDIR /app/frontend
 RUN npm install -g pnpm
 
 # Copy frontend package files
-COPY frontend/package.json frontend/pnpm-lock.yaml ./
+COPY frontend/package.json frontend/pnpm-lock.yaml* ./
 
 # Install dependencies
-RUN pnpm install --frozen-lockfile
+RUN pnpm install --frozen-lockfile || pnpm install
 
 # Copy frontend source
 COPY frontend/ ./
@@ -18,8 +21,8 @@ COPY frontend/ ./
 # Build Svelte frontend
 RUN pnpm run build
 
-# Crystal builder stage
-FROM 84codes/crystal:latest-ubuntu-22.04 AS builder
+# Stage 2: Build Crystal binary with embedded frontend
+FROM 84codes/crystal:1.18.2-ubuntu-22.04 AS builder
 
 WORKDIR /app
 
@@ -51,13 +54,13 @@ ENV CRYSTAL_WORKERS=4
 RUN touch src/web/assets.cr && \
     APP_ENV=production crystal build --release --no-debug -Dversion=${BUILD_REV} src/quickheadlines.cr -o /app/server
 
-# Runtime stage
+# Stage 3: Minimal runtime
 FROM debian:stable-slim
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libmagic1 \
-    libxml2-dev \
-    libssl-dev \
+    libxml2 \
+    libssl3 \
     libyaml-0-2 \
     libsqlite3-0 \
     libreadline8 \
