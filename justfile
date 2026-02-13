@@ -280,7 +280,59 @@ svelte-build:
         cd frontend && npm install --legacy-peer-deps; \
     fi
     cd frontend && npm run build
+    @# Copy static assets
+    @cp frontend/static/logo.svg frontend/dist/ 2>/dev/null || true
     @echo "✓ Svelte built to frontend/dist/"
+
+# Verify baked assets are present in binary
+verify-baked-assets *ARGS:
+    #!/usr/bin/env bash
+    set -e
+    echo "Verifying baked assets..."
+    
+    # Get the main JS entry point from index.html
+    START_JS=$(grep -oP 'start\.[A-Za-z0-9_-]+\.js' frontend/dist/index.html | head -1)
+    APP_JS=$(grep -oP 'app\.[A-Za-z0-9_-]+\.js' frontend/dist/index.html | head -1)
+    
+    if [ -z "$START_JS" ] || [ -z "$APP_JS" ]; then
+        echo "❌ Could not find JS entry points in index.html"
+        exit 1
+    fi
+    
+    echo "Expected JS files:"
+    echo "  - _app/immutable/entry/$START_JS"
+    echo "  - _app/immutable/entry/$APP_JS"
+    
+    # Start server in background if not running
+    SERVER_STARTED=0
+    if ! curl -s http://127.0.0.1:8080/ > /dev/null 2>&1; then
+        echo "Starting server for verification..."
+        ./bin/quickheadlines &
+        SERVER_PID=$!
+        SERVER_STARTED=1
+        sleep 3
+    fi
+    
+    # Check if JS files are accessible
+    START_CODE=$(curl -s -o /dev/null -w "%{http_code}" "http://127.0.0.1:8080/_app/immutable/entry/$START_JS")
+    APP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "http://127.0.0.1:8080/_app/immutable/entry/$APP_JS")
+    
+    # Stop server if we started it
+    if [ "$SERVER_STARTED" = "1" ]; then
+        kill $SERVER_PID 2>/dev/null || true
+    fi
+    
+    if [ "$START_CODE" = "200" ] && [ "$APP_CODE" = "200" ]; then
+        echo "✓ All JS files are properly baked into binary"
+        exit 0
+    else
+        echo "❌ JS files not found in binary:"
+        [ "$START_CODE" != "200" ] && echo "  - $START_JS returned HTTP $START_CODE"
+        [ "$APP_CODE" != "200" ] && echo "  - $APP_JS returned HTTP $APP_CODE"
+        echo ""
+        echo "Run 'just rebuild' to rebuild with fresh assets"
+        exit 1
+    fi
 
 # Run Svelte dev server
 svelte-dev:
@@ -305,14 +357,20 @@ test-frontend:
 build: check-deps svelte-build
     @echo "Compiling release binary for {{os}}-{{arch}}..."
     @mkdir -p bin
+    @# Force BakedFileSystem to pick up new assets
+    @touch src/web/assets.cr
     @echo "Note: Frontend assets are baked into the binary"
     @APP_ENV=production {{FINAL_CRYSTAL}} build --release --no-debug src/quickheadlines.cr -o bin/{{NAME}}
     @echo "✓ Built bin/{{NAME}}"
+    @# Verify assets are baked in
+    @just verify-baked-assets 2>/dev/null || echo "⚠ Run 'just verify-baked-assets' to check baked assets"
 
 # Build with specific OS/Arch naming for GitHub Releases
 build-release: check-deps svelte-build
     @echo "Compiling release binary: bin/{{NAME}}-{{BUILD_REV}}-{{os}}-{{arch}}"
     @mkdir -p bin
+    @# Force BakedFileSystem to pick up new assets
+    @touch src/web/assets.cr
     @APP_ENV=production {{FINAL_CRYSTAL}} build --release --no-debug -Dversion={{BUILD_REV}} src/quickheadlines.cr -o bin/{{NAME}}-{{BUILD_REV}}-{{os}}-{{arch}}
     @echo "✓ Built bin/{{NAME}}-{{BUILD_REV}}-{{os}}-{{arch}}"
 
@@ -337,19 +395,20 @@ help:
     @echo "QuickHeadlines Justfile (Svelte 5 + Crystal)"
     @echo ""
     @echo "Targets:"
-    @echo "  default        - Build release binary (same as build)"
-    @echo "  build          - Build release binary (Svelte assets baked in)"
-    @echo "  build-release  - Build release binary with version naming"
-    @echo "  run            - Run in development mode"
-    @echo "  download-crystal - Download and build Crystal compiler"
-    @echo "  check-deps     - Check for required dependencies"
-    @echo "  svelte-install - Install Svelte dependencies"
-    @echo "  svelte-build   - Build Svelte frontend"
-    @echo "  svelte-dev     - Run Svelte dev server"
-    @echo "  test-frontend  - Run Playwright frontend tests"
-    @echo "  clean          - Remove build artifacts"
-    @echo "  rebuild        - Clean and rebuild everything"
-    @echo "  help           - Show this help message"
+    @echo "  default           - Build release binary (same as build)"
+    @echo "  build             - Build release binary (Svelte assets baked in)"
+    @echo "  build-release     - Build release binary with version naming"
+    @echo "  run               - Run in development mode"
+    @echo "  download-crystal  - Download and build Crystal compiler"
+    @echo "  check-deps        - Check for required dependencies"
+    @echo "  svelte-install    - Install Svelte dependencies"
+    @echo "  svelte-build      - Build Svelte frontend"
+    @echo "  svelte-dev        - Run Svelte dev server"
+    @echo "  verify-baked-assets - Verify JS files are baked into binary"
+    @echo "  test-frontend     - Run Playwright frontend tests"
+    @echo "  clean             - Remove build artifacts"
+    @echo "  rebuild           - Clean and rebuild everything"
+    @echo "  help              - Show this help message"
     @echo ""
     @echo "Platform: {{os}}-{{arch}}"
     @echo "Version: {{BUILD_REV}}"
