@@ -3,6 +3,7 @@
 	import { formatTimestamp } from '$lib/api';
 	import { onMount } from 'svelte';
 	import { cn } from '$lib/utils';
+	import { themeStore } from '$lib/stores/theme.svelte';
 
 	interface Props {
 		feed: FeedResponse;
@@ -15,7 +16,7 @@
 	let isScrolledToBottom = $state(false);
 
 	function getHeaderStyle(): string {
-		const isDark = document.documentElement.classList.contains('dark');
+		const isDark = themeStore.isDark;
 		
 		if (feed.header_theme_colors) {
 			const colors = isDark ? feed.header_theme_colors.dark : feed.header_theme_colors.light;
@@ -30,6 +31,8 @@
 		
 		return '';
 	}
+
+	let headerStyle = $derived(getHeaderStyle());
 
 	function checkScrollPosition() {
 		if (!scrollContainer) return;
@@ -67,7 +70,7 @@
 		target="_blank"
 		rel="noopener noreferrer"
 		class="flex items-center gap-2 px-3 py-2 font-semibold text-sm hover:opacity-90 transition-opacity"
-		style={getHeaderStyle()}
+		style={headerStyle}
 	>
 		{#if feed.favicon || feed.favicon_data}
 			<img

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { TimelineItemResponse } from '$lib/types';
 	import { formatTimestamp } from '$lib/api';
+	import { themeStore } from '$lib/stores/theme.svelte';
 
 	interface Props {
 		items: TimelineItemResponse[];
@@ -11,7 +12,7 @@
 	let { items, hasMore, onLoadMore }: Props = $props();
 
 	function getHeaderStyle(item: TimelineItemResponse): string {
-		const isDark = document.documentElement.classList.contains('dark');
+		const isDark = themeStore.isDark;
 		
 		if (item.header_color && item.header_text_color) {
 			return `background-color: ${item.header_color}; color: ${item.header_text_color};`;

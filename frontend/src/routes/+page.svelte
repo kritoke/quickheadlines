@@ -126,7 +126,7 @@
 			<!-- Feeds Grid (3-2-1 responsive) -->
 			{#if feeds.length > 0}
 				<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-					{#each feeds as feed (feed.url)}
+					{#each feeds as feed, i (feed.url + '-' + i)}
 						<FeedBox {feed} onLoadMore={() => handleLoadMore(feed)} />
 					{/each}
 				</div>

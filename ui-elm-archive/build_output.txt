@@ -1,0 +1,7 @@
+path '/workspaces/quickheadlines/ui' does not contain a 'flake.nix', searching up
+warning: Git tree '/workspaces/quickheadlines' has uncommitted changes
+warning: ignoring the client-specified setting 'trusted-public-keys', because it is a restricted setting and you are not a trusted user
+warning: ignoring the client-specified setting 'trusted-public-keys', because it is a restricted setting and you are not a trusted user
+warning: ignoring the client-specified setting 'trusted-public-keys', because it is a restricted setting and you are not a trusted user
+🚀 Quickheadlines Loaded with Crystal 1.19.1
+npm warn exec The following package was not found and will be installed: elm-land@0.20.1

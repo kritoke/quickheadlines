@@ -1,0 +1,26 @@
+{
+  "app": {
+    "elm": {
+      "development": { "debugger": true },
+      "production": { "debugger": false }
+    },
+    "env": [],
+    "html": {
+      "attributes": {
+        "html": { "lang": "en" },
+        "head": {}
+      },
+      "title": "QuickHeadlines",
+      "meta": [
+        { "charset": "UTF-8" },
+        { "name": "viewport", "content": "width=device-width, initial-scale=1.0" }
+      ],
+      "link": [],
+      "script": []
+    },
+    "router": {
+      "useHashRouting": false
+    },
+    "proxy": null
+  }
+}
