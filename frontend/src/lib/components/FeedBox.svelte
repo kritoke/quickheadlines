@@ -3,7 +3,7 @@
 	import { formatTimestamp } from '$lib/api';
 	import { onMount } from 'svelte';
 	import { cn } from '$lib/utils';
-	import { isDark } from '$lib/stores/theme.svelte';
+	import { themeState } from '$lib/stores/theme.svelte';
 
 	interface Props {
 		feed: FeedResponse;
@@ -16,7 +16,7 @@
 	let isScrolledToBottom = $state(false);
 
 	function getHeaderStyle(): string {
-		const dark = isDark();
+		const dark = themeState.theme === 'dark';
 		
 		if (feed.header_theme_colors) {
 			const colors = dark ? feed.header_theme_colors.dark : feed.header_theme_colors.light;
