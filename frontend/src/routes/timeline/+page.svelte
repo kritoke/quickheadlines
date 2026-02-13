@@ -4,9 +4,10 @@
 	import type { TimelineItemResponse } from '$lib/types';
 	import { themeState, toggleTheme } from '$lib/stores/theme.svelte';
 	import { onMount } from 'svelte';
+	import { SvelteSet } from 'svelte/reactivity';
 
 	let items = $state<TimelineItemResponse[]>([]);
-	let itemIds = $state<Set<string>>(new Set());
+	let itemIds = $state(new SvelteSet<string>());
 	let hasMore = $state(false);
 	let loading = $state(true);
 	let loadingMore = $state(false);
@@ -32,7 +33,7 @@
 				newItems.forEach((item: TimelineItemResponse) => itemIds.add(item.id));
 				items = [...items, ...newItems];
 			} else {
-				itemIds = new Set(response.items.map((item: TimelineItemResponse) => item.id));
+				itemIds = new SvelteSet(response.items.map((item: TimelineItemResponse) => item.id));
 				items = response.items;
 			}
 			

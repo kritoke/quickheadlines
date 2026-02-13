@@ -44,12 +44,12 @@
 			
 			const feedIndex = feeds.findIndex(f => f.url === feed.url);
 			if (feedIndex !== -1) {
-				feeds[feedIndex] = {
+				const updatedFeed = {
 					...feeds[feedIndex],
 					items: [...feeds[feedIndex].items, ...response.items.slice(currentOffset)],
 					total_item_count: response.total_item_count
 				};
-				feeds = feeds;
+				feeds = feeds.map((f, i) => i === feedIndex ? updatedFeed : f);
 			}
 		} catch (e) {
 			console.error('Failed to load more items:', e);
