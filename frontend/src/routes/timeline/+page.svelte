@@ -10,6 +10,7 @@
 	let loadingMore = $state(false);
 	let error = $state<string | null>(null);
 	let offset = $state(0);
+	let theme = $state<'light' | 'dark'>('light');
 	const limit = 100;
 
 	async function loadTimeline(append: boolean = false) {
@@ -41,11 +42,42 @@
 	}
 
 	async function handleLoadMore() {
-		await loadTimeline(true);
+		if (!loadingMore && hasMore) {
+			await loadTimeline(true);
+		}
+	}
+
+	function handleScroll() {
+		if (loadingMore || !hasMore) return;
+		
+		const scrollHeight = document.documentElement.scrollHeight;
+		const scrollTop = document.documentElement.scrollTop;
+		const clientHeight = document.documentElement.clientHeight;
+		
+		if (scrollTop + clientHeight >= scrollHeight - 500) {
+			handleLoadMore();
+		}
+	}
+
+	function toggleTheme() {
+		theme = theme === 'light' ? 'dark' : 'light';
+		document.documentElement.classList.toggle('dark', theme === 'dark');
+		localStorage.setItem('quickheadlines-theme', theme);
 	}
 
 	onMount(() => {
+		const saved = localStorage.getItem('quickheadlines-theme');
+		if (saved) {
+			theme = saved as 'light' | 'dark';
+		} else {
+			theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+		}
+		document.documentElement.classList.toggle('dark', theme === 'dark');
+		
 		loadTimeline();
+		
+		window.addEventListener('scroll', handleScroll);
+		return () => window.removeEventListener('scroll', handleScroll);
 	});
 </script>
 
@@ -53,21 +85,38 @@
 	<title>Timeline - QuickHeadlines</title>
 </svelte:head>
 
-<div class="min-h-screen">
+<div class="min-h-screen bg-white dark:bg-slate-900 transition-colors">
 	<!-- Header -->
-	<header class="sticky top-0 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700 z-20">
+	<header class="sticky top-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur border-b border-slate-200 dark:border-slate-700 z-20">
 		<div class="max-w-3xl mx-auto px-4 py-3 flex items-center justify-between">
 			<div class="flex items-center gap-4">
-				<a href="/" class="text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white">
+				<a href="/" class="text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors">
 					← Back
 				</a>
 				<h1 class="text-xl font-bold text-slate-900 dark:text-white">
 					Timeline
 				</h1>
 			</div>
-			<span class="text-sm text-slate-500 dark:text-slate-400">
-				{items.length} items
-			</span>
+			<div class="flex items-center gap-4">
+				<span class="text-sm text-slate-500 dark:text-slate-400">
+					{items.length} items
+				</span>
+				<button
+					onclick={toggleTheme}
+					class="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+					aria-label="Toggle theme"
+				>
+					{#if theme === 'dark'}
+						<svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-yellow-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+						</svg>
+					{:else}
+						<svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+						</svg>
+					{/if}
+				</button>
+			</div>
 		</div>
 	</header>
 

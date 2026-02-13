@@ -10,6 +10,7 @@
 	let activeTab = $state('all');
 	let loading = $state(true);
 	let error = $state<string | null>(null);
+	let theme = $state<'light' | 'dark'>('light');
 
 	let totalHeadlines = $derived(
 		feeds.reduce((acc, f) => acc + f.items.length, 0)
@@ -20,9 +21,10 @@
 			loading = true;
 			error = null;
 			const response: FeedsPageResponse = await fetchFeeds(tab);
-			feeds = response.feeds;
-			tabs = response.tabs;
-			activeTab = response.active_tab;
+			feeds = response.feeds || [];
+			tabs = response.tabs || [];
+			activeTab = response.active_tab || 'all';
+			console.log('Loaded feeds:', feeds.length, 'tabs:', tabs.length);
 		} catch (e) {
 			error = e instanceof Error ? e.message : 'Failed to load feeds';
 			console.error('Failed to load feeds:', e);
@@ -54,7 +56,21 @@
 		}
 	}
 
+	function toggleTheme() {
+		theme = theme === 'light' ? 'dark' : 'light';
+		document.documentElement.classList.toggle('dark', theme === 'dark');
+		localStorage.setItem('quickheadlines-theme', theme);
+	}
+
 	onMount(() => {
+		const saved = localStorage.getItem('quickheadlines-theme');
+		if (saved) {
+			theme = saved as 'light' | 'dark';
+		} else {
+			theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+		}
+		document.documentElement.classList.toggle('dark', theme === 'dark');
+		
 		loadFeeds();
 	});
 </script>
@@ -63,9 +79,9 @@
 	<title>QuickHeadlines</title>
 </svelte:head>
 
-<div class="min-h-screen">
+<div class="min-h-screen bg-white dark:bg-slate-900 transition-colors">
 	<!-- Header -->
-	<header class="sticky top-0 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700 z-20">
+	<header class="sticky top-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur border-b border-slate-200 dark:border-slate-700 z-20">
 		<div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
 			<div class="flex items-center gap-3">
 				<img src="/logo.svg" alt="Logo" class="w-8 h-8" />
@@ -80,6 +96,21 @@
 				<a href="/timeline" class="text-sm text-blue-600 dark:text-blue-400 hover:underline">
 					Timeline
 				</a>
+				<button
+					onclick={toggleTheme}
+					class="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+					aria-label="Toggle theme"
+				>
+					{#if theme === 'dark'}
+						<svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-yellow-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+						</svg>
+					{:else}
+						<svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+						</svg>
+					{/if}
+				</button>
 			</div>
 		</div>
 	</header>
@@ -107,13 +138,13 @@
 			{/if}
 
 			<!-- Feeds Grid (3-2-1 responsive) -->
-			<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-				{#each feeds as feed (feed.url)}
-					<FeedBox {feed} onLoadMore={() => handleLoadMore(feed)} />
-				{/each}
-			</div>
-
-			{#if feeds.length === 0}
+			{#if feeds.length > 0}
+				<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+					{#each feeds as feed (feed.url)}
+						<FeedBox {feed} onLoadMore={() => handleLoadMore(feed)} />
+					{/each}
+				</div>
+			{:else}
 				<div class="text-center py-20 text-slate-500 dark:text-slate-400">
 					No feeds found. Check your configuration.
 				</div>
