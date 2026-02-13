@@ -15,7 +15,7 @@
 	let scrollContainer: HTMLDivElement | undefined = $state();
 	let isScrolledToBottom = $state(false);
 
-	function getHeaderStyle(): string {
+	let headerStyle = $derived(() => {
 		const isDark = themeStore.isDark;
 		
 		if (feed.header_theme_colors) {
@@ -30,9 +30,7 @@
 		}
 		
 		return '';
-	}
-
-	let headerStyle = $derived(getHeaderStyle());
+	});
 
 	function checkScrollPosition() {
 		if (!scrollContainer) return;
@@ -70,7 +68,7 @@
 		target="_blank"
 		rel="noopener noreferrer"
 		class="flex items-center gap-2 px-3 py-2 font-semibold text-sm hover:opacity-90 transition-opacity"
-		style={headerStyle}
+		style={headerStyle()}
 	>
 		{#if feed.favicon || feed.favicon_data}
 			<img
@@ -92,7 +90,7 @@
 		class="flex-1 overflow-y-auto auto-hide-scroll relative"
 	>
 		<ul class="divide-y divide-slate-100 dark:divide-slate-700">
-			{#each feed.items as item, i (feed.url + '-' + i)}
+			{#each feed.items as item, i (`${feed.url}-${i}`)}
 				<li>
 					<a
 						href={item.link}

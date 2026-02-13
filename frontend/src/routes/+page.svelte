@@ -64,7 +64,6 @@
 	<title>QuickHeadlines</title>
 </svelte:head>
 
-{#if themeStore.isMounted}
 <div class="min-h-screen bg-white dark:bg-slate-900 transition-colors duration-200">
 	<!-- Header -->
 	<header class="sticky top-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur border-b border-slate-200 dark:border-slate-700 z-20">
@@ -126,7 +125,7 @@
 			<!-- Feeds Grid (3-2-1 responsive) -->
 			{#if feeds.length > 0}
 				<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-					{#each feeds as feed, i (feed.url + '-' + i)}
+					{#each feeds as feed, i (`feed-${i}`)}
 						<FeedBox {feed} onLoadMore={() => handleLoadMore(feed)} />
 					{/each}
 				</div>
@@ -138,4 +137,3 @@
 		{/if}
 	</main>
 </div>
-{/if}

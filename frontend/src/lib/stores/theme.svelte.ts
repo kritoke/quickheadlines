@@ -1,6 +1,9 @@
 class ThemeStore {
 	theme = $state<'light' | 'dark'>('light');
 	mounted = $state(false);
+	
+	isDark = $derived(this.theme === 'dark');
+	isMounted = $derived(this.mounted);
 
 	init() {
 		if (typeof window === 'undefined') return;
@@ -19,14 +22,6 @@ class ThemeStore {
 		this.theme = this.theme === 'light' ? 'dark' : 'light';
 		document.documentElement.classList.toggle('dark', this.theme === 'dark');
 		localStorage.setItem('quickheadlines-theme', this.theme);
-	}
-
-	get isDark() {
-		return this.theme === 'dark';
-	}
-
-	get isMounted() {
-		return this.mounted;
 	}
 }
 
