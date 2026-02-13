@@ -13,17 +13,17 @@ I wanted it to be as simple as dropping an executable and a YAML file with feeds
 - **Software Release Tracking**: Monitor releases from GitHub, GitLab, and Codeberg in a unified view.
 - **Adaptive UI**: Automatically extracts colors from site favicons to style feed headers.
 - **Dark Mode**: Built-in support with a toggle, including high-contrast scrollbars and scroll-indicators for Safari compatibility.
-- **Live Updates**: Automatically refreshes feeds in the background and updates the UI without a page reload using [Morphodom](https://github.com/patrick-steele-idem/morphdom).
+- **Live Updates**: Automatically refreshes feeds in the background and updates the UI without a page reload.
 - **Hybrid Clustering**: Groups similar stories together using a two-pass algorithm (LSH + Jaccard similarity) with stop-word filtering for high precision.
 - **Clustering Status**: Visual indicator in the UI shows when background clustering is active.
 - **Authentication**: Support for Basic, Bearer token, and API Key authentication for private feeds.
 - **Configurable Caching**: SQLite-based caching with configurable retention and size limits.
 - **Health Monitoring**: Built-in health monitoring with CPU spike detection and error logging.
-- **Lightweight**: Single binary deployment with minimal dependencies.
+- **Lightweight**: Single binary deployment with embedded frontend assets (Svelte 5).
 
-Backfill tool (optional)
- - The repository contains an optional backfill script that can scan your existing cache database and upgrade feed theme metadata to the newer "auto-corrected" format. This is a migration convenience only — it is not required for deployment or runtime.
- - Deployments only need the application executable and `feeds.yml` (and `public/elm.js` for FreeBSD builds). You do not need the backfill binary or script to run the service; runtime color extraction and auto-correction happen during normal operation.
+## Deployment
+
+Deployments only need the application executable and `feeds.yml`. The Svelte 5 frontend is embedded in the binary via BakedFileSystem - no separate frontend files needed.
 
 ## Screenshots
 
@@ -56,13 +56,11 @@ Download the associated binary for your operating system from the Releases page.
 ### Prerequisites
 
 - **Crystal** (>= 1.18.2)
+- **Node.js** (>= 18) and **pnpm** - for building the Svelte 5 frontend
 - **SQLite3** development libraries
 - **OpenSSL** development libraries
-- **Node.js/npm** (for Tailwind CSS CLI during build)
 
-Note: The frontend bundle `public/elm.js` is required for builds on systems without Elm (notably FreeBSD). The Makefile will use a precompiled `public/elm.js` if present; otherwise it will attempt to run the Elm compiler. For CI and FreeBSD releases we recommend committing `public/elm.js` to the repo or generating it as part of your release process.
-
-The Makefile will automatically check for these dependencies and provide installation instructions if any are missing.
+The frontend is built with Svelte 5 and embedded in the binary using BakedFileSystem. No separate deployment of frontend files is needed.
 
 ### Platform-Specific Setup
 
@@ -74,12 +72,15 @@ curl -fsSL https://crystal-lang.org/install.sh | sudo bash
 
 # Install system dependencies
 sudo apt-get update
-sudo apt-get install -y libsqlite3-dev libssl-dev pkg-config
+sudo apt-get install -y libsqlite3-dev libssl-dev pkg-config nodejs npm
+
+# Install pnpm
+npm install -g pnpm
 
 # Clone and build
 git clone https://github.com/kritoke/quickheadlines.git
 cd quickheadlines
-make build
+just build
 ```
 
 #### Fedora / RHEL
@@ -89,36 +90,42 @@ make build
 curl -fsSL https://crystal-lang.org/install.sh | sudo bash
 
 # Install system dependencies
-sudo dnf install -y sqlite-devel openssl-devel pkg-config
+sudo dnf install -y sqlite-devel openssl-devel pkg-config nodejs npm
+
+# Install pnpm
+npm install -g pnpm
 
 # Clone and build
 git clone https://github.com/kritoke/quickheadlines.git
 cd quickheadlines
-make build
+just build
 ```
 
 #### Arch Linux
 
 ```bash
 # Install Crystal and dependencies
-sudo pacman -S crystal sqlite openssl pkg-config
+sudo pacman -S crystal sqlite openssl pkg-config nodejs npm
+
+# Install pnpm
+npm install -g pnpm
 
 # Clone and build
 git clone https://github.com/kritoke/quickheadlines.git
 cd quickheadlines
-make build
+just build
 ```
 
 #### macOS
 
 ```bash
 # Install Crystal and dependencies via Homebrew
-brew install crystal openssl@3
+brew install crystal openssl@3 node pnpm
 
 # Clone and build
 git clone https://github.com/kritoke/quickheadlines.git
 cd quickheadlines
-make build
+just build
 ```
 
 #### FreeBSD
@@ -127,12 +134,13 @@ make build
 # Install Crystal and dependencies
 pkg install crystal shards sqlite3 openssl node npm gmake
 
- # Clone and build
- git clone https://github.com/kritoke/quickheadlines.git
- cd quickheadlines
- gmake build
+# Install pnpm
+npm install -g pnpm
 
- On FreeBSD, if you cannot compile Elm locally, provide a precompiled `public/elm.js` in the repository before running `gmake build`.
+# Clone and build
+git clone https://github.com/kritoke/quickheadlines.git
+cd quickheadlines
+gmake build
 ```
 
 #### FreeBSD Jail Deployment (Bastille)
@@ -146,10 +154,11 @@ These files set up the service user, cache directory at `/var/cache/quickheadlin
 
 ### Build Commands
 
-- **Production Mode**: `make build` - Compiles optimized binary to `bin/quickheadlines`
-- **Development Mode**: `make run` - Compiles and runs with live CSS reloading
-- **Check Dependencies**: `make check-deps` - Verify all required dependencies are installed
-- **Clean Build**: `make clean && make build` - Remove all build artifacts and rebuild
+- **Production Mode**: `just build` - Builds Svelte frontend and compiles optimized binary to `bin/quickheadlines`
+- **Development Mode**: `just run` - Runs with development settings
+- **Check Dependencies**: `just check-deps` - Verify all required dependencies are installed
+- **Clean Build**: `just clean && just build` - Remove all build artifacts and rebuild
+- **Run Tests**: `cd frontend && npm run test` - Run Vitest tests for Svelte components
 
 ### Running the Application
 
@@ -158,7 +167,7 @@ These files set up the service user, cache directory at `/var/cache/quickheadlin
 ./bin/quickheadlines
 
 # Or use development mode
-make run
+just run
 ```
 
 The application will:
