@@ -45,17 +45,18 @@
 	}
 
 	let groupedItems = $derived(groupByDate(items));
+	let groupIndex = $derived(Array.from(groupedItems.entries()));
 </script>
 
 <div class="timeline-view">
-	{#each groupedItems.entries() as [date, dateItems]}
+	{#each groupIndex as [date, dateItems], i}
 		<div class="day-group mb-6">
 			<h2 class="text-lg font-semibold text-slate-700 dark:text-slate-300 mb-3 sticky top-0 bg-white dark:bg-slate-900 py-2 z-10">
 				{date}
 			</h2>
 			
 			<div class="space-y-2">
-				{#each dateItems as item (item.id)}
+				{#each dateItems as item, j}
 					<div class="timeline-item bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
 						<!-- Item Header with Feed Info -->
 						<div
