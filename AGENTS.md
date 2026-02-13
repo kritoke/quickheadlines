@@ -15,12 +15,11 @@ All work must be structured as an OpenSpec Change within `openspec/changes/`.
 ### 1. The Core Agent Directive
 
 > Execution Context:
-> This project is a Nix Spoke. You are running inside a persistent Hub, but the project-specific tools (Crystal 1.18.2, Elm, Shards) are isolated.
- > Rule: For ANY shell command execution (compiling, testing, formatting), you MUST run commands inside the nix devshell. Prefer either: (A) call `make` targets from inside the devshell (recommended), or (B) use the devshell `--command` with the working-directory semantics your tooling supports.
- > - Recommended: `nix develop . --command make run` or `nix develop . --command make elm-build`
- > - Avoid: `nix develop . --command "cd ui && elm make ..."` because some wrappers treat the whole quoted string as a program path and fail with posix_spawn/ENOENT. If you must run an exact program in a subdirectory, use the devshell's workdir parameter (e.g., `workdir=ui`) or run `make` targets that encapsulate directory changes.
- > - Incorrect: `crystal spec` (without devshell)
- > - Incorrect: `shards install` (without devshell)
+> This project is a Nix Spoke. You are running inside a persistent Hub, but the project-specific tools (Crystal 1.18.2, Node.js 22, pnpm) are isolated.
+> Rule: For ANY shell command execution (compiling, testing, formatting), you MUST run commands inside the nix devshell. Prefer either: (A) call `make` targets from inside the devshell (recommended), or (B) use the devshell `--command` with the working-directory semantics your tooling supports.
+> - Recommended: `nix develop . --command make run` or `nix develop . --command make svelte-build`
+> - Incorrect: `crystal spec` (without devshell)
+> - Incorrect: `shards install` (without devshell)
 
 ### 2. The Library/Linker Workaround
 
@@ -83,37 +82,24 @@ If you don't use the prefix, you will get a `command not found: crystal` error, 
 ## Building & Running QuickHeadlines
 
 ### The Golden Rule
-**ALWAYS use `nix develop . --command` prefix for any Crystal, Elm, or Shards command.**
+**ALWAYS use `nix develop . --command` prefix for any Crystal or Svelte command.**
 
 This sets up the correct `LD_LIBRARY_PATH` for Crystal's dependencies (boehmgc, libevent, pcre2, etc.). Without it, you'll get cryptic errors like `undefined constant Code` in athena-routing.
 
 ### Quick Reference
 
-Prefer running Makefile targets inside the devshell; they encapsulate environment setup and directory context.
-
 ```bash
 # Start development server (recommended)
 nix develop . --command make run
 
-# Build production Elm bundle (recommended)
-nix develop . --command make elm-build
+# Build production Svelte bundle
+nix develop . --command make svelte-build
 
 # Run Crystal tests
 nix develop . --command crystal spec
 
-# Rebuild Elm frontend manually (avoid embedding `cd` inside --command)
-# Good: use the nix devshell workdir feature if available, or run make:
-#   workdir=ui nix develop . --command 'elm make src/Main.elm --optimize --output=../public/elm.js'
-# Better: use make
-nix develop . --command make elm-build
-
 # Install/update dependencies
 nix develop . --command shards install
-
-# Format Elm code
-# workdir=ui nix develop . --command elm-format src/
-# or using make wrapper:
-nix develop . --command make elm-format
 
 # Run Playwright tests
 nix develop . --command npx playwright test
@@ -124,177 +110,192 @@ nix develop . --command npx playwright test
 | Symptom | Cause | Solution |
 |---------|-------|----------|
 | `undefined constant Code` in athena-routing | Crystal running outside nix develop | Always prefix with `nix develop . --command` |
-| `crystal: command not found` | Crystal not in PATH | Use full path `/home/kritoke/.local/bin/crystal` or nix develop |
+| `crystal: command not found` | Crystal not in PATH | Use nix develop |
 | `libgc.so.1 not found` | Missing library path | Run through nix develop (sets LD_LIBRARY_PATH) |
 | Make command not found | make not in PATH | nix develop provides gnumake |
 | Feeds not updating after config changes | Stale database cache | Run `rm -rf ~/.cache/quickheadlines/feed_cache.db*` then restart server |
+| JS files returning 404 | BakedFileSystem not rebuilt | Rebuild Crystal binary after Svelte build |
 
 ### Environment Variables
 
 The nix develop shell sets these automatically:
 - `APP_ENV=development`
 - `LD_LIBRARY_PATH` - Includes Crystal dependencies
-- `PATH` - Includes crystal, shards, elm, make, openspec
+- `PATH` - Includes crystal, shards, node, pnpm, make, openspec
 
 ### Understanding the Build Process
 
 1. **Crystal Backend** (`src/quickheadlines.cr`)
-   - Compiled on-the-fly with `crystal run`
-   - Shards installed in `lib/`
+   - Compiled with `crystal build --release`
+   - Uses BakedFileSystem to embed frontend assets
    - Server listens on http://0.0.0.0:8080
 
-2. **Elm Frontend** (`ui/src/Main.elm`)
-   - Compiled to `public/elm.js`
-   - Served at `/elm.js` route
-   - Inlined CSS in `views/index.html` for development
+2. **Svelte 5 Frontend** (`frontend/`)
+   - Built with Vite to `frontend/dist/`
+   - Uses `@sveltejs/adapter-static` with `fallback: 'index.html'` for SPA mode
+   - Assets embedded in Crystal binary via BakedFileSystem
 
 3. **Routes**
-   - `/` - Main HTML with inlined CSS
-   - `/elm.js` - Compiled Elm bundle
+   - `/` - Main HTML (SPA entry point)
+   - `/timeline` - Timeline page (SPA route)
+   - `/_app/*` - SvelteKit immutable assets
    - `/api/*` - REST endpoints
 
 ## Key Learnings
 
-### JavaScript/CSS Debugging
+### Svelte 5 Reactivity (CRITICAL)
 
-- **Console logging for timing issues**: When code runs before elements exist, add `console.log` to verify execution order and element presence
-- **CSS execution order matters**: Inline styles (`style=""`) override CSS classes. Use `!important` in CSS to override inline styles from JavaScript/Elm
-- **Function scope**: Functions defined inside `DOMContentLoaded` callbacks aren't accessible outside. Assign to `window.functionName` to make them globally available
-- **Timing fixups**: Run code at multiple intervals (500ms, 1500ms, 3000ms) to catch elements that load at different times
+**Function calls in templates are NOT reactive.** This is the #1 cause of UI not updating.
 
-### Color Handling
+```svelte
+<!-- WRONG - isDark() is not tracked -->
+{#if isDark()}
+  <p>Dark mode</p>
+{/if}
 
-- **YIQ Formula for text readability**: Calculate contrast color from background using `((r * 299) + (g * 587) + (b * 114)) / 1000`. If result >= 128, use dark text; otherwise use light text
-- **Color thief limitations**: Favicons that fail to load (404s, broken images) cause color extraction to fail, leaving headers with default/invisible colors
-- **Elm color classes**: Elm generates dynamic classes like `fc-148-163-184` for inline colors. These can be overridden with CSS targeting the element directly
-- **Fixing unreadable headers**: Strip inline styles with `element.style.cssText = ''` then apply readable colors using YIQ
+<!-- CORRECT - property access IS tracked -->
+{#if themeState.theme === 'dark'}
+  <p>Dark mode</p>
+{/if}
+```
 
-### Horizontal Scrollbars
+**Module-level state must be exported as objects, not reassigned primitives:**
 
-- **Prevent with `overflow-x: hidden`**: Add to `html`, `body`, `#app`, and scroll containers to prevent horizontal overflow
-- **Use `!important`**: `overflow-x: hidden !important` ensures the rule takes precedence over other CSS
+```typescript
+// WRONG - reassignment breaks reactivity when exported
+export let theme = $state('light');
 
-### Clustering System
+// CORRECT - object mutation preserves reactivity
+export const themeState = $state({
+  theme: 'light' as 'light' | 'dark',
+  mounted: false
+});
+```
 
-- **How it works**: Uses MinHash/LSH (Locality Sensitive Hashing) for efficient similarity detection
-  - MinHash computes signatures that preserve Jaccard similarity
-  - LSH bands bucket similar signatures for fast candidate retrieval
-  - Threshold: 0.75 similarity score required to cluster
-  - Minimum 5 words required for clustering eligibility
+**Use `$effect` for side effects, not `onMount`:**
 
-- **Same-feed duplicate prevention**: Critical to skip candidates from the same feed
-  - Without this, identical articles from re-fetches get clustered together
-  - Pass `feed_id` to `compute_cluster_for_item` and skip if candidate has same feed_id
-  - Added `get_item_feed_id` and `get_feed_id` methods to storage.cr
+```svelte
+<script>
+  // Correct - runs on mount and when dependencies change
+  $effect(() => {
+    loadFeeds();
+  });
+  
+  // Avoid - only runs once on mount
+  onMount(() => {
+    loadFeeds();
+  });
+</script>
+```
 
-- **Database schema**:
-  - `items.cluster_id` - Points to representative item ID (or self if singleton)
-  - Representative = lowest ID in cluster (deterministic)
-  - `lsh_bands` table - Stores band hashes for LSH lookups
-  - `item_signatures` table - Stores MinHash signatures
+### BakedFileSystem Rebuild Requirement
 
-- **Clustering verification query**:
-  ```sql
-  SELECT cluster_id, COUNT(*) as cnt FROM items GROUP BY cluster_id HAVING cnt > 1
-  ```
+**CRITICAL:** The Crystal binary MUST be rebuilt after any Svelte build changes.
+
+BakedFileSystem embeds files at **compile time**, not runtime. If you:
+1. Run `npm run build` in frontend/
+2. But don't rebuild the Crystal binary
+
+The new JS/CSS files won't be served - you'll get 404s.
+
+```bash
+# Full rebuild workflow
+cd frontend && npm run build
+cp frontend/static/logo.svg frontend/dist/
+cd ..
+nix develop . --command crystal build --release src/quickheadlines.cr -o bin/quickheadlines
+./bin/quickheadlines
+```
+
+**Force rebuild when assets change:**
+```bash
+touch src/web/assets.cr && nix develop . --command crystal build --release src/quickheadlines.cr -o bin/quickheadlines
+```
+
+### SvelteKit SPA Mode with adapter-static
+
+Project uses SPA mode (client-side rendering only):
+
+```javascript
+// svelte.config.js
+adapter: adapter({
+  pages: 'dist',
+  assets: 'dist',
+  fallback: 'index.html',  // SPA fallback
+  precompress: false,
+  strict: true
+})
+```
+
+```typescript
+// src/routes/+layout.ts
+export const prerender = true;
+export const ssr = false;  // Disable SSR for SPA mode
+```
+
+### Duplicate Key Errors in #each Blocks
+
+Always use unique keys in `#each` blocks. Composite keys work well:
+
+```svelte
+<!-- WRONG - duplicate URLs cause errors -->
+{#each feeds as feed (feed.url)}
+
+<!-- CORRECT - composite key ensures uniqueness -->
+{#each feeds as feed, i (`feed-${i}`)}
+{#each items as item, i (`${feed.url}-${i}`)}
+```
+
+### Tailwind Dark Mode
+
+Tailwind is configured for `darkMode: 'class'`. Toggle dark mode by adding/removing `dark` class on `<html>`:
+
+```typescript
+document.documentElement.classList.toggle('dark', isDark);
+```
+
+```css
+/* In templates - dark: prefix applies when dark class present */
+<div class="bg-white dark:bg-slate-900">
+```
 
 ### Timeline & Sorting
 
-- **Timezone handling**: Elm frontend uses `Time.customZone -360 []` for US Central (CST/CDT)
-  - Change in `ui/src/Application.elm:84`
-  - Times stored as UTC in DB, displayed in user's timezone
-
-- **Day grouping**: Elm groups items by date, displays newest day first
-  - `groupClustersByDay` in Timeline.elm sorts days newest-first
-  - Items within each day sorted newest-first
-
+- **Timezone handling**: Times stored as UTC in DB, displayed in user's timezone
 - **Infinite scroll pagination**:
   - Initial load: 35 items (fast page load)
   - Load More: 500 items per batch
-  - Default timeline window: 14 days (`cache_retention_hours: 336` in feeds.yml)
-  - NO resort on merge - prevents scroll position jumps
-  - Backend returns already-sorted items (pub_date DESC, id DESC)
+  - Default timeline window: 14 days
+- **Backend returns sorted items**: `pub_date DESC, id DESC`
 
-- **Common issues**:
-  - Items split across pages = clusters appear incomplete
-  - Increase `cache_retention_hours` or `db_fetch_limit` to see more clusters
-  - `?limit=1000` query param overrides defaults
+### Clustering System
 
-### When NOT to Fix
-
-- Leave working features alone. If color thief produces readable results, don't override it with aggressive fixes
-- Simple is better. Over-engineering causes new bugs (like breaking previously working colors)
-
-### Elm UI Styling Best Practices
-
-- **Keep styles in Elm**: Use Elm UI attributes for all styling (Background, Font, Border, padding). This avoids CSS specificity wars and keeps styles theme-aware.
-- **Minimal CSS**: Only use CSS for `@font-face`, scrollbar styling, and pseudo-elements that Elm can't express. Everything else belongs in Elm.
-- **Avoid `htmlAttribute (HA.style ...)` for core styles**: Use dedicated Elm attributes (e.g., `Background.color`, `Border.rounded`) instead of inline style strings. This keeps styles centralized and themeable.
-- **Theme tokens over hardcoded values**: Add tokens to `Theme.elm` for colors, surfaces, and backgrounds. This ensures dark/light mode consistency without scattered conditionals.
-
-### Typography Helpers Pattern
-
-- **Centralized responsive typography**: Create helper functions in `ThemeTypography.elm` (e.g., `hero`, `dayHeader`) that return responsive font attributes based on `Breakpoint`.
-- **Pattern example**:
-  ```elm
-  hero : Breakpoint -> List (Attribute msg)
-  hero breakpoint =
-      let
-          size =
-              case breakpoint of
-                  VeryNarrowBreakpoint -> 20
-                  MobileBreakpoint -> 20
-                  TabletBreakpoint -> 28
-                  DesktopBreakpoint -> 36
-      in
-      [ Font.size size, Font.semiBold, Font.letterSpacing 0.6 ]
-  ```
-- **Use `Ty.hero breakpoint` in views**: Pass the current breakpoint to get the right size. Keeps all size logic in one place.
+- **MinHash/LSH** for similarity detection
+- **Threshold**: 0.75 similarity score required to cluster
+- **Same-feed duplicate prevention**: Skip candidates from same feed_id
 
 ### Visual Regression Testing
 
-- **Snapshot tests fail on UI changes**: When modifying styles, visual regression tests (`timeline-favicon.spec.ts`) will fail with pixel differences. This is expected.
-- **Update snapshots after design changes**:
-  ```bash
-  npx playwright test --update-snapshots
-  ```
-- **Commit snapshots**: Always commit updated snapshot files with the design change so tests pass for future commits.
-- **Minor pixel differences are OK**: Small height/width changes (8-16px) are normal when adding padding or changing fonts. Update snapshots rather than debugging pixel-perfect matches.
-
-### Font Integration
-
-- **Self-host variable fonts**: Download WOFF2 files to `public/fonts/` and serve locally. This avoids CDN dependencies and ensures offline support.
-- **Pattern for adding fonts**:
-  1. Download font to `public/fonts/<name>.woff2`
-  2. Add `@font-face` in `views/index.html` `<style>` block
-  3. Use in Elm: `Font.family [ Font.name "Font Name", Font.system ]`
-- **Variable fonts simplify weights**: Use `font-weight: 100 900` in CSS and `Font.semiBold` (600) in Elm for clean weight handling.
-- **Font fallback stack**: Always include system fonts after custom fonts: `Font.family [ Font.name "Inter var", Font.system ]` where `Font.system` expands to `-apple-system, BlinkMacSystemFont, ...`
+- **Snapshot tests fail on UI changes**: Update with `npx playwright test --update-snapshots`
+- **Commit snapshots**: Always commit updated snapshot files with design changes
 
 ### OpenSpec Workflow Notes
 
-- **Change creation**: Use `openspec new change "name"` to create change directory with proposal/design/specs/tasks.
-- **Manual spec sync**: When `openspec archive` times out or fails, manually copy spec files:
-  ```bash
-  cp openspec/changes/<change>/specs/<cap>/spec.md openspec/specs/<cap>/spec.md
-  ```
-- **Tasks tracking**: Tasks.md uses `- [ ] 1.1 Description` format. Check off as you complete. OpenSpec reads this format during verification.
+- **Change creation**: Use `openspec new change "name"` to create change directory
+- **Manual spec sync**: When `openspec archive` times out, manually copy spec files
+- **Tasks tracking**: Tasks.md uses `- [ ] 1.1 Description` format
 
-### Quick Reference for Elm Changes
+## Quick Reference for Svelte Changes
 
 ```bash
-# Rebuild Elm after changes (preferred: use Makefile target inside devshell)
-nix develop . --command make elm-build
+# Build Svelte frontend
+cd frontend && npm run build
 
-# Alternatively, run Elm from the ui/ directory using the devshell workdir
-# workdir=ui nix develop . --command 'elm make src/Main.elm --optimize --output=../public/elm.js'
+# Check for build errors
+cd frontend && npm run build 2>&1 | tail -20
 
-# Format Elm code (use workdir or make wrapper)
-# workdir=ui nix develop . --command elm-format src/
-nix develop . --command make elm-format
-
-# Check Elm compiler errors (short): run from ui/ via workdir
-# workdir=ui nix develop . --command 'elm make src/Main.elm 2>&1 | head -50'
+# Preview production build locally
+cd frontend && npm run preview
 ```
 
 ## Crystal Versioning & Platform Compatibility
@@ -308,66 +309,6 @@ This project requires **Crystal 1.18.2** for FreeBSD compatibility. The Athena f
 - Athena framework v0.21.x is compatible with Crystal 1.18.x
 - Crystal 1.19.x deprecates `Time.monotonic` (warnings only, still compiles)
 
-**GitHub Actions Configuration:**
-- Must use `crystal: 1.18.2` (not `latest`) in all workflow files
-- Both `crystal-lang/install-crystal@v1` and `crystal-lang/setup-crystal@v2` support version pinning
-- CI jobs for Ubuntu, macOS, and tests.yml all use 1.18.2
-
-### Platform-Specific Crystal Handling
-
-| Platform | Installation | Makefile Behavior |
-|----------|--------------|-------------------|
-| Linux | `crystal-lang/install-crystal@v1` with version | Downloads from official tarball |
-| macOS | Homebrew or GitHub Action | Uses `which crystal` (system-installed) |
-| FreeBSD | `pkg install crystal` | Uses system Crystal directly |
-
-**macOS-specific fix:**
-- The Makefile previously tried to download Crystal from source on macOS
-- This failed because `CRYSTAL_TARBALL` and `CRYSTAL_URL` were undefined
-- Solution: macOS now uses system-installed Crystal via `which crystal`
-- CI macOS job uses `crystal-lang/install-crystal@v1` to install to PATH
-
-### Time.monotonic Deprecation
-
-Crystal 1.19.x warns about `Time.monotonic` deprecation, recommending `Time.instant` instead:
-
-```
-Warning: Deprecated Time.monotonic. Use `Time.instant` instead.
-```
-
-**Current policy:** Keep `Time.monotonic` for FreeBSD compatibility. The warnings are harmless and the code compiles and runs correctly on all platforms.
-
-**If FreeBSD support is dropped in the future**, migrate to `Time.instant`:
-```crystal
-# Before
-start_time = Time.monotonic
-elapsed = (Time.monotonic - start_time).total_seconds
-
-# After
-start_time = Time.instant
-elapsed = (Time.instant - start_time).total_seconds
-```
-
-### Makefile System Crystal Discovery
-
-**Problem:** GitHub Actions uses `crystal-lang/install-crystal@v1` which installs Crystal to system PATH (`/usr/local/bin/crystal`), but the Makefile only checked for `bin/crystal` and tried to download from source. This failed because `CRYSTAL_TARBALL` and `CRYSTAL_URL` were undefined.
-
-**Solution:** Added system Crystal detection to Makefile:
-```makefile
-FINAL_CRYSTAL := $(shell if command -v crystal >/dev/null 2>&1; then echo "crystal"; else echo "$(CRYSTAL)"; fi)
-```
-
-**Key pattern:**
-- Check `which crystal` or `command -v crystal` first for system-installed Crystal
-- Fall back to project `bin/crystal` only if system Crystal not found
-- This allows GitHub Actions to work without modifying the Makefile per-runner
-
-**Platform precedence:**
-1. Linux CI: Uses system crystal from `crystal-lang/install-crystal`
-2. macOS: Uses system crystal from Homebrew or `crystal-lang/install-crystal`
-3. FreeBSD: Falls back to `download-crystal` if no system crystal
-4. Local development: Uses `bin/crystal` (nix or manually managed)
-
 ## Debug Mode & Favicon Troubleshooting
 
 ### Enabling Debug Mode
@@ -378,45 +319,6 @@ Add `debug: true` to your `feeds.yml` config file to enable verbose logging:
 refresh_minutes: 30
 debug: true  # Enable verbose debug logging
 item_limit: 20
-...
-```
-
-Debug mode outputs detailed information about:
-- Favicon fetching attempts and successes
-- Redirect chains for feeds and favicons
-- HTTP status codes (404, 403, etc.)
-- Fallback chain usage (HTML parsing, Google favicon service)
-- Cache hits and misses
-
-### Testing Debug Mode
-
-```bash
-# Clear stale cache before testing
-rm -rf ~/.cache/quickheadlines/feed_cache.db*
-
-# Start server with debug mode
-nix develop . --command make run
-
-# In another terminal, check feeds with favicons
-curl -s "http://127.0.0.1:8080/api/feeds" | python3 -c "
-import json, sys
-data = json.load(sys.stdin)
-for feed in data.get('feeds', []):
-    title = feed.get('title', '')
-    fav = feed.get('favicon', 'MISSING')
-    print(f'{title}: favicon={fav}')
-"
-```
-
-### Favicon Fetching Debug Output
-
-When debug mode is enabled, you'll see output like:
-```
-[DEBUG] Fetching favicon: https://www.google.com/s2/favicons?domain=www.nasa.gov&sz=64
-[DEBUG] Favicon redirect 1: https://www.nasa.gov/favicon.ico
-[DEBUG] Favicon fetched: https://www.nasa.gov/favicon.ico, size=4286, type=image/x-icon
-[DEBUG] Favicon saved: /favicons/725ba8bbaf1ef9bd.ico
-[DEBUG] Google fallback for: https://www.nasa.gov/rss/dyn/breaking_news.rss
 ```
 
 ### Common Favicon Issues
@@ -426,72 +328,6 @@ When debug mode is enabled, you'll see output like:
 | Favicon shows 404 in browser | Stale database cache | `rm -rf ~/.cache/quickheadlines/feed_cache.db*` |
 | Favicon missing from UI | Feed redirect changed URL hash | Refresh feed to re-fetch favicon |
 | Gray/fallback icon displayed | All fetching methods failed | Check debug output for network errors |
-| Favicon file exists but 404 | Server serving from wrong directory | Ensure running from project root |
-| 198-byte gray placeholder | Site returns "not found" icon | System auto-retries with larger Google favicon (256px) |
-| Feed returns bot protection | Site blocks automated access | May need manual favicon or feed removal |
-
-### Gray Placeholder Detection
-
-The system detects 198-byte favicon files (the common "not found" size from both sites and Google's service) and automatically:
-1. Skips saving the gray placeholder
-2. For Google favicon URLs: retries with larger size (256px instead of 64px)
-3. For direct site favicons: triggers Google fallback
-
-### Sites That Block Favicon Fetching
-
-Some sites use bot protection that blocks favicon extraction:
-- **AI News** (artificialintelligence-news.com): Returns bot protection page
-- **OpenAI** (openai.com): Blocks HTML parsing with 403
-- **Science.org**: Blocks HTML parsing with 403
-- **ItsFOSS**: Blocks HTML parsing with 403
-
-For these sites, the Google fallback will still work but may return generic icons.
-
-### HTTPS First for HTTP URLs
-
-The codebase now automatically upgrades HTTP URLs to HTTPS for security:
-
-```yaml
-# Before (HTTP)
-- url: "http://example.com/feed"
-
-# After (automatic upgrade)
-# The system tries https://example.com/feed first
-# Falls back to http:// only if HTTPS fails
-```
-
-This applies to:
-- Feed URL fetching
-- Favicon URL fetching
-- HTML parsing for favicon links
-
-### Checking Favicon Status
-
-```bash
-# Check if a specific favicon is serving
-curl -I "http://127.0.0.1:8080/favicons/<hash>.png"
-
-# Verify all favicons from feeds
-bash scripts/check_favicons.sh
-
-# Check feeds.json for missing favicons
-curl -s "http://127.0.0.1:8080/api/feeds" | grep -o '"favicon":"[^"]*"' | sort | uniq -c
-```
-
-### Debugging Missing Favicons
-
-1. Enable debug mode in feeds.yml
-2. Clear cache: `rm -rf ~/.cache/quickheadlines/feed_cache.db*`
-3. Restart server
-4. Watch console output for favicon fetch attempts
-5. Check if the feed's site_link is accessible
-6. Verify the site's homepage has a favicon link tag
-
-```bash
-# Test if a site's homepage returns a favicon
-curl -s "https://www.nasa.gov/" | grep -i "link.*icon"
-curl -sI "https://www.nasa.gov/favicon.ico"
-```
 
 ### Code Quality Tools
 
