@@ -13,16 +13,16 @@
 	function getHeaderStyle(item: TimelineItemResponse): string {
 		const isDark = document.documentElement.classList.contains('dark');
 		
-		if (item.headerColor && item.headerTextColor) {
-			return `background-color: ${item.headerColor}; color: ${item.headerTextColor};`;
+		if (item.header_color && item.header_text_color) {
+			return `background-color: ${item.header_color}; color: ${item.header_text_color};`;
 		}
 		
 		return '';
 	}
 
 	function getFaviconSrc(item: TimelineItemResponse): string {
-		if (item.faviconData) {
-			return item.faviconData;
+		if (item.favicon_data) {
+			return item.favicon_data;
 		}
 		if (item.favicon) {
 			return item.favicon;
@@ -34,7 +34,7 @@
 		const groups = new Map<string, TimelineItemResponse[]>();
 		
 		for (const item of items) {
-			const date = item.pubDate ? new Date(item.pubDate).toDateString() : 'Unknown Date';
+			const date = item.pub_date ? new Date(item.pub_date).toDateString() : 'Unknown Date';
 			if (!groups.has(date)) {
 				groups.set(date, []);
 			}
@@ -64,17 +64,17 @@
 						>
 							<img
 								src={getFaviconSrc(item)}
-								alt="{item.feedTitle} favicon"
+								alt="{item.feed_title} favicon"
 								class="w-4 h-4 rounded"
 								onerror={(e) => {
 									const target = e.target as HTMLImageElement;
 									target.src = '/favicon.svg';
 								}}
 							/>
-							<span class="truncate">{item.feedTitle}</span>
-							{#if item.clusterSize && item.clusterSize > 1}
+							<span class="truncate">{item.feed_title}</span>
+							{#if item.cluster_size && item.cluster_size > 1}
 								<span class="ml-auto bg-white/20 px-1.5 py-0.5 rounded text-[10px]">
-									{item.clusterSize} sources
+									{item.cluster_size} sources
 								</span>
 							{/if}
 						</div>
@@ -90,7 +90,7 @@
 								{item.title}
 							</h3>
 							<p class="text-xs text-slate-500 dark:text-slate-400 mt-1">
-								{formatTimestamp(item.pubDate)}
+								{formatTimestamp(item.pub_date)}
 							</p>
 						</a>
 					</div>

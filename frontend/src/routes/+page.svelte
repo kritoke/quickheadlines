@@ -22,7 +22,7 @@
 			const response: FeedsPageResponse = await fetchFeeds(tab);
 			feeds = response.feeds;
 			tabs = response.tabs;
-			activeTab = response.activeTab;
+			activeTab = response.active_tab;
 		} catch (e) {
 			error = e instanceof Error ? e.message : 'Failed to load feeds';
 			console.error('Failed to load feeds:', e);
@@ -40,15 +40,14 @@
 			const currentOffset = feed.items.length;
 			const response = await fetchMoreFeedItems(feed.url, 10, currentOffset);
 			
-			// Update the feed in place
 			const feedIndex = feeds.findIndex(f => f.url === feed.url);
 			if (feedIndex !== -1) {
 				feeds[feedIndex] = {
 					...feeds[feedIndex],
 					items: [...feeds[feedIndex].items, ...response.items.slice(currentOffset)],
-					totalItemCount: response.totalItemCount
+					total_item_count: response.total_item_count
 				};
-				feeds = feeds; // Trigger reactivity
+				feeds = feeds;
 			}
 		} catch (e) {
 			console.error('Failed to load more items:', e);
@@ -68,9 +67,12 @@
 	<!-- Header -->
 	<header class="sticky top-0 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700 z-20">
 		<div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
-			<h1 class="text-xl font-bold text-slate-900 dark:text-white">
-				QuickHeadlines
-			</h1>
+			<div class="flex items-center gap-3">
+				<img src="/logo.svg" alt="Logo" class="w-8 h-8" />
+				<h1 class="text-xl font-bold text-slate-900 dark:text-white">
+					QuickHeadlines
+				</h1>
+			</div>
 			<div class="flex items-center gap-4">
 				<span class="text-sm text-slate-500 dark:text-slate-400">
 					{totalHeadlines} headlines

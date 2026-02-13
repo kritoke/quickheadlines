@@ -6,82 +6,82 @@ export interface ItemResponse {
 	title: string;
 	link: string;
 	version?: string;
-	pubDate?: number;
+	pub_date?: number;
 }
 
 export interface FeedResponse {
 	tab: string;
 	url: string;
 	title: string;
-	siteLink: string;
-	displayLink: string;
+	site_link: string;
+	display_link: string;
 	favicon?: string;
-	faviconData?: string;
-	headerColor?: string;
-	headerTextColor?: string;
-	headerThemeColors?: { light?: { bg: string; text: string }; dark?: { bg: string; text: string } };
+	favicon_data?: string;
+	header_color?: string;
+	header_text_color?: string;
+	header_theme_colors?: { light?: { bg: string; text: string }; dark?: { bg: string; text: string } };
 	items: ItemResponse[];
-	totalItemCount: number;
-	hasMore?: boolean;
+	total_item_count: number;
+	has_more?: boolean;
 }
 
 export interface TimelineItemResponse {
 	id: string;
 	title: string;
 	link: string;
-	pubDate?: number;
-	feedTitle: string;
-	feedUrl: string;
-	feedLink: string;
+	pub_date?: number;
+	feed_title: string;
+	feed_url: string;
+	feed_link: string;
 	favicon?: string;
-	faviconData?: string;
-	headerColor?: string;
-	headerTextColor?: string;
-	clusterId?: string;
-	isRepresentative: boolean;
-	clusterSize?: number;
+	favicon_data?: string;
+	header_color?: string;
+	header_text_color?: string;
+	cluster_id?: string;
+	is_representative: boolean;
+	cluster_size?: number;
 }
 
 export interface StoryResponse {
 	id: string;
 	title: string;
 	link: string;
-	pubDate?: number;
-	feedTitle: string;
-	feedUrl: string;
-	feedLink: string;
+	pub_date?: number;
+	feed_title: string;
+	feed_url: string;
+	feed_link: string;
 	favicon?: string;
-	faviconData?: string;
-	headerColor?: string;
+	favicon_data?: string;
+	header_color?: string;
 }
 
 export interface ClusterResponse {
 	id: string;
 	representative: StoryResponse;
 	others: StoryResponse[];
-	clusterSize: number;
+	cluster_size: number;
 }
 
 export interface FeedsPageResponse {
 	tabs: TabResponse[];
-	activeTab: string;
+	active_tab: string;
 	feeds: FeedResponse[];
-	isClustering: boolean;
+	is_clustering: boolean;
 }
 
 export interface TimelinePageResponse {
 	items: TimelineItemResponse[];
-	hasMore: boolean;
-	totalCount: number;
-	isClustering: boolean;
+	has_more: boolean;
+	total_count: number;
+	is_clustering: boolean;
 }
 
 export interface ClustersResponse {
 	clusters: ClusterResponse[];
-	totalCount: number;
+	total_count: number;
 }
 
 export interface VersionResponse {
-	isClustering: boolean;
-	updatedAt: number;
+	is_clustering: boolean;
+	updated_at: number;
 }

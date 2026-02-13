@@ -17,15 +17,15 @@
 	function getHeaderStyle(): string {
 		const isDark = document.documentElement.classList.contains('dark');
 		
-		if (feed.headerThemeColors) {
-			const colors = isDark ? feed.headerThemeColors.dark : feed.headerThemeColors.light;
+		if (feed.header_theme_colors) {
+			const colors = isDark ? feed.header_theme_colors.dark : feed.header_theme_colors.light;
 			if (colors) {
 				return `background-color: ${colors.bg}; color: ${colors.text};`;
 			}
 		}
 		
-		if (feed.headerColor && feed.headerTextColor) {
-			return `background-color: ${feed.headerColor}; color: ${feed.headerTextColor};`;
+		if (feed.header_color && feed.header_text_color) {
+			return `background-color: ${feed.header_color}; color: ${feed.header_text_color};`;
 		}
 		
 		return '';
@@ -55,8 +55,8 @@
 	});
 
 	function getFaviconSrc(): string {
-		if (feed.faviconData) {
-			return feed.faviconData;
+		if (feed.favicon_data) {
+			return feed.favicon_data;
 		}
 		if (feed.favicon) {
 			return feed.favicon;
@@ -68,13 +68,13 @@
 <div class="feed-box bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden flex flex-col h-[400px]">
 	<!-- Feed Header -->
 	<a
-		href={feed.siteLink || '#'}
+		href={feed.site_link || '#'}
 		target="_blank"
 		rel="noopener noreferrer"
 		class="feed-header flex items-center gap-2 px-3 py-2 font-semibold text-sm hover:opacity-90 transition-opacity"
 		style={getHeaderStyle()}
 	>
-		{#if feed.favicon || feed.faviconData}
+		{#if feed.favicon || feed.favicon_data}
 			<img
 				src={getFaviconSrc()}
 				alt="{feed.title} favicon"
@@ -105,9 +105,9 @@
 						<p class="text-sm text-slate-800 dark:text-slate-200 line-clamp-2 leading-snug">
 							{item.title}
 						</p>
-						{#if item.pubDate}
+						{#if item.pub_date}
 							<p class="text-xs text-slate-500 dark:text-slate-400 mt-1">
-								{formatTimestamp(item.pubDate)}
+								{formatTimestamp(item.pub_date)}
 							</p>
 						{/if}
 					</a>
@@ -124,13 +124,13 @@
 	</div>
 
 	<!-- Load More Button -->
-	{#if feed.totalItemCount > feed.items.length}
+	{#if feed.total_item_count > feed.items.length}
 		<div class="p-2 border-t border-slate-200 dark:border-slate-700">
 			<button
 				onclick={onLoadMore}
 				class="w-full text-xs text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 py-1"
 			>
-				+{feed.totalItemCount - feed.items.length} more
+				+{feed.total_item_count - feed.items.length} more
 			</button>
 		</div>
 	{/if}

@@ -29,7 +29,7 @@
 				items = response.items;
 			}
 			
-			hasMore = response.hasMore;
+			hasMore = response.has_more;
 			offset += response.items.length;
 		} catch (e) {
 			error = e instanceof Error ? e.message : 'Failed to load timeline';
