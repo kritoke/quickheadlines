@@ -30,7 +30,7 @@ class StaticController < Athena::Framework::Controller
       if ENV["APP_ENV"]? == "development"
         response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
       else
-        if path.includes?("/_app/immutable/")
+        if path.includes?("_app/immutable/")
           response.headers["Cache-Control"] = "public, max-age=31536000, immutable"
         else
           response.headers["Cache-Control"] = "public, max-age=3600"
@@ -60,11 +60,6 @@ class StaticController < Athena::Framework::Controller
     serve_asset("timeline.html")
   end
 
-  @[ARTA::Get(path: "/_app/{path*}")]
-  def app_assets(path : String) : ATH::Response
-    serve_asset("_app/#{path}")
-  end
-
   @[ARTA::Get(path: "/favicon.svg")]
   def favicon_svg : ATH::Response
     serve_asset("favicon.svg")
@@ -75,8 +70,8 @@ class StaticController < Athena::Framework::Controller
     serve_asset("favicon.svg")
   end
 
-  @[ARTA::Get(path: "/fonts/{path*}")]
-  def fonts(path : String) : ATH::Response
-    serve_asset("fonts/#{path}")
+  @[ARTA::Get(path: "/fonts/Inter-Variable.woff2")]
+  def fonts_inter : ATH::Response
+    serve_asset("fonts/Inter-Variable.woff2")
   end
 end

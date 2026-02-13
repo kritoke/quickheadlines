@@ -14,6 +14,9 @@ const config = {
 		}),
 		alias: {
 			$lib: './src/lib'
+		},
+		paths: {
+			relative: false
 		}
 	}
 };

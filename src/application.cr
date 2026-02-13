@@ -31,6 +31,7 @@ require "./controllers/api_controller"
 # Svelte frontend with baked assets
 require "./web/assets"
 require "./web/static_controller"
+require "./web/static_asset_handler"
 
 require "./events/story_fetched_event"
 require "./listeners/heat_map_listener"

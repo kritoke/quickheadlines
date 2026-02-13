@@ -1,7 +1,5 @@
 require "./application"
 
-# Start server using configured port from feeds.yml when available.
-# Fall back to 8080 if the config cannot be loaded for any reason.
 begin
   config_result = load_config_with_validation("feeds.yml")
   port = 8080
@@ -13,8 +11,12 @@ begin
     STDERR.puts "[WARN] Could not load feeds.yml to determine server_port; defaulting to #{port}"
   end
 
-  ATH.run(port: port)
+  static_handler = StaticAssetHandler.new
+  STDERR.puts "[DEBUG] Created StaticAssetHandler: #{static_handler.class}"
+  
+  ATH.run(port: port, prepend_handlers: [static_handler])
 rescue ex
   STDERR.puts "[ERROR] Failed to start server: #{ex.message}"
+  STDERR.puts ex.backtrace.join("\n")
   exit 1
 end
