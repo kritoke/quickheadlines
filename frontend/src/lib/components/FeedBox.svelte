@@ -1,8 +1,6 @@
 <script lang="ts">
 	import type { FeedResponse, ItemResponse } from '$lib/types';
 	import { formatTimestamp } from '$lib/api';
-	import { onMount } from 'svelte';
-	import { cn } from '$lib/utils';
 	import { themeState } from '$lib/stores/theme.svelte';
 
 	interface Props {
@@ -15,8 +13,11 @@
 	let scrollContainer: HTMLDivElement | undefined = $state();
 	let isScrolledToBottom = $state(false);
 
-	function getHeaderStyle(): string {
+	// Reactive header style - properly tracks themeState.theme changes
+	let headerStyle = $derived.by(() => {
 		const dark = themeState.theme === 'dark';
+		const bgColor = feed.header_color || '#64748b';
+		const textColor = feed.header_text_color || '#ffffff';
 		
 		if (feed.header_theme_colors) {
 			const colors = dark ? feed.header_theme_colors.dark : feed.header_theme_colors.light;
@@ -25,14 +26,8 @@
 			}
 		}
 		
-		if (feed.header_color && feed.header_text_color) {
-			return `background-color: ${feed.header_color}; color: ${feed.header_text_color};`;
-		}
-		
-		return '';
-	}
-
-	let headerStyle = $derived(getHeaderStyle());
+		return `background-color: ${bgColor}; color: ${textColor};`;
+	});
 
 	function checkScrollPosition() {
 		if (!scrollContainer) return;
@@ -43,16 +38,14 @@
 		isScrolledToBottom = maxScroll > 0 && scrollTop >= maxScroll - 10;
 	}
 
-	onMount(() => {
-		if (scrollContainer) {
-			scrollContainer.addEventListener('scroll', checkScrollPosition);
-			checkScrollPosition();
-		}
+	$effect(() => {
+		if (!scrollContainer) return;
+		
+		scrollContainer.addEventListener('scroll', checkScrollPosition);
+		checkScrollPosition();
 		
 		return () => {
-			if (scrollContainer) {
-				scrollContainer.removeEventListener('scroll', checkScrollPosition);
-			}
+			scrollContainer.removeEventListener('scroll', checkScrollPosition);
 		};
 	});
 
@@ -73,17 +66,19 @@
 		style={headerStyle}
 	>
 		{#if feed.favicon || feed.favicon_data}
-			<img
-				src={getFaviconSrc()}
-				alt="{feed.title} favicon"
-				class="w-5 h-5 rounded"
-				onerror={(e) => {
-					const target = e.target as HTMLImageElement;
-					target.src = '/favicon.svg';
-				}}
-			/>
+			<div class="w-5 h-5 rounded bg-white/20 p-0.5 flex items-center justify-center">
+				<img
+					src={getFaviconSrc()}
+					alt="{feed.title} favicon"
+					class="w-4 h-4 rounded"
+					onerror={(e) => {
+						const target = e.target as HTMLImageElement;
+						target.src = '/favicon.svg';
+					}}
+				/>
+			</div>
 		{/if}
-		<span class="truncate">{feed.title}</span>
+		<span class="truncate drop-shadow-sm">{feed.title}</span>
 	</a>
 
 	<!-- Feed Items -->

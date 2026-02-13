@@ -1,7 +1,6 @@
 <script lang="ts">
 	import type { TimelineItemResponse } from '$lib/types';
 	import { formatTimestamp } from '$lib/api';
-	import { isDark } from '$lib/stores/theme.svelte';
 
 	interface Props {
 		items: TimelineItemResponse[];

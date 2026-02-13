@@ -11,10 +11,6 @@
 	let loading = $state(true);
 	let error = $state<string | null>(null);
 
-	let totalHeadlines = $derived(
-		feeds.reduce((acc, f) => acc + f.items.length, 0)
-	);
-
 	async function loadFeeds(tab: string = activeTab) {
 		console.log('[+page] loadFeeds called, tab:', tab);
 		try {
@@ -80,9 +76,6 @@
 				</h1>
 			</div>
 			<div class="flex items-center gap-4">
-				<span class="text-sm text-slate-500 dark:text-slate-400">
-					{totalHeadlines} headlines
-				</span>
 				<a href="/timeline" class="text-sm text-blue-600 dark:text-blue-400 hover:underline">
 					Timeline
 				</a>
