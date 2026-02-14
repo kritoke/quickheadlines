@@ -11,10 +11,9 @@
 	let { items, hasMore, onLoadMore }: Props = $props();
 
 	function getHeaderStyle(item: TimelineItemResponse): string {
-		if (item.header_color && item.header_text_color) {
-			return `background-color: ${item.header_color}; color: ${item.header_text_color};`;
-		}
-		return '';
+		const bgColor = item.header_color || '#64748b';
+		const textColor = item.header_text_color || '#ffffff';
+		return `background-color: ${bgColor}; color: ${textColor};`;
 	}
 
 	function getFaviconSrc(item: TimelineItemResponse): string {
