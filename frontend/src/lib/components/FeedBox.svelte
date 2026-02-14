@@ -67,7 +67,7 @@
 		style={headerStyle}
 	>
 		{#if feed.favicon || feed.favicon_data}
-			<div class="w-5 h-5 rounded bg-white/20 p-0.5 flex items-center justify-center">
+			<div class="w-5 h-5 rounded bg-white/90 p-0.5 flex items-center justify-center shadow-sm">
 				<img
 					src={getFaviconSrc()}
 					alt="{feed.title} favicon"
