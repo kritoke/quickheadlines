@@ -83,10 +83,10 @@
 	</a>
 
 	<!-- Feed Items with Scroll Hint -->
-	<div class="flex-1 relative">
+	<div class="flex-1 relative min-h-0">
 		<div
 			bind:this={scrollContainer}
-			class="h-full overflow-y-auto auto-hide-scroll"
+			class="absolute inset-0 overflow-y-auto auto-hide-scroll"
 		>
 			<ul class="divide-y divide-slate-100 dark:divide-slate-700">
 				{#each feed.items as item, i (`${feed.url}-${i}`)}
