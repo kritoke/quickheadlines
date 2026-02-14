@@ -5,15 +5,6 @@
 	import type { FeedResponse, FeedsPageResponse } from '$lib/types';
 	import { themeState, toggleTheme } from '$lib/stores/theme.svelte';
 	import { onMount } from 'svelte';
-	import { page } from '$app/stores';
-
-	// Get tab from URL query param or default to 'all'
-	$effect(() => {
-		const urlTab = $page.url.searchParams.get('tab');
-		if (urlTab && urlTab !== activeTab) {
-			activeTab = urlTab;
-		}
-	});
 
 	let feeds = $state<FeedResponse[]>([]);
 	let tabs = $state<{ name: string }[]>([]);
@@ -38,7 +29,7 @@
 			const response: FeedsPageResponse = await fetchFeeds(tab);
 			feeds = response.feeds || [];
 			tabs = response.tabs || [];
-			activeTab = response.active_tab || 'all';
+			activeTab = tab;
 			
 			// Update cache
 			tabCache = {
@@ -53,6 +44,7 @@
 	}
 
 	async function handleTabChange(tab: string) {
+		activeTab = tab;
 		// Update URL without reload
 		const url = new URL(window.location.href);
 		url.searchParams.set('tab', tab);
@@ -90,8 +82,13 @@
 	let refreshInterval: ReturnType<typeof setInterval>;
 	
 	onMount(() => {
+		// Get tab from URL on initial load
+		const params = new URLSearchParams(window.location.search);
+		const urlTab = params.get('tab') || 'all';
+		activeTab = urlTab;
+		
 		// Initial load
-		loadFeeds(activeTab, true);
+		loadFeeds(urlTab, true);
 		
 		// Set up auto-refresh (default 10 minutes)
 		const refreshMinutes = 10; // TODO: Get from API config

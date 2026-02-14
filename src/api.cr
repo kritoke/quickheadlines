@@ -251,6 +251,17 @@ class ClusterResponse
   end
 end
 
+# Cluster items response for API (individual items in a cluster)
+class ClusterItemsResponse
+  include JSON::Serializable
+
+  property cluster_id : String
+  property items : Array(StoryResponse)
+
+  def initialize(@cluster_id : String, @items : Array(StoryResponse))
+  end
+end
+
 module Api
   # Convert FeedData to FeedResponse
   def self.feed_to_response(feed : FeedData, tab_name : String = "", total_count : Int32? = nil, display_item_limit : Int32? = nil) : FeedResponse

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { TimelineItemResponse } from '$lib/types';
-	import { formatTimestamp } from '$lib/api';
+	import { fetchClusterItems, formatTimestamp } from '$lib/api';
+	import ClusterExpansion from './ClusterExpansion.svelte';
 
 	interface Props {
 		items: TimelineItemResponse[];
@@ -9,6 +10,50 @@
 	}
 
 	let { items, hasMore, onLoadMore }: Props = $props();
+
+	let expandedClusterId = $state<string | null>(null);
+	let clusterItems = $state<Record<string, TimelineItemResponse[]>>({});
+	let clusterLoading = $state<Record<string, boolean>>({});
+
+	async function toggleCluster(item: TimelineItemResponse): Promise<void> {
+		if (!item.cluster_id) return;
+
+		if (expandedClusterId === item.cluster_id) {
+			expandedClusterId = null;
+			return;
+		}
+
+		expandedClusterId = item.cluster_id;
+
+		if (!clusterItems[item.cluster_id]) {
+			clusterLoading = { ...clusterLoading, [item.cluster_id]: true };
+			try {
+				const response = await fetchClusterItems(item.cluster_id);
+				clusterItems = {
+					...clusterItems,
+					[item.cluster_id]: response.items.map(s => ({
+						id: s.id,
+						title: s.title,
+						link: s.link,
+						pub_date: s.pub_date,
+						feed_title: s.feed_title,
+						feed_url: s.feed_url,
+						feed_link: s.feed_link,
+						favicon: s.favicon,
+						favicon_data: s.favicon_data,
+						header_color: s.header_color,
+						is_representative: false,
+						cluster_id: item.cluster_id,
+						cluster_size: item.cluster_size
+					}))
+				};
+			} catch (e) {
+				console.error('Failed to fetch cluster items:', e);
+			} finally {
+				clusterLoading = { ...clusterLoading, [item.cluster_id]: false };
+			}
+		}
+	}
 
 	function getHeaderStyle(item: TimelineItemResponse): string {
 		const bgColor = item.header_color || '#64748b';
@@ -25,7 +70,14 @@
 	function groupByDate(items: TimelineItemResponse[]): Map<string, TimelineItemResponse[]> {
 		const groups = new Map<string, TimelineItemResponse[]>();
 		
-		for (const item of items) {
+		// Show items that are either:
+		// 1. Not in a cluster (no cluster_id)
+		// 2. The representative of their cluster (is_representative === true)
+		const visibleItems = items.filter(item => 
+			!item.cluster_id || item.is_representative === true
+		);
+		
+		for (const item of visibleItems) {
 			const date = item.pub_date ? new Date(item.pub_date).toDateString() : 'Unknown Date';
 			if (!groups.has(date)) {
 				groups.set(date, []);
@@ -68,9 +120,23 @@
 							</div>
 							<span class="truncate">{item.feed_title}</span>
 							{#if item.cluster_size && item.cluster_size > 1}
-								<span class="ml-auto bg-white/20 px-1.5 py-0.5 rounded text-[10px]">
+								<button
+									type="button"
+									onclick={() => toggleCluster(item)}
+									class="ml-auto bg-white/20 hover:bg-white/30 px-1.5 py-0.5 rounded text-[10px] transition-colors cursor-pointer flex items-center gap-1"
+									aria-label="Show {item.cluster_size} similar stories"
+								>
 									{item.cluster_size} sources
-								</span>
+									{#if expandedClusterId === item.cluster_id}
+										<svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+											<path stroke-linecap="round" stroke-linejoin="round" d="M5 15l7-7 7 7" />
+										</svg>
+									{:else}
+										<svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+											<path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+										</svg>
+									{/if}
+								</button>
 							{/if}
 						</div>
 						
@@ -88,6 +154,14 @@
 								{formatTimestamp(item.pub_date)}
 							</p>
 						</a>
+
+						<!-- Cluster Expansion -->
+						{#if expandedClusterId === item.cluster_id && item.cluster_id}
+							<ClusterExpansion
+								items={clusterItems[item.cluster_id] || []}
+								loading={clusterLoading[item.cluster_id]}
+							/>
+						{/if}
 					</div>
 				{/each}
 			</div>

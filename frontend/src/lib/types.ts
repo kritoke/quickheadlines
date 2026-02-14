@@ -81,6 +81,11 @@ export interface ClustersResponse {
 	total_count: number;
 }
 
+export interface ClusterItemsResponse {
+	cluster_id: string;
+	items: StoryResponse[];
+}
+
 export interface VersionResponse {
 	is_clustering: boolean;
 	updated_at: number;

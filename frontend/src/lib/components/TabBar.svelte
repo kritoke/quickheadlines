@@ -8,14 +8,42 @@
 	}
 
 	let { tabs, activeTab, onTabChange }: Props = $props();
+
+	let navElement: HTMLElement | undefined = $state();
+	let allButton: HTMLButtonElement | undefined = $state();
+
+	function scrollToActiveTab() {
+		if (!navElement) return;
+		
+		const activeBtn = navElement.querySelector('.tab-active') as HTMLElement | null;
+		if (!activeBtn) return;
+		
+		const navRect = navElement.getBoundingClientRect();
+		const btnRect = activeBtn.getBoundingClientRect();
+		
+		const btnCenter = btnRect.left + btnRect.width / 2;
+		const navCenter = navRect.left + navRect.width / 2;
+		const scrollOffset = btnCenter - navCenter;
+		
+		navElement.scrollBy({ left: scrollOffset, behavior: 'smooth' });
+	}
+
+	$effect(() => {
+		activeTab;
+		scrollToActiveTab();
+	});
 </script>
 
-<nav class="tab-bar flex gap-1 p-2 bg-slate-100 dark:bg-slate-800 rounded-lg mb-4 overflow-x-auto">
+<nav 
+	class="tab-bar flex gap-1 p-2 bg-slate-100 dark:bg-slate-800 rounded-lg mb-4 overflow-x-auto"
+	bind:this={navElement}
+>
 	<button
+		bind:this={allButton}
 		onclick={() => onTabChange('all')}
 		class="tab px-3 py-1.5 text-sm font-medium rounded-md whitespace-nowrap transition-colors
 			{activeTab === 'all'
-			? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm'
+			? 'tab-active bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm'
 			: 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'}"
 	>
 		All
@@ -26,7 +54,7 @@
 			onclick={() => onTabChange(tab.name)}
 			class="tab px-3 py-1.5 text-sm font-medium rounded-md whitespace-nowrap transition-colors
 				{activeTab === tab.name
-				? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm'
+				? 'tab-active bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm'
 				: 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'}"
 		>
 			{tab.name}

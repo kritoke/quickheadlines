@@ -2,6 +2,7 @@ import type {
 	FeedsPageResponse,
 	TimelinePageResponse,
 	ClustersResponse,
+	ClusterItemsResponse,
 	FeedResponse
 } from './types';
 
@@ -34,6 +35,15 @@ export async function fetchClusters(): Promise<ClustersResponse> {
 	const response = await fetch(url);
 	if (!response.ok) {
 		throw new Error(`Failed to fetch clusters: ${response.statusText}`);
+	}
+	return response.json();
+}
+
+export async function fetchClusterItems(clusterId: string): Promise<ClusterItemsResponse> {
+	const url = `${API_BASE}/clusters/${clusterId}/items`;
+	const response = await fetch(url);
+	if (!response.ok) {
+		throw new Error(`Failed to fetch cluster items: ${response.statusText}`);
 	}
 	return response.json();
 }

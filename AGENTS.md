@@ -43,17 +43,19 @@ If you don't use the prefix, you will get a `command not found: crystal` error, 
 
 ### 5. Compilation Before Completion
 
-> MANDATORY COMPILATION CHECK:
-> Before EVER saying a task is "done", "complete", "ready for review", or marking it as finished, you MUST compile the program and verify it builds successfully.
+> MANDATORY BUILD CHECK:
+> Before EVER saying a task is "done", "complete", "ready for review", or marking it as finished, you MUST run `just nix-build` and verify it succeeds.
 >
 > **Required command:**
 > ```bash
-> nix develop . --command crystal build src/quickheadlines.cr
+> just nix-build
 > ```
 >
-> If compilation fails, the task is NOT done. Fix all compilation errors before marking the task as complete.
+> This builds both Svelte frontend AND Crystal binary with assets baked in. The `just nix-build` command updates a timestamp in `src/web/assets.cr` to force BakedFileSystem to pick up new frontend assets.
 >
-> **This rule is NON-NEGOTIABLE.** Multiple instances of agents claiming tasks were "done" while the code didn't compile have caused issues. NEVER mark work as complete until `crystal build` succeeds.
+> If build fails, the task is NOT done. Fix all errors before marking the task as complete.
+>
+> **This rule is NON-NEGOTIABLE.** NEVER mark work as complete until `just nix-build` succeeds.
 
 ## Landing the Plane (Session Completion)
 
@@ -82,39 +84,43 @@ If you don't use the prefix, you will get a `command not found: crystal` error, 
 ## Building & Running QuickHeadlines
 
 ### The Golden Rule
-**ALWAYS use `nix develop . --command` prefix for any Crystal or Svelte command.**
-
-This sets up the correct `LD_LIBRARY_PATH` for Crystal's dependencies (boehmgc, libevent, pcre2, etc.). Without it, you'll get cryptic errors like `undefined constant Code` in athena-routing.
+**ALWAYS use `just nix-build` for building. This ensures BakedFileSystem picks up new frontend assets.**
 
 ### Quick Reference
 
 ```bash
-# Start development server (recommended)
-nix develop . --command make run
+# Build everything (RECOMMENDED)
+just nix-build
 
-# Build production Svelte bundle
-nix develop . --command make svelte-build
+# Start server
+./bin/quickheadlines
 
 # Run Crystal tests
 nix develop . --command crystal spec
-
-# Install/update dependencies
-nix develop . --command shards install
 
 # Run Playwright tests
 nix develop . --command npx playwright test
 ```
 
+### Why `just nix-build`?
+
+The `just nix-build` command:
+1. Builds the Svelte frontend (`npm run build`)
+2. Updates a timestamp in `src/web/assets.cr` to force BakedFileSystem recompilation
+3. Rebuilds the Crystal binary with fresh assets baked in
+
+**NEVER run `crystal build` directly** - it won't pick up frontend changes reliably.
+
 ### Common Issues & Solutions
 
 | Symptom | Cause | Solution |
 |---------|-------|----------|
-| `undefined constant Code` in athena-routing | Crystal running outside nix develop | Always prefix with `nix develop . --command` |
-| `crystal: command not found` | Crystal not in PATH | Use nix develop |
-| `libgc.so.1 not found` | Missing library path | Run through nix develop (sets LD_LIBRARY_PATH) |
-| Make command not found | make not in PATH | nix develop provides gnumake |
-| Feeds not updating after config changes | Stale database cache | Run `rm -rf ~/.cache/quickheadlines/feed_cache.db*` then restart server |
-| JS files returning 404 | BakedFileSystem not rebuilt | Rebuild Crystal binary after Svelte build |
+| Changes not visible in browser | BakedFileSystem not rebuilt | Run `just nix-build` |
+| JS files returning 404 | Old binary running | Kill server, run `just nix-build`, restart |
+| `undefined constant Code` in athena-routing | Crystal running outside nix develop | Use `just nix-build` |
+| `crystal: command not found` | Crystal not in PATH | Use `just nix-build` |
+| Feeds not updating after config changes | Stale database cache | Run `rm -rf ~/.cache/quickheadlines/` then restart server |
+| Tab not persisting on refresh | Browser caching old JS | Hard refresh (Ctrl+Shift+R) or incognito |
 
 ### Environment Variables
 

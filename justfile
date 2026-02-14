@@ -416,11 +416,27 @@ build: check-deps
     fi
     @echo "Compiling release binary for {{os}}-{{arch}}..."
     @mkdir -p bin
-    @# Force BakedFileSystem to pick up new assets
-    @touch src/web/assets.cr
+    @# Force BakedFileSystem recompilation by updating assets.cr with build timestamp
+    @sed -i 's/# Build:.*/# Build: $(date -Iseconds)/' src/web/assets.cr 2>/dev/null || \
+        sed -i '' 's/# Build:.*/# Build: '$(date -Iseconds)'/' src/web/assets.cr 2>/dev/null || \
+        true
     @echo "Note: Frontend assets are baked into the binary"
     @APP_ENV=production {{FINAL_CRYSTAL}} build --release --no-debug src/quickheadlines.cr -o bin/{{NAME}}
     @echo "✓ Built bin/{{NAME}}"
+
+# Build using nix develop (recommended for this project)
+nix-build:
+    @echo "Building with nix develop..."
+    @# Build Svelte first
+    cd frontend && npm run build
+    @cp frontend/static/logo.svg frontend/dist/ 2>/dev/null || true
+    @# Force BakedFileSystem recompilation
+    @sed -i 's/# Build:.*/# Build: '$(date -Iseconds)'/' src/web/assets.cr 2>/dev/null || true
+    @# Build Crystal binary
+    @rm -f bin/quickheadlines
+    nix develop . --command crystal build --release src/quickheadlines.cr -o bin/quickheadlines
+    @echo "✓ Built bin/quickheadlines"
+    @ls -la bin/quickheadlines
 
 # Build with specific OS/Arch naming for GitHub Releases
 build-release: check-deps
@@ -465,6 +481,7 @@ help:
     @echo "Targets:"
     @echo "  default           - Build release binary (same as build)"
     @echo "  build             - Build release binary (Svelte assets baked in)"
+    @echo "  nix-build         - Build using nix develop (RECOMMENDED)"
     @echo "  build-release     - Build release binary with version naming"
     @echo "  run               - Run in development mode"
     @echo "  download-crystal  - Download and build Crystal compiler"

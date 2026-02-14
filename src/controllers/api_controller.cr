@@ -152,6 +152,49 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
     clusters
   end
 
+  # GET /api/clusters/:id/items - Get all items in a cluster
+  @[ARTA::Get(path: "/api/clusters/{id}/items")]
+  def cluster_items(request : ATH::Request, id : String) : ClusterItemsResponse
+    unless check_rate_limit(request)
+      return ClusterItemsResponse.new(
+        cluster_id: id,
+        items: [] of StoryResponse
+      )
+    end
+
+    cluster_id = id.to_i64?
+
+    if cluster_id.nil?
+      return ClusterItemsResponse.new(
+        cluster_id: id,
+        items: [] of StoryResponse
+      )
+    end
+
+    cache = FeedCache.instance
+    db_items = cache.get_cluster_items_full(cluster_id)
+
+    items = db_items.map do |item|
+      StoryResponse.new(
+        id: item[:id].to_s,
+        title: item[:title],
+        link: item[:link],
+        pub_date: item[:pub_date].try(&.to_unix_ms),
+        feed_title: item[:feed_title],
+        feed_url: item[:feed_url],
+        feed_link: "",
+        favicon: item[:favicon],
+        favicon_data: item[:favicon],
+        header_color: item[:header_color]
+      )
+    end
+
+    ClusterItemsResponse.new(
+      cluster_id: id,
+      items: items
+    )
+  end
+
   # GET /api/feeds - Get feeds for a specific tab
   @[ARTA::Get(path: "/api/feeds")]
   def feeds(request : ATH::Request) : FeedsPageResponse
