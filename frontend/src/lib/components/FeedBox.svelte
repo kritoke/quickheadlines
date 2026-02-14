@@ -109,9 +109,9 @@
 			{/each}
 		</ul>
 
-		<!-- Scroll Hint -->
-		{#if !isScrolledToBottom}
-			<div class="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-white dark:from-slate-800 to-transparent pointer-events-none"></div>
+		<!-- Scroll Hint - only show when not at bottom and has scrollable content -->
+		{#if !isScrolledToBottom && feed.items.length > 5}
+			<div class="absolute bottom-0 left-0 right-0 h-6 pointer-events-none bg-gradient-to-t from-white dark:from-slate-800 via-white/80 dark:via-slate-800/80 to-transparent"></div>
 		{/if}
 	</div>
 

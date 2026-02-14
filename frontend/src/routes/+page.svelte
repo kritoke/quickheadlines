@@ -5,35 +5,59 @@
 	import type { FeedResponse, FeedsPageResponse } from '$lib/types';
 	import { themeState, toggleTheme } from '$lib/stores/theme.svelte';
 	import { onMount } from 'svelte';
+	import { page } from '$app/stores';
+
+	// Get tab from URL query param or default to 'all'
+	$effect(() => {
+		const urlTab = $page.url.searchParams.get('tab');
+		if (urlTab && urlTab !== activeTab) {
+			activeTab = urlTab;
+		}
+	});
 
 	let feeds = $state<FeedResponse[]>([]);
 	let tabs = $state<{ name: string }[]>([]);
 	let activeTab = $state('all');
-	let loading = $state(true);
+	let loading = $state(false);
 	let error = $state<string | null>(null);
 
-	async function loadFeeds(tab: string = activeTab) {
-		console.log('[+page] loadFeeds called, tab:', tab);
+	// Cache for each tab's data
+	let tabCache = $state<Record<string, { feeds: FeedResponse[], loaded: boolean }>>({});
+
+	async function loadFeeds(tab: string = activeTab, force: boolean = false) {
+		// Check cache first
+		if (!force && tabCache[tab]?.loaded) {
+			feeds = tabCache[tab].feeds;
+			activeTab = tab;
+			return;
+		}
+
 		try {
 			loading = true;
 			error = null;
-			console.log('[+page] Fetching feeds...');
 			const response: FeedsPageResponse = await fetchFeeds(tab);
-			console.log('[+page] Got response, feeds:', response.feeds?.length, 'tabs:', response.tabs?.length);
 			feeds = response.feeds || [];
 			tabs = response.tabs || [];
 			activeTab = response.active_tab || 'all';
-			console.log('[+page] State updated, feeds length:', feeds.length);
+			
+			// Update cache
+			tabCache = {
+				...tabCache,
+				[tab]: { feeds, loaded: true }
+			};
 		} catch (e) {
 			error = e instanceof Error ? e.message : 'Failed to load feeds';
-			console.error('[+page] Failed to load feeds:', e);
 		} finally {
 			loading = false;
-			console.log('[+page] Loading complete, loading:', loading);
 		}
 	}
 
 	async function handleTabChange(tab: string) {
+		// Update URL without reload
+		const url = new URL(window.location.href);
+		url.searchParams.set('tab', tab);
+		window.history.replaceState({}, '', url);
+		
 		await loadFeeds(tab);
 	}
 
@@ -50,28 +74,35 @@
 					total_item_count: response.total_item_count
 				};
 				feeds = feeds.map((f, i) => i === feedIndex ? updatedFeed : f);
+				
+				// Update cache
+				tabCache = {
+					...tabCache,
+					[activeTab]: { feeds, loaded: true }
+				};
 			}
 		} catch (e) {
 			console.error('Failed to load more items:', e);
 		}
 	}
 
-	function handleToggleTheme() {
-		console.log('[+page] Toggle button clicked, current theme:', themeState.theme);
-		toggleTheme();
-		console.log('[+page] After toggle, theme:', themeState.theme);
-		console.log('[+page] HTML has dark class:', document.documentElement.classList.contains('dark'));
-	}
-
-	// Use onMount for initial data load - guaranteed to run once
+	// Auto-refresh at interval
+	let refreshInterval: ReturnType<typeof setInterval>;
+	
 	onMount(() => {
-		console.log('[+page] onMount - loading feeds');
-		loadFeeds();
-	});
-
-	// Debug theme state changes
-	$effect(() => {
-		console.log('[+page] themeState.theme changed to:', themeState.theme);
+		// Initial load
+		loadFeeds(activeTab, true);
+		
+		// Set up auto-refresh (default 10 minutes)
+		const refreshMinutes = 10; // TODO: Get from API config
+		refreshInterval = setInterval(() => {
+			// Force refresh current tab
+			loadFeeds(activeTab, true);
+		}, refreshMinutes * 60 * 1000);
+		
+		return () => {
+			if (refreshInterval) clearInterval(refreshInterval);
+		};
 	});
 </script>
 
@@ -84,17 +115,19 @@
 	<header class="sticky top-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur border-b border-slate-200 dark:border-slate-700 z-20">
 		<div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
 			<div class="flex items-center gap-3">
-				<img src="/logo.svg" alt="Logo" class="w-8 h-8" />
-				<h1 class="text-xl font-bold text-slate-900 dark:text-white">
-					QuickHeadlines
-				</h1>
+				<a href="/?tab=all" class="flex items-center gap-2 hover:opacity-80 transition-opacity">
+					<img src="/logo.svg" alt="Logo" class="w-8 h-8" />
+					<h1 class="text-xl font-bold text-slate-900 dark:text-white">
+						QuickHeadlines
+					</h1>
+				</a>
 			</div>
 			<div class="flex items-center gap-4">
 				<a href="/timeline" class="text-sm text-blue-600 dark:text-blue-400 hover:underline">
 					Timeline
 				</a>
 				<button
-					onclick={handleToggleTheme}
+					onclick={toggleTheme}
 					class="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
 					aria-label="Toggle theme"
 				>
@@ -114,15 +147,15 @@
 
 	<!-- Main Content -->
 	<main class="max-w-7xl mx-auto px-4 py-4">
-		{#if loading}
+		{#if loading && feeds.length === 0}
 			<div class="flex items-center justify-center py-20">
 				<div class="text-slate-500 dark:text-slate-400">Loading feeds...</div>
 			</div>
-		{:else if error}
+		{:else if error && feeds.length === 0}
 			<div class="bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 p-4 rounded-lg">
 				{error}
 				<button
-					onclick={() => loadFeeds()}
+					onclick={() => loadFeeds(activeTab, true)}
 					class="ml-2 underline hover:no-underline"
 				>
 					Retry
@@ -132,6 +165,13 @@
 			<!-- Tab Navigation -->
 			{#if tabs.length > 0}
 				<TabBar {tabs} {activeTab} onTabChange={handleTabChange} />
+			{/if}
+
+			<!-- Loading overlay for tab switch -->
+			{#if loading}
+				<div class="absolute inset-0 bg-white/50 dark:bg-slate-900/50 flex items-center justify-center z-10 pointer-events-none">
+					<div class="text-slate-500 dark:text-slate-400">Loading...</div>
+				</div>
 			{/if}
 
 			<!-- Feeds Grid (3-2-1 responsive) -->

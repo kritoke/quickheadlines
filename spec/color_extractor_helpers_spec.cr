@@ -30,10 +30,6 @@ describe "ColorExtractor helpers" do
     (120..135).includes?(avg[1]).should be_true
     (120..135).includes?(avg[2]).should be_true
     avg.should be_a(Array(Int32))
-    # Expect average around (127,127,127) for these pixels
-    avg[0].should be_between(120, 135)
-    avg[1].should be_between(120, 135)
-    avg[2].should be_between(120, 135)
   end
 
   it "finds readable dark text for a light background" do

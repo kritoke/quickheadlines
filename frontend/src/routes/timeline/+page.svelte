@@ -13,10 +13,10 @@
 	let loadingMore = $state(false);
 	let error = $state<string | null>(null);
 	let offset = $state(0);
+	let sentinelElement: HTMLDivElement | undefined = $state();
 	const limit = 100;
 
 	async function loadTimeline(append: boolean = false) {
-		console.log('[Timeline] loadTimeline called, append:', append);
 		try {
 			if (append) {
 				loadingMore = true;
@@ -26,7 +26,6 @@
 			error = null;
 			
 			const response = await fetchTimeline(limit, offset);
-			console.log('[Timeline] Got response, items:', response.items?.length);
 			
 			if (append) {
 				const newItems = response.items.filter((item: TimelineItemResponse) => !itemIds.has(item.id));
@@ -39,14 +38,12 @@
 			
 			hasMore = response.has_more;
 			offset += response.items.length;
-			console.log('[Timeline] State updated, items:', items.length, 'loading:', loading);
 		} catch (e) {
 			error = e instanceof Error ? e.message : 'Failed to load timeline';
 			console.error('[Timeline] Error:', e);
 		} finally {
 			loading = false;
 			loadingMore = false;
-			console.log('[Timeline] Finally, loading:', loading);
 		}
 	}
 
@@ -56,30 +53,28 @@
 		}
 	}
 
-	function handleScroll() {
-		if (loadingMore || !hasMore) return;
+	// Use IntersectionObserver for infinite scroll
+	$effect(() => {
+		if (!sentinelElement || !hasMore) return;
 		
-		const scrollHeight = document.documentElement.scrollHeight;
-		const scrollTop = document.documentElement.scrollTop;
-		const clientHeight = document.documentElement.clientHeight;
+		const observer = new IntersectionObserver(
+			(entries) => {
+				entries.forEach(entry => {
+					if (entry.isIntersecting && !loadingMore && hasMore) {
+						handleLoadMore();
+					}
+				});
+			},
+			{ rootMargin: '500px' }
+		);
 		
-		if (scrollTop + clientHeight >= scrollHeight - 500) {
-			handleLoadMore();
-		}
-	}
-
-	// Use onMount for initial data load - guaranteed to run once
-	onMount(() => {
-		console.log('[Timeline] onMount - loading timeline');
-		loadTimeline();
+		observer.observe(sentinelElement);
 		
-		window.addEventListener('scroll', handleScroll);
-		return () => window.removeEventListener('scroll', handleScroll);
+		return () => observer.disconnect();
 	});
 
-	// Debug theme state changes
-	$effect(() => {
-		console.log('[Timeline] themeState.theme changed to:', themeState.theme);
+	onMount(() => {
+		loadTimeline();
 	});
 </script>
 
@@ -104,12 +99,7 @@
 					{items.length} items
 				</span>
 				<button
-					onclick={() => {
-						console.log('[Timeline] Toggle button clicked, current theme:', themeState.theme);
-						toggleTheme();
-						console.log('[Timeline] After toggle, theme:', themeState.theme);
-						console.log('[Timeline] HTML has dark class:', document.documentElement.classList.contains('dark'));
-					}}
+					onclick={toggleTheme}
 					class="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
 					aria-label="Toggle theme"
 				>
@@ -129,11 +119,11 @@
 
 	<!-- Main Content -->
 	<main class="max-w-3xl mx-auto px-4 py-4">
-		{#if loading}
+		{#if loading && items.length === 0}
 			<div class="flex items-center justify-center py-20">
 				<div class="text-slate-500 dark:text-slate-400">Loading timeline...</div>
 			</div>
-		{:else if error}
+		{:else if error && items.length === 0}
 			<div class="bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 p-4 rounded-lg">
 				{error}
 				<button
@@ -150,6 +140,11 @@
 				<div class="text-center py-4 text-slate-500 dark:text-slate-400">
 					Loading more...
 				</div>
+			{/if}
+			
+			<!-- Sentinel element for infinite scroll -->
+			{#if hasMore}
+				<div bind:this={sentinelElement} class="h-1"></div>
 			{/if}
 		{/if}
 	</main>
