@@ -62,7 +62,7 @@
 			if (feedIndex !== -1) {
 				const updatedFeed = {
 					...feeds[feedIndex],
-					items: [...feeds[feedIndex].items, ...response.items.slice(currentOffset)],
+					items: [...feeds[feedIndex].items, ...response.items],
 					total_item_count: response.total_item_count
 				};
 				feeds = feeds.map((f, i) => i === feedIndex ? updatedFeed : f);

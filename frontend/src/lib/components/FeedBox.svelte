@@ -82,34 +82,36 @@
 		<span class="truncate drop-shadow-sm">{feed.title}</span>
 	</a>
 
-	<!-- Feed Items -->
-	<div
-		bind:this={scrollContainer}
-		class="flex-1 overflow-y-auto auto-hide-scroll relative"
-	>
-		<ul class="divide-y divide-slate-100 dark:divide-slate-700">
-			{#each feed.items as item, i (`${feed.url}-${i}`)}
-				<li>
-					<a
-						href={item.link}
-						target="_blank"
-						rel="noopener noreferrer"
-						class="block px-3 py-2 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
-					>
-						<p class="text-sm text-slate-800 dark:text-slate-200 line-clamp-2 leading-snug">
-							{item.title}
-						</p>
-						{#if item.pub_date}
-							<p class="text-xs text-slate-500 dark:text-slate-400 mt-1">
-								{formatTimestamp(item.pub_date)}
+	<!-- Feed Items with Scroll Hint -->
+	<div class="flex-1 relative">
+		<div
+			bind:this={scrollContainer}
+			class="h-full overflow-y-auto auto-hide-scroll"
+		>
+			<ul class="divide-y divide-slate-100 dark:divide-slate-700">
+				{#each feed.items as item, i (`${feed.url}-${i}`)}
+					<li>
+						<a
+							href={item.link}
+							target="_blank"
+							rel="noopener noreferrer"
+							class="block px-3 py-2 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
+						>
+							<p class="text-sm text-slate-800 dark:text-slate-200 line-clamp-2 leading-snug">
+								{item.title}
 							</p>
-						{/if}
-					</a>
-				</li>
-			{/each}
-		</ul>
+							{#if item.pub_date}
+								<p class="text-xs text-slate-500 dark:text-slate-400 mt-1">
+									{formatTimestamp(item.pub_date)}
+								</p>
+							{/if}
+						</a>
+					</li>
+				{/each}
+			</ul>
+		</div>
 
-		<!-- Scroll Hint - only show when not at bottom and has scrollable content -->
+		<!-- Scroll Hint - positioned at bottom of visible area -->
 		{#if !isScrolledToBottom && feed.items.length > 5}
 			<div class="absolute bottom-0 left-0 right-0 h-6 pointer-events-none bg-gradient-to-t from-white dark:from-slate-800 via-white/80 dark:via-slate-800/80 to-transparent"></div>
 		{/if}
