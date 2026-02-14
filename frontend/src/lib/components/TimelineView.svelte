@@ -56,15 +56,17 @@
 							class="flex items-center gap-2 px-3 py-2 text-xs font-medium"
 							style={getHeaderStyle(item)}
 						>
-							<img
-								src={getFaviconSrc(item)}
-								alt="{item.feed_title} favicon"
-								class="w-4 h-4 rounded"
-								onerror={(e) => {
-									const target = e.target as HTMLImageElement;
-									target.src = '/favicon.svg';
-								}}
-							/>
+							<div class="w-4 h-4 rounded bg-white/90 p-0.5 flex items-center justify-center shadow-sm">
+								<img
+									src={getFaviconSrc(item)}
+									alt="{item.feed_title} favicon"
+									class="w-3 h-3 rounded"
+									onerror={(e) => {
+										const target = e.target as HTMLImageElement;
+										target.src = '/favicon.svg';
+									}}
+								/>
+							</div>
 							<span class="truncate">{item.feed_title}</span>
 							{#if item.cluster_size && item.cluster_size > 1}
 								<span class="ml-auto bg-white/20 px-1.5 py-0.5 rounded text-[10px]">
