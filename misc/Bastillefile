@@ -1,5 +1,12 @@
 # Bastillefile for quickheadlines (Svelte 5 Frontend)
 
+# Template Arguments (use --arg NAME=VALUE when applying template)
+ARG MODE=prod           # prod=latest tag, dev=main branch
+ARG TAG=                # Optional: specific tag (e.g., v0.4.0)
+ARG REPO_URL=           # Optional: custom repository URL
+ARG SKIP_BUILD=false    # Set to true to skip compilation (use existing binary)
+ARG CLEAR_CACHE=false   # Set to true to clear cache before starting (recommended on version changes)
+
 # 0. Clean up previous failed attempts
 CMD service quickheadlines stop 2>/dev/null || true
 CMD rm -rf /tmp/qh 2>/dev/null || true
@@ -22,20 +29,37 @@ CMD chown -R qh:qh /usr/local/share/quickheadlines /var/cache/quickheadlines /ho
 FSTAB /usr/local/bastille/cache/crystal/quickheadlines /home/qh/.cache nullfs rw 0 0
 
 # 4. Clone and Prepare Environment
-# Configuration via quickheadlines_env variable:
-#   QUICKHEADLINES_DEV=1         - Clone main branch for development
-#   QUICKHEADLINES_TAG=x.x.x     - Clone specific tag
-#   QUICKHEADLINES_REPO_URL=...  - Custom repository URL
-# Note: Environment variables must be set before running bastille template/bootstrap
+# Usage examples:
+#   bastille template JAILNAME path/to/template                           # Latest tag (default)
+#   bastille template JAILNAME path/to/template --arg MODE=dev            # Main branch
+#   bastille template JAILNAME path/to/template --arg TAG=v0.4.0          # Specific tag
+#   bastille template JAILNAME path/to/template --arg REPO_URL=https://... # Custom repo
+#   bastille template JAILNAME path/to/template --arg CLEAR_CACHE=true   # Clear cache on version change
 CMD rm -rf /tmp/qh 2>/dev/null || true
 CMD mkdir -p /tmp/qh
-CMD sh -c "echo 'Checking for DEV mode...' && env | grep -E '(QUICKHEADLINES_|quickheadlines_)' || echo 'No dev env vars found'; if [ -n \"\$QUICKHEADLINES_DEV\" ]; then echo 'DEV mode detected: Cloning main branch'; REPO_URL=\"\${QUICKHEADLINES_REPO_URL:-https://github.com/kritoke/quickheadlines.git}\"; git clone \$REPO_URL /tmp/qh || { echo 'ERROR: Failed to clone repository'; exit 1; }; elif [ -n \"\$QUICKHEADLINES_TAG\" ]; then echo \"TAG mode detected: Cloning tag \$QUICKHEADLINES_TAG\"; REPO_URL=\"\${QUICKHEADLINES_REPO_URL:-https://github.com/kritoke/quickheadlines.git}\"; git clone --branch \$QUICKHEADLINES_TAG \$REPO_URL /tmp/qh 2>/dev/null || { echo \"ERROR: Tag \$QUICKHEADLINES_TAG not found\"; exit 1; }; else echo 'PROD mode: Fetching latest release tag'; REPO_URL=\"\${QUICKHEADLINES_REPO_URL:-https://github.com/kritoke/quickheadlines.git}\"; LATEST_TAG=\$(git ls-remote --sort=v:refname --tags \$REPO_URL | tail -1 | cut -d/ -f3); echo \"Latest tag: \$LATEST_TAG\"; git clone --branch \$LATEST_TAG --depth 1 \$REPO_URL /tmp/qh || { echo 'ERROR: Failed to clone repository'; exit 1; }; fi && chown -R qh:qh /tmp/qh 2>/dev/null || true"
+CMD echo "DEBUG: MODE=[${MODE}], TAG=[${TAG}], REPO_URL=[${REPO_URL}]"
+CMD sh -c "set -e; \
+  REPO='${REPO_URL:-https://github.com/kritoke/quickheadlines.git}'; \
+  echo \"DEBUG: After substitution - REPO=\$REPO\"; \
+  if [ '${MODE}' = 'dev' ]; then \
+    echo 'DEV mode: Cloning main branch'; \
+    git clone \"\$REPO\" /tmp/qh; \
+  elif [ -n '${TAG}' ]; then \
+    echo \"TAG mode: Cloning tag ${TAG}\"; \
+    git clone --branch '${TAG}' --depth 1 \"\$REPO\" /tmp/qh; \
+  else \
+    echo 'PROD mode: Fetching latest release tag'; \
+    LATEST_TAG=\$(git ls-remote --sort=v:refname --tags \"\$REPO\" | tail -1 | cut -d/ -f3); \
+    echo \"Latest tag: \$LATEST_TAG\"; \
+    git clone --branch \"\$LATEST_TAG\" --depth 1 \"\$REPO\" /tmp/qh; \
+  fi && \
+  chown -R qh:qh /tmp/qh 2>/dev/null || true"
 
 # 5. Build quickheadlines
 # Svelte 5 frontend is built with Node.js/pnpm and embedded via BakedFileSystem
 
-# Validate repository was cloned
-CMD sh -c "if [ ! -d '/tmp/qh' ] || [ ! -f '/tmp/qh/justfile' ]; then echo 'ERROR: Repository not cloned to /tmp/qh'; exit 1; fi"
+# Validate repository was cloned (check for justfile or Makefile - older tags use Makefile)
+CMD sh -c "echo 'DEBUG: Validating /tmp/qh'; ls -la /tmp/; echo '---'; ls -la /tmp/qh/ 2>&1 || echo 'Cannot list /tmp/qh'; if [ ! -d '/tmp/qh' ]; then echo 'ERROR: /tmp/qh is not a directory'; exit 1; fi; if [ ! -f '/tmp/qh/justfile' ] && [ ! -f '/tmp/qh/Makefile' ]; then echo 'ERROR: Neither justfile nor Makefile found in /tmp/qh'; ls -la /tmp/qh/; exit 1; fi; echo 'Validation passed'"
 
 # Use system Crystal 1.18.2 (check version and report)
 CMD sh -c "echo 'Checking Crystal installation...' && crystal --version && echo 'Crystal OK - proceeding with build'"
@@ -50,7 +74,9 @@ CMD sh -c "cd /tmp/qh && export HOME=/home/qh && echo 'Installing Crystal depend
 CMD sh -c "cd /tmp/qh/frontend && echo 'Installing Svelte dependencies...' && pnpm install && echo 'Building Svelte frontend...' && pnpm run build && cp static/logo.svg dist/ || { echo 'ERROR: Failed to build Svelte frontend'; exit 1; }"
 
 # Build Crystal binary (with BakedFileSystem)
-CMD sh -c "cd /tmp/qh && export HOME=/home/qh && if [ -n \"\$QUICKHEADLINES_SKIP_BUILD\" ]; then echo 'SKIP_BUILD mode: Using existing binary'; if [ ! -f '/usr/local/share/quickheadlines/quickheadlines' ]; then echo 'ERROR: SKIP_BUILD specified but no existing binary found'; exit 1; fi; else echo 'Building quickheadlines binary...' && touch src/web/assets.cr && sudo -u qh sh -c \"export HOME=/home/qh && crystal build --release src/quickheadlines.cr -o bin/quickheadlines\" && echo 'Copying binary to installation directory...' && cp bin/quickheadlines /usr/local/share/quickheadlines/ && echo 'Binary updated successfully'; fi"
+# Usage: --arg SKIP_BUILD=true to skip compilation
+CMD mkdir -p /tmp/qh/bin && chown -R qh:qh /tmp/qh/bin
+CMD sh -c "cd /tmp/qh && export HOME=/home/qh && if [ '${SKIP_BUILD}' = 'true' ]; then echo 'SKIP_BUILD mode: Using existing binary'; if [ ! -f '/usr/local/share/quickheadlines/quickheadlines' ]; then echo 'ERROR: SKIP_BUILD specified but no existing binary found'; exit 1; fi; else echo 'Building quickheadlines binary...' && touch src/web/assets.cr && sudo -u qh sh -c \"export HOME=/home/qh && crystal build --release src/quickheadlines.cr -o bin/quickheadlines\" && echo 'Copying binary to installation directory...' && cp bin/quickheadlines /usr/local/share/quickheadlines/ && echo 'Binary updated successfully'; fi"
 
 # 6. Install Binary and Config
 CMD [ ! -f '/usr/local/share/quickheadlines/feeds.yml' ] && cp /tmp/qh/feeds.yml /usr/local/share/quickheadlines/feeds.yml || true
@@ -61,6 +87,9 @@ CMD cp /tmp/qh/misc/quickheadlines /usr/local/etc/rc.d/quickheadlines 2>/dev/nul
 SYSRC quickheadlines_enable="YES"
 CMD chmod +x /usr/local/etc/rc.d/quickheadlines
 
-# 8. Wait for database readiness and start
+# 8. Clear cache if requested (recommended when switching versions)
+CMD sh -c "if [ '${CLEAR_CACHE}' = 'true' ]; then echo 'CLEAR_CACHE: Wiping cache directory...'; rm -rf /var/cache/quickheadlines/* /home/qh/.cache/shards 2>/dev/null || true; echo 'Cache cleared'; else echo 'CLEAR_CACHE: Not clearing cache (set CLEAR_CACHE=true to clear)'; fi"
+
+# 9. Wait for database readiness and start
 CMD sleep 2
 CMD service quickheadlines start

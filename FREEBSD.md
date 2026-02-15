@@ -32,17 +32,26 @@ bastille cmd 15.0 quickheadlines sh -c 'cd /tmp/qh/misc && bash Bastillefile'
 
 ### Configuration Options
 
-QuickHeadlines can be configured via environment variables. Set these **before running bastille bootstrap/template**:
+QuickHeadlines can be configured via Bastille template arguments. Use `--arg` when applying the template:
 
 ```bash
-# For specific tag (default is latest release)
-export QUICKHEADLINES_TAG=v0.5.0
+# Production (latest release tag) - default
+bastille template JAILNAME path/to/template
+
+# Development (main branch)
+bastille template JAILNAME path/to/template --arg MODE=dev
+
+# For specific tag
+bastille template JAILNAME path/to/template --arg TAG=v0.4.0
 
 # Custom repository
-export QUICKHEADLINES_REPO_URL=https://github.com/myuser/quickheadlines.git
+bastille template JAILNAME path/to/template --arg REPO_URL=https://github.com/myuser/quickheadlines.git
 
-# Then run bootstrap/template
-bastille bootstrap quickheadlines
+# Skip build (use existing binary)
+bastille template JAILNAME path/to/template --arg SKIP_BUILD=true
+
+# Clear cache (recommended when switching between major versions or bleeding edge to release)
+bastille template JAILNAME path/to/template --arg CLEAR_CACHE=true
 ```
 
 ### Service Configuration Variables
@@ -66,35 +75,48 @@ sysrc quickheadlines_env="VAR1=value1 VAR2=value2 ..."
 ### Specific Release Tag
 
 ```bash
-# Set environment variable before bootstrap
-export QUICKHEADLINES_TAG=v0.5.0
-bastille bootstrap quickheadlines
+# Using --arg TAG
+bastille template quickheadlines path/to/template --arg TAG=v0.4.0
+```
 
-# Or set it inline
-env QUICKHEADLINES_TAG=v0.5.0 bastille bootstrap quickheadlines
+### Development Mode (Main Branch)
+
+```bash
+# Using --arg MODE=dev
+bastille template quickheadlines path/to/template --arg MODE=dev
 ```
 
 ### Skip Build (Use Existing Binary)
 
 ```bash
-# Set environment variable before bootstrap
-export QUICKHEADLINES_SKIP_BUILD=1
-bastille bootstrap quickheadlines
-
-# Or set it inline
-env QUICKHEADLINES_SKIP_BUILD=1 bastille bootstrap quickheadlines
+# Using --arg SKIP_BUILD=true
+bastille template quickheadlines path/to/template --arg SKIP_BUILD=true
 ```
 
 ### Custom Repository
 
 ```bash
-# Set environment variable before bootstrap
-export QUICKHEADLINES_REPO_URL=https://github.com/myuser/quickheadlines.git
-bastille bootstrap quickheadlines
-
-# Or set it inline
-env QUICKHEADLINES_REPO_URL=https://github.com/myuser/quickheadlines.git bastille bootstrap quickheadlines
+# Using --arg REPO_URL
+bastille template quickheadlines path/to/template --arg REPO_URL=https://github.com/myuser/quickheadlines.git
 ```
+
+### Combining Options
+
+```bash
+# Development mode with custom repo
+bastille template quickheadlines path/to/template --arg MODE=dev --arg REPO_URL=https://github.com/myuser/quickheadlines.git
+```
+
+### Clearing Cache
+
+When switching between major versions (e.g., v0.x to v1.x) or from bleeding edge (dev) to stable releases, clear the cache to avoid database incompatibilities:
+
+```bash
+# Clear cache before starting
+bastille template quickheadlines path/to/template --arg CLEAR_CACHE=true
+```
+
+This will remove cached feed data and shards dependencies.
 
 ## Persistence
 
@@ -175,7 +197,7 @@ The `misc/Bastillefile` performs these steps:
 3. **Setup cache**: Mount persistent cache at `/home/qh/.cache`
 4. **Clone repo**: Clone specified tag/branch (default: latest release)
 5. **Install deps**: Run `shards install --production` (skips development dependencies that may cause issues)
-6. **Build**: Compile binary (always builds and replaces existing binary unless SKIP_BUILD=1)
+6. **Build**: Compile binary (uses `--arg SKIP_BUILD=true` to skip build)
 7. **Install**: Copy binary and config to `/usr/local/share/quickheadlines` (binary already installed during build)
 8. **Setup service**: Install rc.d script and enable service
 
@@ -185,5 +207,5 @@ The `misc/Bastillefile` performs these steps:
 - Elm.js is pre-compiled and included in the repository
 - No node/npm required for FreeBSD deployment
 - Development dependencies (like ameba) are skipped during installation to avoid compilation issues with Crystal 1.18.2
-- Binary is always rebuilt and replaced during deployment (set SKIP_BUILD=1 to preserve existing binary)
-- For development mode, manually modify the Bastillefile to clone the main branch instead of a tagged release
+- Binary is always rebuilt and replaced during deployment (use `--arg SKIP_BUILD=true` to preserve existing binary)
+- For development mode, use `--arg MODE=dev` when applying the template to clone the main branch
