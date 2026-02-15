@@ -109,7 +109,7 @@
 
 <div class="min-h-screen bg-white dark:bg-slate-900 transition-colors duration-200">
 	<!-- Header -->
-	<header class="sticky top-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur border-b border-slate-200 dark:border-slate-700 z-20">
+	<header class="fixed top-0 left-0 right-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur border-b border-slate-200 dark:border-slate-700 z-20">
 		<div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
 			<div class="flex items-center gap-3">
 				<a href="/?tab=all" class="flex items-center gap-2 hover:opacity-80 transition-opacity">
@@ -142,8 +142,8 @@
 		</div>
 	</header>
 
-	<!-- Main Content -->
-	<main class="max-w-7xl mx-auto px-4 py-4">
+	<!-- Main Content with padding for fixed header -->
+	<main class="max-w-7xl mx-auto px-4 py-4 pt-16">
 		{#if loading && feeds.length === 0}
 			<div class="flex items-center justify-center py-20">
 				<div class="text-slate-500 dark:text-slate-400">Loading feeds...</div>
