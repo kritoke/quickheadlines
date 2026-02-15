@@ -159,9 +159,11 @@
 				</button>
 			</div>
 		{:else}
-			<!-- Tab Navigation -->
+			<!-- Tab Navigation - sticky below header -->
 			{#if tabs.length > 0}
-				<TabBar {tabs} {activeTab} onTabChange={handleTabChange} />
+				<div class="sticky top-14 z-10 -mx-4 px-4 py-2 bg-white dark:bg-slate-900">
+					<TabBar {tabs} {activeTab} onTabChange={handleTabChange} />
+				</div>
 			{/if}
 
 			<!-- Loading overlay for tab switch -->
