@@ -201,9 +201,9 @@ Get version as plain text (UNIX timestamp).
 
 ### Static Files
 
-#### GET /elm.js
+#### GET /_app/*
 
-Compiled Elm application.
+Svelte 5 application assets (immutable, cacheable).
 
 #### GET /favicon.png
 #### GET /favicon.svg
@@ -223,22 +223,6 @@ Proxy images to avoid CORS issues.
 
 **Query Parameters:**
 - `url`: URL of the image to proxy
-
-## WebSocket/Ports
-
-### saveTheme
-
-Elm port for persisting theme preference.
-
-```javascript
-app.ports.saveTheme.subscribe(function(theme) {
-  localStorage.setItem('quickheadlines-theme', theme);
-});
-```
-
-### onScroll
-
-Elm port for infinite scroll tracking (internal use).
 
 ## Response Format
 
