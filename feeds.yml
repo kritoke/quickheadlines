@@ -290,6 +290,10 @@ tabs:
     feeds:
       - title: "BBC World"
         url: "https://feeds.bbci.co.uk/news/world/rss.xml"
+      - title: "Deutsche Welle"
+        url: "https://rss.dw.com/rdf/rss-en-all"
+      - title: "The Guardian World"
+        url: "https://www.theguardian.com/world/rss"
       - title: "France 24"
         url: "https://www.france24.com/en/rss"
       - title: "South China Morning Post"
