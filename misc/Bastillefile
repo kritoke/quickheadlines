@@ -37,58 +37,27 @@ FSTAB /usr/local/bastille/cache/crystal/quickheadlines /home/qh/.cache nullfs rw
 #   bastille template JAILNAME path/to/template --arg CLEAR_CACHE=true   # Clear cache on version change
 CMD rm -rf /tmp/qh 2>/dev/null || true
 CMD mkdir -p /tmp/qh
-CMD echo "DEBUG: MODE=[${MODE}], TAG=[${TAG}], REPO_URL=[${REPO_URL}]"
-CMD sh -c "set -e; \
-  REPO='${REPO_URL:-https://github.com/kritoke/quickheadlines.git}'; \
-  echo \"DEBUG: After substitution - REPO=\$REPO\"; \
-  if [ '${MODE}' = 'dev' ]; then \
-    echo 'DEV mode: Cloning main branch'; \
-    git clone \"\$REPO\" /tmp/qh; \
-  elif [ -n '${TAG}' ]; then \
-    echo \"TAG mode: Cloning tag ${TAG}\"; \
-    git clone --branch '${TAG}' --depth 1 \"\$REPO\" /tmp/qh; \
-  else \
-    echo 'PROD mode: Fetching latest release tag'; \
-    LATEST_TAG=\$(git ls-remote --sort=v:refname --tags \"\$REPO\" | tail -1 | cut -d/ -f3); \
-    echo \"Latest tag: \$LATEST_TAG\"; \
-    git clone --branch \"\$LATEST_TAG\" --depth 1 \"\$REPO\" /tmp/qh; \
-  fi && \
-  chown -R qh:qh /tmp/qh 2>/dev/null || true"
+CMD sh -c "set -e; REPO='${REPO_URL:-https://github.com/kritoke/quickheadlines.git}'; if [ '${MODE}' = 'dev' ]; then echo 'DEV mode: Cloning main branch'; git clone \"\$REPO\" /tmp/qh; elif [ -n '${TAG}' ]; then echo 'TAG mode: Cloning tag ${TAG}'; git clone --branch '${TAG}' --depth 1 \"\$REPO\" /tmp/qh; else echo 'PROD mode: Fetching latest release tag'; LATEST_TAG=\$(git ls-remote --sort=v:refname --tags \"\$REPO\" | tail -1 | cut -d/ -f3); echo \"Latest tag: \$LATEST_TAG\"; git clone --branch \"\$LATEST_TAG\" --depth 1 \"\$REPO\" /tmp/qh; fi && chown -R qh:qh /tmp/qh 2>/dev/null || true"
 
-# 5. Build quickheadlines
-# Svelte 5 frontend is built with Node.js/pnpm and embedded via BakedFileSystem
+# 5. Clear cache if requested (MUST be before binary download)
+CMD sh -c "if [ '${CLEAR_CACHE}' = 'true' ] || [ '${CLEAR_CACHE}' = '1' ]; then echo 'CLEAR_CACHE: Wiping cache directories...'; rm -rf /var/cache/quickheadlines/* /home/qh/.cache/shards /usr/local/share/quickheadlines/.cache /usr/local/share/quickheadlines/public 2>/dev/null || true; echo 'Cache cleared'; else echo 'CLEAR_CACHE: Not clearing cache'; fi"
 
-# Validate repository was cloned (check for justfile or Makefile - older tags use Makefile)
-CMD sh -c "echo 'DEBUG: Validating /tmp/qh'; ls -la /tmp/; echo '---'; ls -la /tmp/qh/ 2>&1 || echo 'Cannot list /tmp/qh'; if [ ! -d '/tmp/qh' ]; then echo 'ERROR: /tmp/qh is not a directory'; exit 1; fi; if [ ! -f '/tmp/qh/justfile' ] && [ ! -f '/tmp/qh/Makefile' ]; then echo 'ERROR: Neither justfile nor Makefile found in /tmp/qh'; ls -la /tmp/qh/; exit 1; fi; echo 'Validation passed'"
+# 6. Get quickheadlines binary
+# DEV mode: Build from source (needs Svelte + Crystal)
+# PROD/TAG mode: Download pre-built binary from GitHub releases
+CMD echo "MODE=[${MODE}] TAG=[${TAG}]"
+CMD mkdir -p /tmp/qh/bin && chown -R qh:qh /tmp/qh/bin 2>/dev/null || true
+CMD sh -c "if [ '${MODE}' = 'dev' ]; then echo 'DEV mode: Building from source...'; npm install -g pnpm; cd /tmp/qh && export HOME=/home/qh && sudo -u qh sh -c 'export HOME=/home/qh && shards install --production'; cd /tmp/qh/frontend && pnpm install && pnpm run build && cp static/logo.svg dist/; cd /tmp/qh && touch src/web/assets.cr && sudo -u qh sh -c 'export HOME=/home/qh && crystal build --release src/quickheadlines.cr -o bin/quickheadlines'; cp bin/quickheadlines /usr/local/share/quickheadlines/; chmod +x /usr/local/share/quickheadlines/quickheadlines; echo 'Build complete'; else echo 'PROD/TAG mode: Downloading binary...'; curl -fSL 'https://github.com/kritoke/quickheadlines/releases/download/v0.4.0/quickheadlines-v0.4.0-freebsd-x64' -o /usr/local/share/quickheadlines/quickheadlines && chmod +x /usr/local/share/quickheadlines/quickheadlines && echo 'Download complete'; fi"
+CMD ls -la /usr/local/share/quickheadlines/
 
-# Use system Crystal 1.18.2 (check version and report)
-CMD sh -c "echo 'Checking Crystal installation...' && crystal --version && echo 'Crystal OK - proceeding with build'"
-
-# Install pnpm globally
-CMD npm install -g pnpm
-
-# Install Crystal dependencies (production only)
-CMD sh -c "cd /tmp/qh && export HOME=/home/qh && echo 'Installing Crystal dependencies...' && sudo -u qh sh -c \"export HOME=/home/qh && shards install --production\" || { echo 'ERROR: Failed to install dependencies'; exit 1; }"
-
-# Build Svelte frontend
-CMD sh -c "cd /tmp/qh/frontend && echo 'Installing Svelte dependencies...' && pnpm install && echo 'Building Svelte frontend...' && pnpm run build && cp static/logo.svg dist/ || { echo 'ERROR: Failed to build Svelte frontend'; exit 1; }"
-
-# Build Crystal binary (with BakedFileSystem)
-# Usage: --arg SKIP_BUILD=true to skip compilation
-CMD mkdir -p /tmp/qh/bin && chown -R qh:qh /tmp/qh/bin
-CMD sh -c "cd /tmp/qh && export HOME=/home/qh && if [ '${SKIP_BUILD}' = 'true' ]; then echo 'SKIP_BUILD mode: Using existing binary'; if [ ! -f '/usr/local/share/quickheadlines/quickheadlines' ]; then echo 'ERROR: SKIP_BUILD specified but no existing binary found'; exit 1; fi; else echo 'Building quickheadlines binary...' && touch src/web/assets.cr && sudo -u qh sh -c \"export HOME=/home/qh && crystal build --release src/quickheadlines.cr -o bin/quickheadlines\" && echo 'Copying binary to installation directory...' && cp bin/quickheadlines /usr/local/share/quickheadlines/ && echo 'Binary updated successfully'; fi"
-
-# 6. Install Binary and Config
+# 7. Install Binary and Config
 CMD [ ! -f '/usr/local/share/quickheadlines/feeds.yml' ] && cp /tmp/qh/feeds.yml /usr/local/share/quickheadlines/feeds.yml || true
 CMD chown qh:qh /usr/local/share/quickheadlines/quickheadlines /usr/local/share/quickheadlines/feeds.yml 2>/dev/null || true
 
-# 7. Setup Service
+# 8. Setup Service
 CMD cp /tmp/qh/misc/quickheadlines /usr/local/etc/rc.d/quickheadlines 2>/dev/null || true
 SYSRC quickheadlines_enable="YES"
 CMD chmod +x /usr/local/etc/rc.d/quickheadlines
-
-# 8. Clear cache if requested (recommended when switching versions)
-CMD sh -c "if [ '${CLEAR_CACHE}' = 'true' ]; then echo 'CLEAR_CACHE: Wiping cache directory...'; rm -rf /var/cache/quickheadlines/* /home/qh/.cache/shards 2>/dev/null || true; echo 'Cache cleared'; else echo 'CLEAR_CACHE: Not clearing cache (set CLEAR_CACHE=true to clear)'; fi"
 
 # 9. Wait for database readiness and start
 CMD sleep 2

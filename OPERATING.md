@@ -1,26 +1,25 @@
 # QuickHeadlines Operating Manual
 
-> **Quick Reference:** `make help` for build targets, `make run` to start dev server, `make build` for production binary.
+> **Quick Reference:** `just help` for build targets, `just nix-build` to build, `./bin/quickheadlines` to run.
 
 ---
 
 ## 1. Development Environment
 
 ### Mandatory Shell
-All commands must be executed via `nix develop --command <command>`. This ensures identical behavior across FreeBSD, Linux, and macOS.
+All commands must be executed via `nix develop --command <command>` or using `just` recipes. This ensures identical behavior across FreeBSD, Linux, and macOS.
 
 ```bash
 # Enter development shell
 nix develop --command bash
 
 # Run commands directly
-nix develop --command make run
 nix develop --command crystal spec
-nix develop --command elm-land build
+just nix-build
 ```
 
 ### No Global Tools
-Do not use system-installed Crystal, Elm, or Shards. If a tool is missing, it must be added to `flake.nix` rather than installed globally.
+Do not use system-installed Crystal or Shards. If a tool is missing, it must be added to `flake.nix` rather than installed globally.
 
 ---
 
@@ -30,7 +29,6 @@ Do not use system-installed Crystal, Elm, or Shards. If a tool is missing, it mu
 quickheadlines/
 ├── src/                    # Crystal backend source
 │   ├── quickheadlines.cr   # Application entry point
-│   ├── application.cr      # Athena framework setup
 │   ├── config.cr           # Configuration loading (feeds.yml)
 │   ├── fetcher.cr          # RSS/Atom feed fetching
 │   ├── parser.cr           # XML parsing
@@ -38,23 +36,18 @@ quickheadlines/
 │   ├── api.cr              # API response types
 │   ├── controllers/        # Athena controllers
 │   ├── services/           # Athena services
-│   ├── repositories/       # Athena repositories
-│   ├── entities/           # Domain entities
-│   └── dtos/               # Data transfer objects
-├── ui/                     # Elm frontend source
+│   └── web/                # Static file serving
+├── frontend/               # Svelte 5 frontend
 │   ├── src/
-│   │   ├── Main.elm        # Elm Land entry point
-│   │   ├── Pages/          # Page modules
-│   │   ├── Api.elm         # API client
-│   │   └── Shared.elm      # Shared state
-│   └── elm.js              # Compiled frontend
-├── public/                 # Static assets
-│   ├── elm.js              # Compiled frontend
-│   ├── simple.js           # Simple JS fallback
-│   └── vanilla-test.html   # Test page
+│   │   ├── routes/         # SvelteKit routes
+│   │   ├── lib/            # Components and stores
+│   │   └── app.html        # HTML template
+│   ├── dist/               # Built frontend (embedded in binary)
+│   └── package.json        # Node dependencies
+├── bin/                    # Compiled binaries
 ├── feeds.yml               # Feed configuration
 ├── shard.yml               # Crystal dependencies
-├── Makefile                # Build targets
+├── justfile                # Build recipes
 └── README.md               # Project documentation
 ```
 
@@ -66,47 +59,40 @@ quickheadlines/
 
 | Command | Description |
 |---------|-------------|
-| `make help` | Show all available targets |
-| `make build` | Build release binary (default) |
-| `make run` | Run in development mode |
-| `make clean` | Remove build artifacts |
-| `make rebuild` | Clean and rebuild everything |
-| `make check-deps` | Verify required dependencies |
-| `make elm-install` | Install Elm tools |
-| `make elm-build` | Compile Elm to JavaScript |
-| `make elm-format` | Format Elm source files |
-| `make elm-validate` | Validate Elm syntax |
-| `make test-frontend` | Run Playwright frontend tests |
+| `just nix-build` | Build production binary (RECOMMENDED) |
+| `just build` | Build using system crystal |
+| `just run` | Run in development mode |
+| `just clean` | Remove build artifacts |
+| `just rebuild` | Clean and rebuild everything |
+| `just check-deps` | Verify required dependencies |
+| `just test-frontend` | Run Vitest frontend tests |
+| `just help` | Show all available targets |
 
 ### Development Workflow
 
 ```bash
-# 1. Enter development shell
-nix develop --command bash
+# 1. Build everything
+just nix-build
 
-# 2. Check dependencies
-make check-deps
+# 2. Run the server
+./bin/quickheadlines
 
-# 3. Run in development mode (auto-recompiles Crystal, rebuilds Elm on changes)
-make run
-
-# Or for faster iteration, run frontend and backend separately:
-make elm-build  # Compile Elm
-crystal run src/quickheadlines.cr -- config=feeds.yml  # Run backend
+# 3. For frontend development
+cd frontend && npm run dev
 ```
 
 ### Production Build
 
 ```bash
 # Build release binary
-make build
+just nix-build
 
 # Output location: bin/quickheadlines
 
 # Run the binary
 ./bin/quickheadlines
 
-# Default port: 3030
+# Default port: 8080
 # Config file: feeds.yml (must be in same directory)
 ```
 
@@ -120,7 +106,7 @@ make build
 # Global settings
 refresh_minutes: 30        # Refresh interval in minutes
 item_limit: 20             # Items per feed (default: 100)
-server_port: 3030          # HTTP server port
+server_port: 8080          # HTTP server port
 page_title: "Quick Headlines"
 cache_retention_hours: 168 # Cache retention (1 week)
 
@@ -168,17 +154,12 @@ The cache directory location is determined by:
 
 ### Crystal Tests
 ```bash
-nix develop --command crystal spec
+nix develop . --command crystal spec
 ```
 
-### Elm Validation
+### Frontend Tests (Vitest)
 ```bash
-nix develop --command elm make src/Main.elm --output=/dev/null
-```
-
-### Frontend Tests (Playwright)
-```bash
-nix develop --command make test-frontend
+cd frontend && npm run test
 ```
 
 ---
@@ -192,15 +173,16 @@ nix develop --command make test-frontend
 - **Serialization:** Use `Athena::Serializer`, never manually stringify JSON
 - **Error Handling:** Use `Result(T, E)` patterns, never let server crash on malformed RSS
 
-### Frontend (Elm Land + elm-ui)
-- **Framework:** Elm Land with `mdgriffith/elm-ui`
-- **Styling:** Use `Element` primitives only
-- **Forbidden:** `Html`, `Html.Attributes`, `class` tags, Tailwind/CSS
-- **State:** Use Elm Land's file-based routing and `Effect` pattern
+### Frontend (Svelte 5 + Tailwind)
+- **Framework:** Svelte 5 with SvelteKit
+- **Styling:** Tailwind CSS
+- **Build:** Vite with `@sveltejs/adapter-static` for SPA mode
+- **State:** Use `$state`, `$derived`, `$effect` runes
 
 ### Architecture
 - **Decoupling:** Backend is JSON API, frontend is static SPA
 - **Independence:** Must remain independent for future backend porting
+- **Embedded:** Frontend assets are baked into the binary via BakedFileSystem
 
 ---
 
@@ -213,32 +195,10 @@ nix develop --command make test-frontend
 ### Dependencies
 - Every new dependency is a liability
 - Prefer standard library or core framework features first
-- Any new Shard or Elm package requires a "Why" note in PR
-
-### Documentation
-- Changes adding new dependencies require brief ADR notes
 
 ---
 
-## 8. Issue Tracking
-
-### Beads Workflow
-```bash
-nix develop --command bd ready              # Find available work
-nix develop --command bd show <id>          # View issue details
-nix develop --command bd update <id> --status in_progress  # Claim work
-nix develop --command bd close <id>         # Complete work
-nix develop --command bd sync               # Sync with git
-```
-
-### Double-Entry Rule
-- Every Work Package (WP) in Spec Kitty MUST have a corresponding **Epic** in Beads
-- Every sub-task must be created as a **Task** in Beads linked to its parent Epic
-- Task is "Done" when Beads issue is closed (`bd close`) AND Spec Kitty task is checked off
-
----
-
-## 9. Common Tasks
+## 8. Common Tasks
 
 ### Add a New Feed
 1. Edit `feeds.yml`:
@@ -266,42 +226,36 @@ tabs:
 ```
 
 ### Modify Frontend
-1. Edit Elm files in `ui/src/`
-2. Run `make elm-build` to recompile
-3. Refresh browser to see changes
+1. Edit Svelte files in `frontend/src/`
+2. Run `just nix-build` to rebuild
+3. Restart server to see changes
 
 ### Debug Feed Fetching
-```bash
-# Run with verbose logging
-nix develop --command crystal run src/quickheadlines.cr -- --verbose
+```yaml
+# Add to feeds.yml
+debug: true
 ```
 
 ---
 
-## 10. Troubleshooting
+## 9. Troubleshooting
 
 ### Crystal Build Fails
 ```bash
 # Ensure dependencies are installed
-nix develop --command shards install
+nix develop . --command shards install
 
 # Clean and rebuild
-make rebuild
+just clean && just nix-build
 ```
 
-### Elm Compilation Fails
+### Frontend Not Updating
 ```bash
-# Install Elm tools
-make elm-install
+# BakedFileSystem requires rebuild
+just nix-build
 
-# Check for syntax errors
-make elm-validate
+# Clear browser cache or hard refresh (Ctrl+Shift+R)
 ```
-
-### Elm UI Not Displaying
-- Check browser console for JavaScript errors
-- Ensure `public/elm.js` exists after `make elm-build`
-- Verify `public/` directory is accessible
 
 ### Cache Issues
 ```bash
@@ -314,30 +268,21 @@ export QUICKHEADLINES_CACHE_DIR=/tmp/quickheadlines
 
 ---
 
-## 11. Dependencies
+## 10. Dependencies
 
 ### Required (Auto-installed via Nix)
 - **Crystal:** >= 1.18.2
 - **Shards:** Crystal package manager
 - **SQLite3:** Development libraries
 - **OpenSSL:** Development libraries
-- **Node.js/npm:** For Elm tools and Tailwind
+- **Node.js 22:** For Svelte build
+- **pnpm:** Node package manager
 
 ### Platform-Specific
 
 **Ubuntu/Debian:**
 ```bash
 sudo apt-get install libsqlite3-dev libssl-dev libmagic-dev
-```
-
-**Fedora/RHEL:**
-```bash
-sudo dnf install sqlite-devel openssl-devel file-devel
-```
-
-**Arch Linux:**
-```bash
-sudo pacman -S crystal sqlite openssl file
 ```
 
 **macOS:**

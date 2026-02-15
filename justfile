@@ -387,16 +387,10 @@ svelte-dev:
     @echo "Starting Svelte dev server..."
     cd frontend && npm run dev
 
-# Frontend testing with Playwright
+# Frontend testing with Vitest
 test-frontend:
-    @echo "Running Playwright frontend tests..."
-    @if [ ! -d "node_modules" ]; then \
-        echo "Installing Playwright..."; \
-        npm init -y >/dev/null 2>&1; \
-        npm install -D @playwright/test; \
-    fi
-    @npx playwright install chromium 2>/dev/null || true
-    @npx playwright test --reporter=list || echo "No tests found or Playwright not configured"
+    @echo "Running Vitest frontend tests..."
+    cd frontend && npm run test
     @echo "✓ Frontend tests complete"
 
 # --- Crystal Tasks ---
@@ -490,7 +484,7 @@ help:
     @echo "  svelte-build      - Build Svelte frontend"
     @echo "  svelte-dev        - Run Svelte dev server"
     @echo "  verify-baked-assets - Verify JS files are baked into binary"
-    @echo "  test-frontend     - Run Playwright frontend tests"
+    @echo "  test-frontend     - Run Vitest frontend tests"
     @echo "  clean             - Remove build artifacts"
     @echo "  rebuild           - Clean and rebuild everything"
     @echo "  help              - Show this help message"

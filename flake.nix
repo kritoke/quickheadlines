@@ -22,11 +22,10 @@
               bash
               shards pkg-config openssl sqlite libxml2 libyaml
               libevent zlib pcre2 gmp boehmgc file
-              # Svelte 5 build tools (replaced Elm)
+              # Svelte 5 build tools
               nodejs_22 pnpm
               git curl gnumake gcc
               openspec.packages.${system}.default
-              pkgs.playwright-driver.browsers
               ameba
             ];
 
@@ -45,18 +44,11 @@
             export PATH="$PATH:$HUB_ROOT/aiworkflow/bin:$HOME/go/bin"
             export SSH_AUTH_SOCK="/workspaces/.ssh-auth.sock"
 
-            # [ -f "/workspaces/aiworkflow/bin/env.sh" ] && source /workspaces/aiworkflow/bin/env.sh
-
             export APP_ENV=development
             echo "🚀 Quickheadlines Loaded with Crystal & Svelte 5"
 
             # Avoid creating aliases that interfere with command lookup; rely on PATH
             export OPEN_SPEC_PROJECT_DIR="$PWD"
-            
-            # 🌐 Playwright ARM64 Setup
-            export PLAYWRIGHT_BROWSERS_PATH=${pkgs.playwright-driver.browsers}
-            export PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS=true
-            echo "🌐 Playwright ARM64 Environment Ready"
 
             # Guarded check for OpenSpec so shell initialization doesn't fail if
             # the binary is not present or PATH isn't set yet.

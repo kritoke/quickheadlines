@@ -196,16 +196,15 @@ The `misc/Bastillefile` performs these steps:
 2. **Create user**: `qh` user with home at `/usr/local/share/quickheadlines`
 3. **Setup cache**: Mount persistent cache at `/home/qh/.cache`
 4. **Clone repo**: Clone specified tag/branch (default: latest release)
-5. **Install deps**: Run `shards install --production` (skips development dependencies that may cause issues)
-6. **Build**: Compile binary (uses `--arg SKIP_BUILD=true` to skip build)
-7. **Install**: Copy binary and config to `/usr/local/share/quickheadlines` (binary already installed during build)
-8. **Setup service**: Install rc.d script and enable service
+5. **Get binary**:
+   - **DEV mode**: Build from source (requires Svelte + Crystal)
+   - **PROD/TAG mode**: Download pre-built binary from GitHub releases
+6. **Install**: Copy binary and config to `/usr/local/share/quickheadlines`
+7. **Setup service**: Install rc.d script and enable service
 
 ## Notes
 
+- **Production releases**: Use pre-built binaries from GitHub releases (no build required)
+- **Development mode**: Uses `--arg MODE=dev` to build from source (requires Crystal + Node.js/pnpm)
 - Crystal version: 1.18.2 (from FreeBSD ports) - Athena framework compatible
-- Elm.js is pre-compiled and included in the repository
-- No node/npm required for FreeBSD deployment
-- Development dependencies (like ameba) are skipped during installation to avoid compilation issues with Crystal 1.18.2
-- Binary is always rebuilt and replaced during deployment (use `--arg SKIP_BUILD=true` to preserve existing binary)
-- For development mode, use `--arg MODE=dev` when applying the template to clone the main branch
+- For development mode, use `--arg MODE=dev` when applying the template to build from source

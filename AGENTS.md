@@ -16,8 +16,8 @@ All work must be structured as an OpenSpec Change within `openspec/changes/`.
 
 > Execution Context:
 > This project is a Nix Spoke. You are running inside a persistent Hub, but the project-specific tools (Crystal 1.18.2, Node.js 22, pnpm) are isolated.
-> Rule: For ANY shell command execution (compiling, testing, formatting), you MUST run commands inside the nix devshell. Prefer either: (A) call `make` targets from inside the devshell (recommended), or (B) use the devshell `--command` with the working-directory semantics your tooling supports.
-> - Recommended: `nix develop . --command make run` or `nix develop . --command make svelte-build`
+> Rule: For ANY shell command execution (compiling, testing, formatting), you MUST run commands inside the nix devshell. Prefer either: (A) call `just` recipes from inside the devshell (recommended), or (B) use the devshell `--command` with the working-directory semantics your tooling supports.
+> - Recommended: `just nix-build` or `nix develop . --command crystal spec`
 > - Incorrect: `crystal spec` (without devshell)
 > - Incorrect: `shards install` (without devshell)
 
@@ -63,8 +63,8 @@ If you don't use the prefix, you will get a `command not found: crystal` error, 
 
 **MANDATORY WORKFLOW:**
 
-1. **COMPILE FIRST:** Run `nix develop . --command crystal build src/quickheadlines.cr` - MUST succeed before proceeding
-2. **Verify Work:** Run `nix develop . --command npx playwright test` and any relevant Crystal specs.
+1. **COMPILE FIRST:** Run `just nix-build` - MUST succeed before proceeding
+2. **Verify Work:** Run `nix develop . --command crystal spec` and `cd frontend && npm run test`
 3. **Archival:** Use `/opsx:archive <name>` for all completed changes.
 4. **PUSH TO REMOTE:**
     ```bash
@@ -98,8 +98,8 @@ just nix-build
 # Run Crystal tests
 nix develop . --command crystal spec
 
-# Run Playwright tests
-nix develop . --command npx playwright test
+# Run frontend tests (Vitest)
+cd frontend && npm run test
 ```
 
 ### Why `just nix-build`?

@@ -132,6 +132,31 @@ Fetch all clustered stories.
 }
 ```
 
+#### GET /api/clusters/{id}/items
+
+Fetch all items in a specific cluster.
+
+**Response:**
+```json
+{
+  "cluster_id": "12345",
+  "items": [
+    {
+      "id": "12345",
+      "title": "Article Title",
+      "link": "https://example.com/article",
+      "pub_date": 1769718000000,
+      "feed_title": "Example Feed",
+      "feed_url": "https://example.com/feed.xml",
+      "feed_link": "https://example.com",
+      "favicon": "/favicons/abc.ico",
+      "favicon_data": "/favicons/abc.ico",
+      "header_color": null
+    }
+  ]
+}
+```
+
 ### Clustering
 
 #### POST /api/run-clustering
