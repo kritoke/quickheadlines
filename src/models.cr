@@ -80,7 +80,7 @@ class AppState
   property updated_at = Time.local
   property config_title = "Quick Headlines"
   property config : Config?
-  property is_clustering : Bool = false
+  property? is_clustering : Bool = false
 
   # Timeline cache with TTL
   @timeline_cache = {items: [] of TimelineItem, cached_at: Time.local}

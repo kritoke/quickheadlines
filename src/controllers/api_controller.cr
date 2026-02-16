@@ -256,7 +256,7 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
       active_tab: active_tab,
       feeds: feeds_response,
       software_releases: releases_response,
-      is_clustering: STATE.is_clustering
+      is_clustering: STATE.is_clustering?
     )
   end
 
@@ -372,7 +372,7 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
       items: items_response,
       has_more: has_more,
       total_count: total_count,
-      is_clustering: STATE.is_clustering
+      is_clustering: STATE.is_clustering?
     )
   end
 
@@ -381,7 +381,7 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
   def version : ATH::View(VersionResponse)
     self.view(VersionResponse.new(
       updated_at: STATE.updated_at.to_unix_ms,
-      is_clustering: STATE.is_clustering
+      is_clustering: STATE.is_clustering?
     ))
   end
 
@@ -810,7 +810,7 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
   @[ARTA::Get(path: "/api/status")]
   def status : Quickheadlines::DTOs::StatusResponse
     Quickheadlines::DTOs::StatusResponse.new(
-      is_clustering: STATE.is_clustering,
+      is_clustering: STATE.is_clustering?,
       active_jobs: 0 # We don't track background fiber count yet
     )
   end

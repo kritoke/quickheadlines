@@ -4,7 +4,7 @@ require "athena"
 class Quickheadlines::DTOs::StatusResponse
   include ASR::Serializable
 
-  property is_clustering : Bool
+  property? is_clustering : Bool
   property active_jobs : Int32
 
   def initialize(@is_clustering : Bool, @active_jobs : Int32)

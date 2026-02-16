@@ -88,7 +88,7 @@ end
 
 struct RateLimitingConfig
   include YAML::Serializable
-  property enabled : Bool = true
+  property? enabled : Bool = true
   property cleanup_interval_minutes : Int32 = 5
   property max_entries : Int32 = 10_000
   property categories : Hash(String, RateLimitingCategoryConfig)? = nil
@@ -105,7 +105,7 @@ struct Config
   include YAML::Serializable
 
   # Debug mode (optional, default: false) - enables verbose logging for troubleshooting
-  property debug : Bool = false
+  property? debug : Bool = false
 
   # Global refresh interval in minutes (default: 10)
   property refresh_minutes : Int32 = 10
@@ -218,7 +218,7 @@ def load_config(path : String) : Config
 
   # Initialize rate limiting if configured
   if rate_limit_config = config.rate_limiting
-    if rate_limit_config.enabled
+    if rate_limit_config.enabled?
       initialize_rate_limiter(rate_limit_config)
     end
   end
