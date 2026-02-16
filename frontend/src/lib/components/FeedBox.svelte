@@ -54,8 +54,14 @@
 	});
 
 	function getFaviconSrc(): string {
-		if (feed.favicon_data) return feed.favicon_data;
-		if (feed.favicon) return feed.favicon;
+		if (feed.favicon_data) {
+			if (feed.favicon_data.startsWith('internal:')) return '/favicon.svg';
+			return feed.favicon_data;
+		}
+		if (feed.favicon) {
+			if (feed.favicon.startsWith('internal:')) return '/favicon.svg';
+			return feed.favicon;
+		}
 		return '/favicon.svg';
 	}
 </script>
@@ -69,7 +75,7 @@
 		class="flex items-center gap-2 px-3 py-2 font-semibold text-sm hover:opacity-90 transition-opacity"
 		style={headerStyle}
 	>
-		{#if feed.favicon || feed.favicon_data}
+		{#if feed.favicon || feed.favicon_data || getFaviconSrc()}
 			<div class="w-5 h-5 rounded bg-white/90 p-0.5 flex items-center justify-center shadow-sm">
 				<img
 					src={getFaviconSrc()}

@@ -10,8 +10,14 @@
 	let { items, loading = false }: Props = $props();
 
 	function getFaviconSrc(item: StoryResponse): string {
-		if (item.favicon_data) return item.favicon_data;
-		if (item.favicon) return item.favicon;
+		if (item.favicon_data) {
+			if (item.favicon_data.startsWith('internal:')) return '/favicon.svg';
+			return item.favicon_data;
+		}
+		if (item.favicon) {
+			if (item.favicon.startsWith('internal:')) return '/favicon.svg';
+			return item.favicon;
+		}
 		return '/favicon.svg';
 	}
 </script>

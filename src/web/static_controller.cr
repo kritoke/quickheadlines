@@ -65,7 +65,23 @@ class StaticController < Athena::Framework::Controller
 
   @[ARTA::Get(path: "/favicon.ico")]
   def favicon_ico : ATH::Response
-    serve_asset("favicon.svg")
+    file = FrontendAssets.get("favicon.svg")
+    content = file.gets_to_end
+
+    response = ATH::Response.new(content)
+    response.headers["Content-Type"] = "image/svg+xml"
+
+    if ENV["APP_ENV"]? == "development"
+      response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    else
+      response.headers["Cache-Control"] = "public, max-age=3600"
+    end
+
+    response
+  rescue ex : BakedFileSystem::NoSuchFileError
+    ATH::Response.new("Not Found: favicon.ico", 404, HTTP::Headers{"Content-Type" => "text/plain"})
+  rescue ex
+    ATH::Response.new("Error: #{ex.message}", 500, HTTP::Headers{"Content-Type" => "text/plain"})
   end
 
   @[ARTA::Get(path: "/logo.svg")]
