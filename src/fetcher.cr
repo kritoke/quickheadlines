@@ -869,36 +869,39 @@ def refresh_all(config : Config)
 
   STDERR.puts "[#{Time.local}] refresh_all: fetched #{fetched_map.size}/#{all_configs.size} feeds successfully"
 
-  # 4. Clear old feed data before replacing to reduce memory pressure
-  STDERR.puts "[#{Time.local}] refresh_all: clearing STATE (feeds=#{STATE.feeds.size}, tabs=#{STATE.tabs.size})"
-  STATE.feeds.clear
-  STATE.tabs.each &.feeds.clear
-  STATE.software_releases.clear
+  # 4. Clear old feed data and repopulate atomically under lock
+  STDERR.puts "[#{Time.local}] refresh_all: updating STATE (feeds=#{STATE.feeds.size}, tabs=#{STATE.tabs.size})"
 
-  # 5. Populate Top-Level State
-  STATE.feeds = config.feeds.map { |feed| fetched_map[feed.url] || error_feed_data(feed, "Failed to fetch") }
-  STDERR.puts "[#{Time.local}] refresh_all: STATE.feeds=#{STATE.feeds.size}"
-  STATE.software_releases = [] of FeedData
-  if sw = config.software_releases
-    if sw_box = fetch_sw_with_config(sw, config.item_limit)
-      STATE.software_releases << sw_box
-    end
-  end
+  STATE.with_lock do
+    STATE.feeds.clear
+    STATE.tabs.each &.feeds.clear
+    STATE.software_releases.clear
 
-  # 6. Populate Tab State
-  STATE.tabs = config.tabs.map do |tab_config|
-    tab = Tab.new(tab_config.name)
-    tab.feeds = tab_config.feeds.map { |feed| fetched_map[feed.url] || error_feed_data(feed, "Failed to fetch") }
-    STDERR.puts "[#{Time.local}] refresh_all: tab '#{tab.name}' has #{tab.feeds.size} feeds"
-    if sw = tab_config.software_releases
+    # 5. Populate Top-Level State
+    STATE.feeds = config.feeds.map { |feed| fetched_map[feed.url] || error_feed_data(feed, "Failed to fetch") }
+    STDERR.puts "[#{Time.local}] refresh_all: STATE.feeds=#{STATE.feeds.size}"
+    STATE.software_releases = [] of FeedData
+    if sw = config.software_releases
       if sw_box = fetch_sw_with_config(sw, config.item_limit)
-        tab.software_releases = [sw_box]
+        STATE.software_releases << sw_box
       end
     end
-    tab
-  end
 
-  STATE.update(Time.local)
+    # 6. Populate Tab State
+    STATE.tabs = config.tabs.map do |tab_config|
+      tab = Tab.new(tab_config.name)
+      tab.feeds = tab_config.feeds.map { |feed| fetched_map[feed.url] || error_feed_data(feed, "Failed to fetch") }
+      STDERR.puts "[#{Time.local}] refresh_all: tab '#{tab.name}' has #{tab.feeds.size} feeds"
+      if sw = tab_config.software_releases
+        if sw_box = fetch_sw_with_config(sw, config.item_limit)
+          tab.software_releases = [sw_box]
+        end
+      end
+      tab
+    end
+
+    STATE.updated_at = Time.local
+  end
 
   # 7. Process story clustering for all fetched feeds asynchronously
   # Clear memory after large amount of data processing

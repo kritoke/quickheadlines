@@ -1,3 +1,5 @@
+require "mutex"
+
 record Item, title : String, link : String, pub_date : Time?, version : String? = nil
 # Add header_theme_colors to TimelineItem so timeline responses can include theme-aware JSON
 record TimelineItem, item : Item, feed_title : String, feed_url : String, feed_link : String, favicon : String?, favicon_data : String?, header_color : String?, header_text_color : String?, header_theme_colors : String?
@@ -82,7 +84,7 @@ class AppState
   property config : Config?
   property? is_clustering : Bool = false
 
-  # Timeline cache with TTL
+  @mutex = Mutex.new
   @timeline_cache = {items: [] of TimelineItem, cached_at: Time.local}
   TIMELINE_CACHE_TTL = 30.seconds
 
@@ -92,6 +94,10 @@ class AppState
 
   def releases_for_tab(tab_name : String)
     tabs.find { |tab| tab.name.downcase == tab_name.downcase }.try(&.software_releases) || [] of FeedData
+  end
+
+  def with_lock(&)
+    @mutex.synchronize { yield }
   end
 
   # Get all items from all feeds for timeline view, sorted by publication date (newest first)

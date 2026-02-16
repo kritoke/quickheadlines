@@ -1,7 +1,7 @@
 <script lang="ts">
 	import FeedBox from '$lib/components/FeedBox.svelte';
 	import TabBar from '$lib/components/TabBar.svelte';
-	import { fetchFeeds, fetchMoreFeedItems } from '$lib/api';
+	import { fetchFeeds, fetchMoreFeedItems, fetchConfig } from '$lib/api';
 	import type { FeedResponse, FeedsPageResponse } from '$lib/types';
 	import { themeState, toggleTheme } from '$lib/stores/theme.svelte';
 	import { onMount } from 'svelte';
@@ -90,8 +90,9 @@
 
 	// Auto-refresh at interval
 	let refreshInterval: ReturnType<typeof setInterval>;
+	let refreshMinutes = $state(10);
 	
-	onMount(() => {
+	onMount(async () => {
 		// Get tab from URL on initial load
 		const params = new URLSearchParams(window.location.search);
 		const urlTab = params.get('tab') || 'all';
@@ -100,8 +101,15 @@
 		// Initial load
 		loadFeeds(urlTab, true);
 		
-		// Set up auto-refresh (default 10 minutes)
-		const refreshMinutes = 10; // TODO: Get from API config
+		// Fetch config to get refresh rate
+		try {
+			const config = await fetchConfig();
+			refreshMinutes = config.refresh_minutes || 10;
+		} catch (e) {
+			console.warn('Failed to fetch config, using default refresh rate:', e);
+		}
+		
+		// Set up auto-refresh
 		refreshInterval = setInterval(() => {
 			// Force refresh current tab
 			loadFeeds(activeTab, true);

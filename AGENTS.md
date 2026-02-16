@@ -10,6 +10,36 @@ All work must be structured as an OpenSpec Change within `openspec/changes/`.
 3. **Verification:** Use `/opsx:verify <name>` to ensure implementation matches specs.
 4. **Archival:** Use `/opsx:archive <name>` to finalize work and sync specs.
 
+## Ticket System (Task Management)
+
+This project uses **ticket** (from `github:wedow/ticket`) for bug/feature tracking. Tickets are stored in `.tickets/` as markdown files.
+
+### Creating Tickets
+
+```bash
+# Create a new ticket (must run from nix develop)
+nix develop . --command ticket create "Title" -d "Description" -p 1 -t bug
+
+# Options:
+#   -d, --description      Description text
+#   -t, --type            Type: bug|feature|task|epic|chore [default: task]
+#   -p, --priority        Priority 0-4, 0=highest [default: 2]
+#   -a, --assignee       Assignee
+#   --tags               Comma-separated tags
+```
+
+### Common Commands
+
+```bash
+nix develop . --command ticket ls                  # List all tickets
+nix develop . --command ticket show <id>           # Show ticket details
+nix develop . --command ticket start <id>          # Set status to in_progress
+nix develop . --command ticket close <id>          # Set status to closed
+nix develop . --command ticket ready              # List tickets with deps resolved
+```
+
+**Note:** Always use `nix develop . --command ticket ...` to run the ticket command.
+
 ## Critical Directives
 
 ### 1. The Core Agent Directive

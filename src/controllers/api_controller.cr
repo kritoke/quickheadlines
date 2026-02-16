@@ -1,6 +1,7 @@
 require "athena"
 require "../rate_limiter"
 require "../dtos/rate_limit_stats_dto"
+require "../dtos/config_dto"
 
 class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
   @db_service : DatabaseService
@@ -202,12 +203,23 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
     raw_tab = request.query_params["tab"]?
     active_tab = raw_tab.presence || "all"
 
-    # Build simple tabs response (just names for tab navigation)
-    tabs_response = STATE.tabs.map do |tab|
-      TabResponse.new(name: tab.name)
+    cache = FeedCache.instance
+    item_limit = STATE.config.try(&.item_limit) || 20
+
+    # Get consistent snapshot of state under lock
+    feeds_snapshot, tabs_snapshot, software_releases_snapshot, is_clustering = STATE.with_lock do
+      {
+        STATE.feeds.dup,
+        STATE.tabs.map { |t| {name: t.name, feeds: t.feeds.dup, software_releases: t.software_releases.dup} },
+        STATE.software_releases.dup,
+        STATE.is_clustering?
+      }
     end
 
-    cache = FeedCache.instance
+    # Build simple tabs response (just names for tab navigation)
+    tabs_response = tabs_snapshot.map do |tab|
+      TabResponse.new(name: tab[:name])
+    end
 
     # Get feeds for active tab (flattened to top level as Elm expects)
     # For "all" tab, aggregate feeds from all tabs + top-level feeds
@@ -216,36 +228,37 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
                        all_feeds_with_tabs = [] of {feed: FeedData, tab_name: String}
 
                        # Top-level feeds have empty tab name
-                       STATE.feeds.each do |feed|
+                       feeds_snapshot.each do |feed|
                          all_feeds_with_tabs << {feed: feed, tab_name: ""}
                        end
 
                        # Tab feeds have their tab name
-                       STATE.tabs.each do |tab|
-                         tab.feeds.each do |feed|
-                           all_feeds_with_tabs << {feed: feed, tab_name: tab.name}
+                       tabs_snapshot.each do |tab|
+                         tab[:feeds].each do |feed|
+                           all_feeds_with_tabs << {feed: feed, tab_name: tab[:name]}
                          end
                        end
 
-                       all_feeds_with_tabs.map { |entry| Api.feed_to_response(entry[:feed], entry[:tab_name], cache.item_count(entry[:feed].url), STATE.config.try(&.item_limit) || 20) }
+                       all_feeds_with_tabs.map { |entry| Api.feed_to_response(entry[:feed], entry[:tab_name], cache.item_count(entry[:feed].url), item_limit) }
                      else
-                       active_feeds = STATE.feeds_for_tab(active_tab)
-                       active_feeds.map { |feed| Api.feed_to_response(feed, active_tab, cache.item_count(feed.url), STATE.config.try(&.item_limit) || 20) }
+                       found_tab = tabs_snapshot.find { |t| t[:name].downcase == active_tab.downcase }
+                       active_feeds = found_tab ? found_tab[:feeds] : [] of FeedData
+                       active_feeds.map { |feed| Api.feed_to_response(feed, active_tab, cache.item_count(feed.url), item_limit) }
                      end
 
     # Get software releases - from all tabs when active_tab=all, otherwise from specific tab
     releases_response = if active_tab.to_s.downcase == "all"
                           # Aggregate software releases from all tabs
-                          all_software = STATE.software_releases.dup
-                          STATE.tabs.each do |tab|
-                            all_software.concat(tab.software_releases)
+                          all_software = software_releases_snapshot.dup
+                          tabs_snapshot.each do |tab|
+                            all_software.concat(tab[:software_releases])
                           end
-                          all_software.map { |release| Api.feed_to_response(release, "software", release.items.size, STATE.config.try(&.item_limit) || 20) }
+                          all_software.map { |release| Api.feed_to_response(release, "software", release.items.size, item_limit) }
                         else
-                          found_tab = STATE.tabs.find { |tab| tab.name.downcase == active_tab.downcase }
-                          tab_software = found_tab.try(&.software_releases)
+                          found_tab = tabs_snapshot.find { |t| t[:name].downcase == active_tab.downcase }
+                          tab_software = found_tab ? found_tab[:software_releases] : nil
                           if tab_software
-                            tab_software.map { |release| Api.feed_to_response(release, "software", release.items.size, STATE.config.try(&.item_limit) || 20) }
+                            tab_software.map { |release| Api.feed_to_response(release, "software", release.items.size, item_limit) }
                           else
                             [] of FeedResponse
                           end
@@ -256,7 +269,7 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
       active_tab: active_tab,
       feeds: feeds_response,
       software_releases: releases_response,
-      is_clustering: STATE.is_clustering?
+      is_clustering: is_clustering
     )
   end
 
@@ -382,6 +395,19 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
     self.view(VersionResponse.new(
       updated_at: STATE.updated_at.to_unix_ms,
       is_clustering: STATE.is_clustering?
+    ))
+  end
+
+  # GET /api/config - Get configuration settings
+  @[ARTA::Get(path: "/api/config")]
+  def config : ATH::View(Quickheadlines::DTOs::ConfigResponse)
+    config = STATE.config
+    refresh_minutes = config.try(&.refresh_minutes) || 10
+    item_limit = config.try(&.item_limit) || 20
+
+    self.view(Quickheadlines::DTOs::ConfigResponse.new(
+      refresh_minutes: refresh_minutes,
+      item_limit: item_limit
     ))
   end
 

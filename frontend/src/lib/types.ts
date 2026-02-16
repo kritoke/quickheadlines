@@ -91,3 +91,8 @@ export interface VersionResponse {
 	is_clustering: boolean;
 	updated_at: number;
 }
+
+export interface ConfigResponse {
+	refresh_minutes: number;
+	item_limit: number;
+}

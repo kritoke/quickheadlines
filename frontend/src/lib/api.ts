@@ -3,7 +3,8 @@ import type {
 	TimelinePageResponse,
 	ClustersResponse,
 	ClusterItemsResponse,
-	FeedResponse
+	FeedResponse,
+	ConfigResponse
 } from './types';
 
 const API_BASE = '/api';
@@ -108,4 +109,13 @@ export function formatDate(ms?: number): string {
 		month: 'long',
 		day: 'numeric'
 	});
+}
+
+export async function fetchConfig(): Promise<ConfigResponse> {
+	const url = `${API_BASE}/config`;
+	const response = await fetch(url);
+	if (!response.ok) {
+		throw new Error(`Failed to fetch config: ${response.statusText}`);
+	}
+	return response.json();
 }
