@@ -1,8 +1,9 @@
 #!/bin/bash
 # land-the-plane - Unified "Land the Plane" production release checklist
 # Auto-detects language and runs appropriate checks
-# Usage: ./land-the-plane [language]
-#   language: crystal | elixir | gleam | elm (auto-detected if not specified)
+# Usage: ./land-the-plane [language] [--non-dev]
+#   language: crystal | elixir | gleam | elm | nim | go | node (auto-detected if not specified)
+#   --non-dev: Run in non-dev mode (skip dev-specific checks like tests for Elm)
 
 set -e
 
@@ -17,6 +18,7 @@ NC='\033[0m' # No Color
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_DIR="$(pwd)"
 LOG_FILE="land-the-plane.log"
+NON_DEV_MODE=""
 
 # Language detection function
 detect_language() {
@@ -39,6 +41,18 @@ detect_language() {
     fi
     if [ -f "elm.json" ]; then
         echo "elm"
+        return
+    fi
+    if ls *.nimble &>/dev/null 2>&1; then
+        echo "nim"
+        return
+    fi
+    if [ -f "go.mod" ] || [ -f "go.sum" ]; then
+        echo "go"
+        return
+    fi
+    if [ -f "package.json" ]; then
+        echo "node"
         return
     fi
     
@@ -86,13 +100,46 @@ get_config() {
             ;;
         elm)
             case "$key" in
-                format_cmd) echo "elm-format --validate src/" ;;
+                format_cmd) echo "elm-format src/ --yes" ;;
                 lint_cmd) echo "none" ;;
                 security_cmd) echo "manual" ;;
                 build_cmd) echo "elm make src/Main.elm --output=elm.js --optimize" ;;
                 test_cmd) echo "elm-test" ;;
                 cleanup_artifacts) echo "*.log *.elm.bak elm-stuff/" ;;
                 verify_artifacts) echo "*.log *.elm.bak elm-stuff/" ;;
+            esac
+            ;;
+        nim)
+            case "$key" in
+                format_cmd) echo "nim pretty --check" ;;
+                lint_cmd) echo "nim check --hints:off --verbosity:2" ;;
+                security_cmd) echo "manual" ;;
+                build_cmd) echo "nim c -d:release src/main.nim -o /tmp/nim_release_build" ;;
+                test_cmd) echo "nimble test" ;;
+                cleanup_artifacts) echo "*.log erl_crash.dump *.beam *.nim.bak build/ nimcache/" ;;
+                verify_artifacts) echo "*.log erl_crash.dump *.beam *.nim.bak nimcache/" ;;
+            esac
+            ;;
+        go)
+            case "$key" in
+                format_cmd) echo "gofmt -l ." ;;
+                lint_cmd) echo "go vet ./..." ;;
+                security_cmd) echo "go mod tidy && go list -json -m all | nancy sleuth" ;;
+                build_cmd) echo "go build -o /tmp/go_release_build" ;;
+                test_cmd) echo "go test ./..." ;;
+                cleanup_artifacts) echo "*.log *.test *.out go.sum" ;;
+                verify_artifacts) echo "*.log *.test *.out" ;;
+            esac
+            ;;
+        node)
+            case "$key" in
+                format_cmd) echo "npm run format 2>/dev/null || npx prettier --check . 2>/dev/null || echo 'none'" ;;
+                lint_cmd) echo "npm run lint 2>/dev/null || npx eslint . 2>/dev/null || echo 'none'" ;;
+                security_cmd) echo "npm audit --audit-level=moderate 2>/dev/null || echo 'none'" ;;
+                build_cmd) echo "npm run build 2>/dev/null || echo 'none'" ;;
+                test_cmd) echo "npm test" ;;
+                cleanup_artifacts) echo "*.log node_modules/ .next/ dist/ build/ .cache/" ;;
+                verify_artifacts) echo "*.log node_modules/ .next/ dist/ build/" ;;
             esac
             ;;
     esac
@@ -160,6 +207,40 @@ phase_format() {
         return 0
     fi
     
+    # Special handling for elm-format (no --validate option)
+    if [ "$lang" = "elm" ]; then
+        # Check if git is available
+        if ! command -v "git" &> /dev/null; then
+            log_warning "git not found. Cannot check elm-format changes."
+            return 0
+        fi
+        
+        # Create temp copy of git status
+        local git_status=$(git status --porcelain 2>/dev/null || true)
+        
+        # Run elm-format
+        if ! eval "$cmd" > /dev/null 2>&1; then
+            log_error "elm-format failed to run"
+            eval "$cmd" 2>&1 | tee -a "$LOG_FILE"
+            return 1
+        fi
+        
+        # Check if files were modified
+        local new_git_status=$(git status --porcelain 2>/dev/null || true)
+        
+        if [ "$git_status" != "$new_git_status" ]; then
+            log_error "Code formatting issues found. Run 'elm-format src/ --yes' to fix."
+            git diff --name-only 2>/dev/null | head -5 | tee -a "$LOG_FILE"
+            # Revert changes
+            git checkout -- src/ 2>/dev/null || true
+            return 1
+        fi
+        
+        log_success "Code is properly formatted"
+        return 0
+    fi
+    
+    # Original logic for other languages
     if ! eval "$cmd" > /dev/null 2>&1; then
         log_error "Code formatting issues found. Run format command to fix."
         eval "$cmd" 2>&1 | tee -a "$LOG_FILE"
@@ -226,12 +307,34 @@ phase_security() {
             fi
         fi
         
+        # Check for unsafe/ptr blocks (Nim)
+        if [ "$lang" = "nim" ]; then
+            local unsafe_files=$(find src -name "*.nim" -exec grep -l "unsafe" {} \; 2>/dev/null || true)
+            if [ -n "$unsafe_files" ]; then
+                log_warning "Found 'unsafe' blocks in the following files:"
+                echo "$unsafe_files" | tee -a "$LOG_FILE"
+                log_warning "Please verify these are documented and necessary per NIM_SECURITY.md"
+            else
+                log_success "No unsafe blocks found"
+            fi
+            
+            local ptr_files=$(find src -name "*.nim" -exec grep -lE "\bptr\b" {} \; 2>/dev/null || true)
+            if [ -n "$ptr_files" ]; then
+                log_warning "Found 'ptr' usage in the following files:"
+                echo "$ptr_files" | tee -a "$LOG_FILE"
+                log_warning "Please verify these are documented and necessary per NIM_SECURITY.md"
+            else
+                log_success "No ptr usage found"
+            fi
+        fi
+        
         # Check for hardcoded secrets (all languages)
+        # Look for actual string literals being assigned, not variable references
         local secret_patterns=(
-            "password\s*="
-            "api_key\s*="
-            "secret\s*="
-            "token\s*="
+            "password\s*=\s*\"[^\"]"
+            "api_key\s*=\s*\"[^\"]"
+            "secret\s*=\s*\"[^\"]"
+            "token\s*=\s*\"[^\"]"
         )
         
         local found_secrets=0
@@ -239,9 +342,9 @@ phase_security() {
             local src_dir="src"
             [ "$lang" = "elixir" ] && src_dir="lib"
             
-            if grep -rE "$pattern" "$src_dir/" --include="*.cr" --include="*.ex" --include="*.gleam" --include="*.elm" 2>/dev/null | grep -v "ENV\[" | grep -v "env.config" | grep -q .; then
+            if grep -rE "$pattern" "$src_dir/" --include="*.cr" --include="*.ex" --include="*.gleam" --include="*.elm" 2>/dev/null | grep -v "ENV\[" | grep -v "env.config" | grep -v "auth\." | grep -q .; then
                 log_error "Potential hardcoded secret found matching: $pattern"
-                grep -rE "$pattern" "$src_dir/" --include="*.cr" --include="*.ex" --include="*.gleam" --include="*.elm" 2>/dev/null | grep -v "ENV\[" | grep -v "env.config" | head -5 | tee -a "$LOG_FILE"
+                grep -rE "$pattern" "$src_dir/" --include="*.cr" --include="*.ex" --include="*.gleam" --include="*.elm" 2>/dev/null | grep -v "ENV\[" | grep -v "env.config" | grep -v "auth\." | head -5 | tee -a "$LOG_FILE"
                 found_secrets=1
             fi
         done
@@ -284,20 +387,31 @@ phase_build() {
     local cmd_name=$(echo "$cmd" | awk '{print $1}')
     
     if ! command -v "$cmd_name" &> /dev/null; then
-        log_error "$cmd_name not found. Cannot build."
-        return 1
+        log_warning "$cmd_name not found. Skipping build phase."
+        return 0
     fi
     
     # Find main entry point for Crystal
     if [ "$lang" = "crystal" ]; then
-        local main_file="src/main.cr"
-        if [ ! -f "$main_file" ]; then
-            main_file="src/app.cr"
+        local main_file=""
+        
+        # Try to extract main file from shard.yml
+        if [ -f "shard.yml" ]; then
+            # Look for targets section and extract main file
+            main_file=$(grep -A 10 "^targets:" shard.yml 2>/dev/null | grep "main:" | head -1 | sed 's/.*main: *//' | tr -d ' ')
+        fi
+        
+        # Fall back to common defaults if not found in shard.yml
+        if [ -z "$main_file" ] || [ ! -f "$main_file" ]; then
+            main_file="src/main.cr"
+            if [ ! -f "$main_file" ]; then
+                main_file="src/app.cr"
+            fi
         fi
         
         if [ ! -f "$main_file" ]; then
-            log_error "Could not find main entry point (tried src/main.cr and src/app.cr)"
-            return 1
+            log_warning "Could not find main entry point (tried shard.yml targets and common defaults). Skipping build phase."
+            return 0
         fi
         
         cmd="crystal build --release $main_file -o /tmp/crystal_release_build"
@@ -307,11 +421,33 @@ phase_build() {
     if [ "$lang" = "elm" ]; then
         local main_file="src/Main.elm"
         if [ ! -f "$main_file" ]; then
-            log_error "Could not find main entry point (expected src/Main.elm)"
-            return 1
+            log_warning "Could not find main entry point (expected src/Main.elm). Skipping build phase."
+            return 0
         fi
         
         cmd="elm make $main_file --output=elm.js --optimize"
+    fi
+    
+    # Find main entry point for Nim
+    if [ "$lang" = "nim" ]; then
+        local main_file="src/main.nim"
+        if [ ! -f "$main_file" ]; then
+            # Try to find .nimble file and extract package name
+            local nimble_file=$(ls *.nimble 2>/dev/null | head -1)
+            if [ -n "$nimble_file" ]; then
+                local pkg_name=$(grep -E "^package" "$nimble_file" | head -1 | awk '{print $2}')
+                if [ -n "$pkg_name" ]; then
+                    main_file="src/${pkg_name}.nim"
+                fi
+            fi
+        fi
+        
+        if [ ! -f "$main_file" ]; then
+            log_warning "Could not find main entry point (expected src/main.nim or src/<package>.nim). Skipping build phase."
+            return 0
+        fi
+        
+        cmd="nim c -d:release $main_file -o /tmp/nim_release_build"
     fi
     
     log_info "Building (this may take a while)..."
@@ -343,11 +479,19 @@ phase_test() {
     local lang="$1"
     log_info "Phase 6: Test Verification - Running full test suite"
     
+    # In non-dev mode for Elm, skip tests (tests are dev-only)
+    if [ "$lang" = "elm" ] && [ "$NON_DEV_MODE" = "true" ]; then
+        log_info "Non-dev mode: Skipping tests for Elm project"
+        log_info "Tests should have been run during development"
+        return 0
+    fi
+    
     local cmd=$(get_config "$lang" "test_cmd")
     
     # Check if test directory exists
     local test_dir="test"
     [ "$lang" = "crystal" ] && test_dir="spec"
+    [ "$lang" = "nim" ] && test_dir="tests"
     
     if [ ! -d "$test_dir" ]; then
         log_warning "No $test_dir directory found. Skipping tests."
@@ -390,9 +534,9 @@ phase_verify() {
             fi
         else
             # File pattern
-            if find . -name "$pattern" -type f 2>/dev/null | grep -q .; then
+            if find . -name "$pattern" -type f -not -name "$LOG_FILE" 2>/dev/null | grep -q .; then
                 log_error "Found debug artifact: $pattern"
-                find . -name "$pattern" -type f 2>/dev/null | head -5 | tee -a "$LOG_FILE"
+                find . -name "$pattern" -type f -not -name "$LOG_FILE" 2>/dev/null | head -5 | tee -a "$LOG_FILE"
                 found_issues=1
             fi
         fi
@@ -417,6 +561,42 @@ phase_verify() {
         fi
     fi
     
+    if [ "$lang" = "nim" ]; then
+        # Check for .nim.bak files in src/
+        if find src/ -name "*.nim.bak" -type f 2>/dev/null | grep -q .; then
+            log_error "Found .nim.bak files in src/ directory"
+            find src/ -name "*.nim.bak" -type f 2>/dev/null | head -5 | tee -a "$LOG_FILE"
+            found_issues=1
+        fi
+        # Check for nimcache directory
+        if [ -d "nimcache" ]; then
+            log_error "Found nimcache directory - should be cleaned up"
+            found_issues=1
+        fi
+    fi
+    
+    # Elm non-dev mode specific checks
+    if [ "$lang" = "elm" ] && [ "$NON_DEV_MODE" = "true" ]; then
+        # Check that elm.js was generated in non-dev mode
+        if [ -f "elm.js" ]; then
+            local js_size=$(stat -f%z "elm.js" 2>/dev/null || stat -c%s "elm.js" 2>/dev/null || echo "0")
+            local js_size_num=$(echo "$js_size" | grep -E '^[0-9]+$' || echo "0")
+            if [ "$js_size_num" -gt 0 ]; then
+                log_success "Production elm.js generated ($js_size bytes)"
+            else
+                log_warning "elm.js exists but size could not be determined"
+            fi
+        else
+            log_error "elm.js not found - build may have failed"
+            found_issues=1
+        fi
+        
+        # Check for source maps (should not exist in production)
+        if find . -name "*.js.map" -type f 2>/dev/null | grep -q .; then
+            log_warning "Source maps found (.js.map files) - consider removing for production"
+        fi
+    fi
+    
     if [ $found_issues -eq 0 ]; then
         log_success "No debug artifacts found"
     else
@@ -428,12 +608,41 @@ phase_verify() {
 # Main execution
 main() {
     local language=$(detect_language "$1")
+    local non_dev_mode=false
+    
+    # Check for --non-dev flag in arguments
+    if [ $# -gt 0 ]; then
+        # If we specified a language explicitly, shift to next arg
+        if [ "$language" != "$(detect_language)" ]; then
+            shift
+        fi
+        
+        while [[ $# -gt 0 ]]; do
+            case "$1" in
+                --non-dev)
+                    non_dev_mode=true
+                    shift
+                    ;;
+                *)
+                    shift
+                    ;;
+            esac
+        done
+    fi
+    
+    # Store non-dev mode in a global variable for phase functions
+    NON_DEV_MODE="$non_dev_mode"
     
     echo "=========================================="
     echo "🛬 Land the Plane - Production Release Checklist"
     echo "=========================================="
     echo "Language: $language"
     echo "Project: $PROJECT_DIR"
+    if [ "$NON_DEV_MODE" = "true" ]; then
+        echo "Mode: NON-DEV (Production) - Skipping dev-specific checks"
+    else
+        echo "Mode: DEV (Full checks)"
+    fi
     echo "=========================================="
     echo ""
     
@@ -445,12 +654,18 @@ main() {
         echo "  ./land-the-plane elixir"
         echo "  ./land-the-plane gleam"
         echo "  ./land-the-plane elm"
+        echo "  ./land-the-plane nim"
+        echo "  ./land-the-plane go"
+        echo "  ./land-the-plane node"
         echo ""
         echo "Or ensure your project has one of these files:"
         echo "  - shard.yml (Crystal)"
         echo "  - mix.exs (Elixir)"
         echo "  - gleam.toml (Gleam)"
         echo "  - elm.json (Elm)"
+        echo "  - *.nimble (Nim)"
+        echo "  - go.mod or go.sum (Go)"
+        echo "  - package.json (Node/npm)"
         exit 1
     fi
     

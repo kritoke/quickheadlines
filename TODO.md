@@ -8,7 +8,10 @@ These are just possible features that could be added in the future, for now its 
 
 ### UI Features
 
-- Create a Page Tab Concept for Separating Out Different Topics/Categories
+- Add a search bar at the top of the page that can look through all the headlines on the feedbox page and have it go to that item immediately, having some indicator (highlight or similar).  Make it respect whichever tab it is in. 
+    - Possibly have it do same thing on timeline view.
+- Have a force refresh button somewhere, but rate limit it to prevent abuse.
+- Add a button to clear the cache for a feed, or all feeds, but rate limit it to prevent abuse.
 
 ### Advanced Features
 

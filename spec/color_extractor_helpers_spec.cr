@@ -43,7 +43,7 @@ describe "ColorExtractor helpers" do
     theme = {"bg" => "#ffffff", "text" => {"light" => "#000000", "dark" => "#000000"}, "source" => "auto"}.to_json
     res = ColorExtractor.auto_upgrade_to_auto_corrected(theme)
     res.should_not be_nil
-    parsed = JSON.parse(res.not_nil!)
+    parsed = JSON.parse(res.as(String))
     parsed["source"].should eq("auto-corrected")
   end
 

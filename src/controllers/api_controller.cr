@@ -240,12 +240,12 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
                           STATE.tabs.each do |tab|
                             all_software.concat(tab.software_releases)
                           end
-                          all_software.map { |r| Api.feed_to_response(r, "software", r.items.size, STATE.config.try(&.item_limit) || 20) }
+                          all_software.map { |release| Api.feed_to_response(release, "software", release.items.size, STATE.config.try(&.item_limit) || 20) }
                         else
-                          tab = STATE.tabs.find { |t| t.name.downcase == active_tab.downcase }
-                          tab_software = tab.try(&.software_releases)
+                          found_tab = STATE.tabs.find { |tab| tab.name.downcase == active_tab.downcase }
+                          tab_software = found_tab.try(&.software_releases)
                           if tab_software
-                            tab_software.map { |r| Api.feed_to_response(r, "software", r.items.size, STATE.config.try(&.item_limit) || 20) }
+                            tab_software.map { |release| Api.feed_to_response(release, "software", release.items.size, STATE.config.try(&.item_limit) || 20) }
                           else
                             [] of FeedResponse
                           end

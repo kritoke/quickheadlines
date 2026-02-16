@@ -79,7 +79,7 @@ end
 describe Quickheadlines::RateLimiting::RateLimiter do
   describe "#check_limit" do
     it "allows first request within limit" do
-    ip = "unique-test-#{Time.utc.to_unix}"
+      ip = "unique-test-#{Time.utc.to_unix}"
       result = Quickheadlines::RateLimiting::RateLimiter.new.check_limit(ip, "read")
 
       result[:allowed].should be_true

@@ -304,6 +304,23 @@ cd frontend && npm run build 2>&1 | tail -20
 cd frontend && npm run preview
 ```
 
+### Svelte MCP Autofix
+
+After making any changes to Svelte files, you MUST run the Svelte MCP autofix to verify code quality:
+
+1. Use the `svelte_svelte-autofixer` tool with your modified Svelte code
+2. Fix any issues reported by the autofixer before completing the task
+3. This ensures Svelte 5 best practices are followed
+
+```typescript
+// Example: Run autofix on your component code
+svelte_svelte-autofixer({
+  code: "<your component code>",
+  desired_svelte_version: 5,
+  filename: "YourComponent.svelte"
+})
+```
+
 ## Crystal Versioning & Platform Compatibility
 
 ### Crystal 1.18.2 Requirement

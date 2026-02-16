@@ -159,21 +159,21 @@ def fetch_favicon_uri(url : String) : String?
 
           # Skip saving tiny gray placeholder icons (198 bytes is the common "not found" size)
           # For Google favicon URLs, try larger size instead
-              if memory.size == 198
-                debug_log("Gray placeholder detected (#{memory.size} bytes) for #{current_url}")
-                if current_url.includes?("google.com/s2/favicons")
-                  larger_url = current_url.gsub(/sz=\d+/, "sz=256")
-                  cached = FaviconStorage.get_or_fetch(larger_url)
-                  if cached
-                    return cached
-                  end
-                  return fetch_favicon_uri(larger_url)
-                else
-                  # For non-Google URLs, try the Google fallback
-                  debug_log("Trying Google fallback for gray placeholder")
-                  return nil # Trigger Google fallback in try_favicon_fallbacks
-                end
+          if memory.size == 198
+            debug_log("Gray placeholder detected (#{memory.size} bytes) for #{current_url}")
+            if current_url.includes?("google.com/s2/favicons")
+              larger_url = current_url.gsub(/sz=\d+/, "sz=256")
+              cached = FaviconStorage.get_or_fetch(larger_url)
+              if cached
+                return cached
               end
+              return fetch_favicon_uri(larger_url)
+            else
+              # For non-Google URLs, try the Google fallback
+              debug_log("Trying Google fallback for gray placeholder")
+              return nil # Trigger Google fallback in try_favicon_fallbacks
+            end
+          end
 
           # Validate that response is actually an image (not HTML or other content)
           # Some servers lie about content-type, so we check magic bytes

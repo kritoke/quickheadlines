@@ -2,6 +2,47 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
+@keyframes fade-in {
+	from { opacity: 0; }
+}
+
+@keyframes fade-out {
+	to { opacity: 0; }
+}
+
+@keyframes slide-from-right {
+	from { transform: translateX(30px); }
+}
+
+@keyframes slide-to-left {
+	to { transform: translateX(-30px); }
+}
+
+@keyframes item-appear {
+	from {
+		opacity: 0;
+		transform: scale(0.95) translateY(-10px);
+	}
+	to {
+		opacity: 1;
+		transform: scale(1) translateY(0);
+	}
+}
+
+.new-item {
+	animation: item-appear 300ms cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+::view-transition-old(root) {
+	animation: 150ms cubic-bezier(0.4, 0, 1, 1) both fade-out,
+	           150ms cubic-bezier(0.4, 0, 1, 1) both slide-to-left;
+}
+
+::view-transition-new(root) {
+	animation: 150ms cubic-bezier(0, 0, 0.2, 1) 90ms both fade-in,
+	           150ms cubic-bezier(0, 0, 0.2, 1) 90ms both slide-from-right;
+}
+
 @font-face {
 	font-family: 'Inter var';
 	src: url('/fonts/Inter-Variable.woff2') format('woff2');
@@ -25,6 +66,33 @@ html, body {
 
 .auto-hide-scroll {
 	overflow-y: auto;
+}
+
+/* Tab bar horizontal scrollbar - light mode */
+.tab-bar::-webkit-scrollbar {
+	height: 6px;
+}
+
+.tab-bar::-webkit-scrollbar-track {
+	background: transparent;
+}
+
+.tab-bar::-webkit-scrollbar-thumb {
+	background-color: rgba(128, 128, 128, 0.4);
+	border-radius: 3px;
+}
+
+.tab-bar::-webkit-scrollbar-thumb:hover {
+	background-color: rgba(128, 128, 128, 0.6);
+}
+
+/* Dark mode tab bar scrollbar */
+:global(.dark) .tab-bar::-webkit-scrollbar-thumb {
+	background-color: rgba(100, 116, 139, 0.5);
+}
+
+:global(.dark) .tab-bar::-webkit-scrollbar-thumb:hover {
+	background-color: rgba(100, 116, 139, 0.7);
 }
 
 .auto-hide-scroll::-webkit-scrollbar {

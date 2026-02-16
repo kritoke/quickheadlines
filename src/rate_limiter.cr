@@ -46,7 +46,7 @@ module Quickheadlines
         window_key = "#{ip}:#{category}"
 
         info = @@mutex.synchronize do
-          existing = @limits[window_key]? 
+          existing = @limits[window_key]?
           if existing
             if existing.expired?(window_size)
               @limits.delete(window_key)

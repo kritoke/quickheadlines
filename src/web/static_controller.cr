@@ -5,44 +5,42 @@ class StaticController < Athena::Framework::Controller
   private def get_mime_type(path : String) : String
     ext = path.split(".").last?.try(&.downcase) || ""
     case ext
-    when "js"   then "application/javascript; charset=utf-8"
-    when "css"  then "text/css; charset=utf-8"
-    when "html" then "text/html; charset=utf-8"
-    when "svg"  then "image/svg+xml"
-    when "png"  then "image/png"
-    when "jpg", "jpeg" then "image/jpeg"
-    when "ico"  then "image/x-icon"
+    when "js"            then "application/javascript; charset=utf-8"
+    when "css"           then "text/css; charset=utf-8"
+    when "html"          then "text/html; charset=utf-8"
+    when "svg"           then "image/svg+xml"
+    when "png"           then "image/png"
+    when "jpg", "jpeg"   then "image/jpeg"
+    when "ico"           then "image/x-icon"
     when "woff", "woff2" then "font/woff2"
-    when "json" then "application/json"
-    else "application/octet-stream"
+    when "json"          then "application/json"
+    else                      "application/octet-stream"
     end
   end
 
   private def serve_asset(path : String) : ATH::Response
-    begin
-      file = FrontendAssets.get(path)
-      content = file.gets_to_end
-      mime = get_mime_type(path)
-      
-      response = ATH::Response.new(content)
-      response.headers["Content-Type"] = mime
-      
-      if ENV["APP_ENV"]? == "development"
-        response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    file = FrontendAssets.get(path)
+    content = file.gets_to_end
+    mime = get_mime_type(path)
+
+    response = ATH::Response.new(content)
+    response.headers["Content-Type"] = mime
+
+    if ENV["APP_ENV"]? == "development"
+      response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    else
+      if path.includes?("_app/immutable/")
+        response.headers["Cache-Control"] = "public, max-age=31536000, immutable"
       else
-        if path.includes?("_app/immutable/")
-          response.headers["Cache-Control"] = "public, max-age=31536000, immutable"
-        else
-          response.headers["Cache-Control"] = "public, max-age=3600"
-        end
+        response.headers["Cache-Control"] = "public, max-age=3600"
       end
-      
-      response
-    rescue ex : BakedFileSystem::NoSuchFileError
-      ATH::Response.new("Not Found: #{path}", 404, HTTP::Headers{"Content-Type" => "text/plain"})
-    rescue ex
-      ATH::Response.new("Error: #{ex.message}", 500, HTTP::Headers{"Content-Type" => "text/plain"})
     end
+
+    response
+  rescue ex : BakedFileSystem::NoSuchFileError
+    ATH::Response.new("Not Found: #{path}", 404, HTTP::Headers{"Content-Type" => "text/plain"})
+  rescue ex
+    ATH::Response.new("Error: #{ex.message}", 500, HTTP::Headers{"Content-Type" => "text/plain"})
   end
 
   @[ARTA::Get(path: "/")]

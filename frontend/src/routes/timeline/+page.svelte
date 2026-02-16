@@ -85,7 +85,7 @@
 <div class="min-h-screen bg-white dark:bg-slate-900 transition-colors">
 	<!-- Header -->
 	<header class="fixed top-0 left-0 right-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur border-b border-slate-200 dark:border-slate-700 z-20">
-		<div class="max-w-3xl mx-auto px-4 py-3 flex items-center justify-between">
+		<div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
 			<div class="flex items-center gap-4">
 				<a href="/" class="text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors">
 					← Back
@@ -118,7 +118,7 @@
 	</header>
 
 	<!-- Main Content with padding for fixed header -->
-	<main class="max-w-3xl mx-auto px-4 py-4 pt-16">
+	<main class="max-w-7xl mx-auto px-4 py-4 pt-16">
 		{#if loading && items.length === 0}
 			<div class="flex items-center justify-center py-20">
 				<div class="text-slate-500 dark:text-slate-400">Loading timeline...</div>

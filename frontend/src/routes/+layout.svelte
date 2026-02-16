@@ -2,11 +2,23 @@
 	import '../app.css';
 	import { onMount } from 'svelte';
 	import { themeState, initTheme } from '$lib/stores/theme.svelte';
+	import { onNavigate, type Navigation } from '$app/navigation';
 	
 	let { children } = $props();
 	
 	onMount(() => {
 		initTheme();
+	});
+
+	onNavigate((navigation: Navigation) => {
+		if (!document.startViewTransition) return;
+
+		return new Promise<void>((resolve) => {
+			document.startViewTransition(async () => {
+				resolve();
+				await navigation.complete;
+			});
+		});
 	});
 </script>
 

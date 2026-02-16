@@ -35,7 +35,7 @@
 </script>
 
 <nav 
-	class="tab-bar flex gap-1 p-2 bg-slate-100 dark:bg-slate-800 rounded-lg mb-4 overflow-x-auto"
+	class="tab-bar sticky top-16 z-20 bg-white dark:bg-slate-900 flex gap-1 p-2 overflow-x-auto"
 	bind:this={navElement}
 >
 	<button
