@@ -12,10 +12,13 @@
     "test:watch": "vitest"
   },
   "type": "module",
+  "overrides": {
+    "cookie": ">=0.7.0"
+  },
   "dependencies": {
     "@sveltejs/adapter-static": "^3.0.10",
     "@sveltejs/kit": "^2.50.2",
-    "svelte": "^5.50.2",
+    "svelte": "^5.51.2",
     "typescript": "^5.9.3",
     "vite": "^6.4.1"
   },
