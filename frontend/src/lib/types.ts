@@ -66,6 +66,7 @@ export interface FeedsPageResponse {
 	tabs: TabResponse[];
 	active_tab: string;
 	feeds: FeedResponse[];
+	software_releases: FeedResponse[];
 	is_clustering: boolean;
 }
 

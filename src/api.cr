@@ -145,9 +145,10 @@ class FeedsPageResponse
   property tabs : Array(TabResponse)
   property active_tab : String
   property feeds : Array(FeedResponse)
+  property software_releases : Array(FeedResponse)
   property is_clustering : Bool = false
 
-  def initialize(@tabs : Array(TabResponse), @active_tab : String, @feeds : Array(FeedResponse), @is_clustering : Bool = false)
+  def initialize(@tabs : Array(TabResponse), @active_tab : String, @feeds : Array(FeedResponse), @software_releases : Array(FeedResponse), @is_clustering : Bool = false)
   end
 end
 

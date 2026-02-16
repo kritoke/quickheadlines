@@ -233,10 +233,29 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
                        active_feeds.map { |feed| Api.feed_to_response(feed, active_tab, cache.item_count(feed.url), STATE.config.try(&.item_limit) || 20) }
                      end
 
+    # Get software releases - from all tabs when active_tab=all, otherwise from specific tab
+    releases_response = if active_tab.to_s.downcase == "all"
+                          # Aggregate software releases from all tabs
+                          all_software = STATE.software_releases.dup
+                          STATE.tabs.each do |tab|
+                            all_software.concat(tab.software_releases)
+                          end
+                          all_software.map { |r| Api.feed_to_response(r, "software", r.items.size, STATE.config.try(&.item_limit) || 20) }
+                        else
+                          tab = STATE.tabs.find { |t| t.name.downcase == active_tab.downcase }
+                          tab_software = tab.try(&.software_releases)
+                          if tab_software
+                            tab_software.map { |r| Api.feed_to_response(r, "software", r.items.size, STATE.config.try(&.item_limit) || 20) }
+                          else
+                            [] of FeedResponse
+                          end
+                        end
+
     FeedsPageResponse.new(
       tabs: tabs_response,
       active_tab: active_tab,
       feeds: feeds_response,
+      software_releases: releases_response,
       is_clustering: STATE.is_clustering
     )
   end

@@ -64,7 +64,7 @@ private def fetch_github_release(repo_path : String, item_limit : Int32) : Item?
         # Parse the published date
         pub_date = Time.parse_iso8601(published_at)
 
-        return Item.new(repo_path, html_url, pub_date, release_name)
+        return Item.new(title: "#{repo_path} #{release_name}", link: html_url, pub_date: pub_date, version: release_name)
       end
     end
   rescue ex
@@ -82,7 +82,7 @@ private def fetch_gitlab_release(repo_path : String, item_limit : Int32) : Item?
     if response.status_code == 200
       parsed = parse_feed(IO::Memory.new(response.body), item_limit)
       if latest = parsed[:items].first?
-        return Item.new(repo_path, latest.link, latest.pub_date, latest.title)
+        return Item.new(title: "#{repo_path} #{latest.title}", link: latest.link, pub_date: latest.pub_date, version: latest.title)
       end
     elsif response.status_code == 404
       return gl_tag(repo_path, item_limit)
@@ -102,7 +102,7 @@ private def fetch_codeberg_release(repo_path : String, item_limit : Int32) : Ite
     if response.status_code == 200
       parsed = parse_feed(IO::Memory.new(response.body), item_limit)
       if latest = parsed[:items].first?
-        return Item.new(repo_path, latest.link, latest.pub_date, latest.title)
+        return Item.new(title: "#{repo_path} #{latest.title}", link: latest.link, pub_date: latest.pub_date, version: latest.title)
       end
     end
   rescue ex

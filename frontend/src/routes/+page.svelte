@@ -5,12 +5,17 @@
 	import type { FeedResponse, FeedsPageResponse } from '$lib/types';
 	import { themeState, toggleTheme } from '$lib/stores/theme.svelte';
 	import { onMount } from 'svelte';
+	import { fade, fly } from 'svelte/transition';
+	import { cubicOut } from 'svelte/easing';
 
 	let feeds = $state<FeedResponse[]>([]);
 	let tabs = $state<{ name: string }[]>([]);
 	let activeTab = $state('all');
 	let loading = $state(false);
 	let error = $state<string | null>(null);
+
+	// Track loading state per feed for Load More
+	let loadingFeeds = $state<Record<string, boolean>>({});
 
 	// Cache for each tab's data
 	let tabCache = $state<Record<string, { feeds: FeedResponse[], loaded: boolean }>>({});
@@ -27,7 +32,8 @@
 			loading = true;
 			error = null;
 			const response: FeedsPageResponse = await fetchFeeds(tab);
-			feeds = response.feeds || [];
+			const swReleases = response.software_releases || [];
+			feeds = [...swReleases, ...(response.feeds || [])];
 			tabs = response.tabs || [];
 			activeTab = tab;
 			
@@ -55,6 +61,8 @@
 
 	async function handleLoadMore(feed: FeedResponse) {
 		try {
+			loadingFeeds = { ...loadingFeeds, [feed.url]: true };
+			
 			const currentOffset = feed.items.length;
 			const response = await fetchMoreFeedItems(feed.url, 10, currentOffset);
 			
@@ -75,6 +83,8 @@
 			}
 		} catch (e) {
 			console.error('Failed to load more items:', e);
+		} finally {
+			loadingFeeds = { ...loadingFeeds, [feed.url]: false };
 		}
 	}
 
@@ -109,7 +119,7 @@
 
 <div class="min-h-screen bg-white dark:bg-slate-900 transition-colors duration-200">
 	<!-- Header -->
-	<header class="fixed top-0 left-0 right-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur border-b border-slate-200 dark:border-slate-700 z-20">
+	<header class="fixed top-0 left-0 right-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur border-b border-slate-200 dark:border-slate-700 z-30">
 		<div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
 			<div class="flex items-center gap-3">
 				<a href="/?tab=all" class="flex items-center gap-2 hover:opacity-80 transition-opacity">
@@ -143,7 +153,7 @@
 	</header>
 
 	<!-- Main Content with padding for fixed header -->
-	<main class="max-w-7xl mx-auto px-4 py-4 pt-16">
+	<main class="max-w-7xl mx-auto px-4 py-4 pt-16 overflow-visible">
 		{#if loading && feeds.length === 0}
 			<div class="flex items-center justify-center py-20">
 				<div class="text-slate-500 dark:text-slate-400">Loading feeds...</div>
@@ -159,11 +169,9 @@
 				</button>
 			</div>
 		{:else}
-			<!-- Tab Navigation - sticky below header -->
+			<!-- Tab Navigation -->
 			{#if tabs.length > 0}
-				<div class="sticky top-14 z-10 -mx-4 px-4 py-2 bg-white dark:bg-slate-900">
-					<TabBar {tabs} {activeTab} onTabChange={handleTabChange} />
-				</div>
+				<TabBar {tabs} {activeTab} onTabChange={handleTabChange} />
 			{/if}
 
 			<!-- Loading overlay for tab switch -->
@@ -175,11 +183,15 @@
 
 			<!-- Feeds Grid (3-2-1 responsive) -->
 			{#if feeds.length > 0}
-				<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-					{#each feeds as feed, i (`feed-${i}`)}
-						<FeedBox {feed} onLoadMore={() => handleLoadMore(feed)} />
-					{/each}
-				</div>
+				{#key activeTab}
+					<div 
+						class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
+					>
+						{#each feeds as feed, i (`feed-${i}`)}
+							<FeedBox {feed} onLoadMore={() => handleLoadMore(feed)} loading={loadingFeeds[feed.url] ?? false} />
+						{/each}
+					</div>
+				{/key}
 			{:else}
 				<div class="text-center py-20 text-slate-500 dark:text-slate-400">
 					No feeds found. Check your configuration.
