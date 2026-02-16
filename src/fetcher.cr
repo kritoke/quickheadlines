@@ -486,33 +486,7 @@ private def handle_success_response(feed : Feed, response : HTTP::Client::Respon
   # Compute final legacy header fields (prefer explicitly extracted values,
   # otherwise fall back to values from the theme-aware JSON). Avoid mutating
   # FeedData after construction because records/structs don't expose setters.
-  final_header_color : String? = header_color
-  final_header_text : String? = header_text_color
-
-  if header_theme_json
-    begin
-      parsed = JSON.parse(header_theme_json).as_h
-      if parsed_text = parsed["text"]
-        # prefer light variant for legacy header_text_color
-        if final_header_text.nil? || final_header_text == ""
-          begin
-            new_text = (parsed_text.is_a?(Hash) && parsed_text["light"] ? parsed_text["light"] : parsed_text["dark"])
-            final_header_text = new_text.to_s if new_text
-          rescue
-            # ignore parse errors
-          end
-        end
-      end
-
-      if parsed_bg = parsed["bg"]
-        if final_header_color.nil? || final_header_color == ""
-          final_header_color = parsed_bg.to_s
-        end
-      end
-    rescue
-      # ignore parse errors
-    end
-  end
+  final_header_color, final_header_text = extract_legacy_header_from_theme(header_color, header_text_color, header_theme_json)
 
   fd = FeedData.new(
     feed.title,
@@ -533,6 +507,86 @@ private def handle_success_response(feed : Feed, response : HTTP::Client::Respon
   fd
 end
 
+private def extract_legacy_header_from_theme(header_color : String?, header_text_color : String?, header_theme_json : String?) : {String?, String?}
+  final_header_color = header_color
+  final_header_text = header_text_color
+
+  return {final_header_color, final_header_text} unless header_theme_json
+
+  begin
+    parsed = JSON.parse(header_theme_json).as_h
+    if parsed_text = parsed["text"]
+      # prefer light variant for legacy header_text_color
+      if final_header_text.nil? || final_header_text == ""
+        begin
+          new_text = (parsed_text.is_a?(Hash) && parsed_text["light"] ? parsed_text["light"] : parsed_text["dark"])
+          final_header_text = new_text.to_s if new_text
+        rescue
+          # ignore parse errors
+        end
+      end
+    end
+
+    if parsed_bg = parsed["bg"]
+      if final_header_color.nil? || final_header_color == ""
+        final_header_color = parsed_bg.to_s
+      end
+    end
+  rescue
+    # ignore parse errors
+  end
+
+  {final_header_color, final_header_text}
+end
+
+private def parse_theme_text_value(text_val) : Hash(String, String)?
+  return nil unless text_val
+
+  # Ensure text_val is non-empty (either Hash or String)
+  has_text = (text_val.is_a?(Hash) && !text_val.empty?) || (text_val.is_a?(String) && !text_val.empty?)
+  return nil unless has_text
+
+  # Parse the inner text JSON (may already be a Hash or a JSON string)
+  parsed_text = nil.as(Hash(String, String)?)
+  if text_val.is_a?(Hash)
+    parsed_text = {} of String => String
+    text_val.each do |k, v|
+      parsed_text[k.to_s] = v.to_s
+    end
+  else
+    begin
+      # JSON.parse(...).as_h returns Hash(String, JSON::Any) - normalize values to String
+      tmp = JSON.parse(text_val.to_s).as_h
+      parsed_text = {} of String => String
+      tmp.each do |k, v|
+        parsed_text[k.to_s] = v.to_s
+      end
+    rescue
+      parsed_text = {"light" => text_val.to_s, "dark" => text_val.to_s}
+    end
+  end
+  parsed_text
+end
+
+private def normalize_bg_value(extracted : Hash?) : String?
+  return nil unless extracted && extracted.has_key?("bg")
+
+  raw_bg = extracted["bg"]
+  bg_val = nil.as(String?)
+  if raw_bg.is_a?(String)
+    bg_val = raw_bg
+  elsif raw_bg.is_a?(JSON::Any)
+    begin
+      bg_val = raw_bg.as_s
+    rescue
+      bg_val = raw_bg.to_s
+    end
+  else
+    bg_val = raw_bg.to_s
+  end
+  bg_val
+end
+
 private def extract_header_colors(feed : Feed, favicon_path : String?) : {String?, String?, String?}
   if favicon_path && favicon_path.starts_with?("/favicons/")
     # Prefer theme-aware extraction when we have a local favicon file
@@ -543,30 +597,9 @@ private def extract_header_colors(feed : Feed, favicon_path : String?) : {String
       if extracted && extracted.is_a?(Hash) && extracted.has_key?("text")
         text_val = extracted["text"]
 
-        # Ensure text_val is non-empty (either Hash or String)
-        has_text = (text_val.is_a?(Hash) && !text_val.empty?) || (text_val.is_a?(String) && !text_val.empty?)
+        parsed_text = parse_theme_text_value(text_val)
 
-        if has_text
-          # Parse the inner text JSON (may already be a Hash or a JSON string)
-          parsed_text = nil.as(Hash(String, String)?)
-          if text_val.is_a?(Hash)
-            parsed_text = {} of String => String
-            text_val.each do |k, v|
-              parsed_text[k.to_s] = v.to_s
-            end
-          else
-            begin
-              # JSON.parse(...).as_h returns Hash(String, JSON::Any) - normalize values to String
-              tmp = JSON.parse(text_val.to_s).as_h
-              parsed_text = {} of String => String
-              tmp.each do |k, v|
-                parsed_text[k.to_s] = v.to_s
-              end
-            rescue
-              parsed_text = {"light" => text_val.to_s, "dark" => text_val.to_s}
-            end
-          end
-
+        if parsed_text
           # Build canonical theme JSON to persist: {bg: ..., text: {light:..., dark:...}, source: "auto"}
           theme_payload = {
             "bg"     => (extracted.has_key?("bg") ? extracted["bg"] : nil),
@@ -579,24 +612,10 @@ private def extract_header_colors(feed : Feed, favicon_path : String?) : {String
           header_theme_json = theme_payload.to_json
 
           # For legacy return, pick the "light" theme text color when available, otherwise fallback to "dark"
-          legacy_text = parsed_text && parsed_text["light"] ? parsed_text["light"] : (parsed_text && parsed_text["dark"] ? parsed_text["dark"] : nil)
+          legacy_text = parsed_text["light"]? || parsed_text["dark"]?
 
           # Normalize bg value to String? (extractor may return JSON::Any or String)
-          bg_val = nil.as(String?)
-          if extracted.has_key?("bg")
-            raw_bg = extracted["bg"]
-            if raw_bg.is_a?(String)
-              bg_val = raw_bg
-            elsif raw_bg.is_a?(JSON::Any)
-              begin
-                bg_val = raw_bg.as_s
-              rescue
-                bg_val = raw_bg.to_s
-              end
-            else
-              bg_val = raw_bg.to_s
-            end
-          end
+          bg_val = normalize_bg_value(extracted)
 
           return {bg_val, legacy_text, header_theme_json}
         end
