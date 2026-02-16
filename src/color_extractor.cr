@@ -1,4 +1,3 @@
-require "stumpy_png"
 require "crimage"
 require "json"
 
@@ -7,20 +6,6 @@ module ColorExtractor
 
   @@extraction_cache = Hash(String, {bg: String, text: String | Hash(String, String), timestamp: Time}).new
   @@cache_mutex = Mutex.new
-
-  def self.extract_from_favicon(favicon_path : String, feed_url : String, config_header_color : String?) : {bg: String?, text: String?}
-    has_manual_override = !config_header_color.nil? && config_header_color != ""
-    return {bg: nil, text: nil} if has_manual_override
-
-    cached = get_cached(favicon_path)
-    return cached if cached
-
-    extracted = extract_from_file(favicon_path)
-    return {bg: nil, text: nil} unless extracted
-
-    cache_result(favicon_path, extracted)
-    extracted
-  end
 
   def self.theme_aware_extract_from_favicon(favicon_path : String, feed_url : String, config_header_color : String?) : Hash(String, String | Hash(String, String))?
     # If a manual header color override is configured, don't compute theme-aware colors here.
@@ -279,103 +264,6 @@ module ColorExtractor
     end
   end
 
-  private def self.cache_result(path : String, result : {bg: String, text: String})
-    @@cache_mutex.synchronize do
-      @@extraction_cache[path] = {bg: result[:bg], text: result[:text], timestamp: Time.local}
-    end
-  end
-
-  private def self.get_cached(path : String) : {bg: String?, text: String?}?
-    @@cache_mutex.synchronize do
-      if entry = @@extraction_cache[path]?
-        if (Time.local - entry[:timestamp]).to_i < 7 * 24 * 60 * 60
-          # Return stored strings directly. If entry[:text] contains a JSON
-          # theme-aware payload, callers will handle parsing as needed.
-          return {bg: entry[:bg], text: entry[:text]}
-        else
-          @@extraction_cache.delete(path)
-        end
-      end
-    end
-    nil
-  end
-
-  private def self.extract_from_file(path : String) : {bg: String, text: String}?
-    full_path = "public#{path}"
-    return nil unless File.exists?(full_path)
-
-    # Only process PNG files (StumpyPNG only handles PNG)
-    # For non-PNG files (GIF, etc.), skip server-side extraction
-    # and let JavaScript ColorThief handle it client-side
-    file_type = `file "#{full_path}"`.strip
-    unless file_type.includes?("PNG image data") || file_type.includes?("PNG")
-      return nil
-    end
-
-    begin
-      canvas = StumpyPNG.read(full_path)
-      width = canvas.width
-      height = canvas.height
-
-      return nil if width == 0 || height == 0
-
-      dominant = calculate_dominant_color(canvas)
-      text_color = calculate_contrasting_text(dominant)
-
-      bg_rgb = "rgb(#{dominant[0]}, #{dominant[1]}, #{dominant[2]})"
-
-      {bg: bg_rgb, text: text_color}
-    rescue ex
-      nil
-    end
-  end
-
-  private def self.calculate_dominant_color(canvas : StumpyPNG::Canvas) : Array(Int32)
-    width = canvas.width
-    height = canvas.height
-
-    return [0, 0, 0] of Int32 if width == 0 || height == 0
-
-    sample_size = 1000
-    r_total, g_total, b_total, count = sample_pixels_from_canvas(canvas, sample_size)
-
-    return [0, 0, 0] of Int32 if count == 0
-
-    r_avg = (r_total / count).to_i32
-    g_avg = (g_total / count).to_i32
-    b_avg = (b_total / count).to_i32
-
-    [r_avg, g_avg, b_avg]
-  end
-
-  private def self.sample_pixels_from_canvas(canvas : StumpyPNG::Canvas, sample_size : Int32) : Tuple(Int32, Int32, Int32, Int32)
-    width = canvas.width
-    height = canvas.height
-    step = ((width * height) / sample_size).to_i32
-    step = 1 if step < 1
-
-    r_total = 0_i32
-    g_total = 0_i32
-    b_total = 0_i32
-    count = 0_i32
-
-    (0...width).each do |x|
-      (0...height).each do |y|
-        next unless (x + y * width) % step == 0
-
-        pixel = canvas[x, y]
-        r, g, b = pixel.to_rgb8
-
-        r_total += r.to_i32
-        g_total += g.to_i32
-        b_total += b.to_i32
-        count += 1
-      end
-    end
-
-    {r_total, g_total, b_total, count}
-  end
-
   private def self.calculate_dominant_color_from_buffer(pixels : Array(UInt8), width : Int32, height : Int32) : Array(Int32)
     return [0, 0, 0] of Int32 if width == 0 || height == 0
 
@@ -504,16 +392,6 @@ module ColorExtractor
   # Test helper to expose internal buffer sampling for specs
   def self.test_calculate_dominant_color_from_buffer(pixels : Array(UInt8), width : Int32, height : Int32) : Array(Int32)
     calculate_dominant_color_from_buffer(pixels, width, height)
-  end
-
-  private def self.calculate_contrasting_text(rgb : Array(Int32)) : String
-    lum = calculate_luminance(rgb)
-
-    if lum >= 128
-      "#1f2937"
-    else
-      "#ffffff"
-    end
   end
 
   # Ensure theme JSON contains readable text colors relative to bg.

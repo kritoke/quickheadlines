@@ -18,9 +18,6 @@ dependencies:
   lexis-minhash:
     github: kritoke/lexis-minhash
     version: "~> 0.1.0"
-  stumpy_png:
-    github: stumpycr/stumpy_png
-    version: "~> 5.0"
   crimage:
     github: naqvis/crimage
   baked_file_system:
