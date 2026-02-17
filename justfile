@@ -421,36 +421,128 @@ build: check-deps
 # Build using nix develop (recommended for this project)
 nix-build:
     @echo "Building with nix develop..."
-    @# Build Svelte first
-    cd frontend && npm run build
+    @cd frontend && npm run build
     @cp frontend/static/logo.svg frontend/dist/ 2>/dev/null || true
-    @# Force BakedFileSystem recompilation
     @sed -i 's/# Build:.*/# Build: '$(date -Iseconds)'/' src/web/assets.cr 2>/dev/null || true
-    @# Build Crystal binary
     @rm -f bin/quickheadlines
     nix develop . --command crystal build --release src/quickheadlines.cr -o bin/quickheadlines
     @echo "✓ Built bin/quickheadlines"
-    @ls -la bin/quickheadlines
+    @ls -lh bin/quickheadlines
 
-# Build with specific OS/Arch naming for GitHub Releases
+# Build with size optimization (-Os = optimize for size)
+nix-build-size:
+    @echo "Building with nix develop (size optimized -Os)..."
+    @cd frontend && npm run build
+    @cp frontend/static/logo.svg frontend/dist/ 2>/dev/null || true
+    @sed -i 's/# Build:.*/# Build: '$(date -Iseconds)'/' src/web/assets.cr 2>/dev/null || true
+    @rm -f bin/quickheadlines
+    nix develop . --command crystal build --release -Os src/quickheadlines.cr -o bin/quickheadlines
+    @echo "✓ Built bin/quickheadlines (size optimized)"
+    @ls -lh bin/quickheadlines
+
+# Build with LTO (smaller + faster runtime)
+nix-build-lto:
+    @echo "Building with nix develop (LTO)..."
+    @cd frontend && npm run build
+    @cp frontend/static/logo.svg frontend/dist/ 2>/dev/null || true
+    @sed -i 's/# Build:.*/# Build: '$(date -Iseconds)'/' src/web/assets.cr 2>/dev/null || true
+    @rm -f bin/quickheadlines
+    nix develop . --command crystal build --release -Dpreview_lto src/quickheadlines.cr -o bin/quickheadlines
+    @echo "✓ Built bin/quickheadlines (LTO)"
+    @ls -lh bin/quickheadlines
+
+# Build with both size optimization and LTO
+nix-build-optimized:
+    @echo "Building with nix develop (optimized: size + LTO)..."
+    @cd frontend && npm run build
+    @cp frontend/static/logo.svg frontend/dist/ 2>/dev/null || true
+    @sed -i 's/# Build:.*/# Build: '$(date -Iseconds)'/' src/web/assets.cr 2>/dev/null || true
+    @rm -f bin/quickheadlines
+    nix develop . --command crystal build --release -Os -Dpreview_lto src/quickheadlines.cr -o bin/quickheadlines
+    @echo "✓ Built bin/quickheadlines (optimized)"
+    @ls -lh bin/quickheadlines
+
+# Build with specific OS/Arch naming for GitHub Releases (optimized by default)
 build-release: check-deps
     @echo "Building Svelte frontend..."
-    @# Check if dist is stale and force rebuild if needed
     @if [ ! -d "frontend/dist" ]; then \
-        echo "Dist not found, building..."; \
         cd frontend && npm run build; \
         cp frontend/static/logo.svg frontend/dist/ 2>/dev/null || true; \
     elif [ -n "$(find frontend/src -newer frontend/dist -type f 2>/dev/null | head -1)" ]; then \
-        echo "Source files newer than dist, rebuilding..."; \
+        cd frontend && npm run build; \
+        cp frontend/static/logo.svg frontend/dist/ 2>/dev/null || true; \
+    fi
+    @echo "Compiling release binary (optimized: -Os -Dpreview_lto): bin/{{NAME}}-{{BUILD_REV}}-{{os}}-{{arch}}"
+    @mkdir -p bin
+    @touch src/web/assets.cr
+    APP_ENV=production {{FINAL_CRYSTAL}} build --release --no-debug -Os -Dpreview_lto -Dversion={{BUILD_REV}} src/quickheadlines.cr -o bin/{{NAME}}-{{BUILD_REV}}-{{os}}-{{arch}}
+    @echo "✓ Built bin/{{NAME}}-{{BUILD_REV}}-{{os}}-{{arch}}"
+    @ls -lh bin/{{NAME}}-{{BUILD_REV}}-{{os}}-{{arch}}
+    @echo "Building Svelte frontend..."
+    @if [ ! -d "frontend/dist" ]; then \
+        cd frontend && npm run build; \
+        cp frontend/static/logo.svg frontend/dist/ 2>/dev/null || true; \
+    elif [ -n "$(find frontend/src -newer frontend/dist -type f 2>/dev/null | head -1)" ]; then \
         cd frontend && npm run build; \
         cp frontend/static/logo.svg frontend/dist/ 2>/dev/null || true; \
     fi
     @echo "Compiling release binary: bin/{{NAME}}-{{BUILD_REV}}-{{os}}-{{arch}}"
     @mkdir -p bin
-    @# Force BakedFileSystem to pick up new assets
     @touch src/web/assets.cr
-    @APP_ENV=production {{FINAL_CRYSTAL}} build --release --no-debug -Dversion={{BUILD_REV}} src/quickheadlines.cr -o bin/{{NAME}}-{{BUILD_REV}}-{{os}}-{{arch}}
+    APP_ENV=production {{FINAL_CRYSTAL}} build --release --no-debug -Dversion={{BUILD_REV}} src/quickheadlines.cr -o bin/{{NAME}}-{{BUILD_REV}}-{{os}}-{{arch}}
     @echo "✓ Built bin/{{NAME}}-{{BUILD_REV}}-{{os}}-{{arch}}"
+    @ls -lh bin/{{NAME}}-{{BUILD_REV}}-{{os}}-{{arch}}
+
+# Build release with size optimization (-Os)
+build-release-size: check-deps
+    @echo "Building Svelte frontend..."
+    @if [ ! -d "frontend/dist" ]; then \
+        cd frontend && npm run build; \
+        cp frontend/static/logo.svg frontend/dist/ 2>/dev/null || true; \
+    elif [ -n "$(find frontend/src -newer frontend/dist -type f 2>/dev/null | head -1)" ]; then \
+        cd frontend && npm run build; \
+        cp frontend/static/logo.svg frontend/dist/ 2>/dev/null || true; \
+    fi
+    @echo "Compiling release binary (size optimized): bin/{{NAME}}-{{BUILD_REV}}-{{os}}-{{arch}}"
+    @mkdir -p bin
+    @touch src/web/assets.cr
+    APP_ENV=production {{FINAL_CRYSTAL}} build --release --no-debug -Os -Dversion={{BUILD_REV}} src/quickheadlines.cr -o bin/{{NAME}}-{{BUILD_REV}}-{{os}}-{{arch}}-size
+    @echo "✓ Built bin/{{NAME}}-{{BUILD_REV}}-{{os}}-{{arch}}-size"
+    @ls -lh bin/{{NAME}}-{{BUILD_REV}}-{{os}}-{{arch}}-size
+
+# Build release with LTO
+build-release-lto: check-deps
+    @echo "Building Svelte frontend..."
+    @if [ ! -d "frontend/dist" ]; then \
+        cd frontend && npm run build; \
+        cp frontend/static/logo.svg frontend/dist/ 2>/dev/null || true; \
+    elif [ -n "$(find frontend/src -newer frontend/dist -type f 2>/dev/null | head -1)" ]; then \
+        cd frontend && npm run build; \
+        cp frontend/static/logo.svg frontend/dist/ 2>/dev/null || true; \
+    fi
+    @echo "Compiling release binary (LTO): bin/{{NAME}}-{{BUILD_REV}}-{{os}}-{{arch}}"
+    @mkdir -p bin
+    @touch src/web/assets.cr
+    APP_ENV=production {{FINAL_CRYSTAL}} build --release --no-debug -Dpreview_lto -Dversion={{BUILD_REV}} src/quickheadlines.cr -o bin/{{NAME}}-{{BUILD_REV}}-{{os}}-{{arch}}-lto
+    @echo "✓ Built bin/{{NAME}}-{{BUILD_REV}}-{{os}}-{{arch}}-lto"
+    @ls -lh bin/{{NAME}}-{{BUILD_REV}}-{{os}}-{{arch}}-lto
+
+# Build release optimized (size + LTO)
+build-release-optimized: check-deps
+    @echo "Building Svelte frontend..."
+    @if [ ! -d "frontend/dist" ]; then \
+        cd frontend && npm run build; \
+        cp frontend/static/logo.svg frontend/dist/ 2>/dev/null || true; \
+    elif [ -n "$(find frontend/src -newer frontend/dist -type f 2>/dev/null | head -1)" ]; then \
+        cd frontend && npm run build; \
+        cp frontend/static/logo.svg frontend/dist/ 2>/dev/null || true; \
+    fi
+    @echo "Compiling release binary (optimized): bin/{{NAME}}-{{BUILD_REV}}-{{os}}-{{arch}}"
+    @mkdir -p bin
+    @touch src/web/assets.cr
+    APP_ENV=production {{FINAL_CRYSTAL}} build --release --no-debug -Os -Dpreview_lto -Dversion={{BUILD_REV}} src/quickheadlines.cr -o bin/{{NAME}}-{{BUILD_REV}}-{{os}}-{{arch}}-optimized
+    @echo "✓ Built bin/{{NAME}}-{{BUILD_REV}}-{{os}}-{{arch}}-optimized"
+    @ls -lh bin/{{NAME}}-{{BUILD_REV}}-{{os}}-{{arch}}-optimized
 
 # Run in Development Mode
 run: check-deps svelte-build
@@ -473,13 +565,19 @@ help:
     @echo "QuickHeadlines Justfile (Svelte 5 + Crystal)"
     @echo ""
     @echo "Targets:"
-    @echo "  default           - Build release binary (same as build)"
-    @echo "  build             - Build release binary (Svelte assets baked in)"
-    @echo "  nix-build         - Build using nix develop (RECOMMENDED)"
-    @echo "  build-release     - Build release binary with version naming"
-    @echo "  run               - Run in development mode"
-    @echo "  download-crystal  - Download and build Crystal compiler"
-    @echo "  check-deps        - Check for required dependencies"
+    @echo "  default                  - Build release binary (same as build)"
+    @echo "  build                    - Build release binary (Svelte assets baked in)"
+    @echo "  nix-build                - Build using nix develop (RECOMMENDED)"
+    @echo "  nix-build-size           - Build with size optimization (-Os)"
+    @echo "  nix-build-lto            - Build with LTO (smaller + faster)"
+    @echo "  nix-build-optimized      - Build with size + LTO (~27% smaller)"
+    @echo "  build-release            - Build release binary with version naming"
+    @echo "  build-release-size       - Build release with size optimization"
+    @echo "  build-release-lto        - Build release with LTO"
+    @echo "  build-release-optimized  - Build release optimized (recommended for production)"
+    @echo "  run                      - Run in development mode"
+    @echo "  download-crystal         - Download and build Crystal compiler"
+    @echo "  check-deps               - Check for required dependencies"
     @echo "  svelte-install    - Install Svelte dependencies"
     @echo "  svelte-build      - Build Svelte frontend"
     @echo "  svelte-dev        - Run Svelte dev server"

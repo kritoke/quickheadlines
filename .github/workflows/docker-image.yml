@@ -100,7 +100,7 @@ jobs:
             cd frontend && pnpm install && pnpm run build && cd .. && \
             shards install --production && \
             touch src/web/assets.cr && \
-            crystal build --release -Dversion=${{ github.ref_name }} src/quickheadlines.cr -o bin/quickheadlines-linux-${{ matrix.arch }}"
+            crystal build --release -Os -Dpreview_lto -Dversion=${{ github.ref_name }} src/quickheadlines.cr -o bin/quickheadlines-linux-${{ matrix.arch }}"
 
       - name: Build macOS Binaries
         if: matrix.target == 'macos'
@@ -120,7 +120,7 @@ jobs:
           cd frontend && pnpm install && pnpm run build && cd ..
           shards install --production
           touch src/web/assets.cr
-          crystal build --release -Dversion=${{ github.ref_name }} src/quickheadlines.cr -o bin/quickheadlines-macos-${{ matrix.arch }}
+          crystal build --release -Os -Dpreview_lto -Dversion=${{ github.ref_name }} src/quickheadlines.cr -o bin/quickheadlines-macos-${{ matrix.arch }}
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
