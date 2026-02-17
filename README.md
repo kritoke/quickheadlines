@@ -210,16 +210,17 @@ The default `~/.cache/quickheadlines` location works well for local development.
 
 QuickHeadlines automatically manages the SQLite cache database with configurable retention and size limits:
 
-- **Default retention**: 168 hours (1 week) - feeds not fetched within this period are automatically cleaned up
+- **Default retention**: 336 hours (14 days) - feeds not fetched within this period are automatically cleaned up
 - **Warning threshold**: 50MB - logs a warning when database exceeds this size
 - **Hard limit**: 100MB - automatically removes oldest entries when database exceeds this size
+- **DB Fetch Limit**: 500 items - controls how many items are fetched and stored per feed for "Load More" and clustering
 
 #### Configuring Cache Retention
 
 Add `cache_retention_hours` to your `feeds.yml`:
 
 ```yaml
-cache_retention_hours: 168  # 1 week (default)
+cache_retention_hours: 336  # 14 days (default)
 # cache_retention_hours: 720  # 30 days
 # cache_retention_hours: 24   # 1 day
 ```
@@ -231,7 +232,7 @@ The application will:
 3. Automatically remove oldest entries if database exceeds 100MB
 4. Log cleanup actions with details
 
-**Note**: The cache retention setting is backwards compatible - if not specified, it defaults to 168 hours (1 week).
+**Note**: The cache retention setting is backwards compatible - if not specified, it defaults to 336 hours (14 days).
 
 ## Usage
 
@@ -243,8 +244,10 @@ Edit the `feeds.yml` file to add your own content. It only requires a feed title
 refresh_minutes: 10           # Refresh interval in minutes (default: 10)
 item_limit: 10                 # Default number of items per feed (default: 10)
 server_port: 3030              # HTTP server port (default: 3030)
-page_title: "Quick Headlines" # Page title (default: "Quick Headlines")
-cache_retention_hours: 168     # Cache retention in hours (default: 168 = 1 week)
+page_title: "Quick Headlines"  # Page title (default: "Quick Headlines")
+cache_retention_hours: 336     # Cache retention in hours (default: 336 = 14 days)
+db_fetch_limit: 500            # Items to fetch/store for timeline/clustering (default: 500)
+max_cache_size_mb: 100         # Max cache size in MB before auto-cleanup (default: 100)
 ```
 
 ### HTTP Client Configuration

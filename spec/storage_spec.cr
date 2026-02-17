@@ -24,7 +24,7 @@ describe "Storage" do
 
     it "uses default value when cache_retention_hours is not specified" do
       config = Config.from_yaml("")
-      config.cache_retention_hours.should eq(168)
+      config.cache_retention_hours.should eq(336)
     end
 
     it "has max_cache_size_mb property with default value" do

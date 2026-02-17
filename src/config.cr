@@ -128,8 +128,8 @@ struct Config
   # Cache directory path (optional, defaults to XDG cache or ./cache)
   property cache_dir : String?
 
-  # Cache retention period in hours (default: 168 = 1 week)
-  property cache_retention_hours : Int32 = 168
+  # Cache retention period in hours (default: 336 = 14 days)
+  property cache_retention_hours : Int32 = 336
 
   # Maximum cache size in MB (default: 100). When exceeded, cleanup tasks run.
   property max_cache_size_mb : Int32 = 100

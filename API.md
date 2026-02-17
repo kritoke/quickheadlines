@@ -269,6 +269,6 @@ No rate limiting is currently implemented, but the server may throttle feed fetc
 The server runs periodic background jobs:
 - **Feed Refresh**: Fetches new items from all feeds (every ~15 minutes)
 - **Clustering**: Runs automatically on newly fetched items
-- **Cache Cleanup**: Removes items older than 7 days
+- **Cache Cleanup**: Removes items older than 14 days (configurable via `cache_retention_hours`)
 
 Use `/api/run-clustering` to manually cluster existing items.
