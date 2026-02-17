@@ -9,7 +9,6 @@ require "./fetcher"
 require "./storage"
 require "./favicon_storage"
 require "./health_monitor"
-require "./minhash"
 require "./api"
 
 # Load entities, services, controllers, repositories, etc.
@@ -79,12 +78,21 @@ begin
   # Clear in-memory favicon cache to prevent stale base64 data from previous runs
   FAVICON_CACHE.clear
 
-  # Initial load so the first request sees real data
-  refresh_all(initial_config)
+  # Load from cache first so server can respond immediately
+  load_feeds_from_cache(initial_config)
 
   # Start background refresh loop for automatic feed updates
   spawn do
     start_refresh_loop("feeds.yml")
+  end
+
+  # Clustering scheduler
+  spawn do
+    loop do
+      sleep 60.minutes
+      next if STATE.is_clustering?
+      clustering_service.cluster_uncategorized(initial_config.db_fetch_limit)
+    end
   end
 
   # Verify feeds are loaded before starting server

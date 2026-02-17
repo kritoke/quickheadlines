@@ -1,115 +1,117 @@
 require "spec"
-require "../src/minhash"
+require "lexis-minhash"
 
-describe StoryHasher do
-  describe "compute_signature" do
+describe LexisMinhash::Engine do
+  describe "#compute_signature" do
     it "returns an array of the correct size" do
-      signature = StoryHasher.compute_signature("Hello World")
-      signature.size.should eq(StoryHasher::SIGNATURE_SIZE)
+      doc = LexisMinhash::SimpleDocument.new("Hello World Today")
+      signature = LexisMinhash::Engine.compute_signature(doc)
+      signature.size.should eq(100)
     end
 
     it "returns zeros for empty string" do
-      signature = StoryHasher.compute_signature("")
-      signature.should eq(Array(UInt32).new(StoryHasher::SIGNATURE_SIZE, 0_u32))
+      doc = LexisMinhash::SimpleDocument.new("")
+      signature = LexisMinhash::Engine.compute_signature(doc)
+      signature.should eq(Array(UInt32).new(100, 0_u32))
     end
 
     it "returns consistent signatures for the same text" do
-      sig1 = StoryHasher.compute_signature("Test Article Title")
-      sig2 = StoryHasher.compute_signature("Test Article Title")
+      doc1 = LexisMinhash::SimpleDocument.new("Test Article Title News")
+      doc2 = LexisMinhash::SimpleDocument.new("Test Article Title News")
+      sig1 = LexisMinhash::Engine.compute_signature(doc1)
+      sig2 = LexisMinhash::Engine.compute_signature(doc2)
       sig1.should eq(sig2)
     end
 
     it "returns different signatures for different texts" do
-      sig1 = StoryHasher.compute_signature("Technology company announces revolutionary new product update")
-      sig2 = StoryHasher.compute_signature("Government officials discuss new policy changes for citizens")
+      doc1 = LexisMinhash::SimpleDocument.new("Technology company announces revolutionary new product update")
+      doc2 = LexisMinhash::SimpleDocument.new("Government officials discuss new policy changes for citizens")
+      sig1 = LexisMinhash::Engine.compute_signature(doc1)
+      sig2 = LexisMinhash::Engine.compute_signature(doc2)
       sig1.should_not eq(sig2)
     end
 
     it "is case insensitive" do
-      sig1 = StoryHasher.compute_signature("Hello World")
-      sig2 = StoryHasher.compute_signature("hello world")
+      doc1 = LexisMinhash::SimpleDocument.new("Hello World Test")
+      doc2 = LexisMinhash::SimpleDocument.new("hello world test")
+      sig1 = LexisMinhash::Engine.compute_signature(doc1)
+      sig2 = LexisMinhash::Engine.compute_signature(doc2)
       sig1.should eq(sig2)
     end
   end
 
-  describe "similarity" do
+  describe "#similarity" do
     it "returns 1.0 for identical signatures" do
-      sig = StoryHasher.compute_signature("Same Title")
-      StoryHasher.similarity(sig, sig).should eq(1.0_f64)
+      doc = LexisMinhash::SimpleDocument.new("Same Title News")
+      sig = LexisMinhash::Engine.compute_signature(doc)
+      LexisMinhash::Engine.similarity(sig, sig).should eq(1.0_f64)
     end
 
-    it "returns 0.0 for completely different signatures" do
-      sig1 = StoryHasher.compute_signature("AAAA BBBB CCCC DDDD EEEE FFFF")
-      sig2 = StoryHasher.compute_signature("1111 2222 3333 4444 5555 6666")
-      similarity = StoryHasher.similarity(sig1, sig2)
+    it "returns low similarity for completely different signatures" do
+      doc1 = LexisMinhash::SimpleDocument.new("AAAA BBBB CCCC DDDD EEEE FFFF")
+      doc2 = LexisMinhash::SimpleDocument.new("1111 2222 3333 4444 5555 6666")
+      sig1 = LexisMinhash::Engine.compute_signature(doc1)
+      sig2 = LexisMinhash::Engine.compute_signature(doc2)
+      similarity = LexisMinhash::Engine.similarity(sig1, sig2)
       similarity.should be < 0.5_f64
     end
 
     it "returns higher similarity for similar texts" do
-      sig1 = StoryHasher.compute_signature("Apple announces new iPhone 15 Pro")
-      sig2 = StoryHasher.compute_signature("Apple announces new iPhone 15 Pro Max")
-      sig3 = StoryHasher.compute_signature("Microsoft releases Windows 12")
+      doc1 = LexisMinhash::SimpleDocument.new("Apple announces new iPhone 15 Pro")
+      doc2 = LexisMinhash::SimpleDocument.new("Apple announces new iPhone 15 Pro Max")
+      doc3 = LexisMinhash::SimpleDocument.new("Microsoft releases Windows 12")
 
-      similarity_same = StoryHasher.similarity(sig1, sig2)
-      similarity_diff = StoryHasher.similarity(sig1, sig3)
+      sig1 = LexisMinhash::Engine.compute_signature(doc1)
+      sig2 = LexisMinhash::Engine.compute_signature(doc2)
+      sig3 = LexisMinhash::Engine.compute_signature(doc3)
+
+      similarity_same = LexisMinhash::Engine.similarity(sig1, sig2)
+      similarity_diff = LexisMinhash::Engine.similarity(sig1, sig3)
 
       similarity_same.should be > similarity_diff
     end
   end
 
-  describe "generate_bands" do
+  describe "#generate_bands" do
     it "returns the correct number of bands" do
-      signature = StoryHasher.compute_signature("Test")
-      bands = StoryHasher.generate_bands(signature)
-      bands.size.should eq(StoryHasher::NUM_BANDS)
+      doc = LexisMinhash::SimpleDocument.new("Test Document Here")
+      signature = LexisMinhash::Engine.compute_signature(doc)
+      bands = LexisMinhash::Engine.generate_bands(signature)
+      bands.size.should eq(20)
     end
 
     it "returns unique band indices" do
-      signature = StoryHasher.compute_signature("Test")
-      bands = StoryHasher.generate_bands(signature)
+      doc = LexisMinhash::SimpleDocument.new("Test Document For")
+      signature = LexisMinhash::Engine.compute_signature(doc)
+      bands = LexisMinhash::Engine.generate_bands(signature)
       band_indices = bands.map(&.[0])
       band_indices.uniq.size.should eq(band_indices.size)
     end
 
     it "returns UInt64 band hashes" do
-      signature = StoryHasher.compute_signature("Test")
-      bands = StoryHasher.generate_bands(signature)
+      doc = LexisMinhash::SimpleDocument.new("Test Data Now")
+      signature = LexisMinhash::Engine.compute_signature(doc)
+      bands = LexisMinhash::Engine.generate_bands(signature)
       bands.each do |_band_index, band_hash|
         band_hash.should be_a(UInt64)
       end
     end
   end
 
-  describe "signature_to_bytes and bytes_to_signature" do
+  describe "#signature_to_bytes and #bytes_to_signature" do
     it "preserves signature data through conversion" do
-      original = StoryHasher.compute_signature("Convert This Signature")
-      bytes = StoryHasher.signature_to_bytes(original)
-      restored = StoryHasher.bytes_to_signature(bytes)
+      doc = LexisMinhash::SimpleDocument.new("Convert This Signature")
+      original = LexisMinhash::Engine.compute_signature(doc)
+      bytes = LexisMinhash::Engine.signature_to_bytes(original)
+      restored = LexisMinhash::Engine.bytes_to_signature(bytes)
       original.should eq(restored)
     end
 
     it "handles empty signatures" do
-      empty = Array(UInt32).new(StoryHasher::SIGNATURE_SIZE, 0_u32)
-      bytes = StoryHasher.signature_to_bytes(empty)
-      restored = StoryHasher.bytes_to_signature(bytes)
+      empty = Array(UInt32).new(100, 0_u32)
+      bytes = LexisMinhash::Engine.signature_to_bytes(empty)
+      restored = LexisMinhash::Engine.bytes_to_signature(bytes)
       empty.should eq(restored)
-    end
-  end
-
-  describe "detection_probability" do
-    it "returns 0.0 for 0 similarity" do
-      StoryHasher.detection_probability(0.0_f64).should eq(0.0_f64)
-    end
-
-    it "returns 1.0 for 1.0 similarity" do
-      prob = StoryHasher.detection_probability(1.0_f64)
-      prob.should be_close(1.0_f64, 0.01_f64)
-    end
-
-    it "returns higher probability for higher similarity" do
-      prob_low = StoryHasher.detection_probability(0.5_f64)
-      prob_high = StoryHasher.detection_probability(0.9_f64)
-      prob_high.should be > prob_low
     end
   end
 end

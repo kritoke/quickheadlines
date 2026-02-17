@@ -193,7 +193,7 @@ Get the current system status including clustering state.
 - `is_clustering`: Whether clustering jobs are currently running
 - `active_jobs`: Number of active clustering jobs
 
-### Clustering Algorithm (v0.5.1+)
+### Clustering Algorithm (v0.5.0+)
 
 QuickHeadlines uses a **Hybrid Clustering** approach for grouping similar stories:
 

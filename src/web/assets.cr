@@ -1,16 +1,4 @@
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-# Build: 2026-02-17T07:56:50-06:00
-=======
-# Build: 2026-02-17T06:44:25-06:00
->>>>>>> 22b6938 (Remove deprecated root package.json and package-lock.json)
-=======
-# Build: 2026-02-17T07:56:50-06:00
->>>>>>> aebe4cc (Update default cache settings: retention to 336h (14 days), document all config options)
-=======
-# Build: 2026-02-17T08:05:23-06:00
->>>>>>> f2874b4 (Add debug config to README, fix Ameba formatting and naming issues)
+# Build: 2026-02-17T11:41:07-06:00
 # This comment is updated before each build to force BakedFileSystem recompilation
 # DO NOT remove this line - it's used by the build system
 

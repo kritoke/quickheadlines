@@ -17,16 +17,7 @@ module ClusteringUtilities
     "works", "work", "working", "today", "where",
   ])
 
-  # Replaced by LexisMinhash constants
-  # Keeping for reference during migration
-  #
-  # SHORT_HEADLINE_THRESHOLD = 0.85
-  MIN_WORDS_FOR_CLUSTERING = 5
-
-  # JACCARD_FALLBACK_THRESHOLD = 0.45
-  # WORD_COVERAGE_THRESHOLD = 0.70
-  # MIN_SHARED_KEYWORDS = 2
-  # MIN_WORD_LENGTH = 5
+  MIN_WORDS_FOR_CLUSTERING = 4
 
   def self.normalize_headline(text : String) : String
     return "" if text.empty?
@@ -36,111 +27,11 @@ module ClusteringUtilities
     filtered.join(" ")
   end
 
-  # Replaced by LexisMinhash::Engine.similarity for MinHash-based similarity estimation
-  # Keeping for reference during migration
-  #
-  # def self.jaccard_similarity(text1 : String, text2 : String) : Float64
-  #   norm1 = normalize_headline(text1)
-  #   norm2 = normalize_headline(text2)
-  #
-  #   words1 = Set.new(norm1.split(/\s+/))
-  #   words2 = Set.new(norm2.split(/\s+/))
-  #
-  #   intersection = words1 & words2
-  #   union = words1 | words2
-  #
-  #   return 0.0_f64 if union.empty?
-  #   intersection.size.to_f64 / union.size.to_f64
-  # end
-  #
-  # def self.word_coverage_similarity(text1 : String, text2 : String) : Float64
-  #   norm1 = normalize_headline(text1)
-  #   norm2 = normalize_headline(text2)
-  #
-  #   words1 = norm1.split(/\s+/).select { |w| w.size >= MIN_WORD_LENGTH }
-  #   words2 = norm2.split(/\s+/).select { |w| w.size >= MIN_WORD_LENGTH }
-  #
-  #   return 0.0_f64 if words1.empty? || words2.empty?
-  #
-  #   matched = Set(String).new
-  #
-  #   words1.each do |w1|
-  #     if words2.includes?(w1)
-  #       matched << w1
-  #     else
-  #       words2.each do |w2|
-  #         if w1.includes?(w2) || w2.includes?(w1)
-  #           matched << w1
-  #           break
-  #         elsif levenshtein_distance(w1, w2) <= 2
-  #           matched << w1
-  #           break
-  #         end
-  #       end
-  #     end
-  #   end
-  #
-  #   return 0.0_f64 if matched.size < MIN_SHARED_KEYWORDS
-  #
-  #   shared = matched.size.to_f64
-  #   coverage1 = shared / words1.size
-  #   coverage2 = shared / words2.size
-  #
-  #   {coverage1, coverage2}.min
-  # end
-  #
-  # def self.hybrid_similarity(text1 : String, text2 : String) : Float64
-  #   jac = jaccard_similarity(text1, text2)
-  #   word_cov = word_coverage_similarity(text1, text2)
-  #
-  #   if jac < JACCARD_FALLBACK_THRESHOLD && word_cov > jac
-  #     STDERR.puts "[Clustering] Jaccard=#{jac.round(2)} < #{JACCARD_FALLBACK_THRESHOLD}, using word_coverage=#{word_cov.round(2)}" if ENV["DEBUG_CLUSTERING"]?
-  #     return word_cov
-  #   end
-  #
-  #   jac
-  # end
-
   def self.word_count(text : String) : Int32
     normalized = normalize_headline(text)
     return 0 if normalized.empty?
     normalized.split(/\s+/).size
   end
-
-  # Replaced by LexisMinhash::SimpleDocument which handles stop-word filtering internally
-  # Keeping for reference during migration
-  #
-  # def self.extract_keywords(text : String) : Array(String)
-  #   normalized = normalize_headline(text)
-  #   words = normalized.split(/\s+/)
-  #   words.select { |w| w.size > 4 }.first(5)
-  # end
-
-  # Only used by word_coverage_similarity which is replaced by LexisMinhash::Engine.similarity
-  # Keeping for reference during migration
-  #
-  # private def self.levenshtein_distance(s1 : String, s2 : String) : Int32
-  #   return (s1.size - s2.size).abs if s1.size == 0 || s2.size == 0
-  #
-  #   matrix = Array(Array(Int32)).new(s1.size + 1) { |i| Array(Int32).new(s2.size + 1, 0) }
-  #
-  #   (0..s1.size).each { |i| matrix[i][0] = i }
-  #   (0..s2.size).each { |j| matrix[0][j] = j }
-  #
-  #   (1..s1.size).each do |i|
-  #     (1..s2.size).each do |j|
-  #       cost = s1[i - 1] == s2[j - 1] ? 0 : 1
-  #       matrix[i][j] = {
-  #         matrix[i - 1][j] + 1,
-  #         matrix[i][j - 1] + 1,
-  #         matrix[i - 1][j - 1] + cost,
-  #       }.min
-  #     end
-  #   end
-  #
-  #   matrix[s1.size][s2.size]
-  # end
-
 end
 
 class Quickheadlines::Services::ClusteringService
@@ -151,7 +42,7 @@ class Quickheadlines::Services::ClusteringService
   def initialize(@db : DB::Database)
   end
 
-  def compute_cluster_for_item(item_id : Int64, title : String, cache : FeedCache, item_feed_id : Int64? = nil) : Int64?
+  def compute_cluster_for_item(item_id : Int64, title : String, cache : FeedCache, item_feed_id : Int64? = nil, threshold : Float64 = 0.75) : Int64?
     return nil if title.empty?
     return nil if ClusteringUtilities.word_count(title) < ClusteringUtilities::MIN_WORDS_FOR_CLUSTERING
 
@@ -186,7 +77,6 @@ class Quickheadlines::Services::ClusteringService
       candidate_signature = cache.get_item_signature(candidate_id)
       next unless candidate_signature
 
-      # Skip if candidate is from the same feed (likely a duplicate)
       candidate_feed_id = cache.get_item_feed_id(candidate_id)
       if item_feed_id && candidate_feed_id == item_feed_id
         next
@@ -200,8 +90,6 @@ class Quickheadlines::Services::ClusteringService
         best_feed_id = candidate_feed_id
       end
     end
-
-    threshold = 0.75_f64
 
     STDERR.puts "[Clustering] Best match similarity: #{best_similarity.round(2)} (threshold: #{threshold})" if ENV["DEBUG_CLUSTERING"]?
 
@@ -220,14 +108,6 @@ class Quickheadlines::Services::ClusteringService
       STDERR.puts "[Clustering] Created new cluster for '#{title[0...50]}...'" if ENV["DEBUG_CLUSTERING"]?
       item_id
     end
-  end
-
-  def cluster_stories(stories : Array(Quickheadlines::Entities::Story)) : Array(Quickheadlines::Entities::Cluster)
-    [] of Quickheadlines::Entities::Cluster
-  end
-
-  def get_cluster(story_id : String) : Quickheadlines::Entities::Cluster?
-    nil
   end
 
   def get_all_clusters_from_db : Array(Quickheadlines::Entities::Cluster)
@@ -329,6 +209,84 @@ class Quickheadlines::Services::ClusteringService
     end
 
     clusters
+  end
+
+  # Cluster uncategorized items (items with cluster_id NULL or cluster_id = id)
+  # Returns number of items processed
+  def cluster_uncategorized(limit : Int32 = 5000, threshold : Float64 = 0.75) : Int32
+    cache = FeedCache.instance
+    db = @db
+
+    processed = 0
+    STATE.is_clustering = true
+    begin
+      STDERR.puts "[#{Time.local}] Starting clustering (streaming rows, threshold: #{threshold})"
+
+      db.query("SELECT id, title, link, pub_date, feed_id FROM items WHERE cluster_id IS NULL OR cluster_id = id ORDER BY pub_date DESC LIMIT ?", limit) do |rows|
+        rows.each do
+          id = rows.read(Int64)
+          title = rows.read(String)
+          link = rows.read(String)
+          pub_date_str = rows.read(String?)
+          feed_id = rows.read(Int64)
+          # parse pub_date only if needed by downstream code
+          # pub_date = pub_date_str.try { |str| Time.parse(str, "%Y-%m-%d %H:%M:%S", Time::Location::UTC) }
+
+          next if title.empty?
+
+          compute_cluster_for_item(id, title, FeedCache.instance, feed_id, threshold)
+          processed += 1
+          if processed % 50 == 0
+            STDERR.puts "[#{Time.local}] Processed #{processed} items..."
+          end
+        end
+      end
+
+      STDERR.puts "[#{Time.local}] Clustering complete: #{processed} items processed"
+    ensure
+      STATE.is_clustering = false
+    end
+
+    processed
+  end
+
+  # Clear clustering metadata and recluster all items (up to limit)
+  def recluster_all(limit : Int32 = 5000, threshold : Float64 = 0.75) : Int32
+    cache = FeedCache.instance
+    cache.clear_clustering_metadata
+
+    items = [] of {id: Int64, title: String, link: String, pub_date: Time?, feed_id: Int64}
+    @db.query("SELECT id, title, link, pub_date, feed_id FROM items ORDER BY pub_date DESC LIMIT ?", limit) do |rows|
+      rows.each do
+        id = rows.read(Int64)
+        title = rows.read(String)
+        link = rows.read(String)
+        pub_date_str = rows.read(String?)
+        feed_id = rows.read(Int64)
+        pub_date = pub_date_str.try { |str| Time.parse(str, "%Y-%m-%d %H:%M:%S", Time::Location::UTC) }
+        items << {id: id, title: title, link: link, pub_date: pub_date, feed_id: feed_id}
+      end
+    end
+
+    STDERR.puts "[#{Time.local}] Found #{items.size} items to re-cluster (threshold: #{threshold})"
+
+    processed = 0
+    STATE.is_clustering = true
+    begin
+      items.each do |item|
+        next if item[:title].empty?
+        compute_cluster_for_item(item[:id], item[:title], FeedCache.instance, item[:feed_id], threshold)
+        processed += 1
+        if processed % 50 == 0
+          STDERR.puts "[#{Time.local}] Processed #{processed} items..."
+        end
+      end
+      STDERR.puts "[#{Time.local}] Re-clustering complete: #{processed} items processed"
+    ensure
+      STATE.is_clustering = false
+    end
+
+    processed
   end
 end
 

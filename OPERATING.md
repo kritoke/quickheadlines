@@ -148,6 +148,56 @@ The cache directory location is determined by:
 3. `$XDG_CACHE_HOME/quickheadlines` (default on Linux)
 4. `./cache` in current directory
 
+### Clustering Configuration
+
+The clustering feature uses MinHash/LSH to group similar stories across feeds. Configuration is optional - defaults are designed to work well out of the box.
+
+```yaml
+# Clustering configuration (optional)
+clustering:
+  enabled: true                    # Enable automatic clustering (default: true)
+  schedule_minutes: 60             # Run clustering every N minutes (default: 60)
+  run_on_startup: true            # Run clustering on startup (default: true)
+  max_items: 5000                 # Max items per clustering run (default: nil = use db_fetch_limit)
+  threshold: 0.75                 # Similarity threshold 0.0-1.0 (default: 0.75)
+```
+
+#### Configuration Options
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `enabled` | Bool | true | Enable/disable automatic clustering |
+| `schedule_minutes` | Int32 | 60 | How often to run clustering (in minutes) |
+| `run_on_startup` | Bool | true | Run clustering when the application starts |
+| `max_items` | Int32? | nil | Max items to process per run (nil = use `db_fetch_limit`) |
+| `threshold` | Float64 | 0.75 | Similarity threshold (higher = stricter matching) |
+
+#### Tuning the Threshold
+
+- **Higher (0.8-0.9):** Stricter matching, fewer but more accurate clusters
+- **Lower (0.5-0.7):** More aggressive clustering, may group unrelated stories
+- **Default (0.75):** Balanced - works well for news headlines
+
+#### Manual Clustering
+
+You can manually trigger clustering via the API:
+
+```bash
+# Trigger clustering on uncategorized items
+curl -X POST http://127.0.0.1:8080/api/run-clustering
+
+# Clear and re-cluster all items
+curl -X POST http://127.0.0.1:8080/api/recluster
+```
+
+#### Debugging Clustering
+
+Enable debug output to see clustering decisions:
+
+```bash
+DEBUG_CLUSTERING=1 ./bin/quickheadlines
+```
+
 ---
 
 ## 5. Testing
@@ -193,90 +243,51 @@ cd frontend && npm run test
 - Use DTOs for everything
 
 ### Dependencies
-- Every new dependency is a liability
-- Prefer standard library or core framework features first
 
----
-
-## 8. Common Tasks
-
-### Add a New Feed
-1. Edit `feeds.yml`:
-   ```yaml
-   tabs:
-     - name: "Category"
-       feeds:
-         - title: "New Feed"
-           url: "https://example.com/feed.xml"
-   ```
-2. Restart the application
-
-### Change Item Limit
-```yaml
-# Global (affects all feeds)
-item_limit: 30
-
-# Per-feed (overrides global)
-tabs:
-  - name: "Tech"
-    feeds:
-      - title: "Hacker News"
-        url: "https://news.ycombinator.com/rss"
-        item_limit: 50
-```
-
-### Modify Frontend
-1. Edit Svelte files in `frontend/src/`
-2. Run `just nix-build` to rebuild
-3. Restart server to see changes
-
-### Debug Feed Fetching
-```yaml
-# Add to feeds.yml
-debug: true
-```
-
----
-
-## 9. Troubleshooting
-
-### Crystal Build Fails
-```bash
-# Ensure dependencies are installed
-nix develop . --command shards install
-
-# Clean and rebuild
-just clean && just nix-build
-```
-
-### Frontend Not Updating
-```bash
-# BakedFileSystem requires rebuild
-just nix-build
-
-# Clear browser cache or hard refresh (Ctrl+Shift+R)
-```
-
-### Cache Issues
-```bash
-# Clear cache directory
-rm -rf ~/.cache/quickheadlines/
-
-# Or set custom cache location
-export QUICKHEADLINES_CACHE_DIR=/tmp/quickheadlines
-```
-
----
-
-## 10. Dependencies
-
-### Required (Auto-installed via Nix)
+Required (Auto-installed via Nix)
 - **Crystal:** >= 1.18.2
 - **Shards:** Crystal package manager
 - **SQLite3:** Development libraries
 - **OpenSSL:** Development libraries
 - **Node.js 22:** For Svelte build
 - **pnpm:** Node package manager
+
+---
+
+## 11. Code Quality
+
+### Running Ameba
+
+Ameba is the Crystal linter. Run it to check for code issues:
+
+```bash
+# Run ameba (checks for issues)
+nix develop . --command ameba
+
+# Auto-fix correctable issues
+nix develop . --command ameba --fix
+```
+
+**Recommended workflow:** Run `ameba --fix` after each major change to resolve minor issues and maintain code consistency.
+
+### Code Organization
+
+**File size guideline:** When a source file exceeds 800 lines, consider splitting it into multiple files. This improves:
+- Readability and maintainability
+- Compile times (Crystal recompiles changed files)
+- Testability
+
+**Common patterns for splitting:**
+- Extract modules/classes to separate files
+- Group related functionality into `services/` or `repositories/` directories
+- Move utility functions to dedicated files in `src/utils/`
+
+### Cyclomatic Complexity
+
+Ameba will flag methods with high cyclomatic complexity (>10). Consider refactoring complex methods by:
+- Extracting helper methods
+- Using early returns
+- Simplifying conditional logic
 
 ### Platform-Specific
 

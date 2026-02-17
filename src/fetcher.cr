@@ -826,6 +826,40 @@ private def get_cached_feed(feed : Feed, item_limit : Int32, previous_data : Fee
   cached
 end
 
+# Load feeds from cache into STATE for immediate availability
+# Returns true if cache was loaded, false if no cache exists
+def load_feeds_from_cache(config : Config) : Bool
+  cache = FeedCache.instance
+  STATE.config_title = config.page_title
+  STATE.config = config
+
+  cached_feeds = [] of FeedData
+  config.feeds.each do |feed_config|
+    if cached = cache.get(feed_config.url)
+      cached_feeds << cached
+    end
+  end
+
+  # Load tabs from cache
+  STATE.with_lock do
+    STATE.feeds = cached_feeds
+    STATE.tabs = config.tabs.map do |tab_config|
+      tab = Tab.new(tab_config.name)
+      tab.feeds = tab_config.feeds.compact_map { |feed_config| cache.get(feed_config.url) }
+      tab
+    end
+    STATE.updated_at = Time.local
+  end
+
+  if cached_feeds.empty? && STATE.tabs.all? { |t| t.feeds.empty? }
+    STDERR.puts "[#{Time.local}] load_feeds_from_cache: no cached data found"
+    return false
+  end
+
+  STDERR.puts "[#{Time.local}] load_feeds_from_cache: loaded #{cached_feeds.size} feeds and #{STATE.tabs.size} tabs from cache"
+  true
+end
+
 def refresh_all(config : Config)
   STATE.config_title = config.page_title
   STATE.config = config
@@ -973,9 +1007,9 @@ def start_refresh_loop(config_path : String)
   active_config = load_config(config_path)
   last_mtime = File.info(config_path).modification_time
 
-  # Do an initial refresh with active config
-  refresh_all(active_config)
-  puts "[#{Time.local}] Initial refresh complete"
+  # Skip initial refresh - cache is already loaded, periodic refresh will run in loop
+  # refresh_all(active_config)
+  # puts "[#{Time.local}] Initial refresh complete"
 
   # Save initial cache
   save_feed_cache(FeedCache.instance, active_config.cache_retention_hours, active_config.max_cache_size_mb)

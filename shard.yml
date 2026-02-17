@@ -17,7 +17,7 @@ dependencies:
     version: ~> 0.19.0
   lexis-minhash:
     github: kritoke/lexis-minhash
-    version: "~> 0.1.0"
+    version: "~> 0.2.4"
   crimage:
     github: naqvis/crimage
   baked_file_system:

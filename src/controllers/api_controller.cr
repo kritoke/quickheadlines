@@ -641,42 +641,10 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
     spawn do
       begin
         STDERR.puts "[#{Time.local}] Starting manual clustering..."
-
-        cache = FeedCache.instance
-        db = cache.db
-
-        uncategorized_items = [] of {id: Int64, title: String, link: String, pub_date: Time?, feed_id: Int64}
-        db.query("SELECT id, title, link, pub_date, feed_id FROM items WHERE cluster_id IS NULL OR cluster_id = id ORDER BY pub_date DESC LIMIT 5000") do |rows|
-          rows.each do
-            id = rows.read(Int64)
-            title = rows.read(String)
-            link = rows.read(String)
-            pub_date_str = rows.read(String?)
-            feed_id = rows.read(Int64)
-            pub_date = pub_date_str.try { |str| Time.parse(str, "%Y-%m-%d %H:%M:%S", Time::Location::UTC) }
-            uncategorized_items << {id: id, title: title, link: link, pub_date: pub_date, feed_id: feed_id}
-          end
-        end
-
-        STDERR.puts "[#{Time.local}] Found #{uncategorized_items.size} uncategorized items"
-
-        STATE.is_clustering = true
-        begin
-          clustered_count = 0
-          uncategorized_items.each do |item|
-            if item[:title].empty?
-              next
-            end
-            result = compute_cluster_for_item(item[:id], item[:title], item[:feed_id])
-            clustered_count += 1
-            if clustered_count % 50 == 0
-              STDERR.puts "[#{Time.local}] Processed #{clustered_count} items..."
-            end
-          end
-          STDERR.puts "[#{Time.local}] Clustering complete: #{clustered_count} items processed"
-        ensure
-          STATE.is_clustering = false
-        end
+        service = clustering_service
+        cluster_limit = STATE.config.try(&.clustering).try(&.max_items) || STATE.config.try(&.db_fetch_limit) || 5000
+        threshold = STATE.config.try(&.clustering).try(&.threshold) || 0.75
+        service.cluster_uncategorized(cluster_limit, threshold)
       rescue ex
         STDERR.puts "[#{Time.local}] Clustering error: #{ex.message}"
         STDERR.puts ex.backtrace.join("\n")
@@ -692,45 +660,10 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
     spawn do
       begin
         STDERR.puts "[#{Time.local}] Clearing clustering metadata and re-clustering..."
-
-        cache = FeedCache.instance
-        cache.clear_clustering_metadata
-
-        # Now trigger clustering on all items
-        db = cache.db
-
-        all_items = [] of {id: Int64, title: String, link: String, pub_date: Time?, feed_id: Int64}
-        db.query("SELECT id, title, link, pub_date, feed_id FROM items ORDER BY pub_date DESC LIMIT 5000") do |rows|
-          rows.each do
-            id = rows.read(Int64)
-            title = rows.read(String)
-            link = rows.read(String)
-            pub_date_str = rows.read(String?)
-            feed_id = rows.read(Int64)
-            pub_date = pub_date_str.try { |str| Time.parse(str, "%Y-%m-%d %H:%M:%S", Time::Location::UTC) }
-            all_items << {id: id, title: title, link: link, pub_date: pub_date, feed_id: feed_id}
-          end
-        end
-
-        STDERR.puts "[#{Time.local}] Found #{all_items.size} items to re-cluster"
-
-        STATE.is_clustering = true
-        begin
-          clustered_count = 0
-          all_items.each do |item|
-            if item[:title].empty?
-              next
-            end
-            result = compute_cluster_for_item(item[:id], item[:title], item[:feed_id])
-            clustered_count += 1
-            if clustered_count % 50 == 0
-              STDERR.puts "[#{Time.local}] Processed #{clustered_count} items..."
-            end
-          end
-          STDERR.puts "[#{Time.local}] Re-clustering complete: #{clustered_count} items processed"
-        ensure
-          STATE.is_clustering = false
-        end
+        service = clustering_service
+        cluster_limit = STATE.config.try(&.clustering).try(&.max_items) || STATE.config.try(&.db_fetch_limit) || 5000
+        threshold = STATE.config.try(&.clustering).try(&.threshold) || 0.75
+        service.recluster_all(cluster_limit, threshold)
       rescue ex
         STDERR.puts "[#{Time.local}] Re-clustering error: #{ex.message}"
         STDERR.puts ex.backtrace.join("\n")

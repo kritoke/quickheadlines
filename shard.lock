@@ -2,7 +2,7 @@ version: 2.0
 shards:
   ameba:
     git: https://github.com/crystal-ameba/ameba.git
-    version: 1.7.0-dev+git.commit.a74c675501891beba1ef0eb4ad926b41af1b53f2
+    version: 1.7.0-dev+git.commit.95277396e615f0c216f2cbb7993d968d250d3071
 
   athena:
     git: https://github.com/athena-framework/framework.git
@@ -66,17 +66,9 @@ shards:
 
   lexis-minhash:
     git: https://github.com/kritoke/lexis-minhash.git
-    version: 0.1.0
+    version: 0.2.4
 
   sqlite3:
     git: https://github.com/crystal-lang/crystal-sqlite3.git
     version: 0.19.0
-
-  stumpy_core:
-    git: https://github.com/stumpycr/stumpy_core.git
-    version: 1.9.1
-
-  stumpy_png:
-    git: https://github.com/stumpycr/stumpy_png.git
-    version: 5.0.1
 

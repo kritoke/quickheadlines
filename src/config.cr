@@ -145,6 +145,30 @@ struct Config
   property software_releases : SoftwareConfig?
 
   property tabs : Array(TabConfig) = [] of TabConfig
+
+  # Clustering configuration (optional)
+  # If omitted, clustering is enabled by default and runs hourly.
+  property clustering : ClusteringConfig? = nil
+end
+
+struct ClusteringConfig
+  include YAML::Serializable
+
+  # Enable automatic clustering (default: true)
+  property enabled : Bool = true
+
+  # Schedule interval in minutes for automatic clustering (default: 60)
+  property schedule_minutes : Int32 = 60
+
+  # Run a clustering pass on startup (default: true)
+  property run_on_startup : Bool = true
+
+  # Maximum number of items to process in a clustering run (default: nil = use db_fetch_limit)
+  property max_items : Int32? = nil
+
+  # Similarity threshold for clustering (0.0-1.0, default: 0.75)
+  # Higher values = stricter matching, lower values = more clusters
+  property threshold : Float64 = 0.75
 end
 
 # YAML parsing result with detailed error information
