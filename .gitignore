@@ -92,6 +92,9 @@ node_modules/
 .github/copilot/
 .kittify/.dashboard
 
+# Ticket AI Task Management
+.tickets/
+
 # Nix Related
 .direnv/
 .envrc.local

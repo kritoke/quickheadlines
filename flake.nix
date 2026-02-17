@@ -4,15 +4,32 @@
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     openspec.url = "github:Fission-AI/OpenSpec";
+    ticket-src = {
+      url = "github:wedow/ticket";
+      flake = false;
+    };
   };
 
-  outputs = { self, nixpkgs, openspec }:
+  outputs = { self, nixpkgs, openspec, ticket-src }:
     let
       system = "aarch64-linux";
       pkgs = nixpkgs.legacyPackages.${system};
 
       # 💎 Use nixpkgs Crystal 1.18.2
       crystal_1_18 = pkgs.crystal;
+
+      # Minimal derivation for the ticket bash script
+      ticket = pkgs.stdenv.mkDerivation {
+        pname = "ticket";
+        version = "latest";
+        src = ticket-src;
+        dontBuild = true;
+        installPhase = ''
+          mkdir -p $out/bin
+          cp ticket $out/bin/ticket
+          chmod +x $out/bin/ticket
+        '';
+      };
     in {
       # Nesting under the system fixes the 'attribute missing' error
       devShells.${system} = {
@@ -27,6 +44,10 @@
               git curl gnumake gcc
               openspec.packages.${system}.default
               ameba
+              # Screenshot tools
+              shot-scraper
+              # Ticket AI task management
+              ticket
             ];
 
           shellHook = ''
@@ -40,9 +61,18 @@
             # Ensure the openspec package's bin directory is first on PATH so the
             # binary is resolvable in all subsequent shell commands.
             export PATH="${openspec.packages.${system}.default}/bin:$HOME/.local/bin:$PWD/bin:$PATH"
+            # Add ticket to PATH for AI task management
+            export PATH="$PATH:${ticket}/bin"
             export HUB_ROOT="/workspaces"
             export PATH="$PATH:$HUB_ROOT/aiworkflow/bin:$HOME/go/bin"
             export SSH_AUTH_SOCK="/workspaces/.ssh-auth.sock"
+
+            # Ticket AI Task Management
+            export TICKET_DIR="$PWD/.tickets"
+            if [ ! -d "$TICKET_DIR" ]; then
+              echo "🎟️ Initializing local Ticket storage in $TICKET_DIR"
+              mkdir -p "$TICKET_DIR"
+            fi
 
             export APP_ENV=development
             echo "🚀 Quickheadlines Loaded with Crystal & Svelte 5"
