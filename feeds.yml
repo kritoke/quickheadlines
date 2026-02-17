@@ -5,7 +5,7 @@ server_port: 8080
 max_cache_size_mb: 100
 page_title: "Quick Headlines"
 cache_retention_hours: 336  # 14 days
-debug: true
+debug: false
 
 # HTTP client configuration (optional)
 # http_client:
