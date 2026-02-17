@@ -15,6 +15,11 @@
       system = "aarch64-linux";
       pkgs = nixpkgs.legacyPackages.${system};
 
+      # Import private configuration (not tracked in git)
+      privateConfig = if builtins.pathExists ./flake.private.nix
+        then import ./flake.private.nix
+        else {};
+
       # 💎 Use nixpkgs Crystal 1.18.2
       crystal_1_18 = pkgs.crystal;
 
@@ -72,6 +77,7 @@
             # Add ticket to PATH for AI task management
             export PATH="$PATH:${ticket}/bin"
 <<<<<<< HEAD
+<<<<<<< HEAD
 
             # Ticket AI Task Management
             export TICKET_DIR="$PWD/.tickets"
@@ -84,6 +90,13 @@
             export PATH="$PATH:$HUB_ROOT/aiworkflow/bin:$HOME/go/bin"
             export SSH_AUTH_SOCK="/workspaces/.ssh-auth.sock"
 >>>>>>> 22b6938 (Remove deprecated root package.json and package-lock.json)
+=======
+
+            # Private system-specific configuration (from flake.private.nix)
+            export HUB_ROOT="${privateConfig.hub-root or "/workspaces"}"
+            export PATH="$PATH:${privateConfig.aiworkflow-bin or "$HUB_ROOT/aiworkflow/bin"}:${privateConfig.go-bin or "$HOME/go/bin"}"
+            export SSH_AUTH_SOCK="${privateConfig.ssh-auth-sock or "/workspaces/.ssh-auth.sock"}"
+>>>>>>> 9cff036 (Move system-specific flake config to flake.private.nix)
 
             # Ticket AI Task Management
             export TICKET_DIR="$PWD/.tickets"
