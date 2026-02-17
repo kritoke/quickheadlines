@@ -98,6 +98,7 @@ node_modules/
 # Nix Related
 .direnv/
 .envrc.local
+flake.private.nix
 
 spec-kitty
 
