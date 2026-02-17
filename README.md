@@ -248,6 +248,7 @@ page_title: "Quick Headlines"  # Page title (default: "Quick Headlines")
 cache_retention_hours: 336     # Cache retention in hours (default: 336 = 14 days)
 db_fetch_limit: 500            # Items to fetch/store for timeline/clustering (default: 500)
 max_cache_size_mb: 100         # Max cache size in MB before auto-cleanup (default: 100)
+debug: false                   # Enable verbose debug logging (default: false)
 ```
 
 ### HTTP Client Configuration

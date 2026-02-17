@@ -1,119 +1,47 @@
-# Changelog
+# Unreleased
 
-## [0.4.0] - 2026-01-16
+This draft summarizes all notable changes made during the current release prep cycle. Review and edit before committing to the repository release notes.
 
-### Added
+## Removed
 
-- **Timeline View**: New timeline page showing all feed items in chronological order with day grouping and timestamps
-- **HTTP Client Configuration**: Global HTTP client settings for timeout, connection timeout, and custom User-Agent
-- **Authentication Support**: Feed authentication with support for Basic, Bearer token, and API Key authentication
-- **Per-Feed Item Limits**: Configure individual feed item limits to override global default
-- **Retry Logic**: Automatic retry with exponential backoff for failed feed fetches
-- **Feed Validation**: Enhanced feed validation with better error messages
-- **Health Monitoring**: Built-in health monitoring with CPU spike detection and error logging
-- **Watchdog Timer**: Automatic detection and logging of hung refresh operations
-- **Timeline Caching**: Cached timeline view with 30-second TTL for improved performance
-- **Database Integrity Checks**: Automatic integrity checks on startup with repair capability
-- **Configurable Cache Retention**: Set custom cache retention hours in feeds.yml (default: 168 hours)
-- **Size-Based Cleanup**: Automatic cleanup of oldest entries when database exceeds 100MB
+- Removed legacy/stumpy_png image-processing dead code and dependency references (see: `shard.yml`, `src/color_extractor.cr`).
 
-### Changed
+## Added
 
-- **Favicon Storage**: Serve favicons as static files instead of base64 data URIs for better performance
-- **Favicon Resolution**: Improved favicon resolution for CDN/Cloudflare feeds
-- **Mobile Layout**: Enhanced text, colors, and layout for better mobile experience
-- **Dark Mode**: Improved timeline date styling for better contrast in dark mode
-- **Container Support**: Added Linux/FreeBSD container fixes for better deployment
+- New Crystal specs for color extraction and theme-aware favicon handling (`spec/color_extractor_crimage_spec.cr`).
 
-### Fixed
+## Changed
 
-- **Gray Icon Fix**: Added Google favicon fallback for feeds with gray or missing icons
-- **Favicon Redirects**: Fixed favicon redirect handling to properly follow redirects
-- **Feed Box Text**: Removed "Fallback to Google favicon service" text from feed boxes view
-- **Bastille Template**: Fixed template bugs for FreeBSD jail deployment
+- Security: Added npm override to address `cookie` package vulnerability and updated Svelte to a recent 5.x release in `frontend/package.json`.
+- Frontend: Explicit SVG favicon link attribute added to the SPA template (`frontend/src/app.html`) to prevent prerender/fav lookup issues.
+- Frontend: Components now treat internal placeholder icon identifiers (e.g. `internal:code_icon`) as an explicit fallback to the shipped `/favicon.svg` instead of rendering the literal placeholder. Affected components: `FeedBox.svelte`, `TimelineView.svelte`, `ClusterExpansion.svelte`.
+- Backend: Serve `/favicon.ico` correctly by returning the bundled SVG with the appropriate `image/svg+xml` Content-Type and sane cache headers (`src/web/static_controller.cr`). This improves browser favicon loading behavior for some clients.
+- Software feeds: Software releases use a generic internal code icon (`internal:code_icon`) as their favicon_data; UI now maps that internal token to the shipped `/favicon.svg` fallback.
 
-## [0.3.3] - 2026-01-07
+## Fixed
 
-### Fixed
+- Fix: Browser tab favicon 404s in prerender/build caused by missing/incorrect favicon route during Svelte build.
+- Fix: Various favicon handling robustness improvements (gray-placeholder detection, larger Google favicon fallback logic) — see fetcher and favicon storage logic in `src/fetcher.cr` and `src/favicon_storage.cr`.
 
-- **Memory Leak**: Fixed memory leak from feed data not being cleared between refreshes.
-  - Old feed data now properly cleared before populating with new data to prevent continuous memory growth over time.
+## Tests & Verification
 
-## [0.3.2] - 2026-01-06
+- Full build performed: `just nix-build` (Svelte build + Crystal binary bake) — success.
+- Crystal tests: `nix develop . --command crystal spec` — 126 examples, 0 failures.
+- Frontend tests: `cd frontend && npm run test` — 11 tests, all passing.
 
-### Added
+## Files touched (high level)
 
-- Favicon cache with 100MB limit and 7-day expiration
+- Backend: `src/color_extractor.cr`, `src/fetcher.cr`, `src/web/static_controller.cr`, `src/software_fetcher.cr`, `src/web/assets.cr`
+- Frontend: `frontend/src/app.html`, `frontend/src/lib/components/FeedBox.svelte`, `frontend/src/lib/components/TimelineView.svelte`, `frontend/src/lib/components/ClusterExpansion.svelte`
+- Tests: `spec/color_extractor_crimage_spec.cr`
 
-## [0.3.1] - 2025-12-31
+## Notes
 
-### Added
+- Commit `ec106e3` contains the favicon-related fixes (do not tag this as a release until you're ready).
+- I verified build and tests locally as part of the workflow. Please review these changelog entries and adjust scope/wording before committing to your canonical CHANGELOG in the repo.
 
-- **Explicit 404 Handling**: Added a proper 404 Not Found response for unknown routes in server.
+## Next steps (suggested)
 
-### Fixed
-
-- **403 Forbidden Errors**: Resolved access issues for feeds by enhancing HTTP headers (`Accept-Language`, `Connection`) and updating legacy URLs.
-
-### Changed
-
-- **Server Refactoring**: Optimized routing logic in `server.cr` to improve performance and code clarity.
-- **HTTP Compression**: Enabled Gzip/Deflate support for all outgoing fetcher requests in `utils.cr` to reduce bandwidth usage.
-
-## [0.3.0] - 2025-12-30
-
-### Added
-
-- **Redirect Support**: The fetcher now follows up to 10 redirects for both RSS feeds and favicon images.
-- **Namespace-Agnostic Parsing**: Improved RSS/Atom parsing using `local-name()` to support feeds with custom XML namespaces (e.g., Sophos, Krebs on Security).
-
-### Fixed
-
-- **Favicon Fetching**: Resolved a crash caused by an invalid binary read method; implemented proper `IO::Memory` buffering.
-- **Icon Visibility**: Added a styled "tile" background and border for favicons to ensure visibility on headers with matching brand colors.
-- **Double Escaping**: Fixed an issue where favicon URLs were being escaped twice, breaking image proxy links.
-- **Header Fallbacks**: Removed forced inline transparency on headers to allow CSS fallback colors to show while adaptive picker is loading.
-
-### Changed
-
-- **Color Algorithm**: Reverted adaptive color picker to prefer dominant icon colors over high-vibrancy colors for a more consistent, muted aesthetic.
-- **User-Agent**: Switched to a modern browser User-Agent string to prevent being blocked by security-conscious sites.
-- **Build System**: Updated to Makefile and Docker configuration to use standalone Tailwind CLI and improved ARM64 stability.
-
-## [0.2.2] - 2025-12-30
-
-### Added
-
-- **Namespace-Agnostic Parsing**: Switched to `local-name()` XPath queries to handle feeds with custom XML namespaces (e.g., Sophos, Krebs).
-- **Browser User-Agent**: Updated the fetcher to use a modern browser string to avoid being blocked by security-conscious sites.
-
-### Fixed
-
-- **Adaptive Colors**: Implemented a vibrancy-based color selection algorithm to better extract brand colors from icons (later refined in 0.2.3).
-- **CSS Fallbacks**: Added default background colors for feed headers to prevent transparency issues during load.
-
-## [0.2.1] - 2025-12-29
-
-### Added
-
-- **Redirect Handling**: Implemented automatic following of HTTP redirects for RSS feeds and favicons.
-- **CORS Support**: Added `Access-Control-Allow-Origin` headers to the image proxy for browser-side color extraction.
-
-### Fixed
-
-- **Favicon Fetching**: Fixed a crash in binary data reading by using `IO::Memory` buffers.
-
-## [0.2.0] - 2025-12-27
-
-### Added
-
-- **Tab Feature**: Feeds can now be organized into custom categories (e.g., "Tech", "Dev") via `feeds.yml`.
-- **Enhanced Navigation**: Re-added scrollbars with high-contrast thumbs and implemented a bottom shadow indicator for light mode to ensure content visibility in Safari and other browsers.
-
-### Fixed
-
-- **UTF-8 Encoding**: Resolved issues with special characters (e.g., "Ÿnsect") in feed titles by updating the XML parser options.
-
-### Changed
-
-- **Mobile Responsiveness**: Improved layout handling and spacing for a better experience on smaller screens.
+1. Review this Unreleased section and edit wording or scope.
+2. When satisfied, stage and commit the changelog entry: `git add changelog.md && git commit -m "chore: add Unreleased changelog"`.
+3. When preparing a release, move entries from Unreleased to the release version section and tag.

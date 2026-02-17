@@ -210,9 +210,9 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
     feeds_snapshot, tabs_snapshot, software_releases_snapshot, is_clustering = STATE.with_lock do
       {
         STATE.feeds.dup,
-        STATE.tabs.map { |t| {name: t.name, feeds: t.feeds.dup, software_releases: t.software_releases.dup} },
+        STATE.tabs.map { |tab| {name: tab.name, feeds: tab.feeds.dup, software_releases: tab.software_releases.dup} },
         STATE.software_releases.dup,
-        STATE.is_clustering?
+        STATE.is_clustering?,
       }
     end
 
@@ -241,7 +241,7 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
 
                        all_feeds_with_tabs.map { |entry| Api.feed_to_response(entry[:feed], entry[:tab_name], cache.item_count(entry[:feed].url), item_limit) }
                      else
-                       found_tab = tabs_snapshot.find { |t| t[:name].downcase == active_tab.downcase }
+                       found_tab = tabs_snapshot.find { |tab| tab[:name].downcase == active_tab.downcase }
                        active_feeds = found_tab ? found_tab[:feeds] : [] of FeedData
                        active_feeds.map { |feed| Api.feed_to_response(feed, active_tab, cache.item_count(feed.url), item_limit) }
                      end
@@ -255,7 +255,7 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
                           end
                           all_software.map { |release| Api.feed_to_response(release, "software", release.items.size, item_limit) }
                         else
-                          found_tab = tabs_snapshot.find { |t| t[:name].downcase == active_tab.downcase }
+                          found_tab = tabs_snapshot.find { |tab| tab[:name].downcase == active_tab.downcase }
                           tab_software = found_tab ? found_tab[:software_releases] : nil
                           if tab_software
                             tab_software.map { |release| Api.feed_to_response(release, "software", release.items.size, item_limit) }
