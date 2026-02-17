@@ -30,20 +30,11 @@
           chmod +x $out/bin/ticket
         '';
       };
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
->>>>>>> f6e2546 (Refactor flake.nix to use flake.private.nix for private config)
 
       # Read a local flake.private.nix if present. We wrap it in a guard so
       # Nix evaluation doesn't error when the file is missing.
       private_hook = builtins.tryEval (if builtins.pathExists ./flake.private.nix then builtins.readFile ./flake.private.nix else "");
 
-<<<<<<< HEAD
-=======
->>>>>>> 22b6938 (Remove deprecated root package.json and package-lock.json)
-=======
->>>>>>> f6e2546 (Refactor flake.nix to use flake.private.nix for private config)
     in {
       # Nesting under the system fixes the 'attribute missing' error
       devShells.${system} = {
@@ -77,31 +68,7 @@
             export PATH="${openspec.packages.${system}.default}/bin:$HOME/.local/bin:$PWD/bin:$PATH"
             # Add ticket to PATH for AI task management
             export PATH="$PATH:${ticket}/bin"
-<<<<<<< HEAD
-<<<<<<< HEAD
 
-            # Ticket AI Task Management
-            export TICKET_DIR="$PWD/.tickets"
-            if [ ! -d "$TICKET_DIR" ]; then
-              echo "🎟️ Initializing local Ticket storage in $TICKET_DIR"
-              mkdir -p "$TICKET_DIR"
-            fi
-=======
-            export HUB_ROOT="/workspaces"
-            export PATH="$PATH:$HUB_ROOT/aiworkflow/bin:$HOME/go/bin"
-            export SSH_AUTH_SOCK="/workspaces/.ssh-auth.sock"
->>>>>>> 22b6938 (Remove deprecated root package.json and package-lock.json)
-=======
-
-<<<<<<< HEAD
-            # Private system-specific configuration (from flake.private.nix)
-            export HUB_ROOT="${privateConfig.hub-root or "/workspaces"}"
-            export PATH="$PATH:${privateConfig.aiworkflow-bin or "$HUB_ROOT/aiworkflow/bin"}:${privateConfig.go-bin or "$HOME/go/bin"}"
-            export SSH_AUTH_SOCK="${privateConfig.ssh-auth-sock or "/workspaces/.ssh-auth.sock"}"
->>>>>>> 9cff036 (Move system-specific flake config to flake.private.nix)
-
-=======
->>>>>>> f6e2546 (Refactor flake.nix to use flake.private.nix for private config)
             # Ticket AI Task Management
             export TICKET_DIR="$PWD/.tickets"
             if [ ! -d "$TICKET_DIR" ]; then
