@@ -531,7 +531,15 @@ class FeedCache
 
         # Insert items with proper upsert logic
         # First insert new items, then update pub_date for existing items if changed
+        # Skip items that already exist with the same title for this feed (duplicate detection)
+        existing_titles = @db.query_all("SELECT title FROM items WHERE feed_id = ?", feed_id, as: String).to_set
+
         feed_data.items.each_with_index do |item, index|
+          # Skip if title already exists for this feed (duplicate)
+          if existing_titles.includes?(item.title)
+            next
+          end
+
           pub_date_str = item.pub_date.try(&.to_s("%Y-%m-%d %H:%M:%S"))
 
           # Try to insert, ignore if already exists
@@ -544,6 +552,9 @@ class FeedCache
             item.version,
             index
           )
+
+          # Add title to set to prevent duplicates within same batch
+          existing_titles << item.title
 
           # Update pub_date and position for existing items
           # This handles the case when a feed comes back online with updated timestamps
