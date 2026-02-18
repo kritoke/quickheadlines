@@ -166,9 +166,10 @@ struct ClusteringConfig
   # Maximum number of items to process in a clustering run (default: nil = use db_fetch_limit)
   property max_items : Int32? = nil
 
-  # Similarity threshold for clustering (0.0-1.0, default: 0.75)
+  # Similarity threshold for clustering (0.0-1.0, default: 0.35)
   # Higher values = stricter matching, lower values = more clusters
-  property threshold : Float64 = 0.75
+  # 0.35 works well with overlap coefficient for short headlines
+  property threshold : Float64 = 0.35
 end
 
 # YAML parsing result with detailed error information

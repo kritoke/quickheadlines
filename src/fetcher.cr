@@ -938,6 +938,8 @@ def refresh_all(config : Config)
   end
 
   # 7. Process story clustering for all fetched feeds asynchronously
+  async_clustering(fetched_map.values.to_a)
+
   # Clear memory after large amount of data processing
   GC.collect
 

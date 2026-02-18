@@ -216,6 +216,11 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
       }
     end
 
+    # Fallback: if STATE is empty (initial load), read directly from cache
+    if feeds_snapshot.empty? && tabs_snapshot.all? { |t| t[:feeds].empty? }
+      feeds_snapshot, tabs_snapshot = load_feeds_from_cache_fallback(cache)
+    end
+
     # Build simple tabs response (just names for tab navigation)
     tabs_response = tabs_snapshot.map do |tab|
       TabResponse.new(name: tab[:name])
@@ -643,7 +648,7 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
         STDERR.puts "[#{Time.local}] Starting manual clustering..."
         service = clustering_service
         cluster_limit = STATE.config.try(&.clustering).try(&.max_items) || STATE.config.try(&.db_fetch_limit) || 5000
-        threshold = STATE.config.try(&.clustering).try(&.threshold) || 0.75
+        threshold = STATE.config.try(&.clustering).try(&.threshold) || 0.35
         service.cluster_uncategorized(cluster_limit, threshold)
       rescue ex
         STDERR.puts "[#{Time.local}] Clustering error: #{ex.message}"
@@ -662,7 +667,7 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
         STDERR.puts "[#{Time.local}] Clearing clustering metadata and re-clustering..."
         service = clustering_service
         cluster_limit = STATE.config.try(&.clustering).try(&.max_items) || STATE.config.try(&.db_fetch_limit) || 5000
-        threshold = STATE.config.try(&.clustering).try(&.threshold) || 0.75
+        threshold = STATE.config.try(&.clustering).try(&.threshold) || 0.35
         service.recluster_all(cluster_limit, threshold)
       rescue ex
         STDERR.puts "[#{Time.local}] Re-clustering error: #{ex.message}"
@@ -783,5 +788,25 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
       status: :not_found,
       headers: HTTP::Headers{"Content-Type" => "text/plain"}
     )
+  end
+
+  # Fallback method to load feeds directly from cache when STATE is empty
+  private def load_feeds_from_cache_fallback(cache : FeedCache)
+    config = STATE.config
+    return {[] of FeedData, [] of NamedTuple(name: String, feeds: Array(FeedData), software_releases: Array(FeedData))} unless config
+
+    cached_feeds = [] of FeedData
+    config.feeds.each do |feed_config|
+      if cached = cache.get(feed_config.url)
+        cached_feeds << cached
+      end
+    end
+
+    cached_tabs = config.tabs.map do |tab_config|
+      tab_feeds = tab_config.feeds.compact_map { |feed_config| cache.get(feed_config.url) }
+      {name: tab_config.name, feeds: tab_feeds, software_releases: [] of FeedData}
+    end
+
+    {cached_feeds, cached_tabs}
   end
 end

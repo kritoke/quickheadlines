@@ -32,6 +32,31 @@ module ClusteringUtilities
     return 0 if normalized.empty?
     normalized.split(/\s+/).size
   end
+
+  def self.word_set(text : String) : Set(String)
+    normalized = normalize_headline(text)
+    return Set(String).new if normalized.empty?
+    normalized.split(/\s+/).to_set
+  end
+
+  def self.jaccard_similarity(set1 : Set(String), set2 : Set(String)) : Float64
+    return 0.0 if set1.empty? && set2.empty?
+    return 0.0 if set1.empty? || set2.empty?
+    intersection = set1 & set2
+    union = set1 | set2
+    return 0.0 if union.size == 0
+    intersection.size.to_f64 / union.size.to_f64
+  end
+
+  # Overlap coefficient - measures how much one set overlaps with another
+  # Better for comparing sets of different sizes (more forgiving for short text)
+  def self.overlap_coefficient(set1 : Set(String), set2 : Set(String)) : Float64
+    return 0.0 if set1.empty? || set2.empty?
+    intersection = set1 & set2
+    return 0.0 if intersection.empty?
+    min_size = {set1.size, set2.size}.min
+    intersection.size.to_f64 / min_size.to_f64
+  end
 end
 
 class Quickheadlines::Services::ClusteringService
@@ -42,11 +67,14 @@ class Quickheadlines::Services::ClusteringService
   def initialize(@db : DB::Database)
   end
 
-  def compute_cluster_for_item(item_id : Int64, title : String, cache : FeedCache, item_feed_id : Int64? = nil, threshold : Float64 = 0.75) : Int64?
+  def compute_cluster_for_item(item_id : Int64, title : String, cache : FeedCache, item_feed_id : Int64? = nil, threshold : Float64 = 0.35) : Int64?
     return nil if title.empty?
     return nil if ClusteringUtilities.word_count(title) < ClusteringUtilities::MIN_WORDS_FOR_CLUSTERING
 
-    # Compute MinHash signature
+    # Compute normalized word set for Jaccard similarity
+    title_set = ClusteringUtilities.word_set(title)
+
+    # Compute MinHash signature (still used for LSH candidate generation)
     document = LexisMinhash::SimpleDocument.new(title)
     signature = LexisMinhash::Engine.compute_signature(document)
 
@@ -82,11 +110,17 @@ class Quickheadlines::Services::ClusteringService
         next
       end
 
-      similarity = LexisMinhash::Engine.similarity(signature, candidate_signature)
+      candidate_title = cache.get_item_title(candidate_id)
+      next unless candidate_title
+
+      candidate_set = ClusteringUtilities.word_set(candidate_title)
+
+      similarity = ClusteringUtilities.overlap_coefficient(title_set, candidate_set)
+
       if similarity > best_similarity
         best_similarity = similarity
         best_match = candidate_id
-        best_title = cache.get_item_title(candidate_id) || ""
+        best_title = candidate_title
         best_feed_id = candidate_feed_id
       end
     end
@@ -213,7 +247,7 @@ class Quickheadlines::Services::ClusteringService
 
   # Cluster uncategorized items (items with cluster_id NULL or cluster_id = id)
   # Returns number of items processed
-  def cluster_uncategorized(limit : Int32 = 5000, threshold : Float64 = 0.75) : Int32
+  def cluster_uncategorized(limit : Int32 = 5000, threshold : Float64 = 0.35) : Int32
     cache = FeedCache.instance
     db = @db
 
@@ -251,7 +285,7 @@ class Quickheadlines::Services::ClusteringService
   end
 
   # Clear clustering metadata and recluster all items (up to limit)
-  def recluster_all(limit : Int32 = 5000, threshold : Float64 = 0.75) : Int32
+  def recluster_all(limit : Int32 = 5000, threshold : Float64 = 0.35) : Int32
     cache = FeedCache.instance
     cache.clear_clustering_metadata
 
