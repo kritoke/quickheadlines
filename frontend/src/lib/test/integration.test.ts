@@ -44,7 +44,8 @@ describe('API Integration', () => {
 					title: 'Test Feed',
 					items: [{ title: 'Item 1', link: 'https://example.com/1' }]
 				}
-			]
+			],
+			updated_at: 1700000000000
 		};
 
 		mockFetch.mockResolvedValueOnce({
@@ -57,6 +58,7 @@ describe('API Integration', () => {
 
 		expect(data.feeds).toHaveLength(1);
 		expect(data.feeds[0].title).toBe('Test Feed');
+		expect(data.updated_at).toBe(1700000000000);
 	});
 
 	it('fetches timeline from /api/timeline', async () => {

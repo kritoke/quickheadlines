@@ -68,6 +68,7 @@ export interface FeedsPageResponse {
 	feeds: FeedResponse[];
 	software_releases: FeedResponse[];
 	is_clustering: boolean;
+	updated_at: number;
 }
 
 export interface TimelinePageResponse {

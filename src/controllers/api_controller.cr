@@ -217,7 +217,7 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
     end
 
     # Fallback: if STATE is empty (initial load), read directly from cache
-    if feeds_snapshot.empty? && tabs_snapshot.all? { |t| t[:feeds].empty? }
+    if feeds_snapshot.empty? && tabs_snapshot.all?(&.[:feeds].empty?)
       feeds_snapshot, tabs_snapshot = load_feeds_from_cache_fallback(cache)
     end
 
@@ -226,7 +226,7 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
       TabResponse.new(name: tab[:name])
     end
 
-    # Get feeds for active tab (flattened to top level as Elm expects)
+    # Get feeds for active tab (flattened to top level)
     # For "all" tab, aggregate feeds from all tabs + top-level feeds
     feeds_response = if active_tab.to_s.downcase == "all"
                        # Build list of tuples (feed, tab_name) to preserve tab info
@@ -274,7 +274,8 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
       active_tab: active_tab,
       feeds: feeds_response,
       software_releases: releases_response,
-      is_clustering: is_clustering
+      is_clustering: is_clustering,
+      updated_at: STATE.updated_at.to_unix_ms
     )
   end
 

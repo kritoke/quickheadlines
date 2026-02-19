@@ -147,8 +147,9 @@ class FeedsPageResponse
   property feeds : Array(FeedResponse)
   property software_releases : Array(FeedResponse)
   property? is_clustering : Bool = false
+  property updated_at : Int64
 
-  def initialize(@tabs : Array(TabResponse), @active_tab : String, @feeds : Array(FeedResponse), @software_releases : Array(FeedResponse), @is_clustering : Bool = false)
+  def initialize(@tabs : Array(TabResponse), @active_tab : String, @feeds : Array(FeedResponse), @software_releases : Array(FeedResponse), @is_clustering : Bool = false, @updated_at : Int64 = 0_i64)
   end
 end
 
@@ -418,7 +419,7 @@ module Api
       STDERR.puts "[#{Time.local}] handle_feeds: tab '#{tab.name}' has #{tab.feeds.size} feeds"
     end
 
-    # Get feeds for active tab (flattened to top level as Elm expects)
+    # Get feeds for active tab (flattened to top level)
     # For "all" tab, aggregate feeds from all tabs + top-level feeds
     feeds_response = if active_tab.downcase == "all"
                        # Build list of tuples (feed, tab_name) to preserve tab info

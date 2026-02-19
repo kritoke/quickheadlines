@@ -83,7 +83,31 @@
 	}
 
 	let refreshInterval: ReturnType<typeof setInterval>;
+	let configRefreshInterval: ReturnType<typeof setInterval>;
 	let refreshMinutes = $state(10);
+	let configFetched = $state(false);
+	
+	async function loadConfig() {
+		try {
+			const config = await fetchConfig();
+			const newRefreshMinutes = config.refresh_minutes || 10;
+			
+			if (configFetched && newRefreshMinutes !== refreshMinutes) {
+				console.log(`Config changed: refresh interval updated from ${refreshMinutes} to ${newRefreshMinutes} minutes`);
+				if (refreshInterval) {
+					clearInterval(refreshInterval);
+					refreshInterval = setInterval(() => {
+						loadFeeds(activeTab, true);
+					}, newRefreshMinutes * 60 * 1000);
+				}
+			}
+			
+			refreshMinutes = newRefreshMinutes;
+			configFetched = true;
+		} catch (e) {
+			console.warn('Failed to fetch config, using existing refresh rate:', e);
+		}
+	}
 	
 	onMount(async () => {
 		const params = new URLSearchParams(window.location.search);
@@ -92,19 +116,19 @@
 		
 		loadFeeds(urlTab, true);
 		
-		try {
-			const config = await fetchConfig();
-			refreshMinutes = config.refresh_minutes || 10;
-		} catch (e) {
-			console.warn('Failed to fetch config, using default refresh rate:', e);
-		}
+		await loadConfig();
 		
 		refreshInterval = setInterval(() => {
 			loadFeeds(activeTab, true);
 		}, refreshMinutes * 60 * 1000);
 		
+		configRefreshInterval = setInterval(() => {
+			loadConfig();
+		}, 60000);
+		
 		return () => {
 			if (refreshInterval) clearInterval(refreshInterval);
+			if (configRefreshInterval) clearInterval(configRefreshInterval);
 		};
 	});
 </script>
@@ -128,8 +152,16 @@
 				{/if}
 			</div>
 			<div class="flex items-center gap-1 sm:gap-2">
-				<a href="/timeline" class="text-xs sm:text-sm text-blue-600 dark:text-blue-400 hover:underline">
-					Timeline
+				<a 
+					href="/timeline" 
+					class="p-1.5 sm:p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+					aria-label="Timeline view"
+					title="Timeline view"
+				>
+					<svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-slate-500 dark:text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+						<circle cx="12" cy="12" r="10" />
+						<polyline points="12 6 12 12 16 14" />
+					</svg>
 				</a>
 				<button
 					onclick={toggleCoolMode}
@@ -160,7 +192,7 @@
 		</div>
 	</header>
 
-	<main class="max-w-7xl mx-auto px-2 sm:px-4 py-4 pt-14 sm:pt-16 overflow-visible">
+	<main class="max-w-7xl mx-auto px-2 sm:px-4 py-4 pt-20 sm:pt-20 overflow-visible">
 		{#if loading && feeds.length === 0}
 			<div class="flex items-center justify-center py-20">
 				<div class="text-slate-500 dark:text-slate-400">Loading feeds...</div>

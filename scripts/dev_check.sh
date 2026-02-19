@@ -61,8 +61,4 @@ except Exception as e:
     print('pagination check failed:', e)
 PY2
 
-echo "--- compare elm.js sha256 ---"
-curl -sS "http://localhost:8080/elm.js" -o /tmp/served_elm.js || true
-sha256sum public/elm.js /tmp/served_elm.js || true
-
 echo "Done. Server pid: $SERVER_PID"

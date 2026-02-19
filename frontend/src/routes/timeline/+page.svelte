@@ -1,6 +1,6 @@
 <script lang="ts">
 	import TimelineView from '$lib/components/TimelineView.svelte';
-	import { fetchTimeline } from '$lib/api';
+	import { fetchTimeline, fetchConfig } from '$lib/api';
 	import type { TimelineItemResponse } from '$lib/types';
 	import { themeState, toggleCoolMode } from '$lib/stores/theme.svelte';
 	import { onMount } from 'svelte';
@@ -16,6 +16,27 @@
 	let offset = $state(0);
 	let sentinelElement: HTMLDivElement | undefined = $state();
 	const limit = 100;
+	
+	let refreshInterval: ReturnType<typeof setInterval>;
+	let refreshMinutes = $state(10);
+	
+	async function loadConfig() {
+		try {
+			const config = await fetchConfig();
+			const newRefreshMinutes = config.refresh_minutes || 10;
+			
+			if (refreshInterval && newRefreshMinutes !== refreshMinutes) {
+				clearInterval(refreshInterval);
+				refreshInterval = setInterval(() => {
+					loadTimeline();
+				}, newRefreshMinutes * 60 * 1000);
+			}
+			
+			refreshMinutes = newRefreshMinutes;
+		} catch (e) {
+			console.warn('Failed to fetch config:', e);
+		}
+	}
 
 	async function loadTimeline(append: boolean = false) {
 		try {
@@ -75,6 +96,15 @@
 
 	onMount(() => {
 		loadTimeline();
+		loadConfig();
+		
+		refreshInterval = setInterval(() => {
+			loadTimeline();
+		}, refreshMinutes * 60 * 1000);
+		
+		return () => {
+			if (refreshInterval) clearInterval(refreshInterval);
+		};
 	});
 </script>
 
@@ -85,18 +115,28 @@
 <div class="min-h-screen bg-white dark:bg-slate-900 transition-colors">
 	<header class="fixed top-0 left-0 right-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur border-b border-slate-200 dark:border-slate-700 z-20">
 		<div class="max-w-7xl mx-auto px-2 sm:px-4 py-2 sm:py-3 flex items-center justify-between">
-			<div class="flex items-center gap-2 sm:gap-4 min-w-0">
-				<a href="/" class="text-sm sm:text-base text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors shrink-0">
-					← Back
+			<div class="flex items-center gap-2 sm:gap-3 min-w-0">
+				<a href="/" class="flex items-center gap-2 hover:opacity-80 transition-opacity shrink-0">
+					<img src="/logo.svg" alt="Logo" class="w-7 h-7 sm:w-8 sm:h-8" />
+					<span class="text-lg sm:text-xl font-bold text-slate-900 dark:text-white">Timeline</span>
 				</a>
-				<h1 class="text-lg sm:text-xl font-bold text-slate-900 dark:text-white truncate">
-					Timeline
-				</h1>
 				<span class="text-xs sm:text-sm text-slate-500 dark:text-slate-400 hidden sm:block whitespace-nowrap">
 					{items.length} items
 				</span>
 			</div>
 			<div class="flex items-center gap-1 sm:gap-2">
+				<a 
+					href="/" 
+					class="p-1.5 sm:p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+					aria-label="Feed view"
+					title="Feed view"
+				>
+					<svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-slate-500 dark:text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+						<path d="M4 11a9 9 0 0 1 9 9" />
+						<path d="M4 4a16 16 0 0 1 16 16" />
+						<circle cx="5" cy="19" r="1" fill="currentColor" />
+					</svg>
+				</a>
 				<button
 					onclick={toggleCoolMode}
 					class="p-1.5 sm:p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
@@ -126,7 +166,7 @@
 		</div>
 	</header>
 
-	<main class="max-w-7xl mx-auto px-2 sm:px-4 py-4 pt-14 sm:pt-16">
+	<main class="max-w-7xl mx-auto px-2 sm:px-4 py-4 pt-20 sm:pt-20">
 		{#if loading && items.length === 0}
 			<div class="flex items-center justify-center py-20">
 				<div class="text-slate-500 dark:text-slate-400">Loading timeline...</div>

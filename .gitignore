@@ -35,8 +35,7 @@ server.log
 # Elm compiler artifacts and cache
 elm-stuff/
 
-# Note: public/elm.js is NOT ignored - it is committed for FreeBSD support
-# since Elm compiler may not be available on FreeBSD
+# No Elm artifacts - frontend is now Svelte only
 
 # Active design plan (working document, not for commit)
 ACTIVE_DESIGN_PLAN.md

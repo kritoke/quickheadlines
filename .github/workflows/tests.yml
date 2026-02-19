@@ -24,7 +24,7 @@ jobs:
       - name: Run Crystal tests
         run: crystal spec spec/header_colors_spec.cr spec/api_controller_header_color_spec.cr
 
-  playwright-tests:
+  frontend-tests:
     runs-on: ubuntu-latest
     needs: crystal-tests
     steps:
@@ -33,38 +33,47 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
+
+      - name: Install pnpm
+        run: npm install -g pnpm
+
+      - name: Install frontend dependencies
+        run: cd frontend && pnpm install
+
+      - name: Run frontend tests
+        run: cd frontend && pnpm run test
+
+  build-verify:
+    runs-on: ubuntu-latest
+    needs: [crystal-tests, frontend-tests]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install pnpm
+        run: npm install -g pnpm
+
+      - name: Setup Crystal
+        uses: crystal-lang/setup-crystal@v2
+        with:
+          crystal_version: 1.18.2
 
       - name: Install system dependencies
         run: sudo apt-get install -y libsqlite3-dev libssl-dev libmagic-dev
 
-      - name: Install Playwright
-        run: npm install
+      - name: Install shards
+        run: shards install
 
-      - name: Build Elm
-        run: |
-          # Install a known Elm 0.19.1 reliably and build optimized bundle for tests
-          echo "Setting up Elm 0.19.1"
-          curl -sL https://github.com/avh4/setup-elm/releases/latest/download/install-elm.sh | bash -s -- 0.19.1
-          cd ui && rm -f elm.js && elm make src/Main.elm --optimize --output=elm.js
+      - name: Build Svelte frontend
+        run: cd frontend && pnpm run build
 
       - name: Build Crystal binary
-        uses: crystal-lang/setup-crystal@v2
-        with:
-          crystal_version: 1.18.2
-        run: shards install && crystal build --release --no-debug src/quickheadlines.cr -o bin/quickheadlines
+        run: touch src/web/assets.cr && crystal build --release --no-debug src/quickheadlines.cr -o bin/quickheadlines
 
-      - name: Start app
-        run: |
-          ./bin/quickheadlines &
-          sleep 10
-
-      - name: Run Playwright tests
-        run: npx playwright test ui/tests/ --reporter=list
-
-      - name: Collect artifacts
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: playwright-report
-          path: playwright-report/
+      - name: Verify binary exists
+        run: test -f bin/quickheadlines
