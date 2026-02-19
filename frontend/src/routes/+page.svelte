@@ -167,7 +167,7 @@
 					onclick={toggleCoolMode}
 					class="p-1.5 sm:p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
 					aria-label="Toggle cool mode"
-					title="Particle effects"
+					title="Cool mode"
 				>
 					<svg 
 						class="w-5 h-5"
