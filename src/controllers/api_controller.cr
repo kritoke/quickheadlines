@@ -2,6 +2,7 @@ require "athena"
 require "../rate_limiter"
 require "../dtos/rate_limit_stats_dto"
 require "../dtos/config_dto"
+require "../web/assets"
 
 class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
   @db_service : DatabaseService
@@ -480,7 +481,7 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
 
   @[ARTA::Get(path: "/favicon.png")]
   def favicon_png(request : ATH::Request) : ATH::Response
-    content = File.read("./assets/images/favicon.png")
+    content = FrontendAssets.get("favicon.png").gets_to_end
     response = ATH::Response.new(content)
     response.headers["content-type"] = "image/png"
     response.headers["Cache-Control"] = "public, max-age=31536000"
@@ -488,29 +489,9 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
     response
   end
 
-  @[ARTA::Get(path: "/favicon.svg")]
-  def favicon_svg(request : ATH::Request) : ATH::Response
-    content = File.read("./assets/images/favicon.svg")
-    response = ATH::Response.new(content)
-    response.headers["content-type"] = "image/svg+xml"
-    response.headers["Cache-Control"] = "public, max-age=31536000"
-    response.headers["Access-Control-Allow-Origin"] = "*"
-    response
-  end
-
-  @[ARTA::Get(path: "/favicon.ico")]
-  def favicon_ico(request : ATH::Request) : ATH::Response
-    content = File.read("./assets/images/favicon.ico")
-    response = ATH::Response.new(content)
-    response.headers["content-type"] = "image/x-icon"
-    response.headers["Cache-Control"] = "public, max-age=31536000"
-    response.headers["Access-Control-Allow-Origin"] = "*"
-    response
-  end
-
   @[ARTA::Get(path: "/sun-icon.svg")]
   def sun_icon_svg(request : ATH::Request) : ATH::Response
-    content = File.read("./assets/images/sun-icon.svg")
+    content = FrontendAssets.get("sun-icon.svg").gets_to_end
     response = ATH::Response.new(content)
     response.headers["content-type"] = "image/svg+xml"
     response.headers["Cache-Control"] = "public, max-age=31536000"
@@ -520,7 +501,7 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
 
   @[ARTA::Get(path: "/moon-icon.svg")]
   def moon_icon_svg(request : ATH::Request) : ATH::Response
-    content = File.read("./assets/images/moon-icon.svg")
+    content = FrontendAssets.get("moon-icon.svg").gets_to_end
     response = ATH::Response.new(content)
     response.headers["content-type"] = "image/svg+xml"
     response.headers["Cache-Control"] = "public, max-age=31536000"
@@ -530,7 +511,7 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
 
   @[ARTA::Get(path: "/home-icon.svg")]
   def home_icon_svg(request : ATH::Request) : ATH::Response
-    content = File.read("./assets/images/home-icon.svg")
+    content = FrontendAssets.get("home-icon.svg").gets_to_end
     response = ATH::Response.new(content)
     response.headers["content-type"] = "image/svg+xml"
     response.headers["Cache-Control"] = "public, max-age=31536000"
@@ -540,7 +521,7 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
 
   @[ARTA::Get(path: "/timeline-icon.svg")]
   def timeline_icon_svg(request : ATH::Request) : ATH::Response
-    content = File.read("./assets/images/timeline-icon.svg")
+    content = FrontendAssets.get("timeline-icon.svg").gets_to_end
     response = ATH::Response.new(content)
     response.headers["content-type"] = "image/svg+xml"
     response.headers["Cache-Control"] = "public, max-age=31536000"
