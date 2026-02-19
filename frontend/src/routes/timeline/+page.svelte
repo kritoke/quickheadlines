@@ -103,6 +103,13 @@
 	});
 
 	onMount(() => {
+		if (typeof window !== 'undefined') {
+			const savedOffset = localStorage.getItem(STORAGE_KEY);
+			if (savedOffset) {
+				offset = parseInt(savedOffset);
+			}
+		}
+		
 		loadTimeline();
 		loadConfig();
 		
