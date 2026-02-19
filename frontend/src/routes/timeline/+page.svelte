@@ -16,6 +16,7 @@
 	let offset = $state(0);
 	let sentinelElement: HTMLDivElement | undefined = $state();
 	const limit = 100;
+	const STORAGE_KEY = 'quickheadlines-timeline-offset';
 	
 	let refreshInterval: ReturnType<typeof setInterval>;
 	let refreshMinutes = $state(10);
@@ -60,6 +61,10 @@
 			
 			hasMore = response.has_more;
 			offset += response.items.length;
+			
+			if (typeof window !== 'undefined') {
+				localStorage.setItem(STORAGE_KEY, String(offset));
+			}
 		} catch (e) {
 			error = e instanceof Error ? e.message : 'Failed to load timeline';
 			console.error('[Timeline] Error:', e);
@@ -95,6 +100,13 @@
 	});
 
 	onMount(() => {
+		if (typeof window !== 'undefined') {
+			const savedOffset = localStorage.getItem(STORAGE_KEY);
+			if (savedOffset) {
+				offset = parseInt(savedOffset);
+			}
+		}
+		
 		loadTimeline();
 		loadConfig();
 		
