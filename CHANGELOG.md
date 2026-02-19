@@ -1,5 +1,28 @@
 # Changelog
 
+## [0.5.0] - Unreleased
+
+### Added
+
+- **Athena Framework Backend**: Migrated from custom Crystal backend to Athena framework for improved routing and maintainability
+- **Svelte 5 Frontend**: Rebuilt frontend with Svelte 5 using BakedFileSystem for embedded assets (single binary deployment)
+- **Cool Mode Particle Effects**: Optional visual particle effects toggle
+- **Vitest Testing**: Frontend unit tests with @testing-library/svelte
+- **Config Change Detection**: Frontend periodically polls for feeds.yml changes without requiring server restart
+- **Automatic Clustering**: Story clustering now runs automatically after each feed refresh
+- **Duplicate Detection**: Skip items that already exist with the same title from the same feed
+
+### Changed
+
+- **Build System**: Migrated from Makefile to Justfile for better cross-platform developer experience
+- **Clustering Algorithm**: Replaced MinHash with overlap coefficient for better short text matching
+- **Clustering Threshold**: Lowered default threshold from 0.75 to 0.35 for more clusters
+- **Fast Server Startup**: Improved startup logic to serve cached content immediately while fetching new feed items in background
+- **Color Calculations**: Improved header color extraction algorithm for better feed branding
+- **Animations**: Added animated theme toggle with smooth transitions
+- **Feed Box Styling**: Improved responsive layout and visual styling for feed cards
+- **CI/CD**: Updated workflows for Svelte 5 build pipeline
+
 ## [0.4.0] - 2026-01-16
 
 ### Added
