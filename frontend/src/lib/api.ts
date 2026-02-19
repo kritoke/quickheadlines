@@ -4,7 +4,8 @@ import type {
 	ClustersResponse,
 	ClusterItemsResponse,
 	FeedResponse,
-	ConfigResponse
+	ConfigResponse,
+	StatusResponse
 } from './types';
 
 const API_BASE = '/api';
@@ -116,6 +117,15 @@ export async function fetchConfig(): Promise<ConfigResponse> {
 	const response = await fetch(url);
 	if (!response.ok) {
 		throw new Error(`Failed to fetch config: ${response.statusText}`);
+	}
+	return response.json();
+}
+
+export async function fetchStatus(): Promise<StatusResponse> {
+	const url = `${API_BASE}/status`;
+	const response = await fetch(url);
+	if (!response.ok) {
+		throw new Error(`Failed to fetch status: ${response.statusText}`);
 	}
 	return response.json();
 }

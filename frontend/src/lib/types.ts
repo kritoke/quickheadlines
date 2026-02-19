@@ -97,3 +97,8 @@ export interface ConfigResponse {
 	refresh_minutes: number;
 	item_limit: number;
 }
+
+export interface StatusResponse {
+	is_clustering: boolean;
+	active_jobs: number;
+}

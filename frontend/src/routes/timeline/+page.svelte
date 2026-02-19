@@ -1,6 +1,6 @@
 <script lang="ts">
 	import TimelineView from '$lib/components/TimelineView.svelte';
-	import { fetchTimeline, fetchConfig } from '$lib/api';
+	import { fetchTimeline, fetchConfig, fetchStatus } from '$lib/api';
 	import type { TimelineItemResponse } from '$lib/types';
 	import { themeState, toggleCoolMode } from '$lib/stores/theme.svelte';
 	import { onMount } from 'svelte';
@@ -15,6 +15,8 @@
 	let error = $state<string | null>(null);
 	let offset = $state(0);
 	let sentinelElement: HTMLDivElement | undefined = $state();
+	let wasClustering = $state(false);
+	let saveScrollY = $state(0);
 	const limit = 100;
 	const STORAGE_KEY = 'quickheadlines-timeline-offset';
 	
@@ -103,12 +105,27 @@
 		loadTimeline();
 		loadConfig();
 		
+		const clusteringCheckInterval = setInterval(async () => {
+			try {
+				const status = await fetchStatus();
+				if (wasClustering && !status.is_clustering) {
+					saveScrollY = window.scrollY;
+					await loadTimeline();
+					window.scrollTo(0, saveScrollY);
+				}
+				wasClustering = status.is_clustering;
+			} catch (e) {
+				console.warn('Failed to check clustering status:', e);
+			}
+		}, 5000);
+		
 		refreshInterval = setInterval(() => {
 			loadTimeline();
 		}, refreshMinutes * 60 * 1000);
 		
 		return () => {
 			if (refreshInterval) clearInterval(refreshInterval);
+			clearInterval(clusteringCheckInterval);
 		};
 	});
 </script>
