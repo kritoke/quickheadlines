@@ -16,10 +16,10 @@
 	let offset = $state(0);
 	let sentinelElement: HTMLDivElement | undefined = $state();
 	let isClustering = $state(false);
+	let isRefreshing = $state(false);
 	let saveScrollY = $state(0);
 	let clusteringCheckInterval: ReturnType<typeof setInterval> | null = null;
 	const limit = 100;
-	const STORAGE_KEY = 'quickheadlines-timeline-offset';
 	
 	let refreshInterval: ReturnType<typeof setInterval>;
 	let refreshMinutes = $state(10);
@@ -43,10 +43,13 @@
 	}
 
 	async function loadTimeline(append: boolean = false) {
+		if (!append && isRefreshing) return;
+		
 		try {
 			if (append) {
 				loadingMore = true;
 			} else {
+				isRefreshing = true;
 				loading = true;
 			}
 			error = null;
@@ -64,16 +67,13 @@
 			
 			hasMore = response.has_more;
 			offset += response.items.length;
-			
-			if (typeof window !== 'undefined') {
-				localStorage.setItem(STORAGE_KEY, String(offset));
-			}
 		} catch (e) {
 			error = e instanceof Error ? e.message : 'Failed to load timeline';
 			console.error('[Timeline] Error:', e);
 		} finally {
 			loading = false;
 			loadingMore = false;
+			isRefreshing = false;
 		}
 	}
 
@@ -103,13 +103,6 @@
 	});
 
 	onMount(() => {
-		if (typeof window !== 'undefined') {
-			const savedOffset = localStorage.getItem(STORAGE_KEY);
-			if (savedOffset) {
-				offset = parseInt(savedOffset);
-			}
-		}
-		
 		loadTimeline();
 		loadConfig();
 		
@@ -127,6 +120,7 @@
 						clusteringCheckInterval = null;
 					}
 					saveScrollY = window.scrollY;
+					isRefreshing = false;
 					await loadTimeline();
 					window.scrollTo(0, saveScrollY);
 				}
@@ -167,7 +161,6 @@
 						<button
 							onclick={() => {
 								offset = 0;
-								localStorage.removeItem(STORAGE_KEY);
 								loadTimeline();
 							}}
 							class="ml-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 align-middle"
