@@ -55,7 +55,11 @@
 
 	function getFaviconSrc(): string {
 		if (feed.favicon_data) {
-			if (feed.favicon_data.startsWith('internal:')) return '/favicon.svg';
+			if (feed.favicon_data.startsWith('internal:')) {
+				const iconName = feed.favicon_data.replace('internal:', '');
+				if (iconName === 'code_icon') return '/code_icon.svg';
+				return '/favicon.svg';
+			}
 			return feed.favicon_data;
 		}
 		if (feed.favicon) {

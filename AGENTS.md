@@ -487,3 +487,59 @@ $effect(() => {
   }
 });
 ```
+
+## Screenshots
+
+This project uses **shot-scraper** for taking screenshots. It is available via `flake.nix`.
+
+### Light Mode
+
+```bash
+# Desktop main page
+nix shell nixpkgs#shot-scraper -c shot-scraper "http://localhost:8080/" -o ss/qh-desktop-lm-ss.png --wait 3000 -h 800
+
+# Desktop timeline (needs longer wait for feeds to load)
+nix shell nixpkgs#shot-scraper -c shot-scraper "http://localhost:8080/timeline" -o ss/qh-desktop-lm-timeline-ss.png --wait 5000 -h 800
+
+# Mobile main page (375x667 viewport)
+nix shell nixpkgs#shot-scraper -c shot-scraper "http://localhost:8080/" -o ss/qh-mobile-lm-ss.png --wait 3000 -w 375 -h 667
+
+# Mobile timeline
+nix shell nixpkgs#shot-scraper -c shot-scraper "http://localhost:8080/timeline" -o ss/qh-mobile-lm-timeline-ss.png --wait 5000 -w 375 -h 667
+```
+
+### Dark Mode
+
+Dark mode requires using an auth storage file to pre-set localStorage before page load:
+
+```bash
+# Create dark-theme-storage.json:
+# {
+#   "origins": [
+#     {
+#       "origin": "http://localhost:8080",
+#       "localStorage": [
+#         { "name": "quickheadlines-theme", "value": "dark" }
+#       ]
+#     }
+#   ]
+# }
+
+# Desktop dark main
+nix shell nixpkgs#shot-scraper -c shot-scraper "http://localhost:8080/" -o ss/qh-desktop-dm-ss.png --wait 5000 -h 800 -a dark-theme-storage.json
+
+# Desktop dark timeline
+nix shell nixpkgs#shot-scraper -c shot-scraper "http://localhost:8080/timeline" -o ss/qh-desktop-dm-timeline-ss.png --wait 7000 -h 800 -a dark-theme-storage.json
+
+# Mobile dark main
+nix shell nixpkgs#shot-scraper -c shot-scraper "http://localhost:8080/" -o ss/qh-mobile-dm-ss.png --wait 5000 -w 375 -h 667 -a dark-theme-storage.json
+
+# Mobile dark timeline
+nix shell nixpkgs#shot-scraper -c shot-scraper "http://localhost:8080/timeline" -o ss/qh-mobile-dm-timeline-ss.png --wait 7000 -w 375 -h 667 -a dark-theme-storage.json
+```
+
+### Key Findings
+
+1. **Timeline views need longer wait times** - Feeds load asynchronously, so use `--wait 5000` for main pages and `--wait 7000` for timeline views
+2. **Dark mode requires auth storage file** - The Svelte store initializes on page load, so using `-a` with a localStorage JSON file pre-sets values before navigation
+3. **Viewport heights** - Use `-h 800` for desktop (1280x800) and `-h 667` for mobile (375x667)

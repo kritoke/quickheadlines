@@ -11,7 +11,11 @@
 
 	function getFaviconSrc(item: StoryResponse): string {
 		if (item.favicon_data) {
-			if (item.favicon_data.startsWith('internal:')) return '/favicon.svg';
+			if (item.favicon_data.startsWith('internal:')) {
+				const iconName = item.favicon_data.replace('internal:', '');
+				if (iconName === 'code_icon') return '/code_icon.svg';
+				return '/favicon.svg';
+			}
 			return item.favicon_data;
 		}
 		if (item.favicon) {
