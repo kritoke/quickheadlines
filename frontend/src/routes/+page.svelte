@@ -3,25 +3,21 @@
 	import TabBar from '$lib/components/TabBar.svelte';
 	import { fetchFeeds, fetchMoreFeedItems, fetchConfig } from '$lib/api';
 	import type { FeedResponse, FeedsPageResponse } from '$lib/types';
-	import { themeState, toggleTheme } from '$lib/stores/theme.svelte';
+	import { themeState, toggleCoolMode } from '$lib/stores/theme.svelte';
 	import { onMount } from 'svelte';
-	import { fade, fly } from 'svelte/transition';
-	import { cubicOut } from 'svelte/easing';
+	import AnimatedThemeToggler from '$lib/components/AnimatedThemeToggler.svelte';
 
 	let feeds = $state<FeedResponse[]>([]);
 	let tabs = $state<{ name: string }[]>([]);
 	let activeTab = $state('all');
 	let loading = $state(false);
 	let error = $state<string | null>(null);
+	let lastUpdated = $state<Date | null>(null);
 
-	// Track loading state per feed for Load More
 	let loadingFeeds = $state<Record<string, boolean>>({});
-
-	// Cache for each tab's data
 	let tabCache = $state<Record<string, { feeds: FeedResponse[], loaded: boolean }>>({});
 
 	async function loadFeeds(tab: string = activeTab, force: boolean = false) {
-		// Check cache first
 		if (!force && tabCache[tab]?.loaded) {
 			feeds = tabCache[tab].feeds;
 			activeTab = tab;
@@ -36,8 +32,8 @@
 			feeds = [...swReleases, ...(response.feeds || [])];
 			tabs = response.tabs || [];
 			activeTab = tab;
+			lastUpdated = response.updated_at ? new Date(response.updated_at) : null;
 			
-			// Update cache
 			tabCache = {
 				...tabCache,
 				[tab]: { feeds, loaded: true }
@@ -51,7 +47,6 @@
 
 	async function handleTabChange(tab: string) {
 		activeTab = tab;
-		// Update URL without reload
 		const url = new URL(window.location.href);
 		url.searchParams.set('tab', tab);
 		window.history.replaceState({}, '', url);
@@ -75,7 +70,6 @@
 				};
 				feeds = feeds.map((f, i) => i === feedIndex ? updatedFeed : f);
 				
-				// Update cache
 				tabCache = {
 					...tabCache,
 					[activeTab]: { feeds, loaded: true }
@@ -88,20 +82,16 @@
 		}
 	}
 
-	// Auto-refresh at interval
 	let refreshInterval: ReturnType<typeof setInterval>;
 	let refreshMinutes = $state(10);
 	
 	onMount(async () => {
-		// Get tab from URL on initial load
 		const params = new URLSearchParams(window.location.search);
 		const urlTab = params.get('tab') || 'all';
 		activeTab = urlTab;
 		
-		// Initial load
 		loadFeeds(urlTab, true);
 		
-		// Fetch config to get refresh rate
 		try {
 			const config = await fetchConfig();
 			refreshMinutes = config.refresh_minutes || 10;
@@ -109,9 +99,7 @@
 			console.warn('Failed to fetch config, using default refresh rate:', e);
 		}
 		
-		// Set up auto-refresh
 		refreshInterval = setInterval(() => {
-			// Force refresh current tab
 			loadFeeds(activeTab, true);
 		}, refreshMinutes * 60 * 1000);
 		
@@ -126,42 +114,53 @@
 </svelte:head>
 
 <div class="min-h-screen bg-white dark:bg-slate-900 transition-colors duration-200">
-	<!-- Header -->
 	<header class="fixed top-0 left-0 right-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur border-b border-slate-200 dark:border-slate-700 z-30">
-		<div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
-			<div class="flex items-center gap-3">
-				<a href="/?tab=all" class="flex items-center gap-2 hover:opacity-80 transition-opacity">
-					<img src="/logo.svg" alt="Logo" class="w-8 h-8" />
-					<h1 class="text-xl font-bold text-slate-900 dark:text-white">
-						QuickHeadlines
-					</h1>
+		<div class="max-w-7xl mx-auto px-2 sm:px-4 py-2 sm:py-3 flex items-center justify-between">
+			<div class="flex items-center gap-2 sm:gap-3 min-w-0">
+				<a href="/?tab=all" class="flex items-center gap-2 hover:opacity-80 transition-opacity shrink-0">
+					<img src="/logo.svg" alt="Logo" class="w-7 h-7 sm:w-8 sm:h-8" />
+					<span class="text-lg sm:text-xl font-bold text-slate-900 dark:text-white">QuickHeadlines</span>
 				</a>
+				{#if lastUpdated}
+					<span class="text-xs text-slate-500 dark:text-slate-400 hidden md:block whitespace-nowrap">
+						Updated {lastUpdated.toLocaleTimeString()}
+					</span>
+				{/if}
 			</div>
-			<div class="flex items-center gap-4">
-				<a href="/timeline" class="text-sm text-blue-600 dark:text-blue-400 hover:underline">
+			<div class="flex items-center gap-1 sm:gap-2">
+				<a href="/timeline" class="text-xs sm:text-sm text-blue-600 dark:text-blue-400 hover:underline">
 					Timeline
 				</a>
 				<button
-					onclick={toggleTheme}
-					class="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-					aria-label="Toggle theme"
+					onclick={toggleCoolMode}
+					class="p-1.5 sm:p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+					aria-label="Toggle cool mode"
+					title="Toggle particle effects"
 				>
-					{#if themeState.theme === 'dark'}
-						<svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-yellow-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-							<path stroke-linecap="round" stroke-linejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
-						</svg>
-					{:else}
-						<svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-							<path stroke-linecap="round" stroke-linejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
-						</svg>
-					{/if}
+					<svg 
+						class="w-5 h-5"
+						class:text-pink-500={themeState.coolMode}
+						class:text-slate-400={!themeState.coolMode}
+						class:dark:text-slate-500={!themeState.coolMode}
+						viewBox="0 0 24 24" 
+						fill="currentColor"
+					>
+						<circle cx="5" cy="5" r="2.5" />
+						<circle cx="12" cy="8" r="2" />
+						<circle cx="19" cy="5" r="2.5" />
+						<circle cx="7" cy="12" r="1.5" />
+						<circle cx="17" cy="12" r="1.5" />
+						<circle cx="5" cy="19" r="2.5" />
+						<circle cx="12" cy="16" r="2" />
+						<circle cx="19" cy="19" r="2.5" />
+					</svg>
 				</button>
+				<AnimatedThemeToggler class="p-1.5 sm:p-2" />
 			</div>
 		</div>
 	</header>
 
-	<!-- Main Content with padding for fixed header -->
-	<main class="max-w-7xl mx-auto px-4 py-4 pt-16 overflow-visible">
+	<main class="max-w-7xl mx-auto px-2 sm:px-4 py-4 pt-14 sm:pt-16 overflow-visible">
 		{#if loading && feeds.length === 0}
 			<div class="flex items-center justify-center py-20">
 				<div class="text-slate-500 dark:text-slate-400">Loading feeds...</div>
@@ -177,24 +176,19 @@
 				</button>
 			</div>
 		{:else}
-			<!-- Tab Navigation -->
 			{#if tabs.length > 0}
 				<TabBar {tabs} {activeTab} onTabChange={handleTabChange} />
 			{/if}
 
-			<!-- Loading overlay for tab switch -->
 			{#if loading}
 				<div class="absolute inset-0 bg-white/50 dark:bg-slate-900/50 flex items-center justify-center z-10 pointer-events-none">
 					<div class="text-slate-500 dark:text-slate-400">Loading...</div>
 				</div>
 			{/if}
 
-			<!-- Feeds Grid (3-2-1 responsive) -->
 			{#if feeds.length > 0}
 				{#key activeTab}
-					<div 
-						class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
-					>
+					<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
 						{#each feeds as feed, i (`feed-${i}`)}
 							<FeedBox {feed} onLoadMore={() => handleLoadMore(feed)} loading={loadingFeeds[feed.url] ?? false} />
 						{/each}

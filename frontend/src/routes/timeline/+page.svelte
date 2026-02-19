@@ -2,9 +2,10 @@
 	import TimelineView from '$lib/components/TimelineView.svelte';
 	import { fetchTimeline } from '$lib/api';
 	import type { TimelineItemResponse } from '$lib/types';
-	import { themeState, toggleTheme } from '$lib/stores/theme.svelte';
+	import { themeState, toggleCoolMode } from '$lib/stores/theme.svelte';
 	import { onMount } from 'svelte';
 	import { SvelteSet } from 'svelte/reactivity';
+	import AnimatedThemeToggler from '$lib/components/AnimatedThemeToggler.svelte';
 
 	let items = $state<TimelineItemResponse[]>([]);
 	let itemIds = $state(new SvelteSet<string>());
@@ -53,7 +54,6 @@
 		}
 	}
 
-	// Use IntersectionObserver for infinite scroll
 	$effect(() => {
 		if (!sentinelElement || !hasMore) return;
 		
@@ -83,42 +83,50 @@
 </svelte:head>
 
 <div class="min-h-screen bg-white dark:bg-slate-900 transition-colors">
-	<!-- Header -->
 	<header class="fixed top-0 left-0 right-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur border-b border-slate-200 dark:border-slate-700 z-20">
-		<div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
-			<div class="flex items-center gap-4">
-				<a href="/" class="text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors">
+		<div class="max-w-7xl mx-auto px-2 sm:px-4 py-2 sm:py-3 flex items-center justify-between">
+			<div class="flex items-center gap-2 sm:gap-4 min-w-0">
+				<a href="/" class="text-sm sm:text-base text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors shrink-0">
 					← Back
 				</a>
-				<h1 class="text-xl font-bold text-slate-900 dark:text-white">
+				<h1 class="text-lg sm:text-xl font-bold text-slate-900 dark:text-white truncate">
 					Timeline
 				</h1>
-			</div>
-			<div class="flex items-center gap-4">
-				<span class="text-sm text-slate-500 dark:text-slate-400">
+				<span class="text-xs sm:text-sm text-slate-500 dark:text-slate-400 hidden sm:block whitespace-nowrap">
 					{items.length} items
 				</span>
+			</div>
+			<div class="flex items-center gap-1 sm:gap-2">
 				<button
-					onclick={toggleTheme}
-					class="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-					aria-label="Toggle theme"
+					onclick={toggleCoolMode}
+					class="p-1.5 sm:p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+					aria-label="Toggle cool mode"
+					title="Toggle particle effects"
 				>
-					{#if themeState.theme === 'dark'}
-						<svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-yellow-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
-						</svg>
-					{:else}
-						<svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
-						</svg>
-					{/if}
+					<svg 
+						class="w-5 h-5"
+						class:text-pink-500={themeState.coolMode}
+						class:text-slate-400={!themeState.coolMode}
+						class:dark:text-slate-500={!themeState.coolMode}
+						viewBox="0 0 24 24" 
+						fill="currentColor"
+					>
+						<circle cx="5" cy="5" r="2.5" />
+						<circle cx="12" cy="8" r="2" />
+						<circle cx="19" cy="5" r="2.5" />
+						<circle cx="7" cy="12" r="1.5" />
+						<circle cx="17" cy="12" r="1.5" />
+						<circle cx="5" cy="19" r="2.5" />
+						<circle cx="12" cy="16" r="2" />
+						<circle cx="19" cy="19" r="2.5" />
+					</svg>
 				</button>
+				<AnimatedThemeToggler class="p-1.5 sm:p-2" />
 			</div>
 		</div>
 	</header>
 
-	<!-- Main Content with padding for fixed header -->
-	<main class="max-w-7xl mx-auto px-4 py-4 pt-16">
+	<main class="max-w-7xl mx-auto px-2 sm:px-4 py-4 pt-14 sm:pt-16">
 		{#if loading && items.length === 0}
 			<div class="flex items-center justify-center py-20">
 				<div class="text-slate-500 dark:text-slate-400">Loading timeline...</div>
@@ -142,7 +150,6 @@
 				</div>
 			{/if}
 			
-			<!-- Sentinel element for infinite scroll -->
 			{#if hasMore}
 				<div bind:this={sentinelElement} class="h-1"></div>
 			{/if}

@@ -33,14 +33,18 @@
 	animation: item-appear 300ms cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
 }
 
+::view-transition-old(root),
+::view-transition-new(root) {
+	animation: none;
+	mix-blend-mode: normal;
+}
+
 ::view-transition-old(root) {
-	animation: 150ms cubic-bezier(0.4, 0, 1, 1) both fade-out,
-	           150ms cubic-bezier(0.4, 0, 1, 1) both slide-to-left;
+	z-index: 1;
 }
 
 ::view-transition-new(root) {
-	animation: 150ms cubic-bezier(0, 0, 0.2, 1) 90ms both fade-in,
-	           150ms cubic-bezier(0, 0, 0.2, 1) 90ms both slide-from-right;
+	z-index: 9999;
 }
 
 @font-face {
