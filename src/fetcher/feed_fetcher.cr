@@ -295,11 +295,14 @@ def fetch_feed(feed : Feed, display_item_limit : Int32, db_fetch_limit : Int32, 
 
     elapsed_seconds = (Time.monotonic - start_time).total_seconds
     abort_msg = should_abort_fetch?(feed, elapsed_seconds, retries, redirects, timeout_seconds)
-    if abort_msg[0]
-      message = abort_msg[1] || "Error: Unknown fetch error"
-      HealthMonitor.log_warning("fetch_feed(#{feed.url}) #{message}")
-      return error_feed_data(feed, message)
+  if abort_msg[0]
+    message = abort_msg[1] || "Error: Unknown fetch error"
+    HealthMonitor.log_warning("fetch_feed(#{feed.url}) #{message}")
+    if stale_cache = get_stale_cached_feed(feed, effective_item_limit, previous_data)
+      return stale_cache
     end
+    return error_feed_data(feed, message)
+  end
 
     begin
       uri = URI.parse(current_url)
@@ -313,7 +316,13 @@ def fetch_feed(feed : Feed, display_item_limit : Int32, db_fetch_limit : Int32, 
         current_url = new_url
 
         if should_return
-          return result.as(FeedData)
+          result_data = result.as(FeedData)
+          if result_data.items.size >= 1 && (first_item = result_data.items.first) && first_item.title.starts_with?("Error:") && first_item.link == feed.url
+            if stale_cache = get_stale_cached_feed(feed, effective_item_limit, previous_data)
+              return stale_cache
+            end
+          end
+          return result_data
         end
 
         redirects = new_redirects
@@ -338,6 +347,9 @@ def fetch_feed(feed : Feed, display_item_limit : Int32, db_fetch_limit : Int32, 
       else
         HealthMonitor.log_error("fetch_feed(#{feed.url})", ex)
         HealthMonitor.update_feed_health(feed.url, FeedHealthStatus::Unreachable)
+        if stale_cache = get_stale_cached_feed(feed, effective_item_limit, previous_data)
+          return stale_cache
+        end
         return error_feed_data(feed, "Error: #{ex.class} - #{error_msg}")
       end
     end
@@ -350,6 +362,30 @@ private def get_cached_feed(feed : Feed, item_limit : Int32, previous_data : Fee
   return unless last_fetched = cache.get_fetched_time(feed.url)
 
   return unless cache_fresh?(last_fetched, 5) && cached.items.size >= item_limit
+
+  if previous_data && (prev_favicon_data = previous_data.favicon_data)
+    favicon = prev_favicon_data.starts_with?("/favicons/") ? prev_favicon_data : cached.favicon
+    return FeedData.new(
+      cached.title,
+      cached.url,
+      cached.site_link,
+      cached.header_color,
+      cached.header_text_color,
+      cached.items,
+      cached.etag,
+      cached.last_modified,
+      favicon,
+      prev_favicon_data
+    )
+  end
+
+  cached
+end
+
+private def get_stale_cached_feed(feed : Feed, item_limit : Int32, previous_data : FeedData?) : FeedData?
+  cache = FeedCache.instance
+  cached = cache.get(feed.url)
+  return nil unless cached
 
   if previous_data && (prev_favicon_data = previous_data.favicon_data)
     favicon = prev_favicon_data.starts_with?("/favicons/") ? prev_favicon_data : cached.favicon
