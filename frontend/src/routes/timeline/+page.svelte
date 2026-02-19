@@ -15,8 +15,9 @@
 	let error = $state<string | null>(null);
 	let offset = $state(0);
 	let sentinelElement: HTMLDivElement | undefined = $state();
-	let wasClustering = $state(false);
+	let isClustering = $state(false);
 	let saveScrollY = $state(0);
+	let clusteringCheckInterval: ReturnType<typeof setInterval> | null = null;
 	const limit = 100;
 	const STORAGE_KEY = 'quickheadlines-timeline-offset';
 	
@@ -105,19 +106,29 @@
 		loadTimeline();
 		loadConfig();
 		
-		const clusteringCheckInterval = setInterval(async () => {
+		async function checkClustering() {
 			try {
 				const status = await fetchStatus();
-				if (wasClustering && !status.is_clustering) {
+				
+				if (status.is_clustering && !isClustering) {
+					isClustering = true;
+					clusteringCheckInterval = setInterval(checkClustering, 5000);
+				} else if (!status.is_clustering && isClustering) {
+					isClustering = false;
+					if (clusteringCheckInterval) {
+						clearInterval(clusteringCheckInterval);
+						clusteringCheckInterval = null;
+					}
 					saveScrollY = window.scrollY;
 					await loadTimeline();
 					window.scrollTo(0, saveScrollY);
 				}
-				wasClustering = status.is_clustering;
 			} catch (e) {
 				console.warn('Failed to check clustering status:', e);
 			}
-		}, 5000);
+		}
+		
+		checkClustering();
 		
 		refreshInterval = setInterval(() => {
 			loadTimeline();
@@ -125,7 +136,7 @@
 		
 		return () => {
 			if (refreshInterval) clearInterval(refreshInterval);
-			clearInterval(clusteringCheckInterval);
+			if (clusteringCheckInterval) clearInterval(clusteringCheckInterval);
 		};
 	});
 </script>
