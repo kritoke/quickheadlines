@@ -45,6 +45,14 @@
 
 ::view-transition-new(root) {
 	z-index: 9999;
+	clip-path: circle(0% at var(--x) var(--y));
+	animation: reveal 250ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+@keyframes reveal {
+	to {
+		clip-path: circle(150% at var(--x) var(--y));
+	}
 }
 
 @font-face {

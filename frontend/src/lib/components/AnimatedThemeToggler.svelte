@@ -5,15 +5,21 @@
 
 	interface AnimatedThemeTogglerProps {
 		class?: string;
-		duration?: number;
+		title?: string;
 	}
 
-	let { class: className, duration = 400, ...props }: AnimatedThemeTogglerProps = $props();
+	let { class: className, title = "Toggle theme", ...props }: AnimatedThemeTogglerProps = $props();
 
 	let buttonRef: HTMLButtonElement | null = $state(null);
 
-	const toggleTheme = async () => {
+	const toggleTheme = (event: MouseEvent) => {
 		if (!buttonRef) return;
+
+		const x = event.clientX;
+		const y = event.clientY;
+		
+		document.documentElement.style.setProperty('--x', `${x}px`);
+		document.documentElement.style.setProperty('--y', `${y}px`);
 
 		const newTheme = themeState.theme === 'light' ? 'dark' : 'light';
 
@@ -24,35 +30,11 @@
 			return;
 		}
 
-		const transition = document.startViewTransition(() => {
+		document.startViewTransition(() => {
 			themeState.theme = newTheme;
 			document.documentElement.classList.toggle('dark', newTheme === 'dark');
 			localStorage.setItem('quickheadlines-theme', newTheme);
 		});
-
-		await transition.ready;
-
-		const { top, left, width, height } = buttonRef.getBoundingClientRect();
-		const x = left + width / 2;
-		const y = top + height / 2;
-		const maxRadius = Math.hypot(
-			Math.max(left, window.innerWidth - left),
-			Math.max(top, window.innerHeight - top)
-		);
-
-		document.documentElement.animate(
-			{
-				clipPath: [
-					`circle(0px at ${x}px ${y}px)`,
-					`circle(${maxRadius}px at ${x}px ${y}px)`
-				]
-			},
-			{
-				duration,
-				easing: 'ease-in-out',
-				pseudoElement: '::view-transition-new(root)'
-			}
-		);
 	};
 </script>
 
@@ -61,6 +43,7 @@
 	onclick={toggleTheme}
 	class={cn('p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors', className)}
 	aria-label="Toggle theme"
+	title={title}
 	{...props}
 >
 	{#if themeState.theme === 'dark'}

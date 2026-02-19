@@ -129,7 +129,7 @@
 					href="/" 
 					class="p-1.5 sm:p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
 					aria-label="Feed view"
-					title="Feed view"
+					title="Feeds"
 				>
 					<svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-slate-500 dark:text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
 						<path d="M4 11a9 9 0 0 1 9 9" />
@@ -141,7 +141,7 @@
 					onclick={toggleCoolMode}
 					class="p-1.5 sm:p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
 					aria-label="Toggle cool mode"
-					title="Toggle particle effects"
+					title="Particle effects"
 				>
 					<svg 
 						class="w-5 h-5"
@@ -161,7 +161,7 @@
 						<circle cx="19" cy="19" r="2.5" />
 					</svg>
 				</button>
-				<AnimatedThemeToggler class="p-1.5 sm:p-2" />
+				<AnimatedThemeToggler class="p-1.5 sm:p-2" title="Toggle theme" />
 			</div>
 		</div>
 	</header>
