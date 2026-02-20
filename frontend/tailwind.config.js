@@ -20,7 +20,14 @@ export default {
 					800: '#1e293b',
 					900: '#0f172a',
 					950: '#020617'
+				},
+				accent: {
+					DEFAULT: '#96ad8d',
+					glow: 'rgba(150, 173, 141, 0.3)'
 				}
+			},
+			boxShadow: {
+				'luxe-glow': '0 0 15px -3px rgba(150, 173, 141, 0.4)'
 			}
 		}
 	},

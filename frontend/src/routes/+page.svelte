@@ -1,6 +1,6 @@
 <script lang="ts">
 	import FeedBox from '$lib/components/FeedBox.svelte';
-	import TabBar from '$lib/components/TabBar.svelte';
+	import FeedTabs from '$lib/components/FeedTabs.svelte';
 	import { fetchFeeds, fetchMoreFeedItems, fetchConfig } from '$lib/api';
 	import type { FeedResponse, FeedsPageResponse } from '$lib/types';
 	import { themeState, toggleCoolMode } from '$lib/stores/theme.svelte';
@@ -209,7 +209,7 @@
 			</div>
 		{:else}
 			{#if tabs.length > 0}
-				<TabBar {tabs} {activeTab} onTabChange={handleTabChange} />
+				<FeedTabs {tabs} {activeTab} onTabChange={handleTabChange} />
 			{/if}
 
 			{#if loading}
