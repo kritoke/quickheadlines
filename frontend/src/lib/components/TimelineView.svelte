@@ -105,7 +105,7 @@
 <div class="timeline-view">
 	{#each groupIndex as [date, dateItems] (date)}
 		<div class="day-group mb-6">
-			<h2 class="text-lg font-semibold text-slate-700 dark:text-slate-300 mb-3 sticky top-0 bg-white dark:bg-slate-900 py-2 z-10">
+			<h2 class="text-lg font-semibold text-slate-700 dark:text-slate-300 mb-3 sticky top-16 bg-white dark:bg-slate-900 py-2 z-10">
 				{date}
 			</h2>
 			
