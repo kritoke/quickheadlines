@@ -295,14 +295,14 @@ def fetch_feed(feed : Feed, display_item_limit : Int32, db_fetch_limit : Int32, 
 
     elapsed_seconds = (Time.monotonic - start_time).total_seconds
     abort_msg = should_abort_fetch?(feed, elapsed_seconds, retries, redirects, timeout_seconds)
-  if abort_msg[0]
-    message = abort_msg[1] || "Error: Unknown fetch error"
-    HealthMonitor.log_warning("fetch_feed(#{feed.url}) #{message}")
-    if stale_cache = get_stale_cached_feed(feed, effective_item_limit, previous_data)
-      return stale_cache
+    if abort_msg[0]
+      message = abort_msg[1] || "Error: Unknown fetch error"
+      HealthMonitor.log_warning("fetch_feed(#{feed.url}) #{message}")
+      if stale_cache = get_stale_cached_feed(feed, effective_item_limit, previous_data)
+        return stale_cache
+      end
+      return error_feed_data(feed, message)
     end
-    return error_feed_data(feed, message)
-  end
 
     begin
       uri = URI.parse(current_url)
