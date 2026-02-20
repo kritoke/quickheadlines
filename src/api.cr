@@ -414,9 +414,13 @@ module Api
       TabResponse.new(name: tab.name)
     end
 
-    STDERR.puts "[#{Time.local}] handle_feeds: active_tab=#{active_tab}, STATE.feeds.size=#{STATE.feeds.size}, STATE.tabs.size=#{STATE.tabs.size}"
-    STATE.tabs.each do |tab|
-      STDERR.puts "[#{Time.local}] handle_feeds: tab '#{tab.name}' has #{tab.feeds.size} feeds"
+    if config = STATE.config
+      if config.debug?
+        STDERR.puts "[#{Time.local}] handle_feeds: active_tab=#{active_tab}, STATE.feeds.size=#{STATE.feeds.size}, STATE.tabs.size=#{STATE.tabs.size}"
+        STATE.tabs.each do |tab|
+          STDERR.puts "[#{Time.local}] handle_feeds: tab '#{tab.name}' has #{tab.feeds.size} feeds"
+        end
+      end
     end
 
     # Get feeds for active tab (flattened to top level)
@@ -437,11 +441,19 @@ module Api
                          end
                        end
 
-                       STDERR.puts "[DEBUG] handle_feeds: tab=#{active_tab}, top_level_feeds=#{STATE.feeds.size}, tab_count=#{STATE.tabs.size}, total_feeds=#{all_feeds_with_tabs.size}"
+                       if config = STATE.config
+                         if config.debug?
+                           STDERR.puts "[DEBUG] handle_feeds: tab=#{active_tab}, top_level_feeds=#{STATE.feeds.size}, tab_count=#{STATE.tabs.size}, total_feeds=#{all_feeds_with_tabs.size}"
+                         end
+                       end
                        all_feeds_with_tabs.map { |entry| feed_to_response(entry[:feed], entry[:tab_name]) }
                      else
                        active_feeds = STATE.feeds_for_tab(active_tab)
-                       STDERR.puts "[DEBUG] handle_feeds: tab=#{active_tab}, feeds=#{active_feeds.size}"
+                       if config = STATE.config
+                         if config.debug?
+                           STDERR.puts "[DEBUG] handle_feeds: tab=#{active_tab}, feeds=#{active_feeds.size}"
+                         end
+                       end
                        active_feeds.map { |feed| feed_to_response(feed, active_tab) }
                      end
 

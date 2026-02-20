@@ -56,6 +56,10 @@ tabs:
         url: "https://www.infoworld.com/feed/"
       - title: "Network World"
         url: "https://www.networkworld.com/feed/"
+      - title: "9to5Mac"
+        url: "https://9to5mac.com/feed/"
+      - title: "The Register"
+        url: "https://www.theregister.co.uk/headlines.atom"
   - name: "Security"
     feeds:
       - title: "Sophos News"
@@ -98,6 +102,10 @@ tabs:
         url: "https://isc.sans.edu/rssfeed.xml"
       - title: "Black Hills InfoSec"
         url: "https://www.blackhillsinfosec.com/feed/"
+      - title: "Dark Reading"
+        url: "https://www.darkreading.com/rss.xml"
+      - title: "SecurityWeek"
+        url: "https://www.securityweek.com/feed/"
   - name: "3D Printing"
     feeds:
       - title: "TCT Magazine"
@@ -172,6 +180,8 @@ tabs:
         url: "https://blog.bytebytego.com/feed"
       - title: "High Scalability"
         url: "http://feeds.feedburner.com/HighScalability"
+      - title: "Hacker Noon"
+        url: "https://hackernoon.com/feed"
     software_releases:
       title: "Project Updates"
       repos:
@@ -197,6 +207,12 @@ tabs:
         url: "https://itsfoss.com/feed/"
       - title: "OMG! Linux"
         url: "https://omglinux.com/feed/"
+      - title: "Linux Today"
+        url: "https://linuxtoday.com/feed"
+      - title: "Haiku Project"
+        url: "https://www.haiku-os.org/blog/feed/"
+      - title: "Desktop on Fire"
+        url: "https://desktoponfire.com/feed/"
   - name: "Science"
     feeds:
       - title: "Nature"
@@ -257,6 +273,8 @@ tabs:
         url: "https://www.eurogamer.net/?format=rss"
       - title: "PC Gamer"
         url: "https://www.pcgamer.com/rss"
+      - title: "IGN"
+        url: "https://feeds.feedburner.com/ign/all"
   - name: "Automotive"
     feeds:
       - title: "Jalopnik"
@@ -283,6 +301,8 @@ tabs:
         url: "https://theintercept.com/feed/"
       - title: "Restore Privacy"
         url: "https://restoreprivacy.com/feed/"
+      - title: "Privacy International"
+        url: "https://www.privacyinternational.org/rss.xml"
   - name: "World"
     feeds:
       - title: "BBC World"

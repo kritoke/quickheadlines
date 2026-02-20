@@ -1,11 +1,16 @@
 module CleanupRepository
-  def cleanup_old_entries(retention_hours : Int32 = CACHE_RETENTION_HOURS)
+  def cleanup_old_entries(retention_hours : Int32 = CACHE_RETENTION_HOURS, config_urls : Array(String)? = nil)
     @mutex.synchronize do
       log_db_size(@db_path, "before cleanup")
 
       cutoff = (Time.utc - retention_hours.hours).to_s("%Y-%m-%d %H:%M:%S")
 
-      result = @db.exec("DELETE FROM feeds WHERE last_fetched < ?", cutoff)
+      if config_urls && !config_urls.empty?
+        url_list = config_urls.map { |url| "'#{url.gsub("'", "''")}'" }.join(",")
+        result = @db.exec("DELETE FROM feeds WHERE last_fetched < ? AND url NOT IN (#{url_list})", cutoff)
+      else
+        result = @db.exec("DELETE FROM feeds WHERE last_fetched < ?", cutoff)
+      end
       deleted_count = result.rows_affected
       STDERR.puts "[#{Time.local}] Cleaned up #{deleted_count} old feeds (older than #{retention_hours}h)" if deleted_count > 0
 
@@ -29,13 +34,6 @@ module CleanupRepository
 
       if orphaned_count > 0
         STDERR.puts "[#{Time.local}] Cleaned up #{orphaned_count} orphaned items"
-      end
-
-      result = @db.exec("DELETE FROM feeds WHERE id NOT IN (SELECT DISTINCT feed_id FROM items)")
-      empty_feeds = result.rows_affected
-
-      if empty_feeds > 0
-        STDERR.puts "[#{Time.local}] Cleaned up #{empty_feeds} empty feeds"
       end
     end
   end

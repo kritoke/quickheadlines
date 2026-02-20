@@ -89,6 +89,11 @@ class StaticController < Athena::Framework::Controller
     serve_asset("logo.svg")
   end
 
+  @[ARTA::Get(path: "/code_icon.svg")]
+  def code_icon_svg : ATH::Response
+    serve_asset("code_icon.svg")
+  end
+
   @[ARTA::Get(path: "/fonts/Inter-Variable.woff2")]
   def fonts_inter : ATH::Response
     serve_asset("fonts/Inter-Variable.woff2")
