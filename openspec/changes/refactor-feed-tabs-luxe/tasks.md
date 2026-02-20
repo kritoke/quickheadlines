@@ -51,6 +51,6 @@
 - [ ] 8.3 Start server: `./bin/quickheadlines` and verify UI
 
 ### Phase 9: Commit & Archive
-- [ ] 9.1 Commit all changes
-- [ ] 9.2 Push to origin: `git push -u origin bitsui-luxerefactor`
+- [x] 9.1 Commit all changes
+- [x] 9.2 Push to origin: `git push -u origin bitsui-luxerefactor`
 - [ ] 9.3 Archive: `/opsx:archive refactor-feed-tabs-luxe`
