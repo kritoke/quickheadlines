@@ -1,9 +1,10 @@
 <script lang="ts">
 	import FeedBox from '$lib/components/FeedBox.svelte';
-	import TabBar from '$lib/components/TabBar.svelte';
+	import FeedTabs from '$lib/components/FeedTabs.svelte';
+	import CursorTrail from '$lib/components/CursorTrail.svelte';
 	import { fetchFeeds, fetchMoreFeedItems, fetchConfig } from '$lib/api';
 	import type { FeedResponse, FeedsPageResponse } from '$lib/types';
-	import { themeState, toggleCoolMode } from '$lib/stores/theme.svelte';
+	import { themeState, toggleCursorTrail } from '$lib/stores/theme.svelte';
 	import { onMount } from 'svelte';
 	import AnimatedThemeToggler from '$lib/components/AnimatedThemeToggler.svelte';
 
@@ -138,6 +139,8 @@
 </svelte:head>
 
 <div class="min-h-screen bg-white dark:bg-slate-900 transition-colors duration-200">
+	<CursorTrail />
+	
 	<header class="fixed top-0 left-0 right-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur border-b border-slate-200 dark:border-slate-700 z-30">
 		<div class="max-w-7xl mx-auto px-2 sm:px-4 py-2 sm:py-3 flex items-center justify-between">
 			<div class="flex items-center gap-2 sm:gap-3 min-w-0">
@@ -164,27 +167,21 @@
 					</svg>
 				</a>
 				<button
-					onclick={toggleCoolMode}
+					onclick={toggleCursorTrail}
 					class="p-1.5 sm:p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-					aria-label="Toggle cool mode"
-					title="Cool mode"
+					aria-label="Toggle cursor trail"
+					title="Cursor trail"
 				>
 					<svg 
 						class="w-5 h-5"
-						class:text-pink-500={themeState.coolMode}
-						class:text-slate-400={!themeState.coolMode}
-						class:dark:text-slate-500={!themeState.coolMode}
+						class:text-accent={themeState.cursorTrail}
+						class:text-slate-400={!themeState.cursorTrail}
+						class:dark:text-slate-500={!themeState.cursorTrail}
 						viewBox="0 0 24 24" 
 						fill="currentColor"
 					>
-						<circle cx="5" cy="5" r="2.5" />
-						<circle cx="12" cy="8" r="2" />
-						<circle cx="19" cy="5" r="2.5" />
-						<circle cx="7" cy="12" r="1.5" />
-						<circle cx="17" cy="12" r="1.5" />
-						<circle cx="5" cy="19" r="2.5" />
-						<circle cx="12" cy="16" r="2" />
-						<circle cx="19" cy="19" r="2.5" />
+						<path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z" />
+						<path d="M13 13l6 6" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" />
 					</svg>
 				</button>
 				<AnimatedThemeToggler class="p-1.5 sm:p-2" title="Toggle theme" />
@@ -209,7 +206,7 @@
 			</div>
 		{:else}
 			{#if tabs.length > 0}
-				<TabBar {tabs} {activeTab} onTabChange={handleTabChange} />
+				<FeedTabs {tabs} bind:activeTab={activeTab} onTabChange={handleTabChange} />
 			{/if}
 
 			{#if loading}

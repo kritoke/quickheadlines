@@ -1,6 +1,6 @@
 export const themeState = $state({
 	theme: 'light' as 'light' | 'dark',
-	coolMode: false,
+	cursorTrail: false,
 	mounted: false
 });
 
@@ -15,8 +15,8 @@ export function initTheme() {
 	}
 	document.documentElement.classList.toggle('dark', themeState.theme === 'dark');
 
-	const savedCoolMode = localStorage.getItem('quickheadlines-coolmode');
-	themeState.coolMode = savedCoolMode === 'true';
+	const savedCursorTrail = localStorage.getItem('quickheadlines-cursortrail');
+	themeState.cursorTrail = savedCursorTrail === 'true';
 
 	themeState.mounted = true;
 }
@@ -27,7 +27,7 @@ export function toggleTheme() {
 	localStorage.setItem('quickheadlines-theme', themeState.theme);
 }
 
-export function toggleCoolMode() {
-	themeState.coolMode = !themeState.coolMode;
-	localStorage.setItem('quickheadlines-coolmode', String(themeState.coolMode));
+export function toggleCursorTrail() {
+	themeState.cursorTrail = !themeState.cursorTrail;
+	localStorage.setItem('quickheadlines-cursortrail', String(themeState.cursorTrail));
 }

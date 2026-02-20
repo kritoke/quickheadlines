@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { themeState, toggleCoolMode } from '$lib/stores/theme.svelte';
+	import { themeState, toggleCursorTrail } from '$lib/stores/theme.svelte';
 	import AnimatedThemeToggler from './AnimatedThemeToggler.svelte';
 </script>
 
@@ -19,27 +19,21 @@
 				Timeline
 			</a>
 			<button
-				onclick={toggleCoolMode}
+				onclick={toggleCursorTrail}
 				class="p-1.5 sm:p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-				aria-label="Toggle cool mode"
-				title="Toggle particle effects"
+				aria-label="Toggle cursor trail"
+				title="Cursor trail"
 			>
 				<svg 
 					class="w-5 h-5"
-					class:text-pink-500={themeState.coolMode}
-					class:text-slate-400={!themeState.coolMode}
-					class:dark:text-slate-500={!themeState.coolMode}
+					class:text-accent={themeState.cursorTrail}
+					class:text-slate-400={!themeState.cursorTrail}
+					class:dark:text-slate-500={!themeState.cursorTrail}
 					viewBox="0 0 24 24" 
 					fill="currentColor"
 				>
-					<circle cx="5" cy="5" r="2.5" />
-					<circle cx="12" cy="8" r="2" />
-					<circle cx="19" cy="5" r="2.5" />
-					<circle cx="7" cy="12" r="1.5" />
-					<circle cx="17" cy="12" r="1.5" />
-					<circle cx="5" cy="19" r="2.5" />
-					<circle cx="12" cy="16" r="2" />
-					<circle cx="19" cy="19" r="2.5" />
+					<path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z" />
+					<path d="M13 13l6 6" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" />
 				</svg>
 			</button>
 			<AnimatedThemeToggler />
