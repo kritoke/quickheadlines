@@ -253,7 +253,20 @@ module Quickheadlines::Repositories
       feed_result = @db.query_one?(
         "SELECT title, url, site_link, header_color, header_text_color, header_theme_colors, etag, last_modified, favicon, favicon_data FROM feeds WHERE url = ?",
         url
-      )
+      ) do |row|
+        {
+          title:               row.read(String),
+          url:                 row.read(String),
+          site_link:           row.read(String),
+          header_color:        row.read(String?),
+          header_text_color:   row.read(String?),
+          header_theme_colors: row.read(String?),
+          etag:                row.read(String?),
+          last_modified:       row.read(String?),
+          favicon:             row.read(String?),
+          favicon_data:        row.read(String?),
+        }
+      end
       return nil unless feed_result
 
       feed_id_result = @db.query_one?("SELECT id FROM feeds WHERE url = ?", url, as: Int64)
@@ -293,7 +306,20 @@ module Quickheadlines::Repositories
       feed_result = @db.query_one?(
         "SELECT title, url, site_link, header_color, header_text_color, header_theme_colors, etag, last_modified, favicon, favicon_data FROM feeds WHERE url = ?",
         url
-      )
+      ) do |row|
+        {
+          title:               row.read(String),
+          url:                 row.read(String),
+          site_link:           row.read(String),
+          header_color:        row.read(String?),
+          header_text_color:   row.read(String?),
+          header_theme_colors: row.read(String?),
+          etag:                row.read(String?),
+          last_modified:       row.read(String?),
+          favicon:             row.read(String?),
+          favicon_data:        row.read(String?),
+        }
+      end
       return nil unless feed_result
 
       items = [] of Item

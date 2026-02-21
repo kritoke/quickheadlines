@@ -51,83 +51,7 @@ class FeedCache
   end
 
   def get(url : String) : FeedData?
-    start_time = Time.monotonic
-    feed_data = @mutex.synchronize do
-      result = @db.query_one?("SELECT title, url, site_link, header_color, header_text_color, header_theme_colors, etag, last_modified, favicon, favicon_data FROM feeds WHERE url = ?", url) do |row|
-        {
-          title:               row.read(String),
-          url:                 row.read(String),
-          site_link:           row.read(String),
-          header_color:        row.read(String?),
-          header_text_color:   row.read(String?),
-          header_theme_colors: row.read(String?),
-          etag:                row.read(String?),
-          last_modified:       row.read(String?),
-          favicon:             row.read(String?),
-          favicon_data:        row.read(String?),
-        }
-      end
-
-      unless result
-        HealthMonitor.record_cache_miss
-        return
-      end
-      HealthMonitor.record_cache_hit
-
-      if result[:favicon_data].nil?
-        if favicon = result[:favicon]
-          if favicon.starts_with?("/favicons/")
-            result = {
-              title:               result[:title],
-              url:                 result[:url],
-              site_link:           result[:site_link],
-              header_color:        result[:header_color],
-              header_text_color:   result[:header_text_color],
-              header_theme_colors: result[:header_theme_colors],
-              etag:                result[:etag],
-              last_modified:       result[:last_modified],
-              favicon:             result[:favicon],
-              favicon_data:        favicon,
-            }
-          end
-        end
-      end
-
-      feed_id_result = @db.query_one?("SELECT id FROM feeds WHERE url = ?", url, as: {Int64})
-      return unless feed_id_result
-      feed_id = feed_id_result
-
-      items = [] of Item
-      @db.query("SELECT title, link, pub_date, version FROM items WHERE feed_id = ? AND (pub_date IS NULL OR pub_date <= datetime('now', '+1 day')) ORDER BY pub_date DESC", feed_id) do |rows|
-        rows.each do
-          title = rows.read(String)
-          link = rows.read(String)
-          pub_date_str = rows.read(String?)
-          version = rows.read(String?)
-
-          pub_date = pub_date_str.try { |date_str| Time.parse(date_str, "%Y-%m-%d %H:%M:%S", Time::Location::UTC) }
-          items << Item.new(title, link, pub_date, version)
-        end
-      end
-
-      fd = FeedData.new(
-        result[:title],
-        result[:url],
-        result[:site_link],
-        result[:header_color],
-        result[:header_text_color],
-        items,
-        result[:etag],
-        result[:last_modified],
-        result[:favicon],
-        result[:favicon_data]
-      )
-      fd.header_theme_colors = result[:header_theme_colors] if result[:header_theme_colors]
-      fd
-    end
-    query_time = (Time.monotonic - start_time).total_milliseconds
-    HealthMonitor.record_db_query(query_time)
-    feed_data
+    feed_repository.find_with_items(url)
   end
 
   def get_fetched_time(url : String) : Time?
@@ -147,24 +71,13 @@ class FeedCache
   end
 
   def entries : Hash(String, FeedData)
-    @mutex.synchronize do
-      urls = {} of String => FeedData
-
-      @db.query("SELECT url FROM feeds") do |rows|
-        rows.each do
-          url = rows.read(String)
-          if feed = get_without_lock(url)
-            urls[url] = feed
-          end
-        end
+    urls = {} of String => FeedData
+    feed_repository.find_all_urls.each do |url|
+      if feed = feed_repository.find_with_items(url)
+        urls[url] = feed
       end
-
-      urls
     end
-  end
-
-  def size : Int32
-    feed_repository.count_all
+    urls
   end
 
   def sync_favicon_paths
