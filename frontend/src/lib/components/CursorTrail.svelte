@@ -2,34 +2,43 @@
 	import { onMount } from 'svelte';
 	import { themeState } from '$lib/stores/theme.svelte';
 
-	let x = $state(0);
-	let y = $state(0);
+	let container: HTMLDivElement;
 
 	onMount(() => {
+		if (!container) return;
+
 		function handleMouseMove(e: MouseEvent) {
-			x = e.clientX;
-			y = e.clientY;
+			const aura = container.querySelector('.cursor-aura') as HTMLElement;
+			const dot = container.querySelector('.cursor-dot') as HTMLElement;
+			
+			if (aura) {
+				aura.style.left = (e.clientX - 40) + 'px';
+				aura.style.top = (e.clientY - 40) + 'px';
+			}
+			if (dot) {
+				dot.style.left = (e.clientX - 8) + 'px';
+				dot.style.top = (e.clientY - 8) + 'px';
+			}
 		}
 
 		window.addEventListener('mousemove', handleMouseMove);
 		return () => window.removeEventListener('mousemove', handleMouseMove);
 	});
-
-	let enabled = $derived(themeState.coolMode);
 </script>
 
-{#if enabled}
+{#if themeState.coolMode}
 	<div
+		bind:this={container}
 		class="fixed inset-0 pointer-events-none z-[9999]"
 		aria-hidden="true"
 	>
 		<div
-			class="absolute w-20 h-20 rounded-full"
-			style="left: {x - 40}px; top: {y - 40}px; background: rgba(150, 173, 141, 0.3); filter: blur(12px); transition: left 0.1s ease-out, top 0.1s ease-out;"
+			class="cursor-aura absolute w-20 h-20 rounded-full"
+			style="left: -100px; top: -100px; background: rgba(150, 173, 141, 0.3); filter: blur(12px);"
 		></div>
 		<div
-			class="absolute w-4 h-4 rounded-full"
-			style="left: {x - 8}px; top: {y - 8}px; background: #96ad8d; transition: left 0.05s ease-out, top 0.05s ease-out;"
+			class="cursor-dot absolute w-4 h-4 rounded-full"
+			style="left: -100px; top: -100px; background: #96ad8d;"
 		></div>
 	</div>
 {/if}
