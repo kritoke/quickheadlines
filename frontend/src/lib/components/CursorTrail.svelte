@@ -2,42 +2,41 @@
 	import { onMount } from 'svelte';
 	import { themeState } from '$lib/stores/theme.svelte';
 
-	let container: HTMLDivElement;
-	let aura: HTMLDivElement;
-	let dot: HTMLDivElement;
-
-	function updatePosition(e: MouseEvent) {
-		if (aura) {
-			aura.style.left = (e.clientX - 40) + 'px';
-			aura.style.top = (e.clientY - 40) + 'px';
-		}
-		if (dot) {
-			dot.style.left = (e.clientX - 8) + 'px';
-			dot.style.top = (e.clientY - 8) + 'px';
-		}
-	}
-
 	onMount(() => {
-		document.addEventListener('mousemove', updatePosition);
-		return () => document.removeEventListener('mousemove', updatePosition);
+		function updateCursor(e: MouseEvent) {
+			document.documentElement.style.setProperty('--cursor-x', e.clientX + 'px');
+			document.documentElement.style.setProperty('--cursor-y', e.clientY + 'px');
+		}
+
+		document.addEventListener('mousemove', updateCursor, { passive: true });
+		return () => document.removeEventListener('mousemove', updateCursor);
 	});
 </script>
 
 {#if themeState.coolMode}
-	<div
-		bind:this={container}
-		class="fixed inset-0 pointer-events-none z-[9999]"
-		aria-hidden="true"
-	>
+	<style>
+		:root {
+			--cursor-x: -100px;
+			--cursor-y: -100px;
+		}
+	</style>
+	<div class="fixed inset-0 pointer-events-none z-[9999]" aria-hidden="true">
 		<div
-			bind:this={aura}
 			class="absolute w-20 h-20 rounded-full"
-			style="left: -100px; top: -100px; background: rgba(150, 173, 141, 0.3); filter: blur(12px); will-change: left, top;"
+			style="
+				left: calc(var(--cursor-x) - 40px);
+				top: calc(var(--cursor-y) - 40px);
+				background: rgba(150, 173, 141, 0.3);
+				filter: blur(12px);
+			"
 		></div>
 		<div
-			bind:this={dot}
 			class="absolute w-4 h-4 rounded-full"
-			style="left: -100px; top: -100px; background: #96ad8d; will-change: left, top;"
+			style="
+				left: calc(var(--cursor-x) - 8px);
+				top: calc(var(--cursor-y) - 8px);
+				background: #96ad8d;
+			"
 		></div>
 	</div>
 {/if}
