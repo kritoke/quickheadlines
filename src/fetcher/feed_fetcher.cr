@@ -61,7 +61,8 @@ private def handle_success_response(feed : Feed, response : HTTP::Client::Respon
   last_modified = response.headers["Last-Modified"]?
 
   if items.empty?
-    items = [Item.new("No items found (or unsupported format)", feed.url, nil)]
+    STDERR.puts "[#{Time.local}] Feed returned no items: #{feed.title} (#{feed.url})"
+    return error_feed_data(feed, "No items found (or unsupported format)")
   end
 
   final_header_color, final_header_text = extract_legacy_header_from_theme(header_color, header_text_color, header_theme_json)
