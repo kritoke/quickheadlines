@@ -1,72 +1,25 @@
 <script lang="ts">
-	import { onMount, onDestroy } from 'svelte';
+	import { spring } from 'svelte/motion';
 	import { themeState } from '$lib/stores/theme.svelte';
 
-	let container: HTMLDivElement;
-	let cleanup: (() => void) | undefined;
+	let coords = spring({ x: -100, y: -100 }, { stiffness: 0.1, damping: 0.25 });
+	let trail = spring({ x: -100, y: -100 }, { stiffness: 0.05, damping: 0.3 });
 
-	const getContainer = () => {
-		const id = '_cursorTrail_effect';
-		const existingContainer = document.getElementById(id);
-
-		if (existingContainer) {
-			return existingContainer;
-		}
-
-		const div = document.createElement('div');
-		div.setAttribute('id', id);
-		div.setAttribute('style', 'overflow:hidden; position:fixed; height:100%; top:0; left:0; right:0; bottom:0; pointer-events:none; z-index:2147483647');
-
-		document.body.appendChild(div);
-		return div;
-	};
-
-	const createParticle = (x: number, y: number) => {
-		const particle = document.createElement('div');
-		const size = Math.random() * 20 + 15;
-		particle.setAttribute('style', `
-			position: absolute;
-			width: ${size}px;
-			height: ${size}px;
-			border-radius: 50%;
-			background: rgba(150, 173, 141, ${Math.random() * 0.3 + 0.2});
-			left: ${x - size/2}px;
-			top: ${y - size/2}px;
-			pointer-events: none;
-			animation: fadeOut 1s ease-out forwards;
-		`);
-		
-		// Add animation keyframes if not exists
-		if (!document.getElementById('_cursorTrail_animations')) {
-			const style = document.createElement('style');
-			style.id = '_cursorTrail_animations';
-			style.textContent = `
-				@keyframes fadeOut {
-					0% { opacity: 1; transform: scale(1); }
-					100% { opacity: 0; transform: scale(0.5); }
-				}
-			`;
-			document.head.appendChild(style);
-		}
-		
-		getContainer().appendChild(particle);
-		
-		setTimeout(() => particle.remove(), 1000);
-	};
-
-	const handleClick = (e: MouseEvent) => {
-		if (!themeState.coolMode) return;
-		for (let i = 0; i < 5; i++) {
-			setTimeout(() => createParticle(e.clientX, e.clientY), i * 50);
-		}
-	};
-
-	onMount(() => {
-		document.addEventListener('click', handleClick);
-		cleanup = () => document.removeEventListener('click', handleClick);
-	});
-
-	onDestroy(() => {
-		if (cleanup) cleanup();
-	});
+	function handleMouseMove(event: MouseEvent) {
+		coords.set({ x: event.clientX, y: event.clientY });
+		setTimeout(() => trail.set({ x: event.clientX, y: event.clientY }), 50);
+	}
 </script>
+
+<svelte:window onmousemove={handleMouseMove} />
+
+{#if themeState.coolMode}
+	<div 
+		class="pointer-events-none fixed z-50 h-3 w-3 rounded-full"
+		style="left: {$coords.x}px; top: {$coords.y}px; background: #96ad8d;"
+	></div>
+	<div 
+		class="pointer-events-none fixed z-40 h-8 w-8 rounded-full"
+		style="left: {$trail.x - 12}px; top: {$trail.y - 12}px; background: rgba(150, 173, 141, 0.3); filter: blur(12px);"
+	></div>
+{/if}
