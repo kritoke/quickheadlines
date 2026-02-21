@@ -3,7 +3,7 @@
 	import AnimatedThemeToggler from './AnimatedThemeToggler.svelte';
 </script>
 
-<header class="sticky top-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur border-b border-slate-200 dark:border-slate-700 z-20">
+<header class="sticky top-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur border-b border-slate-200 dark:border-slate-700 z-20" data-name="main-header">
 	<div class="max-w-7xl mx-auto px-2 sm:px-4 py-2 sm:py-3 flex items-center justify-between">
 		<div class="flex items-center gap-2 sm:gap-3">
 			<a href="/" class="flex items-center gap-2 sm:gap-3 hover:opacity-80 transition-opacity">

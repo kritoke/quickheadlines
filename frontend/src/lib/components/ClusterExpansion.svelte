@@ -31,7 +31,7 @@
 		Loading similar stories...
 	</div>
 {:else if items.length > 0}
-	<div class="cluster-expansion border-t border-slate-200 dark:border-slate-700">
+	<div class="cluster-expansion border-t border-slate-200 dark:border-slate-700" data-name="cluster-expansion">
 		<div class="py-2 px-3 bg-slate-50 dark:bg-slate-800/50">
 			<span class="text-xs font-medium text-slate-600 dark:text-slate-400">
 				Similar stories ({items.length})

@@ -38,6 +38,7 @@
 </script>
 
 <button
+	data-name="button"
 	class={cn(baseStyles, variants[variant], sizes[size], className)}
 	{...props}
 >

@@ -70,7 +70,7 @@
 	}
 </script>
 
-<div class="rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-sm overflow-hidden flex flex-col h-[400px] contain: strict transform-gpu">
+<div class="rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-sm overflow-hidden flex flex-col h-[400px] contain: strict transform-gpu" data-name="feed-box">
 	<!-- Feed Header -->
 	<a
 		href={feed.site_link || '#'}
@@ -134,6 +134,7 @@
 	{#if feed.total_item_count > feed.items.length}
 		<div class="p-2 border-t border-slate-200 dark:border-slate-700">
 			<button
+				data-name="load-more"
 				onclick={onLoadMore}
 				disabled={loading}
 				class="w-full text-xs text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 py-1 transition-all duration-200 disabled:opacity-50"

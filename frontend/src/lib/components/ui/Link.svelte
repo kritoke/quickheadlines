@@ -10,6 +10,7 @@
 </script>
 
 <a
+	data-name="link"
 	href={href}
 	class={cn('transition-colors hover:text-slate-900 dark:hover:text-slate-50', className)}
 	{...props}

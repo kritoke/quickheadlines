@@ -43,6 +43,7 @@
 <Tabs.Root
 	value={activeTab}
 	class="w-full z-20 mb-4"
+	data-name="feed-tabs"
 	onValueChange={(newValue) => {
 		if (newValue && newValue !== activeTab) {
 			onTabChange(newValue);
@@ -58,6 +59,7 @@
 	>
 		{#each allTabs as tab (tab.name)}
 			<Tabs.Trigger
+				data-name="tab-button"
 				value={tab.name}
 				class="relative px-3 py-1.5 text-sm font-medium whitespace-nowrap
 					transition-colors duration-300 z-10 rounded-lg

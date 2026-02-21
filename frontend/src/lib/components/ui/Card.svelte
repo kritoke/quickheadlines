@@ -22,7 +22,7 @@
 	};
 </script>
 
-<div class={cn(baseStyles, variants[variant], className)} {...props}>
+<div data-name="card" class={cn(baseStyles, variants[variant], className)} {...props}>
 	{#if children}
 		{@render children()}
 	{/if}

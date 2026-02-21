@@ -139,8 +139,8 @@
 	<title>QuickHeadlines</title>
 </svelte:head>
 
-<div class="min-h-screen bg-white dark:bg-slate-900 transition-colors duration-200">
-	<header class="fixed top-0 left-0 right-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur border-b border-slate-200 dark:border-slate-700 z-30">
+<div class="min-h-screen bg-white dark:bg-slate-900 transition-colors duration-200" data-name="feeds-page">
+	<header class="fixed top-0 left-0 right-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur border-b border-slate-200 dark:border-slate-700 z-30" data-name="main-header">
 		<div class="max-w-7xl mx-auto px-2 sm:px-4 py-2 sm:py-3 flex items-center justify-between">
 			<div class="flex items-center gap-2 sm:gap-3 min-w-0">
 				<a href="/?tab=all" class="flex items-center gap-2 hover:opacity-80 transition-opacity shrink-0">
