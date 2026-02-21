@@ -42,7 +42,7 @@ record StoryGroup,
   representative : ClusteredTimelineItem,
   others : Array(ClusteredTimelineItem)
 
-record FeedData, title : String, url : String, site_link : String, header_color : String?, header_text_color : String?, items : Array(Item), etag : String? = nil, last_modified : String? = nil, favicon : String? = nil, favicon_data : String? = nil do
+record FeedData, title : String, url : String, site_link : String, header_color : String?, header_text_color : String?, items : Array(Item), etag : String? = nil, last_modified : String? = nil, favicon : String? = nil, favicon_data : String? = nil, error_message : String? = nil do
   def display_header_color
     (header_color.try(&.strip).presence) || "transparent"
   end
@@ -63,6 +63,10 @@ record FeedData, title : String, url : String, site_link : String, header_color 
 
   def header_theme_colors=(val : String?)
     @header_theme_colors = val
+  end
+
+  def failed?
+    error_message != nil
   end
 end
 

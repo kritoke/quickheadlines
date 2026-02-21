@@ -186,7 +186,7 @@ module ClusteringRepository
         SELECT i.id, i.title, i.link, i.pub_date, f.url as feed_url, f.title as feed_title, f.favicon, f.header_color
         FROM items i
         JOIN feeds f ON i.feed_id = f.id
-        WHERE i.pub_date >= ?
+        WHERE i.pub_date >= ? AND i.pub_date <= datetime('now', '+1 day')
         ORDER BY i.pub_date DESC
         LIMIT ?
         SQL

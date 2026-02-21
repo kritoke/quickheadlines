@@ -63,7 +63,7 @@ tabs:
   - name: "Security"
     feeds:
       - title: "Sophos News"
-        url: "https://news.sophos.com/en-us/blog/feed?id=blt6f15f4f7deaf4242"
+        url: "https://news.sophos.com/en-us/category/threat-research/feed/atom/"
       - title: "Sentinel One"
         url: "https://sentinelone.com/feed/"
       - title: "JUMPSEC LABS"

@@ -256,7 +256,7 @@ class Quickheadlines::Services::ClusteringService
     begin
       STDERR.puts "[#{Time.local}] Starting clustering (streaming rows, threshold: #{threshold})"
 
-      db.query("SELECT id, title, link, pub_date, feed_id FROM items WHERE cluster_id IS NULL OR cluster_id = id ORDER BY pub_date DESC LIMIT ?", limit) do |rows|
+      db.query("SELECT id, title, link, pub_date, feed_id FROM items WHERE (cluster_id IS NULL OR cluster_id = id) AND (pub_date IS NULL OR pub_date <= datetime('now', '+1 day')) ORDER BY pub_date DESC LIMIT ?", limit) do |rows|
         rows.each do
           id = rows.read(Int64)
           title = rows.read(String)
@@ -290,7 +290,7 @@ class Quickheadlines::Services::ClusteringService
     cache.clear_clustering_metadata
 
     items = [] of {id: Int64, title: String, link: String, pub_date: Time?, feed_id: Int64}
-    @db.query("SELECT id, title, link, pub_date, feed_id FROM items ORDER BY pub_date DESC LIMIT ?", limit) do |rows|
+    @db.query("SELECT id, title, link, pub_date, feed_id FROM items WHERE pub_date IS NULL OR pub_date <= datetime('now', '+1 day') ORDER BY pub_date DESC LIMIT ?", limit) do |rows|
       rows.each do
         id = rows.read(Int64)
         title = rows.read(String)

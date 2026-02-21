@@ -195,6 +195,8 @@ end
 def error_feed_data(feed : Feed, message : String) : FeedData
   site_link = feed.url
 
+  STDERR.puts "[#{Time.local}] Feed temporarily disabled due to error: #{feed.title} (#{feed.url}) - #{message}"
+
   favicon, favicon_data = get_favicon(feed, site_link, nil, nil)
 
   header_color, header_text_color = extract_header_colors(feed, favicon_data)
@@ -213,7 +215,8 @@ def error_feed_data(feed : Feed, message : String) : FeedData
     nil,
     nil,
     favicon,
-    favicon_data
+    favicon_data,
+    message
   )
 end
 

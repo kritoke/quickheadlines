@@ -194,7 +194,7 @@ class FeedCache
       feed_id = feed_id_result
 
       items = [] of Item
-      @db.query("SELECT title, link, pub_date, version FROM items WHERE feed_id = ? ORDER BY pub_date DESC", feed_id) do |rows|
+      @db.query("SELECT title, link, pub_date, version FROM items WHERE feed_id = ? AND (pub_date IS NULL OR pub_date <= datetime('now', '+1 day')) ORDER BY pub_date DESC", feed_id) do |rows|
         rows.each do
           title = rows.read(String)
           link = rows.read(String)
@@ -254,7 +254,7 @@ class FeedCache
       return unless feed_result
 
       items = [] of Item
-      query = "SELECT title, link, pub_date, version FROM items WHERE feed_id = ? ORDER BY pub_date DESC LIMIT ? OFFSET ?"
+      query = "SELECT title, link, pub_date, version FROM items WHERE feed_id = ? AND (pub_date IS NULL OR pub_date <= datetime('now', '+1 day')) ORDER BY pub_date DESC LIMIT ? OFFSET ?"
 
       @db.query(query, url, limit, offset) do |rows|
         rows.each do
@@ -441,7 +441,7 @@ class FeedCache
     feed_id = feed_id_result
 
     items = [] of Item
-    @db.query("SELECT title, link, pub_date, version FROM items WHERE feed_id = ? ORDER BY pub_date DESC", feed_id) do |rows|
+    @db.query("SELECT title, link, pub_date, version FROM items WHERE feed_id = ? AND (pub_date IS NULL OR pub_date <= datetime('now', '+1 day')) ORDER BY pub_date DESC", feed_id) do |rows|
       rows.each do
         title = rows.read(String)
         link = rows.read(String)

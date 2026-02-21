@@ -173,6 +173,7 @@ class DatabaseService
     where_clause = <<-SQL
       FROM items i
       JOIN feeds f ON i.feed_id = f.id
+      AND (i.pub_date IS NULL OR i.pub_date <= datetime('now', '+1 day'))
       #{cutoff_clause}
       ORDER BY COALESCE(i.pub_date, '1970-01-01 00:00:00') DESC, i.id DESC
       LIMIT ? OFFSET ?

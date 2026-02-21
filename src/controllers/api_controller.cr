@@ -233,22 +233,22 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
                        # Build list of tuples (feed, tab_name) to preserve tab info
                        all_feeds_with_tabs = [] of {feed: FeedData, tab_name: String}
 
-                       # Top-level feeds have empty tab name
+                       # Top-level feeds have empty tab name (filter out failed feeds)
                        feeds_snapshot.each do |feed|
-                         all_feeds_with_tabs << {feed: feed, tab_name: ""}
+                         all_feeds_with_tabs << {feed: feed, tab_name: ""} unless feed.failed?
                        end
 
-                       # Tab feeds have their tab name
+                       # Tab feeds have their tab name (filter out failed feeds)
                        tabs_snapshot.each do |tab|
                          tab[:feeds].each do |feed|
-                           all_feeds_with_tabs << {feed: feed, tab_name: tab[:name]}
+                           all_feeds_with_tabs << {feed: feed, tab_name: tab[:name]} unless feed.failed?
                          end
                        end
 
                        all_feeds_with_tabs.map { |entry| Api.feed_to_response(entry[:feed], entry[:tab_name], cache.item_count(entry[:feed].url), item_limit) }
                      else
                        found_tab = tabs_snapshot.find { |tab| tab[:name].downcase == active_tab.downcase }
-                       active_feeds = found_tab ? found_tab[:feeds] : [] of FeedData
+                       active_feeds = found_tab ? found_tab[:feeds].reject(&.failed?) : [] of FeedData
                        active_feeds.map { |feed| Api.feed_to_response(feed, active_tab, cache.item_count(feed.url), item_limit) }
                      end
 
