@@ -42,7 +42,7 @@
 
 <Tabs.Root
 	value={activeTab}
-	class="w-full z-20 mb-4"
+	class="w-full z-20 my-3"
 	onValueChange={(newValue) => {
 		if (newValue && newValue !== activeTab) {
 			onTabChange(newValue);
