@@ -3,7 +3,6 @@
 	import { fetchTimeline, fetchConfig, fetchStatus } from '$lib/api';
 	import type { TimelineItemResponse } from '$lib/types';
 	import { themeState, toggleCoolMode } from '$lib/stores/theme.svelte';
-	import { onMount } from 'svelte';
 	import { SvelteSet } from 'svelte/reactivity';
 	import AnimatedThemeToggler from '$lib/components/AnimatedThemeToggler.svelte';
 
@@ -38,7 +37,7 @@
 			
 			refreshMinutes = newRefreshMinutes;
 		} catch (e) {
-			console.warn('Failed to fetch config:', e);
+			// Using existing refresh rate
 		}
 	}
 
@@ -69,7 +68,6 @@
 			offset += response.items.length;
 		} catch (e) {
 			error = e instanceof Error ? e.message : 'Failed to load timeline';
-			console.error('[Timeline] Error:', e);
 		} finally {
 			loading = false;
 			loadingMore = false;
@@ -102,38 +100,43 @@
 		return () => observer.disconnect();
 	});
 
-	onMount(() => {
-		loadTimeline();
-		loadConfig();
-		
-		async function checkClustering() {
-			try {
-				const status = await fetchStatus();
-				
-				if (status.is_clustering && !isClustering) {
-					isClustering = true;
-					clusteringCheckInterval = setInterval(checkClustering, 5000);
-				} else if (!status.is_clustering && isClustering) {
-					isClustering = false;
-					if (clusteringCheckInterval) {
-						clearInterval(clusteringCheckInterval);
-						clusteringCheckInterval = null;
-					}
-					saveScrollY = window.scrollY;
-					isRefreshing = false;
-					await loadTimeline();
-					window.scrollTo(0, saveScrollY);
-				}
-			} catch (e) {
-				console.warn('Failed to check clustering status:', e);
-			}
-		}
-		
-		checkClustering();
-		
-		refreshInterval = setInterval(() => {
+	let mounted = $state(false);
+	
+	$effect(() => {
+		if (!mounted) {
+			mounted = true;
 			loadTimeline();
-		}, refreshMinutes * 60 * 1000);
+			loadConfig();
+			
+			async function checkClustering() {
+				try {
+					const status = await fetchStatus();
+					
+					if (status.is_clustering && !isClustering) {
+						isClustering = true;
+						clusteringCheckInterval = setInterval(checkClustering, 5000);
+					} else if (!status.is_clustering && isClustering) {
+						isClustering = false;
+						if (clusteringCheckInterval) {
+							clearInterval(clusteringCheckInterval);
+							clusteringCheckInterval = null;
+						}
+						saveScrollY = window.scrollY;
+						isRefreshing = false;
+						await loadTimeline();
+						window.scrollTo(0, saveScrollY);
+					}
+				} catch (e) {
+					// Clustering check failed
+				}
+			}
+			
+			checkClustering();
+			
+			refreshInterval = setInterval(() => {
+				loadTimeline();
+			}, refreshMinutes * 60 * 1000);
+		}
 		
 		return () => {
 			if (refreshInterval) clearInterval(refreshInterval);

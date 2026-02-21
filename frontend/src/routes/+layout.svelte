@@ -1,12 +1,11 @@
 <script lang="ts">
 	import '../app.css';
-	import { onMount } from 'svelte';
 	import { themeState, initTheme } from '$lib/stores/theme.svelte';
 	import CursorTrail from '$lib/components/CursorTrail.svelte';
 	
 	let { children } = $props();
 	
-	onMount(() => {
+	$effect(() => {
 		initTheme();
 	});
 </script>

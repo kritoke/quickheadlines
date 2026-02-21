@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onMount, onDestroy } from 'svelte';
+	import { onDestroy } from 'svelte';
 	import type { Snippet } from 'svelte';
 
 	export interface CoolParticleOptions {
@@ -98,11 +98,28 @@
 
 				particle.appendChild(circleSVG);
 			} else if (particleType.startsWith('http') || particleType.startsWith('/')) {
-				particle.innerHTML = `<img src="${particleType}" width="${size}" height="${size}" style="border-radius: 50%">`;
+				const img = document.createElement('img');
+				img.src = particleType;
+				img.width = size;
+				img.height = size;
+				img.style.borderRadius = '50%';
+				particle.appendChild(img);
 			} else {
 				const fontSizeMultiplier = 3;
 				const emojiSize = size * fontSizeMultiplier;
-				particle.innerHTML = `<div style="font-size: ${emojiSize}px; line-height: 1; text-align: center; width: ${size}px; height: ${size}px; display: flex; align-items: center; justify-content: center; transform: scale(${fontSizeMultiplier}); transform-origin: center;">${particleType}</div>`;
+				const div = document.createElement('div');
+				div.style.fontSize = `${emojiSize}px`;
+				div.style.lineHeight = '1';
+				div.style.textAlign = 'center';
+				div.style.width = `${size}px`;
+				div.style.height = `${size}px`;
+				div.style.display = 'flex';
+				div.style.alignItems = 'center';
+				div.style.justifyContent = 'center';
+				div.style.transform = `scale(${fontSizeMultiplier})`;
+				div.style.transformOrigin = 'center';
+				div.textContent = particleType;
+				particle.appendChild(div);
 			}
 
 			particle.style.position = 'absolute';

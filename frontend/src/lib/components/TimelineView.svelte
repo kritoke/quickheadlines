@@ -48,7 +48,7 @@
 					}))
 				};
 			} catch (e) {
-				console.error('Failed to fetch cluster items:', e);
+				// Failed to fetch cluster items
 			} finally {
 				clusterLoading = { ...clusterLoading, [item.cluster_id]: false };
 			}

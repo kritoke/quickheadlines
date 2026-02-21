@@ -4,7 +4,6 @@
 	import { fetchFeeds, fetchMoreFeedItems, fetchConfig } from '$lib/api';
 	import type { FeedResponse, FeedsPageResponse } from '$lib/types';
 	import { themeState, toggleCoolMode } from '$lib/stores/theme.svelte';
-	import { onMount } from 'svelte';
 	import AnimatedThemeToggler from '$lib/components/AnimatedThemeToggler.svelte';
 
 	let feeds = $state<FeedResponse[]>([]);
@@ -76,7 +75,7 @@
 				};
 			}
 		} catch (e) {
-			console.error('Failed to load more items:', e);
+			error = e instanceof Error ? e.message : 'Failed to load more items';
 		} finally {
 			loadingFeeds = { ...loadingFeeds, [feed.url]: false };
 		}
@@ -86,6 +85,7 @@
 	let configRefreshInterval: ReturnType<typeof setInterval>;
 	let refreshMinutes = $state(10);
 	let configFetched = $state(false);
+	let mounted = $state(false);
 	
 	async function loadConfig() {
 		try {
@@ -93,7 +93,6 @@
 			const newRefreshMinutes = config.refresh_minutes || 10;
 			
 			if (configFetched && newRefreshMinutes !== refreshMinutes) {
-				console.log(`Config changed: refresh interval updated from ${refreshMinutes} to ${newRefreshMinutes} minutes`);
 				if (refreshInterval) {
 					clearInterval(refreshInterval);
 					refreshInterval = setInterval(() => {
@@ -105,26 +104,29 @@
 			refreshMinutes = newRefreshMinutes;
 			configFetched = true;
 		} catch (e) {
-			console.warn('Failed to fetch config, using existing refresh rate:', e);
+			// Using existing refresh rate
 		}
 	}
 	
-	onMount(async () => {
-		const params = new URLSearchParams(window.location.search);
-		const urlTab = params.get('tab') || 'all';
-		activeTab = urlTab;
-		
-		loadFeeds(urlTab, true);
-		
-		await loadConfig();
-		
-		refreshInterval = setInterval(() => {
-			loadFeeds(activeTab, true);
-		}, refreshMinutes * 60 * 1000);
-		
-		configRefreshInterval = setInterval(() => {
+	$effect(() => {
+		if (!mounted) {
+			mounted = true;
+			const params = new URLSearchParams(window.location.search);
+			const urlTab = params.get('tab') || 'all';
+			activeTab = urlTab;
+			
+			loadFeeds(urlTab, true);
+			
 			loadConfig();
-		}, 60000);
+			
+			refreshInterval = setInterval(() => {
+				loadFeeds(activeTab, true);
+			}, refreshMinutes * 60 * 1000);
+			
+			configRefreshInterval = setInterval(() => {
+				loadConfig();
+			}, 60000);
+		}
 		
 		return () => {
 			if (refreshInterval) clearInterval(refreshInterval);
