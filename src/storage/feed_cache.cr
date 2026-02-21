@@ -13,6 +13,7 @@ require "./database"
 require "./clustering_repo"
 require "./header_colors"
 require "./cleanup"
+require "../repositories/feed_repository"
 
 class FeedCache
   include ClusteringRepository
@@ -22,8 +23,9 @@ class FeedCache
   @mutex : Mutex
   @db : DB::Database
   @db_path : String
+  @feed_repository : Quickheadlines::Repositories::FeedRepository?
 
-  def initialize(config : Config?)
+  def initialize(config : Config?, db : DB::Database? = nil)
     @mutex = Mutex.new
     cache_dir = get_cache_dir(config)
     ensure_cache_dir(cache_dir)
@@ -31,119 +33,21 @@ class FeedCache
     db_path = get_cache_db_path(config).as(String)
     @db_path = db_path
 
-    @db = DB.open("sqlite3://#{@db_path}")
+    @db = db || DB.open("sqlite3://#{@db_path}")
     create_schema(@db, @db_path)
     STDERR.puts "[#{Time.local}] Database initialized: #{@db_path}"
 
     log_db_size(@db_path, "on startup")
   end
 
+  private def feed_repository : Quickheadlines::Repositories::FeedRepository
+    @feed_repository ||= Quickheadlines::Repositories::FeedRepository.new(@db)
+  end
+
   getter :db_path
 
   def add(feed_data : FeedData)
-    @mutex.synchronize do
-      begin
-        @db.exec("BEGIN TRANSACTION")
-
-        result = @db.query_one?("SELECT id FROM feeds WHERE url = ?", feed_data.url, as: {Int64})
-
-        if result
-          feed_id = result
-
-          existing_color = @db.query_one?("SELECT header_color FROM feeds WHERE id = ?", feed_id, as: {String?})
-          existing_text_color = @db.query_one?("SELECT header_text_color FROM feeds WHERE id = ?", feed_id, as: {String?})
-          existing_theme = @db.query_one?("SELECT header_theme_colors FROM feeds WHERE id = ?", feed_id, as: {String?})
-
-          header_color_to_save = feed_data.header_color.nil? ? existing_color : feed_data.header_color
-          header_text_color_to_save = feed_data.header_text_color.nil? ? existing_text_color : feed_data.header_text_color
-          header_theme_to_save = feed_data.header_theme_colors.nil? ? existing_theme : feed_data.header_theme_colors
-
-          begin
-            corrected = ColorExtractor.auto_correct_theme_json(header_theme_to_save, header_color_to_save, header_text_color_to_save)
-            header_theme_to_save = corrected if corrected
-          rescue
-          end
-
-          @db.exec(
-            "UPDATE feeds SET title = ?, site_link = ?, header_color = ?, header_text_color = ?, header_theme_colors = ?, etag = ?, last_modified = ?, favicon = ?, favicon_data = ?, last_fetched = ? WHERE id = ?",
-            feed_data.title,
-            feed_data.site_link,
-            header_color_to_save,
-            header_text_color_to_save,
-            header_theme_to_save,
-            feed_data.etag,
-            feed_data.last_modified,
-            feed_data.favicon,
-            feed_data.favicon_data,
-            Time.utc.to_s("%Y-%m-%d %H:%M:%S"),
-            feed_id
-          )
-        else
-          begin
-            incoming_theme = feed_data.header_theme_colors
-            corrected_incoming = ColorExtractor.auto_correct_theme_json(incoming_theme, feed_data.header_color, feed_data.header_text_color)
-            theme_to_insert = corrected_incoming || incoming_theme
-          rescue
-            theme_to_insert = feed_data.header_theme_colors
-          end
-
-          @db.exec(
-            "INSERT INTO feeds (url, title, site_link, header_color, header_text_color, header_theme_colors, etag, last_modified, favicon, favicon_data, last_fetched) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-            feed_data.url,
-            feed_data.title,
-            feed_data.site_link,
-            feed_data.header_color,
-            feed_data.header_text_color,
-            theme_to_insert,
-            feed_data.etag,
-            feed_data.last_modified,
-            feed_data.favicon,
-            feed_data.favicon_data,
-            Time.utc.to_s("%Y-%m-%d %H:%M:%S")
-          )
-
-          feed_id = @db.scalar("SELECT last_insert_rowid()").as(Int64)
-        end
-
-        existing_titles = @db.query_all("SELECT title FROM items WHERE feed_id = ?", feed_id, as: String).to_set
-
-        feed_data.items.each_with_index do |item, index|
-          if existing_titles.includes?(item.title)
-            next
-          end
-
-          pub_date_str = item.pub_date.try(&.to_s("%Y-%m-%d %H:%M:%S"))
-
-          @db.exec(
-            "INSERT OR IGNORE INTO items (feed_id, title, link, pub_date, version, position) VALUES (?, ?, ?, ?, ?, ?)",
-            feed_id,
-            item.title,
-            item.link,
-            pub_date_str,
-            item.version,
-            index
-          )
-
-          existing_titles << item.title
-
-          @db.exec(
-            "UPDATE items SET pub_date = ?, position = ? WHERE feed_id = ? AND link = ?",
-            pub_date_str,
-            index,
-            feed_id,
-            item.link
-          )
-        end
-
-        @db.exec("COMMIT")
-      rescue ex
-        STDERR.puts "[Cache ERROR] Failed to add feed #{feed_data.title}: #{ex.message}"
-        begin
-          @db.exec("ROLLBACK")
-        rescue
-        end
-      end
-    end
+    feed_repository.upsert_with_items(feed_data)
   end
 
   def get(url : String) : FeedData?

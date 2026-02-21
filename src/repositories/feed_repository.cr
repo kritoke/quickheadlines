@@ -141,5 +141,90 @@ module Quickheadlines::Repositories
       )
       result ? result.to_i : 0
     end
+
+    def upsert_with_items(feed_data : FeedData) : Void
+      @db.exec("BEGIN TRANSACTION")
+
+      begin
+        result = @db.query_one?("SELECT id FROM feeds WHERE url = ?", feed_data.url, as: {Int64})
+
+        feed_id : Int64
+        if result
+          feed_id = result
+          existing_color = @db.query_one?("SELECT header_color FROM feeds WHERE id = ?", feed_id, as: {String?})
+          existing_text_color = @db.query_one?("SELECT header_text_color FROM feeds WHERE id = ?", feed_id, as: {String?})
+          existing_theme = @db.query_one?("SELECT header_theme_colors FROM feeds WHERE id = ?", feed_id, as: {String?})
+
+          header_color_to_save = feed_data.header_color.nil? ? existing_color : feed_data.header_color
+          header_text_color_to_save = feed_data.header_text_color.nil? ? existing_text_color : feed_data.header_text_color
+          header_theme_to_save = feed_data.header_theme_colors.nil? ? existing_theme : feed_data.header_theme_colors
+
+          @db.exec(
+            "UPDATE feeds SET title = ?, site_link = ?, header_color = ?, header_text_color = ?, header_theme_colors = ?, etag = ?, last_modified = ?, favicon = ?, favicon_data = ?, last_fetched = ? WHERE id = ?",
+            feed_data.title,
+            feed_data.site_link,
+            header_color_to_save,
+            header_text_color_to_save,
+            header_theme_to_save,
+            feed_data.etag,
+            feed_data.last_modified,
+            feed_data.favicon,
+            feed_data.favicon_data,
+            Time.utc.to_s("%Y-%m-%d %H:%M:%S"),
+            feed_id
+          )
+        else
+          @db.exec(
+            "INSERT INTO feeds (url, title, site_link, header_color, header_text_color, header_theme_colors, etag, last_modified, favicon, favicon_data, last_fetched) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            feed_data.url,
+            feed_data.title,
+            feed_data.site_link,
+            feed_data.header_color,
+            feed_data.header_text_color,
+            feed_data.header_theme_colors,
+            feed_data.etag,
+            feed_data.last_modified,
+            feed_data.favicon,
+            feed_data.favicon_data,
+            Time.utc.to_s("%Y-%m-%d %H:%M:%S")
+          )
+          feed_id = @db.scalar("SELECT last_insert_rowid()").as(Int64)
+        end
+
+        existing_titles = @db.query_all("SELECT title FROM items WHERE feed_id = ?", feed_id, as: String).to_set
+
+        feed_data.items.each_with_index do |item, index|
+          next if existing_titles.includes?(item.title)
+
+          pub_date_str = item.pub_date.try(&.to_s("%Y-%m-%d %H:%M:%S"))
+
+          @db.exec(
+            "INSERT OR IGNORE INTO items (feed_id, title, link, pub_date, version, position) VALUES (?, ?, ?, ?, ?, ?)",
+            feed_id,
+            item.title,
+            item.link,
+            pub_date_str,
+            item.version,
+            index
+          )
+
+          existing_titles << item.title
+
+          @db.exec(
+            "UPDATE items SET pub_date = ?, position = ? WHERE feed_id = ? AND link = ?",
+            pub_date_str,
+            index,
+            feed_id,
+            item.link
+          )
+        end
+
+        @db.exec("COMMIT")
+      rescue ex
+        STDERR.puts "[FeedRepository ERROR] Failed to upsert feed #{feed_data.title}: #{ex.message}"
+        @db.exec("ROLLBACK")
+        raise ex
+      end
+    end
   end
 end
