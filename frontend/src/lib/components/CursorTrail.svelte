@@ -5,13 +5,24 @@
 	let coords = spring({ x: -100, y: -100 }, { stiffness: 0.1, damping: 0.25 });
 	let trail = spring({ x: -100, y: -100 }, { stiffness: 0.05, damping: 0.3 });
 
+	function handleMove(x: number, y: number) {
+		coords.set({ x, y });
+		setTimeout(() => trail.set({ x, y }), 50);
+	}
+
 	function handleMouseMove(event: MouseEvent) {
-		coords.set({ x: event.clientX, y: event.clientY });
-		setTimeout(() => trail.set({ x: event.clientX, y: event.clientY }), 50);
+		handleMove(event.clientX, event.clientY);
+	}
+
+	function handleTouchMove(event: TouchEvent) {
+		if (event.touches.length > 0) {
+			const touch = event.touches[0];
+			handleMove(touch.clientX, touch.clientY);
+		}
 	}
 </script>
 
-<svelte:window onmousemove={handleMouseMove} />
+<svelte:window onmousemove={handleMouseMove} ontouchmove={handleTouchMove} />
 
 {#if themeState.coolMode}
 	<div 
