@@ -25,10 +25,8 @@
 				title="Cursor trail"
 			>
 				<svg 
-					class="w-5 h-5"
-					class:text-accent={themeState.coolMode}
-					class:text-slate-400={!themeState.coolMode}
-					class:dark:text-slate-500={!themeState.coolMode}
+					class="w-5 h-5 transition-colors duration-200"
+					style={themeState.coolMode ? 'color: #6b8e5f;' : 'color: #94a3b8;'}
 					viewBox="0 0 24 24" 
 					fill="currentColor"
 				>
