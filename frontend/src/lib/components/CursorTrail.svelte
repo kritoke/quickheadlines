@@ -4,11 +4,8 @@
 
 	let x = $state(0);
 	let y = $state(0);
-	let mounted = $state(false);
 
 	onMount(() => {
-		mounted = true;
-
 		function handleMouseMove(e: MouseEvent) {
 			x = e.clientX;
 			y = e.clientY;
@@ -18,7 +15,7 @@
 		return () => window.removeEventListener('mousemove', handleMouseMove);
 	});
 
-	let enabled = $derived(mounted && themeState.coolMode);
+	let enabled = $derived(themeState.coolMode);
 </script>
 
 {#if enabled}
