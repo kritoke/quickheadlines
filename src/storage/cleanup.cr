@@ -95,7 +95,7 @@ module CleanupRepository
       updated = 0
       rows.each do |id, raw|
         next if raw.nil?
-        str = raw.not_nil!
+        str = raw.as(String)
 
         if str =~ /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/
           next

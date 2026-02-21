@@ -44,6 +44,7 @@ jobs:
             type=sha
 
       - name: Build and push Docker image
+        id: build
         uses: docker/build-push-action@v6
         with:
           context: .
@@ -55,6 +56,10 @@ jobs:
           cache-to: type=gha,mode=max
           build-args: |
             BUILD_REV=${{ github.ref_name }}
+
+      - name: Verify build succeeded
+        if: steps.build.outputs.outputs != ''
+        run: echo "Docker image build and push completed successfully"
 
   build-binaries:
     if: startsWith(github.ref, 'refs/tags/v')

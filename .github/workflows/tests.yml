@@ -22,7 +22,7 @@ jobs:
         run: shards install
 
       - name: Run Crystal tests
-        run: crystal spec spec/header_colors_spec.cr spec/api_controller_header_color_spec.cr
+        run: crystal spec
 
   frontend-tests:
     runs-on: ubuntu-latest

@@ -428,7 +428,9 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
   # Takes feed_url, color (bg color), and text_color (text color). Manual header_color in config takes priority.
   @[ARTA::Post(path: "/api/header_color")]
   def save_header_color(request : ATH::Request) : ATH::Response
-    body = JSON.parse(request.body.not_nil!.gets_to_end)
+    body_io = request.body
+    return ATH::Response.new("Missing request body", 400) if body_io.nil?
+    body = JSON.parse(body_io.gets_to_end)
 
     feed_url_raw = body["feed_url"]?
     color_raw = body["color"]?

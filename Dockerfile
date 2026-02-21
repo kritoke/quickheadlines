@@ -67,18 +67,26 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libreadline8 \
     ca-certificates \
     curl \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* \
+    && useradd --create-home --shell /bin/bash appuser
 
-WORKDIR /
+WORKDIR /home/appuser
 
 ENV APP_ENV=production
 
 # Copy binary (assets are baked in)
-COPY --from=builder /app/server /server
-COPY feeds.yml /feeds.yml.default
+COPY --from=builder /app/server /home/appuser/server
+COPY --from=builder /app/feeds.yml /home/appuser/feeds.yml.default
 
-RUN if [ ! -f /feeds.yml ]; then cp /feeds.yml.default /feeds.yml; fi
+# Copy feeds.yml from build context if it exists, otherwise use default
+COPY feeds.yml /home/appuser/feeds.yml 2>/dev/null || cp /home/appuser/feeds.yml.default /home/appuser/feeds.yml
+
+USER appuser
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:8080/ || exit 1
 
 EXPOSE 8080
 
-ENTRYPOINT ["/server", "--config=/feeds.yml"]
+ENTRYPOINT ["/home/appuser/server", "--config=/home/appuser/feeds.yml"]
