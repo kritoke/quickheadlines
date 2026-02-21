@@ -177,3 +177,9 @@ body::-webkit-scrollbar-thumb:hover {
 	animation-duration: 0.3s;
 	animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
 }
+
+/* Cursor trail CSS variables */
+:root {
+	--cursor-x: -100px;
+	--cursor-y: -100px;
+}
