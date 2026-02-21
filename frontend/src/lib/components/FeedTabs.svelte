@@ -42,7 +42,7 @@
 
 <Tabs.Root
 	value={activeTab}
-	class="w-full z-20 my-3"
+	class="w-full z-20 mb-4"
 	onValueChange={(newValue) => {
 		if (newValue && newValue !== activeTab) {
 			onTabChange(newValue);
@@ -51,7 +51,7 @@
 >
 	<div
 		bind:this={listElement}
-		class="relative flex items-center gap-1 p-1 overflow-x-auto
+		class="sticky top-16 z-20 relative flex items-center gap-1 p-2 overflow-x-auto
 			bg-slate-100/80 dark:bg-slate-800/80 backdrop-blur-xl
 			rounded-xl border border-slate-200/50 dark:border-slate-700/50
 			shadow-sm"
