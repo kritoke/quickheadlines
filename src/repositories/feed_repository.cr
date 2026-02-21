@@ -1,4 +1,5 @@
 require "db"
+require "../models"
 
 module Quickheadlines::Repositories
   class FeedRepository
@@ -35,6 +36,27 @@ module Quickheadlines::Repositories
       end
 
       feeds
+    end
+
+    def find_all_urls : Array(String)
+      urls = [] of String
+      @db.query("SELECT url FROM feeds") do |rows|
+        rows.each do
+          urls << rows.read(String)
+        end
+      end
+      urls
+    end
+
+    def count_all : Int32
+      result = @db.query_one?("SELECT COUNT(*) FROM feeds", as: Int64)
+      result ? result.to_i : 0
+    end
+
+    def find_last_fetched_time(url : String) : Time?
+      result = @db.query_one?("SELECT last_fetched FROM feeds WHERE url = ?", url, as: String?)
+      return nil unless result
+      Time.parse(result, "%Y-%m-%d %H:%M:%S", Time::Location::UTC)
     end
 
     def find_by_url(url : String) : Quickheadlines::Entities::Feed?
@@ -225,6 +247,84 @@ module Quickheadlines::Repositories
         @db.exec("ROLLBACK")
         raise ex
       end
+    end
+
+    def find_with_items(url : String) : FeedData?
+      feed_result = @db.query_one?(
+        "SELECT title, url, site_link, header_color, header_text_color, header_theme_colors, etag, last_modified, favicon, favicon_data FROM feeds WHERE url = ?",
+        url
+      )
+      return nil unless feed_result
+
+      feed_id_result = @db.query_one?("SELECT id FROM feeds WHERE url = ?", url, as: Int64)
+      return nil unless feed_id_result
+      feed_id = feed_id_result
+
+      items = [] of Item
+      @db.query("SELECT title, link, pub_date, version FROM items WHERE feed_id = ? AND (pub_date IS NULL OR pub_date <= datetime('now', '+1 day')) ORDER BY pub_date DESC", feed_id) do |rows|
+        rows.each do
+          title = rows.read(String)
+          link = rows.read(String)
+          pub_date_str = rows.read(String?)
+          version = rows.read(String?)
+
+          pub_date = pub_date_str.try { |date_str| Time.parse(date_str, "%Y-%m-%d %H:%M:%S", Time::Location::UTC) }
+          items << Item.new(title, link, pub_date, version)
+        end
+      end
+
+      fd = FeedData.new(
+        feed_result[:title],
+        feed_result[:url],
+        feed_result[:site_link],
+        feed_result[:header_color],
+        feed_result[:header_text_color],
+        items,
+        feed_result[:etag],
+        feed_result[:last_modified],
+        feed_result[:favicon],
+        feed_result[:favicon_data]
+      )
+      fd.header_theme_colors = feed_result[:header_theme_colors] if feed_result[:header_theme_colors]
+      fd
+    end
+
+    def find_with_items_slice(url : String, limit : Int32, offset : Int32) : FeedData?
+      feed_result = @db.query_one?(
+        "SELECT title, url, site_link, header_color, header_text_color, header_theme_colors, etag, last_modified, favicon, favicon_data FROM feeds WHERE url = ?",
+        url
+      )
+      return nil unless feed_result
+
+      items = [] of Item
+      query = "SELECT title, link, pub_date, version FROM items WHERE feed_id = (SELECT id FROM feeds WHERE url = ?) AND (pub_date IS NULL OR pub_date <= datetime('now', '+1 day')) ORDER BY pub_date DESC LIMIT ? OFFSET ?"
+
+      @db.query(query, url, limit, offset) do |rows|
+        rows.each do
+          title = rows.read(String)
+          link = rows.read(String)
+          pub_date_str = rows.read(String?)
+          version = rows.read(String?)
+
+          pub_date = pub_date_str.try { |date_str| Time.parse(date_str, "%Y-%m-%d %H:%M:%S", Time::Location::UTC) }
+          items << Item.new(title, link, pub_date, version)
+        end
+      end
+
+      fd = FeedData.new(
+        feed_result[:title],
+        feed_result[:url],
+        feed_result[:site_link],
+        feed_result[:header_color],
+        feed_result[:header_text_color],
+        items,
+        feed_result[:etag],
+        feed_result[:last_modified],
+        feed_result[:favicon],
+        feed_result[:favicon_data]
+      )
+      fd.header_theme_colors = feed_result[:header_theme_colors] if feed_result[:header_theme_colors]
+      fd
     end
   end
 end

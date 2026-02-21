@@ -131,69 +131,19 @@ class FeedCache
   end
 
   def get_fetched_time(url : String) : Time?
-    @mutex.synchronize do
-      result = @db.query_one?("SELECT last_fetched FROM feeds WHERE url = ?", url, as: {String})
-      return unless result
-
-      Time.parse(result, "%Y-%m-%d %H:%M:%S", Time::Location::UTC)
-    end
+    feed_repository.find_last_fetched_time(url)
   end
 
   def get_slice(url : String, limit : Int32, offset : Int32) : FeedData?
-    @mutex.synchronize do
-      feed_result = @db.query_one?("SELECT title, url, site_link, header_color, header_text_color, header_theme_colors, etag, last_modified, favicon, favicon_data FROM feeds WHERE url = ?", url) do |row|
-        {
-          title:               row.read(String),
-          url:                 row.read(String),
-          site_link:           row.read(String),
-          header_color:        row.read(String?),
-          header_text_color:   row.read(String?),
-          header_theme_colors: row.read(String?),
-          etag:                row.read(String?),
-          last_modified:       row.read(String?),
-          favicon:             row.read(String?),
-          favicon_data:        row.read(String?),
-        }
-      end
-      return unless feed_result
-
-      items = [] of Item
-      query = "SELECT title, link, pub_date, version FROM items WHERE feed_id = ? AND (pub_date IS NULL OR pub_date <= datetime('now', '+1 day')) ORDER BY pub_date DESC LIMIT ? OFFSET ?"
-
-      @db.query(query, url, limit, offset) do |rows|
-        rows.each do
-          title = rows.read(String)
-          link = rows.read(String)
-          pub_date_str = rows.read(String?)
-          version = rows.read(String?)
-
-          pub_date = pub_date_str.try { |date_str| Time.parse(date_str, "%Y-%m-%d %H:%M:%S", Time::Location::UTC) }
-          items << Item.new(title, link, pub_date, version)
-        end
-      end
-    end
-
-    fd = FeedData.new(
-      feed_result[:title],
-      feed_result[:url],
-      feed_result[:site_link],
-      feed_result[:header_color],
-      feed_result[:header_text_color],
-      items,
-      feed_result[:etag],
-      feed_result[:last_modified],
-      feed_result[:favicon],
-      feed_result[:favicon_data]
-    )
-    fd.header_theme_colors = feed_result[:header_theme_colors] if feed_result[:header_theme_colors]
-    fd
+    feed_repository.find_with_items_slice(url, limit, offset)
   end
 
   def item_count(url : String) : Int32
-    @mutex.synchronize do
-      result = @db.query_one?("SELECT COUNT(*) FROM items JOIN feeds ON items.feed_id = feeds.id WHERE feeds.url = ?", url, as: {Int64})
-      result ? result.to_i : 0
-    end
+    feed_repository.count_items(url)
+  end
+
+  def size : Int32
+    feed_repository.count_all
   end
 
   def entries : Hash(String, FeedData)
@@ -214,10 +164,7 @@ class FeedCache
   end
 
   def size : Int32
-    @mutex.synchronize do
-      result = @db.query_one?("SELECT COUNT(*) FROM feeds", as: {Int64})
-      result ? result.to_i : 0
-    end
+    feed_repository.count_all
   end
 
   def sync_favicon_paths
@@ -301,76 +248,6 @@ class FeedCache
     @mutex.synchronize do
       @db.close
     end
-  end
-
-  private def get_without_lock(url : String) : FeedData?
-    result = @db.query_one?("SELECT title, url, site_link, header_color, header_text_color, header_theme_colors, etag, last_modified, favicon, favicon_data FROM feeds WHERE url = ?", url) do |row|
-      {
-        title:               row.read(String),
-        url:                 row.read(String),
-        site_link:           row.read(String),
-        header_color:        row.read(String?),
-        header_text_color:   row.read(String?),
-        header_theme_colors: row.read(String?),
-        etag:                row.read(String?),
-        last_modified:       row.read(String?),
-        favicon:             row.read(String?),
-        favicon_data:        row.read(String?),
-      }
-    end
-
-    return unless result
-
-    if result[:favicon_data].nil?
-      if favicon = result[:favicon]
-        if favicon.starts_with?("/favicons/")
-          result = {
-            title:               result[:title],
-            url:                 result[:url],
-            site_link:           result[:site_link],
-            header_color:        result[:header_color],
-            header_text_color:   result[:header_text_color],
-            header_theme_colors: result[:header_theme_colors],
-            etag:                result[:etag],
-            last_modified:       result[:last_modified],
-            favicon:             result[:favicon],
-            favicon_data:        favicon,
-          }
-        end
-      end
-    end
-
-    feed_id_result = @db.query_one?("SELECT id FROM feeds WHERE url = ?", url, as: {Int64})
-    return unless feed_id_result
-    feed_id = feed_id_result
-
-    items = [] of Item
-    @db.query("SELECT title, link, pub_date, version FROM items WHERE feed_id = ? AND (pub_date IS NULL OR pub_date <= datetime('now', '+1 day')) ORDER BY pub_date DESC", feed_id) do |rows|
-      rows.each do
-        title = rows.read(String)
-        link = rows.read(String)
-        pub_date_str = rows.read(String?)
-        version = rows.read(String?)
-
-        pub_date = pub_date_str.try { |date_str| Time.parse(date_str, "%Y-%m-%d %H:%M:%S", Time::Location::UTC) }
-        items << Item.new(title, link, pub_date, version)
-      end
-    end
-
-    fd = FeedData.new(
-      result[:title],
-      result[:url],
-      result[:site_link],
-      result[:header_color],
-      result[:header_text_color],
-      items,
-      result[:etag],
-      result[:last_modified],
-      result[:favicon],
-      result[:favicon_data]
-    )
-    fd.header_theme_colors = result[:header_theme_colors] if result[:header_theme_colors]
-    fd
   end
 end
 
