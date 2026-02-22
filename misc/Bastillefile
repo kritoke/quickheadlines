@@ -50,21 +50,38 @@ CMD mkdir -p /tmp/qh/bin && chown -R qh:qh /tmp/qh/bin 2>/dev/null || true
 CMD sh -c "if [ '${MODE}' = 'dev' ]; then echo 'DEV mode: Building from source...'; npm install -g pnpm; cd /tmp/qh && export HOME=/home/qh && sudo -u qh sh -c 'export HOME=/home/qh && shards install --production'; cd /tmp/qh/frontend && pnpm install && pnpm svelte-kit sync && pnpm run build && cp static/logo.svg dist/; cd /tmp/qh && touch src/web/assets.cr && sudo -u qh sh -c 'export HOME=/home/qh && crystal build --release -Os -Dpreview_lto src/quickheadlines.cr -o bin/quickheadlines'; cp bin/quickheadlines /usr/local/share/quickheadlines/; chmod +x /usr/local/share/quickheadlines/quickheadlines; echo 'Build complete'; else echo 'PROD/TAG mode: Downloading binary...'; curl -fSL 'https://github.com/kritoke/quickheadlines/releases/download/v0.4.0/quickheadlines-v0.4.0-freebsd-x64' -o /usr/local/share/quickheadlines/quickheadlines && chmod +x /usr/local/share/quickheadlines/quickheadlines && echo 'Download complete'; fi"
 CMD ls -la /usr/local/share/quickheadlines/
 
-# 7. Install Binary and Config
-# Copy and run helper script to install feeds.yml (avoids nested quoting issues)
-CMD cp misc/install_feeds.sh /tmp/install_feeds.sh 2>/dev/null || true
-CMD chmod +x /tmp/install_feeds.sh 2>/dev/null || true
-CMD sh -c "MODE='${MODE}' TAG='${TAG}' REPO_URL='${REPO_URL:-https://github.com/kritoke/quickheadlines.git}' ALLOW_REMOTE_FETCH='${ALLOW_REMOTE_FETCH:-false}' /tmp/install_feeds.sh"
-CMD chown qh:qh /usr/local/share/quickheadlines/quickheadlines /usr/local/share/quickheadlines/feeds.yml 2>/dev/null || true
+# 7. Self-Contained Config Installation (feeds.yml)
+# Logic: Check /usr/local/share, then /tmp/qh, then GitHub Raw
+CMD sh -c 'TARGET="/usr/local/share/quickheadlines/feeds.yml"; \
+    if [ -f "$TARGET" ]; then \
+        echo "✅ feeds.yml already exists."; \
+    elif [ -f "/tmp/qh/feeds.yml" ]; then \
+        echo "📂 Copying feeds.yml from local clone..."; \
+        cp /tmp/qh/feeds.yml "$TARGET"; \
+    else \
+        echo "🌐 Fetching default feeds.yml from GitHub..."; \
+        REPO="${REPO_URL:-https://github.com/kritoke/quickheadlines}"; \
+        RAW_URL=$(echo "$REPO" | sed "s/github.com/raw.githubusercontent.com/")/main/feeds.yml; \
+        curl -fSL "$RAW_URL" -o "$TARGET" || touch "$TARGET"; \
+    fi'
 
-# 8. Setup Service
-# Copy and run helper script to install rc.d script (avoids nested quoting issues)
-CMD cp misc/install_rcd.sh /tmp/install_rcd.sh 2>/dev/null || true
-CMD chmod +x /tmp/install_rcd.sh 2>/dev/null || true
-CMD sh -c "MODE='${MODE}' TAG='${TAG}' REPO_URL='${REPO_URL:-https://github.com/kritoke/quickheadlines.git}' ALLOW_REMOTE_FETCH='${ALLOW_REMOTE_FETCH:-false}' /tmp/install_rcd.sh"
-SYSRC quickheadlines_enable="YES"
-CMD chmod +x /usr/local/etc/rc.d/quickheadlines || true
+# 8. Self-Contained Service Installation (quickheadlines rc.d)
+# Logic: Check /usr/local/etc/rc.d, then /tmp/qh/misc, then GitHub Raw
+CMD sh -c 'RCSCRIPT="/usr/local/etc/rc.d/quickheadlines"; \
+    if [ -f "$RCSCRIPT" ]; then \
+        echo "✅ RC script already exists."; \
+    elif [ -f "/tmp/qh/misc/quickheadlines" ]; then \
+        echo "📂 Copying RC script from local clone (misc/)..."; \
+        cp /tmp/qh/misc/quickheadlines "$RCSCRIPT"; \
+    else \
+        echo "🌐 Fetching RC script from GitHub (misc/)..."; \
+        REPO="${REPO_URL:-https://github.com/kritoke/quickheadlines}"; \
+        RAW_URL=$(echo "$REPO" | sed "s/github.com/raw.githubusercontent.com/")/main/misc/quickheadlines; \
+        curl -fSL "$RAW_URL" -o "$RCSCRIPT"; \
+    fi && chmod +x "$RCSCRIPT"'
 
-# 9. Wait for database readiness and start
+# 9. Final prep and start
+CMD mkdir -p /var/run/quickheadlines
+CMD chown qh:qh /var/run/quickheadlines
 CMD sleep 2
 CMD service quickheadlines start

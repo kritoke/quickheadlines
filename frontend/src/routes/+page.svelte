@@ -92,17 +92,16 @@
 			const config = await fetchConfig();
 			const newRefreshMinutes = config.refresh_minutes || 10;
 			
-			if (configFetched && newRefreshMinutes !== refreshMinutes) {
-				if (refreshInterval) {
-					clearInterval(refreshInterval);
-					refreshInterval = setInterval(() => {
-						loadFeeds(activeTab, true);
-					}, newRefreshMinutes * 60 * 1000);
-				}
-			}
-			
 			refreshMinutes = newRefreshMinutes;
 			configFetched = true;
+			
+			// Update the refresh interval with the configured value
+			if (refreshInterval) {
+				clearInterval(refreshInterval);
+			}
+			refreshInterval = setInterval(() => {
+				loadFeeds(activeTab, true);
+			}, newRefreshMinutes * 60 * 1000);
 		} catch (e) {
 			// Using existing refresh rate
 		}
@@ -117,11 +116,12 @@
 			
 			loadFeeds(urlTab, true);
 			
-			loadConfig();
-			
-			refreshInterval = setInterval(() => {
-				loadFeeds(activeTab, true);
-			}, refreshMinutes * 60 * 1000);
+			// Load config first, then set up interval with correct value
+			loadConfig().then(() => {
+				refreshInterval = setInterval(() => {
+					loadFeeds(activeTab, true);
+				}, refreshMinutes * 60 * 1000);
+			});
 			
 			configRefreshInterval = setInterval(() => {
 				loadConfig();

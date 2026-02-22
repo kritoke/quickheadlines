@@ -106,7 +106,13 @@
 		if (!mounted) {
 			mounted = true;
 			loadTimeline();
-			loadConfig();
+			
+			// Load config first, then set up interval with correct value
+			loadConfig().then(() => {
+				refreshInterval = setInterval(() => {
+					loadTimeline();
+				}, refreshMinutes * 60 * 1000);
+			});
 			
 			async function checkClustering() {
 				try {
@@ -132,10 +138,6 @@
 			}
 			
 			checkClustering();
-			
-			refreshInterval = setInterval(() => {
-				loadTimeline();
-			}, refreshMinutes * 60 * 1000);
 		}
 		
 		return () => {
