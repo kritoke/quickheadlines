@@ -9,6 +9,7 @@ require "../services/clustering_service"
 require "../repositories/feed_repository"
 require "../repositories/story_repository"
 require "../repositories/cluster_repository"
+require "../fetcher/refresh_loop"
 
 class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
   @db_service : DatabaseService
@@ -290,6 +291,21 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
     days = request.query_params["days"]?.try(&.to_i?) || default_days.to_i32
 
     result = story_service.get_timeline(limit, offset, days)
+
+    # If timeline has very few items and we're not already clustering, trigger a background refresh
+    # This ensures the timeline populates quickly after server startup
+    if result.total_count < 100 && !STATE.is_clustering? && offset == 0
+      spawn do
+        begin
+          config = STATE.config
+          if config
+            refresh_all(config)
+          end
+        rescue ex
+          STDERR.puts "[Timeline] Background refresh error: #{ex.message}"
+        end
+      end
+    end
 
     TimelinePageResponse.new(
       items: result.items,
