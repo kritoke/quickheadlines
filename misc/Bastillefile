@@ -51,84 +51,17 @@ CMD sh -c "if [ '${MODE}' = 'dev' ]; then echo 'DEV mode: Building from source..
 CMD ls -la /usr/local/share/quickheadlines/
 
 # 7. Install Binary and Config
-CMD sh -c "
-  # Only install feeds.yml if destination is missing
-  if [ -f /usr/local/share/quickheadlines/feeds.yml ]; then
-    echo 'feeds.yml already exists; skipping install'
-  else
-    # If in dev mode and repo was cloned, prefer the repository copy
-    if [ '${MODE}' = 'dev' ] && [ -f /tmp/qh/feeds.yml ]; then
-      echo 'Installing feeds.yml from cloned repository: /tmp/qh/feeds.yml'
-      cp /tmp/qh/feeds.yml /usr/local/share/quickheadlines/feeds.yml || echo 'Warning: failed to copy feeds.yml from repo'
-    else
-      # For dev we prefer 'main'; for explicit TAG use that tag; otherwise try latest release tag
-      REPO='${REPO_URL:-https://github.com/kritoke/quickheadlines.git}'
-      if [ '${MODE}' = 'dev' ]; then
-        REF='main'
-      elif [ -n '${TAG}' ]; then
-        REF='${TAG}'
-      else
-        LATEST_TAG=$(git ls-remote --sort=v:refname --tags "${REPO}" 2>/dev/null | tail -1 | cut -d/ -f3)
-        if [ -n "${LATEST_TAG}" ]; then
-          REF="${LATEST_TAG}"
-        else
-          REF='main'
-        fi
-      fi
-
-      # Prefer REPO_URL when it's a GitHub URL
-      if echo "${REPO}" | grep -qE 'github.com'; then
-        OWNER_REPO=$(echo "${REPO}" | sed -E 's#https?://github.com/##; s#\.git$##; s#/$##')
-        RAW_URL="https://raw.githubusercontent.com/${OWNER_REPO}/${REF}/feeds.yml"
-      else
-        RAW_URL="https://raw.githubusercontent.com/kritoke/quickheadlines/${REF}/feeds.yml"
-      fi
-
-      echo \"Fetching ${RAW_URL}\"
-      curl -fSL "${RAW_URL}" -o /usr/local/share/quickheadlines/feeds.yml 2>/dev/null || { echo "Error: failed to download feeds.yml from ${RAW_URL}"; exit 1; }
-    fi
-  fi
-"
+# Copy and run helper script to install feeds.yml (avoids nested quoting issues)
+CMD cp misc/install_feeds.sh /tmp/install_feeds.sh 2>/dev/null || true
+CMD chmod +x /tmp/install_feeds.sh 2>/dev/null || true
+CMD sh -c "MODE='${MODE}' TAG='${TAG}' REPO_URL='${REPO_URL:-https://github.com/kritoke/quickheadlines.git}' /tmp/install_feeds.sh"
 CMD chown qh:qh /usr/local/share/quickheadlines/quickheadlines /usr/local/share/quickheadlines/feeds.yml 2>/dev/null || true
 
 # 8. Setup Service
-CMD sh -c "
-  REPO='${REPO_URL:-https://github.com/kritoke/quickheadlines.git}'
-  # If the rc.d script already exists inside the container, don't overwrite it
-  if [ -f /usr/local/etc/rc.d/quickheadlines ]; then
-    echo 'rc.d already present at /usr/local/etc/rc.d/quickheadlines; skipping copy/fetch'
-  else
-    # For production/tag modes we may not have cloned the repo; fetch raw directly
-    if [ '${MODE}' = 'dev' ] && [ -f /tmp/qh/misc/quickheadlines ]; then
-      echo 'Using rc.d from cloned repository: /tmp/qh/misc/quickheadlines'
-      cp /tmp/qh/misc/quickheadlines /usr/local/etc/rc.d/quickheadlines || { echo 'Error: failed to copy rc.d from cloned repository'; exit 1; }
-    else
-      # Determine REF: dev->main, TAG->TAG, else latest release tag
-      if [ '${MODE}' = 'dev' ]; then
-        REF='main'
-      elif [ -n '${TAG}' ]; then
-        REF='${TAG}'
-      else
-        LATEST_TAG=$(git ls-remote --sort=v:refname --tags "${REPO}" 2>/dev/null | tail -1 | cut -d/ -f3)
-        if [ -n "${LATEST_TAG}" ]; then
-          REF="${LATEST_TAG}"
-        else
-          REF='main'
-        fi
-      fi
-
-      if echo "${REPO}" | grep -qE 'github.com'; then
-        OWNER_REPO=$(echo "${REPO}" | sed -E 's#https?://github.com/##; s#\.git$##; s#/$##')
-        RAW_URL="https://raw.githubusercontent.com/${OWNER_REPO}/${REF}/misc/quickheadlines"
-      else
-        RAW_URL="https://raw.githubusercontent.com/kritoke/quickheadlines/${REF}/misc/quickheadlines"
-      fi
-
-      echo \"Fetching ${RAW_URL}\"
-      curl -fSL "${RAW_URL}" -o /usr/local/etc/rc.d/quickheadlines 2>/dev/null || { echo "Error: failed to download rc.d from ${RAW_URL}"; exit 1; }
-    fi
-  fi
-"
+# Copy and run helper script to install rc.d script (avoids nested quoting issues)
+CMD cp misc/install_rcd.sh /tmp/install_rcd.sh 2>/dev/null || true
+CMD chmod +x /tmp/install_rcd.sh 2>/dev/null || true
+CMD sh -c "MODE='${MODE}' TAG='${TAG}' REPO_URL='${REPO_URL:-https://github.com/kritoke/quickheadlines.git}' /tmp/install_rcd.sh"
 SYSRC quickheadlines_enable="YES"
 CMD chmod +x /usr/local/etc/rc.d/quickheadlines || true
 
