@@ -84,7 +84,7 @@ CMD sh -c "
         RAW_URL="https://raw.githubusercontent.com/kritoke/quickheadlines/${REF}/feeds.yml"
       fi
 
-      echo "Fetching ${RAW_URL}"
+      echo \"Fetching ${RAW_URL}\"
       curl -fSL "${RAW_URL}" -o /usr/local/share/quickheadlines/feeds.yml 2>/dev/null || { echo "Error: failed to download feeds.yml from ${RAW_URL}"; exit 1; }
     fi
   fi
@@ -124,7 +124,7 @@ CMD sh -c "
         RAW_URL="https://raw.githubusercontent.com/kritoke/quickheadlines/${REF}/misc/quickheadlines"
       fi
 
-      echo "Fetching ${RAW_URL}"
+      echo \"Fetching ${RAW_URL}\"
       curl -fSL "${RAW_URL}" -o /usr/local/etc/rc.d/quickheadlines 2>/dev/null || { echo "Error: failed to download rc.d from ${RAW_URL}"; exit 1; }
     fi
   fi
