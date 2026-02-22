@@ -4,7 +4,7 @@ require "../src/entities/story"
 require "../src/entities/feed"
 
 describe Quickheadlines::Services::ClusteringService do
-  describe "#cluster_uncategorized" do
+  describe "#recluster_with_lsh" do
     it "clusters similar items together" do
       cache = FeedCache.new(nil)
       db = cache.db
@@ -45,7 +45,7 @@ describe Quickheadlines::Services::ClusteringService do
       )
 
       service = Quickheadlines::Services::ClusteringService.new(db)
-      processed = service.cluster_uncategorized(limit: 10)
+      processed = service.recluster_with_lsh(limit: 10)
 
       processed.should eq(5)
 
@@ -82,19 +82,13 @@ describe Quickheadlines::Services::ClusteringService do
       )
 
       service = Quickheadlines::Services::ClusteringService.new(db)
-      processed = service.cluster_uncategorized(limit: 10)
+      processed = service.recluster_with_lsh(limit: 10)
 
-      processed.should eq(2)
-
-      signature_1 = cache.get_item_signature(1_i64)
-      signature_1.should be_nil
-
-      signature_2 = cache.get_item_signature(2_i64)
-      signature_2.should_not be_nil
+      processed.should eq(1)
     end
   end
 
-  describe "#recluster_all" do
+  describe "#recluster_with_lsh clears and reclusters" do
     it "clears existing clustering and reclusters all items" do
       cache = FeedCache.new(nil)
       db = cache.db
@@ -122,7 +116,7 @@ describe Quickheadlines::Services::ClusteringService do
       )
 
       service = Quickheadlines::Services::ClusteringService.new(db)
-      processed = service.recluster_all(limit: 10)
+      processed = service.recluster_with_lsh(limit: 10)
 
       processed.should eq(2)
 

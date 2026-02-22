@@ -154,7 +154,7 @@ module Quickheadlines
 
       def self.get_category(endpoint : String) : String
         case endpoint
-        when "/api/cluster", "/api/recluster"
+        when "/api/cluster", "/api/recluster", "/api/recluster_v2"
           "expensive"
         when "/api/refresh", "/api/clear-cache"
           "moderately"

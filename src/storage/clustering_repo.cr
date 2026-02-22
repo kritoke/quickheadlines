@@ -98,6 +98,26 @@ module ClusteringRepository
     end
   end
 
+  # Bulk assign clusters. `clusters` is a hash mapping representative_id => Array(item_id)
+  def assign_clusters_bulk(clusters : Hash(Int64, Array(Int64)))
+    @mutex.synchronize do
+      begin
+        @db.exec("BEGIN TRANSACTION")
+        clusters.each do |rep_id, members|
+          next if members.empty?
+          placeholders = members.map { |_| "?" }.join(",")
+          sql = "UPDATE items SET cluster_id = ? WHERE id IN (#{placeholders})"
+          args = [rep_id] + members
+          @db.exec(sql, args: args)
+        end
+        @db.exec("COMMIT")
+      rescue ex
+        @db.exec("ROLLBACK")
+        STDERR.puts "[Cluster ERROR] Failed to assign clusters: #{ex.message}"
+      end
+    end
+  end
+
   def get_cluster_items(cluster_id : Int64) : Array(Int64)
     items = [] of Int64
     @mutex.synchronize do

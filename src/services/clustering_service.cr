@@ -230,6 +230,114 @@ class Quickheadlines::Services::ClusteringService
 
     processed
   end
+
+  # New two-phase clustering using in-memory LSH + exact verification
+  def recluster_with_lsh(limit : Int32 = 5000, threshold : Float64 = 0.35, bands : Int32 = 20) : Int32
+    cache = FeedCache.instance
+
+    items = [] of {id: Int64, title: String, link: String, pub_date: Time?, feed_id: Int64}
+    @db.query("SELECT id, title, link, pub_date, feed_id FROM items WHERE pub_date IS NULL OR pub_date <= datetime('now', '+1 day') ORDER BY pub_date DESC LIMIT ?", limit) do |rows|
+      rows.each do
+        id = rows.read(Int64)
+        title = rows.read(String)
+        link = rows.read(String)
+        pub_date_str = rows.read(String?)
+        feed_id = rows.read(Int64)
+        pub_date = pub_date_str.try { |str| Time.parse(str, "%Y-%m-%d %H:%M:%S", Time::Location::UTC) }
+        items << {id: id, title: title, link: link, pub_date: pub_date, feed_id: feed_id}
+      end
+    end
+
+    STDERR.puts "[#{Time.local}] Found #{items.size} items to re-cluster with LSH (threshold: #{threshold}, bands: #{bands})"
+
+    processed = 0
+    STATE.is_clustering = true
+    begin
+      # Build index
+      index = LexisMinhash::LSHIndex.new(bands: bands, expected_docs: items.size)
+      signatures = {} of Int64 => Array(UInt32)
+      items_map = {} of Int64 => {id: Int64, title: String, feed_id: Int64}
+
+      items.each do |it|
+        next if it[:title].empty?
+        # Skip too-short titles
+        next if ClusteringUtilities.word_count(it[:title]) < ClusteringUtilities::MIN_WORDS_FOR_CLUSTERING
+
+        doc = LexisMinhash::SimpleDocument.new(it[:title])
+        sig = LexisMinhash::Engine.compute_signature(doc)
+        signatures[it[:id]] = sig
+        items_map[it[:id]] = {id: it[:id], title: it[:title], feed_id: it[:feed_id]}
+
+        # add signature to LSH index
+        index.add_with_signature(it[:id].to_i32, sig)
+      end
+
+      # find candidate pairs from LSH
+      pairs = index.find_similar_pairs(threshold)
+
+      # union-find for clusters
+      parent = {} of Int64 => Int64
+      find = ->(x : Int64) do
+        parent[x] ||= x
+        while parent[x] != x
+          parent[x] = parent[parent[x]]
+          x = parent[x]
+        end
+        x
+      end
+      union = ->(a : Int64, b : Int64) do
+        ra = find.call(a)
+        rb = find.call(b)
+        return if ra == rb
+        # attach smaller to larger by id
+        if ra < rb
+          parent[rb] = ra
+        else
+          parent[ra] = rb
+        end
+      end
+
+      # verify and union pairs
+      pairs.each do |pair|
+        a = pair[0].to_i64
+        b = pair[1].to_i64
+        next unless items_map.has_key?(a) && items_map.has_key?(b)
+        next if items_map[a][:feed_id] == items_map[b][:feed_id]
+
+        set_a = ClusteringUtilities.word_set(items_map[a][:title])
+        set_b = ClusteringUtilities.word_set(items_map[b][:title])
+        sim = ClusteringUtilities.overlap_coefficient(set_a, set_b)
+        if sim >= threshold
+          union.call(a, b)
+        end
+      end
+
+      # gather clusters
+      clusters = {} of Int64 => Array(Int64)
+      items_map.keys.each do |id|
+        root = find.call(id)
+        clusters[root] ||= [] of Int64
+        clusters[root] << id
+      end
+
+      # choose representative per cluster (min id) and build rep->members map
+      rep_map = {} of Int64 => Array(Int64)
+      clusters.each do |_root, members|
+        rep = members.min
+        rep_map[rep] = members
+      end
+
+      # persist clusters in bulk via cache
+      cache.assign_clusters_bulk(rep_map)
+
+      processed = items_map.size
+      STDERR.puts "[#{Time.local}] Re-clustering with LSH complete: #{processed} items clustered into #{rep_map.size} groups"
+    ensure
+      STATE.is_clustering = false
+    end
+
+    processed
+  end
 end
 
 def clustering_service : Quickheadlines::Services::ClusteringService

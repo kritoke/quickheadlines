@@ -532,11 +532,11 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
   def run_clustering : ATH::Response
     spawn do
       begin
-        STDERR.puts "[#{Time.local}] Starting manual clustering..."
+        STDERR.puts "[#{Time.local}] Starting manual clustering with LSH..."
         service = clustering_service
         cluster_limit = STATE.config.try(&.clustering).try(&.max_items) || STATE.config.try(&.db_fetch_limit) || 5000
         threshold = STATE.config.try(&.clustering).try(&.threshold) || 0.35
-        service.cluster_uncategorized(cluster_limit, threshold)
+        service.recluster_with_lsh(cluster_limit, threshold)
       rescue ex
         STDERR.puts "[#{Time.local}] Clustering error: #{ex.message}"
         STDERR.puts ex.backtrace.join("\n")
@@ -551,11 +551,11 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
   def recluster : ATH::Response
     spawn do
       begin
-        STDERR.puts "[#{Time.local}] Clearing clustering metadata and re-clustering..."
+        STDERR.puts "[#{Time.local}] Clearing clustering metadata and re-clustering with LSH..."
         service = clustering_service
         cluster_limit = STATE.config.try(&.clustering).try(&.max_items) || STATE.config.try(&.db_fetch_limit) || 5000
         threshold = STATE.config.try(&.clustering).try(&.threshold) || 0.35
-        service.recluster_all(cluster_limit, threshold)
+        service.recluster_with_lsh(cluster_limit, threshold)
       rescue ex
         STDERR.puts "[#{Time.local}] Re-clustering error: #{ex.message}"
         STDERR.puts ex.backtrace.join("\n")
@@ -563,6 +563,26 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
     end
 
     ATH::Response.new("Re-clustering started in background", 202, HTTP::Headers{"content-type" => "text/plain"})
+  end
+
+  # POST /api/recluster_v2 - Re-cluster using new LSH method
+  @[ARTA::Post(path: "/api/recluster_v2")]
+  def recluster_v2 : ATH::Response
+    spawn do
+      begin
+        STDERR.puts "[#{Time.local}] Re-clustering with LSH v2..."
+        service = clustering_service
+        cluster_limit = STATE.config.try(&.clustering).try(&.max_items) || STATE.config.try(&.db_fetch_limit) || 5000
+        threshold = STATE.config.try(&.clustering).try(&.threshold) || 0.35
+        bands = 20
+        service.recluster_with_lsh(cluster_limit, threshold, bands)
+      rescue ex
+        STDERR.puts "[#{Time.local}] Re-clustering v2 error: #{ex.message}"
+        STDERR.puts ex.backtrace.join("\n")
+      end
+    end
+
+    ATH::Response.new("Re-clustering v2 started in background", 202, HTTP::Headers{"content-type" => "text/plain"})
   end
 
   # POST /api/cleanup-orphaned - Remove feeds from database that are no longer in config

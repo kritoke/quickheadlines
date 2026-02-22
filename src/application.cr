@@ -91,7 +91,8 @@ begin
     loop do
       sleep 60.minutes
       next if STATE.is_clustering?
-      clustering_service.cluster_uncategorized(initial_config.db_fetch_limit)
+      threshold = STATE.config.try(&.clustering).try(&.threshold) || 0.35
+      clustering_service.recluster_with_lsh(initial_config.db_fetch_limit, threshold)
     end
   end
 
