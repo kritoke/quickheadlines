@@ -5,6 +5,7 @@ set -eu
 # Expects MODE, TAG, REPO_URL environment variables to be set (or defaults)
 
 : ${REPO_URL:="https://github.com/kritoke/quickheadlines.git"}
+: ${ALLOW_REMOTE_FETCH:=false}
 
 DEST=/usr/local/etc/rc.d/quickheadlines
 
@@ -42,7 +43,12 @@ else
 fi
 
 echo "Fetching rc.d from $RAW_URL"
-curl -fSL "$RAW_URL" -o "$DEST" || { echo "Error: failed to download rc.d from $RAW_URL" >&2; exit 1; }
-
-chmod +x "$DEST"
-echo "rc.d installed at $DEST"
+if [ "$ALLOW_REMOTE_FETCH" = "true" ] || [ "$ALLOW_REMOTE_FETCH" = "1" ]; then
+  curl -fSL "$RAW_URL" -o "$DEST" || { echo "Error: failed to download rc.d from $RAW_URL" >&2; exit 1; }
+  chmod +x "$DEST"
+  echo "rc.d installed at $DEST"
+else
+  echo "Remote fetch disabled (ALLOW_REMOTE_FETCH=${ALLOW_REMOTE_FETCH}); not attempting to download rc.d from $RAW_URL" >&2
+  echo "Error: rc.d not available locally and remote fetch is disabled" >&2
+  exit 1
+fi

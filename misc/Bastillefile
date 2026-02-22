@@ -54,14 +54,14 @@ CMD ls -la /usr/local/share/quickheadlines/
 # Copy and run helper script to install feeds.yml (avoids nested quoting issues)
 CMD cp misc/install_feeds.sh /tmp/install_feeds.sh 2>/dev/null || true
 CMD chmod +x /tmp/install_feeds.sh 2>/dev/null || true
-CMD sh -c "MODE='${MODE}' TAG='${TAG}' REPO_URL='${REPO_URL:-https://github.com/kritoke/quickheadlines.git}' /tmp/install_feeds.sh"
+CMD sh -c "MODE='${MODE}' TAG='${TAG}' REPO_URL='${REPO_URL:-https://github.com/kritoke/quickheadlines.git}' ALLOW_REMOTE_FETCH='${ALLOW_REMOTE_FETCH:-false}' /tmp/install_feeds.sh"
 CMD chown qh:qh /usr/local/share/quickheadlines/quickheadlines /usr/local/share/quickheadlines/feeds.yml 2>/dev/null || true
 
 # 8. Setup Service
 # Copy and run helper script to install rc.d script (avoids nested quoting issues)
 CMD cp misc/install_rcd.sh /tmp/install_rcd.sh 2>/dev/null || true
 CMD chmod +x /tmp/install_rcd.sh 2>/dev/null || true
-CMD sh -c "MODE='${MODE}' TAG='${TAG}' REPO_URL='${REPO_URL:-https://github.com/kritoke/quickheadlines.git}' /tmp/install_rcd.sh"
+CMD sh -c "MODE='${MODE}' TAG='${TAG}' REPO_URL='${REPO_URL:-https://github.com/kritoke/quickheadlines.git}' ALLOW_REMOTE_FETCH='${ALLOW_REMOTE_FETCH:-false}' /tmp/install_rcd.sh"
 SYSRC quickheadlines_enable="YES"
 CMD chmod +x /usr/local/etc/rc.d/quickheadlines || true
 

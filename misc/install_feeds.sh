@@ -4,7 +4,9 @@ set -eu
 # install_feeds.sh
 # Expects MODE, TAG, REPO_URL environment variables to be set (or uses defaults)
 
+
 : ${REPO_URL:="https://github.com/kritoke/quickheadlines.git"}
+: ${ALLOW_REMOTE_FETCH:=false}
 
 DEST=/usr/local/share/quickheadlines/feeds.yml
 
@@ -42,6 +44,12 @@ else
 fi
 
 echo "Fetching feeds.yml from $RAW_URL"
-curl -fSL "$RAW_URL" -o "$DEST" || { echo "Error: failed to download feeds.yml from $RAW_URL" >&2; exit 1; }
+if [ "$ALLOW_REMOTE_FETCH" = "true" ] || [ "$ALLOW_REMOTE_FETCH" = "1" ]; then
+  curl -fSL "$RAW_URL" -o "$DEST" || { echo "Error: failed to download feeds.yml from $RAW_URL" >&2; exit 1; }
+else
+  echo "Remote fetch disabled (ALLOW_REMOTE_FETCH=${ALLOW_REMOTE_FETCH}); not attempting to download feeds.yml from $RAW_URL" >&2
+  echo "Error: feeds.yml not available locally and remote fetch is disabled" >&2
+  exit 1
+fi
 
 echo "feeds.yml installed at $DEST"
