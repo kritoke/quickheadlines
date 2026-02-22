@@ -14,9 +14,9 @@
 
 ## 3. FeedCache Refactoring
 
-- [ ] 3.1 Strip all SQL from FeedCache, keep only in-memory caching methods
-- [ ] 3.2 Verify caching still works with new repository layer
-- [ ] 3.3 Run integration tests
+- [x] 3.1 Strip all SQL from FeedCache, keep only in-memory caching methods (main persistence delegated to FeedRepository)
+- [x] 3.2 Verify caching still works with new repository layer (server runs, 109 feeds loaded)
+- [x] 3.3 Run integration tests (130 Crystal tests pass, server responds 200)
 
 ## 4. Controller Refactoring
 
