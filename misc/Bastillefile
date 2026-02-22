@@ -85,7 +85,7 @@ CMD sh -c "
       fi
 
       echo "Fetching ${RAW_URL}"
-      curl -fSL "${RAW_URL}" -o /usr/local/share/quickheadlines/feeds.yml 2>/dev/null || echo 'Warning: failed to download feeds.yml; continuing without it'
+      curl -fSL "${RAW_URL}" -o /usr/local/share/quickheadlines/feeds.yml 2>/dev/null || { echo "Error: failed to download feeds.yml from ${RAW_URL}"; exit 1; }
     fi
   fi
 "
