@@ -182,8 +182,10 @@ QuickHeadlines stores feed data in an SQLite database for better performance. Th
 
 1. **Environment variable** `QUICKHEADLINES_CACHE_DIR`
 2. **Config file** option `cache_dir` in `feeds.yml`
-3. **XDG cache directory** `~/.cache/quickheadlines` (or `$XDG_CACHE_HOME/quickheadlines`)
-4. **Fallback** `./cache` in the current directory
+3. **Platform-specific default**:
+   - **FreeBSD/Linux**: `/var/cache/quickheadlines` (if writable), otherwise XDG or `~/.cache/quickheadlines`
+   - **macOS**: `~/Library/Caches/quickheadlines`
+   - **Fallback**: `./cache` in the current directory
 
 #### Setting the Cache Directory
 

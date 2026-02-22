@@ -20,11 +20,31 @@ def get_cache_dir(config : Config?) : String
     return cache
   end
 
+  # Platform-specific defaults
+  # FreeBSD: /var/cache/quickheadlines
+  # Linux: /var/cache/quickheadlines (if /var/cache exists and is writable)
+  # macOS: ~/Library/Caches/quickheadlines
+  # Fallback: XDG or ~/.cache/quickheadlines
+  if Dir.exists?("/var/cache")
+    begin
+      test_dir = "/var/cache/quickheadlines_test_#{Process.pid}"
+      Dir.mkdir_p(test_dir)
+      File.delete(test_dir)
+      return "/var/cache/quickheadlines"
+    rescue
+      # Not writable, fall through to other options
+    end
+  end
+
   if xdg = ENV["XDG_CACHE_HOME"]?
     return File.join(xdg, "quickheadlines")
   end
 
   if home = ENV["HOME"]?
+    # Check for macOS ~/Library/Caches
+    if home.includes?("/Users/") && Dir.exists?(File.join(home, "Library", "Caches"))
+      return File.join(home, "Library", "Caches", "quickheadlines")
+    end
     return File.join(home, ".cache", "quickheadlines")
   end
 

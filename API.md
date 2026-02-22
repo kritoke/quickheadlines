@@ -262,13 +262,35 @@ Errors return appropriate HTTP status codes:
 
 ## Rate Limiting
 
-No rate limiting is currently implemented, but the server may throttle feed fetching internally.
+The API implements rate limiting with configurable limits per category. Rate limits are configured in `feeds.yml`:
+
+```yaml
+rate_limiting:
+  enabled: true
+  cleanup_interval_minutes: 5
+  max_entries: 10000
+  categories:
+    expensive:       # /api/recluster, /api/cluster
+      limit: 5
+      window_minutes: 60
+    moderately:     # /api/refresh, /api/clear-cache
+      limit: 10
+      window_minutes: 60
+    very_expensive: # /api/cleanup-orphaned
+      limit: 3
+      window_minutes: 60
+    read:           # All other endpoints
+      limit: 60
+      window_minutes: 1
+```
+
+When rate limited, endpoints return `429 Too Many Requests` with a `Retry-After` header.
 
 ## Background Jobs
 
 The server runs periodic background jobs:
-- **Feed Refresh**: Fetches new items from all feeds (every ~15 minutes)
-- **Clustering**: Runs automatically on newly fetched items
-- **Cache Cleanup**: Removes items older than 14 days (configurable via `cache_retention_hours`)
+- **Feed Refresh**: Fetches new items from all configured feeds based on `refresh_minutes` (default: 30 minutes)
+- **Clustering**: Runs automatically on newly fetched items (every 60 minutes)
+- **Cache Cleanup**: Removes items older than configured `cache_retention_hours` (default: 14 days)
 
 Use `/api/run-clustering` to manually cluster existing items.
