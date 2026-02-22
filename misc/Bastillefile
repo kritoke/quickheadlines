@@ -56,34 +56,39 @@ CMD chown qh:qh /usr/local/share/quickheadlines/quickheadlines /usr/local/share/
 
 # 8. Setup Service
 CMD sh -c "
-  # Prefer rc.d script included in the cloned repository
-  if [ -f /tmp/qh/misc/quickheadlines ]; then
-    echo 'Using rc.d from repository: /tmp/qh/misc/quickheadlines'
-    cp /tmp/qh/misc/quickheadlines /usr/local/etc/rc.d/quickheadlines
+  # If the rc.d script already exists inside the container, don't overwrite it
+  if [ -f /usr/local/etc/rc.d/quickheadlines ]; then
+    echo 'rc.d already present at /usr/local/etc/rc.d/quickheadlines; skipping copy/fetch'
   else
-    echo 'Repository does not include misc/quickheadlines; attempting to fetch from GitHub raw'
-    # Determine branch/ref to use for raw fetch
-    if [ '${MODE}' = 'dev' ]; then
-      REF='main'
-    elif [ -n '${TAG}' ]; then
-      REF='${TAG}'
+    # Prefer rc.d script included in the cloned repository
+    if [ -f /tmp/qh/misc/quickheadlines ]; then
+      echo 'Using rc.d from repository: /tmp/qh/misc/quickheadlines'
+      cp /tmp/qh/misc/quickheadlines /usr/local/etc/rc.d/quickheadlines
     else
-      REF='main'
-    fi
-
-    # Try to derive owner/repo from REPO_URL when it's a GitHub URL
-    RAW_URL='https://raw.githubusercontent.com/kritoke/quickheadlines/${REF}/misc/quickheadlines'
-    if echo "${REPO_URL}" | grep -qE "github.com"; then
-      # Normalize URL like: https://github.com/owner/repo(.git)
-      OWNER_REPO=$(echo "${REPO_URL}" | sed -E 's#https?://github.com/##; s#\.git$##; s#/$##')
-      if [ -n "${OWNER_REPO}" ]; then
-        RAW_URL="https://raw.githubusercontent.com/${OWNER_REPO}/${REF}/misc/quickheadlines"
+      echo 'Repository does not include misc/quickheadlines; attempting to fetch from GitHub raw'
+      # Determine branch/ref to use for raw fetch
+      if [ '${MODE}' = 'dev' ]; then
+        REF='main'
+      elif [ -n '${TAG}' ]; then
+        REF='${TAG}'
+      else
+        REF='main'
       fi
-    fi
 
-    echo "Fetching ${RAW_URL}"
-    curl -fSL "${RAW_URL}" -o /usr/local/etc/rc.d/quickheadlines 2>/dev/null || \
-      echo 'Warning: failed to download rc.d from remote; continuing without it'
+      # Default to upstream owner/repo, but prefer REPO_URL when it's a GitHub URL
+      RAW_URL='https://raw.githubusercontent.com/kritoke/quickheadlines/${REF}/misc/quickheadlines'
+      if echo "${REPO_URL}" | grep -qE "github.com"; then
+        # Normalize URL like: https://github.com/owner/repo(.git)
+        OWNER_REPO=$(echo "${REPO_URL}" | sed -E 's#https?://github.com/##; s#\.git$##; s#/$##')
+        if [ -n "${OWNER_REPO}" ]; then
+          RAW_URL="https://raw.githubusercontent.com/${OWNER_REPO}/${REF}/misc/quickheadlines"
+        fi
+      fi
+
+      echo "Fetching ${RAW_URL}"
+      curl -fSL "${RAW_URL}" -o /usr/local/etc/rc.d/quickheadlines 2>/dev/null || \
+        echo 'Warning: failed to download rc.d from remote; continuing without it'
+    fi
   fi
 "
 SYSRC quickheadlines_enable="YES"
