@@ -95,6 +95,21 @@ begin
     end
   end
 
+  # Old articles cleanup scheduler - runs every 6 hours
+  spawn do
+    loop do
+      sleep 6.hours
+      begin
+        cache = FeedCache.instance
+        cache.cleanup_old_articles(CACHE_RETENTION_DAYS)
+        cache.cleanup_old_entries(initial_config.cache_retention_hours || CACHE_RETENTION_HOURS)
+        STDERR.puts "[#{Time.local}] Scheduled cleanup completed"
+      rescue ex
+        STDERR.puts "[#{Time.local}] Scheduled cleanup failed: #{ex.message}"
+      end
+    end
+  end
+
   # Verify feeds are loaded before starting server
   STDERR.puts "[#{Time.local}] Verifying feeds loaded..."
   STDERR.puts "[#{Time.local}] STATE.feeds.size=#{STATE.feeds.size}"
