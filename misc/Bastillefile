@@ -1,87 +1,56 @@
 # Bastillefile for quickheadlines (Svelte 5 Frontend)
 
-# Template Arguments (use --arg NAME=VALUE when applying template)
-ARG MODE=prod           # prod=latest tag, dev=main branch
-ARG TAG=                # Optional: specific tag (e.g., v0.4.0)
-ARG REPO_URL=           # Optional: custom repository URL
-ARG SKIP_BUILD=false    # Set to true to skip compilation (use existing binary)
-ARG CLEAR_CACHE=false   # Set to true to clear cache before starting (recommended on version changes)
+# --- Arguments (Restored to your original working pattern) ---
+ARG MODE=prod
+ARG TAG=
+ARG REPO_URL=https://github.com/kritoke/quickheadlines.git
+ARG CLEAR_CACHE=false
 
-# 0. Clean up previous failed attempts
-CMD service quickheadlines stop 2>/dev/null || true
-CMD rm -rf /tmp/qh 2>/dev/null || true
+# 1. System Dependencies
+PKG ca_root_nss crystal shards git openssl gmake curl sqlite3 sudo libevent libyaml node npm
+CMD ln -sf /usr/local/share/certs/ca-root-nss.crt /etc/ssl/cert.pem 2>/dev/null || true
 
-# 1. Install dependencies (including Node.js for Svelte build)
-# Note: FreeBSD uses Crystal 1.18.2 from ports (Athena-compatible)
-# Note: Node.js is required for building the Svelte 5 frontend
-CMD pkg install -y crystal shards git openssl ca_root_nss gmake curl sqlite3 sudo libevent libyaml node npm
-
-# Link SSL certificates (handle different FreeBSD versions)
-CMD sh -c "if [ -f /usr/local/share/certs/ca-root-nss.crt ]; then ln -sf /usr/local/share/certs/ca-root-nss.crt /etc/ssl/cert.pem 2>/dev/null || true; elif [ -f /etc/ssl/cert.pem ]; then echo 'SSL cert already linked'; fi"
-
-# 2. Create user and core directories
+# 2. User & Directory Setup
+# Added /var/run/quickheadlines here to ensure the service has its PID home
 CMD pw useradd qh -d /usr/local/share/quickheadlines -s /usr/sbin/nologin 2>/dev/null || true
-CMD mkdir -p /usr/local/share/quickheadlines /var/cache/quickheadlines /home/qh
-CMD chown -R qh:qh /usr/local/share/quickheadlines /var/cache/quickheadlines /home/qh 2>/dev/null || true
+CMD mkdir -p /usr/local/share/quickheadlines /var/cache/quickheadlines /home/qh /var/run/quickheadlines /var/log/quickheadlines
+CMD chown -R qh:qh /usr/local/share/quickheadlines /var/cache/quickheadlines /home/qh /var/run/quickheadlines /var/log/quickheadlines
 
-# 3. Setup Persistence Cache
-# Cache shards lib directory to avoid re-downloading dependencies
+# 3. Persistence Cache
 FSTAB /usr/local/bastille/cache/crystal/quickheadlines /home/qh/.cache nullfs rw 0 0
 
-# 4. Clone and Prepare Environment
-# Usage examples:
-#   bastille template JAILNAME path/to/template                           # Latest tag (default)
-#   bastille template JAILNAME path/to/template --arg MODE=dev            # Main branch
-#   bastille template JAILNAME path/to/template --arg TAG=v0.4.0          # Specific tag
-#   bastille template JAILNAME path/to/template --arg REPO_URL=https://... # Custom repo
-#   bastille template JAILNAME path/to/template --arg CLEAR_CACHE=true   # Clear cache on version change
-CMD rm -rf /tmp/qh 2>/dev/null || true
-CMD mkdir -p /tmp/qh
-CMD sh -c "set -e; REPO='${REPO_URL:-https://github.com/kritoke/quickheadlines.git}'; if [ '${MODE}' = 'dev' ]; then echo 'DEV mode: Cloning main branch'; git clone \"\$REPO\" /tmp/qh; elif [ -n '${TAG}' ]; then echo 'TAG mode: Cloning tag ${TAG}'; git clone --branch '${TAG}' --depth 1 \"\$REPO\" /tmp/qh; else echo 'PROD mode: Fetching latest release tag'; LATEST_TAG=\$(git ls-remote --sort=v:refname --tags \"\$REPO\" | tail -1 | cut -d/ -f3); echo \"Latest tag: \$LATEST_TAG\"; git clone --branch \"\$LATEST_TAG\" --depth 1 \"\$REPO\" /tmp/qh; fi && chown -R qh:qh /tmp/qh 2>/dev/null || true"
+# 4. Clone and Prepare
+# We explicitly clean /tmp/qh first to avoid "already exists" errors
+CMD service quickheadlines stop 2>/dev/null || true
+CMD pkill -u qh 2>/dev/null || true
+CMD rm -f /var/run/quickheadlines/quickheadlines.pid 2>/dev/null || true
+CMD rm -rf /tmp/qh
+CMD git clone ${REPO_URL} /tmp/qh
+CMD chown -R qh:qh /tmp/qh
 
-# 5. Clear cache if requested (MUST be before binary download)
-CMD sh -c "if [ '${CLEAR_CACHE}' = 'true' ] || [ '${CLEAR_CACHE}' = '1' ]; then echo 'CLEAR_CACHE: Wiping cache directories...'; rm -rf /var/cache/quickheadlines/* /home/qh/.cache/shards /usr/local/share/quickheadlines/.cache /usr/local/share/quickheadlines/public 2>/dev/null || true; echo 'Cache cleared'; else echo 'CLEAR_CACHE: Not clearing cache'; fi"
+# 5. Clear cache if requested
+CMD sh -c "if [ '${CLEAR_CACHE}' = 'true' ]; then rm -rf /home/qh/.cache/shards; fi"
 
-# 6. Get quickheadlines binary
-# DEV mode: Build from source (needs Svelte + Crystal)
-# PROD/TAG mode: Download pre-built binary from GitHub releases
-CMD echo "MODE=[${MODE}] TAG=[${TAG}]"
-CMD mkdir -p /tmp/qh/bin && chown -R qh:qh /tmp/qh/bin 2>/dev/null || true
-CMD sh -c "if [ '${MODE}' = 'dev' ]; then echo 'DEV mode: Building from source...'; npm install -g pnpm; cd /tmp/qh && export HOME=/home/qh && sudo -u qh sh -c 'export HOME=/home/qh && shards install --production'; cd /tmp/qh/frontend && pnpm install && pnpm svelte-kit sync && pnpm run build && cp static/logo.svg dist/; cd /tmp/qh && touch src/web/assets.cr && sudo -u qh sh -c 'export HOME=/home/qh && crystal build --release -Os -Dpreview_lto src/quickheadlines.cr -o bin/quickheadlines'; cp bin/quickheadlines /usr/local/share/quickheadlines/; chmod +x /usr/local/share/quickheadlines/quickheadlines; echo 'Build complete'; else echo 'PROD/TAG mode: Downloading binary...'; curl -fSL 'https://github.com/kritoke/quickheadlines/releases/download/v0.4.0/quickheadlines-v0.4.0-freebsd-x64' -o /usr/local/share/quickheadlines/quickheadlines && chmod +x /usr/local/share/quickheadlines/quickheadlines && echo 'Download complete'; fi"
-CMD ls -la /usr/local/share/quickheadlines/
+# 6. Get binary (Using the interpolation style that worked for you)
+# 6a. DEV MODE: Install Shards
+CMD sh -c "if [ '${MODE}' = 'dev' ]; then cd /tmp/qh && sudo -u qh sh -c 'export HOME=/home/qh && export PATH=/usr/local/bin:/usr/bin:/bin && cd /tmp/qh && shards install'; fi"
 
-# 7. Self-Contained Config Installation (feeds.yml)
-# Logic: Check /usr/local/share, then /tmp/qh, then GitHub Raw
-CMD sh -c 'TARGET="/usr/local/share/quickheadlines/feeds.yml"; \
-    if [ -f "$TARGET" ]; then \
-        echo "✅ feeds.yml already exists."; \
-    elif [ -f "/tmp/qh/feeds.yml" ]; then \
-        echo "📂 Copying feeds.yml from local clone..."; \
-        cp /tmp/qh/feeds.yml "$TARGET"; \
-    else \
-        echo "🌐 Fetching default feeds.yml from GitHub..."; \
-        REPO="${REPO_URL:-https://github.com/kritoke/quickheadlines}"; \
-        RAW_URL=$(echo "$REPO" | sed "s/github.com/raw.githubusercontent.com/")/main/feeds.yml; \
-        curl -fSL "$RAW_URL" -o "$TARGET" || touch "$TARGET"; \
-    fi'
+# 6b. DEV MODE: Build Frontend (Atomic logic)
+CMD sh -c "if [ '${MODE}' = 'dev' ] && [ -d '/tmp/qh/frontend' ]; then npm install -g pnpm && cd /tmp/qh/frontend && pnpm install && npx svelte-kit sync && pnpm run build; fi"
 
-# 8. Self-Contained Service Installation (quickheadlines rc.d)
-# Logic: Check /usr/local/etc/rc.d, then /tmp/qh/misc, then GitHub Raw
-CMD sh -c 'RCSCRIPT="/usr/local/etc/rc.d/quickheadlines"; \
-    if [ -f "$RCSCRIPT" ]; then \
-        echo "✅ RC script already exists."; \
-    elif [ -f "/tmp/qh/misc/quickheadlines" ]; then \
-        echo "📂 Copying RC script from local clone (misc/)..."; \
-        cp /tmp/qh/misc/quickheadlines "$RCSCRIPT"; \
-    else \
-        echo "🌐 Fetching RC script from GitHub (misc/)..."; \
-        REPO="${REPO_URL:-https://github.com/kritoke/quickheadlines}"; \
-        RAW_URL=$(echo "$REPO" | sed "s/github.com/raw.githubusercontent.com/")/main/misc/quickheadlines; \
-        curl -fSL "$RAW_URL" -o "$RCSCRIPT"; \
-    fi && chmod +x "$RCSCRIPT"'
+# 6c. DEV MODE: Compile Binary
+CMD sh -c "if [ '${MODE}' = 'dev' ]; then mkdir -p /tmp/qh/src/web && touch /tmp/qh/src/web/assets.cr && sudo -u qh sh -c 'export HOME=/home/qh && export PATH=/usr/local/bin:/usr/bin:/bin && cd /tmp/qh && crystal build --release -Os -Dpreview_lto src/quickheadlines.cr -o /usr/local/share/quickheadlines/quickheadlines'; fi"
 
-# 9. Final prep and start
-CMD mkdir -p /var/run/quickheadlines
-CMD chown qh:qh /var/run/quickheadlines
+# 6d. PROD MODE: Download (Only runs if NOT dev)
+CMD sh -c "if [ '${MODE}' != 'dev' ]; then LATEST_TAG=\$(git ls-remote --sort=v:refname --tags ${REPO_URL} | tail -1 | cut -d/ -f3); VERSION='${TAG:-\$LATEST_TAG}'; curl -fSL \"https://github.com/kritoke/quickheadlines/releases/download/\${VERSION}/quickheadlines-\${VERSION}-freebsd-x64\" -o /usr/local/share/quickheadlines/quickheadlines; fi"
+
+# 7. Config & Service Setup
+CMD chmod +x /usr/local/share/quickheadlines/quickheadlines
+CMD sh -c 'TARGET="/usr/local/share/quickheadlines/feeds.yml"; if [ ! -f "$TARGET" ]; then if [ -f "/tmp/qh/feeds.yml" ]; then cp /tmp/qh/feeds.yml "$TARGET"; else curl -fSL "https://raw.githubusercontent.com/kritoke/quickheadlines/main/feeds.yml" -o "$TARGET"; fi; fi'
+CMD sh -c 'RCSCRIPT="/usr/local/etc/rc.d/quickheadlines"; if [ ! -f "$RCSCRIPT" ]; then if [ -f "/tmp/qh/misc/quickheadlines" ]; then cp /tmp/qh/misc/quickheadlines "$RCSCRIPT"; else curl -fSL "https://raw.githubusercontent.com/kritoke/quickheadlines/main/misc/quickheadlines" -o "$RCSCRIPT"; fi; fi && chmod +x "$RCSCRIPT"'
+
+# 9. Start
+SYSRC quickheadlines_enable="YES"
+CMD chown -R qh:qh /usr/local/share/quickheadlines /var/run/quickheadlines
 CMD sleep 2
-CMD service quickheadlines start
+CMD service quickheadlines onestart
