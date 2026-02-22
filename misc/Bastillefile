@@ -1,56 +1,70 @@
 # Bastillefile for quickheadlines (Svelte 5 Frontend)
 
-# --- Arguments (Restored to your original working pattern) ---
+# --- Arguments ---
 ARG MODE=prod
 ARG TAG=
 ARG REPO_URL=https://github.com/kritoke/quickheadlines.git
 ARG CLEAR_CACHE=false
+
+# 0. Initial Cleanup & Service Stop
+CMD service quickheadlines stop 2>/dev/null || true
+CMD pkill -9 -u qh 2>/dev/null || true
+CMD rm -f /var/run/quickheadlines/quickheadlines.pid /tmp/skip_download 2>/dev/null || true
 
 # 1. System Dependencies
 PKG ca_root_nss crystal shards git openssl gmake curl sqlite3 sudo libevent libyaml node npm
 CMD ln -sf /usr/local/share/certs/ca-root-nss.crt /etc/ssl/cert.pem 2>/dev/null || true
 
 # 2. User & Directory Setup
-# Added /var/run/quickheadlines here to ensure the service has its PID home
 CMD pw useradd qh -d /usr/local/share/quickheadlines -s /usr/sbin/nologin 2>/dev/null || true
-CMD mkdir -p /usr/local/share/quickheadlines /var/cache/quickheadlines /home/qh /var/run/quickheadlines /var/log/quickheadlines
-CMD chown -R qh:qh /usr/local/share/quickheadlines /var/cache/quickheadlines /home/qh /var/run/quickheadlines /var/log/quickheadlines
+CMD mkdir -p /usr/local/share/quickheadlines /var/cache/quickheadlines /home/qh /var/run/quickheadlines /var/log/quickheadlines /tmp/qh
+CMD chown -R qh:qh /usr/local/share/quickheadlines /var/cache/quickheadlines /home/qh /var/run/quickheadlines /var/log/quickheadlines /tmp/qh
 
 # 3. Persistence Cache
 FSTAB /usr/local/bastille/cache/crystal/quickheadlines /home/qh/.cache nullfs rw 0 0
 
-# 4. Clone and Prepare
-# We explicitly clean /tmp/qh first to avoid "already exists" errors
-CMD service quickheadlines stop 2>/dev/null || true
-CMD pkill -u qh 2>/dev/null || true
-CMD rm -f /var/run/quickheadlines/quickheadlines.pid 2>/dev/null || true
-CMD rm -rf /tmp/qh
-CMD git clone ${REPO_URL} /tmp/qh
-CMD chown -R qh:qh /tmp/qh
+# 4. Binary Guard (The "No-Arg" Fix)
+# If the binary is already there and we aren't in dev mode, we skip the acquisition steps
+CMD sh -c "if [ '${MODE}' != 'dev' ] && [ -f /usr/local/share/quickheadlines/quickheadlines ]; then touch /tmp/skip_download && echo '✅ Existing binary found. Skipping acquisition.'; fi"
 
-# 5. Clear cache if requested
-CMD sh -c "if [ '${CLEAR_CACHE}' = 'true' ]; then rm -rf /home/qh/.cache/shards; fi"
+# 5. Clone Source (Into /tmp/qh)
+# We only clone if we aren't skipping the download (saves bandwidth/time)
+CMD sh -c "if [ ! -f /tmp/skip_download ]; then rm -rf /tmp/qh && git clone ${REPO_URL} /tmp/qh && chown -R qh:qh /tmp/qh; fi"
 
-# 6. Get binary (Using the interpolation style that worked for you)
-# 6a. DEV MODE: Install Shards
-CMD sh -c "if [ '${MODE}' = 'dev' ]; then cd /tmp/qh && sudo -u qh sh -c 'export HOME=/home/qh && export PATH=/usr/local/bin:/usr/bin:/bin && cd /tmp/qh && shards install'; fi"
+# 6. Cache Clear (Optional)
+CMD sh -c "if [ '${CLEAR_CACHE}' = 'true' ]; then rm -rf /home/qh/.cache/shards /var/cache/quickheadlines/*; fi"
 
-# 6b. DEV MODE: Build Frontend (Atomic logic)
-CMD sh -c "if [ '${MODE}' = 'dev' ] && [ -d '/tmp/qh/frontend' ]; then npm install -g pnpm && cd /tmp/qh/frontend && pnpm install && npx svelte-kit sync && pnpm run build; fi"
+# 7a. DEV MODE: Build (Only runs if MODE=dev)
+CMD sh -c "if [ '${MODE}' = 'dev' ]; then \
+    echo '🛠️ MODE: dev - Compiling from source...'; \
+    npm install -g pnpm && cd /tmp/qh/frontend && pnpm install && npx svelte-kit sync && pnpm run build; \
+    cd /tmp/qh && mkdir -p src/web && touch src/web/assets.cr; \
+    sudo -u qh sh -c 'export HOME=/home/qh && export PATH=/usr/local/bin:/usr/bin:/bin && cd /tmp/qh && shards install && crystal build --release -Os -Dpreview_lto src/quickheadlines.cr -o /tmp/qh/quickheadlines'; \
+    touch /tmp/skip_download; \
+fi"
 
-# 6c. DEV MODE: Compile Binary
-CMD sh -c "if [ '${MODE}' = 'dev' ]; then mkdir -p /tmp/qh/src/web && touch /tmp/qh/src/web/assets.cr && sudo -u qh sh -c 'export HOME=/home/qh && export PATH=/usr/local/bin:/usr/bin:/bin && cd /tmp/qh && crystal build --release -Os -Dpreview_lto src/quickheadlines.cr -o /usr/local/share/quickheadlines/quickheadlines'; fi"
+# 7b. PROD MODE: Dynamic Download (Only if NOT skipped)
+CMD sh -c "if [ ! -f /tmp/skip_download ]; then \
+    echo '📦 MODE: prod - Resolving latest version...'; \
+    LATEST=\$(git ls-remote --sort=v:refname --tags ${REPO_URL} | tail -1 | cut -d/ -f3); \
+    V='${TAG:-\$LATEST}'; \
+    echo \"📥 Downloading version: \$V\"; \
+    curl -fSL \"https://github.com/kritoke/quickheadlines/releases/download/\$V/quickheadlines-\$V-freebsd-x64\" -o /tmp/qh/quickheadlines; \
+fi"
 
-# 6d. PROD MODE: Download (Only runs if NOT dev)
-CMD sh -c "if [ '${MODE}' != 'dev' ]; then LATEST_TAG=\$(git ls-remote --sort=v:refname --tags ${REPO_URL} | tail -1 | cut -d/ -f3); VERSION='${TAG:-\$LATEST_TAG}'; curl -fSL \"https://github.com/kritoke/quickheadlines/releases/download/\${VERSION}/quickheadlines-\${VERSION}-freebsd-x64\" -o /usr/local/share/quickheadlines/quickheadlines; fi"
+# 8. THE ATOMIC SWAP (Fixes "Busy" error)
+CMD sh -c "if [ -f /tmp/qh/quickheadlines ]; then \
+    [ -f /usr/local/share/quickheadlines/quickheadlines ] && mv /usr/local/share/quickheadlines/quickheadlines /usr/local/share/quickheadlines/quickheadlines.old && rm -f /usr/local/share/quickheadlines/quickheadlines.old; \
+    mv /tmp/qh/quickheadlines /usr/local/share/quickheadlines/quickheadlines && chmod +x /usr/local/share/quickheadlines/quickheadlines; \
+fi"
 
-# 7. Config & Service Setup
-CMD chmod +x /usr/local/share/quickheadlines/quickheadlines
-CMD sh -c 'TARGET="/usr/local/share/quickheadlines/feeds.yml"; if [ ! -f "$TARGET" ]; then if [ -f "/tmp/qh/feeds.yml" ]; then cp /tmp/qh/feeds.yml "$TARGET"; else curl -fSL "https://raw.githubusercontent.com/kritoke/quickheadlines/main/feeds.yml" -o "$TARGET"; fi; fi'
-CMD sh -c 'RCSCRIPT="/usr/local/etc/rc.d/quickheadlines"; if [ ! -f "$RCSCRIPT" ]; then if [ -f "/tmp/qh/misc/quickheadlines" ]; then cp /tmp/qh/misc/quickheadlines "$RCSCRIPT"; else curl -fSL "https://raw.githubusercontent.com/kritoke/quickheadlines/main/misc/quickheadlines" -o "$RCSCRIPT"; fi; fi && chmod +x "$RCSCRIPT"'
+# 9. Config & Service Setup
+CMD sh -c "TARGET='/usr/local/share/quickheadlines/feeds.yml'; if [ ! -f \"\$TARGET\" ]; then if [ -f '/tmp/qh/feeds.yml' ]; then cp /tmp/qh/feeds.yml \"\$TARGET\"; else curl -fSL https://raw.githubusercontent.com/kritoke/quickheadlines/main/feeds.yml -o \"\$TARGET\"; fi; fi"
+CMD sh -c "RCSCRIPT='/usr/local/etc/rc.d/quickheadlines'; if [ ! -f \"\$RCSCRIPT\" ]; then if [ -f '/tmp/qh/misc/quickheadlines' ]; then cp /tmp/qh/misc/quickheadlines \"\$RCSCRIPT\"; else curl -fSL https://raw.githubusercontent.com/kritoke/quickheadlines/main/misc/quickheadlines -o \"\$RCSCRIPT\"; fi; fi && chmod +x \"\$RCSCRIPT\""
 
-# 9. Start
+# 10. Launch
 SYSRC quickheadlines_enable="YES"
 CMD chown -R qh:qh /usr/local/share/quickheadlines /var/run/quickheadlines
+CMD rm -f /tmp/skip_download
 CMD sleep 2
 CMD service quickheadlines onestart
