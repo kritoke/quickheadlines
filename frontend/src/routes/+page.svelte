@@ -81,8 +81,8 @@
 		}
 	}
 
-	let refreshInterval: ReturnType<typeof setInterval>;
-	let configRefreshInterval: ReturnType<typeof setInterval>;
+	let refreshInterval: ReturnType<typeof setInterval> | null = null;
+	let configRefreshInterval: ReturnType<typeof setInterval> | null = null;
 	let refreshMinutes = $state(10);
 	let configFetched = $state(false);
 	let mounted = $state(false);
@@ -95,15 +95,21 @@
 			refreshMinutes = newRefreshMinutes;
 			configFetched = true;
 			
-			// Update the refresh interval with the configured value
+			// Always set/reset the interval with the configured value
 			if (refreshInterval) {
 				clearInterval(refreshInterval);
 			}
 			refreshInterval = setInterval(() => {
 				loadFeeds(activeTab, true);
 			}, newRefreshMinutes * 60 * 1000);
+			console.log('[Feeds] Refresh interval set to', newRefreshMinutes, 'minutes');
 		} catch (e) {
-			// Using existing refresh rate
+			// Use default if config fetch fails
+			if (!refreshInterval) {
+				refreshInterval = setInterval(() => {
+					loadFeeds(activeTab, true);
+				}, 10 * 60 * 1000);
+			}
 		}
 	}
 	

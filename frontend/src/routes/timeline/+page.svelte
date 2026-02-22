@@ -20,7 +20,7 @@
 	let clusteringCheckInterval: ReturnType<typeof setInterval> | null = null;
 	const limit = 100;
 	
-	let refreshInterval: ReturnType<typeof setInterval>;
+	let refreshInterval: ReturnType<typeof setInterval> | null = null;
 	let refreshMinutes = $state(10);
 	
 	async function loadConfig() {
@@ -28,16 +28,24 @@
 			const config = await fetchConfig();
 			const newRefreshMinutes = config.refresh_minutes || 10;
 			
-			if (refreshInterval && newRefreshMinutes !== refreshMinutes) {
+			// Always update refreshMinutes
+			refreshMinutes = newRefreshMinutes;
+			
+			// Always set/reset the interval with the new value
+			if (refreshInterval) {
 				clearInterval(refreshInterval);
+			}
+			refreshInterval = setInterval(() => {
+				loadTimeline();
+			}, newRefreshMinutes * 60 * 1000);
+			console.log('[Timeline] Refresh interval set to', newRefreshMinutes, 'minutes');
+		} catch (e) {
+			// Use default if config fetch fails
+			if (!refreshInterval) {
 				refreshInterval = setInterval(() => {
 					loadTimeline();
-				}, newRefreshMinutes * 60 * 1000);
+				}, 10 * 60 * 1000);
 			}
-			
-			refreshMinutes = newRefreshMinutes;
-		} catch (e) {
-			// Using existing refresh rate
 		}
 	}
 
@@ -106,13 +114,7 @@
 		if (!mounted) {
 			mounted = true;
 			loadTimeline();
-			
-			// Load config first, then set up interval with correct value
-			loadConfig().then(() => {
-				refreshInterval = setInterval(() => {
-					loadTimeline();
-				}, refreshMinutes * 60 * 1000);
-			});
+			loadConfig(); // loadConfig now handles setting up the refresh interval
 			
 			async function checkClustering() {
 				try {

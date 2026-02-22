@@ -96,6 +96,22 @@ begin
     end
   end
 
+  # Run clustering on startup if enabled (default: true)
+  run_on_startup = initial_config.clustering.try(&.run_on_startup)
+  if run_on_startup.nil? || run_on_startup
+    spawn do
+      # Wait a bit for feeds to be loaded first
+      sleep 30.seconds
+      begin
+        STDERR.puts "[#{Time.local}] Running initial clustering on startup..."
+        threshold = initial_config.clustering.try(&.threshold) || 0.35
+        clustering_service.recluster_with_lsh(initial_config.db_fetch_limit, threshold)
+      rescue ex
+        STDERR.puts "[#{Time.local}] Initial clustering failed: #{ex.message}"
+      end
+    end
+  end
+
   # Old articles cleanup scheduler - runs every 6 hours
   spawn do
     loop do
