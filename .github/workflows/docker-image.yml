@@ -198,12 +198,24 @@ jobs:
       - name: Build Svelte frontend
         run: cd frontend && pnpm install && pnpm run build
       
+      - name: Cache shards
+        uses: actions/cache@v4
+        with:
+          path: |
+            .shards
+            lib
+          key: ${{ runner.os }}-shards-${{ hashFiles('shard.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-shards-
+
+      - name: Install shards (for caching)
+        run: shards install --production
+
       - name: Build in FreeBSD VM
         uses: vmactions/freebsd-vm@v1
         with:
           prepare: pkg install -y crystal shards libxml2 libyaml openssl libevent libiconv bash gmake file
           run: |
-            shards install --production
             mkdir -p bin
             touch src/web/assets.cr
             export LD_LIBRARY_PATH="${LD_LIBRARY_PATH:-}:/usr/local/lib"
