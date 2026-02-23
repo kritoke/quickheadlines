@@ -113,7 +113,7 @@ jobs:
           docker run --rm --platform linux/${{ matrix.arch == 'x64' && 'amd64' || 'arm64' }} \
             --entrypoint /bin/sh \
             -v ${{ github.workspace }}:/app -w /app 84codes/crystal:1.18.2-ubuntu-22.04 \
-            -c "apt-get update && apt-get install -y libxml2-dev libssl-dev libyaml-dev libsqlite3-dev curl make && \
+            -c "apt-get update && apt-get install -y libxml2-dev libssl-dev libyaml-dev libsqlite3-dev libmagic-dev curl make && \
             shards install --production && \
             touch src/web/assets.cr && \
             crystal build --release -Os -Dpreview_lto -Dversion=${{ github.ref_name }} src/quickheadlines.cr -o /app/bin/quickheadlines-linux-${{ matrix.arch }}"
@@ -122,7 +122,9 @@ jobs:
         if: matrix.target == 'macos'
         run: |
           brew install libyaml libxml2 openssl@3 libmagic
-          echo "PKG_CONFIG_PATH=$(brew --prefix openssl@3)/lib/pkgconfig" >> $GITHUB_ENV
+          echo "PKG_CONFIG_PATH=$(brew --prefix openssl@3)/lib/pkgconfig:$(brew --prefix libmagic)/lib/pkgconfig" >> $GITHUB_ENV
+          echo "LDFLAGS=-L$(brew --prefix libmagic)/lib" >> $GITHUB_ENV
+          echo "CPPFLAGS=-I$(brew --prefix libmagic)/include" >> $GITHUB_ENV
 
       - name: Install pnpm (macOS)
         if: matrix.target == 'macos'
