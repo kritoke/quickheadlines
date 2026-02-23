@@ -248,8 +248,6 @@ tabs:
         url: "https://www.science.org/rss/news_current.xml"
       - title: "ScienceDaily"
         url: "https://www.sciencedaily.com/rss/all.xml"
-      - title: "NASA News"
-        url: "https://www.nasa.gov/rss/dyn/breaking_news.rss"
       - title: "Phys.org"
         url: "https://feeds.feedburner.com/physorg"
       - title: "Scientific American"
