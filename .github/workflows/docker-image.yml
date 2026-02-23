@@ -91,8 +91,21 @@ jobs:
         with:
           node-version: '22'
 
+      - name: Verify Node.js version
+        run: |
+          echo "Node.js version: $(node --version)"
+          echo "npm version: $(npm --version)"
+          if [[ "$(node --version | cut -d. -f1 | tr -d 'v')" -lt 18 ]]; then
+            echo "Error: Node.js 18+ required"
+            exit 1
+          fi
+          echo "Node.js version is sufficient (18+)"
+
       - name: Install pnpm
         run: npm install -g pnpm@9
+
+      - name: Build Svelte frontend
+        run: cd frontend && pnpm install && pnpm run build
 
       - name: Build Linux Binaries (via Docker)
         if: matrix.target == 'linux'
@@ -100,18 +113,24 @@ jobs:
           docker run --rm --platform linux/${{ matrix.arch == 'x64' && 'amd64' || 'arm64' }} \
             --entrypoint /bin/sh \
             -v ${{ github.workspace }}:/app -w /app 84codes/crystal:1.18.2-ubuntu-22.04 \
-            -c "apt-get update && apt-get install -y libxml2-dev libssl-dev libyaml-dev libsqlite3-dev curl make nodejs npm && \
-            npm install -g pnpm@9 && \
-            cd frontend && pnpm install && pnpm run build && cd .. && \
+            -c "apt-get update && apt-get install -y libxml2-dev libssl-dev libyaml-dev libsqlite3-dev curl make && \
             shards install --production && \
             touch src/web/assets.cr && \
-            crystal build --release -Os -Dpreview_lto -Dversion=${{ github.ref_name }} src/quickheadlines.cr -o bin/quickheadlines-linux-${{ matrix.arch }}"
+            crystal build --release -Os -Dpreview_lto -Dversion=${{ github.ref_name }} src/quickheadlines.cr -o /app/bin/quickheadlines-linux-${{ matrix.arch }}"
 
-      - name: Build macOS Binaries
+      - name: Install system deps (macOS)
         if: matrix.target == 'macos'
         run: |
           brew install libyaml libxml2 openssl@3 libmagic
           echo "PKG_CONFIG_PATH=$(brew --prefix openssl@3)/lib/pkgconfig" >> $GITHUB_ENV
+
+      - name: Install pnpm (macOS)
+        if: matrix.target == 'macos'
+        run: npm install -g pnpm@9
+
+      - name: Build Svelte frontend (macOS)
+        if: matrix.target == 'macos'
+        run: cd frontend && pnpm install && pnpm run build
 
       - name: Install Crystal
         if: matrix.target == 'macos'
@@ -119,11 +138,9 @@ jobs:
         with:
           crystal: 1.18.2
 
-      - name: Build macOS
+      - name: Build Crystal binary (macOS)
         if: matrix.target == 'macos'
         run: |
-          npm install -g pnpm@9
-          cd frontend && pnpm install && pnpm run build && cd ..
           shards install --production
           touch src/web/assets.cr
           crystal build --release -Os -Dpreview_lto -Dversion=${{ github.ref_name }} src/quickheadlines.cr -o bin/quickheadlines-macos-${{ matrix.arch }}
@@ -154,11 +171,9 @@ jobs:
       - name: Build in FreeBSD VM
         uses: vmactions/freebsd-vm@v1
         with:
-          prepare: pkg install -y crystal shards libxml2 libyaml openssl libevent libiconv bash gmake node npm libmagic
+          prepare: pkg install -y crystal shards libxml2 libyaml openssl libevent libiconv bash gmake libmagic
           run: |
-            npm install -g pnpm@9
             shards install --production
-            cd frontend && pnpm install && pnpm run build && cd ..
             touch src/web/assets.cr
             VERSION=$(grep '^version:' shard.yml | awk '{print $2}')
             crystal build --release -Os -Dpreview_lto -Dversion=v$VERSION src/quickheadlines.cr -o bin/quickheadlines-freebsd-x64
