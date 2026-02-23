@@ -48,13 +48,13 @@ export function applyTheme(theme: ThemeStyle) {
 }
 
 function applyCustomThemeColors(theme: ThemeStyle) {
-	const colors: Record<ThemeStyle, { bg: string; text: string; border: string; accent: string }> = {
-		light: { bg: '#ffffff', text: '#0f172a', border: '#e2e8f0', accent: '#3b82f6' },
-		dark: { bg: '#1e293b', text: '#f1f5f9', border: '#334155', accent: '#60a5fa' },
-		retro80s: { bg: '#1a1a2e', text: '#e94560', border: '#16213e', accent: '#ff2e63' },
-		matrix: { bg: '#000000', text: '#00ff00', border: '#003b00', accent: '#00ff00' },
-		ocean: { bg: '#0c1929', text: '#7dd3fc', border: '#164e63', accent: '#06b6d4' },
-		sunset: { bg: '#1c1309', text: '#fed7aa', border: '#7c2d12', accent: '#f97316' }
+	const colors: Record<ThemeStyle, { bg: string; text: string; border: string; accent: string; shadow: string }> = {
+		light: { bg: '#ffffff', text: '#0f172a', border: '#e2e8f0', accent: '#3b82f6', shadow: 'rgba(59, 130, 246, 0.15)' },
+		dark: { bg: '#1e293b', text: '#f1f5f9', border: '#334155', accent: '#60a5fa', shadow: 'rgba(96, 165, 250, 0.2)' },
+		retro80s: { bg: '#1a1a2e', text: '#e94560', border: '#16213e', accent: '#ff2e63', shadow: 'rgba(255, 46, 99, 0.3)' },
+		matrix: { bg: '#000000', text: '#00ff00', border: '#003b00', accent: '#00ff00', shadow: 'rgba(0, 255, 0, 0.3)' },
+		ocean: { bg: '#0c1929', text: '#7dd3fc', border: '#164e63', accent: '#06b6d4', shadow: 'rgba(6, 182, 212, 0.25)' },
+		sunset: { bg: '#1c1309', text: '#fed7aa', border: '#7c2d12', accent: '#f97316', shadow: 'rgba(249, 115, 22, 0.25)' }
 	};
 	
 	const c = colors[theme];
@@ -62,6 +62,7 @@ function applyCustomThemeColors(theme: ThemeStyle) {
 	document.documentElement.style.setProperty('--theme-text', c.text);
 	document.documentElement.style.setProperty('--theme-border', c.border);
 	document.documentElement.style.setProperty('--theme-accent', c.accent);
+	document.documentElement.style.setProperty('--theme-shadow', c.shadow);
 }
 
 export function setTheme(theme: ThemeStyle) {
@@ -100,6 +101,18 @@ export function getScrollButtonColors(theme: ThemeStyle): { bg: string; text: st
 		matrix: { bg: '#00ff00', text: '#000000', hover: '#33ff33' },
 		ocean: { bg: '#06b6d4', text: '#000000', hover: '#22d3ee' },
 		sunset: { bg: '#f97316', text: '#ffffff', hover: '#fb923c' }
+	};
+	return colors[theme];
+}
+
+export function getThemeAccentColors(theme: ThemeStyle): { bg: string; text: string; border: string; accent: string; shadow: string } {
+	const colors: Record<ThemeStyle, { bg: string; text: string; border: string; accent: string; shadow: string }> = {
+		light: { bg: '#ffffff', text: '#0f172a', border: '#e2e8f0', accent: '#3b82f6', shadow: 'rgba(59, 130, 246, 0.15)' },
+		dark: { bg: '#1e293b', text: '#f1f5f9', border: '#334155', accent: '#60a5fa', shadow: 'rgba(96, 165, 250, 0.2)' },
+		retro80s: { bg: '#1a1a2e', text: '#e94560', border: '#16213e', accent: '#ff2e63', shadow: 'rgba(255, 46, 99, 0.3)' },
+		matrix: { bg: '#000000', text: '#00ff00', border: '#003b00', accent: '#00ff00', shadow: 'rgba(0, 255, 0, 0.3)' },
+		ocean: { bg: '#0c1929', text: '#7dd3fc', border: '#164e63', accent: '#06b6d4', shadow: 'rgba(6, 182, 212, 0.25)' },
+		sunset: { bg: '#1c1309', text: '#fed7aa', border: '#7c2d12', accent: '#f97316', shadow: 'rgba(249, 115, 22, 0.25)' }
 	};
 	return colors[theme];
 }

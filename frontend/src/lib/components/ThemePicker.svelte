@@ -1,11 +1,13 @@
 <script lang="ts">
-	import { themeState, setTheme, themeStyles } from '$lib/stores/theme.svelte';
+	import { themeState, setTheme, themeStyles, getThemeAccentColors } from '$lib/stores/theme.svelte';
 	import { fade, scale } from 'svelte/transition';
 
 	type ThemeStyle = 'light' | 'dark' | 'retro80s' | 'matrix' | 'ocean' | 'sunset';
 
 	let isOpen = $state(false);
 	let buttonRef: HTMLButtonElement | null = $state(null);
+
+	let themeColor = $derived(getThemeAccentColors(themeState.theme));
 
 	function toggleDropdown(event: MouseEvent) {
 		event.stopPropagation();
@@ -58,7 +60,7 @@
 		title="Theme"
 		aria-expanded={isOpen}
 	>
-		<svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-slate-500 dark:text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+		<svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke={themeColor.accent} stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
 			<circle cx="12" cy="12" r="10"/>
 			<circle cx="12" cy="12" r="4"/>
 			<line x1="21.17" y1="8" x2="12" y2="8"/>
