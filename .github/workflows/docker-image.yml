@@ -145,7 +145,7 @@ jobs:
           node-version: '22'
       
       - name: Install pnpm
-        run: npm install -g pnpm
+        run: npm install -g pnpm@9
       
       - name: Build Svelte frontend
         run: cd frontend && pnpm install && pnpm run build
@@ -155,7 +155,7 @@ jobs:
         with:
           prepare: pkg install -y crystal shards libxml2 libyaml openssl libevent libiconv bash gmake node npm
           run: |
-            npm install -g pnpm
+            npm install -g pnpm@9
             shards install --production
             cd frontend && pnpm install && pnpm run build && cd ..
             touch src/web/assets.cr
