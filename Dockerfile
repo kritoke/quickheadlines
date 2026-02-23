@@ -7,7 +7,7 @@ FROM node:22-slim AS svelte-builder
 WORKDIR /app/frontend
 
 # Install pnpm
-RUN npm install -g pnpm
+RUN npm install -g pnpm@9
 
 # Copy frontend package files
 COPY frontend/package.json frontend/pnpm-lock.yaml* ./
@@ -76,10 +76,7 @@ ENV APP_ENV=production
 
 # Copy binary (assets are baked in)
 COPY --from=builder /app/server /home/appuser/server
-COPY --from=builder /app/feeds.yml /home/appuser/feeds.yml.default
-
-# Copy feeds.yml from build context if it exists, otherwise use default
-COPY feeds.yml /home/appuser/feeds.yml 2>/dev/null || cp /home/appuser/feeds.yml.default /home/appuser/feeds.yml
+COPY --from=builder /app/feeds.yml /home/appuser/feeds.yml
 
 USER appuser
 
