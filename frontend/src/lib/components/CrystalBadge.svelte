@@ -4,17 +4,18 @@
   import { CrystalEngine } from '$lib/crystal-engine';
   import { themeState } from '$lib/stores/theme.svelte';
 
-  let canvas = $state<HTMLCanvasElement | null>(null);
-  let engine = $state<CrystalEngine | null>(null);
+  let canvasEl: HTMLCanvasElement;
+  let engine: CrystalEngine | null = null;
   let mounted = $state(false);
 
   onMount(() => {
     if (!browser) return;
     
     mounted = true;
+    
     requestAnimationFrame(() => {
-      if (canvas) {
-        engine = new CrystalEngine(canvas, {
+      if (canvasEl) {
+        engine = new CrystalEngine(canvasEl, {
           width: 60,
           height: 60,
         });
@@ -37,7 +38,7 @@
 {#if mounted}
 <div class="flex items-center gap-2 select-none">
   <canvas
-    bind:this={canvas}
+    bind:this={canvasEl}
     width="60"
     height="60"
     class="cursor-grab active:cursor-grabbing"
