@@ -3,6 +3,18 @@ name: Deploy
 on:
   push:
     tags: [ "v*.*.*" ]
+  workflow_dispatch:
+    inputs:
+      platform:
+        description: 'Platform to build'
+        required: true
+        default: 'freebsd'
+        type: choice
+        options:
+          - freebsd
+          - linux
+          - macos
+          - all
 
 env:
   REGISTRY: ghcr.io
@@ -62,7 +74,7 @@ jobs:
         run: echo "Docker image build and push completed successfully"
 
   build-binaries:
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && (inputs.platform == 'all' || inputs.platform == 'linux' || inputs.platform == 'macos'))
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -156,7 +168,7 @@ jobs:
           path: bin/quickheadlines-*
 
   build-freebsd:
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && (inputs.platform == 'all' || inputs.platform == 'freebsd'))
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -192,6 +204,7 @@ jobs:
           path: bin/quickheadlines-*
 
   publish-release:
+    if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
     needs: [build-binaries, build-freebsd]
     runs-on: ubuntu-latest
     steps:
