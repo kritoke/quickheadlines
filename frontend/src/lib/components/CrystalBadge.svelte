@@ -4,8 +4,8 @@
   import { CrystalEngine } from '$lib/crystal-engine';
   import { themeState } from '$lib/stores/theme.svelte';
 
-  let canvas: HTMLCanvasElement;
-  let engine: CrystalEngine | null = null;
+  let canvas = $state<HTMLCanvasElement | null>(null);
+  let engine = $state<CrystalEngine | null>(null);
   let mounted = $state(false);
 
   onMount(() => {
