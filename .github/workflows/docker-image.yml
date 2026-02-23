@@ -206,8 +206,8 @@ jobs:
             shards install --production
             mkdir -p bin
             touch src/web/assets.cr
-            export LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH
-            export LDFLAGS=-L/usr/local/lib
+            export LD_LIBRARY_PATH="${LD_LIBRARY_PATH:-}:/usr/local/lib"
+            export LDFLAGS="${LDFLAGS:-} -L/usr/local/lib"
             VERSION=$(grep '^version:' shard.yml | awk '{print $2}')
             crystal build --release -Os -Dpreview_lto -Dversion=v$VERSION src/quickheadlines.cr -o bin/quickheadlines-freebsd-x64
       
