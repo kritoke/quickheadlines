@@ -192,7 +192,7 @@
 		</div>
 	</header>
 
-	<main class="max-w-7xl mx-auto px-2 sm:px-4 py-4 pt-20 sm:pt-20 overflow-visible">
+	<main class="max-w-7xl mx-auto px-2 sm:px-4 py-4 pt-16 sm:pt-16 overflow-visible">
 		{#if loading && feeds.length === 0}
 			<div class="flex items-center justify-center py-20">
 				<div class="text-slate-500 dark:text-slate-400">Loading feeds...</div>
