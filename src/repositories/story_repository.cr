@@ -159,6 +159,7 @@ module Quickheadlines::Repositories
 
       cutoff_clause = days_back ? "AND i.pub_date >= ?" : ""
 
+      # Only show cluster representatives to avoid duplicates
       query = <<-SQL
         SELECT
           i.id,
@@ -172,11 +173,12 @@ module Quickheadlines::Repositories
           f.header_color,
           f.header_text_color,
           i.cluster_id,
-          CASE WHEN i.id = (SELECT MIN(id) FROM items WHERE cluster_id = i.cluster_id AND cluster_id IS NOT NULL) THEN 1 ELSE 0 END as is_representative,
+          CASE WHEN i.cluster_id IS NULL OR i.id = (SELECT MIN(id) FROM items WHERE cluster_id = i.cluster_id AND cluster_id IS NOT NULL) THEN 1 ELSE 0 END as is_representative,
           (SELECT COUNT(*) FROM items WHERE cluster_id = i.cluster_id AND cluster_id IS NOT NULL) as cluster_size
         FROM items i
         JOIN feeds f ON i.feed_id = f.id
         AND (i.pub_date IS NULL OR i.pub_date <= datetime('now', '+1 day'))
+        AND (i.cluster_id IS NULL OR i.id = (SELECT MIN(id) FROM items WHERE cluster_id = i.cluster_id))
         #{cutoff_clause}
         ORDER BY COALESCE(i.pub_date, '1970-01-01 00:00:00') DESC, i.id DESC
         LIMIT ? OFFSET ?
