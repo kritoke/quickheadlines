@@ -155,9 +155,12 @@ jobs:
         with:
           prepare: pkg install -y crystal shards libxml2 libyaml openssl libevent libiconv bash gmake node npm
           run: |
+            npm install -g pnpm
             shards install --production
+            cd frontend && pnpm install && pnpm run build && cd ..
             touch src/web/assets.cr
-            gmake build-release OS_NAME=freebsd ARCH_NAME=x64 BUILD_REV=${{ github.ref_name }}
+            VERSION=$(grep '^version:' shard.yml | awk '{print $2}')
+            crystal build --release -Os -Dpreview_lto -Dversion=v$VERSION src/quickheadlines.cr -o bin/quickheadlines-freebsd-x64
       
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
