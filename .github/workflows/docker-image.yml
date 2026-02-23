@@ -115,6 +115,7 @@ jobs:
             -v ${{ github.workspace }}:/app -w /app 84codes/crystal:1.18.2-ubuntu-22.04 \
             -c "apt-get update && apt-get install -y libxml2-dev libssl-dev libyaml-dev libsqlite3-dev libmagic-dev curl make && \
             shards install --production && \
+            mkdir -p /app/bin && \
             touch src/web/assets.cr && \
             crystal build --release -Os -Dpreview_lto -Dversion=${{ github.ref_name }} src/quickheadlines.cr -o /app/bin/quickheadlines-linux-${{ matrix.arch }}"
 
@@ -144,6 +145,7 @@ jobs:
         if: matrix.target == 'macos'
         run: |
           shards install --production
+          mkdir -p bin
           touch src/web/assets.cr
           crystal build --release -Os -Dpreview_lto -Dversion=${{ github.ref_name }} src/quickheadlines.cr -o bin/quickheadlines-macos-${{ matrix.arch }}
 
@@ -176,6 +178,7 @@ jobs:
           prepare: pkg install -y crystal shards libxml2 libyaml openssl libevent libiconv bash gmake libmagic
           run: |
             shards install --production
+            mkdir -p bin
             touch src/web/assets.cr
             VERSION=$(grep '^version:' shard.yml | awk '{print $2}')
             crystal build --release -Os -Dpreview_lto -Dversion=v$VERSION src/quickheadlines.cr -o bin/quickheadlines-freebsd-x64
