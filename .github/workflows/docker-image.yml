@@ -175,11 +175,13 @@ jobs:
       - name: Build in FreeBSD VM
         uses: vmactions/freebsd-vm@v1
         with:
-          prepare: pkg install -y crystal shards libxml2 libyaml openssl libevent libiconv bash gmake libmagic
+          prepare: pkg install -y crystal shards libxml2 libyaml openssl libevent libiconv bash gmake file
           run: |
             shards install --production
             mkdir -p bin
             touch src/web/assets.cr
+            export LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH
+            export LDFLAGS=-L/usr/local/lib
             VERSION=$(grep '^version:' shard.yml | awk '{print $2}')
             crystal build --release -Os -Dpreview_lto -Dversion=v$VERSION src/quickheadlines.cr -o bin/quickheadlines-freebsd-x64
       
