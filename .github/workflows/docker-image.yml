@@ -153,7 +153,7 @@ jobs:
       - name: Build in FreeBSD VM
         uses: vmactions/freebsd-vm@v1
         with:
-          prepare: pkg install -y crystal shards libxml2 libyaml openssl libevent libiconv bash gmake node npm
+          prepare: pkg install -y crystal shards libxml2 libyaml openssl libevent libiconv bash gmake node npm libmagic
           run: |
             npm install -g pnpm@9
             shards install --production

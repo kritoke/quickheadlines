@@ -36,6 +36,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
+# Copy feeds.yml for the build
+COPY feeds.yml ./
+
 # Copy shard files first for better caching
 COPY shard.yml shard.lock ./
 RUN shards install --production
