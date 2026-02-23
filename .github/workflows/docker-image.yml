@@ -214,7 +214,7 @@ jobs:
       - name: Build in FreeBSD VM
         uses: vmactions/freebsd-vm@v1
         with:
-          prepare: pkg install -y crystal shards libxml2 libyaml openssl libevent libiconv bash gmake file
+          prepare: pkg install -y crystal shards libxml2 libyaml openssl libevent libiconv bash gmake file sqlite3
           run: |
             mkdir -p bin
             touch src/web/assets.cr
