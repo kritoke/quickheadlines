@@ -1,6 +1,6 @@
 # Changelog
 
-## [0.5.0] - Unreleased
+## [0.5.0] - 2026-02-23
 
 ### Added
 
@@ -8,9 +8,9 @@
 - **Svelte 5 Frontend**: Rebuilt frontend with Svelte 5 using BakedFileSystem for embedded assets (single binary deployment)
 - **Cool Mode Particle Effects**: Optional visual particle effects toggle
 - **Vitest Testing**: Frontend unit tests with @testing-library/svelte
-- **Config Change Detection**: Frontend periodically polls for feeds.yml changes without requiring server restart
 - **Automatic Clustering**: Story clustering now runs automatically after each feed refresh
 - **Duplicate Detection**: Skip items that already exist with the same title from the same feed
+- **Crystal Badge**: Spinning 3D crystal at bottom of page with link to crystal-lang.org
 
 ### Changed
 
@@ -22,6 +22,12 @@
 - **Animations**: Added animated theme toggle with smooth transitions
 - **Feed Box Styling**: Improved responsive layout and visual styling for feed cards
 - **CI/CD**: Updated workflows for Svelte 5 build pipeline
+
+### Migration
+
+- **Database**: Automatically migrated on first startup (new columns for clustering)
+- **feeds.yml**: Fully backward compatible with v0.4.x
+- See [OPERATING.md](./OPERATING.md#migration-from-v04x-to-v050) for detailed upgrade instructions
 
 ## [0.4.0] - 2026-01-16
 

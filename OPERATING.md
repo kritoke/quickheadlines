@@ -4,6 +4,74 @@
 
 ---
 
+## Migration from v0.4.x to v0.5.0
+
+v0.5.0 includes significant architectural changes (Athena framework, Svelte 5 frontend). The database is automatically migrated on first startup, but there are some manual steps recommended.
+
+### Database Migration
+
+The database schema is automatically upgraded when you start v0.5.0 for the first time. The following changes are applied:
+
+1. **`cluster_id` column** - Added to `items` table for clustering support
+2. **`minhash_signature` column** - Added to `items` table for MinHash clustering
+3. **`lsh_bands` table** - Created for Locality-Sensitive Hashing
+4. **`header_theme_colors` column** - Added to `feeds` table for theme extraction
+
+**Automatic Migration:** The server automatically runs `ALTER TABLE` statements on startup if columns don't exist. No manual action required.
+
+**Recommendation:** If you encounter issues, you can clear the old cache:
+```bash
+# Stop the server first
+rm -rf ~/.cache/quickheadlines/
+```
+
+### feeds.yml Changes
+
+The configuration file format is backward compatible. However, note:
+
+1. **New features in v0.5.0:**
+   - `clustering:` section for configuring duplicate detection
+   - All existing options continue to work
+
+2. **Sample updated configuration:**
+```yaml
+# Global settings
+refresh_minutes: 30
+item_limit: 20
+
+# Clustering (optional - v0.5.0+)
+clustering:
+  enabled: true
+  threshold: 0.35  # Lower = more aggressive clustering (0.0-1.0)
+```
+
+3. **If using custom feeds.yml:** Simply copy your existing `feeds.yml` - all existing syntax is supported.
+
+### Config Change Detection (Pre-existing)
+
+**Note:** This feature existed in v0.4.0. The frontend polls for changes to `feeds.yml` every 30 seconds and prompts to reload if detected. No configuration needed.
+
+### Upgrading Steps
+
+```bash
+# 1. Stop the old server
+pkill quickheadlines
+
+# 2. Backup your config (optional)
+cp feeds.yml feeds.yml.backup
+
+# 3. Install/compile new version
+just nix-build
+
+# 4. Start the new version
+./bin/quickheadlines
+
+# 5. Verify clustering is running (check logs)
+# You should see: "Running initial clustering on startup..."
+```
+
+---
+
 ## 1. Development Environment
 
 ### Mandatory Shell
