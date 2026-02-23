@@ -198,6 +198,11 @@ jobs:
       - name: Build Svelte frontend
         run: cd frontend && pnpm install && pnpm run build
       
+      - name: Install shards (for caching)
+        uses: crystal-lang/install-crystal@v1
+        with:
+          crystal: 1.18.2
+
       - name: Cache shards
         uses: actions/cache@v4
         with:
@@ -208,7 +213,7 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-shards-
 
-      - name: Install shards (for caching)
+      - name: Install shards (populate cache)
         run: shards install --production
 
       - name: Build in FreeBSD VM
