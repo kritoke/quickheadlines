@@ -92,7 +92,7 @@ jobs:
           node-version: '22'
 
       - name: Install pnpm
-        run: npm install -g pnpm
+        run: npm install -g pnpm@9
 
       - name: Build Linux Binaries (via Docker)
         if: matrix.target == 'linux'
@@ -101,7 +101,7 @@ jobs:
             --entrypoint /bin/sh \
             -v ${{ github.workspace }}:/app -w /app 84codes/crystal:1.18.2-ubuntu-22.04 \
             -c "apt-get update && apt-get install -y libxml2-dev libssl-dev libyaml-dev libsqlite3-dev curl make nodejs npm && \
-            npm install -g pnpm && \
+            npm install -g pnpm@9 && \
             cd frontend && pnpm install && pnpm run build && cd .. && \
             shards install --production && \
             touch src/web/assets.cr && \
@@ -122,6 +122,7 @@ jobs:
       - name: Build macOS
         if: matrix.target == 'macos'
         run: |
+          npm install -g pnpm@9
           cd frontend && pnpm install && pnpm run build && cd ..
           shards install --production
           touch src/web/assets.cr
