@@ -3,6 +3,7 @@
 	import { themeState, initTheme } from '$lib/stores/theme.svelte';
 	import CursorTrail from '$lib/components/CursorTrail.svelte';
 	import CrystalBadge from '$lib/components/CrystalBadge.svelte';
+	import ScrollToTop from '$lib/components/ScrollToTop.svelte';
 	
 	let { children } = $props();
 	
@@ -18,3 +19,4 @@
 		<CrystalBadge />
 	</div>
 </div>
+<ScrollToTop />

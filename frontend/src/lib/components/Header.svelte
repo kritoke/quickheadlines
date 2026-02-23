@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { themeState, toggleCoolMode } from '$lib/stores/theme.svelte';
-	import AnimatedThemeToggler from './AnimatedThemeToggler.svelte';
+	import ThemePicker from './ThemePicker.svelte';
 </script>
 
 <header class="sticky top-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur border-b border-slate-200 dark:border-slate-700 z-20" data-name="main-header">
@@ -34,7 +34,7 @@
 					<path d="M13 13l6 6" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" />
 				</svg>
 			</button>
-			<AnimatedThemeToggler />
+			<ThemePicker />
 		</div>
 	</div>
 </header>

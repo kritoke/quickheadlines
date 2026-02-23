@@ -1,10 +1,10 @@
 <script lang="ts">
 	import FeedBox from '$lib/components/FeedBox.svelte';
 	import FeedTabs from '$lib/components/FeedTabs.svelte';
-	import { fetchFeeds, fetchMoreFeedItems, fetchConfig } from '$lib/api';
+	import { fetchFeeds, fetchMoreFeedItems, fetchConfig, fetchStatus } from '$lib/api';
 	import type { FeedResponse, FeedsPageResponse } from '$lib/types';
 	import { themeState, toggleCoolMode } from '$lib/stores/theme.svelte';
-	import AnimatedThemeToggler from '$lib/components/AnimatedThemeToggler.svelte';
+	import ThemePicker from '$lib/components/ThemePicker.svelte';
 
 	let feeds = $state<FeedResponse[]>([]);
 	let tabs = $state<{ name: string }[]>([]);
@@ -12,6 +12,7 @@
 	let loading = $state(false);
 	let error = $state<string | null>(null);
 	let lastUpdated = $state<Date | null>(null);
+	let saveScrollY = $state(0);
 
 	let loadingFeeds = $state<Record<string, boolean>>({});
 	let tabCache = $state<Record<string, { feeds: FeedResponse[], loaded: boolean }>>({});
@@ -128,6 +129,27 @@
 					loadFeeds(activeTab, true);
 				}, refreshMinutes * 60 * 1000);
 			});
+
+			// Check for background refresh completion
+			async function checkRefresh() {
+				try {
+					const status = await fetchStatus();
+					if (status.is_refreshing) {
+						saveScrollY = window.scrollY;
+						// Wait for refresh to complete, then reload
+						await new Promise(r => setTimeout(r, 5000));
+						const currentStatus = await fetchStatus();
+						if (!currentStatus.is_refreshing) {
+							loadFeeds(activeTab, true);
+							window.scrollTo(0, saveScrollY);
+						}
+					}
+				} catch (e) {
+					// Status check failed
+				}
+			}
+
+			setInterval(checkRefresh, 10000);
 			
 			configRefreshInterval = setInterval(() => {
 				loadConfig();
@@ -187,7 +209,7 @@
 						<path d="M13 13l6 6" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" />
 					</svg>
 				</button>
-				<AnimatedThemeToggler class="p-1.5 sm:p-2" title="Toggle theme" />
+				<ThemePicker />
 			</div>
 		</div>
 	</header>

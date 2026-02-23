@@ -4,6 +4,7 @@
 	import { themeState } from '$lib/stores/theme.svelte';
 	import { slide } from 'svelte/transition';
 	import { cubicOut } from 'svelte/easing';
+	import ScrollToTop from './ScrollToTop.svelte';
 
 	interface Props {
 		feed: FeedResponse;

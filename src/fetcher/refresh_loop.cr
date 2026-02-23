@@ -12,6 +12,7 @@ require "./feed_fetcher"
 CLUSTERING_JOBS = Atomic(Int32).new(0)
 
 def refresh_all(config : Config)
+  STATE.is_refreshing = true
   STATE.config_title = config.page_title
   STATE.config = config
 
@@ -85,6 +86,7 @@ def refresh_all(config : Config)
   async_clustering(fetched_map.values.to_a)
 
   GC.collect
+  STATE.is_refreshing = false
 
   STDERR.puts "[#{Time.local}] refresh_all: complete - STATE.feeds=#{STATE.feeds.size}, STATE.tabs=#{STATE.tabs.size}"
 end
@@ -140,11 +142,23 @@ def start_refresh_loop(config_path : String)
 
   save_feed_cache(FeedCache.instance, active_config.cache_retention_hours, active_config.max_cache_size_mb)
 
+  # Skip initial refresh - cache was already loaded before server started
+  # This allows fast startup, refresh happens after first interval
+  first_run = true
+
   spawn do
     loop do
       refresh_start_time = Time.monotonic
 
       begin
+        # Skip first refresh - data already loaded from cache for fast startup
+        if first_run
+          first_run = false
+          STDERR.puts "[#{Time.local}] Skipping initial refresh - using cached data for fast startup"
+          sleep (active_config.refresh_minutes * 60).seconds
+          next
+        end
+
         current_mtime = File.info(config_path).modification_time
 
         if current_mtime > last_mtime

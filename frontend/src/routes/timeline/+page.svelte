@@ -4,7 +4,7 @@
 	import type { TimelineItemResponse } from '$lib/types';
 	import { themeState, toggleCoolMode } from '$lib/stores/theme.svelte';
 	import { SvelteSet } from 'svelte/reactivity';
-	import AnimatedThemeToggler from '$lib/components/AnimatedThemeToggler.svelte';
+	import ThemePicker from '$lib/components/ThemePicker.svelte';
 
 	let items = $state<TimelineItemResponse[]>([]);
 	let itemIds = $state(new SvelteSet<string>());
@@ -195,7 +195,7 @@
 						<path d="M13 13l6 6" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" />
 					</svg>
 				</button>
-				<AnimatedThemeToggler class="p-1.5 sm:p-2" title="Toggle theme" />
+				<ThemePicker />
 			</div>
 		</div>
 	</header>

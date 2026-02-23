@@ -182,4 +182,151 @@ body::-webkit-scrollbar-thumb:hover {
 :root {
 	--cursor-x: -100px;
 	--cursor-y: -100px;
+	--theme-bg: #ffffff;
+	--theme-text: #0f172a;
+	--theme-border: #e2e8f0;
+	--theme-accent: #3b82f6;
+}
+
+/* Custom theme styles */
+html.custom-theme {
+	background-color: var(--theme-bg);
+	color: var(--theme-text);
+}
+
+html.custom-theme body {
+	background-color: var(--theme-bg);
+	color: var(--theme-text);
+}
+
+/* Matrix theme glow effect */
+html[data-theme="matrix"] {
+	--theme-bg: #000000;
+	--theme-text: #00ff00;
+	--theme-border: #003b00;
+	--theme-accent: #00ff00;
+}
+
+html[data-theme="matrix"] .glow-text {
+	text-shadow: 0 0 10px #00ff00, 0 0 20px #00ff00;
+}
+
+/* Retro 80s neon effect */
+html[data-theme="retro80s"] {
+	--theme-bg: #1a1a2e;
+	--theme-text: #e94560;
+	--theme-border: #16213e;
+	--theme-accent: #ff2e63;
+}
+
+html[data-theme="retro80s"] .neon-text {
+	text-shadow: 0 0 5px #ff2e63, 0 0 10px #ff2e63, 0 0 20px #ff2e63;
+	color: #ff2e63 !important;
+}
+
+html[data-theme="retro80s"] .neon-border {
+	border-color: #ff2e63 !important;
+	box-shadow: 0 0 5px #ff2e63, inset 0 0 5px rgba(255, 46, 99, 0.3);
+}
+
+/* Ocean deep blue */
+html[data-theme="ocean"] {
+	--theme-bg: #0c1929;
+	--theme-text: #7dd3fc;
+	--theme-border: #164e63;
+	--theme-accent: #06b6d4;
+}
+
+/* Ensure scroll to top button is always clickable */
+.scroll-to-top-btn {
+	pointer-events: auto !important;
+	opacity: 1 !important;
+	visibility: visible !important;
+}
+
+/* Sunset warm tones - apply to everything */
+html[data-theme="sunset"],
+html[data-theme="sunset"] body,
+html[data-theme="sunset"] #app,
+html[data-theme="sunset"] [data-name="feeds-page"],
+html[data-theme="sunset"] [data-name="app-layout"] {
+	background-color: #1c1309 !important;
+	color: #fed7aa !important;
+}
+
+/* Override all slate background colors for sunset */
+html[data-theme="sunset"] .bg-slate-50,
+html[data-theme="sunset"] .bg-slate-100,
+html[data-theme="sunset"] .bg-slate-200,
+html[data-theme="sunset"] .bg-slate-300,
+html[data-theme="sunset"] .bg-slate-400,
+html[data-theme="sunset"] .bg-slate-500,
+html[data-theme="sunset"] .bg-slate-600,
+html[data-theme="sunset"] .bg-slate-700,
+html[data-theme="sunset"] .bg-slate-800,
+html[data-theme="sunset"] .bg-slate-900,
+html[data-theme="sunset"] .bg-white,
+html[data-theme="sunset"] header,
+html[data-theme="sunset"] .header,
+html[data-theme="sunset"] [data-name="main-header"],
+html[data-theme="sunset"] [data-name="feed-tabs"],
+html[data-theme="sunset"] [data-name="timeline-page"],
+html[data-theme="sunset"] .min-h-screen {
+	background-color: #1c1309 !important;
+}
+
+/* Text colors for sunset */
+html[data-theme="sunset"] .text-slate-900,
+html[data-theme="sunset"] .text-slate-800,
+html[data-theme="sunset"] .text-slate-700,
+html[data-theme="sunset"] .text-slate-600,
+html[data-theme="sunset"] .text-slate-500,
+html[data-theme="sunset"] .text-slate-400,
+html[data-theme="sunset"] .text-white,
+html[data-theme="sunset"] header *,
+html[data-theme="sunset"] a {
+	color: #fed7aa !important;
+}
+
+/* Border colors for sunset */
+html[data-theme="sunset"] .border-slate-200,
+html[data-theme="sunset"] .border-slate-300,
+html[data-theme="sunset"] .border-slate-600,
+html[data-theme="sunset"] .border-slate-700,
+html[data-theme="sunset"] header.border-b {
+	border-color: #7c2d12 !important;
+}
+
+/* Apply custom theme colors to main elements */
+html.custom-theme .bg-white,
+html.custom-theme .bg-slate-50,
+html.custom-theme .bg-slate-100 {
+	background-color: var(--theme-bg) !important;
+}
+
+html.custom-theme .text-slate-900,
+html.custom-theme .text-slate-800,
+html.custom-theme .text-slate-700 {
+	color: var(--theme-text) !important;
+}
+
+html.custom-theme .border-slate-200,
+html.custom-theme .border-slate-300 {
+	border-color: var(--theme-border) !important;
+}
+
+html.custom-theme .dark\:bg-slate-900,
+html.custom-theme .dark\:bg-slate-800 {
+	background-color: var(--theme-bg) !important;
+}
+
+html.custom-theme .dark\:text-slate-100,
+html.custom-theme .dark\:text-slate-200,
+html.custom-theme .dark\:text-slate-300 {
+	color: var(--theme-text) !important;
+}
+
+html.custom-theme .dark\:border-slate-700,
+html.custom-theme .dark\:border-slate-600 {
+	border-color: var(--theme-border) !important;
 }
