@@ -2,7 +2,7 @@
 	import { Tabs } from 'bits-ui';
 	import { fly } from 'svelte/transition';
 	import { cubicOut } from 'svelte/easing';
-	import { themeState } from '$lib/stores/theme.svelte';
+	import { themeState, getThemeAccentColors } from '$lib/stores/theme.svelte';
 	import type { TabResponse } from '$lib/types';
 
 	interface Props {
@@ -12,6 +12,8 @@
 	}
 
 	let { tabs, activeTab, onTabChange }: Props = $props();
+
+	let themeColors = $derived(getThemeAccentColors(themeState.theme));
 
 	let listElement: HTMLDivElement | undefined = $state();
 
@@ -42,7 +44,7 @@
 
 <Tabs.Root
 	value={activeTab}
-	class="w-full z-20 mb-4"
+	class="w-full z-20 mb-4 mt-3 sm:mt-6"
 	data-name="feed-tabs"
 	onValueChange={(newValue) => {
 		if (newValue && newValue !== activeTab) {
@@ -52,10 +54,8 @@
 >
 	<div
 		bind:this={listElement}
-		class="sticky top-16 z-20 relative flex items-center gap-1 p-2 overflow-x-auto
-			bg-slate-100/80 dark:bg-slate-800/80 backdrop-blur-xl
-			rounded-xl border border-slate-200/50 dark:border-slate-700/50
-			shadow-sm"
+		class="sticky top-16 z-20 relative flex items-center gap-1 p-2 overflow-x-auto backdrop-blur-xl rounded-xl shadow-sm"
+		style="background-color: {themeColors.bgSecondary}; border: 1px solid {themeColors.border};"
 	>
 		{#each allTabs as tab (tab.name)}
 			<Tabs.Trigger
@@ -73,14 +73,8 @@
 				{#if activeTab === tab.name}
 					<div
 						in:fly={{ x: 5, duration: 300, easing: cubicOut }}
-						class="absolute inset-0 rounded-lg -z-10
-							bg-white dark:bg-slate-700
-							border border-slate-200 dark:border-slate-600
-							shadow-sm
-							{themeState.coolMode
-							? 'shadow-luxe-glow border-accent/30'
-							: ''}"
-						style="view-transition-name: tab-pill;"
+						class="absolute inset-0 rounded-lg -z-10 shadow-sm {themeState.coolMode ? 'border-accent/30' : ''}"
+						style="background-color: {themeColors.bg}; border: 1px solid {themeColors.border}; {themeState.coolMode ? `box-shadow: 0 0 12px ${themeColors.shadow}` : ''}; view-transition-name: tab-pill;"
 					></div>
 				{/if}
 			</Tabs.Trigger>

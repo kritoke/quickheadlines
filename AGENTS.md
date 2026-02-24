@@ -248,6 +248,20 @@ nix develop . --command crystal build --release src/quickheadlines.cr -o bin/qui
 touch src/web/assets.cr && nix develop . --command crystal build --release src/quickheadlines.cr -o bin/quickheadlines
 ```
 
+### Triple Build Rule for UI Changes
+
+**IMPORTANT:** When making UI changes that affect themes or visual components, you need to run `just nix-build` **3 times** (each time touches `assets.cr` to force BakedFileSystem to pick up changes):
+
+```bash
+just nix-build && just nix-build && just nix-build
+```
+
+This is required because `just nix-build` touches `assets.cr` before each build, but the Svelte build output needs to propagate through multiple build cycles for:
+- Theme color changes
+- New CSS/Tailwind classes
+- Border beam or animation changes
+- Any visual styling updates
+
 ### SvelteKit SPA Mode with adapter-static
 
 Project uses SPA mode (client-side rendering only):

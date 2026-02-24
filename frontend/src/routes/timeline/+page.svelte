@@ -2,7 +2,7 @@
 	import TimelineView from '$lib/components/TimelineView.svelte';
 	import { fetchTimeline, fetchConfig, fetchStatus } from '$lib/api';
 	import type { TimelineItemResponse } from '$lib/types';
-	import { themeState, toggleCoolMode } from '$lib/stores/theme.svelte';
+	import { themeState, toggleCoolMode, getCursorColors, getThemeAccentColors } from '$lib/stores/theme.svelte';
 	import { SvelteSet } from 'svelte/reactivity';
 	import ThemePicker from '$lib/components/ThemePicker.svelte';
 
@@ -18,10 +18,13 @@
 	let isRefreshing = $state(false);
 	let saveScrollY = $state(0);
 	let clusteringCheckInterval: ReturnType<typeof setInterval> | null = null;
-	const limit = 100;
+
+	let cursorColors = $derived(getCursorColors(themeState.theme));
+	let themeColors = $derived(getThemeAccentColors(themeState.theme));
 	
 	let refreshInterval: ReturnType<typeof setInterval> | null = null;
 	let refreshMinutes = $state(10);
+	const limit = 100;
 	
 	async function loadConfig() {
 		try {
@@ -181,13 +184,15 @@
 				</a>
 				<button
 					onclick={toggleCoolMode}
-					class="p-1.5 sm:p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+					class="p-1.5 sm:p-2 rounded-lg transition-colors"
+					style="background-color: {themeState.coolMode ? themeColors.bgSecondary : 'transparent'}; opacity: {themeState.coolMode ? 1 : 0.7};"
 					aria-label="Toggle cursor trail"
 					title="Cursor trail"
 				>
 					<svg 
-						class="w-5 h-5 transition-colors duration-200"
-						style={themeState.coolMode ? 'color: #6b8e5f;' : 'color: #94a3b8;'}
+						class="w-5 h-5 transition-all duration-200"
+						class:drop-shadow-lg={themeState.coolMode}
+						style="color: {themeState.coolMode ? cursorColors.primary : '#94a3b8'};"
 						viewBox="0 0 24 24" 
 						fill="currentColor"
 					>

@@ -7,12 +7,10 @@
 		e.preventDefault();
 		e.stopPropagation();
 		
-		// Try multiple scroll methods
 		document.documentElement.scrollTop = 0;
 		document.body.scrollTop = 0;
 		window.scrollTo(0, 0);
 		
-		// Also try scrollIntoView
 		document.body.scrollIntoView({ behavior: 'auto', block: 'start' });
 		document.documentElement.scrollIntoView({ behavior: 'auto', block: 'start' });
 		

@@ -206,6 +206,17 @@ html.custom-theme body {
 	color: var(--theme-text);
 }
 
+/* Header styling for custom themes */
+html.custom-theme header,
+html.custom-theme [data-name="main-header"] {
+	background-color: var(--theme-bg) !important;
+	border-color: var(--theme-border) !important;
+}
+
+html.custom-theme header * {
+	color: var(--theme-text) !important;
+}
+
 /* Matrix theme glow effect */
 html[data-theme="matrix"] {
 	--theme-bg: #000000;
@@ -263,6 +274,76 @@ html[data-theme="sunset"] [data-name="app-layout"] {
 	background-color: #1c1309 !important;
 	color: #fed7aa !important;
 	--theme-shadow: rgba(249, 115, 22, 0.25);
+}
+
+/* Hot Dog Stand theme - Windows 3.1 vibes */
+html[data-theme="hotdog"],
+html[data-theme="hotdog"] body,
+html[data-theme="hotdog"] #app,
+html[data-theme="hotdog"] [data-name="feeds-page"],
+html[data-theme="hotdog"] [data-name="app-layout"],
+html[data-theme="hotdog"] .min-h-screen {
+	background-color: #008080 !important;
+	color: #ffff00 !important;
+}
+
+/* Override all slate background colors for hotdog */
+html[data-theme="hotdog"] .bg-slate-50,
+html[data-theme="hotdog"] .bg-slate-100,
+html[data-theme="hotdog"] .bg-slate-200,
+html[data-theme="hotdog"] .bg-slate-300,
+html[data-theme="hotdog"] .bg-slate-400,
+html[data-theme="hotdog"] .bg-slate-500,
+html[data-theme="hotdog"] .bg-slate-600,
+html[data-theme="hotdog"] .bg-slate-700,
+html[data-theme="hotdog"] .bg-slate-800,
+html[data-theme="hotdog"] .bg-slate-900,
+html[data-theme="hotdog"] .bg-white,
+html[data-theme="hotdog"] header,
+html[data-theme="hotdog"] .header,
+html[data-theme="hotdog"] [data-name="main-header"],
+html[data-theme="hotdog"] [data-name="feed-tabs"],
+html[data-theme="hotdog"] [data-name="timeline-page"] {
+	background-color: #008080 !important;
+}
+
+/* Hotdog text colors */
+html[data-theme="hotdog"] .text-slate-900,
+html[data-theme="hotdog"] .text-slate-800,
+html[data-theme="hotdog"] .text-slate-700,
+html[data-theme="hotdog"] .text-slate-600,
+html[data-theme="hotdog"] .text-slate-500,
+html[data-theme="hotdog"] .text-slate-400,
+html[data-theme="hotdog"] .text-white,
+html[data-theme="hotdog"] header *,
+html[data-theme="hotdog"] a {
+	color: #ffff00 !important;
+}
+
+/* Hotdog border colors */
+html[data-theme="hotdog"] .border-slate-200,
+html[data-theme="hotdog"] .border-slate-300,
+html[data-theme="hotdog"] .border-slate-600,
+html[data-theme="hotdog"] .border-slate-700,
+html[data-theme="hotdog"] header.border-b {
+	border-color: #c0c0c0 !important;
+}
+
+/* Prevent focus ring in hotdog theme - only outline, not background */
+html[data-theme="hotdog"] *:focus,
+html[data-theme="hotdog"] *:focus-visible {
+	outline-color: #ff0000 !important;
+	--tw-ring-color: #ff0000 !important;
+}
+
+/* Hotdog button focus/active - text color only, allow background from inline styles */
+html[data-theme="hotdog"] button:focus-visible,
+html[data-theme="hotdog"] button:active,
+html[data-theme="hotdog"] a:focus-visible,
+html[data-theme="hotdog"] a:active {
+	color: #ffff00 !important;
+	outline: none !important;
+	box-shadow: none !important;
 }
 
 /* Override all slate background colors for sunset */

@@ -1,10 +1,11 @@
 <script lang="ts">
 	import type { FeedResponse, ItemResponse } from '$lib/types';
 	import { formatTimestamp } from '$lib/api';
-	import { themeState } from '$lib/stores/theme.svelte';
+	import { themeState, getThemeAccentColors } from '$lib/stores/theme.svelte';
 	import { slide } from 'svelte/transition';
 	import { cubicOut } from 'svelte/easing';
 	import ScrollToTop from './ScrollToTop.svelte';
+	import BorderBeam from './BorderBeam.svelte';
 
 	interface Props {
 		feed: FeedResponse;
@@ -16,6 +17,27 @@
 
 	let scrollContainer: HTMLDivElement | undefined = $state();
 	let isScrolledToBottom = $state(false);
+
+	let themeColors = $derived(getThemeAccentColors(themeState.theme));
+
+	let beamThemes = ['cyberpunk', 'matrix', 'vaporwave'] as const;
+	type BeamTheme = typeof beamThemes[number];
+
+	let showBorderBeam = $derived(beamThemes.includes(themeState.theme as BeamTheme));
+
+	let beamColors: Record<BeamTheme, { from: string; to: string; via?: string }> = {
+		matrix: { from: '#00ff00', to: '#22c55e' },
+		cyberpunk: { from: '#ff00ff', to: '#00ffff' },
+		vaporwave: { from: '#ff71ce', to: '#b967ff', via: '#01cdfe' }
+	};
+
+	let currentBeamColors = $derived(beamColors[themeState.theme as BeamTheme] || { from: '#ff00ff', to: '#00ffff' });
+
+	let cardStyle = $derived.by(() => {
+		if (showBorderBeam) return '';
+		const shadow = themeState.coolMode ? `0 4px 12px ${themeColors.shadow}` : '';
+		return `box-shadow: ${shadow};`;
+	});
 
 	// Reactive header style - properly tracks themeState.theme changes
 	let headerStyle = $derived.by(() => {
@@ -71,7 +93,16 @@
 	}
 </script>
 
-<div class="rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-sm overflow-hidden flex flex-col h-[400px] contain: strict transform-gpu" data-name="feed-box">
+<div class="rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 overflow-hidden flex flex-col h-[400px] contain: strict transform-gpu relative" class:shadow-sm={!showBorderBeam} style={cardStyle} data-name="feed-box">
+	{#if showBorderBeam}
+		<BorderBeam 
+			colorFrom={currentBeamColors.from} 
+			colorTo={currentBeamColors.to}
+			colorVia={currentBeamColors.via}
+			duration={5}
+			size={250}
+		/>
+	{/if}
 	<!-- Feed Header -->
 	<a
 		href={feed.site_link || '#'}
@@ -81,7 +112,7 @@
 		style={headerStyle}
 	>
 		{#if feed.favicon || feed.favicon_data || getFaviconSrc()}
-			<div class="w-5 h-5 rounded bg-white/90 p-0.5 flex items-center justify-center shadow-sm">
+			<div class="w-5 h-5 rounded bg-white/90 p-0.5 flex items-center justify-center" class:shadow-sm={!showBorderBeam}>
 				<img
 					src={getFaviconSrc()}
 					alt="{feed.title} favicon"
@@ -93,7 +124,7 @@
 				/>
 			</div>
 		{/if}
-		<span class="truncate drop-shadow-sm">{feed.title}</span>
+		<span class="truncate" class:drop-shadow-sm={!showBorderBeam}>{feed.title}</span>
 	</a>
 
 	<!-- Feed Items with Scroll Hint -->

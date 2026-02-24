@@ -3,7 +3,7 @@
 	import FeedTabs from '$lib/components/FeedTabs.svelte';
 	import { fetchFeeds, fetchMoreFeedItems, fetchConfig, fetchStatus } from '$lib/api';
 	import type { FeedResponse, FeedsPageResponse } from '$lib/types';
-	import { themeState, toggleCoolMode } from '$lib/stores/theme.svelte';
+	import { themeState, toggleCoolMode, getCursorColors, getThemeAccentColors } from '$lib/stores/theme.svelte';
 	import ThemePicker from '$lib/components/ThemePicker.svelte';
 
 	let feeds = $state<FeedResponse[]>([]);
@@ -16,6 +16,15 @@
 
 	let loadingFeeds = $state<Record<string, boolean>>({});
 	let tabCache = $state<Record<string, { feeds: FeedResponse[], loaded: boolean }>>({});
+
+	let cursorColor = $derived(getCursorColors(themeState.theme).primary);
+	let themeColors = $derived(getThemeAccentColors(themeState.theme));
+	
+	let refreshInterval: ReturnType<typeof setInterval> | null = null;
+	let configRefreshInterval: ReturnType<typeof setInterval> | null = null;
+	let refreshMinutes = $state(10);
+	let configFetched = $state(false);
+	let mounted = $state(false);
 
 	async function loadFeeds(tab: string = activeTab, force: boolean = false) {
 		if (!force && tabCache[tab]?.loaded) {
@@ -42,6 +51,30 @@
 			error = e instanceof Error ? e.message : 'Failed to load feeds';
 		} finally {
 			loading = false;
+		}
+	}
+	
+	async function loadConfig() {
+		try {
+			const config = await fetchConfig();
+			const newRefreshMinutes = config.refresh_minutes || 10;
+			
+			refreshMinutes = newRefreshMinutes;
+			configFetched = true;
+			
+			if (refreshInterval) {
+				clearInterval(refreshInterval);
+			}
+			refreshInterval = setInterval(() => {
+				loadFeeds(activeTab, true);
+			}, newRefreshMinutes * 60 * 1000);
+			console.log('[Feeds] Refresh interval set to', newRefreshMinutes, 'minutes');
+		} catch (e) {
+			if (!refreshInterval) {
+				refreshInterval = setInterval(() => {
+					loadFeeds(activeTab, true);
+				}, 10 * 60 * 1000);
+			}
 		}
 	}
 
@@ -79,38 +112,6 @@
 			error = e instanceof Error ? e.message : 'Failed to load more items';
 		} finally {
 			loadingFeeds = { ...loadingFeeds, [feed.url]: false };
-		}
-	}
-
-	let refreshInterval: ReturnType<typeof setInterval> | null = null;
-	let configRefreshInterval: ReturnType<typeof setInterval> | null = null;
-	let refreshMinutes = $state(10);
-	let configFetched = $state(false);
-	let mounted = $state(false);
-	
-	async function loadConfig() {
-		try {
-			const config = await fetchConfig();
-			const newRefreshMinutes = config.refresh_minutes || 10;
-			
-			refreshMinutes = newRefreshMinutes;
-			configFetched = true;
-			
-			// Always set/reset the interval with the configured value
-			if (refreshInterval) {
-				clearInterval(refreshInterval);
-			}
-			refreshInterval = setInterval(() => {
-				loadFeeds(activeTab, true);
-			}, newRefreshMinutes * 60 * 1000);
-			console.log('[Feeds] Refresh interval set to', newRefreshMinutes, 'minutes');
-		} catch (e) {
-			// Use default if config fetch fails
-			if (!refreshInterval) {
-				refreshInterval = setInterval(() => {
-					loadFeeds(activeTab, true);
-				}, 10 * 60 * 1000);
-			}
 		}
 	}
 	
@@ -195,13 +196,15 @@
 				</a>
 				<button
 					onclick={toggleCoolMode}
-					class="p-1.5 sm:p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+					class="p-1.5 sm:p-2 rounded-lg transition-colors"
+					style="background-color: {themeState.coolMode ? themeColors.bgSecondary : 'transparent'}; opacity: {themeState.coolMode ? 1 : 0.7};"
 					aria-label="Toggle cursor trail"
 					title="Cursor trail"
 				>
 					<svg 
-						class="w-5 h-5 transition-colors duration-200"
-						style={themeState.coolMode ? 'color: #6b8e5f;' : 'color: #94a3b8;'}
+						class="w-5 h-5 transition-all duration-200"
+						class:drop-shadow-lg={themeState.coolMode}
+						style="color: {themeState.coolMode ? cursorColor : '#94a3b8'};"
 						viewBox="0 0 24 24" 
 						fill="currentColor"
 					>
