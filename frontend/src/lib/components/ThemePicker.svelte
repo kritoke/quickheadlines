@@ -46,6 +46,7 @@
 			case 'matrix': return 'linear-gradient(135deg, #00ff00 50%, #003b00 50%)';
 			case 'ocean': return 'linear-gradient(135deg, #06b6d4 50%, #164e63 50%)';
 			case 'sunset': return 'linear-gradient(135deg, #f97316 50%, #431407 50%)';
+			case 'hotdog': return 'linear-gradient(135deg, #008080 50%, #ffff00 50%)';
 			default: return '#ccc';
 		}
 	}
@@ -55,17 +56,17 @@
 	<button
 		bind:this={buttonRef}
 		onclick={toggleDropdown}
-		class="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+		class="flex items-center gap-1 p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
 		aria-label="Select theme"
 		title="Theme"
 		aria-expanded={isOpen}
 	>
-		<svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke={themeColor.accent} stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-			<circle cx="12" cy="12" r="10"/>
-			<circle cx="12" cy="12" r="4"/>
-			<line x1="21.17" y1="8" x2="12" y2="8"/>
-			<line x1="3.95" y1="6.06" x2="8.54" y2="14"/>
-			<line x1="10.88" y1="21.94" x2="15.46" y2="14"/>
+		<span
+			class="w-5 h-5 rounded-full border border-slate-300 dark:border-slate-600 shrink-0"
+			style="background: {getThemePreview(themeState.theme)}"
+		></span>
+		<svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3 text-slate-500 dark:text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+			<polyline points="6 9 12 15 18 9"/>
 		</svg>
 		<span class="sr-only">Select theme</span>
 	</button>
