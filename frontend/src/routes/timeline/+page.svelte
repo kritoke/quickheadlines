@@ -169,24 +169,59 @@
 
 <div class="min-h-screen bg-white dark:bg-slate-900 transition-colors">
 	<header class="fixed top-0 left-0 right-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur border-b border-slate-200 dark:border-slate-700 z-20">
-		<div class="max-w-7xl mx-auto px-2 sm:px-4 py-2 sm:py-3 flex items-center justify-between">
-			<div class="flex items-center gap-2 sm:gap-3 min-w-0">
-				<a href="/" class="flex items-center gap-2 hover:opacity-80 transition-opacity shrink-0">
-					<img src="/logo.svg" alt="Logo" class="w-7 h-7 sm:w-8 sm:h-8" />
-					<span class="text-lg sm:text-xl font-bold text-slate-900 dark:text-white">Timeline</span>
-				</a>
-				<span class="text-xs sm:text-sm text-slate-500 dark:text-slate-400 whitespace-nowrap">
-					<span class="sm:hidden">{filteredItems.length}</span>
-					<span class="hidden sm:inline">{filteredItems.length} items</span>
-				</span>
+		<div class="max-w-7xl mx-auto px-2 sm:px-4">
+			<div class="flex items-center justify-between py-2">
+				<div class="flex items-center gap-2 sm:gap-3 min-w-0">
+					<a href="/" class="flex items-center gap-2 hover:opacity-80 transition-opacity shrink-0">
+						<img src="/logo.svg" alt="Logo" class="w-7 h-7 sm:w-8 sm:h-8" />
+						<span class="text-lg sm:text-xl font-bold text-slate-900 dark:text-white">Timeline</span>
+					</a>
+					<span class="text-xs sm:text-sm text-slate-500 dark:text-slate-400 whitespace-nowrap">
+						<span class="sm:hidden">{filteredItems.length}</span>
+						<span class="hidden sm:inline">{filteredItems.length} items</span>
+					</span>
+				</div>
+				<div class="flex items-center gap-1 sm:gap-2">
+					<a 
+						href="/" 
+						class="p-1.5 sm:p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+						aria-label="Feed view"
+						title="Feeds"
+					>
+						<svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-slate-500 dark:text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+							<path d="M4 11a9 9 0 0 1 9 9" />
+							<path d="M4 4a16 16 0 0 1 16 16" />
+							<circle cx="5" cy="19" r="1" fill="currentColor" />
+						</svg>
+					</a>
+					<button
+						onclick={toggleCoolMode}
+						class="p-1.5 sm:p-2 rounded-lg transition-colors"
+						style="background-color: {themeState.coolMode ? themeColors.bgSecondary : 'transparent'}; opacity: {themeState.coolMode ? 1 : 0.7};"
+						aria-label="Toggle cursor trail"
+						title="Cursor trail"
+					>
+						<svg 
+							class="w-5 h-5 transition-all duration-200"
+							class:drop-shadow-lg={themeState.coolMode}
+							style="color: {themeState.coolMode ? cursorColors.primary : '#94a3b8'};"
+							viewBox="0 0 24 24" 
+							fill="currentColor"
+						>
+							<path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z" />
+							<path d="M13 13l6 6" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" />
+						</svg>
+					</button>
+					<ThemePicker />
+				</div>
 			</div>
-			<div class="flex items-center gap-2">
-				<div class="relative">
+			<div class="hidden md:block pb-2">
+				<div class="relative max-w-md">
 					<input
 						type="text"
 						bind:value={searchQuery}
 						placeholder="Search timeline..."
-						class="w-32 sm:w-48 lg:w-64 px-3 py-1.5 text-sm bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500"
+						class="w-full px-3 py-1.5 text-sm bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500"
 					/>
 					{#if searchQuery}
 						<button
@@ -200,43 +235,10 @@
 					{/if}
 				</div>
 			</div>
-			<div class="flex items-center gap-1 sm:gap-2">
-				<a 
-					href="/" 
-					class="p-1.5 sm:p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-					aria-label="Feed view"
-					title="Feeds"
-				>
-					<svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-slate-500 dark:text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-						<path d="M4 11a9 9 0 0 1 9 9" />
-						<path d="M4 4a16 16 0 0 1 16 16" />
-						<circle cx="5" cy="19" r="1" fill="currentColor" />
-					</svg>
-				</a>
-				<button
-					onclick={toggleCoolMode}
-					class="p-1.5 sm:p-2 rounded-lg transition-colors"
-					style="background-color: {themeState.coolMode ? themeColors.bgSecondary : 'transparent'}; opacity: {themeState.coolMode ? 1 : 0.7};"
-					aria-label="Toggle cursor trail"
-					title="Cursor trail"
-				>
-					<svg 
-						class="w-5 h-5 transition-all duration-200"
-						class:drop-shadow-lg={themeState.coolMode}
-						style="color: {themeState.coolMode ? cursorColors.primary : '#94a3b8'};"
-						viewBox="0 0 24 24" 
-						fill="currentColor"
-					>
-						<path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z" />
-						<path d="M13 13l6 6" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" />
-					</svg>
-				</button>
-				<ThemePicker />
-			</div>
 		</div>
 	</header>
 
-	<main class="max-w-7xl mx-auto px-2 sm:px-4 py-4 pt-16 overflow-visible">
+	<main class="max-w-7xl mx-auto px-2 sm:px-4 py-4 pt-4 md:pt-28 overflow-visible">
 		{#if loading && items.length === 0}
 			<div class="flex items-center justify-center py-20">
 				<div class="text-slate-500 dark:text-slate-400">Loading timeline...</div>
