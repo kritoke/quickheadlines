@@ -240,28 +240,10 @@
 					<ThemePicker />
 				</div>
 			</div>
-			<div class="hidden md:flex items-center gap-4 pb-2">
+			<div class="hidden md:block pb-2">
 				{#if tabs.length > 0}
 					<FeedTabs {tabs} {activeTab} onTabChange={handleTabChange} />
 				{/if}
-				<div class="relative flex-1 max-w-xs">
-					<input
-						type="text"
-						bind:value={searchQuery}
-						placeholder="Search feeds..."
-						class="w-full px-3 py-1.5 text-sm bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500"
-					/>
-					{#if searchQuery}
-						<button
-							onclick={() => searchQuery = ''}
-							class="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
-						>
-							<svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-							</svg>
-						</button>
-					{/if}
-				</div>
 			</div>
 		</div>
 	</header>
@@ -272,7 +254,28 @@
 		</div>
 	{/if}
 
-	<main class="max-w-7xl mx-auto px-2 sm:px-4 py-4 overflow-visible">
+	<div class="hidden md:block max-w-7xl mx-auto px-4 pt-2">
+		<div class="relative max-w-md">
+			<input
+				type="text"
+				bind:value={searchQuery}
+				placeholder="Search feeds..."
+				class="w-full px-3 py-2 text-sm bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500"
+			/>
+			{#if searchQuery}
+				<button
+					onclick={() => searchQuery = ''}
+					class="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+				>
+					<svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+					</svg>
+				</button>
+			{/if}
+		</div>
+	</div>
+
+	<main class="max-w-7xl mx-auto px-2 sm:px-4 py-4 pt-0 md:pt-2 overflow-visible">
 		{#if loading && feeds.length === 0}
 			<div class="flex items-center justify-center py-20">
 				<div class="text-slate-500 dark:text-slate-400">Loading feeds...</div>
