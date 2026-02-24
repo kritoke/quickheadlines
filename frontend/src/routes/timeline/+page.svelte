@@ -25,6 +25,17 @@
 	let refreshInterval: ReturnType<typeof setInterval> | null = null;
 	let refreshMinutes = $state(10);
 	const limit = 100;
+
+	let searchQuery = $state('');
+
+	let filteredItems = $derived.by(() => {
+		if (!searchQuery.trim()) return items;
+		const q = searchQuery.toLowerCase();
+		return items.filter(item => 
+			item.title.toLowerCase().includes(q) ||
+			item.feed_title.toLowerCase().includes(q)
+		);
+	});
 	
 	async function loadConfig() {
 		try {
@@ -165,9 +176,29 @@
 					<span class="text-lg sm:text-xl font-bold text-slate-900 dark:text-white">Timeline</span>
 				</a>
 				<span class="text-xs sm:text-sm text-slate-500 dark:text-slate-400 whitespace-nowrap">
-					<span class="sm:hidden">{items.length}</span>
-					<span class="hidden sm:inline">{items.length} items</span>
+					<span class="sm:hidden">{filteredItems.length}</span>
+					<span class="hidden sm:inline">{filteredItems.length} items</span>
 				</span>
+			</div>
+			<div class="flex items-center gap-2">
+				<div class="relative">
+					<input
+						type="text"
+						bind:value={searchQuery}
+						placeholder="Search timeline..."
+						class="w-32 sm:w-48 lg:w-64 px-3 py-1.5 text-sm bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500"
+					/>
+					{#if searchQuery}
+						<button
+							onclick={() => searchQuery = ''}
+							class="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+						>
+							<svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+							</svg>
+						</button>
+					{/if}
+				</div>
 			</div>
 			<div class="flex items-center gap-1 sm:gap-2">
 				<a 
@@ -221,7 +252,13 @@
 				</button>
 			</div>
 		{:else}
-			<TimelineView {items} {hasMore} onLoadMore={handleLoadMore} />
+			{#if filteredItems.length > 0}
+				<TimelineView items={filteredItems} {hasMore} onLoadMore={handleLoadMore} />
+			{:else if searchQuery}
+				<div class="text-center py-20 text-slate-500 dark:text-slate-400">
+					No results for "{searchQuery}". Try a different search term.
+				</div>
+			{/if}
 
 			{#if loadingMore}
 				<div class="text-center py-4 text-slate-500 dark:text-slate-400">
