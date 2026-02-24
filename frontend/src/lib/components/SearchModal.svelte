@@ -44,7 +44,7 @@
 		role="dialog"
 		aria-label="Search"
 	>
-		<div class="max-w-7xl mx-auto p-4">
+		<div class="mx-auto py-4 px-2 sm:px-4 xl:px-12 2xl:px-16" style="max-width: 2200px;">
 			<div class="flex items-center gap-3 max-w-md mx-auto">
 				<div class="relative flex-1">
 					<input 
