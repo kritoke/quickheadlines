@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.5.2] - 2026-02-24
+
+### Added
+
+- **11 New Themes**: Retro 80s, Matrix, Ocean, Sunset, Hot Dog Stand, Dracula, Nord, Cyberpunk, Forest, Coffee, Vaporwave (13 themes total)
+- **Border Beam Animation**: Animated rotating gradient border on feed cards for Cyberpunk, Matrix, and Vaporwave themes
+- **Theme Picker**: New modal-based theme selector with 2-column grid layout showing visual theme previews (replaces old sun/moon toggle)
+- **Scroll-to-Top Button**: Floating arrow button to quickly navigate back to top of feed lists
+- **Theme Preview**: Visual gradient preview in theme selector showing theme colors
+
+### Changed
+
+- **Theme Cursor Trail**: Updated trail colors to match each theme's accent color
+
+### Fixed
+
+- **Theme Persistence**: Theme selection now properly persists across page refreshes
+
 ## [0.5.1] - 2026-02-23
 
 ### Added

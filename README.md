@@ -35,6 +35,8 @@ Desktop (Dark Mode)           |  Desktop (Light Mode)
 :-------------------------:|:-------------------------:
 ![](ss/qh-desktop-dm-ss.png)  |  ![](ss/qh-desktop-lm-ss.png)
 
+**13 Themes Available**: QuickHeadlines now includes 11 custom themes beyond Light and Dark. [View all themes →](./themes.md)
+
 ---
 
 ### Timeline View
