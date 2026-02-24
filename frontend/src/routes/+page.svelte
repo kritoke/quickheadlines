@@ -191,98 +191,70 @@
 
 <div class="min-h-screen bg-white dark:bg-slate-900 transition-colors duration-200" data-name="feeds-page">
 	<header class="fixed top-0 left-0 right-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur border-b border-slate-200 dark:border-slate-700 z-30" data-name="main-header">
-		<div class="max-w-7xl mx-auto px-2 sm:px-4 py-2 sm:py-3 flex items-center justify-between">
-			<div class="flex items-center gap-2 sm:gap-3 min-w-0">
-				<a href="/?tab=all" class="flex items-center gap-2 hover:opacity-80 transition-opacity shrink-0">
-					<img src="/logo.svg" alt="Logo" class="w-7 h-7 sm:w-8 sm:h-8" />
-					<span class="text-lg sm:text-xl font-bold text-slate-900 dark:text-white">QuickHeadlines</span>
-				</a>
-				{#if lastUpdated}
-					<span class="text-xs text-slate-500 dark:text-slate-400 hidden md:block whitespace-nowrap flex items-center gap-1">
-						{#if isRefreshing}
-							<span class="inline-block w-2 h-2 bg-blue-500 rounded-full animate-pulse"></span>
-						{/if}
-						Updated {lastUpdated.toLocaleTimeString()}
-					</span>
-				{/if}
-			</div>
-			<div class="flex items-center gap-2">
-				<div class="relative">
-					<input
-						type="text"
-						bind:value={searchQuery}
-						placeholder="Search feeds..."
-						class="w-32 sm:w-48 lg:w-64 px-3 py-1.5 text-sm bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500"
-					/>
-					{#if searchQuery}
-						<button
-							onclick={() => searchQuery = ''}
-							class="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
-						>
-							<svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-							</svg>
-						</button>
+		<div class="max-w-7xl mx-auto px-2 sm:px-4">
+			<div class="flex items-center justify-between py-2">
+				<div class="flex items-center gap-2 sm:gap-3 min-w-0">
+					<a href="/?tab=all" class="flex items-center gap-2 hover:opacity-80 transition-opacity shrink-0">
+						<img src="/logo.svg" alt="Logo" class="w-7 h-7 sm:w-8 sm:h-8" />
+						<span class="text-lg sm:text-xl font-bold text-slate-900 dark:text-white">QuickHeadlines</span>
+					</a>
+					{#if lastUpdated}
+						<span class="text-xs text-slate-500 dark:text-slate-400 hidden md:block whitespace-nowrap flex items-center gap-1">
+							{#if isRefreshing}
+								<span class="inline-block w-2 h-2 bg-blue-500 rounded-full animate-pulse"></span>
+							{/if}
+							Updated {lastUpdated.toLocaleTimeString()}
+						</span>
 					{/if}
 				</div>
-			</div>
-			<div class="flex items-center gap-1 sm:gap-2">
-				<a 
-					href="/timeline" 
-					class="p-1.5 sm:p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-					aria-label="Timeline view"
-					title="Timeline"
-				>
-					<svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-slate-500 dark:text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-						<circle cx="12" cy="12" r="10" />
-						<polyline points="12 6 12 12 16 14" />
-					</svg>
-				</a>
-				<button
-					onclick={toggleCoolMode}
-					class="p-1.5 sm:p-2 rounded-lg transition-colors"
-					style="background-color: {themeState.coolMode ? themeColors.bgSecondary : 'transparent'}; opacity: {themeState.coolMode ? 1 : 0.7};"
-					aria-label="Toggle cursor trail"
-					title="Cursor trail"
-				>
-					<svg 
-						class="w-5 h-5 transition-all duration-200"
-						class:drop-shadow-lg={themeState.coolMode}
-						style="color: {themeState.coolMode ? cursorColor : '#94a3b8'};"
-						viewBox="0 0 24 24" 
-						fill="currentColor"
+				<div class="flex items-center gap-1 sm:gap-2">
+					<a 
+						href="/timeline" 
+						class="p-1.5 sm:p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+						aria-label="Timeline view"
+						title="Timeline"
 					>
-						<path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z" />
-						<path d="M13 13l6 6" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" />
-					</svg>
-				</button>
-				<ThemePicker />
+						<svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-slate-500 dark:text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+							<circle cx="12" cy="12" r="10" />
+							<polyline points="12 6 12 12 16 14" />
+						</svg>
+					</a>
+					<button
+						onclick={toggleCoolMode}
+						class="p-1.5 sm:p-2 rounded-lg transition-colors"
+						style="background-color: {themeState.coolMode ? themeColors.bgSecondary : 'transparent'}; opacity: {themeState.coolMode ? 1 : 0.7};"
+						aria-label="Toggle cursor trail"
+						title="Cursor trail"
+					>
+						<svg 
+							class="w-5 h-5 transition-all duration-200"
+							class:drop-shadow-lg={themeState.coolMode}
+							style="color: {themeState.coolMode ? cursorColor : '#94a3b8'};"
+							viewBox="0 0 24 24" 
+							fill="currentColor"
+						>
+							<path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z" />
+							<path d="M13 13l6 6" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" />
+						</svg>
+					</button>
+					<ThemePicker />
+				</div>
+			</div>
+			<div class="hidden md:block pb-2">
+				{#if tabs.length > 0}
+					<FeedTabs {tabs} {activeTab} onTabChange={handleTabChange} />
+				{/if}
 			</div>
 		</div>
 	</header>
 
-	{#if searchQuery}
-		<div class="block md:hidden p-3 pb-0">
-			<div class="relative">
-				<input
-					type="text"
-					bind:value={searchQuery}
-					placeholder="Search feeds..."
-					class="w-full px-3 py-2 text-sm bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500"
-				/>
-				<button
-					onclick={() => searchQuery = ''}
-					class="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
-				>
-					<svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-					</svg>
-				</button>
-			</div>
+	{#if tabs.length > 0}
+		<div class="md:hidden pt-20">
+			<FeedTabs {tabs} {activeTab} onTabChange={handleTabChange} />
 		</div>
 	{/if}
 
-	<main class="max-w-7xl mx-auto px-2 sm:px-4 py-4 pt-4 sm:pt-16 overflow-visible">
+	<main class="max-w-7xl mx-auto px-2 sm:px-4 py-4 overflow-visible">
 		{#if loading && feeds.length === 0}
 			<div class="flex items-center justify-center py-20">
 				<div class="text-slate-500 dark:text-slate-400">Loading feeds...</div>
@@ -298,10 +270,6 @@
 				</button>
 			</div>
 		{:else}
-			{#if tabs.length > 0}
-				<FeedTabs {tabs} {activeTab} onTabChange={handleTabChange} />
-			{/if}
-
 			{#if loading}
 				<div class="absolute inset-0 bg-white/50 dark:bg-slate-900/50 flex items-center justify-center z-10 pointer-events-none">
 					<div class="text-slate-500 dark:text-slate-400">Loading...</div>
