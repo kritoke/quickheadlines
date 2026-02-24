@@ -25,8 +25,29 @@
 	let refreshMinutes = $state(10);
 	let configFetched = $state(false);
 	let mounted = $state(false);
+	let isRefreshing = $state(false);
+
+	let searchQuery = $state('');
+	let searchExpanded = $state(false);
+
+	let filteredFeeds = $derived.by(() => {
+		if (!searchQuery.trim()) return feeds;
+		const q = searchQuery.toLowerCase();
+		return feeds.map(feed => ({
+			...feed,
+			items: feed.items.filter(item => 
+				item.title.toLowerCase().includes(q) ||
+				feed.title.toLowerCase().includes(q)
+			)
+		})).filter(feed => feed.items.length > 0);
+	});
 
 	async function loadFeeds(tab: string = activeTab, force: boolean = false) {
+		const isAutoRefresh = force && tabCache[tab]?.loaded;
+		if (isAutoRefresh) {
+			isRefreshing = true;
+		}
+
 		if (!force && tabCache[tab]?.loaded) {
 			feeds = tabCache[tab].feeds;
 			activeTab = tab;
@@ -34,7 +55,7 @@
 		}
 
 		try {
-			loading = true;
+			loading = !isAutoRefresh;
 			error = null;
 			const response: FeedsPageResponse = await fetchFeeds(tab);
 			const swReleases = response.software_releases || [];
@@ -51,6 +72,7 @@
 			error = e instanceof Error ? e.message : 'Failed to load feeds';
 		} finally {
 			loading = false;
+			isRefreshing = false;
 		}
 	}
 	
@@ -177,11 +199,44 @@
 					<span class="text-lg sm:text-xl font-bold text-slate-900 dark:text-white">QuickHeadlines</span>
 				</a>
 				{#if lastUpdated}
-					<span class="text-xs text-slate-500 dark:text-slate-400 hidden md:block whitespace-nowrap">
+					<span class="text-xs text-slate-500 dark:text-slate-400 hidden md:block whitespace-nowrap flex items-center gap-1">
+						{#if isRefreshing}
+							<span class="inline-block w-2 h-2 bg-blue-500 rounded-full animate-pulse"></span>
+						{/if}
 						Updated {lastUpdated.toLocaleTimeString()}
 					</span>
 				{/if}
 			</div>
+			<div class="hidden md:flex items-center gap-2">
+				<div class="relative">
+					<input
+						type="text"
+						bind:value={searchQuery}
+						placeholder="Search feeds..."
+						class="w-48 lg:w-64 px-3 py-1.5 text-sm bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500"
+					/>
+					{#if searchQuery}
+						<button
+							onclick={() => searchQuery = ''}
+							class="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+						>
+							<svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+							</svg>
+						</button>
+					{/if}
+				</div>
+			</div>
+			<button
+				onclick={() => searchExpanded = !searchExpanded}
+				class="md:hidden p-1.5 sm:p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+				aria-label="Search"
+				title="Search"
+			>
+				<svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-slate-500 dark:text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+					<path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+				</svg>
+			</button>
 			<div class="flex items-center gap-1 sm:gap-2">
 				<a 
 					href="/timeline" 
@@ -217,6 +272,30 @@
 		</div>
 	</header>
 
+	{#if searchExpanded}
+		<div class="fixed top-14 left-0 right-0 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700 p-3 md:hidden z-20">
+			<div class="relative">
+				<input
+					type="text"
+					bind:value={searchQuery}
+					placeholder="Search feeds..."
+					class="w-full px-3 py-2 text-sm bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500"
+					autofocus
+				/>
+				{#if searchQuery}
+					<button
+						onclick={() => searchQuery = ''}
+						class="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+					>
+						<svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+						</svg>
+					</button>
+				{/if}
+			</div>
+		</div>
+	{/if}
+
 	<main class="max-w-7xl mx-auto px-2 sm:px-4 py-4 pt-16 sm:pt-16 overflow-visible">
 		{#if loading && feeds.length === 0}
 			<div class="flex items-center justify-center py-20">
@@ -243,14 +322,18 @@
 				</div>
 			{/if}
 
-			{#if feeds.length > 0}
+			{#if filteredFeeds.length > 0}
 				{#key activeTab}
-					<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-						{#each feeds as feed, i (`feed-${i}`)}
+					<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+						{#each filteredFeeds as feed, i (`feed-${i}`)}
 							<FeedBox {feed} onLoadMore={() => handleLoadMore(feed)} loading={loadingFeeds[feed.url] ?? false} />
 						{/each}
 					</div>
 				{/key}
+			{:else if searchQuery}
+				<div class="text-center py-20 text-slate-500 dark:text-slate-400">
+					No results for "{searchQuery}". Try a different search term.
+				</div>
 			{:else}
 				<div class="text-center py-20 text-slate-500 dark:text-slate-400">
 					No feeds found. Check your configuration.

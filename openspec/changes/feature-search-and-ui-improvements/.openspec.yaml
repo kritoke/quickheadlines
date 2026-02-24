@@ -1,0 +1,9 @@
+name: feature-search-and-ui-improvements
+title: Search Feature and UI Improvements
+owner: openspec-agent
+status: in_progress
+tags:
+  - feature
+  - search
+  - ui
+  - svelte5

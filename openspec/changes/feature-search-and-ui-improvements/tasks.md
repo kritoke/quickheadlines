@@ -1,0 +1,17 @@
+- [ ] 1.1 Add 4th column grid: Edit `+page.svelte` line 248 to add `xl:grid-cols-4`
+- [ ] 1.2 Remove unused `onDestroy` from CoolMode.svelte (import and usage)
+- [ ] 2.1 Run autofix on CoolMode.svelte to verify changes
+- [ ] 3.1 Build frontend to verify no errors: `cd frontend && npm run build`
+- [ ] 4.1 Implement search state and derived filter in +page.svelte
+- [ ] 4.2 Add search UI (icon + expanded input) to +page.svelte header
+- [ ] 4.3 Run autofix on +page.svelte, fix any issues
+- [ ] 5.1 Implement search in timeline/+page.svelte
+- [ ] 5.2 Run autofix on timeline/+page.svelte, fix any issues
+- [ ] 6.1 Add optimistic tab switching: keep cached content visible during load
+- [ ] 6.2 Add optimistic load more: show placeholder while fetching
+- [ ] 6.3 Add subtle refresh indicator in header
+- [ ] 7.1 Build frontend: `cd frontend && npm run build`
+- [ ] 7.2 Full build: `just nix-build`
+- [ ] 7.3 Run tests: `cd frontend && npm run test`
+- [ ] 7.4 Run Crystal specs: `nix develop . --command crystal spec`
+- [ ] 8.0 Archive OpenSpec change and push branch
