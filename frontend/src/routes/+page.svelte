@@ -229,7 +229,7 @@
 			</div>
 			<button
 				onclick={() => searchExpanded = !searchExpanded}
-				class="md:hidden p-1.5 sm:p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+				class="md:hidden p-1.5 sm:p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors z-50 relative"
 				aria-label="Search"
 				title="Search"
 			>
