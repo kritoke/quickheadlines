@@ -100,5 +100,6 @@ export interface ConfigResponse {
 
 export interface StatusResponse {
 	is_clustering: boolean;
+	is_refreshing: boolean;
 	active_jobs: number;
 }

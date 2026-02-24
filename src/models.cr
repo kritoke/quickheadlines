@@ -87,6 +87,7 @@ class AppState
   property config_title = "Quick Headlines"
   property config : Config?
   property? is_clustering : Bool = false
+  property? is_refreshing : Bool = false
 
   @mutex = Mutex.new
   @timeline_cache = {items: [] of TimelineItem, cached_at: Time.local}

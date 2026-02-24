@@ -549,6 +549,28 @@ run: check-deps svelte-build
     @echo "Starting server in development mode..."
     @APP_ENV=development {{FINAL_CRYSTAL}} run src/quickheadlines.cr -- config=feeds.yml
 
+# Run server in background (production mode with proper detachment)
+run-bg:
+    @./scripts/run-bg.sh
+
+# Stop background server
+stop-bg:
+    @echo "Stopping server..."
+    @pkill -f quickheadlines 2>/dev/null || true
+    @echo "✓ Server stopped"
+
+# Check if server is running
+status:
+    @if curl -s http://0.0.0.0:8080/ > /dev/null 2>&1; then \
+        echo "✓ Server is running on http://0.0.0.0:8080"; \
+    else \
+        echo "❌ Server is not running"; \
+    fi
+
+# View server logs
+logs:
+    @tail -50 /tmp/quickheadlines.log
+
 # Clean build artifacts
 clean:
     rm -rf bin
@@ -576,6 +598,10 @@ help:
     @echo "  build-release-lto        - Build release with LTO"
     @echo "  build-release-optimized  - Build release optimized (recommended for production)"
     @echo "  run                      - Run in development mode"
+    @echo "  run-bg                   - Run server in background (with proper detachment)"
+    @echo "  stop-bg                  - Stop background server"
+    @echo "  status                   - Check if server is running"
+    @echo "  logs                     - View server logs"
     @echo "  download-crystal         - Download and build Crystal compiler"
     @echo "  check-deps               - Check for required dependencies"
     @echo "  svelte-install    - Install Svelte dependencies"

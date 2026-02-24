@@ -1,9 +1,11 @@
 <script lang="ts">
 	import { spring } from 'svelte/motion';
-	import { themeState } from '$lib/stores/theme.svelte';
+	import { themeState, getCursorColors } from '$lib/stores/theme.svelte';
 
 	let coords = spring({ x: -100, y: -100 }, { stiffness: 0.1, damping: 0.25 });
 	let trail = spring({ x: -100, y: -100 }, { stiffness: 0.05, damping: 0.3 });
+
+	let cursorColors = $derived(getCursorColors(themeState.theme));
 
 	function handleMove(x: number, y: number) {
 		coords.set({ x, y });
@@ -26,11 +28,11 @@
 
 {#if themeState.coolMode}
 	<div 
-		class="pointer-events-none fixed z-50 h-3 w-3 rounded-full"
-		style="left: {$coords.x}px; top: {$coords.y}px; background: #96ad8d;"
+		class="pointer-events-none"
+		style="position: fixed; z-index: 9999999; left: {$coords.x}px; top: {$coords.y}px; width: 0.75rem; height: 0.75rem; border-radius: 9999px; background: {cursorColors.primary}; pointer-events: none;"
 	></div>
 	<div 
-		class="pointer-events-none fixed z-40 h-8 w-8 rounded-full"
-		style="left: {$trail.x - 12}px; top: {$trail.y - 12}px; background: rgba(150, 173, 141, 0.3); filter: blur(12px);"
+		class="pointer-events-none"
+		style="position: fixed; z-index: 9999998; left: {$trail.x - 12}px; top: {$trail.y - 12}px; width: 2rem; height: 2rem; border-radius: 9999px; background: {cursorColors.trail}; filter: blur(12px); pointer-events: none;"
 	></div>
 {/if}

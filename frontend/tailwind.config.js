@@ -27,7 +27,8 @@ export default {
 				}
 			},
 			boxShadow: {
-				'luxe-glow': '0 0 15px -3px rgba(150, 173, 141, 0.4)'
+				'luxe-glow': '0 0 15px -3px rgba(150, 173, 141, 0.4)',
+				'theme-accent': 'var(--theme-shadow, rgba(150, 173, 141, 0.3))'
 			}
 		}
 	},

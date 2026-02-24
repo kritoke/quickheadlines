@@ -686,6 +686,7 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
   def status : Quickheadlines::DTOs::StatusResponse
     Quickheadlines::DTOs::StatusResponse.new(
       is_clustering: STATE.is_clustering?,
+      is_refreshing: STATE.is_refreshing?,
       active_jobs: 0 # We don't track background fiber count yet
     )
   end
