@@ -245,14 +245,13 @@
 					<FeedTabs {tabs} {activeTab} onTabChange={handleTabChange} />
 				{/if}
 			</div>
+			{#if tabs.length > 0}
+				<div class="md:hidden -mx-2 px-2">
+					<FeedTabs {tabs} {activeTab} onTabChange={handleTabChange} />
+				</div>
+			{/if}
 		</div>
 	</header>
-
-	{#if tabs.length > 0}
-		<div class="md:hidden pt-20">
-			<FeedTabs {tabs} {activeTab} onTabChange={handleTabChange} />
-		</div>
-	{/if}
 
 	<div class="hidden md:block max-w-7xl mx-auto px-4 pt-2">
 		<div class="relative max-w-md">
@@ -275,7 +274,7 @@
 		</div>
 	</div>
 
-	<main class="max-w-7xl mx-auto px-2 sm:px-4 py-4 pt-0 md:pt-2 overflow-visible">
+	<main class="max-w-7xl mx-auto px-2 sm:px-4 py-4 pt-16 md:pt-2 overflow-visible">
 		{#if loading && feeds.length === 0}
 			<div class="flex items-center justify-center py-20">
 				<div class="text-slate-500 dark:text-slate-400">Loading feeds...</div>
