@@ -20,7 +20,7 @@
 
 	let themeColors = $derived(getThemeAccentColors(themeState.theme));
 
-	let beamThemes = ['cyberpunk', 'matrix', 'vaporwave'] as const;
+	let beamThemes = ['cyberpunk', 'matrix', 'vaporwave', 'retro80s', 'dracula', 'ocean'] as const;
 	type BeamTheme = typeof beamThemes[number];
 
 	let showBorderBeam = $derived(beamThemes.includes(themeState.theme as BeamTheme));
@@ -28,7 +28,10 @@
 	let beamColors: Record<BeamTheme, { from: string; to: string; via?: string }> = {
 		matrix: { from: '#00ff00', to: '#22c55e' },
 		cyberpunk: { from: '#ff00ff', to: '#00ffff' },
-		vaporwave: { from: '#ff71ce', to: '#b967ff', via: '#01cdfe' }
+		vaporwave: { from: '#ff71ce', to: '#b967ff', via: '#01cdfe' },
+		retro80s: { from: '#ff2e63', to: '#00d4ff' },
+		dracula: { from: '#bd93f9', to: '#50fa7b', via: '#ff79c6' },
+		ocean: { from: '#06b6d4', to: '#0ea5e9', via: '#22d3ee' }
 	};
 
 	let currentBeamColors = $derived(beamColors[themeState.theme as BeamTheme] || { from: '#ff00ff', to: '#00ffff' });

@@ -4,6 +4,7 @@
 	import ClusterExpansion from './ClusterExpansion.svelte';
 	import { themeState, getThemeAccentColors } from '$lib/stores/theme.svelte';
 	import { layoutState } from '$lib/stores/layout.svelte';
+	import BorderBeam from './BorderBeam.svelte';
 
 	interface Props {
 		items: TimelineItemResponse[];
@@ -20,6 +21,21 @@
 	let clusterLoading = $state<Record<string, boolean>>({});
 
 	let columns = $derived(layoutState.timelineColumns);
+
+	let beamThemes = ['cyberpunk', 'matrix', 'vaporwave', 'retro80s', 'dracula', 'ocean'] as const;
+	type BeamTheme = typeof beamThemes[number];
+	let showBorderBeam = $derived(beamThemes.includes(themeState.theme as BeamTheme));
+
+	let beamColors: Record<BeamTheme, { from: string; to: string; via?: string }> = {
+		matrix: { from: '#00ff00', to: '#22c55e' },
+		cyberpunk: { from: '#ff00ff', to: '#00ffff' },
+		vaporwave: { from: '#ff71ce', to: '#b967ff', via: '#01cdfe' },
+		retro80s: { from: '#ff2e63', to: '#00d4ff' },
+		dracula: { from: '#bd93f9', to: '#50fa7b', via: '#ff79c6' },
+		ocean: { from: '#06b6d4', to: '#0ea5e9', via: '#22d3ee' }
+	};
+
+	let currentBeamColors = $derived(beamColors[themeState.theme as BeamTheme] || { from: '#ff00ff', to: '#00ffff' });
 
 	function getGridClass(cols: number): string {
 		if (cols <= 1) return 'grid-cols-1';
@@ -127,9 +143,18 @@
 			<div class="grid gap-2 {gridClass} transition-all duration-200">
 				{#each dateItems as item (item.id)}
 					<div 
-						class="timeline-item bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden transition-all duration-200"
+						class="timeline-item bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden transition-all duration-200 relative"
 						class:col-span-full={expandedClusterId === item.id && columns > 1}
 					>
+						{#if showBorderBeam}
+							<BorderBeam 
+								colorFrom={currentBeamColors.from} 
+								colorTo={currentBeamColors.to}
+								colorVia={currentBeamColors.via}
+								duration={5}
+								size={250}
+							/>
+						{/if}
 						<!-- Item Header with Feed Info -->
 						<div
 							class="flex items-center gap-2 px-3 py-2 text-xs font-medium"
