@@ -21,13 +21,13 @@
     "cookie": ">=0.7.0"
   },
   "dependencies": {
-    "@sveltejs/adapter-static": "^3.0.10",
     "@sveltejs/kit": "^2.53.1",
     "svelte": "^5.53.3",
     "typescript": "^5.9.3",
-    "vite": "^6.4.1"
+    "vite": "^7.3.1"
   },
   "devDependencies": {
+    "@sveltejs/adapter-static": "^3.0.10",
     "@sveltejs/vite-plugin-svelte": "^6.2.4",
     "@tailwindcss/postcss": "^4.1.18",
     "@tailwindcss/typography": "^0.5.19",
