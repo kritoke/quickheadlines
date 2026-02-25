@@ -2,6 +2,7 @@
 	import TimelineView from '$lib/components/TimelineView.svelte';
 	import AppHeader from '$lib/components/AppHeader.svelte';
 	import SearchModal from '$lib/components/SearchModal.svelte';
+	import LayoutPicker from '$lib/components/LayoutPicker.svelte';
 	import { fetchTimeline, fetchConfig, fetchStatus } from '$lib/api';
 	import type { TimelineItemResponse } from '$lib/types';
 	import { SvelteSet } from 'svelte/reactivity';
@@ -27,7 +28,7 @@
 	let searchExpanded = $state(false);
 
 	let filteredItems = $derived.by(() => {
-		if (!searchQuery.trim()) return items;
+		if (!searchQuery.trim()) return [...items];
 		const q = searchQuery.toLowerCase();
 		return items.filter(item => 
 			item.title.toLowerCase().includes(q) ||
@@ -177,6 +178,10 @@
 				<span class="sm:hidden">{filteredItems.length}</span>
 				<span class="hidden sm:inline">{filteredItems.length} items</span>
 			</span>
+		{/snippet}
+		
+		{#snippet actions()}
+			<LayoutPicker />
 		{/snippet}
 	</AppHeader>
 

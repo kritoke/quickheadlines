@@ -3,6 +3,7 @@
 	import { fetchClusterItems, formatTimestamp } from '$lib/api';
 	import ClusterExpansion from './ClusterExpansion.svelte';
 	import { themeState, getThemeAccentColors } from '$lib/stores/theme.svelte';
+	import { layoutState } from '$lib/stores/layout.svelte';
 
 	interface Props {
 		items: TimelineItemResponse[];
@@ -16,6 +17,15 @@
 	let expandedClusterId = $state<string | null>(null);
 	let clusterItems = $state<Record<string, TimelineItemResponse[]>>({});
 	let clusterLoading = $state<Record<string, boolean>>({});
+
+	let columns = $derived(layoutState.timelineColumns);
+
+	function getGridClass(cols: number): string {
+		if (cols <= 1) return 'grid-cols-1';
+		if (cols === 2) return 'sm:grid-cols-2';
+		if (cols === 3) return 'sm:grid-cols-2 lg:grid-cols-3';
+		return 'sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4';
+	}
 
 	async function toggleCluster(item: TimelineItemResponse): Promise<void> {
 		if (!item.cluster_id) return;
@@ -100,8 +110,10 @@
 		return groups;
 	}
 
-	let groupedItems = $derived(groupByDate(items));
+		let groupedItems = $derived(groupByDate(items));
 	let groupIndex = $derived(Array.from(groupedItems.entries()));
+	
+	let gridClass = $derived(getGridClass(columns));
 </script>
 
 <div class="timeline-view" data-name="timeline-view">
@@ -111,9 +123,12 @@
 				{date}
 			</h2>
 			
-			<div class="space-y-2">
+			<div class="grid gap-2 {gridClass} transition-all duration-200">
 				{#each dateItems as item (item.id)}
-					<div class="timeline-item bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
+					<div 
+						class="timeline-item bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden transition-all duration-200"
+						class:col-span-full={expandedClusterId === item.id && columns > 1}
+					>
 						<!-- Item Header with Feed Info -->
 						<div
 							class="flex items-center gap-2 px-3 py-2 text-xs font-medium"
