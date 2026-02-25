@@ -240,7 +240,7 @@ module Quickheadlines::Repositories
         feed_id, title,
         as: Int64
       )
-      result > 0
+      (result || 0) > 0
     end
 
     private def find_feed_by_url(url : String) : Quickheadlines::Entities::Feed?
