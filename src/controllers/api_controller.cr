@@ -311,7 +311,7 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
 
     TimelinePageResponse.new(
       items: result.items,
-      has_more: result.has_more?,
+      has_more: result.has_more,
       total_count: result.total_count,
       is_clustering: STATE.is_clustering?
     )

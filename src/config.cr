@@ -27,6 +27,11 @@ struct Feed
 
   # Feed-specific authentication
   property auth : AuthConfig? = nil
+
+  # Reddit subreddit feed configuration
+  property subreddit : String? = nil
+  property sort : String = "hot"
+  property over18 : Bool? = nil
 end
 
 # HTTP client configuration for global settings
@@ -419,6 +424,7 @@ def validate_feed(feed : Feed) : Bool
   return false unless valid_url?(feed)
   return false unless valid_item_limit?(feed)
   return false unless valid_retry_config?(feed)
+  return false unless valid_subreddit_config?(feed)
   valid_auth_config?(feed)
 end
 
@@ -513,6 +519,29 @@ private def valid_auth_config?(feed : Feed) : Bool
     if token.nil? || token.strip.empty?
       STDERR.puts "[WARN] #{auth.type.capitalize} auth for '#{feed.title}' missing token"
     end
+  end
+
+  true
+end
+
+# Validate subreddit configuration
+private def valid_subreddit_config?(feed : Feed) : Bool
+  subreddit = feed.subreddit
+  return true unless subreddit
+
+  if subreddit.strip.empty?
+    STDERR.puts "[WARN] Empty subreddit name for '#{feed.title}'"
+    return false
+  end
+
+  if subreddit =~ /[^a-zA-Z0-9_-]/
+    STDERR.puts "[WARN] Invalid subreddit name '#{subreddit}' for '#{feed.title}' (can only contain alphanumeric, underscore, hyphen)"
+    return false
+  end
+
+  valid_sorts = ["hot", "new", "top", "rising", "controversial"]
+  unless valid_sorts.includes?(feed.sort)
+    STDERR.puts "[WARN] Invalid sort '#{feed.sort}' for '#{feed.title}' (must be: hot, new, top, rising, controversial)"
   end
 
   true

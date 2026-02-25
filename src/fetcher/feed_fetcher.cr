@@ -7,6 +7,7 @@ require "../storage"
 require "../health_monitor"
 require "../color_extractor"
 require "./favicon"
+require "../reddit_fetcher"
 
 private def build_fetch_headers(feed : Feed, current_url : String, previous_data : FeedData?) : HTTP::Headers
   headers = HTTP::Headers{
@@ -282,6 +283,10 @@ private def handle_feed_response(feed : Feed, response : HTTP::Client::Response,
 end
 
 def fetch_feed(feed : Feed, display_item_limit : Int32, db_fetch_limit : Int32, previous_data : FeedData? = nil) : FeedData
+  if feed.subreddit
+    return RedditFetcher.fetch_subreddit(feed, feed.item_limit || display_item_limit)
+  end
+
   effective_item_limit = feed.item_limit || display_item_limit
 
   if cached_data = get_cached_feed(feed, effective_item_limit, previous_data)
