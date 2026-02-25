@@ -2,18 +2,25 @@ import { sveltekit } from '@sveltejs/kit/vite';
 import { defineConfig } from 'vite';
 
 export default defineConfig({
-	plugins: [sveltekit()],
-	build: {
-		target: 'esnext',
-		rollupOptions: {
-            onwarn(warning, warn) {
-                // Ignore the Rolldown warning about 'codeSplitting'
-                if (warning.message.includes('codeSplitting')) return;
-                
-                // Keep all other warnings
-                warn(warning);
+	plugins: [sveltekit(),
+		{
+            name: 'strip-codesplitting-warning',
+            // Intercept the config before it hits the bundler
+            configResolved(config) {
+                const output = config.build.rollupOptions.output;
+                if (output) {
+                    if (Array.isArray(output)) {
+                        output.forEach(o => delete o.codeSplitting);
+                    } else {
+                        delete output.codeSplitting;
+                    }
+                }
             }
         }
+	],
+
+	build: {
+		target: 'esnext',
 	},
 	server: {
 		port: 5173,
