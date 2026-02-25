@@ -142,6 +142,7 @@ class FeedCache
       @db.exec("CREATE INDEX IF NOT EXISTS idx_lsh_band_search ON lsh_bands(band_index, band_hash)")
     end
   rescue ex
+    STDERR.puts "[#{Time.local}] Warning: ensure_indexes failed: #{ex.message}"
   end
 
   def clear_all
@@ -225,6 +226,7 @@ def save_feed_cache(cache : FeedCache, retention_hours : Int32 = CACHE_RETENTION
     begin
       cache.vacuum
     rescue ex
+      STDERR.puts "[#{Time.local}] Warning: vacuum failed: #{ex.message}"
     end
   end
 

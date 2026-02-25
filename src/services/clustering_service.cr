@@ -165,15 +165,12 @@ class Quickheadlines::Services::ClusteringService
     begin
       STDERR.puts "[#{Time.local}] Starting clustering (streaming rows, threshold: #{threshold})"
 
-      db.query("SELECT id, title, link, pub_date, feed_id FROM items WHERE (cluster_id IS NULL OR cluster_id = id) AND (pub_date IS NULL OR pub_date <= datetime('now', '+1 day')) ORDER BY pub_date DESC LIMIT ?", limit) do |rows|
+      db.query("SELECT id, title, link, feed_id FROM items WHERE (cluster_id IS NULL OR cluster_id = id) AND (pub_date IS NULL OR pub_date <= datetime('now', '+1 day')) ORDER BY pub_date DESC LIMIT ?", limit) do |rows|
         rows.each do
           id = rows.read(Int64)
           title = rows.read(String)
           link = rows.read(String)
-          pub_date_str = rows.read(String?)
           feed_id = rows.read(Int64)
-          # parse pub_date only if needed by downstream code
-          # pub_date = pub_date_str.try { |str| Time.parse(str, "%Y-%m-%d %H:%M:%S", Time::Location::UTC) }
 
           next if title.empty?
 

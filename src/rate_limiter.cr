@@ -45,30 +45,32 @@ module Quickheadlines
         limit = RateLimitConfig.limit(category)
         window_key = "#{ip}:#{category}"
 
-        info = @@mutex.synchronize do
+        @@mutex.synchronize do
           existing = @limits[window_key]?
           if existing
             if existing.expired?(window_size)
               @limits.delete(window_key)
-              RateLimitInfo.new(category)
+              info = RateLimitInfo.new(category)
+              @limits[window_key] = info
             else
-              existing
+              info = existing
             end
           else
-            RateLimitInfo.new(category).tap { |i| @limits[window_key] = i }
+            info = RateLimitInfo.new(category)
+            @limits[window_key] = info
           end
-        end
 
-        if info.request_count >= limit
+          if info.request_count >= limit
+            reset_at = info.window_start.to_unix + window_size.total_seconds.to_i64
+            return {allowed: false, remaining: 0, reset_at: reset_at}
+          end
+
+          info.request_count += 1
+          remaining = limit - info.request_count
           reset_at = info.window_start.to_unix + window_size.total_seconds.to_i64
-          return {allowed: false, remaining: 0, reset_at: reset_at}
+
+          {allowed: true, remaining: remaining, reset_at: reset_at}
         end
-
-        info.request_count += 1
-        remaining = limit - info.request_count
-        reset_at = info.window_start.to_unix + window_size.total_seconds.to_i64
-
-        {allowed: true, remaining: remaining, reset_at: reset_at}
       end
 
       def should_rate_limit?(ip : String, category : String) : Bool
@@ -100,15 +102,15 @@ module Quickheadlines
       end
 
       private def cleanup_expired_entries
-        removed = 0
         @@mutex.synchronize do
+          before_size = @limits.size
           @limits.reject! do |_, info|
             window_size = RateLimitConfig.window_size(info.category)
             info.expired?(window_size)
           end
-          removed = @limits.size
+          removed = before_size - @limits.size
+          STDERR.puts "[#{Time.local}] Rate limit cleanup: #{removed} entries removed, #{@limits.size} active entries"
         end
-        STDERR.puts "[#{Time.local}] Rate limit cleanup: #{removed} active entries"
       end
     end
 

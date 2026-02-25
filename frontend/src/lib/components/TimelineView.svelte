@@ -2,6 +2,7 @@
 	import type { TimelineItemResponse } from '$lib/types';
 	import { fetchClusterItems, formatTimestamp } from '$lib/api';
 	import ClusterExpansion from './ClusterExpansion.svelte';
+	import { themeState, getThemeAccentColors } from '$lib/stores/theme.svelte';
 
 	interface Props {
 		items: TimelineItemResponse[];
@@ -10,6 +11,7 @@
 	}
 
 	let { items, hasMore, onLoadMore }: Props = $props();
+	let themeColors = $derived(getThemeAccentColors(themeState.theme));
 
 	let expandedClusterId = $state<string | null>(null);
 	let clusterItems = $state<Record<string, TimelineItemResponse[]>>({});
@@ -182,7 +184,8 @@
 		<div class="load-more text-center py-4">
 			<button
 				onclick={onLoadMore}
-				class="px-4 py-2 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors text-sm"
+				class="px-4 py-2 text-sm rounded-lg transition-colors"
+				style="background-color: {themeColors.bgSecondary}; color: {themeColors.text}; border: 1px solid {themeColors.border};"
 			>
 				Load More
 			</button>
