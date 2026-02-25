@@ -220,7 +220,7 @@
 		onQueryChange={(value) => searchQuery = value}
 	/>
 
-	<main class="mx-auto px-2 sm:px-4 xl:px-12 2xl:px-16 py-4 overflow-visible" style="padding-top: calc(var(--header-height, 6rem) + 1rem); max-width: 2200px;">
+	<main class="mx-auto px-4 md:px-8 xl:px-12 py-4 overflow-visible" style="padding-top: calc(var(--header-height, 6rem) + 1rem); max-width: 1800px;">
 		{#if loading && feeds.length === 0}
 			<div class="flex items-center justify-center py-20">
 				<div class="text-slate-500 dark:text-slate-400">Loading feeds...</div>
@@ -244,7 +244,7 @@
 
 			{#if filteredFeeds.length > 0}
 				{#key activeTab}
-					<div class="grid gap-4" style="grid-template-columns: repeat(auto-fit, minmax(430px, 1fr));">
+					<div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4">
 						{#each filteredFeeds as feed, i (`feed-${i}`)}
 							<FeedBox {feed} onLoadMore={() => handleLoadMore(feed)} loading={loadingFeeds[feed.url] ?? false} />
 						{/each}

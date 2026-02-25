@@ -24,6 +24,12 @@
 			onClose();
 		}
 	}
+
+	function handleInputKeydown(e: KeyboardEvent) {
+		if (e.key === 'Enter') {
+			onClose();
+		}
+	}
 </script>
 
 <svelte:window onkeydown={handleKeydown} />
@@ -44,13 +50,14 @@
 		role="dialog"
 		aria-label="Search"
 	>
-		<div class="mx-auto py-4 px-2 sm:px-4 xl:px-12 2xl:px-16" style="max-width: 2200px;">
+		<div class="mx-auto py-4 px-4 md:px-8 xl:px-12" style="max-width: 1800px;">
 			<div class="flex items-center gap-3 max-w-md mx-auto">
 				<div class="relative flex-1">
 					<input 
 						bind:this={inputEl}
 						value={query}
 						oninput={(e) => onQueryChange(e.currentTarget.value)}
+						onkeydown={handleInputKeydown}
 						{placeholder}
 						class="w-full px-4 py-3 text-base bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500"
 					/>
