@@ -151,12 +151,21 @@ def start_refresh_loop(config_path : String)
       refresh_start_time = Time.monotonic
 
       begin
-        # Skip first refresh - data already loaded from cache for fast startup
+        # Skip first refresh only if we have cached data
+        # If no cached data (fresh start), we need to fetch
         if first_run
           first_run = false
-          STDERR.puts "[#{Time.local}] Skipping initial refresh - using cached data for fast startup"
-          sleep (active_config.refresh_minutes * 60).seconds
-          next
+          has_cached_feeds = STATE.feeds.size > 0
+          unless has_cached_feeds
+            has_cached_feeds = STATE.tabs.any? { |tab| tab.feeds.size > 0 }
+          end
+          if has_cached_feeds
+            STDERR.puts "[#{Time.local}] Skipping initial refresh - using cached data for fast startup"
+            sleep (active_config.refresh_minutes * 60).seconds
+            next
+          else
+            STDERR.puts "[#{Time.local}] No cached data found - running initial refresh"
+          end
         end
 
         current_mtime = File.info(config_path).modification_time

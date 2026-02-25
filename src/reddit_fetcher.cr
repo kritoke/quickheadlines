@@ -35,8 +35,9 @@ module RedditFetcher
     property after : String?
   end
 
-  struct RedditResponse
+  struct RedditListing
     include JSON::Serializable
+    property kind : String
     property data : RedditData
   end
 
@@ -104,10 +105,10 @@ module RedditFetcher
 
   def self.parse_reddit_response(body : String, limit : Int32, over18 : Bool) : Array(Item)
     parsed = JSON.parse(body)
-    response = RedditResponse.from_json(parsed.to_json)
+    listing = RedditListing.from_json(parsed.to_json)
 
     items = [] of Item
-    response.data.children.each do |child|
+    listing.data.children.each do |child|
       post = child.data
 
       next if post.over_18 && !over18
