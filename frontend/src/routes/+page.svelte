@@ -3,7 +3,7 @@
 	import FeedTabs from '$lib/components/FeedTabs.svelte';
 	import AppHeader from '$lib/components/AppHeader.svelte';
 	import SearchModal from '$lib/components/SearchModal.svelte';
-	import { fetchFeeds, fetchMoreFeedItems, fetchConfig, fetchStatus } from '$lib/api';
+	import { fetchFeeds, fetchMoreFeedItems, fetchConfig } from '$lib/api';
 	import type { FeedResponse, FeedsPageResponse } from '$lib/types';
 
 	let feeds = $state<FeedResponse[]>([]);
@@ -150,26 +150,42 @@
 				}, refreshMinutes * 60 * 1000);
 			});
 
-			// Check for background refresh completion
-			async function checkRefresh() {
+			// Track last update timestamp for long-polling
+			let lastUpdate = Date.now();
+			
+			// Long-polling for real-time feed updates
+			async function pollForUpdates() {
 				try {
-					const status = await fetchStatus();
-					if (status.is_refreshing) {
-						saveScrollY = window.scrollY;
-						// Wait for refresh to complete, then reload
-						await new Promise(r => setTimeout(r, 5000));
-						const currentStatus = await fetchStatus();
-						if (!currentStatus.is_refreshing) {
-							loadFeeds(activeTab, true);
-							window.scrollTo(0, saveScrollY);
+					const response = await fetch(`/api/events?last_update=${lastUpdate}`);
+					const text = await response.text();
+					
+					// Parse SSE-style response
+					const lines = text.split('\n');
+					for (const line of lines) {
+						if (line.startsWith('event: feed_update')) {
+							const dataLine = lines.find(l => l.startsWith('data: '));
+							if (dataLine) {
+								const timestamp = parseInt(dataLine.replace('data: ', ''));
+								if (timestamp > lastUpdate) {
+									console.log('[Long-poll] Feed update received, reloading...');
+									lastUpdate = timestamp;
+									saveScrollY = window.scrollY;
+									await loadFeeds(activeTab, true);
+									window.scrollTo(0, saveScrollY);
+								}
+							}
 						}
 					}
 				} catch (e) {
-					// Status check failed
+					console.warn('[Long-poll] Poll failed, retrying in 5s:', e);
 				}
+				
+				// Continue polling
+				setTimeout(pollForUpdates, 1000);
 			}
-
-			setInterval(checkRefresh, 10000);
+			
+			// Start long-polling
+			pollForUpdates();
 			
 			configRefreshInterval = setInterval(() => {
 				loadConfig();

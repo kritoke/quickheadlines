@@ -311,7 +311,7 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
 
     TimelinePageResponse.new(
       items: result.items,
-      has_more: result.has_more,
+      has_more: result.has_more?,
       total_count: result.total_count,
       is_clustering: STATE.is_clustering?
     )
@@ -691,6 +691,42 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
       is_refreshing: STATE.is_refreshing?,
       active_jobs: 0 # We don't track background fiber count yet
     )
+  end
+
+  # GET /api/events - Long-polling endpoint for real-time feed updates
+  # Client sends last_update timestamp; server holds request until new data or timeout
+  @[ARTA::Get(path: "/api/events")]
+  def events(request : ATH::Request) : ATH::Response
+    response = ATH::Response.new
+    response.headers["content-type"] = "text/event-stream"
+    response.headers["Cache-Control"] = "no-cache"
+    response.headers["Connection"] = "keep-alive"
+    
+    # Get last_update from query params (client sends its last known update time)
+    last_update_param = request.query_params["last_update"]?
+    last_update = last_update_param.try &.to_i64? || 0_i64
+    
+    # Wait for up to 30 seconds for new data
+    max_wait = 30
+    check_interval = 1
+    waited = 0
+    
+    while waited < max_wait
+      sleep check_interval.seconds
+      waited += check_interval
+      
+      # Check if there's new data (compare with STATE.updated_at)
+      current_update = STATE.updated_at.to_unix_ms
+      if current_update > last_update
+        # Send the update event
+        response.content = "event: feed_update\ndata: #{current_update}\n\n"
+        return response
+      end
+    end
+    
+    # Timeout - send heartbeat
+    response.content = "event: heartbeat\ndata: #{Time.local.to_unix_ms}\n\n"
+    response
   end
 
   # GET /.well-known/appspecific/com.chrome.devtools.json - Chrome DevTools config

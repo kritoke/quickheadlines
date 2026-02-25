@@ -129,6 +129,43 @@
 			loadTimeline();
 			loadConfig(); // loadConfig now handles setting up the refresh interval
 			
+			// Track last update timestamp for long-polling
+			let lastUpdate = Date.now();
+			
+			// Long-polling for real-time feed updates
+			async function pollForUpdates() {
+				try {
+					const response = await fetch(`/api/events?last_update=${lastUpdate}`);
+					const text = await response.text();
+					
+					// Parse SSE-style response
+					const lines = text.split('\n');
+					for (const line of lines) {
+						if (line.startsWith('event: feed_update')) {
+							const dataLine = lines.find(l => l.startsWith('data: '));
+							if (dataLine) {
+								const timestamp = parseInt(dataLine.replace('data: ', ''));
+								if (timestamp > lastUpdate) {
+									console.log('[Long-poll] Feed update received, reloading timeline...');
+									lastUpdate = timestamp;
+									saveScrollY = window.scrollY;
+									await loadTimeline();
+									window.scrollTo(0, saveScrollY);
+								}
+							}
+						}
+					}
+				} catch (e) {
+					console.warn('[Long-poll] Poll failed, retrying in 5s:', e);
+				}
+				
+				// Continue polling
+				setTimeout(pollForUpdates, 1000);
+			}
+			
+			// Start long-polling
+			pollForUpdates();
+
 			async function checkClustering() {
 				try {
 					const status = await fetchStatus();
