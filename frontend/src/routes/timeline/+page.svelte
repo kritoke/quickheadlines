@@ -188,7 +188,7 @@
 		onQueryChange={(value) => searchQuery = value}
 	/>
 
-	<main class="max-w-7xl mx-auto px-2 sm:px-4 py-4 overflow-visible" style="padding-top: calc(var(--header-height, 4rem) + 1rem);">
+	<main class="max-w-[1800px] mx-auto px-4 md:px-8 xl:px-12 py-4 overflow-visible" style="padding-top: calc(var(--header-height, 4rem) + 2rem);">
 		{#if loading && items.length === 0}
 			<div class="flex items-center justify-center py-20">
 				<div class="text-slate-500 dark:text-slate-400">Loading timeline...</div>
