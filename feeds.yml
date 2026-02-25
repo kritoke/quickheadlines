@@ -61,6 +61,12 @@ tabs:
         url: "https://mashable.com/feeds/rss/all"
       - title: "Engadget"
         url: "https://www.engadget.com/rss.xml"
+      # Reddit subreddit feeds (add subreddit field to fetch from Reddit instead of RSS)
+      # See https://www.reddit.com/dev/api for sort options (hot, new, top, rising, controversial)
+      - title: "r/technology"
+        url: "https://www.reddit.com/r/technology"
+        subreddit: "technology"
+        sort: "hot"
       - title: "Daring Fireball"
         url: "https://daringfireball.net/feeds/main"
       - title: "Mac Rumors"
