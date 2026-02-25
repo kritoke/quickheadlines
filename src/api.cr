@@ -26,10 +26,6 @@ class FeedResponse
   @[JSON::Field(emit_null: true)]
   property header_theme_colors : JSON::Any?
 
-  # Theme-aware header colors (JSON object) - when present this should be preferred by clients
-  @[JSON::Field(emit_null: true)]
-  property header_theme_colors : JSON::Any?
-
   property tab : String
   property url : String
   property title : String
