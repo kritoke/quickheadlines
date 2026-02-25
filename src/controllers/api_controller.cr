@@ -144,7 +144,9 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
     end
 
     # Fallback: if STATE is empty (initial load), read directly from cache
-    if feeds_snapshot.empty? && tabs_snapshot.all?(&.[:feeds].empty?)
+    # This ensures feeds work even if STATE wasn't populated yet
+    total_feeds = feeds_snapshot.size + tabs_snapshot.sum(&.[:feeds].size)
+    if total_feeds == 0
       feeds_snapshot, tabs_snapshot = load_feeds_from_cache_fallback(cache)
     end
 
