@@ -1,6 +1,6 @@
 <script lang="ts">
-	import type { TimelineItemResponse } from '$lib/types';
-	import { fetchClusterItems, formatTimestamp } from '$lib/api';
+	import type { TimelineItemResponse, ClusterItemsResponse } from '$lib/types';
+	import { fetchClusterItems as defaultFetchClusterItems, formatTimestamp } from '$lib/api';
 	import ClusterExpansion from './ClusterExpansion.svelte';
 	import { themeState, getThemeAccentColors } from '$lib/stores/theme.svelte';
 	import { layoutState } from '$lib/stores/layout.svelte';
@@ -9,9 +9,10 @@
 		items: TimelineItemResponse[];
 		hasMore: boolean;
 		onLoadMore?: () => void;
+		fetchClusterItems?: (id: string) => Promise<ClusterItemsResponse>;
 	}
 
-	let { items, hasMore, onLoadMore }: Props = $props();
+	let { items, hasMore, onLoadMore, fetchClusterItems = defaultFetchClusterItems }: Props = $props();
 	let themeColors = $derived(getThemeAccentColors(themeState.theme));
 
 	let expandedClusterId = $state<string | null>(null);

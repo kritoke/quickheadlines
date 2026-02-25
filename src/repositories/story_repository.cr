@@ -299,7 +299,7 @@ module Quickheadlines::Repositories
       @header_text_color,
       @cluster_id,
       @is_representative,
-      @cluster_size
+      @cluster_size,
     )
     end
   end

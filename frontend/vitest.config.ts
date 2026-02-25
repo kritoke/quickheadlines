@@ -3,7 +3,7 @@ import { sveltekit } from '@sveltejs/kit/vite';
 import { resolve } from 'path';
 
 export default defineConfig({
-	plugins: [sveltekit()],
+	plugins: [sveltekit({		ssr: false	})],
 	test: {
 		environment: 'jsdom',
 		globals: true,
@@ -13,6 +13,7 @@ export default defineConfig({
 	resolve: {
 		alias: {
 			$lib: resolve('./src/lib')
-		}
+		},
+		conditions: process.env.VITEST ? ['browser'] : []
 	}
 });

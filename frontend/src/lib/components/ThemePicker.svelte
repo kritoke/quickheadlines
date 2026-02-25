@@ -54,7 +54,6 @@
 		onclick={toggleDropdown}
 		class="flex items-center gap-1 p-2 rounded-lg transition-colors"
 		style="opacity: {isOpen ? 1 : 0.7};"
-		aria-label="Select theme"
 		title="Theme"
 		aria-expanded={isOpen}
 	>

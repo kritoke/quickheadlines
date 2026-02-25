@@ -11,7 +11,7 @@ module Quickheadlines::Services
 
     def initialize(
       @story_repository : Quickheadlines::Repositories::StoryRepository,
-      @cluster_repository : Quickheadlines::Repositories::ClusterRepository
+      @cluster_repository : Quickheadlines::Repositories::ClusterRepository,
     )
     end
 

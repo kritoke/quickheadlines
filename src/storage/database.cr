@@ -222,7 +222,6 @@ def repopulate_database(config : Config?, cache : FeedCache?, restore_config : F
   end
 
   feeds_to_restore = all_feeds.size
-  items_to_restore = 0
 
   STDERR.puts "[#{Time.local}] Would restore #{feeds_to_restore} feeds from past #{timeframe_hours} hours"
 
