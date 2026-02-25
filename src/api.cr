@@ -243,9 +243,9 @@ class ClusterResponse
     @id : String,
     @representative : StoryResponse,
     @others : Array(StoryResponse) = [] of StoryResponse,
-    @cluster_size : Int32 = 1,
+    @cluster_size : Int32 = 0,
   )
-    @cluster_size = 1 + others.size
+    @cluster_size = @cluster_size > 0 ? @cluster_size : 1 + others.size
   end
 end
 
