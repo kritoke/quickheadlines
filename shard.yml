@@ -23,6 +23,8 @@ dependencies:
   baked_file_system:
     github: schovi/baked_file_system
     version: ~> 0.10.0
+  fetcher:
+    path: ./shared/fetcher
 
 development_dependencies:
   ameba:
