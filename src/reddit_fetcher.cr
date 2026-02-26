@@ -53,6 +53,7 @@ module RedditFetcher
 
     begin
       items = fetch_reddit_posts(subreddit, sort, limit, over18)
+      STDERR.puts "[DEBUG] Reddit fetched #{items.size} items for #{subreddit}"
     rescue ex : RedditFetchError
       msg = ex.message || "Unknown error"
       return error_feed_data(feed, msg)

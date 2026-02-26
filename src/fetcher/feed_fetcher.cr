@@ -282,11 +282,14 @@ private def handle_feed_response(feed : Feed, response : HTTP::Client::Response,
   {error_result, redirects, true, current_url}
 end
 
-def fetch_feed(feed : Feed, display_item_limit : Int32, db_fetch_limit : Int32, previous_data : FeedData? = nil) : FeedData
-  if feed.subreddit
-    limit = feed.item_limit || db_fetch_limit
-    return RedditFetcher.fetch_subreddit(feed, limit)
-  end
+  def fetch_feed(feed : Feed, display_item_limit : Int32, db_fetch_limit : Int32, previous_data : FeedData? = nil) : FeedData
+    if feed.subreddit
+      limit = feed.item_limit || db_fetch_limit
+      STDERR.puts "[DEBUG] Reddit feed: #{feed.title}, limit=#{limit}"
+      result = RedditFetcher.fetch_subreddit(feed, limit)
+      FeedCache.instance.add(result)
+      return result
+    end
 
   effective_item_limit = feed.item_limit || display_item_limit
 
