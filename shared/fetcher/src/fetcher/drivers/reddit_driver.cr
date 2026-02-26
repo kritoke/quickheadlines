@@ -1,20 +1,44 @@
 require "json"
 require "../driver"
+require "../http_client_pool"
 
 module Fetcher
   class RedditDriver < Driver
     USER_AGENT      = "QuickHeadlines/0.3 (Reddit Feed Fetcher)"
     REDDIT_API_BASE = "https://www.reddit.com"
 
-    def pull(url : String, headers : HTTP::Headers, etag : String?, last_modified : String?) : Result
+    def pull(url : String, headers : HTTP::Headers, etag : String?, last_modified : String?, limit : Int32 = 100) : Result
       subreddit = extract_subreddit(url)
       return build_error_result("Not a Reddit subreddit URL") unless subreddit
 
       sort = extract_sort(url)
-      limit = 25
+      actual_limit = Math.min(limit, 25)
 
-      begin
-        items = fetch_reddit_posts(subreddit, sort, limit)
+      with_retry do
+        fetch_reddit(subreddit, sort, actual_limit)
+      end
+    rescue ex : RetriableError
+      build_error_result("Failed after retries: #{ex.message}")
+    rescue ex : RedditFetchError
+      build_error_result(ex.message || "Reddit fetch error")
+    rescue ex
+      build_error_result("#{ex.class}: #{ex.message}")
+    end
+
+    private def fetch_reddit(subreddit : String, sort : String, limit : Int32) : Result
+      url = "#{REDDIT_API_BASE}/r/#{subreddit}/#{sort}.json?limit=#{limit}&raw_json=1"
+      headers = HTTP::Headers{
+        "User-Agent" => USER_AGENT,
+        "Accept"     => "application/json",
+      }
+
+      uri = URI.parse(url)
+      client = HTTPClientPool.clientFor(uri)
+      response = client.get(uri.request_target, headers: headers)
+
+      case response.status_code
+      when 200
+        items = parse_reddit_response(response.body, limit)
         site_link = "https://www.reddit.com/r/#{subreddit}"
         favicon = "https://www.reddit.com/favicon.ico"
 
@@ -26,10 +50,14 @@ module Fetcher
           favicon: favicon,
           error_message: nil
         )
-      rescue ex : RedditFetchError
-        build_error_result(ex.message || "Reddit fetch error")
-      rescue ex
-        build_error_result("#{ex.class}: #{ex.message}")
+      when 404
+        raise RedditFetchError.new("Subreddit '#{subreddit}' not found")
+      when 429
+        raise RetriableError.new("Rate limited by Reddit API")
+      when 503
+        raise RetriableError.new("Reddit service unavailable")
+      else
+        raise RedditFetchError.new("HTTP error #{response.status_code}")
       end
     end
 
@@ -47,29 +75,6 @@ module Fetcher
         "rising"
       else
         "hot"
-      end
-    end
-
-    private def fetch_reddit_posts(subreddit : String, sort : String, limit : Int32) : Array(Entry)
-      url = "#{REDDIT_API_BASE}/r/#{subreddit}/#{sort}.json?limit=#{limit}&raw_json=1"
-      headers = HTTP::Headers{
-        "User-Agent" => USER_AGENT,
-        "Accept"     => "application/json",
-      }
-
-      response = HTTP::Client.get(url, headers: headers)
-
-      case response.status_code
-      when 200
-        parse_reddit_response(response.body, limit)
-      when 404
-        raise RedditFetchError.new("Subreddit '#{subreddit}' not found")
-      when 429
-        raise RedditFetchError.new("Rate limited by Reddit API")
-      when 503
-        raise RedditFetchError.new("Reddit service unavailable")
-      else
-        raise RedditFetchError.new("HTTP error #{response.status_code}")
       end
     end
 

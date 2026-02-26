@@ -1,14 +1,30 @@
 require "xml"
 require "html"
 require "../driver"
+require "../http_client_pool"
 
 module Fetcher
   class RSSDriver < Driver
     MAX_FEED_SIZE = 5 * 1024 * 1024
 
-    def pull(url : String, headers : HTTP::Headers, etag : String?, last_modified : String?) : Result
+    def pull(url : String, headers : HTTP::Headers, etag : String?, last_modified : String?, limit : Int32 = 100) : Result
+      with_retry do
+        perform_fetch(url, headers, limit)
+      end
+    rescue ex : RetriableError
+      build_error_result("Failed after retries: #{ex.message}")
+    rescue ex : IO::TimeoutError
+      raise RetriableError.new("Timeout: #{ex.message}")
+    rescue ex
+      if transient_error?(ex)
+        raise RetriableError.new(ex.message || "Unknown error")
+      end
+      build_error_result("#{ex.class}: #{ex.message}")
+    end
+
+    private def perform_fetch(url : String, headers : HTTP::Headers, limit : Int32) : Result
       uri = URI.parse(url)
-      client = HTTP::Client.new(uri)
+      client = HTTPClientPool.clientFor(uri)
       client.connect_timeout = 10.seconds
       client.read_timeout = 30.seconds
 
@@ -25,17 +41,15 @@ module Fetcher
           error_message: nil
         )
       when 200..299
-        parse_feed(response.body_io, url)
+        parse_feed(response.body_io, url, limit)
+      when 500..599
+        raise RetriableError.new("Server error: #{response.status_code}")
       else
         build_error_result("HTTP #{response.status_code}")
       end
-    rescue ex : IO::TimeoutError
-      build_error_result("Timeout")
-    rescue ex
-      build_error_result(ex.message || "Unknown error")
     end
 
-    private def parse_feed(io : IO, url : String) : Result
+    private def parse_feed(io : IO, url : String, limit : Int32) : Result
       buffer = IO::Memory.new
       bytes_copied = IO.copy(io, buffer, limit: MAX_FEED_SIZE)
 
@@ -52,10 +66,10 @@ module Fetcher
           return build_error_result("No root element")
         end
 
-        rss = parse_rss(xml)
+        rss = parse_rss(xml, limit)
         return rss unless rss.entries.empty?
 
-        atom = parse_atom(xml)
+        atom = parse_atom(xml, limit)
         return atom unless atom.entries.empty?
 
         build_error_result("Unsupported feed format")
@@ -66,7 +80,7 @@ module Fetcher
       end
     end
 
-    private def parse_rss(xml : XML::Node) : Result
+    private def parse_rss(xml : XML::Node, limit : Int32) : Result
       site_link = "#"
       entries = [] of Entry
 
@@ -78,12 +92,14 @@ module Fetcher
         end
         xml.xpath_nodes("//*[local-name()='item']").each do |node|
           entries << parse_rss_item(node)
+          break if entries.size >= limit
         end
       else
         if channel = xml.xpath_node("//*[local-name()='channel']")
           site_link = resolve_rss_site_link(channel)
           channel.xpath_nodes("./*[local-name()='item']").each do |node|
             entries << parse_rss_item(node)
+            break if entries.size >= limit
           end
         end
       end
@@ -126,7 +142,7 @@ module Fetcher
       Entry.new(title, link, "", nil, pub_date, "rss", nil)
     end
 
-    private def parse_atom(xml : XML::Node) : Result
+    private def parse_atom(xml : XML::Node, limit : Int32) : Result
       entries = [] of Entry
 
       feed_node = xml.xpath_node("//*[local-name()='feed']")
@@ -140,6 +156,7 @@ module Fetcher
 
       feed_node.xpath_nodes("./*[local-name()='entry']").each do |node|
         entries << parse_atom_entry(node)
+        break if entries.size >= limit
       end
 
       favicon = feed_node.xpath_node("./*[local-name()='icon']").try(&.text) ||
@@ -197,6 +214,11 @@ module Fetcher
       end
 
       nil
+    end
+
+    private def transient_error?(ex : Exception) : Bool
+      msg = ex.message.to_s.downcase
+      msg.includes?("timeout") || msg.includes?("connection") || msg.includes?("dns")
     end
   end
 end

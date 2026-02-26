@@ -4,11 +4,11 @@ require "./fetcher/favicon"
 require "./color_extractor"
 
 module FetcherAdapter
-  def self.pull_feed(feed : Feed, previous_data : FeedData?) : FeedData
+  def self.pull_feed(feed : Feed, previous_data : FeedData?, limit : Int32 = 100) : FeedData
     etag = previous_data.try(&.etag)
     last_modified = previous_data.try(&.last_modified)
 
-    result = Fetcher::Fetcher.pull(feed.url, HTTP::Headers.new, etag, last_modified)
+    result = Fetcher::Fetcher.pull(feed.url, HTTP::Headers.new, etag, last_modified, limit)
 
     if error = result.error_message
       return error_feed_data(feed, error)
@@ -43,6 +43,10 @@ module FetcherAdapter
   rescue ex
     STDERR.puts "[ERROR] FetcherAdapter: #{ex.message}"
     error_feed_data(feed, "Error: #{ex.class}")
+  end
+
+  def self.configure_logger
+    Fetcher.logger = ->(msg : String) { STDERR.puts "[Fetcher] #{msg}" }
   end
 
   private def self.extract_header_colors_simple(feed : Feed, favicon_path : String?) : {String?, String?}
