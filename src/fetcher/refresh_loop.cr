@@ -151,36 +151,29 @@ def start_refresh_loop(config_path : String)
       refresh_start_time = Time.monotonic
 
       begin
-        # Skip first refresh only if we have cached data
-        # If no cached data (fresh start), we need to fetch
+        # Always run refresh on first iteration to pick up any new feeds
         if first_run
           first_run = false
-          has_cached_feeds = STATE.feeds.size > 0
-          unless has_cached_feeds
-            has_cached_feeds = STATE.tabs.any? { |tab| tab.feeds.size > 0 }
-          end
-          if has_cached_feeds
-            STDERR.puts "[#{Time.local}] Skipping initial refresh - using cached data for fast startup"
+          STDERR.puts "[#{Time.local}] Running initial refresh to fetch feeds"
+          refresh_all(active_config)
+          puts "[#{Time.local}] Initial refresh complete"
+        else
+          current_mtime = File.info(config_path).modification_time
+
+          if current_mtime > last_mtime
+            new_config = load_config(config_path)
+            active_config = new_config
+            last_mtime = current_mtime
+
+            puts "[#{Time.local}] Config change detected. Reloaded feeds.yml"
+            refresh_all(active_config)
+            puts "[#{Time.local}] Refreshed after config change"
             sleep (active_config.refresh_minutes * 60).seconds
             next
           else
-            STDERR.puts "[#{Time.local}] No cached data found - running initial refresh"
+            refresh_all(active_config)
+            puts "[#{Time.local}] Refreshed feeds and ran GC"
           end
-        end
-
-        current_mtime = File.info(config_path).modification_time
-
-        if current_mtime > last_mtime
-          new_config = load_config(config_path)
-          active_config = new_config
-          last_mtime = current_mtime
-
-          puts "[#{Time.local}] Config change detected. Reloaded feeds.yml"
-          refresh_all(active_config)
-          puts "[#{Time.local}] Refreshed after config change"
-        else
-          refresh_all(active_config)
-          puts "[#{Time.local}] Refreshed feeds and ran GC"
         end
 
         save_feed_cache(FeedCache.instance, active_config.cache_retention_hours, active_config.max_cache_size_mb)
