@@ -25,16 +25,11 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
   end
 
   private def story_service : Quickheadlines::Services::StoryService
-    @story_service ||= Quickheadlines::Services::StoryService.new(
-      Quickheadlines::Repositories::StoryRepository.new(@db_service.db),
-      Quickheadlines::Repositories::ClusterRepository.new(@db_service.db)
-    )
+    @story_service ||= Quickheadlines::Services::StoryService
   end
 
   private def feed_service : Quickheadlines::Services::FeedService
-    @feed_service ||= Quickheadlines::Services::FeedService.new(
-      Quickheadlines::Repositories::FeedRepository.new(@db_service.db)
-    )
+    @feed_service ||= Quickheadlines::Services::FeedService
   end
 
   private def clustering_service : Quickheadlines::Services::ClusteringService
@@ -292,7 +287,8 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
     offset = request.query_params["offset"]?.try(&.to_i?) || 0
     days = request.query_params["days"]?.try(&.to_i?) || default_days.to_i32
 
-    result = story_service.get_timeline(limit, offset, days)
+    story_repo = Quickheadlines::Repositories::StoryRepository.new(@db_service.db)
+    result = Quickheadlines::Services::StoryService.get_timeline(story_repo, limit, offset, days)
 
     # If timeline has very few items and we're not already clustering, trigger a background refresh
     # This ensures the timeline populates quickly after server startup

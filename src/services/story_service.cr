@@ -5,19 +5,15 @@ require "../dtos/cluster_dto"
 require "../api"
 
 module Quickheadlines::Services
-  class StoryService
-    @story_repository : Quickheadlines::Repositories::StoryRepository
-    @cluster_repository : Quickheadlines::Repositories::ClusterRepository
-
-    def initialize(
-      @story_repository : Quickheadlines::Repositories::StoryRepository,
-      @cluster_repository : Quickheadlines::Repositories::ClusterRepository,
-    )
-    end
-
-    def get_timeline(limit : Int32, offset : Int32, days : Int32?) : TimelineResult
-      items = @story_repository.find_timeline_items(limit, offset, days)
-      total_count = @story_repository.count_timeline_items(days)
+  module StoryService
+    def self.get_timeline(
+      story_repo : Quickheadlines::Repositories::StoryRepository,
+      limit : Int32,
+      offset : Int32,
+      days : Int32?
+    ) : TimelineResult
+      items = story_repo.find_timeline_items(limit, offset, days)
+      total_count = story_repo.count_timeline_items(days)
       has_more = offset + limit < total_count
 
       timeline_items = items.map do |item|
@@ -45,8 +41,8 @@ module Quickheadlines::Services
       )
     end
 
-    def get_clusters : ClustersResult
-      clusters = @cluster_repository.find_all
+    def self.get_clusters(cluster_repo : Quickheadlines::Repositories::ClusterRepository) : ClustersResult
+      clusters = cluster_repo.find_all
 
       cluster_responses = clusters.map do |cluster|
         Quickheadlines::DTOs::ClusterResponse.from_entity(cluster)
@@ -58,7 +54,7 @@ module Quickheadlines::Services
       )
     end
 
-    def get_cluster_items(cluster_id : String) : ClusterItemsResult
+    def self.get_cluster_items(cluster_repo : Quickheadlines::Repositories::ClusterRepository, cluster_id : String) : ClusterItemsResult
       id = cluster_id.to_i64?
 
       if id.nil?
@@ -68,7 +64,7 @@ module Quickheadlines::Services
         )
       end
 
-      items = @cluster_repository.find_items(id)
+      items = cluster_repo.find_items(id)
 
       story_responses = items.map do |story|
         Quickheadlines::DTOs::StoryResponse.from_entity(story)

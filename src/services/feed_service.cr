@@ -1,4 +1,6 @@
 require "../repositories/feed_repository"
+require "../result"
+require "../errors"
 
 module Quickheadlines::Services
   class FeedService
@@ -12,12 +14,28 @@ module Quickheadlines::Services
     end
 
     def get_feed_with_items(url : String, limit : Int32 = 20) : FeedWithItems?
-      feed = @feed_repository.find_by_url(url)
-      return nil unless feed
+      result = get_feed_with_items_result(url, limit)
+      result.success? ? result.value : nil
+    end
 
+    def get_feed_with_items_result(url : String, limit : Int32 = 20) : FeedWithItemsResult
+      feed_result = @feed_repository.find_by_url_result(url)
+      
+      return feed_result.map_error { |e| e } unless feed_result.success?
+      
+      feed = feed_result.value
       items = [] of Item
 
-      {url: url, title: feed.title, site_link: feed.site_link, header_color: feed.header_color, header_text_color: feed.header_text_color, favicon: feed.favicon, favicon_data: feed.favicon_data, items: items}
+      Result.success(FeedWithItems.new(
+        url: url,
+        title: feed.title,
+        site_link: feed.site_link,
+        header_color: feed.header_color,
+        header_text_color: feed.header_text_color,
+        favicon: feed.favicon,
+        favicon_data: feed.favicon_data,
+        items: items
+      ))
     end
 
     def update_feed_colors(url : String, bg : String, text : String) : Void
@@ -76,4 +94,6 @@ module Quickheadlines::Services
     def initialize(@feeds_deleted, @items_deleted)
     end
   end
+
+  alias FeedWithItemsResult = Result(FeedWithItems, RepositoryError)
 end

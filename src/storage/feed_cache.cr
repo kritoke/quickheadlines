@@ -5,6 +5,8 @@ require "time"
 require "openssl"
 require "../config"
 require "../models"
+require "../result"
+require "../errors"
 require "../favicon_storage"
 require "../color_extractor"
 require "../health_monitor"
@@ -54,12 +56,24 @@ class FeedCache
     feed_repository.find_with_items(url)
   end
 
+  def get_result(url : String) : FeedDataResult
+    feed_repository.find_with_items_result(url)
+  end
+
   def get_fetched_time(url : String) : Time?
     feed_repository.find_last_fetched_time(url)
   end
 
+  def get_fetched_time_result(url : String) : TimeResult
+    feed_repository.find_last_fetched_time_result(url)
+  end
+
   def get_slice(url : String, limit : Int32, offset : Int32) : FeedData?
     feed_repository.find_with_items_slice(url, limit, offset)
+  end
+
+  def get_slice_result(url : String, limit : Int32, offset : Int32) : FeedDataResult
+    feed_repository.find_with_items_slice_result(url, limit, offset)
   end
 
   def item_count(url : String) : Int32
