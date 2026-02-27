@@ -24,7 +24,8 @@ dependencies:
     github: schovi/baked_file_system
     version: ~> 0.10.0
   fetcher:
-    path: ./shared/fetcher
+    github: kritoke/fetcher.cr
+    version: ">= 0.1.0"
 
 development_dependencies:
   ameba:
