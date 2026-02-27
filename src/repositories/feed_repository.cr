@@ -1,5 +1,7 @@
 require "db"
 require "../models"
+require "../result"
+require "../errors"
 
 module Quickheadlines::Repositories
   class FeedRepository
@@ -59,6 +61,14 @@ module Quickheadlines::Repositories
       Time.parse(result, "%Y-%m-%d %H:%M:%S", Time::Location::UTC)
     end
 
+    def find_last_fetched_time_result(url : String) : TimeResult
+      result = @db.query_one?("SELECT last_fetched FROM feeds WHERE url = ?", url, as: String?)
+      return TimeResult.failure(RepositoryError::NotFound) unless result
+      TimeResult.success(Time.parse(result, "%Y-%m-%d %H:%M:%S", Time::Location::UTC))
+    rescue ex
+      TimeResult.failure(RepositoryError::DatabaseError)
+    end
+
     def find_by_url(url : String) : Quickheadlines::Entities::Feed?
       @db.query_one?(
         "SELECT id, url, title, site_link, header_color, header_text_color, favicon, favicon_data FROM feeds WHERE url = ?",
@@ -86,12 +96,28 @@ module Quickheadlines::Repositories
       end
     end
 
+    def find_by_url_result(url : String) : FeedResult
+      result = find_by_url(url)
+      return FeedResult.failure(RepositoryError::NotFound) unless result
+      FeedResult.success(result)
+    rescue ex
+      FeedResult.failure(RepositoryError::DatabaseError)
+    end
+
     def find_by_pattern(pattern : String) : Quickheadlines::Entities::Feed?
       normalized = pattern.strip.rstrip('/')
         .gsub(/\/rss(\.xml)?$/i, "")
         .gsub(/\/feed(\.xml)?$/i, "")
 
       find_by_url(normalized) || find_by_url("#{normalized}/") || find_by_url("#{normalized}/rss")
+    end
+
+    def find_by_pattern_result(pattern : String) : FeedResult
+      result = find_by_pattern(pattern)
+      return FeedResult.failure(RepositoryError::NotFound) unless result
+      FeedResult.success(result)
+    rescue ex
+      FeedResult.failure(RepositoryError::DatabaseError)
     end
 
     def save(feed : Quickheadlines::Entities::Feed) : Quickheadlines::Entities::Feed
@@ -302,6 +328,14 @@ module Quickheadlines::Repositories
       fd
     end
 
+    def find_with_items_result(url : String) : FeedDataResult
+      result = find_with_items(url)
+      return FeedDataResult.failure(RepositoryError::NotFound) unless result
+      FeedDataResult.success(result)
+    rescue ex
+      FeedDataResult.failure(RepositoryError::DatabaseError)
+    end
+
     def find_with_items_slice(url : String, limit : Int32, offset : Int32) : FeedData?
       feed_result = @db.query_one?(
         "SELECT title, url, site_link, header_color, header_text_color, header_theme_colors, etag, last_modified, favicon, favicon_data FROM feeds WHERE url = ?",
@@ -351,6 +385,14 @@ module Quickheadlines::Repositories
       )
       fd.header_theme_colors = feed_result[:header_theme_colors] if feed_result[:header_theme_colors]
       fd
+    end
+
+    def find_with_items_slice_result(url : String, limit : Int32, offset : Int32) : FeedDataResult
+      result = find_with_items_slice(url, limit, offset)
+      return FeedDataResult.failure(RepositoryError::NotFound) unless result
+      FeedDataResult.success(result)
+    rescue ex
+      FeedDataResult.failure(RepositoryError::DatabaseError)
     end
   end
 end

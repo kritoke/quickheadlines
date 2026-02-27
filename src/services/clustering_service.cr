@@ -2,67 +2,9 @@ require "athena"
 require "json"
 require "lexis-minhash"
 require "../repositories/cluster_repository"
-
-module ClusteringUtilities
-  STOP_WORDS = Set.new([
-    "the", "a", "an", "and", "or", "but", "in", "on", "at", "to", "for",
-    "of", "with", "by", "from", "as", "is", "was", "are", "were", "been",
-    "be", "have", "has", "had", "do", "does", "did", "will", "would",
-    "could", "should", "may", "might", "must", "shall", "can", "need",
-    "this", "that", "these", "those", "it",
-    "time", "times", "day", "days", "week", "weeks", "month", "months",
-    "year", "years",
-    "says", "said", "just", "now", "how", "what", "when", "where", "why",
-    "building", "built", "build", "building", "using", "via", "get", "got",
-    "new", "make", "making", "way", "use", "youre", "your",
-    "works", "work", "working", "today", "where",
-  ])
-
-  MIN_WORDS_FOR_CLUSTERING = 4
-
-  def self.normalize_headline(text : String) : String
-    return "" if text.empty?
-    normalized = text.downcase.strip
-    words = normalized.split(/\s+/)
-    filtered = words.reject { |word| STOP_WORDS.includes?(word) }
-    filtered.join(" ")
-  end
-
-  def self.word_count(text : String) : Int32
-    normalized = normalize_headline(text)
-    return 0 if normalized.empty?
-    normalized.split(/\s+/).size
-  end
-
-  def self.word_set(text : String) : Set(String)
-    normalized = normalize_headline(text)
-    return Set(String).new if normalized.empty?
-    normalized.split(/\s+/).to_set
-  end
-
-  def self.jaccard_similarity(set1 : Set(String), set2 : Set(String)) : Float64
-    return 0.0 if set1.empty? && set2.empty?
-    return 0.0 if set1.empty? || set2.empty?
-    intersection = set1 & set2
-    union = set1 | set2
-    return 0.0 if union.size == 0
-    intersection.size.to_f64 / union.size.to_f64
-  end
-
-  # Overlap coefficient - measures how much one set overlaps with another
-  # Better for comparing sets of different sizes (more forgiving for short text)
-  def self.overlap_coefficient(set1 : Set(String), set2 : Set(String)) : Float64
-    return 0.0 if set1.empty? || set2.empty?
-    intersection = set1 & set2
-    return 0.0 if intersection.empty?
-    min_size = {set1.size, set2.size}.min
-    intersection.size.to_f64 / min_size.to_f64
-  end
-end
+require "./clustering_engine"
 
 class Quickheadlines::Services::ClusteringService
-  include ClusteringUtilities
-
   @db : DB::Database
   @cluster_repository : Quickheadlines::Repositories::ClusterRepository?
 
@@ -74,25 +16,17 @@ class Quickheadlines::Services::ClusteringService
   end
 
   def compute_cluster_for_item(item_id : Int64, title : String, cache : FeedCache, item_feed_id : Int64? = nil, threshold : Float64 = 0.35) : Int64?
-    return nil if title.empty?
-    return nil if ClusteringUtilities.word_count(title) < ClusteringUtilities::MIN_WORDS_FOR_CLUSTERING
+    return nil unless ClusteringEngine.can_cluster?(title)
 
-    # Compute normalized word set for Jaccard similarity
-    title_set = ClusteringUtilities.word_set(title)
+    title_set = ClusteringEngine.word_set(title)
+    signature = ClusteringEngine.compute_minhash_signature(title)
 
-    # Compute MinHash signature (still used for LSH candidate generation)
-    document = LexisMinhash::SimpleDocument.new(title)
-    signature = LexisMinhash::Engine.compute_signature(document)
-
-    # Store the signature
     cache.store_item_signature(item_id, signature)
 
-    # Generate LSH bands and extract band hashes (tuples contain {band_index, band_hash})
     bands = LexisMinhash::Engine.generate_bands(signature)
     band_hashes = bands.map { |band| band[1] }
     cache.store_lsh_bands(item_id, band_hashes)
 
-    # Find candidates via LSH
     candidates = cache.find_lsh_candidates(signature)
 
     if candidates.empty?
@@ -119,9 +53,8 @@ class Quickheadlines::Services::ClusteringService
       candidate_title = cache.get_item_title(candidate_id)
       next unless candidate_title
 
-      candidate_set = ClusteringUtilities.word_set(candidate_title)
-
-      similarity = ClusteringUtilities.overlap_coefficient(title_set, candidate_set)
+      candidate_set = ClusteringEngine.word_set(candidate_title)
+      similarity = ClusteringEngine.overlap_coefficient(title_set, candidate_set)
 
       if similarity > best_similarity
         best_similarity = similarity
@@ -154,8 +87,6 @@ class Quickheadlines::Services::ClusteringService
     cluster_repository.find_all
   end
 
-  # Cluster uncategorized items (items with cluster_id NULL or cluster_id = id)
-  # Returns number of items processed
   def cluster_uncategorized(limit : Int32 = 5000, threshold : Float64 = 0.35) : Int32
     cache = FeedCache.instance
     db = @db
@@ -190,7 +121,6 @@ class Quickheadlines::Services::ClusteringService
     processed
   end
 
-  # Clear clustering metadata and recluster all items (up to limit)
   def recluster_all(limit : Int32 = 5000, threshold : Float64 = 0.35) : Int32
     cluster_repository.clear_all_metadata
 
@@ -228,106 +158,27 @@ class Quickheadlines::Services::ClusteringService
     processed
   end
 
-  # New two-phase clustering using in-memory LSH + exact verification
   def recluster_with_lsh(limit : Int32 = 5000, threshold : Float64 = 0.35, bands : Int32 = 20) : Int32
     cache = FeedCache.instance
 
-    items = [] of {id: Int64, title: String, link: String, pub_date: Time?, feed_id: Int64}
-    @db.query("SELECT id, title, link, pub_date, feed_id FROM items WHERE pub_date IS NULL OR pub_date <= datetime('now', '+1 day') ORDER BY pub_date DESC LIMIT ?", limit) do |rows|
+    items = [] of ClusteringItem
+    @db.query("SELECT id, title, feed_id FROM items WHERE pub_date IS NULL OR pub_date <= datetime('now', '+1 day') ORDER BY pub_date DESC LIMIT ?", limit) do |rows|
       rows.each do
         id = rows.read(Int64)
         title = rows.read(String)
-        link = rows.read(String)
-        pub_date_str = rows.read(String?)
         feed_id = rows.read(Int64)
-        pub_date = pub_date_str.try { |str| Time.parse(str, "%Y-%m-%d %H:%M:%S", Time::Location::UTC) }
-        items << {id: id, title: title, link: link, pub_date: pub_date, feed_id: feed_id}
+        items << ClusteringItem.new(id: id, title: title, feed_id: feed_id)
       end
     end
 
     STDERR.puts "[#{Time.local}] Found #{items.size} items to re-cluster with LSH (threshold: #{threshold}, bands: #{bands})"
 
-    processed = 0
     STATE.is_clustering = true
+    processed = 0
     begin
-      # Build index
-      index = LexisMinhash::LSHIndex.new(bands: bands, expected_docs: items.size)
-      signatures = {} of Int64 => Array(UInt32)
-      items_map = {} of Int64 => {id: Int64, title: String, feed_id: Int64}
-
-      items.each do |it|
-        next if it[:title].empty?
-        # Skip too-short titles
-        next if ClusteringUtilities.word_count(it[:title]) < ClusteringUtilities::MIN_WORDS_FOR_CLUSTERING
-
-        doc = LexisMinhash::SimpleDocument.new(it[:title])
-        sig = LexisMinhash::Engine.compute_signature(doc)
-        signatures[it[:id]] = sig
-        items_map[it[:id]] = {id: it[:id], title: it[:title], feed_id: it[:feed_id]}
-
-        # add signature to LSH index
-        index.add_with_signature(it[:id].to_i32, sig)
-      end
-
-      # find candidate pairs from LSH
-      pairs = index.find_similar_pairs(threshold)
-
-      # union-find for clusters
-      parent = {} of Int64 => Int64
-      find = ->(x : Int64) do
-        parent[x] ||= x
-        while parent[x] != x
-          parent[x] = parent[parent[x]]
-          x = parent[x]
-        end
-        x
-      end
-      union = ->(a : Int64, b : Int64) do
-        ra = find.call(a)
-        rb = find.call(b)
-        return if ra == rb
-        # attach smaller to larger by id
-        if ra < rb
-          parent[rb] = ra
-        else
-          parent[ra] = rb
-        end
-      end
-
-      # verify and union pairs
-      pairs.each do |pair|
-        a = pair[0].to_i64
-        b = pair[1].to_i64
-        next unless items_map.has_key?(a) && items_map.has_key?(b)
-        next if items_map[a][:feed_id] == items_map[b][:feed_id]
-
-        set_a = ClusteringUtilities.word_set(items_map[a][:title])
-        set_b = ClusteringUtilities.word_set(items_map[b][:title])
-        sim = ClusteringUtilities.overlap_coefficient(set_a, set_b)
-        if sim >= threshold
-          union.call(a, b)
-        end
-      end
-
-      # gather clusters
-      clusters = {} of Int64 => Array(Int64)
-      items_map.keys.each do |id|
-        root = find.call(id)
-        clusters[root] ||= [] of Int64
-        clusters[root] << id
-      end
-
-      # choose representative per cluster (min id) and build rep->members map
-      rep_map = {} of Int64 => Array(Int64)
-      clusters.each do |_root, members|
-        rep = members.min
-        rep_map[rep] = members
-      end
-
-      # persist clusters in bulk via cache
+      rep_map = ClusteringEngine.cluster_items(items, threshold, bands)
       cache.assign_clusters_bulk(rep_map)
-
-      processed = items_map.size
+      processed = items.count { |i| ClusteringEngine.can_cluster?(i.title) }
       STDERR.puts "[#{Time.local}] Re-clustering with LSH complete: #{processed} items clustered into #{rep_map.size} groups"
     ensure
       STATE.is_clustering = false
