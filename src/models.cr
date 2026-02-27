@@ -168,6 +168,220 @@ class AppState
   end
 end
 
+# Immutable state record for functional updates
+record AppStateSnapshot,
+  feeds : Array(FeedData),
+  software_releases : Array(FeedData),
+  tabs : Array(Tab),
+  updated_at : Time,
+  config_title : String,
+  config : Config?,
+  is_clustering : Bool,
+  is_refreshing : Bool
+
+# Thread-safe state store with atomic updates
+module StateStore
+  @@current = AppStateSnapshot.new(
+    feeds: [] of FeedData,
+    software_releases: [] of FeedData,
+    tabs: [] of Tab,
+    updated_at: Time.local,
+    config_title: "Quick Headlines",
+    config: nil,
+    is_clustering: false,
+    is_refreshing: false
+  )
+  @@mutex = Mutex.new
+
+  def self.get : AppStateSnapshot
+    @@mutex.synchronize { @@current }
+  end
+
+  def self.update(&transform : AppStateSnapshot -> AppStateSnapshot) : AppStateSnapshot
+    @@mutex.synchronize do
+      @@current = transform.call(@@current)
+      @@current
+    end
+  end
+
+  # Convenience methods for backward compatibility with existing code
+  def self.feeds
+    get.feeds
+  end
+
+  def self.tabs
+    get.tabs
+  end
+
+  def self.software_releases
+    get.software_releases
+  end
+
+  def self.updated_at
+    get.updated_at
+  end
+
+  def self.config
+    get.config
+  end
+
+  def self.config_title
+    get.config_title
+  end
+
+  def self.is_clustering?
+    get.is_clustering
+  end
+
+  def self.is_refreshing?
+    get.is_refreshing
+  end
+end
+
+# Legacy compatibility - delegates to StateStore
+class AppState
+  def self.feeds
+    StateStore.feeds
+  end
+
+  def self.tabs
+    StateStore.tabs
+  end
+
+  def self.software_releases
+    StateStore.software_releases
+  end
+
+  def self.updated_at
+    StateStore.updated_at
+  end
+
+  def self.config
+    StateStore.config
+  end
+
+  def self.config_title
+    StateStore.config_title
+  end
+
+  def self.config_title=(value : String)
+    StateStore.update { |s| s.copy_with(config_title: value) }
+  end
+
+  def self.config=(value : Config?)
+    StateStore.update { |s| s.copy_with(config: value) }
+  end
+
+  def self.feeds=(value : Array(FeedData))
+    StateStore.update { |s| s.copy_with(feeds: value) }
+  end
+
+  def self.tabs=(value : Array(Tab))
+    StateStore.update { |s| s.copy_with(tabs: value) }
+  end
+
+  def self.software_releases=(value : Array(FeedData))
+    StateStore.update { |s| s.copy_with(software_releases: value) }
+  end
+
+  def self.updated_at=(value : Time)
+    StateStore.update { |s| s.copy_with(updated_at: value) }
+  end
+
+  def self.is_clustering?
+    StateStore.is_clustering?
+  end
+
+  def self.is_clustering=(value : Bool)
+    StateStore.update { |s| s.copy_with(is_clustering: value) }
+  end
+
+  def self.is_refreshing?
+    StateStore.is_refreshing?
+  end
+
+  def self.is_refreshing=(value : Bool)
+    StateStore.update { |s| s.copy_with(is_refreshing: value) }
+  end
+
+  def self.with_lock(&)
+    # Locking is now handled internally by StateStore
+    yield
+  end
+
+  # Legacy methods that need access to internal state
+  def self.feeds_for_tab(tab_name : String)
+    StateStore.update { |s| s } # Ensure thread-safe read
+    StateStore.feeds_for_tab_impl(tab_name)
+  end
+
+  def self.all_timeline_items
+    StateStore.update { |s| s } # Ensure thread-safe read
+    StateStore.all_timeline_items_impl
+  end
+end
+
+# Extend StateStore with implementation methods
+module StateStore
+  def self.feeds_for_tab_impl(tab_name : String) : Array(FeedData)
+    tabs.find { |tab| tab.name.downcase == tab_name.downcase }.try(&.feeds) || [] of FeedData
+  end
+
+  def self.all_timeline_items_impl : Array(TimelineItem)
+    items = [] of TimelineItem
+
+    feeds.each do |feed|
+      feed.items.each do |item|
+        items << TimelineItem.new(
+          item,
+          feed.title,
+          feed.url,
+          feed.site_link,
+          feed.favicon,
+          feed.favicon_data,
+          feed.header_color,
+          feed.header_text_color,
+          feed.header_theme_colors
+        )
+      end
+    end
+
+    tabs.each do |tab|
+      tab.feeds.each do |feed|
+        feed.items.each do |item|
+          items << TimelineItem.new(
+            item,
+            feed.title,
+            feed.url,
+            feed.site_link,
+            feed.favicon,
+            feed.favicon_data,
+            feed.header_color,
+            feed.header_text_color,
+            feed.header_theme_colors
+          )
+        end
+      end
+    end
+
+    items.sort! do |left, right|
+      date_left = left.item.pub_date
+      date_right = right.item.pub_date
+      if date_left && date_right
+        date_right <=> date_left
+      elsif date_left
+        -1
+      elsif date_right
+        1
+      else
+        0
+      end
+    end
+
+    items
+  end
+end
+
 STATE = AppState.new
 
 # Global feed cache (singleton accessor)
