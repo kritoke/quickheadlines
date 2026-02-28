@@ -96,9 +96,6 @@
 						<path d="M13 13l6 6" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" />
 					</svg>
 				</button>
-				{#if actions}
-					{@render actions()}
-				{/if}
 				<ThemePicker />
 			</div>
 		</div>
