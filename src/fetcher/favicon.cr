@@ -143,7 +143,20 @@ def fetch_favicon_uri(url : String) : String?
               end
               return fetch_favicon_uri(larger_url)
             else
-              debug_log("Trying Google fallback for gray placeholder")
+              debug_log("Gray placeholder from non-Google source, trying Google fallback")
+              # Try Google favicon service as fallback for gray placeholder
+              begin
+                if host = URI.parse(current_url).host
+                  google_favicon = "https://www.google.com/s2/favicons?domain=#{host}&sz=256"
+                  debug_log("Google fallback URL: #{google_favicon}")
+                  if google_data = fetch_favicon_uri(google_favicon)
+                    FAVICON_CACHE.set(google_favicon, google_data)
+                    return google_data
+                  end
+                end
+              rescue ex
+                HealthMonitor.log_error("gray placeholder fallback(#{current_url})", ex)
+              end
               return nil
             end
           end
