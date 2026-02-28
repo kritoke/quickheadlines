@@ -286,10 +286,24 @@ end
 def fetch_feed(feed : Feed, display_item_limit : Int32, db_fetch_limit : Int32, previous_data : FeedData? = nil) : FeedData
   if feed.subreddit
     limit = feed.item_limit || db_fetch_limit
-    STDERR.puts "[DEBUG] Reddit feed: #{feed.title}, limit=#{limit}"
-    result = RedditFetcher.fetch_subreddit(feed, limit)
-    FeedCache.instance.add(result)
-    return result
+    STDERR.puts "[DEBUG] Reddit feed: #{feed.title} (#{feed.url}), limit=#{limit}"
+    begin
+      result = RedditFetcher.fetch_subreddit(feed, limit)
+      FeedCache.instance.add(result)
+      
+      # Log detailed error if fetch failed
+      if result.error_message
+        STDERR.puts "[DEBUG] Reddit fetch failed for #{feed.title}: #{result.error_message}"
+      else
+        STDERR.puts "[DEBUG] Reddit fetch succeeded for #{feed.title}: #{result.items.size} items"
+      end
+      
+      return result
+    rescue ex
+      STDERR.puts "[DEBUG] Reddit fetch exception for #{feed.title}: #{ex.class} - #{ex.message}"
+      STDERR.puts "[DEBUG] Stack trace: #{ex.inspect_with_backtrace}"
+      return error_feed_data(feed, "Reddit error: #{ex.class} - #{ex.message}")
+    end
   end
 
   if feed.url.includes?("github.com") && feed.url.includes?("/releases")
