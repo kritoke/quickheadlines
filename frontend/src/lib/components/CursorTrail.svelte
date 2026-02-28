@@ -1,38 +1,38 @@
 <script lang="ts">
-	import { spring } from 'svelte/motion';
-	import { themeState, getCursorColors } from '$lib/stores/theme.svelte';
+	import { onMount } from 'svelte';
+	import { themeState } from '$lib/stores/theme.svelte';
 
-	let coords = spring({ x: -100, y: -100 }, { stiffness: 0.1, damping: 0.25 });
-	let trail = spring({ x: -100, y: -100 }, { stiffness: 0.05, damping: 0.3 });
+	let x = $state(0);
+	let y = $state(0);
+	let mounted = $state(false);
 
-	let cursorColors = $derived(getCursorColors(themeState.theme));
+	onMount(() => {
+		mounted = true;
 
-	function handleMove(x: number, y: number) {
-		coords.set({ x, y });
-		setTimeout(() => trail.set({ x, y }), 50);
-	}
-
-	function handleMouseMove(event: MouseEvent) {
-		handleMove(event.clientX, event.clientY);
-	}
-
-	function handleTouchMove(event: TouchEvent) {
-		if (event.touches.length > 0) {
-			const touch = event.touches[0];
-			handleMove(touch.clientX, touch.clientY);
+		function handleMouseMove(e: MouseEvent) {
+			x = e.clientX;
+			y = e.clientY;
 		}
-	}
+
+		window.addEventListener('mousemove', handleMouseMove);
+		return () => window.removeEventListener('mousemove', handleMouseMove);
+	});
+
+	let enabled = $derived(mounted && themeState.cursorTrail);
 </script>
 
-<svelte:window onmousemove={handleMouseMove} ontouchmove={handleTouchMove} />
-
-{#if themeState.coolMode}
-	<div 
-		class="pointer-events-none"
-		style="position: fixed; z-index: 9999999; left: {$coords.x}px; top: {$coords.y}px; width: 0.75rem; height: 0.75rem; border-radius: 9999px; background: {cursorColors.primary}; pointer-events: none;"
-	></div>
-	<div 
-		class="pointer-events-none"
-		style="position: fixed; z-index: 9999998; left: {$trail.x - 12}px; top: {$trail.y - 12}px; width: 2rem; height: 2rem; border-radius: 9999px; background: {cursorColors.trail}; filter: blur(12px); pointer-events: none;"
-	></div>
+{#if enabled}
+	<div
+		class="fixed inset-0 pointer-events-none z-[9999]"
+		aria-hidden="true"
+	>
+		<div
+			class="absolute w-20 h-20 rounded-full"
+			style="left: {x - 40}px; top: {y - 40}px; background: rgba(150, 173, 141, 0.3); filter: blur(12px); transition: left 0.1s ease-out, top 0.1s ease-out;"
+		></div>
+		<div
+			class="absolute w-4 h-4 rounded-full"
+			style="left: {x - 8}px; top: {y - 8}px; background: #96ad8d; transition: left 0.05s ease-out, top 0.05s ease-out;"
+		></div>
+	</div>
 {/if}
