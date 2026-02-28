@@ -42,7 +42,12 @@ record StoryGroup,
   representative : ClusteredTimelineItem,
   others : Array(ClusteredTimelineItem)
 
-record FeedData, title : String, url : String, site_link : String, header_color : String?, header_text_color : String?, items : Array(Item), etag : String? = nil, last_modified : String? = nil, favicon : String? = nil, favicon_data : String? = nil, error_message : String? = nil do
+record FeedData,
+  title : String, url : String, site_link : String,
+  header_color : String?, header_text_color : String?,
+  items : Array(Item), etag : String? = nil, last_modified : String? = nil,
+  favicon : String? = nil, favicon_data : String? = nil,
+  error_message : String? = nil, header_theme_colors : String? = nil do
   def display_header_color
     (header_color.try(&.strip).presence) || "transparent"
   end
@@ -55,14 +60,13 @@ record FeedData, title : String, url : String, site_link : String, header_color 
     site_link.empty? ? url : site_link
   end
 
-  # Backwards-compatible accessor for theme-aware header colors.
-  # Stored separately from the record initializer to avoid changing many call sites.
-  def header_theme_colors : String?
-    @header_theme_colors
+  # Immutable setter - returns new instance
+  def with_header_theme_colors(val : String?) : FeedData
+    copy_with(header_theme_colors: val)
   end
 
-  def header_theme_colors=(val : String?)
-    @header_theme_colors = val
+  def with_items(new_items : Array(Item)) : FeedData
+    copy_with(items: new_items)
   end
 
   def failed?
@@ -70,14 +74,10 @@ record FeedData, title : String, url : String, site_link : String, header_color 
   end
 end
 
-class Tab
-  property name : String
-  property feeds = [] of FeedData
-  property software_releases = [] of FeedData
-
-  def initialize(@name)
-  end
-end
+record Tab,
+  name : String,
+  feeds : Array(FeedData) = [] of FeedData,
+  software_releases : Array(FeedData) = [] of FeedData
 
 class AppState
   property feeds = [] of FeedData
@@ -86,8 +86,8 @@ class AppState
   property updated_at = Time.local
   property config_title = "Quick Headlines"
   property config : Config?
-  property? is_clustering : Bool = false
-  property? is_refreshing : Bool = false
+  property? clustering : Bool = false
+  property? refreshing : Bool = false
 
   @mutex = Mutex.new
   @timeline_cache = {items: [] of TimelineItem, cached_at: Time.local}
@@ -176,8 +176,8 @@ record AppStateSnapshot,
   updated_at : Time,
   config_title : String,
   config : Config?,
-  is_clustering : Bool,
-  is_refreshing : Bool
+  clustering : Bool,
+  refreshing : Bool
 
 # Thread-safe state store with atomic updates
 module StateStore
@@ -188,8 +188,8 @@ module StateStore
     updated_at: Time.local,
     config_title: "Quick Headlines",
     config: nil,
-    is_clustering: false,
-    is_refreshing: false
+    clustering: false,
+    refreshing: false
   )
   @@mutex = Mutex.new
 
@@ -229,12 +229,12 @@ module StateStore
     get.config_title
   end
 
-  def self.is_clustering?
-    get.is_clustering
+  def self.clustering?
+    get.clustering
   end
 
-  def self.is_refreshing?
-    get.is_refreshing
+  def self.refreshing?
+    get.refreshing
   end
 end
 
@@ -265,43 +265,43 @@ class AppState
   end
 
   def self.config_title=(value : String)
-    StateStore.update { |s| s.copy_with(config_title: value) }
+    StateStore.update(&.copy_with(config_title: value))
   end
 
   def self.config=(value : Config?)
-    StateStore.update { |s| s.copy_with(config: value) }
+    StateStore.update(&.copy_with(config: value))
   end
 
   def self.feeds=(value : Array(FeedData))
-    StateStore.update { |s| s.copy_with(feeds: value) }
+    StateStore.update(&.copy_with(feeds: value))
   end
 
   def self.tabs=(value : Array(Tab))
-    StateStore.update { |s| s.copy_with(tabs: value) }
+    StateStore.update(&.copy_with(tabs: value))
   end
 
   def self.software_releases=(value : Array(FeedData))
-    StateStore.update { |s| s.copy_with(software_releases: value) }
+    StateStore.update(&.copy_with(software_releases: value))
   end
 
   def self.updated_at=(value : Time)
-    StateStore.update { |s| s.copy_with(updated_at: value) }
+    StateStore.update(&.copy_with(updated_at: value))
   end
 
-  def self.is_clustering?
-    StateStore.is_clustering?
+  def self.clustering?
+    StateStore.clustering?
   end
 
-  def self.is_clustering=(value : Bool)
-    StateStore.update { |s| s.copy_with(is_clustering: value) }
+  def self.clustering=(value : Bool)
+    StateStore.update(&.copy_with(clustering: value))
   end
 
-  def self.is_refreshing?
-    StateStore.is_refreshing?
+  def self.refreshing?
+    StateStore.refreshing?
   end
 
-  def self.is_refreshing=(value : Bool)
-    StateStore.update { |s| s.copy_with(is_refreshing: value) }
+  def self.refreshing=(value : Bool)
+    StateStore.update(&.copy_with(refreshing: value))
   end
 
   def self.with_lock(&)
@@ -311,12 +311,12 @@ class AppState
 
   # Legacy methods that need access to internal state
   def self.feeds_for_tab(tab_name : String)
-    StateStore.update { |s| s } # Ensure thread-safe read
+    StateStore.update { |state| state } # Ensure thread-safe read
     StateStore.feeds_for_tab_impl(tab_name)
   end
 
   def self.all_timeline_items
-    StateStore.update { |s| s } # Ensure thread-safe read
+    StateStore.update { |state| state } # Ensure thread-safe read
     StateStore.all_timeline_items_impl
   end
 end

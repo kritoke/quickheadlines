@@ -82,7 +82,7 @@ private def handle_success_response(feed : Feed, response : HTTP::Client::Respon
     favicon_data
   )
 
-  fd.header_theme_colors = header_theme_json if header_theme_json
+  fd = fd.with_header_theme_colors(header_theme_json) if header_theme_json
 
   fd
 end
@@ -293,15 +293,18 @@ def fetch_feed(feed : Feed, display_item_limit : Int32, db_fetch_limit : Int32, 
   end
 
   if feed.url.includes?("github.com") && feed.url.includes?("/releases")
-    return FetcherAdapter.pull_feed(feed, previous_data)
+    result = FetcherAdapter.pull_feed(feed, previous_data)
+    return result.value_or(error_feed_data(feed, "Fetcher error"))
   end
 
   if feed.url.includes?("gitlab.com") && feed.url.includes?("/-/releases")
-    return FetcherAdapter.pull_feed(feed, previous_data)
+    result = FetcherAdapter.pull_feed(feed, previous_data)
+    return result.value_or(error_feed_data(feed, "Fetcher error"))
   end
 
   if feed.url.includes?("codeberg.org") && feed.url.includes?("/releases")
-    return FetcherAdapter.pull_feed(feed, previous_data)
+    result = FetcherAdapter.pull_feed(feed, previous_data)
+    return result.value_or(error_feed_data(feed, "Fetcher error"))
   end
 
   effective_item_limit = feed.item_limit || display_item_limit
@@ -434,31 +437,28 @@ end
 
 def load_feeds_from_cache(config : Config) : Bool
   cache = FeedCache.instance
-  STATE.config_title = config.page_title
-  STATE.config = config
+  StateStore.update { |state| state.copy_with(config_title: config.page_title, config: config) }
 
-  cached_feeds = [] of FeedData
-  config.feeds.each do |feed_config|
-    if cached = cache.get(feed_config.url)
-      cached_feeds << cached
-    end
+  cached_feeds = config.feeds.compact_map { |feed_config| cache.get(feed_config.url) }
+
+  cached_tabs = config.tabs.map do |tab_config|
+    tab_feeds = tab_config.feeds.compact_map { |feed_config| cache.get(feed_config.url) }
+    Tab.new(tab_config.name, tab_feeds, [] of FeedData)
   end
 
-  STATE.with_lock do
-    STATE.feeds = cached_feeds
-    STATE.tabs = config.tabs.map do |tab_config|
-      tab = Tab.new(tab_config.name)
-      tab.feeds = tab_config.feeds.compact_map { |feed_config| cache.get(feed_config.url) }
-      tab
-    end
-    STATE.updated_at = Time.local
+  StateStore.update do |state|
+    state.copy_with(
+      feeds: cached_feeds,
+      tabs: cached_tabs,
+      updated_at: Time.local
+    )
   end
 
-  if cached_feeds.empty? && STATE.tabs.all?(&.feeds.empty?)
+  if cached_feeds.empty? && cached_tabs.all?(&.feeds.empty?)
     STDERR.puts "[#{Time.local}] load_feeds_from_cache: no cached data found"
     return false
   end
 
-  STDERR.puts "[#{Time.local}] load_feeds_from_cache: loaded #{cached_feeds.size} feeds and #{STATE.tabs.size} tabs from cache"
+  STDERR.puts "[#{Time.local}] load_feeds_from_cache: loaded #{cached_feeds.size} feeds and #{cached_tabs.size} tabs from cache"
   true
 end

@@ -7,7 +7,7 @@ require "./health_monitor"
 require "./color_extractor"
 
 module RedditFetcher
-  USER_AGENT = "QuickHeadlines/0.3 (Reddit Feed Fetcher)"
+  USER_AGENT      = "QuickHeadlines/0.3 (Reddit Feed Fetcher)"
   REDDIT_API_BASE = "https://www.reddit.com"
 
   struct RedditPost
@@ -18,9 +18,15 @@ module RedditFetcher
     property created_utc : Float64
     property author : String
     property num_comments : Int32
-    property over_18 : Bool
-    property is_self : Bool
+    @[JSON::Field(key: "over_18")]
+    property over18 : Bool = false
+    @[JSON::Field(key: "is_self")]
+    property self_post : Bool = false
     property selftext : String?
+
+    def self? : Bool
+      self_post
+    end
   end
 
   struct RedditChild
@@ -85,7 +91,7 @@ module RedditFetcher
     url = "#{REDDIT_API_BASE}/r/#{subreddit}/#{sort}.json?limit=#{limit}&raw_json=1"
     headers = HTTP::Headers{
       "User-Agent" => USER_AGENT,
-      "Accept"     => "application/json"
+      "Accept"     => "application/json",
     }
 
     response = HTTP::Client.get(url, headers: headers)
@@ -112,7 +118,7 @@ module RedditFetcher
     listing.data.children.each do |child|
       post = child.data
 
-      next if post.over_18 && !over18
+      next if post.over18 && !over18
 
       link = resolve_reddit_link(post)
       pub_date = Time.unix(post.created_utc.to_i64) if post.created_utc > 0
@@ -130,7 +136,7 @@ module RedditFetcher
   end
 
   def self.resolve_reddit_link(post : RedditPost) : String
-    if post.is_self
+    if post.self?
       "https://www.reddit.com#{post.permalink}"
     elsif post.selftext
       "https://www.reddit.com#{post.permalink}"

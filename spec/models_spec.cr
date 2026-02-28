@@ -189,7 +189,7 @@ describe "Models" do
 
     it "collects all timeline items" do
       state = AppState.new
-      
+
       feed1 = FeedData.new(
         title: "Feed 1",
         url: "https://feed1.com/feed.xml",
@@ -202,7 +202,7 @@ describe "Models" do
         ]
       )
       state.feeds << feed1
-      
+
       tab = Tab.new("Tech")
       feed2 = FeedData.new(
         title: "Feed 2",

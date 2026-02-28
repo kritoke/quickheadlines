@@ -129,7 +129,7 @@ def get_db(config : Config?, &)
   ensure_cache_dir(cache_dir)
   db_path = get_cache_db_path(config).as(String)
 
-  DB.open("sqlite3", db_path) do |db|
-    yield db
+  DB.open("sqlite3", db_path) do |database|
+    yield database
   end
 end

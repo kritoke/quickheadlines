@@ -11,7 +11,7 @@ module Quickheadlines::Entities
       @id : String,
       @representative : Story,
       @others : Array(Story) = [] of Story,
-      size : Int32? = nil
+      size : Int32? = nil,
     )
       @size = size || 1 + @others.size
     end
@@ -20,7 +20,7 @@ module Quickheadlines::Entities
       id : String? = nil,
       representative : Story? = nil,
       others : Array(Story)? = nil,
-      size : Int32? = nil
+      size : Int32? = nil,
     ) : Cluster
       Cluster.new(
         id || @id,

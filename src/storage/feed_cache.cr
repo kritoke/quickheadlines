@@ -213,9 +213,9 @@ def load_feed_cache(config : Config?) : FeedCache
 
   retention_hours = config.try(&.cache_retention_hours) || CACHE_RETENTION_HOURS
 
-  config_urls = config.try do |c|
-    urls = c.feeds.map(&.url)
-    c.tabs.each do |tab|
+  config_urls = config.try do |conf|
+    urls = conf.feeds.map(&.url)
+    conf.tabs.each do |tab|
       urls.concat(tab.feeds.map(&.url))
     end
     urls

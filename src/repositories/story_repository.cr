@@ -216,7 +216,7 @@ module Quickheadlines::Repositories
             header_color: header_color,
             header_text_color: header_text_color,
             cluster_id: cluster_id,
-            is_representative: is_representative,
+            representative: is_representative,
             cluster_size: cluster_size
           )
         end
@@ -283,7 +283,7 @@ module Quickheadlines::Repositories
     property header_color : String?
     property header_text_color : String?
     property cluster_id : Int64?
-    property is_representative : Bool
+    property representative : Bool
     property cluster_size : Int32
 
     def initialize(
@@ -298,9 +298,13 @@ module Quickheadlines::Repositories
       @header_color,
       @header_text_color,
       @cluster_id,
-      @is_representative,
+      @representative,
       @cluster_size,
     )
+    end
+
+    def representative? : Bool
+      representative
     end
   end
 end

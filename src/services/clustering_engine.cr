@@ -72,7 +72,7 @@ module Quickheadlines::Services
     def self.find_similar_pairs_lsh(
       items : Array(ClusteringItem),
       threshold : Float64 = 0.35,
-      bands : Int32 = 20
+      bands : Int32 = 20,
     ) : Array(Tuple(Int64, Int64, Float64))
       return [] of Tuple(Int64, Int64, Float64) if items.empty?
 
@@ -113,7 +113,7 @@ module Quickheadlines::Services
 
     def self.build_clusters_from_pairs(
       pairs : Array(Tuple(Int64, Int64, Float64)),
-      item_ids : Array(Int64)
+      item_ids : Array(Int64),
     ) : Hash(Int64, Array(Int64))
       parent = {} of Int64 => Int64
 
@@ -160,7 +160,7 @@ module Quickheadlines::Services
     def self.cluster_items(
       items : Array(ClusteringItem),
       threshold : Float64 = 0.35,
-      bands : Int32 = 20
+      bands : Int32 = 20,
     ) : Hash(Int64, Array(Int64))
       return {} of Int64 => Array(Int64) if items.empty?
 

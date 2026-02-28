@@ -102,8 +102,8 @@ def create_schema(db : DB::Database, db_path : String)
 end
 
 def check_db_integrity(db_path : String) : Bool
-  DB.open("sqlite3://#{db_path}") do |db|
-    result = db.query_one("PRAGMA integrity_check", as: {String})
+  DB.open("sqlite3://#{db_path}") do |database|
+    result = database.query_one("PRAGMA integrity_check", as: {String})
     if result == "ok"
       STDERR.puts "[#{Time.local}] Database integrity check passed"
       true
@@ -127,22 +127,22 @@ def check_db_health(db_path : String) : DbHealthStatus
     return DbHealthStatus::NeedsRepopulation
   end
 
-  DB.open("sqlite3://#{db_path}") do |db|
-    integrity_result = db.query_one("PRAGMA integrity_check", as: {String})
+  DB.open("sqlite3://#{db_path}") do |database|
+    integrity_result = database.query_one("PRAGMA integrity_check", as: {String})
     if integrity_result != "ok"
       STDERR.puts "[ERROR] Database integrity check failed: #{integrity_result}"
       return DbHealthStatus::Corrupted
     end
 
     begin
-      fk_result = db.query_one("PRAGMA foreign_key_check", as: Array(Array(Int64)))
+      fk_result = database.query_one("PRAGMA foreign_key_check", as: Array(Array(Int64)))
       if fk_result && !fk_result.empty?
         STDERR.puts "[WARN] Database has #{fk_result.size} foreign key violations"
       end
     rescue ex
     end
 
-    feed_count = db.query_one("SELECT COUNT(*) FROM feeds", as: {Int64})
+    feed_count = database.query_one("SELECT COUNT(*) FROM feeds", as: {Int64})
     if feed_count == 0
       STDERR.puts "[WARN] Database has no feeds, needs repopulation"
       return DbHealthStatus::NeedsRepopulation
@@ -233,7 +233,7 @@ def init_db(config : Config?)
   ensure_cache_dir(cache_dir)
   db_path = get_cache_db_path(config)
 
-  DB.open("sqlite3://#{db_path}") do |db|
-    create_schema(db, db_path)
+  DB.open("sqlite3://#{db_path}") do |database|
+    create_schema(database, db_path)
   end
 end

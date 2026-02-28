@@ -90,14 +90,14 @@ begin
   spawn do
     loop do
       sleep 60.minutes
-      next if STATE.is_clustering?
+      next if STATE.clustering?
       threshold = STATE.config.try(&.clustering).try(&.threshold) || 0.35
       clustering_service.recluster_with_lsh(initial_config.db_fetch_limit, threshold)
     end
   end
 
   # Run clustering on startup if enabled (default: true)
-  run_on_startup = initial_config.clustering.try(&.run_on_startup)
+  run_on_startup = initial_config.clustering.try(&.run_on_startup?)
   if run_on_startup.nil? || run_on_startup
     spawn do
       # Wait a bit for feeds to be loaded first

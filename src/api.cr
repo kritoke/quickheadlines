@@ -142,10 +142,10 @@ class FeedsPageResponse
   property active_tab : String
   property feeds : Array(FeedResponse)
   property software_releases : Array(FeedResponse)
-  property? is_clustering : Bool = false
+  property? clustering : Bool = false
   property updated_at : Int64
 
-  def initialize(@tabs : Array(TabResponse), @active_tab : String, @feeds : Array(FeedResponse), @software_releases : Array(FeedResponse), @is_clustering : Bool = false, @updated_at : Int64 = 0_i64)
+  def initialize(@tabs : Array(TabResponse), @active_tab : String, @feeds : Array(FeedResponse), @software_releases : Array(FeedResponse), @clustering : Bool = false, @updated_at : Int64 = 0_i64)
   end
 end
 
@@ -156,9 +156,9 @@ class TimelinePageResponse
   property items : Array(TimelineItemResponse)
   property? has_more : Bool
   property total_count : Int32
-  property? is_clustering : Bool = false
+  property? clustering : Bool = false
 
-  def initialize(@items : Array(TimelineItemResponse), @has_more : Bool, @total_count : Int32, @is_clustering : Bool = false)
+  def initialize(@items : Array(TimelineItemResponse), @has_more : Bool, @total_count : Int32, @clustering : Bool = false)
   end
 end
 
@@ -166,10 +166,10 @@ end
 class VersionResponse
   include JSON::Serializable
 
-  property? is_clustering : Bool
+  property? clustering : Bool
   property updated_at : Int64
 
-  def initialize(@updated_at : Int64, @is_clustering : Bool = false)
+  def initialize(@updated_at : Int64, @clustering : Bool = false)
   end
 end
 
@@ -457,7 +457,7 @@ module Api
       tabs: tabs_response,
       active_tab: active_tab,
       feeds: feeds_response,
-      is_clustering: STATE.is_clustering?
+      is_clustering: STATE.clustering?
     )
 
     send_json(context, response)
@@ -569,7 +569,7 @@ module Api
       items: items_response,
       has_more: has_more,
       total_count: total_count.to_i32,
-      is_clustering: STATE.is_clustering?
+      is_clustering: STATE.clustering?
     )
 
     send_json(context, response)
@@ -579,7 +579,7 @@ module Api
   def self.handle_version(context : HTTP::Server::Context)
     response = VersionResponse.new(
       updated_at: STATE.updated_at.to_unix_ms,
-      is_clustering: STATE.is_clustering?
+      is_clustering: STATE.clustering?
     )
     send_json(context, response)
   end

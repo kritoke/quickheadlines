@@ -10,7 +10,7 @@ module Quickheadlines::Services
       story_repo : Quickheadlines::Repositories::StoryRepository,
       limit : Int32,
       offset : Int32,
-      days : Int32?
+      days : Int32?,
     ) : TimelineResult
       items = story_repo.find_timeline_items(limit, offset, days)
       total_count = story_repo.count_timeline_items(days)
@@ -29,7 +29,7 @@ module Quickheadlines::Services
           header_color: item.header_color,
           header_text_color: item.header_text_color,
           cluster_id: item.cluster_id.try(&.to_s),
-          is_representative: item.is_representative,
+          is_representative: item.representative?,
           cluster_size: item.cluster_size
         )
       end
@@ -79,7 +79,7 @@ module Quickheadlines::Services
 
   struct TimelineResult
     property items : Array(TimelineItemResponse)
-    property has_more : Bool
+    getter? has_more : Bool
     property total_count : Int32
 
     def initialize(@items, @has_more, @total_count)

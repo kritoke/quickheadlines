@@ -126,28 +126,27 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
     active_tab = raw_tab.presence || "all"
 
     cache = FeedCache.instance
-    item_limit = STATE.config.try(&.item_limit) || 20
+    item_limit = StateStore.get.config.try(&.item_limit) || 20
 
-    # Get consistent snapshot of state under lock
-    feeds_snapshot, tabs_snapshot, software_releases_snapshot, is_clustering = STATE.with_lock do
-      {
-        STATE.feeds.dup,
-        STATE.tabs.map { |tab| {name: tab.name, feeds: tab.feeds.dup, software_releases: tab.software_releases.dup} },
-        STATE.software_releases.dup,
-        STATE.is_clustering?,
-      }
-    end
+    # Get consistent snapshot of state
+    state = StateStore.get
+    feeds_snapshot = state.feeds
+    tabs_snapshot = state.tabs
+    software_releases_snapshot = state.software_releases
+    is_clustering = state.clustering
 
     # Fallback: if STATE is empty (initial load), read directly from cache
     # This ensures feeds work even if STATE wasn't populated yet
-    total_feeds = feeds_snapshot.size + tabs_snapshot.sum(&.[:feeds].size)
+    total_feeds = feeds_snapshot.size + tabs_snapshot.sum(&.feeds.size)
     if total_feeds == 0
-      feeds_snapshot, tabs_snapshot = load_feeds_from_cache_fallback(cache)
+      feeds_snapshot, tabs_snapshot_hash = load_feeds_from_cache_fallback(cache)
+      # Convert tabs hash back to Tab records for consistency
+      tabs_snapshot = tabs_snapshot_hash.map { |tab| Tab.new(tab[:name], tab[:feeds], tab[:software_releases]) }
     end
 
     # Build simple tabs response (just names for tab navigation)
     tabs_response = tabs_snapshot.map do |tab|
-      TabResponse.new(name: tab[:name])
+      TabResponse.new(name: tab.name)
     end
 
     # Get feeds for active tab (flattened to top level)
@@ -163,15 +162,15 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
 
                        # Tab feeds have their tab name (filter out failed feeds)
                        tabs_snapshot.each do |tab|
-                         tab[:feeds].each do |feed|
-                           all_feeds_with_tabs << {feed: feed, tab_name: tab[:name]} unless feed.failed?
+                         tab.feeds.each do |feed|
+                           all_feeds_with_tabs << {feed: feed, tab_name: tab.name} unless feed.failed?
                          end
                        end
 
                        all_feeds_with_tabs.map { |entry| Api.feed_to_response(entry[:feed], entry[:tab_name], cache.item_count(entry[:feed].url), item_limit) }
                      else
-                       found_tab = tabs_snapshot.find { |tab| tab[:name].downcase == active_tab.downcase }
-                       active_feeds = found_tab ? found_tab[:feeds].reject(&.failed?) : [] of FeedData
+                       found_tab = tabs_snapshot.find { |tab| tab.name.to_s.downcase == active_tab.downcase }
+                       active_feeds = found_tab ? found_tab.feeds.reject(&.failed?) : [] of FeedData
                        active_feeds.map { |feed| Api.feed_to_response(feed, active_tab, cache.item_count(feed.url), item_limit) }
                      end
 
@@ -180,12 +179,12 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
                           # Aggregate software releases from all tabs
                           all_software = software_releases_snapshot.dup
                           tabs_snapshot.each do |tab|
-                            all_software.concat(tab[:software_releases])
+                            all_software.concat(tab.software_releases)
                           end
                           all_software.map { |release| Api.feed_to_response(release, "software", release.items.size, item_limit) }
                         else
-                          found_tab = tabs_snapshot.find { |tab| tab[:name].downcase == active_tab.downcase }
-                          tab_software = found_tab ? found_tab[:software_releases] : nil
+                          found_tab = tabs_snapshot.find { |tab| tab.name.to_s.downcase == active_tab.downcase }
+                          tab_software = found_tab ? found_tab.software_releases : [] of FeedData
                           if tab_software
                             tab_software.map { |release| Api.feed_to_response(release, "software", release.items.size, item_limit) }
                           else
@@ -198,7 +197,7 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
       active_tab: active_tab,
       feeds: feeds_response,
       software_releases: releases_response,
-      is_clustering: is_clustering,
+      clustering: is_clustering,
       updated_at: STATE.updated_at.to_unix_ms
     )
   end
@@ -292,7 +291,7 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
 
     # If timeline has very few items and we're not already clustering, trigger a background refresh
     # This ensures the timeline populates quickly after server startup
-    if result.total_count < 100 && !STATE.is_clustering? && offset == 0
+    if result.total_count < 100 && !STATE.clustering? && offset == 0
       spawn do
         begin
           config = STATE.config
@@ -307,9 +306,9 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
 
     TimelinePageResponse.new(
       items: result.items,
-      has_more: result.has_more,
+      has_more: result.has_more?,
       total_count: result.total_count,
-      is_clustering: STATE.is_clustering?
+      clustering: STATE.clustering?
     )
   end
 
@@ -318,7 +317,7 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
   def version : ATH::View(VersionResponse)
     self.view(VersionResponse.new(
       updated_at: STATE.updated_at.to_unix_ms,
-      is_clustering: STATE.is_clustering?
+      clustering: STATE.clustering?
     ))
   end
 
@@ -683,8 +682,8 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
   @[ARTA::Get(path: "/api/status")]
   def status : Quickheadlines::DTOs::StatusResponse
     Quickheadlines::DTOs::StatusResponse.new(
-      is_clustering: STATE.is_clustering?,
-      is_refreshing: STATE.is_refreshing?,
+      clustering: STATE.clustering?,
+      refreshing: STATE.refreshing?,
       active_jobs: 0 # We don't track background fiber count yet
     )
   end
@@ -697,20 +696,20 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
     response.headers["content-type"] = "text/event-stream"
     response.headers["Cache-Control"] = "no-cache"
     response.headers["Connection"] = "keep-alive"
-    
+
     # Get last_update from query params (client sends its last known update time)
     last_update_param = request.query_params["last_update"]?
     last_update = last_update_param.try &.to_i64? || 0_i64
-    
+
     # Wait for up to 30 seconds for new data
     max_wait = 30
     check_interval = 1
     waited = 0
-    
+
     while waited < max_wait
       sleep check_interval.seconds
       waited += check_interval
-      
+
       # Check if there's new data (compare with STATE.updated_at)
       current_update = STATE.updated_at.to_unix_ms
       if current_update > last_update
@@ -719,7 +718,7 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
         return response
       end
     end
-    
+
     # Timeout - send heartbeat
     response.content = "event: heartbeat\ndata: #{Time.local.to_unix_ms}\n\n"
     response

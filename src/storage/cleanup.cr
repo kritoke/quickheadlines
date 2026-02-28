@@ -86,9 +86,9 @@ module CleanupRepository
       STDERR.puts "[#{Time.local}] Normalizing pub_date values..."
 
       rows = [] of {Int64, String?}
-      @db.query("SELECT id, pub_date FROM items WHERE pub_date IS NOT NULL") do |r|
-        r.each do
-          rows << {r.read(Int64), r.read(String?)}
+      @db.query("SELECT id, pub_date FROM items WHERE pub_date IS NOT NULL") do |result_set|
+        result_set.each do
+          rows << {result_set.read(Int64), result_set.read(String?)}
         end
       end
 

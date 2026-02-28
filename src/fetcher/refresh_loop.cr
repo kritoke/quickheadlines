@@ -12,9 +12,8 @@ require "./feed_fetcher"
 CLUSTERING_JOBS = Atomic(Int32).new(0)
 
 def refresh_all(config : Config)
-  STATE.is_refreshing = true
-  STATE.config_title = config.page_title
-  STATE.config = config
+  StateStore.update(&.copy_with(refreshing: true))
+  StateStore.update { |state| state.copy_with(config_title: config.page_title, config: config) }
 
   all_configs = {} of String => Feed
   config.feeds.each { |feed| all_configs[feed.url] = feed }
@@ -52,49 +51,52 @@ def refresh_all(config : Config)
 
   STDERR.puts "[#{Time.local}] refresh_all: fetched #{fetched_map.size}/#{all_configs.size} feeds successfully"
 
-  STDERR.puts "[#{Time.local}] refresh_all: updating STATE (feeds=#{STATE.feeds.size}, tabs=#{STATE.tabs.size})"
+  STDERR.puts "[#{Time.local}] refresh_all: building new state (feeds=#{fetched_map.size}, tabs=#{config.tabs.size})"
 
-  STATE.with_lock do
-    STATE.feeds.clear
-    STATE.tabs.each &.feeds.clear
-    STATE.software_releases.clear
+  # Build new state immutably
+  new_feeds = config.feeds.map { |feed| fetched_map[feed.url]? || error_feed_data(feed, "Failed to fetch") }
 
-    STATE.feeds = config.feeds.map { |feed| fetched_map[feed.url] || error_feed_data(feed, "Failed to fetch") }
-    STDERR.puts "[#{Time.local}] refresh_all: STATE.feeds=#{STATE.feeds.size}"
-    STATE.software_releases = [] of FeedData
-    if sw = config.software_releases
-      if sw_box = fetch_sw_with_config(sw, config.item_limit)
-        STATE.software_releases << sw_box
-      end
+  new_software_releases = [] of FeedData
+  if sw = config.software_releases
+    if sw_box = fetch_sw_with_config(sw, config.item_limit)
+      new_software_releases = [sw_box]
     end
-
-    STATE.tabs = config.tabs.map do |tab_config|
-      tab = Tab.new(tab_config.name)
-      tab.feeds = tab_config.feeds.map { |feed| fetched_map[feed.url] || error_feed_data(feed, "Failed to fetch") }
-      STDERR.puts "[#{Time.local}] refresh_all: tab '#{tab.name}' has #{tab.feeds.size} feeds"
-      if sw = tab_config.software_releases
-        if sw_box = fetch_sw_with_config(sw, config.item_limit)
-          tab.software_releases = [sw_box]
-        end
-      end
-      tab
-    end
-
-    STATE.updated_at = Time.local
   end
+
+  new_tabs = config.tabs.map do |tab_config|
+    tab_feeds = tab_config.feeds.map { |feed| fetched_map[feed.url]? || error_feed_data(feed, "Failed to fetch") }
+    tab_releases = [] of FeedData
+    if sw = tab_config.software_releases
+      if sw_box = fetch_sw_with_config(sw, config.item_limit)
+        tab_releases = [sw_box]
+      end
+    end
+    Tab.new(tab_config.name, tab_feeds, tab_releases)
+  end
+
+  # Atomic state update - no mutations
+  StateStore.update do |state|
+    state.copy_with(
+      feeds: new_feeds,
+      software_releases: new_software_releases,
+      tabs: new_tabs,
+      updated_at: Time.local
+    )
+  end
+
+  STDERR.puts "[#{Time.local}] refresh_all: STATE updated - feeds=#{new_feeds.size}, tabs=#{new_tabs.size}"
 
   async_clustering(fetched_map.values.to_a)
 
   GC.collect
-  STATE.is_refreshing = false
 
-  STDERR.puts "[#{Time.local}] refresh_all: complete - STATE.feeds=#{STATE.feeds.size}, STATE.tabs=#{STATE.tabs.size}"
+  STDERR.puts "[#{Time.local}] refresh_all: complete - STATE.feeds=#{new_feeds.size}, STATE.tabs=#{new_tabs.size}"
 end
 
 def async_clustering(feeds : Array(FeedData))
   clustering_channel = Channel(Nil).new(10)
 
-  STATE.is_clustering = true
+  StateStore.update(&.copy_with(clustering: true))
   CLUSTERING_JOBS.set(feeds.size)
 
   spawn do
@@ -106,7 +108,7 @@ def async_clustering(feeds : Array(FeedData))
         ensure
           clustering_channel.receive
           if CLUSTERING_JOBS.sub(1) <= 1
-            STATE.is_clustering = false
+            StateStore.update(&.copy_with(clustering: false))
           end
         end
       end

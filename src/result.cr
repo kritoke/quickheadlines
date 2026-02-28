@@ -24,7 +24,7 @@ struct Result(T, E)
 
   def value : T
     raise "Result is not successful" unless @success
-    @value.not_nil!
+    @value.as(T)
   end
 
   def value? : T?
@@ -33,43 +33,43 @@ struct Result(T, E)
 
   def error : E
     raise "Result is successful" if @success
-    @error.not_nil!
+    @error.as(E)
   end
 
   def error? : E?
     @error
   end
 
-  def map(&block : T -> U) : Result(U, E) forall U
+  def map(& : T -> U) : Result(U, E) forall U
     if @success
-      Result(U, E).success(yield @value.not_nil!)
+      Result(U, E).success(yield @value.as(T))
     else
-      Result(U, E).failure(@error.not_nil!)
+      Result(U, E).failure(@error.as(E))
     end
   end
 
-  def map_error(&block : E -> F) : Result(T, F) forall F
+  def map_error(& : E -> F) : Result(T, F) forall F
     if @success
-      Result(T, F).success(@value.not_nil!)
+      Result(T, F).success(@value.as(T))
     else
-      Result(T, F).failure(yield @error.not_nil!)
+      Result(T, F).failure(yield @error.as(E))
     end
   end
 
-  def flat_map(&block : T -> Result(U, E)) : Result(U, E) forall U
+  def flat_map(& : T -> Result(U, E)) : Result(U, E) forall U
     if @success
-      yield @value.not_nil!
+      yield @value.as(T)
     else
-      Result(U, E).failure(@error.not_nil!)
+      Result(U, E).failure(@error.as(E))
     end
   end
 
   def value_or(default : T) : T
-    @success ? @value.not_nil! : default
+    @success ? @value.as(T) : default
   end
 
-  def recover(&block : E -> T) : T
-    @success ? @value.not_nil! : yield @error.not_nil!
+  def recover(& : E -> T) : T
+    @success ? @value.as(T) : yield @error.as(E)
   end
 
   def to_s(io : IO) : Nil
@@ -88,9 +88,9 @@ end
 module ResultHelpers
   def self.sequence(results : Array(Result(T, E))) : Result(Array(T), E) forall T, E
     values = [] of T
-    results.each do |r|
-      return Result(Array(T), E).failure(r.error) if r.failure?
-      values << r.value
+    results.each do |result|
+      return Result(Array(T), E).failure(result.error) if result.failure?
+      values << result.value
     end
     Result(Array(T), E).success(values)
   end

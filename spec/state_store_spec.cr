@@ -28,7 +28,7 @@ describe "StateStore" do
       )
 
       StateStore.update { |s| s.copy_with(feeds: [feed]) }
-      
+
       StateStore.feeds.size.should eq(1)
       StateStore.feeds.first.title.should eq("Test Feed")
     end
@@ -36,7 +36,7 @@ describe "StateStore" do
     it "updates is_clustering atomically" do
       StateStore.update { |s| s.copy_with(is_clustering: true) }
       StateStore.is_clustering?.should be_true
-      
+
       StateStore.update { |s| s.copy_with(is_clustering: false) }
       StateStore.is_clustering?.should be_false
     end
@@ -44,7 +44,7 @@ describe "StateStore" do
     it "updates is_refreshing atomically" do
       StateStore.update { |s| s.copy_with(is_refreshing: true) }
       StateStore.is_refreshing?.should be_true
-      
+
       StateStore.update { |s| s.copy_with(is_refreshing: false) }
       StateStore.is_refreshing?.should be_false
     end
@@ -55,7 +55,7 @@ describe "StateStore" do
       10.times do |i|
         StateStore.update { |s| s.copy_with(is_clustering: i.odd?) }
       end
-      
+
       final_state = StateStore.get
       # Just verify no crashes - state is deterministic
       final_state.is_clustering.should be_true

@@ -241,7 +241,7 @@ module ClusteringRepository
     end
   end
 
-  def get_all_clusters : Array({id: Int64, representative_id: Int64, item_count: Int32})
+  def all_clusters : Array({id: Int64, representative_id: Int64, item_count: Int32})
     @mutex.synchronize do
       clusters = [] of {id: Int64, representative_id: Int64, item_count: Int32}
 

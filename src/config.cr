@@ -160,13 +160,23 @@ struct ClusteringConfig
   include YAML::Serializable
 
   # Enable automatic clustering (default: true)
-  property enabled : Bool = true
+  @[YAML::Field(key: "enabled")]
+  private property _enabled : Bool = true
+
+  def enabled? : Bool
+    _enabled
+  end
 
   # Schedule interval in minutes for automatic clustering (default: 60)
   property schedule_minutes : Int32 = 60
 
   # Run a clustering pass on startup (default: true)
-  property run_on_startup : Bool = true
+  @[YAML::Field(key: "run_on_startup")]
+  private property _run_on_startup : Bool = true
+
+  def run_on_startup? : Bool
+    _run_on_startup
+  end
 
   # Maximum number of items to process in a clustering run (default: nil = use db_fetch_limit)
   property max_items : Int32? = nil

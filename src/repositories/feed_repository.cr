@@ -312,7 +312,7 @@ module Quickheadlines::Repositories
         end
       end
 
-      fd = FeedData.new(
+      FeedData.new(
         feed_result[:title],
         feed_result[:url],
         feed_result[:site_link],
@@ -322,10 +322,10 @@ module Quickheadlines::Repositories
         feed_result[:etag],
         feed_result[:last_modified],
         feed_result[:favicon],
-        feed_result[:favicon_data]
+        feed_result[:favicon_data],
+        nil,
+        feed_result[:header_theme_colors]
       )
-      fd.header_theme_colors = feed_result[:header_theme_colors] if feed_result[:header_theme_colors]
-      fd
     end
 
     def find_with_items_result(url : String) : FeedDataResult

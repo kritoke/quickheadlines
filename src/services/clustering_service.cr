@@ -92,7 +92,7 @@ class Quickheadlines::Services::ClusteringService
     db = @db
 
     processed = 0
-    STATE.is_clustering = true
+    STATE.clustering = true
     begin
       STDERR.puts "[#{Time.local}] Starting clustering (streaming rows, threshold: #{threshold})"
 
@@ -115,7 +115,7 @@ class Quickheadlines::Services::ClusteringService
 
       STDERR.puts "[#{Time.local}] Clustering complete: #{processed} items processed"
     ensure
-      STATE.is_clustering = false
+      STATE.clustering = false
     end
 
     processed
@@ -140,7 +140,7 @@ class Quickheadlines::Services::ClusteringService
     STDERR.puts "[#{Time.local}] Found #{items.size} items to re-cluster (threshold: #{threshold})"
 
     processed = 0
-    STATE.is_clustering = true
+    STATE.clustering = true
     begin
       items.each do |item|
         next if item[:title].empty?
@@ -152,7 +152,7 @@ class Quickheadlines::Services::ClusteringService
       end
       STDERR.puts "[#{Time.local}] Re-clustering complete: #{processed} items processed"
     ensure
-      STATE.is_clustering = false
+      STATE.clustering = false
     end
 
     processed
@@ -173,7 +173,7 @@ class Quickheadlines::Services::ClusteringService
 
     STDERR.puts "[#{Time.local}] Found #{items.size} items to re-cluster with LSH (threshold: #{threshold}, bands: #{bands})"
 
-    STATE.is_clustering = true
+    STATE.clustering = true
     processed = 0
     begin
       rep_map = ClusteringEngine.cluster_items(items, threshold, bands)
@@ -181,7 +181,7 @@ class Quickheadlines::Services::ClusteringService
       processed = items.count { |i| ClusteringEngine.can_cluster?(i.title) }
       STDERR.puts "[#{Time.local}] Re-clustering with LSH complete: #{processed} items clustered into #{rep_map.size} groups"
     ensure
-      STATE.is_clustering = false
+      STATE.clustering = false
     end
 
     processed

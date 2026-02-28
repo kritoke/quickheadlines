@@ -9,7 +9,7 @@ module Quickheadlines::Services
     def initialize(@feed_repository : Quickheadlines::Repositories::FeedRepository)
     end
 
-    def get_all_feeds : Array(Quickheadlines::Entities::Feed)
+    def all_feeds : Array(Quickheadlines::Entities::Feed)
       @feed_repository.find_all
     end
 
@@ -20,9 +20,9 @@ module Quickheadlines::Services
 
     def get_feed_with_items_result(url : String, limit : Int32 = 20) : FeedWithItemsResult
       feed_result = @feed_repository.find_by_url_result(url)
-      
+
       return feed_result.map_error { |e| e } unless feed_result.success?
-      
+
       feed = feed_result.value
       items = [] of Item
 
