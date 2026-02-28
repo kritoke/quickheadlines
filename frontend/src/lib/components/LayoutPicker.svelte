@@ -71,22 +71,11 @@
 		aria-expanded={isOpen}
 		aria-haspopup="true"
 	>
-		<svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-slate-500 dark:text-slate-400" viewBox="0 0 24 24" fill="currentColor">
-			{#if !layoutState.mounted || layoutState.timelineColumns === 4}
-				<rect x="3" y="3" width="7" height="7" rx="1" />
-				<rect x="14" y="3" width="7" height="7" rx="1" />
-				<rect x="3" y="14" width="7" height="7" rx="1" />
-				<rect x="14" y="14" width="7" height="7" rx="1" />
-			{:else if layoutState.timelineColumns === 3}
-				<rect x="3" y="3" width="5.5" height="18" rx="1" />
-				<rect x="9.25" y="3" width="5.5" height="18" rx="1" />
-				<rect x="15.5" y="3" width="5.5" height="18" rx="1" />
-			{:else if layoutState.timelineColumns === 2}
-				<rect x="3" y="3" width="7.5" height="18" rx="1" />
-				<rect x="13.5" y="3" width="7.5" height="18" rx="1" />
-			{:else}
-				<rect x="3" y="3" width="18" height="18" rx="1" />
-			{/if}
+		<svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-slate-500 dark:text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+			<rect x="3" y="3" width="7" height="7" rx="1" fill={layoutState.mounted ? 'currentColor' : 'none'} />
+			<rect x="14" y="3" width="7" height="7" rx="1" fill={layoutState.mounted && layoutState.timelineColumns >= 2 ? 'currentColor' : 'none'} />
+			<rect x="3" y="14" width="7" height="7" rx="1" fill={layoutState.mounted && layoutState.timelineColumns >= 3 ? 'currentColor' : 'none'} />
+			<rect x="14" y="14" width="7" height="7" rx="1" fill={layoutState.mounted && layoutState.timelineColumns === 4 ? 'currentColor' : 'none'} />
 		</svg>
 		{#if layoutState.mounted && layoutState.timelineColumns > 1}
 			<span class="text-xs text-slate-500 dark:text-slate-400 font-medium">{layoutState.timelineColumns}</span>
