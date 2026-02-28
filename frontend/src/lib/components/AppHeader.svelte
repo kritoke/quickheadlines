@@ -10,10 +10,9 @@
 		onSearchToggle: () => void;
 		metadata?: Snippet;
 		tabContent?: Snippet;
-		actions?: Snippet;
 	}
 
-	let { title, viewLink, searchExpanded, onSearchToggle, metadata, tabContent, actions }: Props = $props();
+	let { title, viewLink, searchExpanded, onSearchToggle, metadata, tabContent }: Props = $props();
 	let themeColors = $derived(getThemeAccentColors(themeState.theme));
 	let headerElement: HTMLElement | undefined = $state();
 
@@ -93,9 +92,6 @@
 						<path d="M13 13l6 6" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" />
 					</svg>
 				</button>
-				{#if actions}
-					{@render actions()}
-				{/if}
 				<ThemePicker />
 			</div>
 		</div>

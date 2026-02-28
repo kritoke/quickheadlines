@@ -1,23 +1,22 @@
 <script lang="ts">
 	import '../app.css';
-	import { onMount } from 'svelte';
 	import { themeState, initTheme } from '$lib/stores/theme.svelte';
 	import CursorTrail from '$lib/components/CursorTrail.svelte';
-
+	import CrystalBadge from '$lib/components/CrystalBadge.svelte';
+	import ScrollToTop from '$lib/components/ScrollToTop.svelte';
+	
 	let { children } = $props();
-
-	onMount(() => {
+	
+	$effect(() => {
 		initTheme();
 	});
 </script>
 
-{#if themeState.mounted}
-	<CursorTrail />
-	<div id="app" class="min-h-screen bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 transition-colors duration-200">
-		{@render children()}
+<CursorTrail />
+<div id="app" class="min-h-screen bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 transition-colors duration-200" data-name="app-layout">
+	{@render children()}
+	<div class="pb-4 flex justify-center">
+		<CrystalBadge />
 	</div>
-{:else}
-	<div class="min-h-screen bg-white text-slate-900 flex items-center justify-center">
-		Loading...
-	</div>
-{/if}
+</div>
+<ScrollToTop />
