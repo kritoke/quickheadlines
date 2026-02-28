@@ -11,8 +11,8 @@ describe "StateStore" do
       state.software_releases.should be_empty
       state.config_title.should eq("Quick Headlines")
       state.config.should be_nil
-      state.is_clustering.should be_false
-      state.is_refreshing.should be_false
+      state.clustering.should be_false
+      state.refreshing.should be_false
     end
   end
 
@@ -27,38 +27,38 @@ describe "StateStore" do
         items: [] of Item
       )
 
-      StateStore.update { |s| s.copy_with(feeds: [feed]) }
+      StateStore.update(&.copy_with(feeds: [feed]))
 
       StateStore.feeds.size.should eq(1)
       StateStore.feeds.first.title.should eq("Test Feed")
     end
 
-    it "updates is_clustering atomically" do
-      StateStore.update { |s| s.copy_with(is_clustering: true) }
-      StateStore.is_clustering?.should be_true
+    it "updates clustering atomically" do
+      StateStore.update(&.copy_with(clustering: true))
+      StateStore.clustering?.should be_true
 
-      StateStore.update { |s| s.copy_with(is_clustering: false) }
-      StateStore.is_clustering?.should be_false
+      StateStore.update(&.copy_with(clustering: false))
+      StateStore.clustering?.should be_false
     end
 
-    it "updates is_refreshing atomically" do
-      StateStore.update { |s| s.copy_with(is_refreshing: true) }
-      StateStore.is_refreshing?.should be_true
+    it "updates refreshing atomically" do
+      StateStore.update(&.copy_with(refreshing: true))
+      StateStore.refreshing?.should be_true
 
-      StateStore.update { |s| s.copy_with(is_refreshing: false) }
-      StateStore.is_refreshing?.should be_false
+      StateStore.update(&.copy_with(refreshing: false))
+      StateStore.refreshing?.should be_false
     end
   end
 
   describe "thread safety" do
     it "handles sequential updates without crashing" do
       10.times do |i|
-        StateStore.update { |s| s.copy_with(is_clustering: i.odd?) }
+        StateStore.update(&.copy_with(clustering: i.odd?))
       end
 
       final_state = StateStore.get
       # Just verify no crashes - state is deterministic
-      final_state.is_clustering.should be_true
+      final_state.clustering.should be_true
     end
   end
 
@@ -75,7 +75,7 @@ describe "StateStore" do
       )
       tab.feeds << feed
 
-      StateStore.update { |s| s.copy_with(tabs: [tab]) }
+      StateStore.update(&.copy_with(tabs: [tab]))
 
       feeds = StateStore.feeds_for_tab_impl("Tech")
       feeds.size.should eq(1)

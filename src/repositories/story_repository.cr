@@ -283,7 +283,7 @@ module Quickheadlines::Repositories
     property header_color : String?
     property header_text_color : String?
     property cluster_id : Int64?
-    property representative : Bool
+    getter? representative : Bool
     property cluster_size : Int32
 
     def initialize(
@@ -304,7 +304,7 @@ module Quickheadlines::Repositories
     end
 
     def representative? : Bool
-      representative
+      @representative
     end
   end
 end

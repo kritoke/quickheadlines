@@ -31,7 +31,7 @@ struct Feed
   # Reddit subreddit feed configuration
   property subreddit : String? = nil
   property sort : String = "hot"
-  property over18 : Bool? = nil
+  getter? over18 : Bool? = nil
 end
 
 # HTTP client configuration for global settings

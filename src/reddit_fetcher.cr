@@ -19,13 +19,18 @@ module RedditFetcher
     property author : String
     property num_comments : Int32
     @[JSON::Field(key: "over_18")]
-    property over18 : Bool = false
+    getter? over18 : Bool = false
     @[JSON::Field(key: "is_self")]
-    property self_post : Bool = false
+    getter? self_post : Bool = false
+
+    def self_post? : Bool
+      @self_post
+    end
+
     property selftext : String?
 
     def self? : Bool
-      self_post
+      @self_post
     end
   end
 
@@ -52,7 +57,7 @@ module RedditFetcher
     return error_feed_data(feed, "No subreddit configured") unless subreddit
 
     sort = feed.sort
-    over18 = feed.over18 || false
+    over18 = feed.over18? || false
 
     site_link = "https://www.reddit.com/r/#{subreddit}"
     feed_title = "r/#{subreddit}"
@@ -118,7 +123,7 @@ module RedditFetcher
     listing.data.children.each do |child|
       post = child.data
 
-      next if post.over18 && !over18
+      next if post.over18? && !over18
 
       link = resolve_reddit_link(post)
       pub_date = Time.unix(post.created_utc.to_i64) if post.created_utc > 0

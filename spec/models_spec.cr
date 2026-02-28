@@ -158,8 +158,8 @@ describe "Models" do
       state.tabs.should be_empty
       state.config_title.should eq("Quick Headlines")
       state.config.should be_nil
-      state.is_clustering?.should be_false
-      state.is_refreshing?.should be_false
+      state.clustering?.should be_false
+      state.refreshing?.should be_false
     end
 
     it "finds feeds for tab" do

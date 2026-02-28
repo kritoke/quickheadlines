@@ -114,14 +114,14 @@ describe "API Response Types" do
         active_tab: "tech",
         feeds: [] of FeedResponse,
         software_releases: [] of FeedResponse,
-        is_clustering: false,
+        clustering: false,
         updated_at: 1700000000000_i64
       )
       response.tabs.size.should eq(2)
       response.active_tab.should eq("tech")
       response.feeds.should be_empty
       response.software_releases.should be_empty
-      response.is_clustering?.should be_false
+      response.clustering?.should be_false
     end
   end
 
@@ -131,12 +131,12 @@ describe "API Response Types" do
         items: [] of TimelineItemResponse,
         has_more: false,
         total_count: 0,
-        is_clustering: false
+        clustering: false
       )
       response.items.should be_empty
       response.has_more?.should be_false
       response.total_count.should eq(0)
-      response.is_clustering?.should be_false
+      response.clustering?.should be_false
     end
   end
 
@@ -144,10 +144,10 @@ describe "API Response Types" do
     it "creates with required fields" do
       response = VersionResponse.new(
         updated_at: 1700000000000_i64,
-        is_clustering: false
+        clustering: false
       )
       response.updated_at.should eq(1700000000000_i64)
-      response.is_clustering?.should be_false
+      response.clustering?.should be_false
     end
   end
 

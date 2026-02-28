@@ -13,9 +13,9 @@ describe "Feed Theme Persistence" do
       site_link: "https://theme.example.com",
       header_color: nil,
       header_text_color: nil,
-      items: [] of Item
+      items: [] of Item,
+      header_theme_colors: theme_json
     )
-    fd.header_theme_colors = theme_json
 
     # Insert
     cache.add(fd)
@@ -29,7 +29,7 @@ describe "Feed Theme Persistence" do
     fd2 = cache.get("https://theme.example.com/feed.xml")
     fd2.should_not be_nil
     if fd2
-      fd2.header_theme_colors = new_theme
+      fd2 = fd2.with_header_theme_colors(new_theme)
       cache.add(fd2)
     else
       raise "FeedData missing after insert"

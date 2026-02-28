@@ -27,8 +27,8 @@ describe "Header Colors" do
         # Verify via get
         feed = cache.get("https://test.com/feed.xml")
         feed.should_not be_nil
-        feed!.header_color.should eq("rgb(200,200,200)")
-        feed!.header_text_color.should eq("#ffffff")
+        feed.not_nil!.header_color.should eq("rgb(200,200,200)")
+        feed.not_nil!.header_text_color.should eq("#ffffff")
       end
     end
 
