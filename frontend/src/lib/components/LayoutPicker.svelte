@@ -71,11 +71,21 @@
 		aria-expanded={isOpen}
 		aria-haspopup="true"
 	>
-		<svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-slate-500 dark:text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-			{#if layoutState.mounted}
-				<path d="{getGridIcon(layoutState.timelineColumns)}" />
+		<svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-slate-500 dark:text-slate-400" viewBox="0 0 24 24" fill="currentColor">
+			{#if !layoutState.mounted || layoutState.timelineColumns === 4}
+				<rect x="3" y="3" width="7" height="7" rx="1" />
+				<rect x="14" y="3" width="7" height="7" rx="1" />
+				<rect x="3" y="14" width="7" height="7" rx="1" />
+				<rect x="14" y="14" width="7" height="7" rx="1" />
+			{:else if layoutState.timelineColumns === 3}
+				<rect x="3" y="3" width="5.5" height="18" rx="1" />
+				<rect x="9.25" y="3" width="5.5" height="18" rx="1" />
+				<rect x="15.5" y="3" width="5.5" height="18" rx="1" />
+			{:else if layoutState.timelineColumns === 2}
+				<rect x="3" y="3" width="7.5" height="18" rx="1" />
+				<rect x="13.5" y="3" width="7.5" height="18" rx="1" />
 			{:else}
-				<path d="M4 4h16v16H4z" />
+				<rect x="3" y="3" width="18" height="18" rx="1" />
 			{/if}
 		</svg>
 		{#if layoutState.mounted && layoutState.timelineColumns > 1}
