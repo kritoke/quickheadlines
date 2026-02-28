@@ -86,6 +86,8 @@ def refresh_all(config : Config)
 
   STDERR.puts "[#{Time.local}] refresh_all: STATE updated - feeds=#{new_feeds.size}, tabs=#{new_tabs.size}"
 
+  # Ensure feeds are persisted to database before clustering runs
+  # This prevents KeyError on fresh deployments when feeds aren't in DB yet
   async_clustering(fetched_map.values.to_a)
 
   GC.collect
@@ -94,6 +96,8 @@ def refresh_all(config : Config)
 end
 
 def async_clustering(feeds : Array(FeedData))
+  return if feeds.empty?
+
   clustering_channel = Channel(Nil).new(10)
 
   StateStore.update(&.copy_with(clustering: true))
@@ -105,6 +109,8 @@ def async_clustering(feeds : Array(FeedData))
         clustering_channel.send(nil)
         begin
           process_feed_item_clustering(feed_data)
+        rescue ex
+          STDERR.puts "[#{Time.local}] async_clustering: error processing #{feed_data.url}: #{ex.message}"
         ensure
           clustering_channel.receive
           if CLUSTERING_JOBS.sub(1) <= 1
@@ -128,6 +134,7 @@ def process_feed_item_clustering(feed_data : FeedData) : Nil
   cache = FeedCache.instance
 
   feed_id = cache.get_feed_id(feed_data.url)
+  return unless feed_id
 
   feed_data.items.each do |item|
     item_id = cache.get_item_id(feed_data.url, item.link)
