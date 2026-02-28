@@ -41,10 +41,8 @@
 			const config = await fetchConfig();
 			const newRefreshMinutes = config.refresh_minutes || 10;
 			
-			// Always update refreshMinutes
 			refreshMinutes = newRefreshMinutes;
 			
-			// Always set/reset the interval with the new value
 			if (refreshInterval) {
 				clearInterval(refreshInterval);
 			}
@@ -53,7 +51,6 @@
 			}, newRefreshMinutes * 60 * 1000);
 			console.log('[Timeline] Refresh interval set to', newRefreshMinutes, 'minutes');
 		} catch (e) {
-			// Use default if config fetch fails
 			if (!refreshInterval) {
 				refreshInterval = setInterval(() => {
 					loadTimeline();
@@ -122,23 +119,32 @@
 	});
 
 	let mounted = $state(false);
+	let initialized = $state(false);
+	let pollTimeoutId: ReturnType<typeof setTimeout> | null = null;
+	let abortController: AbortController | null = null;
 	
 	$effect(() => {
-		if (!mounted) {
+		if (!initialized) {
+			initialized = true;
 			mounted = true;
 			loadTimeline();
-			loadConfig(); // loadConfig now handles setting up the refresh interval
+			loadConfig();
 			
-			// Track last update timestamp for long-polling
 			let lastUpdate = Date.now();
 			
-			// Long-polling for real-time feed updates
+			abortController = new AbortController();
+			
 			async function pollForUpdates() {
+				if (abortController?.signal.aborted) return;
+				
 				try {
-					const response = await fetch(`/api/events?last_update=${lastUpdate}`);
-					const text = await response.text();
+					const response = await fetch(`/api/events?last_update=${lastUpdate}`, {
+						signal: abortController!.signal
+					});
 					
-					// Parse SSE-style response
+					if (abortController?.signal.aborted) return;
+					
+					const text = await response.text();
 					const lines = text.split('\n');
 					for (const line of lines) {
 						if (line.startsWith('event: feed_update')) {
@@ -156,14 +162,17 @@
 						}
 					}
 				} catch (e) {
-					console.warn('[Long-poll] Poll failed, retrying in 5s:', e);
+					if (e instanceof Error && e.name === 'AbortError') {
+						return;
+					}
+					console.warn('[Long-poll] Poll failed, retrying in 1s:', e);
 				}
 				
-				// Continue polling
-				setTimeout(pollForUpdates, 1000);
+				if (!abortController?.signal.aborted) {
+					pollTimeoutId = setTimeout(pollForUpdates, 1000);
+				}
 			}
 			
-			// Start long-polling
 			pollForUpdates();
 
 			async function checkClustering() {
@@ -193,8 +202,21 @@
 		}
 		
 		return () => {
-			if (refreshInterval) clearInterval(refreshInterval);
-			if (clusteringCheckInterval) clearInterval(clusteringCheckInterval);
+			mounted = false;
+			abortController?.abort();
+			abortController = null;
+			if (refreshInterval) {
+				clearInterval(refreshInterval);
+				refreshInterval = null;
+			}
+			if (clusteringCheckInterval) {
+				clearInterval(clusteringCheckInterval);
+				clusteringCheckInterval = null;
+			}
+			if (pollTimeoutId) {
+				clearTimeout(pollTimeoutId);
+				pollTimeoutId = null;
+			}
 		};
 	});
 </script>

@@ -15,7 +15,8 @@
 	let saveScrollY = $state(0);
 
 	let loadingFeeds = $state<Record<string, boolean>>({});
-	let tabCache = $state<Record<string, { feeds: FeedResponse[], loaded: boolean }>>({});
+	let tabCache = $state<Record<string, { feeds: FeedResponse[], loaded: boolean, updatedAt: Date | null }>>({});
+	const MAX_TAB_CACHE_SIZE = 10;
 	
 	let refreshInterval: ReturnType<typeof setInterval> | null = null;
 	let configRefreshInterval: ReturnType<typeof setInterval> | null = null;
@@ -26,6 +27,7 @@
 
 	let searchQuery = $state('');
 	let searchExpanded = $state(false);
+	let tabChangeTimeout: ReturnType<typeof setTimeout> | null = null;
 
 	let filteredFeeds = $derived.by(() => {
 		if (!searchQuery.trim()) return feeds;
@@ -48,6 +50,7 @@
 		if (!force && tabCache[tab]?.loaded) {
 			feeds = tabCache[tab].feeds;
 			activeTab = tab;
+			lastUpdated = tabCache[tab].updatedAt;
 			return;
 		}
 
@@ -58,13 +61,27 @@
 			const swReleases = response.software_releases || [];
 			feeds = [...swReleases, ...(response.feeds || [])];
 			tabs = response.tabs || [];
-			activeTab = tab;
-			lastUpdated = response.updated_at ? new Date(response.updated_at) : null;
-			
-			tabCache = {
-				...tabCache,
-				[tab]: { feeds, loaded: true }
-			};
+		activeTab = tab;
+		lastUpdated = response.updated_at ? new Date(response.updated_at) : null;
+		
+		let newCache = {
+			...tabCache,
+			[tab]: { feeds, loaded: true, updatedAt: lastUpdated }
+		};
+		
+		const keys = Object.keys(newCache);
+		if (keys.length > MAX_TAB_CACHE_SIZE) {
+			const sorted = keys.sort((a, b) => {
+				const aTime = newCache[a].updatedAt?.getTime() ?? 0;
+				const bTime = newCache[b].updatedAt?.getTime() ?? 0;
+				return aTime - bTime;
+			});
+			const toRemove = keys.length - MAX_TAB_CACHE_SIZE;
+			for (let i = 0; i < toRemove; i++) {
+				delete newCache[sorted[i]];
+			}
+		}
+		tabCache = newCache;
 		} catch (e) {
 			error = e instanceof Error ? e.message : 'Failed to load feeds';
 		} finally {
@@ -80,30 +97,23 @@
 			
 			refreshMinutes = newRefreshMinutes;
 			configFetched = true;
-			
-			if (refreshInterval) {
-				clearInterval(refreshInterval);
-			}
-			refreshInterval = setInterval(() => {
-				loadFeeds(activeTab, true);
-			}, newRefreshMinutes * 60 * 1000);
-			console.log('[Feeds] Refresh interval set to', newRefreshMinutes, 'minutes');
+			console.log('[Feeds] Config loaded, refresh interval:', newRefreshMinutes, 'minutes');
 		} catch (e) {
-			if (!refreshInterval) {
-				refreshInterval = setInterval(() => {
-					loadFeeds(activeTab, true);
-				}, 10 * 60 * 1000);
-			}
+			console.warn('[Feeds] Config fetch failed, using defaults');
 		}
 	}
 
 	async function handleTabChange(tab: string) {
-		activeTab = tab;
-		const url = new URL(window.location.href);
-		url.searchParams.set('tab', tab);
-		window.history.replaceState({}, '', url);
+		if (tabChangeTimeout) clearTimeout(tabChangeTimeout);
 		
-		await loadFeeds(tab);
+		tabChangeTimeout = setTimeout(async () => {
+			activeTab = tab;
+			const url = new URL(window.location.href);
+			url.searchParams.set('tab', tab);
+			window.history.replaceState({}, '', url);
+			
+			await loadFeeds(tab);
+		}, 150);
 	}
 
 	async function handleLoadMore(feed: FeedResponse) {
@@ -124,7 +134,7 @@
 				
 				tabCache = {
 					...tabCache,
-					[activeTab]: { feeds, loaded: true }
+					[activeTab]: { feeds, loaded: true, updatedAt: lastUpdated }
 				};
 			}
 		} catch (e) {
@@ -135,6 +145,9 @@
 	}
 	
 	$effect(() => {
+		let pollTimeoutId: ReturnType<typeof setTimeout> | null = null;
+		let abortController = new AbortController();
+		
 		if (!mounted) {
 			mounted = true;
 			const params = new URLSearchParams(window.location.search);
@@ -145,6 +158,7 @@
 			
 			// Load config first, then set up interval with correct value
 			loadConfig().then(() => {
+				if (refreshInterval) clearInterval(refreshInterval);
 				refreshInterval = setInterval(() => {
 					loadFeeds(activeTab, true);
 				}, refreshMinutes * 60 * 1000);
@@ -155,8 +169,15 @@
 			
 			// Long-polling for real-time feed updates
 			async function pollForUpdates() {
+				if (abortController.signal.aborted) return;
+				
 				try {
-					const response = await fetch(`/api/events?last_update=${lastUpdate}`);
+					const response = await fetch(`/api/events?last_update=${lastUpdate}`, {
+						signal: abortController.signal
+					});
+					
+					if (abortController.signal.aborted) return;
+					
 					const text = await response.text();
 					
 					// Parse SSE-style response
@@ -177,11 +198,17 @@
 						}
 					}
 				} catch (e) {
-					console.warn('[Long-poll] Poll failed, retrying in 5s:', e);
+					if (e instanceof Error && e.name === 'AbortError') {
+						// Expected when navigating away - don't log
+						return;
+					}
+					console.warn('[Long-poll] Poll failed, retrying in 1s:', e);
 				}
 				
-				// Continue polling
-				setTimeout(pollForUpdates, 1000);
+				// Continue polling only if not aborted
+				if (!abortController.signal.aborted) {
+					pollTimeoutId = setTimeout(pollForUpdates, 1000);
+				}
 			}
 			
 			// Start long-polling
@@ -193,8 +220,11 @@
 		}
 		
 		return () => {
+			abortController.abort();
 			if (refreshInterval) clearInterval(refreshInterval);
 			if (configRefreshInterval) clearInterval(configRefreshInterval);
+			if (pollTimeoutId) clearTimeout(pollTimeoutId);
+			if (tabChangeTimeout) clearTimeout(tabChangeTimeout);
 		};
 	});
 </script>
