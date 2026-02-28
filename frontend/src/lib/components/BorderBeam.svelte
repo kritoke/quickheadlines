@@ -35,15 +35,19 @@
 <style>
 	.border-beam-wrapper {
 		mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-		mask-composite: xor;
-		-webkit-mask-composite: xor;
+		mask-composite: exclude;
+		-webkit-mask-composite: exclude;
+		-moz-mask-composite: exclude;
 		padding: 2px;
+		isolation: isolate;
 	}
 
 	.border-beam-glow {
 		position: absolute;
 		inset: -50%;
 		animation: border-beam-rotate linear infinite;
+		filter: blur(0px);
+		will-change: transform;
 	}
 
 	@keyframes border-beam-rotate {
