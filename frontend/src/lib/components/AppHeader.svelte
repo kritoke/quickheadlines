@@ -44,6 +44,9 @@
 				{/if}
 			</div>
 			<div class="flex items-center gap-1 sm:gap-2">
+				{#if actions}
+					{@render actions()}
+				{/if}
 				<button
 					onclick={onSearchToggle}
 					class="p-1.5 sm:p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
