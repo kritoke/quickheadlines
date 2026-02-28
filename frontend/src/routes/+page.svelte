@@ -17,7 +17,8 @@
 	let saveScrollY = $state(0);
 
 	let loadingFeeds = $state<Record<string, boolean>>({});
-	let tabCache = $state<Record<string, { feeds: FeedResponse[], loaded: boolean }>>({});
+	let tabCache = $state<Record<string, { feeds: FeedResponse[], loaded: boolean, updatedAt: Date | null }>>({});
+	const MAX_TAB_CACHE_SIZE = 10;
 	
 	let refreshInterval: ReturnType<typeof setInterval> | null = null;
 	let configRefreshInterval: ReturnType<typeof setInterval> | null = null;
@@ -28,6 +29,7 @@
 
 	let searchQuery = $state('');
 	let searchExpanded = $state(false);
+	let tabChangeTimeout: ReturnType<typeof setTimeout> | null = null;
 
 	let filteredFeeds = $derived.by(() => {
 		if (!searchQuery.trim()) return feeds;
@@ -50,6 +52,7 @@
 		if (!force && tabCache[tab]?.loaded) {
 			feeds = tabCache[tab].feeds;
 			activeTab = tab;
+			lastUpdated = tabCache[tab].updatedAt;
 			return;
 		}
 
@@ -63,10 +66,24 @@
 			activeTab = tab;
 			lastUpdated = response.updated_at ? new Date(response.updated_at) : null;
 			
-			tabCache = {
+			let newCache = {
 				...tabCache,
-				[tab]: { feeds, loaded: true }
+				[tab]: { feeds, loaded: true, updatedAt: lastUpdated }
 			};
+			
+			const keys = Object.keys(newCache);
+			if (keys.length > MAX_TAB_CACHE_SIZE) {
+				const sorted = keys.sort((a, b) => {
+					const aTime = newCache[a].updatedAt?.getTime() ?? 0;
+					const bTime = newCache[b].updatedAt?.getTime() ?? 0;
+					return aTime - bTime;
+				});
+				const toRemove = keys.length - MAX_TAB_CACHE_SIZE;
+				for (let i = 0; i < toRemove; i++) {
+					delete newCache[sorted[i]];
+				}
+			}
+			tabCache = newCache;
 		} catch (e) {
 			error = e instanceof Error ? e.message : 'Failed to load feeds';
 		} finally {
@@ -82,6 +99,7 @@
 			
 			refreshMinutes = newRefreshMinutes;
 			configFetched = true;
+			console.log('[Feeds] Config loaded, refresh interval:', newRefreshMinutes, 'minutes');
 			
 			if (refreshInterval) {
 				clearInterval(refreshInterval);
@@ -100,12 +118,16 @@
 	}
 
 	async function handleTabChange(tab: string) {
-		activeTab = tab;
-		const url = new URL(window.location.href);
-		url.searchParams.set('tab', tab);
-		window.history.replaceState({}, '', url);
+		if (tabChangeTimeout) clearTimeout(tabChangeTimeout);
 		
-		await loadFeeds(tab);
+		tabChangeTimeout = setTimeout(async () => {
+			activeTab = tab;
+			const url = new URL(window.location.href);
+			url.searchParams.set('tab', tab);
+			window.history.replaceState({}, '', url);
+			
+			await loadFeeds(tab);
+		}, 150);
 	}
 
 	async function handleLoadMore(feed: FeedResponse) {
@@ -126,7 +148,7 @@
 				
 				tabCache = {
 					...tabCache,
-					[activeTab]: { feeds, loaded: true }
+					[activeTab]: { feeds, loaded: true, updatedAt: lastUpdated }
 				};
 			}
 		} catch (e) {
@@ -150,39 +172,47 @@
 				refreshInterval = setInterval(() => {
 					loadFeeds(activeTab, true);
 				}, refreshMinutes * 60 * 1000);
-			});
 
-			// Check for background refresh completion
-			async function checkRefresh() {
-				try {
-					const status = await fetchStatus();
-					if (status.is_refreshing) {
-						saveScrollY = window.scrollY;
-						// Wait for refresh to complete, then reload
-						await new Promise(r => setTimeout(r, 5000));
-						const currentStatus = await fetchStatus();
-						if (!currentStatus.is_refreshing) {
-							loadFeeds(activeTab, true);
-							window.scrollTo(0, saveScrollY);
+				configRefreshInterval = setInterval(async () => {
+					try {
+						const config = await fetchConfig();
+						const newRefreshMinutes = config.refresh_minutes || 10;
+						if (newRefreshMinutes !== refreshMinutes) {
+							refreshMinutes = newRefreshMinutes;
+							if (refreshInterval) {
+								clearInterval(refreshInterval);
+							}
+							refreshInterval = setInterval(() => {
+								loadFeeds(activeTab, true);
+							}, newRefreshMinutes * 60 * 1000);
+							console.log('[Config] Refresh interval updated to', newRefreshMinutes, 'minutes');
 						}
+					} catch (e) {
+						// Silent fail for config refresh
 					}
-				} catch (e) {
-					// Status check failed
-				}
-			}
-
-			setInterval(checkRefresh, 10000);
+				}, 5 * 60 * 1000);
+			});
 			
-			configRefreshInterval = setInterval(() => {
-				loadConfig();
-			}, 60000);
+			const cleanupStatus = setInterval(async () => {
+				try {
+					await fetchStatus();
+				} catch (e) {
+					// Silent fail
+				}
+			}, 30 * 1000);
+
+			return () => {
+				if (refreshInterval) clearInterval(refreshInterval);
+				if (configRefreshInterval) clearInterval(configRefreshInterval);
+				if (cleanupStatus) clearInterval(cleanupStatus);
+				if (tabChangeTimeout) clearTimeout(tabChangeTimeout);
+			};
 		}
-		
-		return () => {
-			if (refreshInterval) clearInterval(refreshInterval);
-			if (configRefreshInterval) clearInterval(configRefreshInterval);
-		};
 	});
+
+	function handleScrollToTop() {
+		window.scrollTo({ top: 0, behavior: 'smooth' });
+	}
 </script>
 
 <svelte:head>
