@@ -95,22 +95,25 @@ module RedditFetcher
   def self.fetch_reddit_posts(subreddit : String, sort : String, limit : Int32, over18 : Bool) : Array(Item)
     url = "#{REDDIT_API_BASE}/r/#{subreddit}/#{sort}.json?limit=#{limit}&raw_json=1"
     uri = URI.parse(url)
+    
+    # Use browser-like headers similar to fetcher.cr for better compatibility
     headers = HTTP::Headers{
-      "User-Agent" => USER_AGENT,
-      "Accept"     => "application/json",
+      "User-Agent"      => USER_AGENT,
+      "Accept"          => "application/json",
+      "Accept-Language" => "en-US,en;q=0.9",
+      "Connection"      => "keep-alive",
     }
 
     begin
-      client = HTTP::Client.new(uri)
-      client.connect_timeout = 30.seconds
-      client.read_timeout = 30.seconds
-
-      response = client.get(uri.request_target, headers: headers)
+      # Try using HTTP::Client.get with URL directly (simpler approach)
+      response = HTTP::Client.get(url, headers: headers)
     rescue ex : Socket::ConnectError
       STDERR.puts "[DEBUG] Reddit connection failed for #{subreddit}: #{ex.message}"
+      STDERR.puts "[DEBUG] This may be a network, firewall, or DNS issue on FreeBSD"
       raise RedditFetchError.new("Connection failed: #{ex.message}")
     rescue ex : OpenSSL::SSL::Error
       STDERR.puts "[DEBUG] Reddit SSL error for #{subreddit}: #{ex.message}"
+      STDERR.puts "[DEBUG] This may indicate missing CA certificates or TLS incompatibility"
       raise RedditFetchError.new("SSL error: #{ex.message}")
     rescue ex : IO::Error
       STDERR.puts "[DEBUG] Reddit IO error for #{subreddit}: #{ex.message}"
@@ -124,10 +127,12 @@ module RedditFetcher
     when 200
       parse_reddit_response(response.body, limit, over18)
     when 403
+      STDERR.puts "[DEBUG] Reddit returned 403 for #{subreddit} - User-Agent may be blocked"
       raise RedditFetchError.new("Access denied (403) - Reddit may be blocking this request")
     when 404
       raise RedditFetchError.new("Subreddit '#{subreddit}' not found")
     when 429
+      STDERR.puts "[DEBUG] Reddit rate limited for #{subreddit}"
       raise RedditFetchError.new("Rate limited by Reddit API")
     when 503
       raise RedditFetchError.new("Reddit service unavailable")
