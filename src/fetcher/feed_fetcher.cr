@@ -437,7 +437,7 @@ end
 
 def load_feeds_from_cache(config : Config) : Bool
   cache = FeedCache.instance
-  StateStore.update { |state| state.copy_with(config_title: config.page_title, config: config) }
+  StateStore.update(&.copy_with(config_title: config.page_title, config: config))
 
   cached_feeds = config.feeds.compact_map { |feed_config| cache.get(feed_config.url) }
 

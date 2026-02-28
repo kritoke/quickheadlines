@@ -311,12 +311,12 @@ class AppState
 
   # Legacy methods that need access to internal state
   def self.feeds_for_tab(tab_name : String)
-    StateStore.update { |state| state } # Ensure thread-safe read
+    StateStore.update(&.itself) # Ensure thread-safe read
     StateStore.feeds_for_tab_impl(tab_name)
   end
 
   def self.all_timeline_items
-    StateStore.update { |state| state } # Ensure thread-safe read
+    StateStore.update(&.itself) # Ensure thread-safe read
     StateStore.all_timeline_items_impl
   end
 end

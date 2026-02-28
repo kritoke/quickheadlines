@@ -37,8 +37,8 @@ describe "Repositories" do
 
         found = repo.find_by_url(test_url)
         found.should_not be_nil
-        found.not_nil!.title.should eq("Test Feed")
-        found.not_nil!.header_color.should eq("#ff0000")
+        found!.title.should eq("Test Feed")
+        found!.header_color.should eq("#ff0000")
       end
     end
 
@@ -59,7 +59,7 @@ describe "Repositories" do
 
         found = repo.find_by_url(test_url)
         found.should_not be_nil
-        found.not_nil!.title.should eq("New Feed")
+        found!.title.should eq("New Feed")
       end
     end
 
@@ -107,8 +107,8 @@ describe "Repositories" do
 
         found = repo.find_with_items(test_url)
         found.should_not be_nil
-        found.not_nil!.title.should eq("Test Feed")
-        found.not_nil!.items.size.should eq(2)
+        found!.title.should eq("Test Feed")
+        found!.items.size.should eq(2)
       end
     end
 
@@ -154,7 +154,7 @@ describe "Repositories" do
 
         found = repo.find_by_url(test_url)
         found.should_not be_nil
-        found.not_nil!.title.should eq("Test Feed")
+        found!.title.should eq("Test Feed")
       end
     end
   end
@@ -188,7 +188,7 @@ describe "Repositories" do
         feed_id = cache.get_feed_id(test_url)
         feed_id.should_not be_nil
 
-        story_repo.deduplicate(feed_id.not_nil!, "Existing Title #{rand(99999)}").should be_false
+        story_repo.deduplicate(feed_id!, "Existing Title #{rand(99999)}").should be_false
       end
     end
   end

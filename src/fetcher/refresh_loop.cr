@@ -13,7 +13,7 @@ CLUSTERING_JOBS = Atomic(Int32).new(0)
 
 def refresh_all(config : Config)
   StateStore.update(&.copy_with(refreshing: true))
-  StateStore.update { |state| state.copy_with(config_title: config.page_title, config: config) }
+  StateStore.update(&.copy_with(config_title: config.page_title, config: config))
 
   all_configs = {} of String => Feed
   config.feeds.each { |feed| all_configs[feed.url] = feed }

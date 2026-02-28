@@ -41,8 +41,8 @@ describe "Config Validation" do
       config = Config.from_yaml(yaml)
       feed = config.feeds.first
       feed.auth.should_not be_nil
-      feed.auth.not_nil!.type.should eq("bearer")
-      feed.auth.not_nil!.token.should eq("secret-token")
+      feed.auth!.type.should eq("bearer")
+      feed.auth!.token.should eq("secret-token")
     end
 
     it "parses feed with retry configuration" do
@@ -84,7 +84,7 @@ describe "Config Validation" do
         YAML
       config = Config.from_yaml(yaml)
       config.software_releases.should_not be_nil
-      config.software_releases.not_nil!.repos.size.should eq(2)
+      config.software_releases!.repos.size.should eq(2)
     end
 
     it "uses default values for missing fields" do
@@ -138,9 +138,9 @@ describe "Config Validation" do
       YAML
       config = Config.from_yaml(yaml)
       config.clustering.should_not be_nil
-      cluster = config.clustering.not_nil!
-      cluster.enabled.should eq(true)
-      cluster.run_on_startup.should eq(false)
+      cluster = config.clustering!
+      cluster.enabled?.should eq(true)
+      cluster.run_on_startup?.should eq(false)
       cluster.threshold.should eq(0.5)
       cluster.max_items.should eq(10000)
     end
@@ -160,7 +160,7 @@ describe "Config Validation" do
       YAML
       config = Config.from_yaml(yaml)
       config.rate_limiting.should_not be_nil
-      rate_limit = config.rate_limiting.not_nil!
+      rate_limit = config.rate_limiting!
       rate_limit.enabled?.should eq(true)
       rate_limit.max_entries.should eq(5000)
     end
@@ -178,7 +178,7 @@ describe "Config Validation" do
       YAML
       config = Config.from_yaml(yaml)
       config.http_client.should_not be_nil
-      http_config = config.http_client.not_nil!
+      http_config = config.http_client!
       http_config.connect_timeout.should eq(30)
       http_config.timeout.should eq(60)
       http_config.max_redirects.should eq(5)
