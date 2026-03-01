@@ -285,8 +285,10 @@ end
 
 def fetch_feed(feed : Feed, display_item_limit : Int32, db_fetch_limit : Int32, previous_data : FeedData? = nil) : FeedData
   if feed.subreddit
-    limit = feed.item_limit || db_fetch_limit
-    STDERR.puts "[DEBUG] Reddit feed: #{feed.title} (#{feed.url}), limit=#{limit}"
+    # Reddit API has max limit of 100 per request
+    raw_limit = feed.item_limit || db_fetch_limit
+    limit = Math.min(raw_limit, 100)
+    STDERR.puts "[DEBUG] Reddit feed: #{feed.title} (#{feed.url}), limit=#{limit} (raw=#{raw_limit}, capped at 100)"
     begin
       result = RedditFetcher.fetch_subreddit(feed, limit)
       FeedCache.instance.add(result)
