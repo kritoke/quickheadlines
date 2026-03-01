@@ -115,11 +115,21 @@ module RedditFetcher
       
       STDERR.puts "[DEBUG] Reddit HTTP request starting for #{subreddit}"
       STDERR.puts "[DEBUG] URL: #{url}"
-      STDERR.puts "[DEBUG] Headers: #{headers.to_s}"
       
       response = client.get(uri.request_target, headers: headers)
       
       STDERR.puts "[DEBUG] Reddit HTTP response for #{subreddit}: #{response.status_code}"
+      STDERR.puts "[DEBUG] Response headers: #{response.headers.to_s}"
+      STDERR.puts "[DEBUG] Response body length: #{response.body.bytesize} bytes"
+      
+      # Log first 500 chars of response body for debugging
+      body_preview = response.body.size > 500 ? response.body[0..499] + "..." : response.body
+      STDERR.puts "[DEBUG] Response body preview: #{body_preview}"
+      
+      STDERR.puts "[DEBUG] About to parse Reddit response for #{subreddit}"
+      result = parse_reddit_response(response.body, limit, over18)
+      STDERR.puts "[DEBUG] Successfully parsed #{result.size} items for #{subreddit}"
+      result
     rescue ex : Socket::ConnectError
       STDERR.puts "[ERROR] Reddit connection failed for #{subreddit}: #{ex.class} - #{ex.message}"
       STDERR.puts "[ERROR] Full exception: #{ex.inspect_with_backtrace}"
@@ -132,6 +142,10 @@ module RedditFetcher
       STDERR.puts "[ERROR] Reddit IO error for #{subreddit}: #{ex.class} - #{ex.message}"
       STDERR.puts "[ERROR] Full exception: #{ex.inspect_with_backtrace}"
       raise RedditFetchError.new("IO error: #{ex.class} - #{ex.message}")
+    rescue ex : JSON::ParseException
+      STDERR.puts "[ERROR] Reddit JSON parse error for #{subreddit}: #{ex.class} - #{ex.message}"
+      STDERR.puts "[ERROR] Full exception: #{ex.inspect_with_backtrace}"
+      raise RedditFetchError.new("JSON parse error: #{ex.message}")
     rescue ex : Exception
       STDERR.puts "[ERROR] Reddit unexpected error for #{subreddit}: #{ex.class} - #{ex.message}"
       STDERR.puts "[ERROR] Message: #{ex.message}"
