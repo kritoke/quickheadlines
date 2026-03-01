@@ -92,13 +92,14 @@ module RedditFetcher
 
     favicon = fetch_subreddit_favicon(subreddit)
     header_color = "ff4500"
+    header_text_color = "ffffff"
 
     FeedData.new(
       feed_title,
       feed.url,
       site_link,
       header_color,
-      nil,
+      header_text_color,
       items,
       nil,
       nil,
