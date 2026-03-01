@@ -63,12 +63,14 @@ module RedditFetcher
     site_link = "https://www.reddit.com/r/#{subreddit}"
     feed_title = "r/#{subreddit}"
 
+    STDERR.puts "[RSS-FALLBACK-ENABLED] Version 2026-03-01-11:00"
     STDERR.puts "[DEBUG] fetch_subreddit called for #{subreddit}, limit=#{limit}"
 
     # Try JSON API first, fall back to RSS if blocked
     json_failed = false
     json_error_msg = ""
     begin
+      STDERR.puts "[DEBUG] About to call fetch_reddit_posts for #{subreddit}"
       items = fetch_reddit_posts(subreddit, sort, limit, over18)
       STDERR.puts "[INFO] Reddit JSON API succeeded for #{subreddit}: #{items.size} items"
     rescue ex : Exception
