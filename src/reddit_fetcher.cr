@@ -222,6 +222,7 @@ module RedditFetcher
 
   def self.fetch_reddit_rss(subreddit : String, sort : String, limit : Int32, over18 : Bool) : Array(Item)
     # Use old.reddit.com RSS - less restrictive than new Reddit
+    # Reddit uses Atom format, not RSS 2.0
     url = "https://old.reddit.com/r/#{subreddit}/#{sort}.rss"
     headers = HTTP::Headers{
       "User-Agent" => USER_AGENT,
@@ -237,32 +238,34 @@ module RedditFetcher
 
     STDERR.puts "[DEBUG] RSS response length: #{response.body.bytesize} bytes"
 
-    # Parse RSS XML
+    # Parse Atom XML
     xml = XML.parse(response.body)
     items = [] of Item
     
-    STDERR.puts "[DEBUG] RSS XML parsed, looking for items..."
+    STDERR.puts "[DEBUG] Atom XML parsed, looking for entries..."
     
-    # Reddit RSS uses atom namespace, try different selectors
-    xml.xpath_nodes("//item").each do |node|
-      STDERR.puts "[DEBUG] Found RSS item node"
+    # Reddit uses Atom format with <entry> elements, not RSS <item>
+    xml.xpath_nodes("//atom:entry").each do |node|
+      STDERR.puts "[DEBUG] Found Atom entry node"
       break if items.size >= limit
       
       # Extract child elements
-      title_node = node.xpath_node("./title")
-      link_node = node.xpath_node("./link")
-      pubdate_node = node.xpath_node("./pubDate")
+      title_node = node.xpath_node("./atom:title")
+      link_node = node.xpath_node("./atom:link")
+      updated_node = node.xpath_node("./atom:updated")
       
       title = title_node.try(&.inner_text) || "Untitled"
-      link = link_node.try(&.inner_text) || ""
+      # Atom link has href attribute
+      link = link_node.try(&.["href"]) || ""
       
-      STDERR.puts "[DEBUG] RSS item: title='#{title[0..50] rescue title}', link='#{link[0..50] rescue link}'"
+      STDERR.puts "[DEBUG] Atom entry: title='#{title[0..50] rescue title}', link='#{link[0..50] rescue link}'"
       
       pub_date = nil
-      if pubdate_node
-        pub_date_str = pubdate_node.inner_text
+      if updated_node
+        updated_str = updated_node.inner_text
         begin
-          pub_date = Time.parse(pub_date_str, "%a, %d %b %Y %H:%M:%S %z", Time::Location.local)
+          # Atom uses ISO 8601 format
+          pub_date = Time.parse_iso8601(updated_str)
         rescue
           # Ignore parse errors
         end
@@ -271,7 +274,7 @@ module RedditFetcher
       items << Item.new(title, link, pub_date) if link.size > 0
     end
 
-    STDERR.puts "[DEBUG] RSS parsed #{items.size} items"
+    STDERR.puts "[DEBUG] Atom parsed #{items.size} entries"
     items
   end
 
