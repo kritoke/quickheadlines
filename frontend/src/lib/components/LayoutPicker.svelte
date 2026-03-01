@@ -58,7 +58,7 @@
 
 <svelte:window onkeydown={handleKeydown} />
 
-<div class="relative">
+<div class="relative hidden md:block">
 	<button
 		bind:this={buttonRef}
 		onclick={toggleDropdown}
