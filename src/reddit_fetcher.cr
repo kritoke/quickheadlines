@@ -227,17 +227,25 @@ module RedditFetcher
       "User-Agent" => USER_AGENT,
     }
 
+    STDERR.puts "[DEBUG] RSS URL: #{url}"
     response = HTTP::Client.get(url, headers: headers)
     
     if response.status_code != 200
+      STDERR.puts "[ERROR] RSS HTTP #{response.status_code}"
       raise RedditFetchError.new("RSS HTTP error #{response.status_code}")
     end
+
+    STDERR.puts "[DEBUG] RSS response length: #{response.body.bytesize} bytes"
 
     # Parse RSS XML
     xml = XML.parse(response.body)
     items = [] of Item
     
+    STDERR.puts "[DEBUG] RSS XML parsed, looking for items..."
+    
+    # Reddit RSS uses atom namespace, try different selectors
     xml.xpath_nodes("//item").each do |node|
+      STDERR.puts "[DEBUG] Found RSS item node"
       break if items.size >= limit
       
       # Extract child elements
@@ -247,6 +255,8 @@ module RedditFetcher
       
       title = title_node.try(&.inner_text) || "Untitled"
       link = link_node.try(&.inner_text) || ""
+      
+      STDERR.puts "[DEBUG] RSS item: title='#{title[0..50] rescue title}', link='#{link[0..50] rescue link}'"
       
       pub_date = nil
       if pubdate_node
@@ -261,6 +271,7 @@ module RedditFetcher
       items << Item.new(title, link, pub_date) if link.size > 0
     end
 
+    STDERR.puts "[DEBUG] RSS parsed #{items.size} items"
     items
   end
 
