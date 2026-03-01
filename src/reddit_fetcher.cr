@@ -7,7 +7,7 @@ require "./health_monitor"
 require "./color_extractor"
 
 module RedditFetcher
-  USER_AGENT      = "QuickHeadlines/0.3 (Reddit Feed Fetcher)"
+  USER_AGENT      = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
   REDDIT_API_BASE = "https://www.reddit.com"
 
   struct RedditPost
@@ -100,12 +100,13 @@ module RedditFetcher
     url = "#{REDDIT_API_BASE}/r/#{subreddit}/#{sort}.json?limit=#{limit}&raw_json=1"
     uri = URI.parse(url)
     
-    # Use browser-like headers similar to fetcher.cr for better compatibility
+    # Use realistic browser headers to avoid being blocked by Reddit
     headers = HTTP::Headers{
       "User-Agent"      => USER_AGENT,
-      "Accept"          => "application/json",
+      "Accept"          => "application/json, text/javascript, */*",
       "Accept-Language" => "en-US,en;q=0.9",
-      "Connection"      => "keep-alive",
+      "Origin"          => "https://www.reddit.com",
+      "Referer"         => "https://www.reddit.com/",
     }
 
     begin
