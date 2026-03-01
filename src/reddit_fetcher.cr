@@ -1,5 +1,6 @@
 require "json"
 require "time"
+require "xml"
 require "./config"
 require "./models"
 require "./storage"
@@ -62,24 +63,24 @@ module RedditFetcher
     site_link = "https://www.reddit.com/r/#{subreddit}"
     feed_title = "r/#{subreddit}"
 
+    # Try JSON API first, fall back to RSS if blocked
     begin
       items = fetch_reddit_posts(subreddit, sort, limit, over18)
-      STDERR.puts "[DEBUG] Reddit fetched #{items.size} items for #{subreddit}"
-    rescue ex : RedditFetchError
-      msg = ex.message || "Unknown error"
-      STDERR.puts "[ERROR] Reddit fetch failed for #{subreddit}: #{msg}"
-      STDERR.puts "[ERROR] Full exception: #{ex.inspect_with_backtrace}"
-      return error_feed_data(feed, msg)
+      STDERR.puts "[INFO] Reddit JSON API succeeded for #{subreddit}: #{items.size} items"
     rescue ex
-      STDERR.puts "[ERROR] Reddit unexpected error for #{subreddit}: #{ex.class} - #{ex.message}"
-      STDERR.puts "[ERROR] Full exception: #{ex.inspect_with_backtrace}"
-      HealthMonitor.log_error("fetch_subreddit(#{subreddit})", ex)
-      msg = ex.message || ex.class.to_s
-      return error_feed_data(feed, "Error: #{ex.class} - #{msg}")
+      STDERR.puts "[WARN] Reddit JSON API failed for #{subreddit}, trying RSS fallback..."
+      begin
+        items = fetch_reddit_rss(subreddit, sort, limit, over18)
+        STDERR.puts "[INFO] Reddit RSS fallback succeeded for #{subreddit}: #{items.size} items"
+      rescue rss_ex
+        STDERR.puts "[ERROR] Both JSON API and RSS failed for #{subreddit}"
+        STDERR.puts "[ERROR] JSON error: #{ex.message}"
+        STDERR.puts "[ERROR] RSS error: #{rss_ex.message}"
+        return error_feed_data(feed, "Reddit blocked: #{ex.message}")
+      end
     end
 
     favicon = fetch_subreddit_favicon(subreddit)
-
     header_color = "ff4500"
 
     FeedData.new(
@@ -206,6 +207,50 @@ module RedditFetcher
     else
       post.url
     end
+  end
+
+  def self.fetch_reddit_rss(subreddit : String, sort : String, limit : Int32, over18 : Bool) : Array(Item)
+    # Use old.reddit.com RSS - less restrictive than new Reddit
+    url = "https://old.reddit.com/r/#{subreddit}/#{sort}.rss"
+    headers = HTTP::Headers{
+      "User-Agent" => USER_AGENT,
+    }
+
+    response = HTTP::Client.get(url, headers: headers)
+    
+    if response.status_code != 200
+      raise RedditFetchError.new("RSS HTTP error #{response.status_code}")
+    end
+
+    # Parse RSS XML
+    xml = XML.parse(response.body)
+    items = [] of Item
+    
+    xml.xpath_nodes("//item").each do |node|
+      break if items.size >= limit
+      
+      # Extract child elements
+      title_node = node.xpath_node("./title")
+      link_node = node.xpath_node("./link")
+      pubdate_node = node.xpath_node("./pubDate")
+      
+      title = title_node.try(&.inner_text) || "Untitled"
+      link = link_node.try(&.inner_text) || ""
+      
+      pub_date = nil
+      if pubdate_node
+        pub_date_str = pubdate_node.inner_text
+        begin
+          pub_date = Time.parse(pub_date_str, "%a, %d %b %Y %H:%M:%S %z", Time::Location.local)
+        rescue
+          # Ignore parse errors
+        end
+      end
+
+      items << Item.new(title, link, pub_date) if link.size > 0
+    end
+
+    items
   end
 
   def self.fetch_subreddit_favicon(subreddit : String) : String?
