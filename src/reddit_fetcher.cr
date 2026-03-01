@@ -67,8 +67,12 @@ module RedditFetcher
       STDERR.puts "[DEBUG] Reddit fetched #{items.size} items for #{subreddit}"
     rescue ex : RedditFetchError
       msg = ex.message || "Unknown error"
+      STDERR.puts "[ERROR] Reddit fetch failed for #{subreddit}: #{msg}"
+      STDERR.puts "[ERROR] Full exception: #{ex.inspect_with_backtrace}"
       return error_feed_data(feed, msg)
     rescue ex
+      STDERR.puts "[ERROR] Reddit unexpected error for #{subreddit}: #{ex.class} - #{ex.message}"
+      STDERR.puts "[ERROR] Full exception: #{ex.inspect_with_backtrace}"
       HealthMonitor.log_error("fetch_subreddit(#{subreddit})", ex)
       msg = ex.message || ex.class.to_s
       return error_feed_data(feed, "Error: #{ex.class} - #{msg}")

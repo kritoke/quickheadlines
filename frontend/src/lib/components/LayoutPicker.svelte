@@ -4,6 +4,20 @@
 
 	let isOpen = $state(false);
 	let buttonRef: HTMLButtonElement | null = $state(null);
+	let isMobile = $state(false);
+
+	// Detect mobile/touch devices
+	$effect(() => {
+		if (typeof window === 'undefined') return;
+		
+		const checkMobile = () => {
+			isMobile = window.innerWidth < 768 || 'ontouchstart' in window;
+		};
+		
+		checkMobile();
+		window.addEventListener('resize', checkMobile);
+		return () => window.removeEventListener('resize', checkMobile);
+	});
 
 	function toggleDropdown(event: MouseEvent) {
 		event.stopPropagation();
@@ -58,7 +72,8 @@
 
 <svelte:window onkeydown={handleKeydown} />
 
-<div class="relative hidden md:block">
+{#if !isMobile}
+<div class="relative">
 	<button
 		bind:this={buttonRef}
 		onclick={toggleDropdown}
@@ -125,3 +140,4 @@
 		</div>
 	{/if}
 </div>
+{/if}

@@ -16,8 +16,31 @@
 			y = e.clientY;
 		}
 
+		function handleTouchMove(e: TouchEvent) {
+			if (e.touches.length > 0) {
+				const touch = e.touches[0];
+				x = touch.clientX;
+				y = touch.clientY;
+			}
+		}
+
+		function handleTouchStart(e: TouchEvent) {
+			if (e.touches.length > 0) {
+				const touch = e.touches[0];
+				x = touch.clientX;
+				y = touch.clientY;
+			}
+		}
+
 		window.addEventListener('mousemove', handleMouseMove);
-		return () => window.removeEventListener('mousemove', handleMouseMove);
+		window.addEventListener('touchmove', handleTouchMove, { passive: false });
+		window.addEventListener('touchstart', handleTouchStart, { passive: false });
+		
+		return () => {
+			window.removeEventListener('mousemove', handleMouseMove);
+			window.removeEventListener('touchmove', handleTouchMove);
+			window.removeEventListener('touchstart', handleTouchStart);
+		};
 	});
 
 	let enabled = $derived(mounted && themeState.cursorTrail);
