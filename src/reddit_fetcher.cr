@@ -109,21 +109,33 @@ module RedditFetcher
     }
 
     begin
-      # Try using HTTP::Client.get with URL directly (simpler approach)
-      response = HTTP::Client.get(url, headers: headers)
+      client = HTTP::Client.new(uri)
+      client.connect_timeout = 30.seconds
+      client.read_timeout = 30.seconds
+      
+      STDERR.puts "[DEBUG] Reddit HTTP request starting for #{subreddit}"
+      STDERR.puts "[DEBUG] URL: #{url}"
+      STDERR.puts "[DEBUG] Headers: #{headers.to_s}"
+      
+      response = client.get(uri.request_target, headers: headers)
+      
+      STDERR.puts "[DEBUG] Reddit HTTP response for #{subreddit}: #{response.status_code}"
     rescue ex : Socket::ConnectError
-      STDERR.puts "[DEBUG] Reddit connection failed for #{subreddit}: #{ex.message}"
-      STDERR.puts "[DEBUG] This may be a network, firewall, or DNS issue on FreeBSD"
-      raise RedditFetchError.new("Connection failed: #{ex.message}")
+      STDERR.puts "[ERROR] Reddit connection failed for #{subreddit}: #{ex.class} - #{ex.message}"
+      STDERR.puts "[ERROR] Full exception: #{ex.inspect_with_backtrace}"
+      raise RedditFetchError.new("Connection failed: #{ex.class} - #{ex.message}")
     rescue ex : OpenSSL::SSL::Error
-      STDERR.puts "[DEBUG] Reddit SSL error for #{subreddit}: #{ex.message}"
-      STDERR.puts "[DEBUG] This may indicate missing CA certificates or TLS incompatibility"
-      raise RedditFetchError.new("SSL error: #{ex.message}")
+      STDERR.puts "[ERROR] Reddit SSL error for #{subreddit}: #{ex.class} - #{ex.message}"
+      STDERR.puts "[ERROR] Full exception: #{ex.inspect_with_backtrace}"
+      raise RedditFetchError.new("SSL error: #{ex.class} - #{ex.message}")
     rescue ex : IO::Error
-      STDERR.puts "[DEBUG] Reddit IO error for #{subreddit}: #{ex.message}"
-      raise RedditFetchError.new("IO error: #{ex.message}")
-    rescue ex
-      STDERR.puts "[DEBUG] Reddit unexpected error for #{subreddit}: #{ex.class} - #{ex.message}"
+      STDERR.puts "[ERROR] Reddit IO error for #{subreddit}: #{ex.class} - #{ex.message}"
+      STDERR.puts "[ERROR] Full exception: #{ex.inspect_with_backtrace}"
+      raise RedditFetchError.new("IO error: #{ex.class} - #{ex.message}")
+    rescue ex : Exception
+      STDERR.puts "[ERROR] Reddit unexpected error for #{subreddit}: #{ex.class} - #{ex.message}"
+      STDERR.puts "[ERROR] Message: #{ex.message}"
+      STDERR.puts "[ERROR] Full exception: #{ex.inspect_with_backtrace}"
       raise RedditFetchError.new("Unexpected error: #{ex.class} - #{ex.message}")
     end
 
