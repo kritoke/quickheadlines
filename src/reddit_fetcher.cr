@@ -63,20 +63,28 @@ module RedditFetcher
     site_link = "https://www.reddit.com/r/#{subreddit}"
     feed_title = "r/#{subreddit}"
 
+    STDERR.puts "[DEBUG] fetch_subreddit called for #{subreddit}, limit=#{limit}"
+
     # Try JSON API first, fall back to RSS if blocked
+    json_failed = false
+    json_error_msg = ""
     begin
       items = fetch_reddit_posts(subreddit, sort, limit, over18)
       STDERR.puts "[INFO] Reddit JSON API succeeded for #{subreddit}: #{items.size} items"
-    rescue ex
-      STDERR.puts "[WARN] Reddit JSON API failed for #{subreddit}, trying RSS fallback..."
+    rescue ex : Exception
+      json_failed = true
+      json_error_msg = "#{ex.class}: #{ex.message}"
+      STDERR.puts "[WARN] Reddit JSON API failed for #{subreddit}: #{json_error_msg}"
+      STDERR.puts "[WARN] Trying RSS fallback..."
+      
       begin
+        STDERR.puts "[DEBUG] Attempting RSS fetch for #{subreddit}..."
         items = fetch_reddit_rss(subreddit, sort, limit, over18)
-        STDERR.puts "[INFO] Reddit RSS fallback succeeded for #{subreddit}: #{items.size} items"
-      rescue rss_ex
-        STDERR.puts "[ERROR] Both JSON API and RSS failed for #{subreddit}"
-        STDERR.puts "[ERROR] JSON error: #{ex.message}"
-        STDERR.puts "[ERROR] RSS error: #{rss_ex.message}"
-        return error_feed_data(feed, "Reddit blocked: #{ex.message}")
+        STDERR.puts "[INFO] ✓ Reddit RSS fallback succeeded for #{subreddit}: #{items.size} items"
+      rescue rss_ex : Exception
+        STDERR.puts "[ERROR] ✗ RSS fallback also failed for #{subreddit}: #{rss_ex.class}: #{rss_ex.message}"
+        STDERR.puts "[ERROR] JSON error was: #{json_error_msg}"
+        return error_feed_data(feed, "Reddit blocked: #{json_error_msg}")
       end
     end
 
