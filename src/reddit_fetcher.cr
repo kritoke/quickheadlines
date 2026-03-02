@@ -244,15 +244,16 @@ module RedditFetcher
     
     STDERR.puts "[DEBUG] Atom XML parsed, looking for entries..."
     
+    # Use local-name() to avoid namespace prefix issues
     # Reddit uses Atom format with <entry> elements, not RSS <item>
-    xml.xpath_nodes("//atom:entry").each do |node|
+    xml.xpath_nodes("//*[local-name()='entry']").each do |node|
       STDERR.puts "[DEBUG] Found Atom entry node"
       break if items.size >= limit
       
-      # Extract child elements
-      title_node = node.xpath_node("./atom:title")
-      link_node = node.xpath_node("./atom:link")
-      updated_node = node.xpath_node("./atom:updated")
+      # Extract child elements using local-name() to avoid namespace issues
+      title_node = node.xpath_node("*[local-name()='title']")
+      link_node = node.xpath_node("*[local-name()='link']")
+      updated_node = node.xpath_node("*[local-name()='updated']")
       
       title = title_node.try(&.inner_text) || "Untitled"
       # Atom link has href attribute
