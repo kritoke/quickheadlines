@@ -63,30 +63,16 @@ module RedditFetcher
     site_link = "https://www.reddit.com/r/#{subreddit}"
     feed_title = "r/#{subreddit}"
 
-    STDERR.puts "[RSS-FALLBACK-ENABLED] Version 2026-03-01-11:00"
-    STDERR.puts "[DEBUG] fetch_subreddit called for #{subreddit}, limit=#{limit}"
-
     # Try JSON API first, fall back to RSS if blocked
-    json_failed = false
-    json_error_msg = ""
     begin
-      STDERR.puts "[DEBUG] About to call fetch_reddit_posts for #{subreddit}"
       items = fetch_reddit_posts(subreddit, sort, limit, over18)
-      STDERR.puts "[INFO] Reddit JSON API succeeded for #{subreddit}: #{items.size} items"
     rescue ex : Exception
-      json_failed = true
-      json_error_msg = "#{ex.class}: #{ex.message}"
-      STDERR.puts "[WARN] Reddit JSON API failed for #{subreddit}: #{json_error_msg}"
-      STDERR.puts "[WARN] Trying RSS fallback..."
-      
+      # JSON API failed (likely blocked), try RSS fallback
       begin
-        STDERR.puts "[DEBUG] Attempting RSS fetch for #{subreddit}..."
         items = fetch_reddit_rss(subreddit, sort, limit, over18)
-        STDERR.puts "[INFO] ✓ Reddit RSS fallback succeeded for #{subreddit}: #{items.size} items"
       rescue rss_ex : Exception
-        STDERR.puts "[ERROR] ✗ RSS fallback also failed for #{subreddit}: #{rss_ex.class}: #{rss_ex.message}"
-        STDERR.puts "[ERROR] JSON error was: #{json_error_msg}"
-        return error_feed_data(feed, "Reddit blocked: #{json_error_msg}")
+        # Both methods failed
+        return error_feed_data(feed, "Reddit blocked: #{ex.message}")
       end
     end
 
@@ -126,61 +112,31 @@ module RedditFetcher
       client.connect_timeout = 30.seconds
       client.read_timeout = 30.seconds
       
-      STDERR.puts "[DEBUG] Reddit HTTP request starting for #{subreddit}"
-      STDERR.puts "[DEBUG] URL: #{url}"
-      
       response = client.get(uri.request_target, headers: headers)
-      
-      STDERR.puts "[DEBUG] Reddit HTTP response for #{subreddit}: #{response.status_code}"
-      STDERR.puts "[DEBUG] Response headers: #{response.headers.to_s}"
-      STDERR.puts "[DEBUG] Response body length: #{response.body.bytesize} bytes"
-      
-      # Log first 500 chars of response body for debugging
-      body_preview = response.body.size > 500 ? response.body[0..499] + "..." : response.body
-      STDERR.puts "[DEBUG] Response body preview: #{body_preview}"
-      
-      STDERR.puts "[DEBUG] About to parse Reddit response for #{subreddit}"
-      result = parse_reddit_response(response.body, limit, over18)
-      STDERR.puts "[DEBUG] Successfully parsed #{result.size} items for #{subreddit}"
-      result
     rescue ex : Socket::ConnectError
-      STDERR.puts "[ERROR] Reddit connection failed for #{subreddit}: #{ex.class} - #{ex.message}"
-      STDERR.puts "[ERROR] Full exception: #{ex.inspect_with_backtrace}"
-      raise RedditFetchError.new("Connection failed: #{ex.class} - #{ex.message}")
+      raise RedditFetchError.new("Connection failed: #{ex.message}")
     rescue ex : OpenSSL::SSL::Error
-      STDERR.puts "[ERROR] Reddit SSL error for #{subreddit}: #{ex.class} - #{ex.message}"
-      STDERR.puts "[ERROR] Full exception: #{ex.inspect_with_backtrace}"
-      raise RedditFetchError.new("SSL error: #{ex.class} - #{ex.message}")
+      raise RedditFetchError.new("SSL error: #{ex.message}")
     rescue ex : IO::Error
-      STDERR.puts "[ERROR] Reddit IO error for #{subreddit}: #{ex.class} - #{ex.message}"
-      STDERR.puts "[ERROR] Full exception: #{ex.inspect_with_backtrace}"
-      raise RedditFetchError.new("IO error: #{ex.class} - #{ex.message}")
+      raise RedditFetchError.new("IO error: #{ex.message}")
     rescue ex : JSON::ParseException
-      STDERR.puts "[ERROR] Reddit JSON parse error for #{subreddit}: #{ex.class} - #{ex.message}"
-      STDERR.puts "[ERROR] Full exception: #{ex.inspect_with_backtrace}"
       raise RedditFetchError.new("JSON parse error: #{ex.message}")
     rescue ex : Exception
-      STDERR.puts "[ERROR] Reddit unexpected error for #{subreddit}: #{ex.class} - #{ex.message}"
-      STDERR.puts "[ERROR] Message: #{ex.message}"
-      STDERR.puts "[ERROR] Full exception: #{ex.inspect_with_backtrace}"
-      raise RedditFetchError.new("Unexpected error: #{ex.class} - #{ex.message}")
+      raise RedditFetchError.new("#{ex.class}: #{ex.message}")
     end
 
     case response.status_code
     when 200
       parse_reddit_response(response.body, limit, over18)
     when 403
-      STDERR.puts "[DEBUG] Reddit returned 403 for #{subreddit} - User-Agent may be blocked"
       raise RedditFetchError.new("Access denied (403) - Reddit may be blocking this request")
     when 404
       raise RedditFetchError.new("Subreddit '#{subreddit}' not found")
     when 429
-      STDERR.puts "[DEBUG] Reddit rate limited for #{subreddit}"
       raise RedditFetchError.new("Rate limited by Reddit API")
     when 503
       raise RedditFetchError.new("Reddit service unavailable")
     else
-      STDERR.puts "[DEBUG] Reddit HTTP #{response.status_code} for #{subreddit}"
       raise RedditFetchError.new("HTTP error #{response.status_code}")
     end
   end
@@ -228,27 +184,19 @@ module RedditFetcher
       "User-Agent" => USER_AGENT,
     }
 
-    STDERR.puts "[DEBUG] RSS URL: #{url}"
     response = HTTP::Client.get(url, headers: headers)
     
     if response.status_code != 200
-      STDERR.puts "[ERROR] RSS HTTP #{response.status_code}"
       raise RedditFetchError.new("RSS HTTP error #{response.status_code}")
     end
-
-    STDERR.puts "[DEBUG] RSS response length: #{response.body.bytesize} bytes"
 
     # Parse Atom XML
     xml = XML.parse(response.body)
     items = [] of Item
     
-    STDERR.puts "[DEBUG] Atom XML parsed, looking for entries..."
-    STDERR.puts "[ATOM-FIX-2026-03-01-20:00] Using local-name() XPath"
-    
     # Use local-name() to avoid namespace prefix issues
     # Reddit uses Atom format with <entry> elements, not RSS <item>
     xml.xpath_nodes("//*[local-name()='entry']").each do |node|
-      STDERR.puts "[DEBUG] Found Atom entry node via local-name()"
       break if items.size >= limit
       
       # Extract child elements using local-name() to avoid namespace issues
@@ -259,8 +207,6 @@ module RedditFetcher
       title = title_node.try(&.inner_text) || "Untitled"
       # Atom link has href attribute
       link = link_node.try(&.["href"]) || ""
-      
-      STDERR.puts "[DEBUG] Atom entry: title='#{title[0..50] rescue title}', link='#{link[0..50] rescue link}'"
       
       pub_date = nil
       if updated_node
@@ -276,7 +222,6 @@ module RedditFetcher
       items << Item.new(title, link, pub_date) if link.size > 0
     end
 
-    STDERR.puts "[DEBUG] Atom parsed #{items.size} entries"
     items
   end
 
