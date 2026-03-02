@@ -243,11 +243,12 @@ module RedditFetcher
     items = [] of Item
     
     STDERR.puts "[DEBUG] Atom XML parsed, looking for entries..."
+    STDERR.puts "[ATOM-FIX-2026-03-01-20:00] Using local-name() XPath"
     
     # Use local-name() to avoid namespace prefix issues
     # Reddit uses Atom format with <entry> elements, not RSS <item>
     xml.xpath_nodes("//*[local-name()='entry']").each do |node|
-      STDERR.puts "[DEBUG] Found Atom entry node"
+      STDERR.puts "[DEBUG] Found Atom entry node via local-name()"
       break if items.size >= limit
       
       # Extract child elements using local-name() to avoid namespace issues
