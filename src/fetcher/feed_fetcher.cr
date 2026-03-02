@@ -7,7 +7,6 @@ require "../storage"
 require "../health_monitor"
 require "../color_extractor"
 require "./favicon"
-require "../reddit_fetcher"
 require "../fetcher_adapter"
 
 private def build_fetch_headers(feed : Feed, current_url : String, previous_data : FeedData?) : HTTP::Headers
@@ -284,30 +283,6 @@ private def handle_feed_response(feed : Feed, response : HTTP::Client::Response,
 end
 
 def fetch_feed(feed : Feed, display_item_limit : Int32, db_fetch_limit : Int32, previous_data : FeedData? = nil) : FeedData
-  if feed.subreddit
-    # Reddit API has max limit of 100 per request
-    raw_limit = feed.item_limit || db_fetch_limit
-    limit = Math.min(raw_limit, 100)
-    STDERR.puts "[DEBUG] Reddit feed: #{feed.title} (#{feed.url}), limit=#{limit} (raw=#{raw_limit}, capped at 100)"
-    begin
-      result = RedditFetcher.fetch_subreddit(feed, limit)
-      FeedCache.instance.add(result)
-      
-      # Log detailed error if fetch failed
-      if result.error_message
-        STDERR.puts "[DEBUG] Reddit fetch failed for #{feed.title}: #{result.error_message}"
-      else
-        STDERR.puts "[DEBUG] Reddit fetch succeeded for #{feed.title}: #{result.items.size} items"
-      end
-      
-      return result
-    rescue ex
-      STDERR.puts "[DEBUG] Reddit fetch exception for #{feed.title}: #{ex.class} - #{ex.message}"
-      STDERR.puts "[DEBUG] Stack trace: #{ex.inspect_with_backtrace}"
-      return error_feed_data(feed, "Reddit error: #{ex.class} - #{ex.message}")
-    end
-  end
-
   if feed.url.includes?("github.com") && feed.url.includes?("/releases")
     result = FetcherAdapter.pull_feed(feed, previous_data)
     return result.value_or(error_feed_data(feed, "Fetcher error"))
