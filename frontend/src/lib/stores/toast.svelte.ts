@@ -12,6 +12,7 @@ export interface ToastMessage {
 
 // Use top-level $state for reactivity
 const toasts = $state<ToastMessage[]>([]);
+const timeoutIds = new Set<number>();
 
 export const toastStore = {
 	get toasts() {
@@ -25,7 +26,11 @@ export const toastStore = {
 		// Auto-remove after duration (default 5000ms)
 		const duration = toast.duration ?? 5000;
 		if (duration > 0) {
-			setTimeout(() => this.remove(id), duration);
+			const timeoutId = setTimeout(() => {
+				timeoutIds.delete(timeoutId);
+				this.remove(id);
+			}, duration);
+			timeoutIds.add(timeoutId);
 		}
 	},
 	
@@ -35,6 +40,11 @@ export const toastStore = {
 	
 	clear() {
 		toasts.length = 0;
+		// Clear all pending timeouts
+		for (const timeoutId of timeoutIds) {
+			clearTimeout(timeoutId);
+		}
+		timeoutIds.clear();
 	},
 	
 	// Convenience methods

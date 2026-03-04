@@ -21,7 +21,7 @@ def refresh_all(config : Config)
 
   STDERR.puts "[#{Time.local}] refresh_all: starting - #{all_configs.size} feeds to fetch"
 
-  existing_data = (STATE.feeds + STATE.tabs.flat_map(&.feeds)).index_by(&.url)
+  existing_data = (StateStore.feeds + StateStore.tabs.flat_map(&.feeds)).index_by(&.url)
   STDERR.puts "[#{Time.local}] refresh_all: existing_data.size=#{existing_data.size}"
 
   channel = Channel(FeedData).new

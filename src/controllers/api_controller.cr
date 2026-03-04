@@ -208,7 +208,8 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
 
       # Fetch more data if needed
       if current_count < needed_count
-        fetch_feed(feed_config, needed_count + 50, STATE.config.try(&.db_fetch_limit) || 500, nil)
+        db_fetch_limit = STATE.config.try(&.db_fetch_limit) || 500
+        fetch_feed(feed_config, needed_count + 50, db_fetch_limit, nil)
       end
 
       # Get items from cache
