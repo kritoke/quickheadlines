@@ -80,91 +80,50 @@ record Tab,
   software_releases : Array(FeedData) = [] of FeedData
 
 class AppState
-  property feeds = [] of FeedData
-  property software_releases = [] of FeedData
-  property tabs = [] of Tab
-  property updated_at = Time.local
-  property config_title = "Quick Headlines"
-  property config : Config?
-  property? clustering : Bool = false
-  property? refreshing : Bool = false
-
   @mutex = Mutex.new
-  @timeline_cache = {items: [] of TimelineItem, cached_at: Time.local}
-  TIMELINE_CACHE_TTL = 30.seconds
 
-  def feeds_for_tab(tab_name : String)
-    tabs.find { |tab| tab.name.downcase == tab_name.downcase }.try(&.feeds) || [] of FeedData
+  def feeds
+    StateStore.feeds
   end
 
-  def releases_for_tab(tab_name : String)
-    tabs.find { |tab| tab.name.downcase == tab_name.downcase }.try(&.software_releases) || [] of FeedData
+  def tabs
+    StateStore.tabs
   end
 
-  def with_lock(&)
-    @mutex.synchronize { yield }
+  def software_releases
+    StateStore.software_releases
   end
 
-  # Get all items from all feeds for timeline view, sorted by publication date (newest first)
-  def all_timeline_items : Array(TimelineItem)
-    items = [] of TimelineItem
-
-    # Add items from top-level feeds
-    feeds.each do |feed|
-      feed.items.each do |item|
-        items << TimelineItem.new(
-          item,
-          feed.title,
-          feed.url,
-          feed.site_link,
-          feed.favicon,
-          feed.favicon_data,
-          feed.header_color,
-          feed.header_text_color,
-          feed.header_theme_colors
-        )
-      end
-    end
-
-    # Add items from all tab feeds
-    tabs.each do |tab|
-      tab.feeds.each do |feed|
-        feed.items.each do |item|
-          items << TimelineItem.new(
-            item,
-            feed.title,
-            feed.url,
-            feed.site_link,
-            feed.favicon,
-            feed.favicon_data,
-            feed.header_color,
-            feed.header_text_color,
-            feed.header_theme_colors
-          )
-        end
-      end
-    end
-
-    # Sort by publication date (newest first), items without dates go to end
-    items.sort! do |left, right|
-      date_left = left.item.pub_date
-      date_right = right.item.pub_date
-      if date_left && date_right
-        date_right <=> date_left # Descending order (newest first)
-      elsif date_left
-        -1 # left comes first if it has a date
-      elsif date_right
-        1 # right comes first if it has a date
-      else
-        0 # Both nil, maintain order
-      end
-    end
+  def updated_at
+    StateStore.updated_at
   end
 
-  def update(updated_at : Time)
-    @updated_at = updated_at
-    # Invalidate timeline cache when feeds are updated
-    @timeline_cache = {items: @timeline_cache[:items], cached_at: Time.local - TIMELINE_CACHE_TTL}
+  def updated_at=(value : Time)
+    StateStore.update(&.copy_with(updated_at: value))
+  end
+
+  def config
+    StateStore.config
+  end
+
+  def config_title
+    StateStore.config_title
+  end
+
+  def clustering?
+    StateStore.clustering?
+  end
+
+  def clustering=(value : Bool)
+    StateStore.update(&.copy_with(clustering: value))
+  end
+
+  def refreshing?
+    StateStore.refreshing?
+  end
+
+  def self.with_lock(&)
+    yield
   end
 end
 
@@ -235,6 +194,21 @@ module StateStore
 
   def self.refreshing?
     get.refreshing
+  end
+
+  def self.clear : Nil
+    @@mutex.synchronize do
+      @@current = AppStateSnapshot.new(
+        feeds: [] of FeedData,
+        software_releases: [] of FeedData,
+        tabs: [] of Tab,
+        updated_at: Time.local,
+        config_title: "Quick Headlines",
+        config: nil,
+        clustering: false,
+        refreshing: false
+      )
+    end
   end
 end
 

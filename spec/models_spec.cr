@@ -152,6 +152,7 @@ describe "Models" do
 
   describe AppState do
     it "initializes with defaults" do
+      StateStore.clear
       state = AppState.new
       state.feeds.should be_empty
       state.software_releases.should be_empty
@@ -176,14 +177,13 @@ describe "Models" do
       tab.feeds << feed
       state.tabs << tab
 
-      feeds = state.feeds_for_tab("Tech")
+      feeds = AppState.feeds_for_tab("Tech")
       feeds.size.should eq(1)
       feeds.first.title.should eq("Test Feed")
     end
 
     it "returns empty array for non-existent tab" do
-      state = AppState.new
-      feeds = state.feeds_for_tab("NonExistent")
+      feeds = AppState.feeds_for_tab("NonExistent")
       feeds.should be_empty
     end
 
@@ -217,7 +217,7 @@ describe "Models" do
       tab.feeds << feed2
       state.tabs << tab
 
-      items = state.all_timeline_items
+      items = AppState.all_timeline_items
       items.size.should eq(3)
       # Should be sorted by date descending (newest first)
       items[0].item.title.should eq("Item 3")

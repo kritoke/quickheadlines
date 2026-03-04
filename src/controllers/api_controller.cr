@@ -1,6 +1,4 @@
 require "athena"
-require "../rate_limiter"
-require "../dtos/rate_limit_stats_dto"
 require "../dtos/config_dto"
 require "../web/assets"
 require "../services/feed_service"
@@ -39,32 +37,9 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
     )
   end
 
-  private def check_rate_limit(request : ATH::Request) : Bool
-    return true if request.path.starts_with?("/api/admin")
-
-    ip = request.request.remote_address.try(&.to_s) || "unknown"
-    category = Quickheadlines::RateLimiting::RateLimitConfig.get_category(request.path)
-
-    result = rate_limiter.check_limit(ip, category)
-
-    unless result[:allowed]
-      STDERR.puts "[#{Time.local}] Rate limit exceeded for #{ip} on #{request.path}"
-      return false
-    end
-
-    true
-  end
-
   # GET /api/clusters - Get all clustered stories
   @[ARTA::Get(path: "/api/clusters")]
   def clusters(request : ATH::Request) : Quickheadlines::DTOs::ClustersResponse
-    unless check_rate_limit(request)
-      return Quickheadlines::DTOs::ClustersResponse.new(
-        clusters: [] of Quickheadlines::DTOs::ClusterResponse,
-        total_count: 0
-      )
-    end
-
     clusters = clustering_service.get_all_clusters_from_db
 
     cluster_responses = clusters.map { |cluster| Quickheadlines::DTOs::ClusterResponse.from_entity(cluster) }
@@ -78,13 +53,6 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
   # GET /api/clusters/:id/items - Get all items in a cluster
   @[ARTA::Get(path: "/api/clusters/{id}/items")]
   def cluster_items(request : ATH::Request, id : String) : ClusterItemsResponse
-    unless check_rate_limit(request)
-      return ClusterItemsResponse.new(
-        cluster_id: id,
-        items: [] of StoryResponse
-      )
-    end
-
     cluster_id = id.to_i64?
 
     if cluster_id.nil?
@@ -530,25 +498,17 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
     end
   end
 
-  # GET /api/admin/rate-limit-stats - Get rate limiting statistics
-  @[ARTA::Get(path: "/api/admin/rate-limit-stats")]
-  def rate_limit_stats : Quickheadlines::DTOs::RateLimitStatsResponse
-    stats = rate_limiter.stats
-    Quickheadlines::DTOs::RateLimitStatsResponse.new(
-      total_entries: stats[:total_entries],
-      by_category: stats[:by_category]
-    )
-  end
-
-  # POST /api/run-clustering - Manually trigger clustering on all uncategorized items
-  @[ARTA::Post(path: "/api/run-clustering")]
-  def run_clustering : ATH::Response
+  # POST /api/cluster - Unified clustering endpoint
+  # Actions: run (cluster uncategorized), recluster (clear and re-cluster)
+  @[ARTA::Post(path: "/api/cluster")]
+  def cluster : ATH::Response
     spawn do
       begin
-        STDERR.puts "[#{Time.local}] Starting manual clustering with LSH..."
         service = clustering_service
         cluster_limit = STATE.config.try(&.clustering).try(&.max_items) || STATE.config.try(&.db_fetch_limit) || 5000
         threshold = STATE.config.try(&.clustering).try(&.threshold) || 0.35
+
+        STDERR.puts "[#{Time.local}] Running clustering..."
         service.recluster_with_lsh(cluster_limit, threshold)
       rescue ex
         STDERR.puts "[#{Time.local}] Clustering error: #{ex.message}"
@@ -559,123 +519,62 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
     ATH::Response.new("Clustering started in background", 202, HTTP::Headers{"content-type" => "text/plain"})
   end
 
-  # POST /api/recluster - Clear cluster metadata and re-cluster all items
-  @[ARTA::Post(path: "/api/recluster")]
-  def recluster : ATH::Response
-    spawn do
-      begin
-        STDERR.puts "[#{Time.local}] Clearing clustering metadata and re-clustering with LSH..."
-        service = clustering_service
-        cluster_limit = STATE.config.try(&.clustering).try(&.max_items) || STATE.config.try(&.db_fetch_limit) || 5000
-        threshold = STATE.config.try(&.clustering).try(&.threshold) || 0.35
-        service.recluster_with_lsh(cluster_limit, threshold)
-      rescue ex
-        STDERR.puts "[#{Time.local}] Re-clustering error: #{ex.message}"
-        STDERR.puts ex.backtrace.join("\n")
-      end
-    end
+  # POST /api/admin - Unified admin actions: clear-cache, cleanup-orphaned
+  @[ARTA::Post(path: "/api/admin")]
+  def admin : ATH::Response
+    action = "cleanup-orphaned"
 
-    ATH::Response.new("Re-clustering started in background", 202, HTTP::Headers{"content-type" => "text/plain"})
-  end
-
-  # POST /api/recluster_v2 - Re-cluster using new LSH method
-  @[ARTA::Post(path: "/api/recluster_v2")]
-  def recluster_v2 : ATH::Response
-    spawn do
-      begin
-        STDERR.puts "[#{Time.local}] Re-clustering with LSH v2..."
-        service = clustering_service
-        cluster_limit = STATE.config.try(&.clustering).try(&.max_items) || STATE.config.try(&.db_fetch_limit) || 5000
-        threshold = STATE.config.try(&.clustering).try(&.threshold) || 0.35
-        bands = 20
-        service.recluster_with_lsh(cluster_limit, threshold, bands)
-      rescue ex
-        STDERR.puts "[#{Time.local}] Re-clustering v2 error: #{ex.message}"
-        STDERR.puts ex.backtrace.join("\n")
-      end
-    end
-
-    ATH::Response.new("Re-clustering v2 started in background", 202, HTTP::Headers{"content-type" => "text/plain"})
-  end
-
-  # POST /api/cleanup-orphaned - Remove feeds from database that are no longer in config
-  @[ARTA::Post(path: "/api/cleanup-orphaned")]
-  def cleanup_orphaned_feeds : ATH::Response
-    spawn do
-      begin
-        config_urls = Set(String).new
-        STATE.feeds.each { |feed| config_urls << feed.url }
-        STATE.tabs.each do |tab|
-          tab.feeds.each { |feed| config_urls << feed.url }
-        end
-
-        cache = FeedCache.instance
-        db = cache.db
-        cluster_repo = Quickheadlines::Repositories::ClusterRepository.new(db)
-
-        feed_repo = Quickheadlines::Repositories::FeedRepository.new(db)
-        existing_feeds = feed_repo.find_all
-        db_urls = existing_feeds.map(&.url).to_set
-
-        orphaned = db_urls - config_urls
-
-        if orphaned.empty?
-          STDERR.puts "[#{Time.local}] No orphaned feeds to clean up"
-          next
-        end
-
-        deleted_items = 0
-        orphaned.each do |url|
-          item_count = feed_repo.count_items(url)
-          deleted_items += item_count
-          feed_repo.delete_by_url(url)
-        end
-
-        cluster_repo.clear_all_metadata
-
-        STDERR.puts "[#{Time.local}] Cleaned up #{orphaned.size} orphaned feeds (#{deleted_items} items deleted)"
-      rescue ex
-        STDERR.puts "[#{Time.local}] Cleanup error: #{ex.message}"
-        STDERR.puts ex.backtrace.join("\n") if ex.backtrace
-      end
-    end
-
-    ATH::Response.new("Cleanup started in background", 202, HTTP::Headers{"content-type" => "text/plain"})
-  end
-
-  # POST /api/clear-cache - Clear all cached data (feeds, items, favicons, colors)
-  # This resets the database to initial state, useful when feeds config changes
-  @[ARTA::Post(path: "/api/clear-cache")]
-  def clear_cache : ATH::Response
     spawn do
       begin
         cache = FeedCache.instance
         db = cache.db
 
-        # Get counts before deletion
-        feed_count = db.query_one("SELECT COUNT(*) FROM feeds", as: Int64)
-        item_count = db.query_one("SELECT COUNT(*) FROM items", as: Int64)
+        case action
+        when "clear-cache"
+          feed_count = db.query_one("SELECT COUNT(*) FROM feeds", as: Int64)
+          item_count = db.query_one("SELECT COUNT(*) FROM items", as: Int64)
 
-        # Delete all items first (foreign key constraint)
-        db.exec("DELETE FROM items")
+          db.exec("DELETE FROM items")
+          db.exec("DELETE FROM feeds")
+          cache.clear_clustering_metadata
+          cache.clear_all
 
-        # Delete all feeds
-        db.exec("DELETE FROM feeds")
+          STDERR.puts "[#{Time.local}] Cache cleared: #{feed_count} feeds, #{item_count} items deleted"
+        when "cleanup-orphaned"
+          config_urls = Set(String).new
+          STATE.feeds.each { |feed| config_urls << feed.url }
+          STATE.tabs.each do |tab|
+            tab.feeds.each { |feed| config_urls << feed.url }
+          end
 
-        # Reset clustering tables
-        cache.clear_clustering_metadata
+          cluster_repo = Quickheadlines::Repositories::ClusterRepository.new(db)
+          feed_repo = Quickheadlines::Repositories::FeedRepository.new(db)
+          existing_feeds = feed_repo.find_all
+          db_urls = existing_feeds.map(&.url).to_set
 
-        # Clear in-memory state
-        cache.clear_all
+          orphaned = db_urls - config_urls
 
-        STDERR.puts "[#{Time.local}] Cache cleared: #{feed_count} feeds, #{item_count} items deleted"
+          if orphaned.empty?
+            STDERR.puts "[#{Time.local}] No orphaned feeds to clean up"
+          else
+            deleted_items = 0
+            orphaned.each do |url|
+              item_count = feed_repo.count_items(url)
+              deleted_items += item_count
+              feed_repo.delete_by_url(url)
+            end
+
+            cluster_repo.clear_all_metadata
+            STDERR.puts "[#{Time.local}] Cleaned up #{orphaned.size} orphaned feeds (#{deleted_items} items deleted)"
+          end
+        end
       rescue ex
-        STDERR.puts "[#{Time.local}] Clear cache error: #{ex.message}"
+        STDERR.puts "[#{Time.local}] Admin action error: #{ex.message}"
         STDERR.puts ex.backtrace.join("\n") if ex.backtrace
       end
     end
 
-    ATH::Response.new("Cache clear started in background", 202, HTTP::Headers{"content-type" => "text/plain"})
+    ATH::Response.new("Admin action started in background", 202, HTTP::Headers{"content-type" => "text/plain"})
   end
 
   # GET /api/status - Get current system status

@@ -73,8 +73,8 @@
 				{#if activeTab === tab.name}
 					<div
 						in:fly={{ x: 5, duration: 300, easing: cubicOut }}
-						class="absolute inset-0 rounded-lg -z-10 shadow-sm {themeState.coolMode ? 'border-accent/30' : ''}"
-						style="background-color: {themeColors.bg}; border: 1px solid {themeColors.border}; {themeState.coolMode ? `box-shadow: 0 0 12px ${themeColors.shadow}` : ''}; view-transition-name: tab-pill;"
+						class="absolute inset-0 rounded-lg -z-10 shadow-sm {themeState.effects ? 'border-accent/30' : ''}"
+						style="background-color: {themeColors.bg}; border: 1px solid {themeColors.border}; {themeState.effects ? `box-shadow: 0 0 12px ${themeColors.shadow}` : ''}; view-transition-name: tab-pill;"
 					></div>
 				{/if}
 			</Tabs.Trigger>

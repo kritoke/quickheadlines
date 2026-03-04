@@ -3,10 +3,9 @@
 	import FeedTabs from '$lib/components/FeedTabs.svelte';
 	import AppHeader from '$lib/components/AppHeader.svelte';
 	import SearchModal from '$lib/components/SearchModal.svelte';
-	import CursorTrail from '$lib/components/CursorTrail.svelte';
 	import { fetchFeeds, fetchMoreFeedItems, fetchConfig, fetchStatus } from '$lib/api';
 	import type { FeedResponse, FeedsPageResponse } from '$lib/types';
-	import { themeState, toggleCursorTrail } from '$lib/stores/theme.svelte';
+	import { themeState, toggleEffects } from '$lib/stores/theme.svelte';
 
 	let feeds = $state<FeedResponse[]>([]);
 	let tabs = $state<{ name: string }[]>([]);
@@ -220,7 +219,6 @@
 </svelte:head>
 
 <div class="min-h-screen bg-white dark:bg-slate-900 transition-colors duration-200" data-name="feeds-page">
-	<CursorTrail />
 	<AppHeader 
 		title="QuickHeadlines"
 		viewLink={{ href: '/timeline', icon: 'clock' }}

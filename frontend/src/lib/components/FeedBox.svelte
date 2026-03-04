@@ -20,10 +20,11 @@
 
 	let themeColors = $derived(getThemeAccentColors(themeState.theme));
 
-	let beamThemes = ['cyberpunk', 'matrix', 'vaporwave', 'retro80s', 'dracula', 'ocean'] as const;
+	const isIOS = typeof navigator !== 'undefined' && /iPad|iPhone|iPod/.test(navigator.userAgent);
+	const beamThemes = ['cyberpunk', 'matrix', 'vaporwave', 'retro80s', 'dracula', 'ocean'] as const;
 	type BeamTheme = typeof beamThemes[number];
 
-	let showBorderBeam = $derived(beamThemes.includes(themeState.theme as BeamTheme));
+	let showBorderBeam = $derived(!isIOS && beamThemes.includes(themeState.theme as BeamTheme));
 
 	let beamColors: Record<BeamTheme, { from: string; to: string; via?: string }> = {
 		matrix: { from: '#00ff00', to: '#22c55e' },
@@ -38,11 +39,10 @@
 
 	let cardStyle = $derived.by(() => {
 		if (showBorderBeam) return '';
-		const shadow = themeState.coolMode ? `0 4px 12px ${themeColors.shadow}` : '';
+		const shadow = themeState.effects ? `0 4px 12px ${themeColors.shadow}` : '';
 		return `box-shadow: ${shadow};`;
 	});
 
-	// Reactive header style - properly tracks themeState.theme changes
 	let headerStyle = $derived.by(() => {
 		const dark = themeState.theme === 'dark';
 		const bgColor = feed.header_color || '#64748b';
@@ -96,7 +96,7 @@
 	}
 </script>
 
-<div class="rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 overflow-hidden flex flex-col h-[400px] contain: strict transform-gpu relative" class:shadow-sm={!showBorderBeam} style={cardStyle} data-name="feed-box">
+<div class="rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 overflow-hidden flex flex-col h-[400px] transform-gpu relative" class:shadow-sm={!showBorderBeam} style={cardStyle} data-name="feed-box">
 	{#if showBorderBeam}
 		<BorderBeam 
 			colorFrom={currentBeamColors.from} 
@@ -135,6 +135,7 @@
 		<div
 			bind:this={scrollContainer}
 			class="absolute inset-0 overflow-y-auto auto-hide-scroll"
+			style="-webkit-overflow-scrolling: touch;"
 		>
 			<ul class="divide-y divide-slate-100 dark:divide-slate-700">
 				{#each feed.items as item, i (`${feed.url}-${i}`)}
@@ -169,10 +170,11 @@
 	{#if feed.total_item_count > feed.items.length}
 		<div class="p-2 border-t border-slate-200 dark:border-slate-700">
 			<button
+				type="button"
 				data-name="load-more"
-				onclick={onLoadMore}
 				disabled={loading}
-				class="w-full text-xs text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 py-1 transition-all duration-200 disabled:opacity-50"
+				onclick={onLoadMore}
+				class="w-full text-xs text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 py-1 transition-all duration-200 disabled:opacity-50 active:scale-95"
 			>
 				{#if loading}
 					<span class="inline-flex items-center gap-1">

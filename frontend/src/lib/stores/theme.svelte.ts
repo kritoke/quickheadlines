@@ -18,8 +18,7 @@ export const themeStyles: { id: ThemeStyle; name: string; description: string }[
 
 export const themeState = $state({
 	theme: 'light' as ThemeStyle,
-	coolMode: false,
-	cursorTrail: false,
+	effects: false,
 	mounted: false
 });
 
@@ -34,11 +33,9 @@ export function initTheme() {
 	}
 	applyTheme(themeState.theme);
 
+	const savedEffects = localStorage.getItem('quickheadlines-effects');
 	const savedCoolMode = localStorage.getItem('quickheadlines-coolmode');
-	themeState.coolMode = savedCoolMode === 'true';
-
-	const savedCursorTrail = localStorage.getItem('quickheadlines-cursortrail');
-	themeState.cursorTrail = savedCursorTrail === 'true';
+	themeState.effects = savedEffects === 'true' || savedCoolMode === 'true';
 
 	themeState.mounted = true;
 }
@@ -94,14 +91,9 @@ export function toggleTheme() {
 	setTheme(newTheme);
 }
 
-export function toggleCoolMode() {
-	themeState.coolMode = !themeState.coolMode;
-	localStorage.setItem('quickheadlines-coolmode', String(themeState.coolMode));
-}
-
-export function toggleCursorTrail() {
-	themeState.cursorTrail = !themeState.cursorTrail;
-	localStorage.setItem('quickheadlines-cursortrail', String(themeState.cursorTrail));
+export function toggleEffects() {
+	themeState.effects = !themeState.effects;
+	localStorage.setItem('quickheadlines-effects', String(themeState.effects));
 }
 
 	export function getCursorColors(theme: ThemeStyle): { primary: string; trail: string } {

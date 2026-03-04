@@ -22,9 +22,11 @@
 
 	let columns = $derived(layoutState.timelineColumns);
 
-	let beamThemes = ['cyberpunk', 'matrix', 'vaporwave', 'retro80s', 'dracula', 'ocean'] as const;
+	const isIOS = typeof navigator !== 'undefined' && /iPad|iPhone|iPod/.test(navigator.userAgent);
+	const beamThemes = ['cyberpunk', 'matrix', 'vaporwave', 'retro80s', 'dracula', 'ocean'] as const;
 	type BeamTheme = typeof beamThemes[number];
-	let showBorderBeam = $derived(beamThemes.includes(themeState.theme as BeamTheme));
+
+	let showBorderBeam = $derived(!isIOS && beamThemes.includes(themeState.theme as BeamTheme));
 
 	let beamColors: Record<BeamTheme, { from: string; to: string; via?: string }> = {
 		matrix: { from: '#00ff00', to: '#22c55e' },
@@ -36,6 +38,8 @@
 	};
 
 	let currentBeamColors = $derived(beamColors[themeState.theme as BeamTheme] || { from: '#ff00ff', to: '#00ffff' });
+
+	const beamItemCount = 10;
 
 	function getGridClass(cols: number): string {
 		if (cols <= 1) return 'grid-cols-1';
@@ -131,22 +135,32 @@
 	let groupIndex = $derived(Array.from(groupedItems.entries()));
 	
 	let gridClass = $derived(getGridClass(columns));
+
+	function getGroupStartIndex(groupIdx: number): number {
+		let idx = 0;
+		for (let i = 0; i < groupIdx; i++) {
+			idx += groupIndex[i]?.[1]?.length ?? 0;
+		}
+		return idx;
+	}
 </script>
 
 <div class="timeline-view" data-name="timeline-view">
-	{#each groupIndex as [date, dateItems] (date)}
+	{#each groupIndex as [date, dateItems], groupIdx (date)}
+		{@const groupStartIndex = getGroupStartIndex(groupIdx)}
 		<div class="day-group mb-6">
 			<h2 class="text-lg font-semibold text-slate-700 dark:text-slate-300 mb-3 sticky top-16 bg-white dark:bg-slate-900 py-2 z-10">
 				{date}
 			</h2>
 			
 			<div class="grid gap-2 {gridClass} transition-all duration-200">
-				{#each dateItems as item (item.id)}
+				{#each dateItems as item, i (`${date}-${item.id}`)}
+					{@const globalIndex = groupStartIndex + i}
 					<div 
 						class="timeline-item bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden transition-all duration-200 relative"
 						class:col-span-full={expandedClusterId === item.id && columns > 1}
 					>
-						{#if showBorderBeam}
+						{#if showBorderBeam && globalIndex < beamItemCount}
 							<BorderBeam 
 								colorFrom={currentBeamColors.from} 
 								colorTo={currentBeamColors.to}
@@ -224,6 +238,7 @@
 	{#if hasMore}
 		<div class="load-more text-center py-4">
 			<button
+				type="button"
 				onclick={onLoadMore}
 				class="px-4 py-2 text-sm rounded-lg transition-colors"
 				style="background-color: {themeColors.bgSecondary}; color: {themeColors.text}; border: 1px solid {themeColors.border};"
