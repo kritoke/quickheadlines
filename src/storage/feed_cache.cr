@@ -10,6 +10,7 @@ require "../errors"
 require "../favicon_storage"
 require "../color_extractor"
 require "../health_monitor"
+require "../services/database_service"
 require "./cache_utils"
 require "./database"
 require "./clustering_repo"
@@ -35,7 +36,16 @@ class FeedCache
     db_path = get_cache_db_path(config).as(String)
     @db_path = db_path
 
-    @db = db || DB.open("sqlite3://#{@db_path}")
+    # Use provided db, otherwise try to use DatabaseService, otherwise create new connection
+    if db
+      @db = db
+    else
+      @db = begin
+        DatabaseService.instance.db
+      rescue
+        DB.open("sqlite3://#{@db_path}")
+      end
+    end
     create_schema(@db, @db_path)
     STDERR.puts "[#{Time.local}] Database initialized: #{@db_path}"
 
