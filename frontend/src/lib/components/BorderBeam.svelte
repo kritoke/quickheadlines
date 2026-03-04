@@ -40,6 +40,8 @@
 		-moz-mask-composite: exclude;
 		padding: 2px;
 		isolation: isolate;
+		transform: translateZ(0);
+		backface-visibility: hidden;
 	}
 
 	.border-beam-glow {
@@ -48,6 +50,8 @@
 		animation: border-beam-rotate linear infinite;
 		filter: blur(0px);
 		will-change: transform;
+		transform: translateZ(0);
+		backface-visibility: hidden;
 	}
 
 	@keyframes border-beam-rotate {

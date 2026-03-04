@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { themeState, toggleCoolMode, toggleCursorTrail, getThemeAccentColors } from '$lib/stores/theme.svelte';
+	import { themeState, toggleEffects, getThemeAccentColors } from '$lib/stores/theme.svelte';
 	import ThemePicker from './ThemePicker.svelte';
 	import type { Snippet } from 'svelte';
 
@@ -79,16 +79,16 @@
 					{/if}
 				</a>
 				<button
-					onclick={toggleCursorTrail}
+					onclick={toggleEffects}
 					class="p-1.5 sm:p-2 rounded-lg transition-colors"
-					style="background-color: {themeState.cursorTrail ? themeColors.bgSecondary : 'transparent'}; opacity: {themeState.cursorTrail ? 1 : 0.7};"
-					aria-label="Toggle cursor trail"
-					title="Cursor trail"
+					style="background-color: {themeState.effects ? themeColors.bgSecondary : 'transparent'}; opacity: {themeState.effects ? 1 : 0.7};"
+					aria-label="Toggle effects"
+					title="Effects"
 				>
 					<svg 
 						class="w-5 h-5 transition-all duration-200"
-						class:drop-shadow-lg={themeState.cursorTrail}
-						style="color: {themeState.cursorTrail ? themeColors.accent : '#94a3b8'};"
+						class:drop-shadow-lg={themeState.effects}
+						style="color: {themeState.effects ? themeColors.accent : '#94a3b8'};"
 						viewBox="0 0 24 24" 
 						fill="currentColor"
 					>

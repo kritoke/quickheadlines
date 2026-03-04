@@ -283,6 +283,11 @@ private def handle_feed_response(feed : Feed, response : HTTP::Client::Response,
 end
 
 def fetch_feed(feed : Feed, display_item_limit : Int32, db_fetch_limit : Int32, previous_data : FeedData? = nil) : FeedData
+  if feed.url.includes?("reddit.com/r/")
+    result = FetcherAdapter.pull_feed(feed, previous_data)
+    return result.value_or(error_feed_data(feed, "Fetcher error"))
+  end
+
   if feed.url.includes?("github.com") && feed.url.includes?("/releases")
     result = FetcherAdapter.pull_feed(feed, previous_data)
     return result.value_or(error_feed_data(feed, "Fetcher error"))
