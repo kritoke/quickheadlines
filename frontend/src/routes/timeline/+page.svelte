@@ -1,6 +1,7 @@
 <script lang="ts">
 	import AppHeader from '$lib/components/AppHeader.svelte';
 	import LayoutPicker from '$lib/components/LayoutPicker.svelte';
+	import BitsSearchModal from '$lib/components/BitsSearchModal.svelte';
 	import { fetchTimeline, fetchConfig, fetchStatus } from '$lib/api';
 	import type { TimelineItemResponse } from '$lib/types';
 	import { SvelteSet } from 'svelte/reactivity';
@@ -17,7 +18,7 @@
 	let LazySearchModal: any = null;
 	const loadSearchModal = async () => {
 		if (!LazySearchModal) {
-			const { default: component } = await import('$lib/components/SearchModal.svelte');
+			const { default: component } = await import('$lib/components/BitsSearchModal.svelte');
 			LazySearchModal = component;
 		}
 		return LazySearchModal;

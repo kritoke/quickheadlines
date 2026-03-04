@@ -2,6 +2,7 @@
 	import FeedBox from '$lib/components/FeedBox.svelte';
 	import FeedTabs from '$lib/components/FeedTabs.svelte';
 	import AppHeader from '$lib/components/AppHeader.svelte';
+	import BitsSearchModal from '$lib/components/BitsSearchModal.svelte';
 	import { fetchFeeds, fetchMoreFeedItems, fetchConfig, fetchStatus } from '$lib/api';
 	import type { FeedResponse, FeedsPageResponse } from '$lib/types';
 	import { themeState, toggleEffects } from '$lib/stores/theme.svelte';
@@ -9,7 +10,7 @@
 	let LazySearchModal: any = null;
 	const loadSearchModal = async () => {
 		if (!LazySearchModal) {
-			const { default: component } = await import('$lib/components/SearchModal.svelte');
+			const { default: component } = await import('$lib/components/BitsSearchModal.svelte');
 			LazySearchModal = component;
 		}
 		return LazySearchModal;
