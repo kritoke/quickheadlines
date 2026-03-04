@@ -79,7 +79,7 @@ module FetcherAdapter
         nil,
         nil,
         nil,
-        "Reddit fetch failed: #{ex.message}",
+        Fetcher::Error.new(Fetcher::ErrorKind::HTTPError, "Reddit fetch failed: #{ex.message}"),
         nil,
         nil,
         nil,
@@ -130,7 +130,7 @@ module FetcherAdapter
       entries << Fetcher::Entry.new(
         title: title,
         url: link,
-        source_type: "reddit",
+        source_type: Fetcher::SourceType::Reddit,
         content: "",
         content_html: nil,
         author: nil,
@@ -179,7 +179,7 @@ module FetcherAdapter
       entries << Fetcher::Entry.new(
         title: title,
         url: link,
-        source_type: "reddit",
+        source_type: Fetcher::SourceType::Reddit,
         content: "",
         content_html: nil,
         author: nil,

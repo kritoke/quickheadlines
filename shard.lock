@@ -66,11 +66,15 @@ shards:
 
   fetcher:
     git: https://github.com/kritoke/fetcher.cr.git
-    version: 0.3.0
+    version: 0.4.1
 
   lexis-minhash:
     git: https://github.com/kritoke/lexis-minhash.git
     version: 0.4.2
+
+  sanitize:
+    git: https://github.com/straight-shoota/sanitize.git
+    version: 0.1.0+git.commit.c17d933fed22c6d3d615cca91a895166414389af
 
   sqlite3:
     git: https://github.com/crystal-lang/crystal-sqlite3.git
