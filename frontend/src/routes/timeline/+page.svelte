@@ -1,11 +1,27 @@
 <script lang="ts">
-	import TimelineView from '$lib/components/TimelineView.svelte';
 	import AppHeader from '$lib/components/AppHeader.svelte';
-	import SearchModal from '$lib/components/SearchModal.svelte';
 	import LayoutPicker from '$lib/components/LayoutPicker.svelte';
 	import { fetchTimeline, fetchConfig, fetchStatus } from '$lib/api';
 	import type { TimelineItemResponse } from '$lib/types';
 	import { SvelteSet } from 'svelte/reactivity';
+
+	let LazyTimelineView: any = null;
+	const loadTimelineView = async () => {
+		if (!LazyTimelineView) {
+			const { default: component } = await import('$lib/components/TimelineView.svelte');
+			LazyTimelineView = component;
+		}
+		return LazyTimelineView;
+	};
+
+	let LazySearchModal: any = null;
+	const loadSearchModal = async () => {
+		if (!LazySearchModal) {
+			const { default: component } = await import('$lib/components/SearchModal.svelte');
+			LazySearchModal = component;
+		}
+		return LazySearchModal;
+	};
 
 	let items = $state<TimelineItemResponse[]>([]);
 	let itemIds = $state(new SvelteSet<string>());
@@ -244,13 +260,19 @@
 		{/snippet}
 	</AppHeader>
 
-	<SearchModal 
-		open={searchExpanded}
-		query={searchQuery}
-		placeholder="Search timeline..."
-		onClose={() => searchExpanded = false}
-		onQueryChange={(value) => searchQuery = value}
-	/>
+	{#if searchExpanded}
+		{#await loadSearchModal()}
+			<div></div>
+		{:then SearchModal}
+			<SearchModal 
+				open={searchExpanded}
+				query={searchQuery}
+				placeholder="Search timeline..."
+				onClose={() => searchExpanded = false}
+				onQueryChange={(value) => searchQuery = value}
+			/>
+		{/await}
+	{/if}
 
 	<main class="max-w-[1800px] mx-auto px-4 md:px-8 xl:px-12 py-4 overflow-visible" style="padding-top: calc(var(--header-height, 4rem) + 2rem);">
 		{#if loading && items.length === 0}
@@ -269,7 +291,13 @@
 			</div>
 		{:else}
 			{#if filteredItems.length > 0}
-				<TimelineView items={filteredItems} {hasMore} onLoadMore={handleLoadMore} />
+				{#await loadTimelineView()}
+					<div class="flex items-center justify-center py-8">
+						<div class="text-slate-500 dark:text-slate-400">Loading timeline view...</div>
+					</div>
+				{:then TimelineView}
+					<TimelineView items={filteredItems} {hasMore} onLoadMore={handleLoadMore} />
+				{/await}
 			{:else if searchQuery}
 				<div class="text-center py-20 text-slate-500 dark:text-slate-400">
 					No results for "{searchQuery}". Try a different search term.

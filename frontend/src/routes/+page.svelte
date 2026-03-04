@@ -2,10 +2,18 @@
 	import FeedBox from '$lib/components/FeedBox.svelte';
 	import FeedTabs from '$lib/components/FeedTabs.svelte';
 	import AppHeader from '$lib/components/AppHeader.svelte';
-	import SearchModal from '$lib/components/SearchModal.svelte';
 	import { fetchFeeds, fetchMoreFeedItems, fetchConfig, fetchStatus } from '$lib/api';
 	import type { FeedResponse, FeedsPageResponse } from '$lib/types';
 	import { themeState, toggleEffects } from '$lib/stores/theme.svelte';
+
+	let LazySearchModal: any = null;
+	const loadSearchModal = async () => {
+		if (!LazySearchModal) {
+			const { default: component } = await import('$lib/components/SearchModal.svelte');
+			LazySearchModal = component;
+		}
+		return LazySearchModal;
+	};
 
 	let feeds = $state<FeedResponse[]>([]);
 	let tabs = $state<{ name: string }[]>([]);
@@ -243,13 +251,19 @@
 		{/snippet}
 	</AppHeader>
 
-	<SearchModal 
-		open={searchExpanded}
-		query={searchQuery}
-		placeholder="Search feeds..."
-		onClose={() => searchExpanded = false}
-		onQueryChange={(value) => searchQuery = value}
-	/>
+	{#if searchExpanded}
+		{#await loadSearchModal()}
+			<div></div>
+		{:then SearchModal}
+			<SearchModal 
+				open={searchExpanded}
+				query={searchQuery}
+				placeholder="Search feeds..."
+				onClose={() => searchExpanded = false}
+				onQueryChange={(value) => searchQuery = value}
+			/>
+		{/await}
+	{/if}
 
 	<main class="mx-auto px-4 md:px-8 xl:px-12 py-4 overflow-visible" style="padding-top: calc(var(--header-height, 6rem) + 1rem); max-width: 1800px;">
 		{#if loading && feeds.length === 0}
