@@ -5,6 +5,7 @@
 	import Effects from '$lib/components/Effects.svelte';
 	import CrystalBadge from '$lib/components/CrystalBadge.svelte';
 	import ScrollToTop from '$lib/components/ScrollToTop.svelte';
+	import ToastContainer from '$lib/components/ToastContainer.svelte';
 	
 	let { children } = $props();
 	
@@ -22,3 +23,4 @@
 	</div>
 </div>
 <ScrollToTop />
+<ToastContainer />

@@ -7,16 +7,23 @@ import type {
 	ConfigResponse,
 	StatusResponse
 } from './types';
+import { toastStore } from './stores/toast.svelte';
 
 const API_BASE = '/api';
 
 export async function fetchFeeds(tab: string = 'all'): Promise<FeedsPageResponse> {
 	const url = `${API_BASE}/feeds?tab=${encodeURIComponent(tab)}`;
-	const response = await fetch(url);
-	if (!response.ok) {
-		throw new Error(`Failed to fetch feeds: ${response.statusText}`);
+	try {
+		const response = await fetch(url);
+		if (!response.ok) {
+			throw new Error(`Failed to fetch feeds: ${response.statusText}`);
+		}
+		return response.json();
+	} catch (error) {
+		const errorMessage = error instanceof Error ? error.message : 'Failed to fetch feeds';
+		toastStore.error(errorMessage, 'Feed Error');
+		throw error;
 	}
-	return response.json();
 }
 
 export async function fetchTimeline(
@@ -25,29 +32,47 @@ export async function fetchTimeline(
 	days: number = 14
 ): Promise<TimelinePageResponse> {
 	const url = `${API_BASE}/timeline?limit=${limit}&offset=${offset}&days=${days}`;
-	const response = await fetch(url);
-	if (!response.ok) {
-		throw new Error(`Failed to fetch timeline: ${response.statusText}`);
+	try {
+		const response = await fetch(url);
+		if (!response.ok) {
+			throw new Error(`Failed to fetch timeline: ${response.statusText}`);
+		}
+		return response.json();
+	} catch (error) {
+		const errorMessage = error instanceof Error ? error.message : 'Failed to fetch timeline';
+		toastStore.error(errorMessage, 'Timeline Error');
+		throw error;
 	}
-	return response.json();
 }
 
 export async function fetchClusters(): Promise<ClustersResponse> {
 	const url = `${API_BASE}/clusters`;
-	const response = await fetch(url);
-	if (!response.ok) {
-		throw new Error(`Failed to fetch clusters: ${response.statusText}`);
+	try {
+		const response = await fetch(url);
+		if (!response.ok) {
+			throw new Error(`Failed to fetch clusters: ${response.statusText}`);
+		}
+		return response.json();
+	} catch (error) {
+		const errorMessage = error instanceof Error ? error.message : 'Failed to fetch clusters';
+		toastStore.error(errorMessage, 'Clustering Error');
+		throw error;
 	}
-	return response.json();
 }
 
 export async function fetchClusterItems(clusterId: string): Promise<ClusterItemsResponse> {
 	const url = `${API_BASE}/clusters/${clusterId}/items`;
-	const response = await fetch(url);
-	if (!response.ok) {
-		throw new Error(`Failed to fetch cluster items: ${response.statusText}`);
+	try {
+		const response = await fetch(url);
+		if (!response.ok) {
+			throw new Error(`Failed to fetch cluster items: ${response.statusText}`);
+		}
+		return response.json();
+	} catch (error) {
+		const errorMessage = error instanceof Error ? error.message : 'Failed to fetch cluster items';
+		toastStore.error(errorMessage, 'Cluster Error');
+		throw error;
 	}
-	return response.json();
 }
 
 export async function fetchMoreFeedItems(
@@ -56,11 +81,17 @@ export async function fetchMoreFeedItems(
 	offset: number = 0
 ): Promise<FeedResponse> {
 	const url = `${API_BASE}/feed_more?url=${encodeURIComponent(feedUrl)}&limit=${limit}&offset=${offset}`;
-	const response = await fetch(url);
-	if (!response.ok) {
-		throw new Error(`Failed to fetch more items: ${response.statusText}`);
+	try {
+		const response = await fetch(url);
+		if (!response.ok) {
+			throw new Error(`Failed to fetch more items: ${response.statusText}`);
+		}
+		return response.json();
+	} catch (error) {
+		const errorMessage = error instanceof Error ? error.message : 'Failed to fetch more items';
+		toastStore.error(errorMessage, 'Load More Error');
+		throw error;
 	}
-	return response.json();
 }
 
 export async function saveHeaderColor(
@@ -68,19 +99,25 @@ export async function saveHeaderColor(
 	color: string,
 	textColor: string
 ): Promise<void> {
-	const response = await fetch(`${API_BASE}/header_color`, {
-		method: 'POST',
-		headers: {
-			'Content-Type': 'application/json'
-		},
-		body: JSON.stringify({
-			feed_url: feedUrl,
-			color,
-			text_color: textColor
-		})
-	});
-	if (!response.ok) {
-		throw new Error(`Failed to save header color: ${response.statusText}`);
+	try {
+		const response = await fetch(`${API_BASE}/header_color`, {
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json'
+			},
+			body: JSON.stringify({
+				feed_url: feedUrl,
+				color,
+				text_color: textColor
+			})
+		});
+		if (!response.ok) {
+			throw new Error(`Failed to save header color: ${response.statusText}`);
+		}
+	} catch (error) {
+		const errorMessage = error instanceof Error ? error.message : 'Failed to save header color';
+		toastStore.error(errorMessage, 'Save Error');
+		throw error;
 	}
 }
 
@@ -114,18 +151,30 @@ export function formatDate(ms?: number): string {
 
 export async function fetchConfig(): Promise<ConfigResponse> {
 	const url = `${API_BASE}/config`;
-	const response = await fetch(url);
-	if (!response.ok) {
-		throw new Error(`Failed to fetch config: ${response.statusText}`);
+	try {
+		const response = await fetch(url);
+		if (!response.ok) {
+			throw new Error(`Failed to fetch config: ${response.statusText}`);
+		}
+		return response.json();
+	} catch (error) {
+		const errorMessage = error instanceof Error ? error.message : 'Failed to fetch config';
+		toastStore.error(errorMessage, 'Config Error');
+		throw error;
 	}
-	return response.json();
 }
 
 export async function fetchStatus(): Promise<StatusResponse> {
 	const url = `${API_BASE}/status`;
-	const response = await fetch(url);
-	if (!response.ok) {
-		throw new Error(`Failed to fetch status: ${response.statusText}`);
+	try {
+		const response = await fetch(url);
+		if (!response.ok) {
+			throw new Error(`Failed to fetch status: ${response.statusText}`);
+		}
+		return response.json();
+	} catch (error) {
+		const errorMessage = error instanceof Error ? error.message : 'Failed to fetch status';
+		toastStore.error(errorMessage, 'Status Error');
+		throw error;
 	}
-	return response.json();
 }
