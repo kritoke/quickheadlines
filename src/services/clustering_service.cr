@@ -16,7 +16,7 @@ class Quickheadlines::Services::ClusteringService
   end
 
   def compute_cluster_for_item(item_id : Int64, title : String, cache : FeedCache, item_feed_id : Int64? = nil, threshold : Float64 = 0.35) : Int64?
-    return nil unless ClusteringEngine.can_cluster?(title)
+    return unless ClusteringEngine.can_cluster?(title)
 
     title_set = ClusteringEngine.word_set(title)
     signature = ClusteringEngine.compute_minhash_signature(title)
@@ -162,12 +162,13 @@ class Quickheadlines::Services::ClusteringService
     cache = FeedCache.instance
 
     items = [] of ClusteringItem
-    @db.query("SELECT id, title, feed_id FROM items WHERE pub_date IS NULL OR pub_date <= datetime('now', '+1 day') ORDER BY pub_date DESC LIMIT ?", limit) do |rows|
+    @db.query("SELECT i.id, i.title, i.feed_id, f.url FROM items i JOIN feeds f ON i.feed_id = f.id WHERE i.pub_date IS NULL OR i.pub_date <= datetime('now', '+1 day') ORDER BY i.pub_date DESC LIMIT ?", limit) do |rows|
       rows.each do
         id = rows.read(Int64)
         title = rows.read(String)
         feed_id = rows.read(Int64)
-        items << ClusteringItem.new(id: id, title: title, feed_id: feed_id)
+        feed_url = rows.read(String)
+        items << ClusteringItem.new(id: id, title: title, feed_id: feed_id, feed_url: feed_url)
       end
     end
 

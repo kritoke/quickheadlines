@@ -4,7 +4,8 @@ module Quickheadlines::Services
   record ClusteringItem,
     id : Int64,
     title : String,
-    feed_id : Int64
+    feed_id : Int64,
+    feed_url : String
 
   module ClusteringEngine
     STOP_WORDS = Set.new([
@@ -22,6 +23,26 @@ module Quickheadlines::Services
     ])
 
     MIN_WORDS_FOR_CLUSTERING = 4
+
+    def self.extract_base_domain(url : String) : String
+      return "" if url.empty?
+      begin
+        uri = URI.parse(url)
+        host = uri.host || ""
+        return "" if host.empty?
+        host.downcase
+      rescue
+        ""
+      end
+    end
+
+    def self.same_base_domain?(url1 : String, url2 : String) : Bool
+      return false if url1.empty? || url2.empty?
+      domain1 = extract_base_domain(url1)
+      domain2 = extract_base_domain(url2)
+      return false if domain1.empty? || domain2.empty?
+      domain1 == domain2
+    end
 
     def self.normalize_headline(text : String) : String
       return "" if text.empty?
@@ -98,6 +119,7 @@ module Quickheadlines::Services
 
         next unless items_map.has_key?(a) && items_map.has_key?(b)
         next if items_map[a].feed_id == items_map[b].feed_id
+        next if same_base_domain?(items_map[a].feed_url, items_map[b].feed_url)
 
         set_a = word_set(items_map[a].title)
         set_b = word_set(items_map[b].title)
