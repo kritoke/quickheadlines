@@ -1,5 +1,31 @@
 # Changelog
 
+## [0.6.0] - 2026-03-05
+
+### Added
+
+- **Reddit Feed Caching**: Added HTTP ETag/Last-Modified header support for Reddit feeds, reducing bandwidth and improving refresh performance
+- **Domain-Based Clustering Deduplication**: Articles from feeds with the same base domain (e.g., arstechnica.com and arstechnica.com/science) no longer cluster together, reducing "duplicate" clusters from same publisher
+- **Bits UI Migration**: Replaced custom dropdown/modal components with Bits UI components for better accessibility and consistency
+- **Toast Notification System**: New toast notification system for user feedback
+- **Lazy Loading**: TimelineView and SearchModal are now lazy-loaded to reduce initial bundle size
+
+### Changed
+
+- **Bundle Size Optimization**: Removed Inter font (292KB savings), optimized Tailwind config
+- **Favicon Resolution**: Improved favicon detection with HTML fallback for problematic feeds
+
+### Fixed
+
+- **Database Connection Leak**: Fixed resource leak in FeedCache that could cause "too many open files" errors
+- **Toast Memory Leak**: Fixed memory leak from uncleaned timeouts in toast notifications
+- **Cursor Trail Cleanup**: Verified proper cleanup of cursor trail animations
+- **Reddit API Reliability**: Multiple fixes for Reddit API rate limiting and fallback to RSS
+
+### Dependencies Upgraded
+
+- **fetcher.cr**: Upgraded from v0.3.0 to v0.4.1 with enhanced reliability
+
 ## [0.5.2] - 2026-02-24
 
 ### Added
