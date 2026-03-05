@@ -11,7 +11,24 @@ module FetcherAdapter
     STDERR.puts "[DEBUG] FetcherAdapter.pull_feed: #{feed.url}"
 
     if feed.url.includes?("reddit.com/r/")
-      result = fetch_reddit_feed(feed.url, limit)
+      cache_hit, result = fetch_reddit_feed(feed.url, limit, etag, last_modified)
+      if cache_hit && previous_data
+        STDERR.puts "[DEBUG] Reddit feed cache hit - returning cached data"
+        cached = previous_data
+        cached_with_headers = FeedData.new(
+          cached.title,
+          cached.url,
+          cached.site_link,
+          cached.header_color,
+          cached.header_text_color,
+          cached.items,
+          result.etag,
+          result.last_modified,
+          cached.favicon,
+          cached.favicon_data
+        )
+        return Result(FeedData, String).success(cached_with_headers)
+      end
     else
       result = Fetcher.pull(feed.url, HTTP::Headers.new, etag, last_modified, limit)
     end
@@ -57,12 +74,12 @@ module FetcherAdapter
     Result(FeedData, String).failure("Error: #{ex.class}")
   end
 
-  private def self.fetch_reddit_feed(url : String, limit : Int32) : Fetcher::Result
+  private def self.fetch_reddit_feed(url : String, limit : Int32, etag : String?, last_modified : String?) : {Bool, Fetcher::Result}
     begin
       json_url = "#{url}/hot.json?limit=#{limit}&raw_json=1"
       STDERR.puts "[DEBUG] Fetching Reddit JSON: #{json_url}"
-      items = fetch_reddit_json(json_url, limit)
-      return build_reddit_result(items, url)
+      entries, res_etag, res_last_modified, cache_hit = fetch_reddit_json(json_url, limit, etag, last_modified)
+      return {cache_hit, build_reddit_result(entries, url, res_etag, res_last_modified)}
     rescue ex
       STDERR.puts "[DEBUG] Reddit JSON failed: #{ex.message}, trying RSS fallback"
     end
@@ -70,10 +87,10 @@ module FetcherAdapter
     begin
       rss_url = "#{url}.rss"
       STDERR.puts "[DEBUG] Fetching Reddit RSS: #{rss_url}"
-      items = fetch_reddit_rss(rss_url, limit)
-      build_reddit_result(items, url)
+      entries, res_etag, res_last_modified, cache_hit = fetch_reddit_rss(rss_url, limit, etag, last_modified)
+      return {cache_hit, build_reddit_result(entries, url, res_etag, res_last_modified)}
     rescue ex
-      Fetcher::Result.new(
+      return {false, Fetcher::Result.new(
         [] of Fetcher::Entry,
         nil,
         nil,
@@ -84,28 +101,44 @@ module FetcherAdapter
         nil,
         nil,
         [] of Fetcher::Author
-      )
+      )}
     end
   end
 
-  private def self.fetch_reddit_json(url : String, limit : Int32) : Array(Fetcher::Entry)
+  private def self.fetch_reddit_json(url : String, limit : Int32, etag : String?, last_modified : String?) : {Array(Fetcher::Entry), String?, String?, Bool}
     headers = HTTP::Headers{
       "User-Agent" => "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
     }
 
+    if etag
+      headers["If-None-Match"] = etag
+    end
+    if last_modified
+      headers["If-Modified-Since"] = last_modified
+    end
+
     response = HTTP::Client.get(url, headers: headers)
+
+    if response.status_code == 304
+      STDERR.puts "[DEBUG] Reddit JSON cache hit (304)"
+      return {[] of Fetcher::Entry, etag, last_modified, true}
+    end
+
     if response.status_code != 200
       raise "Reddit API returned #{response.status_code}"
     end
+
+    res_etag = response.headers["ETag"]?
+    res_last_modified = response.headers["Last-Modified"]?
 
     json = JSON.parse(response.body)
     entries = [] of Fetcher::Entry
 
     data = json["data"]?
-    return entries unless data
+    return {entries, res_etag, res_last_modified, false} unless data
 
     posts = data["children"]?
-    return entries unless posts
+    return {entries, res_etag, res_last_modified, false} unless posts
 
     posts.as_a.each do |child|
       break if entries.size >= limit
@@ -142,18 +175,34 @@ module FetcherAdapter
       )
     end
 
-    entries
+    {entries, res_etag, res_last_modified, false}
   end
 
-  private def self.fetch_reddit_rss(url : String, limit : Int32) : Array(Fetcher::Entry)
+  private def self.fetch_reddit_rss(url : String, limit : Int32, etag : String?, last_modified : String?) : {Array(Fetcher::Entry), String?, String?, Bool}
     headers = HTTP::Headers{
       "User-Agent" => "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
     }
 
+    if etag
+      headers["If-None-Match"] = etag
+    end
+    if last_modified
+      headers["If-Modified-Since"] = last_modified
+    end
+
     response = HTTP::Client.get(url, headers: headers)
+
+    if response.status_code == 304
+      STDERR.puts "[DEBUG] Reddit RSS cache hit (304)"
+      return {[] of Fetcher::Entry, etag, last_modified, true}
+    end
+
     if response.status_code != 200
       raise "Reddit RSS returned #{response.status_code}"
     end
+
+    res_etag = response.headers["ETag"]?
+    res_last_modified = response.headers["Last-Modified"]?
 
     xml = XML.parse(response.body)
     entries = [] of Fetcher::Entry
@@ -191,14 +240,14 @@ module FetcherAdapter
       ) if link.size > 0
     end
 
-    entries
+    {entries, res_etag, res_last_modified, false}
   end
 
-  private def self.build_reddit_result(items : Array(Fetcher::Entry), url : String) : Fetcher::Result
+  private def self.build_reddit_result(items : Array(Fetcher::Entry), url : String, etag : String?, last_modified : String?) : Fetcher::Result
     Fetcher::Result.new(
       items,
-      nil,
-      nil,
+      etag,
+      last_modified,
       url,
       nil,
       nil,
