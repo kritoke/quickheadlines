@@ -14,18 +14,17 @@ module FetcherAdapter
       cache_hit, result = fetch_reddit_feed(feed.url, limit, etag, last_modified)
       if cache_hit && previous_data
         STDERR.puts "[DEBUG] Reddit feed cache hit - returning cached data"
-        cached = previous_data
         cached_with_headers = FeedData.new(
-          cached.title,
-          cached.url,
-          cached.site_link,
-          cached.header_color,
-          cached.header_text_color,
-          cached.items,
+          previous_data.title,
+          previous_data.url,
+          previous_data.site_link,
+          previous_data.header_color,
+          previous_data.header_text_color,
+          previous_data.items,
           result.etag,
           result.last_modified,
-          cached.favicon,
-          cached.favicon_data
+          previous_data.favicon,
+          previous_data.favicon_data
         )
         return Result(FeedData, String).success(cached_with_headers)
       end
@@ -106,23 +105,12 @@ module FetcherAdapter
   end
 
   private def self.fetch_reddit_json(url : String, limit : Int32, etag : String?, last_modified : String?) : {Array(Fetcher::Entry), String?, String?, Bool}
-    headers = HTTP::Headers{
-      "User-Agent" => "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-    }
+    headers = build_reddit_headers(etag, last_modified)
+    client = reddit_http_client(url)
 
-    if etag
-      headers["If-None-Match"] = etag
-    end
-    if last_modified
-      headers["If-Modified-Since"] = last_modified
-    end
+    response = client.get(URI.parse(url).request_target, headers: headers)
 
-    response = HTTP::Client.get(url, headers: headers)
-
-    if response.status_code == 304
-      STDERR.puts "[DEBUG] Reddit JSON cache hit (304)"
-      return {[] of Fetcher::Entry, etag, last_modified, true}
-    end
+    return handle_reddit_304(response, etag, last_modified) if response.status_code == 304
 
     if response.status_code != 200
       raise "Reddit API returned #{response.status_code}"
@@ -142,60 +130,24 @@ module FetcherAdapter
 
     posts.as_a.each do |child|
       break if entries.size >= limit
-      post = child["data"]
+      post = child["data"]?
+      next unless post
 
-      title = post["title"]?.to_s
-      permalink = post["permalink"]?.to_s
-      is_self = post["is_self"]?.try(&.as_bool) || false
-      url_val = post["url"]?.to_s
-
-      link = is_self ? "https://www.reddit.com#{permalink}" : url_val
-      pub_date = nil
-      created_raw = post["created_utc"]?
-      if created_raw
-        begin
-          created = created_raw.as_i.to_i64
-          pub_date = Time.unix(created) if created > 0
-        rescue
-        end
+      if entry = parse_reddit_post(post)
+        entries << entry
       end
-
-      entries << Fetcher::Entry.new(
-        title: title,
-        url: link,
-        source_type: Fetcher::SourceType::Reddit,
-        content: "",
-        content_html: nil,
-        author: nil,
-        author_url: nil,
-        categories: [] of String,
-        attachments: [] of Fetcher::Attachment,
-        published_at: pub_date,
-        version: nil
-      )
     end
 
     {entries, res_etag, res_last_modified, false}
   end
 
   private def self.fetch_reddit_rss(url : String, limit : Int32, etag : String?, last_modified : String?) : {Array(Fetcher::Entry), String?, String?, Bool}
-    headers = HTTP::Headers{
-      "User-Agent" => "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-    }
+    headers = build_reddit_headers(etag, last_modified)
+    client = reddit_http_client(url)
 
-    if etag
-      headers["If-None-Match"] = etag
-    end
-    if last_modified
-      headers["If-Modified-Since"] = last_modified
-    end
+    response = client.get(URI.parse(url).request_target, headers: headers)
 
-    response = HTTP::Client.get(url, headers: headers)
-
-    if response.status_code == 304
-      STDERR.puts "[DEBUG] Reddit RSS cache hit (304)"
-      return {[] of Fetcher::Entry, etag, last_modified, true}
-    end
+    return handle_reddit_304(response, etag, last_modified) if response.status_code == 304
 
     if response.status_code != 200
       raise "Reddit RSS returned #{response.status_code}"
@@ -275,5 +227,67 @@ module FetcherAdapter
       end
     end
     {feed.header_color, feed.header_text_color}
+  end
+
+  private def self.build_reddit_headers(etag : String?, last_modified : String?) : HTTP::Headers
+    headers = HTTP::Headers{
+      "User-Agent" => "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+    }
+    headers["If-None-Match"] = etag if etag
+    headers["If-Modified-Since"] = last_modified if last_modified
+    headers
+  end
+
+  private def self.handle_reddit_304(response : HTTP::Client::Response, etag : String?, last_modified : String?) : {Array(Fetcher::Entry), String?, String?, Bool}
+    new_etag = response.headers["ETag"]? || etag
+    new_last_modified = response.headers["Last-Modified"]? || last_modified
+    STDERR.puts "[DEBUG] Reddit cache hit (304)"
+    {[] of Fetcher::Entry, new_etag, new_last_modified, true}
+  end
+
+  private def self.reddit_http_client(url : String) : HTTP::Client
+    uri = URI.parse(url)
+    client = HTTP::Client.new(uri)
+    client.connect_timeout = 10.seconds
+    client.read_timeout = 30.seconds
+    client
+  end
+
+  private def self.parse_reddit_post(post : JSON::Any) : Fetcher::Entry?
+    title = post["title"]?.try(&.as_s?) || "Untitled"
+    permalink = post["permalink"]?.try(&.as_s?) || ""
+    is_self = post["is_self"]?.try(&.as_bool) || false
+    url_val = post["url"]?.try(&.as_s?) || ""
+
+    link = is_self && !permalink.empty? ? "https://www.reddit.com#{permalink}" : url_val
+    return if link.empty?
+
+    pub_date = extract_reddit_timestamp(post)
+
+    Fetcher::Entry.new(
+      title: title,
+      url: link,
+      source_type: Fetcher::SourceType::Reddit,
+      content: "",
+      content_html: nil,
+      author: nil,
+      author_url: nil,
+      categories: [] of String,
+      attachments: [] of Fetcher::Attachment,
+      published_at: pub_date,
+      version: nil
+    )
+  end
+
+  private def self.extract_reddit_timestamp(post : JSON::Any) : Time?
+    created_raw = post["created_utc"]?
+    return unless created_raw
+
+    begin
+      created = created_raw.as_i.to_i64
+      Time.unix(created) if created > 0
+    rescue
+      nil
+    end
   end
 end
