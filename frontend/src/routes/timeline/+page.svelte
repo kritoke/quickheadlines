@@ -43,6 +43,7 @@
 
 	let searchQuery = $state('');
 	let searchExpanded = $state(false);
+	let pageVisible = $state(true);
 
 	let filteredItems = $derived.by(() => {
 		if (!searchQuery.trim()) return [...items];
@@ -185,7 +186,7 @@
 					console.warn('[Long-poll] Poll failed, retrying in 1s:', e);
 				}
 				
-				if (!abortController?.signal.aborted) {
+				if (!abortController?.signal.aborted && pageVisible) {
 					pollTimeoutId = setTimeout(pollForUpdates, 1000);
 				}
 			}
@@ -216,6 +217,14 @@
 			}
 			
 			checkClustering();
+
+			const handleVisibilityChange = () => {
+				pageVisible = !document.hidden;
+				if (pageVisible && pollTimeoutId === null) {
+					pollForUpdates();
+				}
+			};
+			document.addEventListener('visibilitychange', handleVisibilityChange);
 		}
 		
 		return () => {
@@ -234,6 +243,7 @@
 				clearTimeout(pollTimeoutId);
 				pollTimeoutId = null;
 			}
+			document.removeEventListener('visibilitychange', handleVisibilityChange);
 		};
 	});
 </script>

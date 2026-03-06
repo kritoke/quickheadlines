@@ -169,6 +169,20 @@
 
 		loop();
 
+		function handleVisibilityChange() {
+			if (document.hidden) {
+				instanceActive = false;
+				if (animationFrame) {
+					cancelAnimationFrame(animationFrame);
+					animationFrame = undefined;
+				}
+			} else {
+				instanceActive = true;
+				loop();
+			}
+		}
+		document.addEventListener('visibilitychange', handleVisibilityChange);
+
 		function updateMousePosition(e: MouseEvent | TouchEvent) {
 			if ('touches' in e) {
 				mouseX = e.touches?.[0].clientX;
@@ -198,6 +212,7 @@
 
 		return () => {
 			instanceActive = false;
+			document.removeEventListener('visibilitychange', handleVisibilityChange);
 			element.removeEventListener('mousemove', updateMousePosition);
 			element.removeEventListener('touchmove', updateMousePosition);
 			element.removeEventListener('mousedown', tapHandler);

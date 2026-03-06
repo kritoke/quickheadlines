@@ -11,15 +11,18 @@ import { toastStore } from './stores/toast.svelte';
 
 const API_BASE = '/api';
 
-export async function fetchFeeds(tab: string = 'all'): Promise<FeedsPageResponse> {
+export async function fetchFeeds(tab: string = 'all', signal?: AbortSignal): Promise<FeedsPageResponse> {
 	const url = `${API_BASE}/feeds?tab=${encodeURIComponent(tab)}`;
 	try {
-		const response = await fetch(url);
+		const response = await fetch(url, signal ? { signal } : undefined);
 		if (!response.ok) {
 			throw new Error(`Failed to fetch feeds: ${response.statusText}`);
 		}
 		return response.json();
 	} catch (error) {
+		if (error instanceof Error && error.name === 'AbortError') {
+			throw error;
+		}
 		const errorMessage = error instanceof Error ? error.message : 'Failed to fetch feeds';
 		toastStore.error(errorMessage, 'Feed Error');
 		throw error;

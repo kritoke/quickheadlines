@@ -38,6 +38,8 @@
 	let searchQuery = $state('');
 	let searchExpanded = $state(false);
 	let tabChangeTimeout: ReturnType<typeof setTimeout> | null = null;
+	let feedAbortController: AbortController | null = null;
+	let pageVisible = $state(true);
 
 	let filteredFeeds = $derived.by(() => {
 		if (!searchQuery.trim()) return feeds;
@@ -64,10 +66,15 @@
 			return;
 		}
 
+		if (feedAbortController) {
+			feedAbortController.abort();
+		}
+		feedAbortController = new AbortController();
+
 		try {
 			loading = !isAutoRefresh;
 			error = null;
-			const response: FeedsPageResponse = await fetchFeeds(tab);
+			const response: FeedsPageResponse = await fetchFeeds(tab, feedAbortController.signal);
 			const swReleases = response.software_releases || [];
 			feeds = [...swReleases, ...(response.feeds || [])];
 			tabs = response.tabs || [];
@@ -93,6 +100,9 @@
 			}
 			tabCache = newCache;
 		} catch (e) {
+			if (e instanceof Error && e.name === 'AbortError') {
+				return;
+			}
 			error = e instanceof Error ? e.message : 'Failed to load feeds';
 		} finally {
 			loading = false;
@@ -178,7 +188,9 @@
 			// Load config first, then set up interval with correct value
 			loadConfig().then(() => {
 				refreshInterval = setInterval(() => {
-					loadFeeds(activeTab, true);
+					if (pageVisible) {
+						loadFeeds(activeTab, true);
+					}
 				}, refreshMinutes * 60 * 1000);
 
 				configRefreshInterval = setInterval(async () => {
@@ -191,7 +203,9 @@
 								clearInterval(refreshInterval);
 							}
 							refreshInterval = setInterval(() => {
-								loadFeeds(activeTab, true);
+								if (pageVisible) {
+									loadFeeds(activeTab, true);
+								}
 							}, newRefreshMinutes * 60 * 1000);
 							console.log('[Config] Refresh interval updated to', newRefreshMinutes, 'minutes');
 						}
@@ -209,11 +223,18 @@
 				}
 			}, 30 * 1000);
 
+			const handleVisibilityChange = () => {
+				pageVisible = !document.hidden;
+			};
+			document.addEventListener('visibilitychange', handleVisibilityChange);
+
 			return () => {
 				if (refreshInterval) clearInterval(refreshInterval);
 				if (configRefreshInterval) clearInterval(configRefreshInterval);
 				if (cleanupStatus) clearInterval(cleanupStatus);
 				if (tabChangeTimeout) clearTimeout(tabChangeTimeout);
+				if (feedAbortController) feedAbortController.abort();
+				document.removeEventListener('visibilitychange', handleVisibilityChange);
 			};
 		}
 	});
