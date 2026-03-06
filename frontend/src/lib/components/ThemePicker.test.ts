@@ -8,7 +8,7 @@ describe('ThemePicker', () => {
 
 	beforeEach(() => {
 		themeState.theme = 'light';
-		themeState.coolMode = false;
+		themeState.effects = false;
 		themeState.mounted = true;
 		vi.clearAllMocks();
 	});
@@ -20,7 +20,7 @@ describe('ThemePicker', () => {
 		}
 		vi.clearAllMocks();
 		themeState.theme = 'light';
-		themeState.coolMode = false;
+		themeState.effects = false;
 	});
 
 	it('renders theme button', () => {

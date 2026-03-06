@@ -34,7 +34,7 @@ export {
 	initTheme, 
 	setTheme, 
 	toggleTheme,
-	toggleCoolMode,
+	toggleEffects,
 	getThemeAccentColors,
 	type ThemeStyle 
 } from './theme.svelte';

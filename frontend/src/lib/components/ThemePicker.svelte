@@ -1,93 +1,55 @@
 <script lang="ts">
-	import { themeState, setTheme, themeStyles, getThemeAccentColors } from '$lib/stores/theme.svelte';
-	import { scale } from 'svelte/transition';
-
-	let isOpen = $state(false);
-	let buttonRef: HTMLButtonElement | null = $state(null);
+	import { DropdownMenu } from 'bits-ui';
+	import { themeState, setTheme, themeStyles, getThemeAccentColors, getThemePreview, type ThemeStyle } from '$lib/stores/theme.svelte';
 
 	let accentColors = $derived(getThemeAccentColors(themeState.theme));
+	let themePreviews = $derived(
+		themeStyles.reduce((acc, t) => {
+			acc[t.id] = getThemePreview(t.id);
+			return acc;
+		}, {} as Record<ThemeStyle, string>)
+	);
 
-	function toggleDropdown(event: MouseEvent) {
-		event.stopPropagation();
-		isOpen = !isOpen;
-	}
-
-	function selectTheme(theme: string) {
-		setTheme(theme as typeof themeState.theme);
-		isOpen = false;
-	}
-
-	function handleClickOutside(event: MouseEvent) {
-		if (buttonRef && !buttonRef.contains(event.target as Node)) {
-			isOpen = false;
-		}
-	}
-
-	$effect(() => {
-		if (isOpen) {
-			document.addEventListener('click', handleClickOutside);
-			return () => document.removeEventListener('click', handleClickOutside);
-		}
-	});
-
-	function getThemePreview(theme: string): string {
-		switch (theme) {
-			case 'light': return 'linear-gradient(135deg, #ffffff 50%, #e2e8f0 50%)';
-			case 'dark': return 'linear-gradient(135deg, #1e293b 50%, #0f172a 50%)';
-			case 'retro80s': return 'linear-gradient(135deg, #00d4ff 50%, #ff2e63 50%)';
-			case 'matrix': return 'linear-gradient(135deg, #22c55e 50%, #166534 50%)';
-			case 'ocean': return 'linear-gradient(135deg, #06b6d4 50%, #f472b6 50%)';
-			case 'sunset': return 'linear-gradient(135deg, #f97316 50%, #431407 50%)';
-			case 'hotdog': return 'linear-gradient(135deg, #008080 50%, #fff59d 50%)';
-			case 'dracula': return 'linear-gradient(135deg, #bd93f9 50%, #282a36 50%)';
-			case 'nord': return 'linear-gradient(135deg, #88c0d0 50%, #2e3440 50%)';
-			case 'cyberpunk': return 'linear-gradient(135deg, #ff00ff 50%, #00ffff 50%)';
-			case 'forest': return 'linear-gradient(135deg, #4ade80 50%, #1a2e1a 50%)';
-			case 'coffee': return 'linear-gradient(135deg, #d97706 50%, #2c1810 50%)';
-			case 'vaporwave': return 'linear-gradient(135deg, #ff71ce 50%, #b967ff 50%)';
-			default: return '#ccc';
-		}
+	function selectTheme(theme: ThemeStyle) {
+		setTheme(theme);
 	}
 </script>
 
-<div class="relative">
-	<button
-		bind:this={buttonRef}
-		onclick={toggleDropdown}
+<DropdownMenu.Root>
+	<DropdownMenu.Trigger
 		class="flex items-center gap-1 p-2 rounded-lg transition-colors hover:opacity-80"
 		style="color: {accentColors.text}"
 		title="Theme"
-		aria-expanded={isOpen}
 	>
 		<span
 			class="w-5 h-5 rounded-full border shrink-0"
-			style="border-color: {accentColors.border}; background: {getThemePreview(themeState.theme)}"
+			style="border-color: {accentColors.border}; background: {themePreviews[themeState.theme]}"
 		></span>
 		<svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
 			<polyline points="6 9 12 15 18 9"/>
 		</svg>
 		<span class="sr-only">Select theme</span>
-	</button>
+	</DropdownMenu.Trigger>
 
-	{#if isOpen}
-		<div
-			transition:scale={{ duration: 150, start: 0.95 }}
-			class="absolute right-0 mt-2 w-80 rounded-lg shadow-lg py-2 z-50"
+	<DropdownMenu.Portal>
+		<DropdownMenu.Content
+			class="z-50 w-80 rounded-lg shadow-lg py-2"
 			style="background-color: {accentColors.bg}; border-color: {accentColors.border}; color: {accentColors.text}"
+			sideOffset={8}
 		>
 			<div class="px-3 py-1 text-xs font-semibold uppercase tracking-wider opacity-70">
 				Theme
 			</div>
 			<div class="grid grid-cols-2 gap-1 px-1 mt-1">
-				{#each themeStyles as theme}
-					<button
-						onclick={() => selectTheme(theme.id)}
-						class="px-2 py-1.5 text-left hover:opacity-80 rounded-md transition-colors flex items-center gap-2"
+				{#each themeStyles as theme (theme.id)}
+					<DropdownMenu.Item
+						onSelect={() => selectTheme(theme.id)}
+						class="px-2 py-1.5 text-left hover:opacity-80 rounded-md transition-colors flex items-center gap-2 cursor-pointer outline-none"
 						style="background-color: {themeState.theme === theme.id ? accentColors.bgSecondary : 'transparent'}"
 					>
 						<span
 							class="w-4 h-4 rounded-full border shrink-0"
-							style="border-color: {accentColors.border}; background: {getThemePreview(theme.id)}"
+							style="border-color: {accentColors.border}; background: {themePreviews[theme.id]}"
 						></span>
 						<div class="flex-1 min-w-0">
 							<div class="text-sm truncate">{theme.name}</div>
@@ -97,9 +59,9 @@
 								<polyline points="20 6 9 17 4 12"/>
 							</svg>
 						{/if}
-					</button>
+					</DropdownMenu.Item>
 				{/each}
 			</div>
-		</div>
-	{/if}
-</div>
+		</DropdownMenu.Content>
+	</DropdownMenu.Portal>
+</DropdownMenu.Root>
