@@ -10,6 +10,7 @@ require "./storage"
 require "./favicon_storage"
 require "./health_monitor"
 require "./api"
+require "./websocket"
 
 # Load entities, services, controllers, repositories, etc.
 require "./entities/story"
@@ -80,6 +81,22 @@ begin
 
   # Load from cache first so server can respond immediately
   load_feeds_from_cache(initial_config)
+
+  # Start EventBroadcaster for WebSocket push updates
+  EventBroadcaster.start
+
+  # Start Janitor for cleaning up dead WebSocket connections
+  spawn do
+    loop do
+      sleep 60.seconds
+      begin
+        removed = SocketManager.instance.cleanup_dead_connections
+        STDERR.puts "[#{Time.local}] Janitor: #{removed} dead connections cleaned up, #{SocketManager.instance.connection_count} active"
+      rescue ex
+        STDERR.puts "[#{Time.local}] Janitor error: #{ex.message}"
+      end
+    end
+  end
 
   # Start background refresh loop for automatic feed updates
   spawn do

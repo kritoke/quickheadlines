@@ -296,10 +296,12 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
     config = STATE.config
     refresh_minutes = config.try(&.refresh_minutes) || 10
     item_limit = config.try(&.item_limit) || 20
+    use_websocket = config.try(&.use_websocket?) || false
 
     self.view(Quickheadlines::DTOs::ConfigResponse.new(
       refresh_minutes: refresh_minutes,
-      item_limit: item_limit
+      item_limit: item_limit,
+      use_websocket: use_websocket
     ))
   end
 

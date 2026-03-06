@@ -7,6 +7,7 @@ require "../storage"
 require "../health_monitor"
 require "../services/clustering_service"
 require "../software_fetcher"
+require "../websocket"
 require "./feed_fetcher"
 
 CLUSTERING_JOBS = Atomic(Int32).new(0)
@@ -83,6 +84,9 @@ def refresh_all(config : Config)
       updated_at: Time.local
     )
   end
+
+  # Broadcast update to WebSocket clients
+  EventBroadcaster.notify_feed_update(STATE.updated_at.to_unix_ms)
 
   STDERR.puts "[#{Time.local}] refresh_all: STATE updated - feeds=#{new_feeds.size}, tabs=#{new_tabs.size}"
 
