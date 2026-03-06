@@ -115,13 +115,13 @@ module FetcherAdapter
       permalink = post["permalink"]?.to_s
       is_self = post["is_self"]?.try(&.as_bool) || false
       url_val = post["url"]?.to_s
+      created_raw = post["created_utc"]?
 
       link = is_self ? "https://www.reddit.com#{permalink}" : url_val
       pub_date = nil
-      created_raw = post["created_utc"]?
       if created_raw
         begin
-          created = created_raw.as_i.to_i64
+          created = created_raw.as_f.to_i64
           pub_date = Time.unix(created) if created > 0
         rescue
         end
@@ -164,14 +164,16 @@ module FetcherAdapter
       title_node = node.xpath_node("*[local-name()='title']")
       link_node = node.xpath_node("*[local-name()='link']")
       updated_node = node.xpath_node("*[local-name()='updated']")
+      published_node = node.xpath_node("*[local-name()='published']")
 
       title = title_node.try(&.inner_text) || "Untitled"
       link = link_node.try(&.["href"]) || ""
 
       pub_date = nil
-      if updated_node
+      time_node = updated_node || published_node
+      if time_node
         begin
-          pub_date = Time.parse_iso8601(updated_node.inner_text)
+          pub_date = Time.parse_iso8601(time_node.inner_text)
         rescue
         end
       end
