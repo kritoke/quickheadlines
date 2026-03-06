@@ -1,9 +1,11 @@
 <script lang="ts">
-	import { themeState, setTheme, themeStyles } from '$lib/stores/theme.svelte';
+	import { themeState, setTheme, themeStyles, getThemeAccentColors } from '$lib/stores/theme.svelte';
 	import { scale } from 'svelte/transition';
 
 	let isOpen = $state(false);
 	let buttonRef: HTMLButtonElement | null = $state(null);
+
+	let accentColors = $derived(getThemeAccentColors(themeState.theme));
 
 	function toggleDropdown(event: MouseEvent) {
 		event.stopPropagation();
@@ -52,16 +54,16 @@
 	<button
 		bind:this={buttonRef}
 		onclick={toggleDropdown}
-		class="flex items-center gap-1 p-2 rounded-lg transition-colors"
-		style="opacity: {isOpen ? 1 : 0.7};"
+		class="flex items-center gap-1 p-2 rounded-lg transition-colors hover:opacity-80"
+		style="color: {accentColors.text}"
 		title="Theme"
 		aria-expanded={isOpen}
 	>
 		<span
-			class="w-5 h-5 rounded-full border border-slate-300 dark:border-slate-600 shrink-0"
-			style="background: {getThemePreview(themeState.theme)}"
+			class="w-5 h-5 rounded-full border shrink-0"
+			style="border-color: {accentColors.border}; background: {getThemePreview(themeState.theme)}"
 		></span>
-		<svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3 text-slate-500 dark:text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+		<svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
 			<polyline points="6 9 12 15 18 9"/>
 		</svg>
 		<span class="sr-only">Select theme</span>
@@ -70,28 +72,28 @@
 	{#if isOpen}
 		<div
 			transition:scale={{ duration: 150, start: 0.95 }}
-			class="absolute right-0 mt-2 w-80 bg-white dark:bg-slate-800 rounded-lg shadow-lg border border-slate-200 dark:border-slate-700 py-2 z-50"
+			class="absolute right-0 mt-2 w-80 rounded-lg shadow-lg py-2 z-50"
+			style="background-color: {accentColors.bg}; border-color: {accentColors.border}; color: {accentColors.text}"
 		>
-			<div class="px-3 py-1 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+			<div class="px-3 py-1 text-xs font-semibold uppercase tracking-wider opacity-70">
 				Theme
 			</div>
 			<div class="grid grid-cols-2 gap-1 px-1 mt-1">
 				{#each themeStyles as theme}
 					<button
 						onclick={() => selectTheme(theme.id)}
-						class="px-2 py-1.5 text-left hover:bg-slate-100 dark:hover:bg-slate-700 rounded-md transition-colors flex items-center gap-2"
-						class:bg-slate-100={themeState.theme === theme.id}
-						class:dark:bg-slate-700={themeState.theme === theme.id}
+						class="px-2 py-1.5 text-left hover:opacity-80 rounded-md transition-colors flex items-center gap-2"
+						style="background-color: {themeState.theme === theme.id ? accentColors.bgSecondary : 'transparent'}"
 					>
 						<span
-							class="w-4 h-4 rounded-full border border-slate-300 dark:border-slate-600 shrink-0"
-							style="background: {getThemePreview(theme.id)}"
+							class="w-4 h-4 rounded-full border shrink-0"
+							style="border-color: {accentColors.border}; background: {getThemePreview(theme.id)}"
 						></span>
 						<div class="flex-1 min-w-0">
-							<div class="text-sm text-slate-700 dark:text-slate-200 truncate">{theme.name}</div>
+							<div class="text-sm truncate">{theme.name}</div>
 						</div>
 						{#if themeState.theme === theme.id}
-							<svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-slate-500 dark:text-slate-400 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+							<svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: {accentColors.accent}">
 								<polyline points="20 6 9 17 4 12"/>
 							</svg>
 						{/if}

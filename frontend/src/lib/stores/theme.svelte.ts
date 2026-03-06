@@ -152,3 +152,22 @@ export function toggleEffects() {
 		};
 		return colors[theme];
 	}
+
+	export function getDotIndicatorColors(theme: ThemeStyle): string {
+		const colors: Record<ThemeStyle, string> = {
+			light: '#64748b',
+			dark: '#94a3b8',
+			retro80s: '#00d4ff',
+			matrix: '#22c55e',
+			ocean: '#7dd3fc',
+			sunset: '#fed7aa',
+			hotdog: '#fff59d',
+			dracula: '#bd93f9',
+			nord: '#88c0d0',
+			cyberpunk: '#00ffff',
+			forest: '#4ade80',
+			coffee: '#d97706',
+			vaporwave: '#ff71ce'
+		};
+		return colors[theme];
+	}
