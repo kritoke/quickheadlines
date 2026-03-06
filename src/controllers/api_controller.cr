@@ -8,6 +8,7 @@ require "../repositories/feed_repository"
 require "../repositories/story_repository"
 require "../repositories/cluster_repository"
 require "../fetcher/refresh_loop"
+require "../websocket"
 
 class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
   @db_service : DatabaseService
@@ -583,10 +584,19 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
   # GET /api/status - Get current system status
   @[ARTA::Get(path: "/api/status")]
   def status : Quickheadlines::DTOs::StatusResponse
+    ws_stats = SocketManager.instance.get_stats
+    broadcaster_stats = EventBroadcaster.get_stats
+
     Quickheadlines::DTOs::StatusResponse.new(
       clustering: STATE.clustering?,
       refreshing: STATE.refreshing?,
-      active_jobs: 0 # We don't track background fiber count yet
+      active_jobs: 0,
+      websocket_connections: ws_stats["connections"].to_i32,
+      websocket_messages_sent: ws_stats["messages_sent"].to_i64,
+      websocket_messages_dropped: ws_stats["messages_dropped"].to_i64,
+      websocket_send_errors: ws_stats["send_errors"].to_i64,
+      broadcaster_processed: broadcaster_stats["processed"].to_i64,
+      broadcaster_dropped: broadcaster_stats["dropped"].to_i64
     )
   end
 

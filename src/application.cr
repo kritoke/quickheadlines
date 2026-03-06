@@ -144,6 +144,22 @@ begin
     end
   end
 
+  # WebSocket connection janitor - runs every 5 minutes
+  spawn do
+    loop do
+      sleep 5.minutes
+      begin
+        removed = SocketManager.instance.cleanup_dead_connections
+        stats = SocketManager.instance.get_stats
+        STDERR.puts "[WebSocket] Janitor: #{stats["connections"]} active, #{removed} removed, " \
+                    "#{stats["messages_sent"]} sent, #{stats["messages_dropped"]} dropped, " \
+                    "#{stats["send_errors"]} errors"
+      rescue ex
+        STDERR.puts "[WebSocket] Janitor failed: #{ex.message}"
+      end
+    end
+  end
+
   # Verify feeds are loaded before starting server
   STDERR.puts "[#{Time.local}] Verifying feeds loaded..."
   STDERR.puts "[#{Time.local}] STATE.feeds.size=#{STATE.feeds.size}"

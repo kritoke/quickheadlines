@@ -3,7 +3,9 @@ require "json"
 require "./socket_manager"
 
 class EventBroadcaster
-  UPDATE_CHANNEL = Channel(FeedUpdateEvent).new(1000)
+  UPDATE_CHANNEL = Channel(FeedUpdateEvent).new(100)
+  DROPPED_EVENTS = Atomic(Int64).new(0)
+  PROCESSED_EVENTS = Atomic(Int64).new(0)
 
   def self.start : Nil
     spawn do
@@ -11,6 +13,7 @@ class EventBroadcaster
         select
         when event = UPDATE_CHANNEL.receive?
           SocketManager.instance.broadcast(event.to_json)
+          PROCESSED_EVENTS.add(1)
         when timeout(30.seconds)
           SocketManager.instance.broadcast(HeartbeatEvent.new.to_json)
         end
@@ -24,10 +27,21 @@ class EventBroadcaster
     spawn do
       begin
         UPDATE_CHANNEL.send(event)
+        PROCESSED_EVENTS.add(1)
       rescue Channel::ClosedError
         STDERR.puts "[EventBroadcaster] Channel closed, cannot send update"
+      rescue ex
+        DROPPED_EVENTS.add(1)
+        STDERR.puts "[EventBroadcaster] Channel error, event dropped: #{ex.class}"
       end
     end
+  end
+
+  def self.get_stats
+    {
+      "dropped" => DROPPED_EVENTS.get,
+      "processed" => PROCESSED_EVENTS.get
+    }
   end
 end
 

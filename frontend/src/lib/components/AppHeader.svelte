@@ -35,7 +35,7 @@
 	<div class="mx-auto px-4 md:px-8 xl:px-12" style="max-width: 1800px;">
 		<div class="flex items-center justify-between py-2">
 			<div class="flex items-center gap-2 sm:gap-3 min-w-0">
-				<a href={viewLink.icon === 'clock' ? '/?tab=all' : '/'} class="flex items-center gap-2 hover:opacity-80 transition-opacity shrink-0">
+				<a href="/?tab=all" class="flex items-center gap-2 hover:opacity-80 transition-opacity shrink-0">
 					<img src="/logo.svg" alt="Logo" class="w-7 h-7 sm:w-8 sm:h-8" />
 					<span class="text-lg sm:text-xl font-bold text-slate-900 dark:text-white">{title}</span>
 				</a>
