@@ -59,11 +59,11 @@ class SocketManager
 
       outgoing = Channel(String).new(CONNECTION_QUEUE_SIZE)
       connection = Connection.new(websocket: ws, ip: ip, outgoing: outgoing, created_at: Time.local)
-      
+
       @activity_mutex.synchronize do
         @last_activity[ws] = Time.local
       end
-      
+
       spawn writer_fiber(connection)
       @connections << connection
     end
@@ -79,7 +79,7 @@ class SocketManager
         break if message.nil?
         connection.websocket.send(message)
         @messages_sent.add(1)
-        
+
         @activity_mutex.synchronize do
           @last_activity[connection.websocket] = Time.local
         end

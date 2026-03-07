@@ -1,6 +1,6 @@
-import { loadFeeds, loadFeedConfig, feedState } from './feedStore.svelte';
-import { loadTimeline, loadTimelineConfig, checkClusteringStatus, timelineState } from './timelineStore.svelte';
-import { createLiveConnection, type ConnectionState } from '$lib/websocket';
+import { loadFeeds, feedState } from './feedStore.svelte';
+import { loadTimeline, checkClusteringStatus, timelineState } from './timelineStore.svelte';
+import { createLiveConnection } from '$lib/websocket';
 import { fetchConfig } from '$lib/api';
 import { setConnectionState } from './connection.svelte';
 
@@ -26,7 +26,34 @@ function createEffectHandles(): EffectHandles {
 	};
 }
 
-export function createFeedEffects(config: EffectConfig = {}) {
+function createWebSocketConnection(
+	onUpdate: (timestamp: number) => void,
+	effectName: string
+) {
+	const liveConnection = createLiveConnection((timestamp) => {
+		console.log(`[${effectName}] WebSocket update received, reloading...`);
+		onUpdate(timestamp);
+	});
+
+	setConnectionState('connecting');
+
+	Object.defineProperty(window, '__liveConnection', {
+		value: liveConnection,
+		writable: true,
+		configurable: true
+	});
+
+	const originalConnect = liveConnection.connect;
+	liveConnection.connect = () => {
+		setConnectionState('connecting');
+		return originalConnect();
+	};
+
+	liveConnection.connect();
+	return liveConnection;
+}
+
+export function createFeedEffects(_config: EffectConfig = {}) {
 	const handles = createEffectHandles();
 	let lastUpdate = Date.now();
 	let saveScrollY = 0;
@@ -71,47 +98,18 @@ export function createFeedEffects(config: EffectConfig = {}) {
 		handles.pollTimeout = setTimeout(pollForUpdates, 1000);
 	}
 
-	async function setupRefresh() {
-		const minutes = await checkConfig();
-		handles.refreshInterval = setInterval(() => {
-			loadFeeds(feedState.activeTab, true);
-		}, minutes * 60 * 1000);
-		console.log('[FeedEffects] Refresh interval:', minutes, 'minutes');
-	}
-
-	async function startWebSocket() {
-		liveConnection = createLiveConnection((timestamp) => {
-			if (timestamp > lastUpdate) {
-				console.log('[FeedEffects] WebSocket update received, reloading...');
-				lastUpdate = timestamp;
-				saveScrollY = window.scrollY;
-				loadFeeds(feedState.activeTab, true);
-				window.scrollTo(0, saveScrollY);
-			}
-		});
-
-		setConnectionState('connecting');
-
-		Object.defineProperty(window, '__liveConnection', {
-			value: liveConnection,
-			writable: true,
-			configurable: true
-		});
-
-		const originalConnect = liveConnection.connect;
-		liveConnection.connect = () => {
-			setConnectionState('connecting');
-			return originalConnect();
-		};
-
-		liveConnection.connect();
-	}
-
 	async function start() {
 		const minutes = await checkConfig();
 
 		if (useWebSocket) {
-			await startWebSocket();
+			liveConnection = createWebSocketConnection((timestamp) => {
+				if (timestamp > lastUpdate) {
+					lastUpdate = timestamp;
+					saveScrollY = window.scrollY;
+					loadFeeds(feedState.activeTab, true);
+					window.scrollTo(0, saveScrollY);
+				}
+			}, 'FeedEffects');
 		} else {
 			pollForUpdates();
 		}
@@ -133,7 +131,14 @@ export function createFeedEffects(config: EffectConfig = {}) {
 				const cfg = await fetchConfig();
 				if (cfg.use_websocket && !liveConnection) {
 					console.log('[FeedEffects] WebSocket enabled, switching...');
-					await startWebSocket();
+					liveConnection = createWebSocketConnection((timestamp) => {
+						if (timestamp > lastUpdate) {
+							lastUpdate = timestamp;
+							saveScrollY = window.scrollY;
+							loadFeeds(feedState.activeTab, true);
+							window.scrollTo(0, saveScrollY);
+						}
+					}, 'FeedEffects');
 				}
 			}
 		}, 60000);
@@ -150,7 +155,7 @@ export function createFeedEffects(config: EffectConfig = {}) {
 	return { start, stop, handles, getLiveConnection: () => liveConnection };
 }
 
-export function createTimelineEffects(config: EffectConfig = {}) {
+export function createTimelineEffects(_config: EffectConfig = {}) {
 	const handles = createEffectHandles();
 	let lastUpdate = Date.now();
 	let saveScrollY = 0;
@@ -213,49 +218,20 @@ export function createTimelineEffects(config: EffectConfig = {}) {
 		}
 	}
 
-	async function setupRefresh() {
-		const minutes = await checkConfig();
-		handles.refreshInterval = setInterval(() => {
-			loadTimeline();
-		}, minutes * 60 * 1000);
-		console.log('[TimelineEffects] Refresh interval:', minutes, 'minutes');
-	}
-
-  async function startWebSocket() {
-    liveConnection = createLiveConnection((timestamp) => {
-      if (timestamp > lastUpdate) {
-        console.log('[TimelineEffects] WebSocket update received, reloading...');
-        lastUpdate = timestamp;
-        saveScrollY = window.scrollY;
-        loadTimeline();
-        window.scrollTo(0, saveScrollY);
-      }
-    });
-
-    setConnectionState('connecting');
-
-    Object.defineProperty(window, '__liveConnection', {
-      value: liveConnection,
-      writable: true,
-      configurable: true
-    });
-
-    const originalConnect = liveConnection.connect;
-    liveConnection.connect = () => {
-      setConnectionState('connecting');
-      return originalConnect();
-    };
-
-    liveConnection.connect();
-  }
-
 	async function start() {
 		loadTimeline();
 
 		const minutes = await checkConfig();
 
 		if (useWebSocket) {
-			await startWebSocket();
+			liveConnection = createWebSocketConnection((timestamp) => {
+				if (timestamp > lastUpdate) {
+					lastUpdate = timestamp;
+					saveScrollY = window.scrollY;
+					loadTimeline();
+					window.scrollTo(0, saveScrollY);
+				}
+			}, 'TimelineEffects');
 		} else {
 			pollForUpdates();
 		}
@@ -279,7 +255,14 @@ export function createTimelineEffects(config: EffectConfig = {}) {
 				const cfg = await fetchConfig();
 				if (cfg.use_websocket && !liveConnection) {
 					console.log('[TimelineEffects] WebSocket enabled, switching...');
-					await startWebSocket();
+					liveConnection = createWebSocketConnection((timestamp) => {
+						if (timestamp > lastUpdate) {
+							lastUpdate = timestamp;
+							saveScrollY = window.scrollY;
+							loadTimeline();
+							window.scrollTo(0, saveScrollY);
+						}
+					}, 'TimelineEffects');
 				}
 			}
 		}, 60000);

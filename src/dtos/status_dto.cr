@@ -23,7 +23,7 @@ class Quickheadlines::DTOs::StatusResponse
     @websocket_messages_dropped : Int64 = 0,
     @websocket_send_errors : Int64 = 0,
     @broadcaster_processed : Int64 = 0,
-    @broadcaster_dropped : Int64 = 0
+    @broadcaster_dropped : Int64 = 0,
   )
   end
 end

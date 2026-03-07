@@ -116,10 +116,10 @@ private def extract_legacy_header_from_theme(header_color : String?, header_text
 end
 
 private def parse_theme_text_value(text_val) : Hash(String, String)?
-  return nil unless text_val
+  return unless text_val
 
   has_text = (text_val.is_a?(Hash) && !text_val.empty?) || (text_val.is_a?(String) && !text_val.empty?)
-  return nil unless has_text
+  return unless has_text
 
   parsed_text = nil.as(Hash(String, String)?)
   if text_val.is_a?(Hash)
@@ -142,7 +142,7 @@ private def parse_theme_text_value(text_val) : Hash(String, String)?
 end
 
 private def normalize_bg_value(extracted : Hash?) : String?
-  return nil unless extracted && extracted.has_key?("bg")
+  return unless extracted && extracted.has_key?("bg")
 
   raw_bg = extracted["bg"]
   bg_val = nil.as(String?)
@@ -410,7 +410,7 @@ end
 private def get_stale_cached_feed(feed : Feed, item_limit : Int32, previous_data : FeedData?) : FeedData?
   cache = FeedCache.instance
   cached = cache.get(feed.url)
-  return nil unless cached
+  return unless cached
 
   if previous_data && (prev_favicon_data = previous_data.favicon_data)
     favicon = prev_favicon_data.starts_with?("/favicons/") ? prev_favicon_data : cached.favicon

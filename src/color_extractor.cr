@@ -11,13 +11,13 @@ module ColorExtractor
     # If a manual header color override is configured, don't compute theme-aware colors here.
     # Return nil so callers fall back to legacy override handling.
     has_manual_override = !config_header_color.nil? && config_header_color != ""
-    return nil if has_manual_override
+    return if has_manual_override
 
     cached = get_cached_theme_aware(favicon_path)
     return cached if cached
 
     extracted = extract_from_file_theme_aware(favicon_path)
-    return nil unless extracted
+    return unless extracted
 
     cache_result_theme_aware(favicon_path, extracted)
     extracted
@@ -62,7 +62,7 @@ module ColorExtractor
 
   private def self.extract_from_file_theme_aware(path : String) : Hash(String, String | Hash(String, String))?
     full_path = "public#{path}"
-    return nil unless File.exists?(full_path)
+    return unless File.exists?(full_path)
 
     # Delegate ICO vs generic image handling to smaller helpers to reduce
     # cyclomatic complexity and make behavior easier to test.
@@ -79,12 +79,10 @@ module ColorExtractor
 
   private def self.handle_ico_file(full_path : String) : Hash(String, String | Hash(String, String))?
     icon = CrImage::ICO.read_all(full_path) rescue nil
-    return nil unless icon
+    return unless icon
 
     if best_rgb = select_best_icon_rgb(icon)
       build_theme_aware_result(best_rgb)
-    else
-      nil
     end
   end
 
@@ -92,10 +90,10 @@ module ColorExtractor
     img = CrImage.read(full_path)
     w = img.bounds.width
     h = img.bounds.height
-    return nil if w == 0 || h == 0
+    return if w == 0 || h == 0
 
     dominant, _opaque = dominant_from_crimage(img)
-    return nil if dominant.nil?
+    return if dominant.nil?
     build_theme_aware_result(dominant)
   end
 
@@ -195,23 +193,23 @@ module ColorExtractor
   end
 
   private def self.parse_rgb_string(str : String) : Array(Int32)?
-    return nil unless str.starts_with?("rgb(")
+    return unless str.starts_with?("rgb(")
 
     clean = str.sub("rgb(", "").sub(")", "").sub(" ", "")
     parts = clean.split(",")
-    return nil unless parts.size == 3
+    return unless parts.size == 3
 
     r = parts[0].to_i32?
     g = parts[1].to_i32?
     b = parts[2].to_i32?
-    return nil unless r && g && b
+    return unless r && g && b
     [r, g, b]
   end
 
   private def self.parse_hex_string(str : String) : Array(Int32)?
     s = str.strip
     s = s[1..-1] if s.starts_with?("#")
-    return nil unless s.size == 6
+    return unless s.size == 6
     begin
       r = s[0..1].to_i(16).to_i32
       g = s[2..3].to_i(16).to_i32
@@ -223,7 +221,7 @@ module ColorExtractor
   end
 
   private def self.parse_color_to_rgb(str : String) : Array(Int32)?
-    return nil if str.nil? || str.empty?
+    return if str.nil? || str.empty?
     s = str.to_s.strip
     if s.starts_with?("rgb(")
       return parse_rgb_string(s)
@@ -400,8 +398,8 @@ module ColorExtractor
   def self.auto_correct_theme_json(theme_json : String?, legacy_bg : String?, legacy_text : String?) : String?
     bg_rgb, text_hash, source = parse_theme_payload(theme_json, legacy_bg, legacy_text)
 
-    return nil unless bg_rgb
-    return nil if has_explicit_roles?(text_hash)
+    return unless bg_rgb
+    return if has_explicit_roles?(text_hash)
 
     chosen_hex, corrected = select_text_color_for_bg(text_hash, legacy_text, bg_rgb)
 
@@ -467,20 +465,20 @@ module ColorExtractor
   # source set to "auto-corrected" when an upgrade is performed, or nil
   # otherwise.
   def self.auto_upgrade_to_auto_corrected(theme_json : String?) : String?
-    return nil if theme_json.nil? || theme_json.empty?
+    return if theme_json.nil? || theme_json.empty?
 
     parsed = JSON.parse(theme_json) rescue nil
-    return nil unless parsed.is_a?(JSON::Any)
+    return unless parsed.is_a?(JSON::Any)
     h = parsed.as_h rescue nil
-    return nil unless h
+    return unless h
 
     src = h["source"]? ? h["source"].to_s : nil
-    return nil unless src == "auto"
+    return unless src == "auto"
 
     bg_val = h["bg"] || h["background"]
-    return nil unless bg_val
+    return unless bg_val
     bg_rgb = parse_color_to_rgb(bg_val.to_s)
-    return nil unless bg_rgb
+    return unless bg_rgb
 
     txt = h["text"]
     txt_h = parse_text_hash(txt)

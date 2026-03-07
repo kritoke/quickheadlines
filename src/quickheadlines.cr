@@ -29,7 +29,7 @@ begin
         SocketManager.instance.unregister(ws, ip)
       end
 
-      ws.on_message do |msg|
+      ws.on_message do |_|
         # Handle client messages if needed (currently push-only)
       end
     end

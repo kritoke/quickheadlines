@@ -57,7 +57,7 @@ module Quickheadlines::Repositories
 
     def find_last_fetched_time(url : String) : Time?
       result = @db.query_one?("SELECT last_fetched FROM feeds WHERE url = ?", url, as: String?)
-      return nil unless result
+      return unless result
       Time.parse(result, "%Y-%m-%d %H:%M:%S", Time::Location::UTC)
     end
 
@@ -293,10 +293,10 @@ module Quickheadlines::Repositories
           favicon_data:        row.read(String?),
         }
       end
-      return nil unless feed_result
+      return unless feed_result
 
       feed_id_result = @db.query_one?("SELECT id FROM feeds WHERE url = ?", url, as: Int64)
-      return nil unless feed_id_result
+      return unless feed_id_result
       feed_id = feed_id_result
 
       items = [] of Item
@@ -354,7 +354,7 @@ module Quickheadlines::Repositories
           favicon_data:        row.read(String?),
         }
       end
-      return nil unless feed_result
+      return unless feed_result
 
       items = [] of Item
       query = "SELECT title, link, pub_date, version FROM items WHERE feed_id = (SELECT id FROM feeds WHERE url = ?) AND (pub_date IS NULL OR pub_date <= datetime('now', '+1 day')) ORDER BY pub_date DESC LIMIT ? OFFSET ?"

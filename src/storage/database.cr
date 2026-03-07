@@ -82,7 +82,7 @@ def create_schema(db : DB::Database, db_path : String)
       FOREIGN KEY (item_id) REFERENCES items(id) ON DELETE CASCADE,
       UNIQUE(item_id, band_index)
     )
-  SQL
+    SQL
 
   cleanup_result = db.exec(<<-SQL
     DELETE FROM items

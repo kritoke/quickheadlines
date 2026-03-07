@@ -140,6 +140,7 @@
 	let initialized = $state(false);
 	let pollTimeoutId: ReturnType<typeof setTimeout> | null = null;
 	let abortController: AbortController | null = null;
+	let visibilityHandler: (() => void) | null = null;
 	
 	$effect(() => {
 		if (!initialized) {
@@ -218,13 +219,13 @@
 			
 			checkClustering();
 
-			const handleVisibilityChange = () => {
+			visibilityHandler = () => {
 				pageVisible = !document.hidden;
 				if (pageVisible && pollTimeoutId === null) {
 					pollForUpdates();
 				}
 			};
-			document.addEventListener('visibilitychange', handleVisibilityChange);
+			document.addEventListener('visibilitychange', visibilityHandler);
 		}
 		
 		return () => {
@@ -243,7 +244,10 @@
 				clearTimeout(pollTimeoutId);
 				pollTimeoutId = null;
 			}
-			document.removeEventListener('visibilitychange', handleVisibilityChange);
+			if (visibilityHandler) {
+				document.removeEventListener('visibilitychange', visibilityHandler);
+				visibilityHandler = null;
+			}
 		};
 	});
 </script>
@@ -280,7 +284,7 @@
 				query={searchQuery}
 				placeholder="Search timeline..."
 				onClose={() => searchExpanded = false}
-				onQueryChange={(value) => searchQuery = value}
+				onQueryChange={(value: string) => searchQuery = value}
 			/>
 		{/await}
 	{/if}

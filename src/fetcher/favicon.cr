@@ -157,13 +157,13 @@ def fetch_favicon_uri(url : String) : String?
               rescue ex
                 HealthMonitor.log_error("gray placeholder fallback(#{current_url})", ex)
               end
-              return nil
+              return
             end
           end
 
           unless valid_image?(memory.to_slice)
             debug_log("Invalid favicon content (not an image): #{current_url}")
-            return nil
+            return
           end
 
           debug_log("Favicon fetched: #{current_url}, size=#{memory.size}, type=#{content_type}")

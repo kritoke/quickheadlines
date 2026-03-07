@@ -285,7 +285,7 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
   # GET /api/version - Get version for update checking
   @[ARTA::Get(path: "/api/version")]
   def version : ATH::View(VersionResponse)
-    self.view(VersionResponse.new(
+    view(VersionResponse.new(
       updated_at: STATE.updated_at.to_unix_ms,
       clustering: STATE.clustering?
     ))
@@ -299,7 +299,7 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
     item_limit = config.try(&.item_limit) || 20
     use_websocket = config.try(&.use_websocket?) || false
 
-    self.view(Quickheadlines::DTOs::ConfigResponse.new(
+    view(Quickheadlines::DTOs::ConfigResponse.new(
       refresh_minutes: refresh_minutes,
       item_limit: item_limit,
       use_websocket: use_websocket

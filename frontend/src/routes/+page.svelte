@@ -282,7 +282,7 @@
 				query={searchQuery}
 				placeholder="Search feeds..."
 				onClose={() => searchExpanded = false}
-				onQueryChange={(value) => searchQuery = value}
+				onQueryChange={(value: string) => searchQuery = value}
 			/>
 		{/await}
 	{/if}
