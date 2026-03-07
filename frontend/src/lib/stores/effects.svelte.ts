@@ -221,18 +221,33 @@ export function createTimelineEffects(config: EffectConfig = {}) {
 		console.log('[TimelineEffects] Refresh interval:', minutes, 'minutes');
 	}
 
-	async function startWebSocket() {
-		liveConnection = createLiveConnection((timestamp) => {
-			if (timestamp > lastUpdate) {
-				console.log('[TimelineEffects] WebSocket update received, reloading...');
-				lastUpdate = timestamp;
-				saveScrollY = window.scrollY;
-				loadTimeline();
-				window.scrollTo(0, saveScrollY);
-			}
-		});
-		liveConnection.connect();
-	}
+  async function startWebSocket() {
+    liveConnection = createLiveConnection((timestamp) => {
+      if (timestamp > lastUpdate) {
+        console.log('[TimelineEffects] WebSocket update received, reloading...');
+        lastUpdate = timestamp;
+        saveScrollY = window.scrollY;
+        loadTimeline();
+        window.scrollTo(0, saveScrollY);
+      }
+    });
+
+    setConnectionState('connecting');
+
+    Object.defineProperty(window, '__liveConnection', {
+      value: liveConnection,
+      writable: true,
+      configurable: true
+    });
+
+    const originalConnect = liveConnection.connect;
+    liveConnection.connect = () => {
+      setConnectionState('connecting');
+      return originalConnect();
+    };
+
+    liveConnection.connect();
+  }
 
 	async function start() {
 		loadTimeline();

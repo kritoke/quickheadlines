@@ -31,20 +31,19 @@ export function createLiveConnection(
 
 		ws = new WebSocket(wsUrl);
 
-		ws.onopen = () => {
-			state = 'connected';
-			reconnectAttempts = 0;
-			consecutiveFailures = 0;
+    ws.onopen = () => {
+      reconnectAttempts = 0;
+      consecutiveFailures = 0;
 
-			if (usePollingFallback) {
-				usePollingFallback = false;
-				state = 'connected';
-				console.log('[WebSocket] Recovered from polling fallback');
-				onRecoveredFromPolling?.();
-			}
+      if (usePollingFallback) {
+        usePollingFallback = false;
+        console.log('[WebSocket] Recovered from polling fallback');
+        onRecoveredFromPolling?.();
+      }
 
-			console.log('[WebSocket] Connected');
-		};
+      state = 'connected';
+      console.log('[WebSocket] Connected');
+    };
 
 		ws.onmessage = (event) => {
 			try {

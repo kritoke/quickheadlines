@@ -3,8 +3,8 @@ require "json"
 require "./socket_manager"
 
 class EventBroadcaster
-  UPDATE_CHANNEL = Channel(FeedUpdateEvent).new(100)
-  DROPPED_EVENTS = Atomic(Int64).new(0)
+  UPDATE_CHANNEL   = Channel(FeedUpdateEvent).new(100)
+  DROPPED_EVENTS   = Atomic(Int64).new(0)
   PROCESSED_EVENTS = Atomic(Int64).new(0)
 
   def self.start : Nil
@@ -24,23 +24,21 @@ class EventBroadcaster
 
   def self.notify_feed_update(timestamp : Int64) : Nil
     event = FeedUpdateEvent.new(timestamp)
-    spawn do
-      begin
-        UPDATE_CHANNEL.send(event)
-        PROCESSED_EVENTS.add(1)
-      rescue Channel::ClosedError
-        STDERR.puts "[EventBroadcaster] Channel closed, cannot send update"
-      rescue ex
-        DROPPED_EVENTS.add(1)
-        STDERR.puts "[EventBroadcaster] Channel error, event dropped: #{ex.class}"
-      end
+    begin
+      UPDATE_CHANNEL.send(event)
+      PROCESSED_EVENTS.add(1)
+    rescue Channel::ClosedError
+      STDERR.puts "[EventBroadcaster] Channel closed, cannot send update"
+    rescue ex
+      DROPPED_EVENTS.add(1)
+      STDERR.puts "[EventBroadcaster] Channel error, event dropped: #{ex.class}"
     end
   end
 
   def self.get_stats
     {
-      "dropped" => DROPPED_EVENTS.get,
-      "processed" => PROCESSED_EVENTS.get
+      "dropped"   => DROPPED_EVENTS.get,
+      "processed" => PROCESSED_EVENTS.get,
     }
   end
 end

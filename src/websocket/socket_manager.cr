@@ -17,9 +17,9 @@ class SocketManager
   @send_errors : Atomic(Int64)
   @closed_total : Atomic(Int64)
 
-  MAX_CONNECTIONS = 1000
-  MAX_CONNECTIONS_PER_IP = 10
-  CONNECTION_QUEUE_SIZE = 100
+  MAX_CONNECTIONS        = 1000
+  MAX_CONNECTIONS_PER_IP =   10
+  CONNECTION_QUEUE_SIZE  =  100
 
   def initialize
     @connections = [] of Connection
@@ -42,24 +42,22 @@ class SocketManager
         STDERR.puts "[SocketManager] Connection rejected: max #{MAX_CONNECTIONS} connections reached"
         return false
       end
-    end
 
-    @ip_mutex.synchronize do
-      count = @ip_counts[ip]?
-      if count && count >= MAX_CONNECTIONS_PER_IP
-        STDERR.puts "[SocketManager] Connection rejected: max #{MAX_CONNECTIONS_PER_IP} connections per IP (#{ip})"
-        return false
+      @ip_mutex.synchronize do
+        count = @ip_counts[ip]?
+        if count && count >= MAX_CONNECTIONS_PER_IP
+          STDERR.puts "[SocketManager] Connection rejected: max #{MAX_CONNECTIONS_PER_IP} connections per IP (#{ip})"
+          return false
+        end
+        @ip_counts[ip] = (count || 0) + 1
       end
-      @ip_counts[ip] = (count || 0) + 1
-    end
 
-    outgoing = Channel(String).new(CONNECTION_QUEUE_SIZE)
-    connection = Connection.new(websocket: ws, ip: ip, outgoing: outgoing, created_at: Time.local)
-    spawn writer_fiber(connection)
-
-    @connections_mutex.synchronize do
+      outgoing = Channel(String).new(CONNECTION_QUEUE_SIZE)
+      connection = Connection.new(websocket: ws, ip: ip, outgoing: outgoing, created_at: Time.local)
+      spawn writer_fiber(connection)
       @connections << connection
     end
+
     STDERR.puts "[SocketManager] Client connected from #{ip}. Total: #{connection_count}"
     true
   end
@@ -73,7 +71,7 @@ class SocketManager
         @messages_sent.add(1)
       rescue Channel::ClosedError
         break
-      rescue ex : IO::TimeoutError
+      rescue IO::TimeoutError
         @send_errors.add(1)
         STDERR.puts "[SocketManager] Send timeout for #{connection.ip}"
         break
@@ -123,17 +121,7 @@ class SocketManager
     end
 
     return if connection_to_remove.nil?
-    @ip_mutex.synchronize do
-      if count = @ip_counts[ip]?
-        new_count = count - 1
-        if new_count <= 0
-          @ip_counts.delete(ip)
-        else
-          @ip_counts[ip] = new_count
-        end
-      end
-    end
-    STDERR.puts "[SocketManager] Client disconnected from #{ip}. Total: #{connection_count}"
+    unregister_connection(connection_to_remove)
   end
 
   def broadcast(message : String) : Nil
@@ -141,8 +129,14 @@ class SocketManager
 
     connections_snapshot.each do |conn|
       begin
-        conn.outgoing.send(message)
-        @messages_sent.add(1)
+        # Use send with timeout to avoid blocking on slow clients
+        select
+        when conn.outgoing.send(message)
+          @messages_sent.add(1)
+        when timeout(100.milliseconds)
+          @messages_dropped.add(1)
+          STDERR.puts "[SocketManager] Dropped message for slow client: #{conn.ip}"
+        end
       rescue Channel::ClosedError
         @messages_dropped.add(1)
       rescue ex
@@ -221,11 +215,11 @@ class SocketManager
 
   def get_stats
     {
-      "connections" => connection_count,
-      "messages_sent" => messages_sent,
+      "connections"      => connection_count,
+      "messages_sent"    => messages_sent,
       "messages_dropped" => messages_dropped,
-      "send_errors" => send_errors,
-      "closed_total" => closed_total
+      "send_errors"      => send_errors,
+      "closed_total"     => closed_total,
     }
   end
 end
