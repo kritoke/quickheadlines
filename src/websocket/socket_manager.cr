@@ -18,10 +18,6 @@ class SocketManager
   @closed_total : Atomic(Int64)
   @last_activity : Hash(HTTP::WebSocket, Time)
   @activity_mutex : Mutex
-  @peak_connections : Atomic(Int32)
-  @total_connection_time : Atomic(Int64)
-  @connections_accepted : Atomic(Int64)
-  @start_time : Time
 
   MAX_CONNECTIONS        = 1000
   MAX_CONNECTIONS_PER_IP =   10
@@ -39,10 +35,6 @@ class SocketManager
     @closed_total = Atomic(Int64).new(0)
     @last_activity = {} of HTTP::WebSocket => Time
     @activity_mutex = Mutex.new
-    @peak_connections = Atomic(Int32).new(0)
-    @total_connection_time = Atomic(Int64).new(0)
-    @connections_accepted = Atomic(Int64).new(0)
-    @start_time = Time.local
   end
 
   def self.instance : SocketManager
@@ -71,14 +63,6 @@ class SocketManager
       @activity_mutex.synchronize do
         @last_activity[ws] = Time.local
       end
-      
-      # Update performance metrics
-      current_count = @connections.size + 1
-      loop do
-        current_peak = @peak_connections.get
-        break if current_count <= current_peak || @peak_connections.compare_and_set(current_peak, current_count)
-      end
-      @connections_accepted.add(1)
       
       spawn writer_fiber(connection)
       @connections << connection
@@ -121,10 +105,6 @@ class SocketManager
   end
 
   private def unregister_connection(connection : Connection) : Nil
-    # Track connection duration before removing
-    connection_duration = (Time.local - connection.created_at).total_seconds.to_i64
-    @total_connection_time.add(connection_duration)
-    
     @connections_mutex.synchronize do
       @connections.delete(connection)
     end
@@ -142,7 +122,7 @@ class SocketManager
     @activity_mutex.synchronize do
       @last_activity.delete(connection.websocket)
     end
-    STDERR.puts "[SocketManager] Client disconnected from #{connection.ip} (duration: #{connection_duration}s). Total: #{connection_count}"
+    STDERR.puts "[SocketManager] Client disconnected from #{connection.ip}. Total: #{connection_count}"
   end
 
   def unregister(ws : HTTP::WebSocket, ip : String) : Nil
@@ -266,60 +246,11 @@ class SocketManager
 
   def get_stats
     {
-      "connections"           => connection_count,
-      "messages_sent"         => messages_sent,
-      "messages_dropped"      => messages_dropped,
-      "send_errors"           => send_errors,
-      "closed_total"          => closed_total,
-      "peak_connections"      => @peak_connections.get,
-      "connections_accepted"  => @connections_accepted.get,
-      "uptime_seconds"        => (Time.local - @start_time).total_seconds.to_i64,
-    }
-  end
-  
-  def get_performance_stats
-    now = Time.local
-    uptime_seconds = (now - @start_time).total_seconds.to_i64
-    current_connections = connection_count
-    peak = @peak_connections.get
-    accepted = @connections_accepted.get
-    closed = closed_total
-    
-    # Calculate rates
-    messages_per_second = uptime_seconds > 0 ? (messages_sent.to_f / uptime_seconds).round(2) : 0.0
-    connections_per_minute = uptime_seconds > 60 ? ((accepted.to_f / uptime_seconds) * 60).round(2) : 0.0
-    
-    # Calculate averages
-    avg_connection_duration = closed > 0 ? (@total_connection_time.get.to_f / closed).round(2) : 0.0
-    connection_success_rate = accepted > 0 ? ((accepted - closed).to_f / accepted * 100).round(2) : 100.0
-    
-    # Message delivery stats
-    total_messages = messages_sent + messages_dropped
-    delivery_rate = total_messages > 0 ? ((messages_sent.to_f / total_messages) * 100).round(2) : 100.0
-    
-    {
-      # Basic stats
-      "current_connections"     => current_connections,
-      "peak_connections"        => peak,
-      "total_accepted"          => accepted,
-      "total_closed"            => closed,
-      
-      # Performance metrics
-      "uptime_seconds"          => uptime_seconds,
-      "messages_per_second"     => messages_per_second,
-      "connections_per_minute"  => connections_per_minute,
-      "avg_connection_duration" => avg_connection_duration,
-      
-      # Health metrics
-      "connection_success_rate" => connection_success_rate,
-      "message_delivery_rate"   => delivery_rate,
-      "messages_sent"           => messages_sent,
-      "messages_dropped"        => messages_dropped,
-      "send_errors"             => send_errors,
-      
-      # Resource metrics
-      "connections_per_second"  => uptime_seconds > 0 ? (accepted.to_f / uptime_seconds).round(4) : 0.0,
-      "dropped_per_second"      => uptime_seconds > 0 ? (messages_dropped.to_f / uptime_seconds).round(4) : 0.0,
+      "connections"      => connection_count,
+      "messages_sent"    => messages_sent,
+      "messages_dropped" => messages_dropped,
+      "send_errors"      => send_errors,
+      "closed_total"     => closed_total,
     }
   end
 end

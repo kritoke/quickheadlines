@@ -599,62 +599,6 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
       broadcaster_dropped: broadcaster_stats["dropped"].to_i64
     )
   end
-  
-  # GET /api/websocket/performance - Get detailed WebSocket performance metrics
-  @[ARTA::Get(path: "/api/websocket/performance")]
-  def websocket_performance : ATH::Response
-    ws_perf = SocketManager.instance.get_performance_stats
-    broadcaster_stats = EventBroadcaster.get_stats
-    
-    # Convert to JSON-compatible hash
-    ws_perf_json = ws_perf.transform_values { |v| JSON::Any.new(v) }
-    broadcaster_json = broadcaster_stats.transform_values { |v| JSON::Any.new(v) }
-    
-    health_score = calculate_health_score(ws_perf)
-    
-    response = {
-      timestamp: Time.local.to_unix_ms,
-      websocket: ws_perf_json,
-      broadcaster: broadcaster_json,
-      system: {
-        uptime_hours: (ws_perf["uptime_seconds"].as(Int64) / 3600.0).round(2),
-        health_score: health_score,
-      }
-    }
-    
-    ATH::Response.new(
-      response.to_json,
-      200,
-      HTTP::Headers{"content-type" => "application/json"}
-    )
-  end
-  
-  private def calculate_health_score(ws_perf : Hash(String, Float64 | Int32 | Int64)) : Float64
-    score = 100.0
-    
-    # Deduct for message drops (delivery rate should be high)
-    delivery_rate = ws_perf["message_delivery_rate"]?.as?(Float64) || 100.0
-    if delivery_rate < 95.0
-      score -= (95.0 - delivery_rate) * 2
-    end
-    
-    # Deduct for send errors
-    messages_sent = ws_perf["messages_sent"]?.as?(Int64) || 0_i64
-    send_errors = ws_perf["send_errors"]?.as?(Int64) || 0_i64
-    error_rate = send_errors > 0 ? (send_errors.to_f / [messages_sent, 1_i64].max * 100) : 0.0
-    if error_rate > 1.0
-      score -= error_rate * 5
-    end
-    
-    # Deduct for low connection success rate
-    success_rate = ws_perf["connection_success_rate"]?.as?(Float64) || 100.0
-    if success_rate < 99.0
-      score -= (99.0 - success_rate)
-    end
-    
-    # Ensure score is between 0 and 100
-    [0.0, [100.0, score].min].max.round(2)
-  end
 
   # GET /api/events - Long-polling endpoint for real-time feed updates
   # Client sends last_update timestamp; server holds request until new data or timeout
