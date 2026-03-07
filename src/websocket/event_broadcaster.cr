@@ -25,8 +25,13 @@ class EventBroadcaster
   def self.notify_feed_update(timestamp : Int64) : Nil
     event = FeedUpdateEvent.new(timestamp)
     begin
-      UPDATE_CHANNEL.send(event)
-      PROCESSED_EVENTS.add(1)
+      select
+      when UPDATE_CHANNEL.send(event)
+        PROCESSED_EVENTS.add(1)
+      when timeout(10.milliseconds)
+        DROPPED_EVENTS.add(1)
+        STDERR.puts "[EventBroadcaster] Channel full, dropping event (buffer size: 100)"
+      end
     rescue Channel::ClosedError
       STDERR.puts "[EventBroadcaster] Channel closed, cannot send update"
     rescue ex

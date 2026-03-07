@@ -16,10 +16,13 @@ class SocketManager
   @messages_dropped : Atomic(Int64)
   @send_errors : Atomic(Int64)
   @closed_total : Atomic(Int64)
+  @last_activity : Hash(HTTP::WebSocket, Time)
+  @activity_mutex : Mutex
 
   MAX_CONNECTIONS        = 1000
   MAX_CONNECTIONS_PER_IP =   10
   CONNECTION_QUEUE_SIZE  =  100
+  STALE_CONNECTION_AGE   =  120 # seconds
 
   def initialize
     @connections = [] of Connection
@@ -30,6 +33,8 @@ class SocketManager
     @messages_dropped = Atomic(Int64).new(0)
     @send_errors = Atomic(Int64).new(0)
     @closed_total = Atomic(Int64).new(0)
+    @last_activity = {} of HTTP::WebSocket => Time
+    @activity_mutex = Mutex.new
   end
 
   def self.instance : SocketManager
@@ -54,6 +59,11 @@ class SocketManager
 
       outgoing = Channel(String).new(CONNECTION_QUEUE_SIZE)
       connection = Connection.new(websocket: ws, ip: ip, outgoing: outgoing, created_at: Time.local)
+      
+      @activity_mutex.synchronize do
+        @last_activity[ws] = Time.local
+      end
+      
       spawn writer_fiber(connection)
       @connections << connection
     end
@@ -69,6 +79,10 @@ class SocketManager
         break if message.nil?
         connection.websocket.send(message)
         @messages_sent.add(1)
+        
+        @activity_mutex.synchronize do
+          @last_activity[connection.websocket] = Time.local
+        end
       rescue Channel::ClosedError
         break
       rescue IO::TimeoutError
@@ -104,6 +118,9 @@ class SocketManager
           @ip_counts[ip] = new_count
         end
       end
+    end
+    @activity_mutex.synchronize do
+      @last_activity.delete(connection.websocket)
     end
     STDERR.puts "[SocketManager] Client disconnected from #{connection.ip}. Total: #{connection_count}"
   end
@@ -168,11 +185,21 @@ class SocketManager
 
   def cleanup_dead_connections : Int32
     dead = [] of Connection
+    now = Time.local
 
     @connections_mutex.synchronize do
       @connections.each do |conn|
         begin
+          # Check if websocket is closed
           if conn.websocket.closed?
+            dead << conn
+            next
+          end
+
+          # Check if connection is stale (no activity for STALE_CONNECTION_AGE seconds)
+          last_active = @activity_mutex.synchronize { @last_activity[conn.websocket]? }
+          if last_active && (now - last_active).total_seconds > STALE_CONNECTION_AGE
+            STDERR.puts "[SocketManager] Stale connection detected: #{conn.ip} (inactive for #{((now - last_active).total_seconds).round(0)}s)"
             dead << conn
           end
         rescue
@@ -206,6 +233,10 @@ class SocketManager
             @ip_counts[ip] = new_count
           end
         end
+      end
+
+      @activity_mutex.synchronize do
+        @last_activity.delete(conn.websocket)
       end
     end
 

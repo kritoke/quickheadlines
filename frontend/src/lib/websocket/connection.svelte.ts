@@ -14,6 +14,7 @@ export function createLiveConnection(
 	let reconnectAttempts = 0;
 	let consecutiveFailures = 0;
 	let usePollingFallback = false;
+	let intentionalClose = false;
 	const maxReconnectDelay = 30000;
 	const maxConsecutiveFailures = 5;
 
@@ -63,6 +64,10 @@ export function createLiveConnection(
 		ws.onerror = (error) => {
 			console.error('[WebSocket] Error:', error);
 			state = 'error';
+			// Force close to trigger onclose and reconnect logic
+			if (ws) {
+				ws.close();
+			}
 		};
 
 		ws.onclose = () => {
@@ -70,7 +75,13 @@ export function createLiveConnection(
 			console.log('[WebSocket] Disconnected');
 			ws = null;
 
-			consecutiveFailures++;
+			// Only count failures for unintentional closes
+			if (!intentionalClose) {
+				consecutiveFailures++;
+			}
+
+			// Reset flag
+			intentionalClose = false;
 
 			if (consecutiveFailures >= maxConsecutiveFailures && !usePollingFallback) {
 				usePollingFallback = true;
@@ -92,6 +103,7 @@ export function createLiveConnection(
 	}
 
 	function disconnect() {
+		intentionalClose = true;
 		if (ws) {
 			ws.close();
 			ws = null;
