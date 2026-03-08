@@ -156,27 +156,27 @@ export async function loadFeeds(tab: string = feedState.activeTab, force: boolea
 		return;
 	}
 
-	feedState = setLoading(feedState, tab);
+	Object.assign(feedState, setLoading(feedState, tab));
 	
 	try {
 		const response = await fetchFeeds(tab);
-		feedState = setFeedsData(feedState, response, tab);
+		Object.assign(feedState, setFeedsData(feedState, response, tab));
 	} catch (e) {
-		feedState = setError(feedState, e instanceof Error ? e.message : 'Failed to load feeds');
+		Object.assign(feedState, setError(feedState, e instanceof Error ? e.message : 'Failed to load feeds'));
 	}
 }
 
 export async function loadMoreFeedItems(feed: FeedResponse): Promise<void> {
-	feedState = setFeedLoading(feedState, feed.url, true);
+	Object.assign(feedState, setFeedLoading(feedState, feed.url, true));
 	
 	try {
 		const currentOffset = feed.items.length;
 		const response = await fetchMoreFeedItems(feed.url, 10, currentOffset);
-		feedState = appendFeedItems(feedState, feed.url, response.items, response.total_item_count);
+		Object.assign(feedState, appendFeedItems(feedState, feed.url, response.items, response.total_item_count));
 	} catch (e) {
-		feedState = setError(feedState, e instanceof Error ? e.message : 'Failed to load more items');
+		Object.assign(feedState, setError(feedState, e instanceof Error ? e.message : 'Failed to load more items'));
 	} finally {
-		feedState = setFeedLoading(feedState, feed.url, false);
+		Object.assign(feedState, setFeedLoading(feedState, feed.url, false));
 	}
 }
 
@@ -184,7 +184,7 @@ export async function loadFeedConfig(): Promise<number> {
 	try {
 		const config = await fetchConfig();
 		const minutes = config.refresh_minutes || 10;
-		feedState = setRefreshMinutes(feedState, minutes);
+		Object.assign(feedState, setRefreshMinutes(feedState, minutes));
 		return minutes;
 	} catch {
 		return 10;

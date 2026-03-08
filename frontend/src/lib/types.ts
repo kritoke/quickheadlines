@@ -96,11 +96,4 @@ export interface VersionResponse {
 export interface ConfigResponse {
 	refresh_minutes: number;
 	item_limit: number;
-	use_websocket: boolean;
-}
-
-export interface StatusResponse {
-	is_clustering: boolean;
-	is_refreshing: boolean;
-	active_jobs: number;
 }

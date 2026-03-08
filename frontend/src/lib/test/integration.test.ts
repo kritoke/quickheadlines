@@ -81,51 +81,6 @@ describe('API Integration', () => {
 		expect(data.items).toHaveLength(1);
 		expect(data.items[0].title).toBe('Timeline Item 1');
 	});
-
-	it('polls /api/events and detects feed_update', async () => {
-		const timestamp = 1700000000000;
-		const sseResponse = `event: feed_update\ndata: ${timestamp}\n\n`;
-
-		mockFetch.mockResolvedValueOnce({
-			ok: true,
-			text: () => Promise.resolve(sseResponse)
-		});
-
-		const response = await fetch(`/api/events?last_update=0`);
-		const text = await response.text();
-
-		// Parse SSE-style response
-		const lines = text.split('\n');
-		let foundFeedUpdate = false;
-		let receivedTimestamp = 0;
-
-		for (const line of lines) {
-			if (line.startsWith('event: feed_update')) {
-				foundFeedUpdate = true;
-				const dataLine = lines.find(l => l.startsWith('data: '));
-				if (dataLine) {
-					receivedTimestamp = parseInt(dataLine.replace('data: ', ''));
-				}
-			}
-		}
-
-		expect(foundFeedUpdate).toBe(true);
-		expect(receivedTimestamp).toBe(timestamp);
-	});
-
-	it('returns heartbeat when no new data', async () => {
-		const sseResponse = `event: heartbeat\ndata: 1700000000000\n\n`;
-
-		mockFetch.mockResolvedValueOnce({
-			ok: true,
-			text: () => Promise.resolve(sseResponse)
-		});
-
-		const response = await fetch(`/api/events?last_update=1700000000000`);
-		const text = await response.text();
-
-		expect(text).toContain('event: heartbeat');
-	});
 });
 
 describe('Theme Reactivity', () => {

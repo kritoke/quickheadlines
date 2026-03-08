@@ -2,9 +2,10 @@
 	import AppHeader from '$lib/components/AppHeader.svelte';
 	import LayoutPicker from '$lib/components/LayoutPicker.svelte';
 	import BitsSearchModal from '$lib/components/BitsSearchModal.svelte';
-	import { fetchTimeline, fetchConfig, fetchStatus } from '$lib/api';
+	import { fetchTimeline, fetchConfig } from '$lib/api';
 	import type { TimelineItemResponse } from '$lib/types';
 	import { SvelteSet } from 'svelte/reactivity';
+	import { createTimelineEffects } from '$lib/stores/effects.svelte';
 
 	let LazyTimelineView: any = null;
 	const loadTimelineView = async () => {
@@ -35,15 +36,14 @@
 	let isClustering = $state(false);
 	let isRefreshing = $state(false);
 	let saveScrollY = $state(0);
-	let clusteringCheckInterval: ReturnType<typeof setInterval> | null = null;
 	
-	let refreshInterval: ReturnType<typeof setInterval> | null = null;
 	let refreshMinutes = $state(10);
 	const limit = 100;
 
 	let searchQuery = $state('');
 	let searchExpanded = $state(false);
 	let pageVisible = $state(true);
+	let timelineEffects: ReturnType<typeof createTimelineEffects> | null = null;
 
 	let filteredItems = $derived.by(() => {
 		if (!searchQuery.trim()) return [...items];
@@ -60,20 +60,9 @@
 			const newRefreshMinutes = config.refresh_minutes || 10;
 			
 			refreshMinutes = newRefreshMinutes;
-			
-			if (refreshInterval) {
-				clearInterval(refreshInterval);
-			}
-			refreshInterval = setInterval(() => {
-				loadTimeline();
-			}, newRefreshMinutes * 60 * 1000);
 			console.log('[Timeline] Refresh interval set to', newRefreshMinutes, 'minutes');
 		} catch (e) {
-			if (!refreshInterval) {
-				refreshInterval = setInterval(() => {
-					loadTimeline();
-				}, 10 * 60 * 1000);
-			}
+			// Use default 10 minutes on failure
 		}
 	}
 
@@ -138,8 +127,6 @@
 
 	let mounted = $state(false);
 	let initialized = $state(false);
-	let pollTimeoutId: ReturnType<typeof setTimeout> | null = null;
-	let abortController: AbortController | null = null;
 	let visibilityHandler: (() => void) | null = null;
 	
 	$effect(() => {
@@ -149,100 +136,20 @@
 			loadTimeline();
 			loadConfig();
 			
-			let lastUpdate = Date.now();
-			
-			abortController = new AbortController();
-			
-			async function pollForUpdates() {
-				if (abortController?.signal.aborted) return;
-				
-				try {
-					const response = await fetch(`/api/events?last_update=${lastUpdate}`, {
-						signal: abortController!.signal
-					});
-					
-					if (abortController?.signal.aborted) return;
-					
-					const text = await response.text();
-					const lines = text.split('\n');
-					for (const line of lines) {
-						if (line.startsWith('event: feed_update')) {
-							const dataLine = lines.find(l => l.startsWith('data: '));
-							if (dataLine) {
-								const timestamp = parseInt(dataLine.replace('data: ', ''));
-								if (timestamp > lastUpdate) {
-									console.log('[Long-poll] Feed update received, reloading timeline...');
-									lastUpdate = timestamp;
-									saveScrollY = window.scrollY;
-									await loadTimeline();
-									window.scrollTo(0, saveScrollY);
-								}
-							}
-						}
-					}
-				} catch (e) {
-					if (e instanceof Error && e.name === 'AbortError') {
-						return;
-					}
-					console.warn('[Long-poll] Poll failed, retrying in 1s:', e);
-				}
-				
-				if (!abortController?.signal.aborted && pageVisible) {
-					pollTimeoutId = setTimeout(pollForUpdates, 1000);
-				}
-			}
-			
-			pollForUpdates();
-
-			async function checkClustering() {
-				try {
-					const status = await fetchStatus();
-					
-					if (status.is_clustering && !isClustering) {
-						isClustering = true;
-						clusteringCheckInterval = setInterval(checkClustering, 5000);
-					} else if (!status.is_clustering && isClustering) {
-						isClustering = false;
-						if (clusteringCheckInterval) {
-							clearInterval(clusteringCheckInterval);
-							clusteringCheckInterval = null;
-						}
-						saveScrollY = window.scrollY;
-						isRefreshing = false;
-						await loadTimeline();
-						window.scrollTo(0, saveScrollY);
-					}
-				} catch (e) {
-					// Clustering check failed
-				}
-			}
-			
-			checkClustering();
+			// Initialize timeline effects for WebSocket handling
+			timelineEffects = createTimelineEffects();
+			timelineEffects.start();
 
 			visibilityHandler = () => {
 				pageVisible = !document.hidden;
-				if (pageVisible && pollTimeoutId === null) {
-					pollForUpdates();
-				}
 			};
 			document.addEventListener('visibilitychange', visibilityHandler);
 		}
 		
 		return () => {
 			mounted = false;
-			abortController?.abort();
-			abortController = null;
-			if (refreshInterval) {
-				clearInterval(refreshInterval);
-				refreshInterval = null;
-			}
-			if (clusteringCheckInterval) {
-				clearInterval(clusteringCheckInterval);
-				clusteringCheckInterval = null;
-			}
-			if (pollTimeoutId) {
-				clearTimeout(pollTimeoutId);
-				pollTimeoutId = null;
+			if (timelineEffects) {
+				timelineEffects.stop();
 			}
 			if (visibilityHandler) {
 				document.removeEventListener('visibilitychange', visibilityHandler);

@@ -1,11 +1,13 @@
 <script lang="ts">
-	import FeedBox from '$lib/components/FeedBox.svelte';
-	import FeedTabs from '$lib/components/FeedTabs.svelte';
-	import AppHeader from '$lib/components/AppHeader.svelte';
-	import BitsSearchModal from '$lib/components/BitsSearchModal.svelte';
-	import { fetchFeeds, fetchMoreFeedItems, fetchConfig, fetchStatus } from '$lib/api';
-	import type { FeedResponse, FeedsPageResponse } from '$lib/types';
-	import { themeState, toggleEffects } from '$lib/stores/theme.svelte';
+import FeedBox from '$lib/components/FeedBox.svelte';
+import FeedTabs from '$lib/components/FeedTabs.svelte';
+import AppHeader from '$lib/components/AppHeader.svelte';
+import BitsSearchModal from '$lib/components/BitsSearchModal.svelte';
+import { fetchFeeds, fetchMoreFeedItems, fetchConfig } from '$lib/api';
+import type { FeedResponse, FeedsPageResponse } from '$lib/types';
+import { themeState, toggleEffects } from '$lib/stores/theme.svelte';
+import { websocketConnection } from '$lib/websocket';
+	import { createFeedEffects } from '$lib/stores/effects.svelte';
 
 	let LazySearchModal: any = null;
 	const loadSearchModal = async () => {
@@ -28,8 +30,6 @@
 	let tabCache = $state<Record<string, { feeds: FeedResponse[], loaded: boolean, updatedAt: Date | null }>>({});
 	const MAX_TAB_CACHE_SIZE = 10;
 	
-	let refreshInterval: ReturnType<typeof setInterval> | null = null;
-	let configRefreshInterval: ReturnType<typeof setInterval> | null = null;
 	let refreshMinutes = $state(10);
 	let configFetched = $state(false);
 	let mounted = $state(false);
@@ -38,8 +38,8 @@
 	let searchQuery = $state('');
 	let searchExpanded = $state(false);
 	let tabChangeTimeout: ReturnType<typeof setTimeout> | null = null;
-	let feedAbortController: AbortController | null = null;
 	let pageVisible = $state(true);
+	let feedEffects: ReturnType<typeof createFeedEffects> | null = null;
 
 	let filteredFeeds = $derived.by(() => {
 		if (!searchQuery.trim()) return feeds;
@@ -66,20 +66,17 @@
 			return;
 		}
 
-		if (feedAbortController) {
-			feedAbortController.abort();
-		}
-		feedAbortController = new AbortController();
-
 		try {
 			loading = !isAutoRefresh;
 			error = null;
-			const response: FeedsPageResponse = await fetchFeeds(tab, feedAbortController.signal);
+			console.log('[loadFeeds] Fetching feeds for tab:', tab);
+			const response: FeedsPageResponse = await fetchFeeds(tab);
+			console.log('[loadFeeds] Got response, feeds count:', response.feeds?.length, 'swReleases:', response.software_releases?.length);
 			const swReleases = response.software_releases || [];
 			feeds = [...swReleases, ...(response.feeds || [])];
 			tabs = response.tabs || [];
-			activeTab = tab;
-			lastUpdated = response.updated_at ? new Date(response.updated_at) : null;
+			lastUpdated = new Date(response.updated_at);
+			console.log('[loadFeeds] Set feeds, total:', feeds.length);
 			
 			let newCache = {
 				...tabCache,
@@ -100,9 +97,6 @@
 			}
 			tabCache = newCache;
 		} catch (e) {
-			if (e instanceof Error && e.name === 'AbortError') {
-				return;
-			}
 			error = e instanceof Error ? e.message : 'Failed to load feeds';
 		} finally {
 			loading = false;
@@ -110,28 +104,19 @@
 		}
 	}
 	
-	async function loadConfig() {
+	async function updateRefreshConfig() {
 		try {
 			const config = await fetchConfig();
 			const newRefreshMinutes = config.refresh_minutes || 10;
 			
-			refreshMinutes = newRefreshMinutes;
-			configFetched = true;
-			console.log('[Feeds] Config loaded, refresh interval:', newRefreshMinutes, 'minutes');
+			if (newRefreshMinutes !== refreshMinutes) {
+				refreshMinutes = newRefreshMinutes;
+				console.log('[Feeds] Config refresh interval updated from feeds.yml:', newRefreshMinutes, 'minutes');
+			}
 			
-			if (refreshInterval) {
-				clearInterval(refreshInterval);
-			}
-			refreshInterval = setInterval(() => {
-				loadFeeds(activeTab, true);
-			}, newRefreshMinutes * 60 * 1000);
-			console.log('[Feeds] Refresh interval set to', newRefreshMinutes, 'minutes');
+			configFetched = true;
 		} catch (e) {
-			if (!refreshInterval) {
-				refreshInterval = setInterval(() => {
-					loadFeeds(activeTab, true);
-				}, 10 * 60 * 1000);
-			}
+			console.warn('[Feeds] Failed to load config from feeds.yml, using default 10 minute interval');
 		}
 	}
 
@@ -177,51 +162,30 @@
 	}
 	
 	$effect(() => {
+		console.log('[Page] $effect running, mounted:', mounted);
 		if (!mounted) {
 			mounted = true;
+			console.log('[Page] Initializing, loading feeds...');
 			const params = new URLSearchParams(window.location.search);
 			const urlTab = params.get('tab') || 'all';
 			activeTab = urlTab;
 			
 			loadFeeds(urlTab, true);
+			updateRefreshConfig();
 			
-			// Load config first, then set up interval with correct value
-			loadConfig().then(() => {
-				refreshInterval = setInterval(() => {
-					if (pageVisible) {
-						loadFeeds(activeTab, true);
-					}
-				}, refreshMinutes * 60 * 1000);
-
-				configRefreshInterval = setInterval(async () => {
-					try {
-						const config = await fetchConfig();
-						const newRefreshMinutes = config.refresh_minutes || 10;
-						if (newRefreshMinutes !== refreshMinutes) {
-							refreshMinutes = newRefreshMinutes;
-							if (refreshInterval) {
-								clearInterval(refreshInterval);
-							}
-							refreshInterval = setInterval(() => {
-								if (pageVisible) {
-									loadFeeds(activeTab, true);
-								}
-							}, newRefreshMinutes * 60 * 1000);
-							console.log('[Config] Refresh interval updated to', newRefreshMinutes, 'minutes');
-						}
-					} catch (e) {
-						// Silent fail for config refresh
-					}
-				}, 5 * 60 * 1000);
-			});
-			
-			const cleanupStatus = setInterval(async () => {
-				try {
-					await fetchStatus();
-				} catch (e) {
-					// Silent fail
+			// Connect to WebSocket for real-time updates
+			websocketConnection.connect();
+			const handleWebSocketMessage = (message: any) => {
+				if (message.type === 'feed_update') {
+					console.log('[FeedPage] Feed update received, reloading...');
+					saveScrollY = window.scrollY;
+					loadFeeds(activeTab, true);
+					window.scrollTo(0, saveScrollY);
+				} else if (message.type === 'clustering_status') {
+					// Handle clustering status if needed
 				}
-			}, 30 * 1000);
+			};
+			websocketConnection.addEventListener(handleWebSocketMessage);
 
 			const handleVisibilityChange = () => {
 				pageVisible = !document.hidden;
@@ -229,11 +193,7 @@
 			document.addEventListener('visibilitychange', handleVisibilityChange);
 
 			return () => {
-				if (refreshInterval) clearInterval(refreshInterval);
-				if (configRefreshInterval) clearInterval(configRefreshInterval);
-				if (cleanupStatus) clearInterval(cleanupStatus);
 				if (tabChangeTimeout) clearTimeout(tabChangeTimeout);
-				if (feedAbortController) feedAbortController.abort();
 				document.removeEventListener('visibilitychange', handleVisibilityChange);
 			};
 		}

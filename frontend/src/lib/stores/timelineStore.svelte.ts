@@ -1,4 +1,4 @@
-import { fetchTimeline, fetchConfig, fetchStatus } from '$lib/api';
+import { fetchTimeline, fetchConfig } from '$lib/api';
 import type { TimelineItemResponse } from '$lib/types';
 import { SvelteSet } from 'svelte/reactivity';
 
@@ -140,13 +140,14 @@ export function resetTimelineStore(): void {
 export async function loadTimeline(append: boolean = false): Promise<void> {
 	if (!append && (isRefreshing(timelineState) || isLoading(timelineState))) return;
 	
-	timelineState = setLoading(timelineState, append);
+	// Mutate the state instead of reassigning
+	Object.assign(timelineState, setLoading(timelineState, append));
 	
 	try {
 		const response = await fetchTimeline(100, append ? timelineState.offset : 0);
-		timelineState = setTimelineData(timelineState, response.items, response.has_more, append);
+		Object.assign(timelineState, setTimelineData(timelineState, response.items, response.has_more, append));
 	} catch (e) {
-		timelineState = setError(timelineState, e instanceof Error ? e.message : 'Failed to load timeline');
+		Object.assign(timelineState, setError(timelineState, e instanceof Error ? e.message : 'Failed to load timeline'));
 	}
 }
 
@@ -154,19 +155,10 @@ export async function loadTimelineConfig(): Promise<number> {
 	try {
 		const config = await fetchConfig();
 		const minutes = config.refresh_minutes || 10;
-		timelineState = setRefreshMinutes(timelineState, minutes);
+		Object.assign(timelineState, setRefreshMinutes(timelineState, minutes));
 		return minutes;
 	} catch {
 		return 10;
-	}
-}
-
-export async function checkClusteringStatus(): Promise<boolean> {
-	try {
-		const status = await fetchStatus();
-		return status.is_clustering;
-	} catch {
-		return false;
 	}
 }
 

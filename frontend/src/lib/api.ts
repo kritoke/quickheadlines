@@ -4,17 +4,35 @@ import type {
 	ClustersResponse,
 	ClusterItemsResponse,
 	FeedResponse,
-	ConfigResponse,
-	StatusResponse
+	ConfigResponse
 } from './types';
 import { toastStore } from './stores/toast.svelte';
 
 const API_BASE = '/api';
 
-export async function fetchFeeds(tab: string = 'all', signal?: AbortSignal): Promise<FeedsPageResponse> {
+const pendingRequests = new Map<string, Promise<any>>();
+
+async function doFetchFeeds(tab: string, signal?: AbortSignal): Promise<FeedsPageResponse> {
 	const url = `${API_BASE}/feeds?tab=${encodeURIComponent(tab)}`;
+	
+	// Create timeout controller
+	const timeoutController = new AbortController();
+	const timeoutId = setTimeout(() => timeoutController.abort(), 30000);
+	
+	// Set up abort handling
+	const onAbort = () => {
+		timeoutController.abort();
+		clearTimeout(timeoutId);
+	};
+	signal?.addEventListener('abort', onAbort);
+	
 	try {
-		const response = await fetch(url, signal ? { signal } : undefined);
+		// Use timeout controller's signal, or combined if external signal exists
+		const fetchSignal = signal 
+			? (signal.aborted ? signal : timeoutController.signal)
+			: timeoutController.signal;
+		
+		const response = await fetch(url, { signal: fetchSignal });
 		if (!response.ok) {
 			throw new Error(`Failed to fetch feeds: ${response.statusText}`);
 		}
@@ -26,7 +44,30 @@ export async function fetchFeeds(tab: string = 'all', signal?: AbortSignal): Pro
 		const errorMessage = error instanceof Error ? error.message : 'Failed to fetch feeds';
 		toastStore.error(errorMessage, 'Feed Error');
 		throw error;
+	} finally {
+		clearTimeout(timeoutId);
+		signal?.removeEventListener('abort', onAbort);
 	}
+}
+
+export async function fetchFeeds(tab: string = 'all', signal?: AbortSignal): Promise<FeedsPageResponse> {
+	// Don't dedupe when caller provides their own signal (they manage lifecycle)
+	if (signal) {
+		return doFetchFeeds(tab, signal);
+	}
+	
+	const cacheKey = `feeds-${tab}`;
+	
+	if (pendingRequests.has(cacheKey)) {
+		return pendingRequests.get(cacheKey)!;
+	}
+	
+	const promise = doFetchFeeds(tab).finally(() => {
+		pendingRequests.delete(cacheKey);
+	});
+	
+	pendingRequests.set(cacheKey, promise);
+	return promise;
 }
 
 export async function fetchTimeline(
@@ -163,21 +204,6 @@ export async function fetchConfig(): Promise<ConfigResponse> {
 	} catch (error) {
 		const errorMessage = error instanceof Error ? error.message : 'Failed to fetch config';
 		toastStore.error(errorMessage, 'Config Error');
-		throw error;
-	}
-}
-
-export async function fetchStatus(): Promise<StatusResponse> {
-	const url = `${API_BASE}/status`;
-	try {
-		const response = await fetch(url);
-		if (!response.ok) {
-			throw new Error(`Failed to fetch status: ${response.statusText}`);
-		}
-		return response.json();
-	} catch (error) {
-		const errorMessage = error instanceof Error ? error.message : 'Failed to fetch status';
-		toastStore.error(errorMessage, 'Status Error');
 		throw error;
 	}
 }
