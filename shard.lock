@@ -2,7 +2,7 @@ version: 2.0
 shards:
   ameba:
     git: https://github.com/crystal-ameba/ameba.git
-    version: 1.7.0-dev+git.commit.0bc878de36c1f10afde766bdae74d6c74f265c70
+    version: 1.7.0-dev+git.commit.29c934ed7b4d4917d23a936d6464a7fa729a85df
 
   athena:
     git: https://github.com/athena-framework/framework.git
@@ -66,7 +66,7 @@ shards:
 
   fetcher:
     git: https://github.com/kritoke/fetcher.cr.git
-    version: 0.4.1
+    version: 0.5.0
 
   lexis-minhash:
     git: https://github.com/kritoke/lexis-minhash.git

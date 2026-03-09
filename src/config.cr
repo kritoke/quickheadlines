@@ -154,11 +154,6 @@ struct Config
   # Clustering configuration (optional)
   # If omitted, clustering is enabled by default and runs hourly.
   property clustering : ClusteringConfig? = nil
-
-  # Enable WebSocket real-time updates (default: false)
-  # When enabled, clients connect via WebSocket for instant feed update notifications
-  # instead of HTTP long-polling.
-  property? use_websocket : Bool = false
 end
 
 struct ClusteringConfig

@@ -6,8 +6,7 @@ class Quickheadlines::DTOs::ConfigResponse
 
   property refresh_minutes : Int32
   property item_limit : Int32
-  property use_websocket : Bool
 
-  def initialize(@refresh_minutes : Int32, @item_limit : Int32, @use_websocket : Bool)
+  def initialize(@refresh_minutes : Int32, @item_limit : Int32)
   end
 end

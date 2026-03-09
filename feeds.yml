@@ -5,8 +5,7 @@ server_port: 8080
 max_cache_size_mb: 100
 page_title: "Quick Headlines"
 cache_retention_hours: 336  # 14 days
-debug: true
-use_websocket: true  # Enable WebSocket real-time updates
+debug: false
 
 # Clustering configuration
 clustering:
@@ -266,6 +265,32 @@ tabs:
         url: "https://www.reddit.com/r/linux"
         subreddit: "linux"
         sort: "hot"
+  - name: "OS"
+    feeds:
+      - title: "OS News"
+        url: "https://www.osnews.com/feed/"
+      - title: "Haiku Project"
+        url: "https://www.haiku-os.org/blog/feed/"
+      - title: "FreeBSD"
+        url: "https://www.freebsd.org/news/feed.xml"
+      - title: "NetBSD"
+        url: "https://www.netbsd.org/changes/rss-netbsd.xml"
+      - title: "r/FreeBSD"
+        url: "https://www.reddit.com/r/FreeBSD"
+        subreddit: "FreeBSD"
+        sort: "hot"
+      - title: "r/NetBSD"
+        url: "https://www.reddit.com/r/NetBSD"
+        subreddit: "NetBSD"
+        sort: "hot"
+      - title: "r/OpenBSD"
+        url: "https://www.reddit.com/r/OpenBSD"
+        subreddit: "OpenBSD"
+        sort: "hot"
+      - title: "r/HaikuOS"
+        url: "https://www.reddit.com/r/HaikuOS"
+        subreddit: "HaikuOS"
+        sort: "hot"
   - name: "Science"
     feeds:
       - title: "Nature"
@@ -442,32 +467,6 @@ tabs:
         url: "https://www.forbes.com/business/feed/"
       - title: "Business Insider"
         url: "https://www.businessinsider.com/rss"
-  - name: "OS"
-    feeds:
-      - title: "OS News"
-        url: "https://www.osnews.com/feed/"
-      - title: "Haiku Project"
-        url: "https://www.haiku-os.org/blog/feed/"
-      - title: "FreeBSD"
-        url: "https://www.freebsd.org/news/feed.xml"
-      - title: "NetBSD"
-        url: "https://www.netbsd.org/changes/rss-netbsd.xml"
-      - title: "r/FreeBSD"
-        url: "https://www.reddit.com/r/FreeBSD"
-        subreddit: "FreeBSD"
-        sort: "hot"
-      - title: "r/NetBSD"
-        url: "https://www.reddit.com/r/NetBSD"
-        subreddit: "NetBSD"
-        sort: "hot"
-      - title: "r/OpenBSD"
-        url: "https://www.reddit.com/r/OpenBSD"
-        subreddit: "OpenBSD"
-        sort: "hot"
-      - title: "r/HaikuOS"
-        url: "https://www.reddit.com/r/HaikuOS"
-        subreddit: "HaikuOS"
-        sort: "hot"
   - name: "Health"
     feeds:
       - title: "STAT News"
