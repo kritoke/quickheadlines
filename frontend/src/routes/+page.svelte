@@ -121,6 +121,8 @@ import { websocketConnection } from '$lib/websocket';
 	}
 
 	async function handleTabChange(tab: string) {
+		window.scrollTo(0, 0);
+		
 		if (tabChangeTimeout) clearTimeout(tabChangeTimeout);
 		
 		tabChangeTimeout = setTimeout(async () => {
