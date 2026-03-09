@@ -23,24 +23,60 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
   def initialize(@db_service : DatabaseService)
   end
 
-  private def validate_limit(value : Int32?, default : Int32, min : Int32 = 1, max : Int32 = 1000) : Int32
-    return default if value.nil?
-    return min if value < min
-    return max if value > max
-    value
+  # Validate query parameters with sensible defaults and bounds
+  private def validate_limit(value : String?, default : Int32, min : Int32 = 1, max : Int32 = 1000) : Int32
+    if value.nil?
+      return default
+    end
+    
+    begin
+      limit = value.to_i
+      if limit < min
+        min
+      elsif limit > max
+        max
+      else
+        limit
+      end
+    rescue
+      default
+    end
   end
 
-  private def validate_offset(value : Int32?, default : Int32 = 0) : Int32
-    return default if value.nil?
-    return 0 if value < 0
-    value
+  private def validate_offset(value : String?, default : Int32 = 0) : Int32
+    if value.nil?
+      return default
+    end
+    
+    begin
+      offset = value.to_i
+      if offset < 0
+        0
+      else
+        offset
+      end
+    rescue
+      default
+    end
   end
 
-  private def validate_days(value : Int32?, default : Int32, min : Int32 = 1, max : Int32 = 365) : Int32
-    return default if value.nil?
-    return min if value < min
-    return max if value > max
-    value
+  private def validate_days(value : String?, default : Int32, min : Int32 = 1, max : Int32 = 365) : Int32
+    if value.nil?
+      return default
+    end
+    
+    begin
+      days = value.to_i
+      if days < min
+        min
+      elsif days > max
+        max
+      else
+        days
+      end
+    rescue
+      default
+    end
   end
 
   private def story_service : Quickheadlines::Services::StoryService
@@ -195,15 +231,12 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
   @[ARTA::Get(path: "/api/feed_more")]
   def feed_more(request : ATH::Request) : FeedResponse
     url = request.query_params["url"]?
-    raw_limit = request.query_params["limit"]?.try(&.to_i?)
-    raw_offset = request.query_params["offset"]?.try(&.to_i?)
+    limit = validate_limit(request.query_params["limit"]?, 10)
+    offset = validate_offset(request.query_params["offset"]?)
 
     if url.nil? || url.strip.empty?
       raise Athena::Framework::Exception::BadRequest.new("Missing 'url' parameter")
     end
-
-    limit = validate_limit(raw_limit, 10)
-    offset = validate_offset(raw_offset)
 
     # Search top-level feeds and all feeds within tabs
     config = STATE.config
@@ -275,13 +308,9 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
   def timeline(request : ATH::Request) : TimelinePageResponse
     default_limit = STATE.config.try(&.db_fetch_limit) || 500
     default_days = (STATE.config.try(&.cache_retention_hours) || 168) / 24
-    raw_limit = request.query_params["limit"]?.try(&.to_i?)
-    raw_offset = request.query_params["offset"]?.try(&.to_i?)
-    raw_days = request.query_params["days"]?.try(&.to_i?)
-
-    limit = validate_limit(raw_limit, default_limit, max: 1000)
-    offset = validate_offset(raw_offset)
-    days = validate_days(raw_days, default_days.to_i32)
+    limit = validate_limit(request.query_params["limit"]?, default_limit, max: 1000)
+    offset = validate_offset(request.query_params["offset"]?)
+    days = validate_days(request.query_params["days"]?, default_days.to_i32)
 
     story_repo = Quickheadlines::Repositories::StoryRepository.new(@db_service.db)
     result = Quickheadlines::Services::StoryService.get_timeline(story_repo, limit, offset, days)
