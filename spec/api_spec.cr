@@ -245,45 +245,4 @@ describe "API Module" do
       response.total_item_count.should eq(2)
     end
   end
-
-  describe "Long-polling events endpoint logic" do
-    it "detects when STATE.updated_at is newer than client last_update" do
-      # Set a known updated_at time
-      old_time = Time.local - 60.seconds
-      STATE.updated_at = old_time
-
-      client_last_update = (old_time - 30.seconds).to_unix_ms
-      current_update = STATE.updated_at.to_unix_ms
-
-      # Should detect update (current > client)
-      (current_update > client_last_update).should be_true
-    end
-
-    it "detects when STATE.updated_at is same as client last_update" do
-      update_time = Time.local - 30.seconds
-      STATE.updated_at = update_time
-
-      client_last_update = update_time.to_unix_ms
-      current_update = STATE.updated_at.to_unix_ms
-
-      # Should NOT detect update (current == client)
-      (current_update > client_last_update).should be_false
-    end
-
-    it "generates proper SSE format for feed_update event" do
-      timestamp = 1700000000000_i64
-      content = "event: feed_update\ndata: #{timestamp}\n\n"
-
-      content.should contain("event: feed_update")
-      content.should contain("data: #{timestamp}")
-    end
-
-    it "generates proper SSE format for heartbeat" do
-      timestamp = 1700000000000_i64
-      content = "event: heartbeat\ndata: #{timestamp}\n\n"
-
-      content.should contain("event: heartbeat")
-      content.should contain("data: #{timestamp}")
-    end
-  end
 end

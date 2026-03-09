@@ -259,8 +259,6 @@ tabs:
         url: "https://omglinux.com/feed/"
       - title: "Linux Today"
         url: "https://linuxtoday.com/feed"
-      - title: "Desktop on Fire"
-        url: "https://desktoponfire.com/feed/"
       - title: "r/linux"
         url: "https://www.reddit.com/r/linux"
         subreddit: "linux"
@@ -291,6 +289,8 @@ tabs:
         url: "https://www.reddit.com/r/HaikuOS"
         subreddit: "HaikuOS"
         sort: "hot"
+      - title: "Desktop on Fire"
+        url: "https://desktoponfire.com/feed/"
   - name: "Science"
     feeds:
       - title: "Nature"

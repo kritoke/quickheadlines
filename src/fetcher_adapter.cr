@@ -4,13 +4,19 @@ require "./fetcher/favicon"
 require "./color_extractor"
 
 module FetcherAdapter
+  USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+
   def self.pull_feed(feed : Feed, previous_data : FeedData?, limit : Int32 = 100) : FetchResult
     etag = previous_data.try(&.etag)
     last_modified = previous_data.try(&.last_modified)
 
     debug_log("FetcherAdapter.pull_feed: #{feed.url}")
 
-    result = Fetcher.pull(feed.url, HTTP::Headers.new, etag, last_modified, limit)
+    headers = HTTP::Headers{
+      "User-Agent" => USER_AGENT
+    }
+
+    result = Fetcher.pull(feed.url, headers, etag, last_modified, limit)
 
     debug_log("Fetcher result - error: #{result.error_message.inspect}, entries count: #{result.entries.size}")
 
