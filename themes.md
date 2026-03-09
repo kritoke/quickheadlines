@@ -8,13 +8,13 @@ QuickHeadlines features **13 themes** to customize your reading experience. Choo
 
 Clean, minimal light theme for daytime reading.
 
-![Light Theme](ss/qh-light-ss.png)
+![Light Theme](ss/qh-desktop-lm-ss.png)
 
 ### Dark
 
 Easy on the eyes for nighttime reading.
 
-![Dark Theme](ss/qh-dark-ss.png)
+![Dark Theme](ss/qh-desktop-dm-ss.png)
 
 ---
 
