@@ -20,6 +20,7 @@
 
 	function handleInputKeydown(e: KeyboardEvent) {
 		if (e.key === 'Enter') {
+			e.preventDefault();
 			onClose();
 		}
 	}

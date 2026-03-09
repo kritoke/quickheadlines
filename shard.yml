@@ -25,7 +25,7 @@ dependencies:
     version: ~> 0.10.0
   fetcher:
     github: kritoke/fetcher.cr
-    version: "~> 0.5"
+    branch: main
 
 development_dependencies:
   ameba:

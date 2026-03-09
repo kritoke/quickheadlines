@@ -66,7 +66,7 @@ shards:
 
   fetcher:
     git: https://github.com/kritoke/fetcher.cr.git
-    version: 0.5.0
+    version: 0.5.0+git.commit.3efca1d782c375df1500ae0245219d02aa5b7d35
 
   lexis-minhash:
     git: https://github.com/kritoke/lexis-minhash.git
