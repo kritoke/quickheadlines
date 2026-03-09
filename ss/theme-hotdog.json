@@ -1,0 +1,10 @@
+{
+  "origins": [
+    {
+      "origin": "http://localhost:8080",
+      "localStorage": [
+        { "name": "quickheadlines-theme", "value": "hotdog" }
+      ]
+    }
+  ]
+}

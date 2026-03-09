@@ -527,29 +527,56 @@ nix shell nixpkgs#shot-scraper -c shot-scraper "http://localhost:8080/timeline" 
 Dark mode requires using an auth storage file to pre-set localStorage before page load:
 
 ```bash
-# Create dark-theme-storage.json:
-# {
-#   "origins": [
-#     {
-#       "origin": "http://localhost:8080",
-#       "localStorage": [
-#         { "name": "quickheadlines-theme", "value": "dark" }
-#       ]
-#     }
-#   ]
-# }
-
 # Desktop dark main
-nix shell nixpkgs#shot-scraper -c shot-scraper "http://localhost:8080/" -o ss/qh-desktop-dm-ss.png --wait 5000 -h 800 -a dark-theme-storage.json
+nix shell nixpkgs#shot-scraper -c shot-scraper "http://localhost:8080/" -o ss/qh-desktop-dm-ss.png --wait 5000 -h 800 -a ss/dark-theme-storage.json
 
 # Desktop dark timeline
-nix shell nixpkgs#shot-scraper -c shot-scraper "http://localhost:8080/timeline" -o ss/qh-desktop-dm-timeline-ss.png --wait 7000 -h 800 -a dark-theme-storage.json
+nix shell nixpkgs#shot-scraper -c shot-scraper "http://localhost:8080/timeline" -o ss/qh-desktop-dm-timeline-ss.png --wait 7000 -h 800 -a ss/dark-theme-storage.json
 
 # Mobile dark main
-nix shell nixpkgs#shot-scraper -c shot-scraper "http://localhost:8080/" -o ss/qh-mobile-dm-ss.png --wait 5000 -w 375 -h 667 -a dark-theme-storage.json
+nix shell nixpkgs#shot-scraper -c shot-scraper "http://localhost:8080/" -o ss/qh-mobile-dm-ss.png --wait 5000 -w 375 -h 667 -a ss/dark-theme-storage.json
 
 # Mobile dark timeline
-nix shell nixpkgs#shot-scraper -c shot-scraper "http://localhost:8080/timeline" -o ss/qh-mobile-dm-timeline-ss.png --wait 7000 -w 375 -h 667 -a dark-theme-storage.json
+nix shell nixpkgs#shot-scraper -c shot-scraper "http://localhost:8080/timeline" -o ss/qh-mobile-dm-timeline-ss.png --wait 7000 -w 375 -h 667 -a ss/dark-theme-storage.json
+```
+
+### Custom Theme Screenshots
+
+Each custom theme requires its own auth storage file:
+
+```bash
+# Retro 80s
+nix shell nixpkgs#shot-scraper -c shot-scraper "http://localhost:8080/" -o ss/qh-retro80s-ss.png --wait 5000 -h 800 -a ss/theme-retro80s.json
+
+# Matrix
+nix shell nixpkgs#shot-scraper -c shot-scraper "http://localhost:8080/" -o ss/qh-matrix-ss.png --wait 5000 -h 800 -a ss/theme-matrix.json
+
+# Ocean
+nix shell nixpkgs#shot-scraper -c shot-scraper "http://localhost:8080/" -o ss/qh-ocean-ss.png --wait 5000 -h 800 -a ss/theme-ocean.json
+
+# Sunset
+nix shell nixpkgs#shot-scraper -c shot-scraper "http://localhost:8080/" -o ss/qh-sunset-ss.png --wait 5000 -h 800 -a ss/theme-sunset.json
+
+# Hot Dog Stand
+nix shell nixpkgs#shot-scraper -c shot-scraper "http://localhost:8080/" -o ss/qh-hotdog-ss.png --wait 5000 -h 800 -a ss/theme-hotdog.json
+
+# Dracula
+nix shell nixpkgs#shot-scraper -c shot-scraper "http://localhost:8080/" -o ss/qh-dracula-ss.png --wait 5000 -h 800 -a ss/theme-dracula.json
+
+# Nord
+nix shell nixpkgs#shot-scraper -c shot-scraper "http://localhost:8080/" -o ss/qh-nord-ss.png --wait 5000 -h 800 -a ss/theme-nord.json
+
+# Cyberpunk
+nix shell nixpkgs#shot-scraper -c shot-scraper "http://localhost:8080/" -o ss/qh-cyberpunk-ss.png --wait 5000 -h 800 -a ss/theme-cyberpunk.json
+
+# Forest
+nix shell nixpkgs#shot-scraper -c shot-scraper "http://localhost:8080/" -o ss/qh-forest-ss.png --wait 5000 -h 800 -a ss/theme-forest.json
+
+# Coffee
+nix shell nixpkgs#shot-scraper -c shot-scraper "http://localhost:8080/" -o ss/qh-coffee-ss.png --wait 5000 -h 800 -a ss/theme-coffee.json
+
+# Vaporwave
+nix shell nixpkgs#shot-scraper -c shot-scraper "http://localhost:8080/" -o ss/qh-vaporwave-ss.png --wait 5000 -h 800 -a ss/theme-vaporwave.json
 ```
 
 ### Key Findings
