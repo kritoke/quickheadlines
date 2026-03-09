@@ -568,7 +568,9 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
         cluster_limit = STATE.config.try(&.clustering).try(&.max_items) || STATE.config.try(&.db_fetch_limit) || 5000
         threshold = STATE.config.try(&.clustering).try(&.threshold) || 0.35
 
-        STDERR.puts "[#{Time.local}] Running clustering..."
+        if STATE.config.try(&.debug?)
+          STDERR.puts "[#{Time.local}] Running clustering..."
+        end
         service.recluster_with_lsh(cluster_limit, threshold)
       rescue ex
         STDERR.puts "[#{Time.local}] Clustering error: #{ex.message}"

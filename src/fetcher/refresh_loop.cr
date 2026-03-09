@@ -20,10 +20,14 @@ def refresh_all(config : Config)
   config.feeds.each { |feed| all_configs[feed.url] = feed }
   config.tabs.each { |tab| tab.feeds.each { |feed| all_configs[feed.url] = feed } }
 
-  STDERR.puts "[#{Time.local}] refresh_all: starting - #{all_configs.size} feeds to fetch"
+  if config.debug?
+    STDERR.puts "[#{Time.local}] refresh_all: starting - #{all_configs.size} feeds to fetch"
+  end
 
   existing_data = (StateStore.feeds + StateStore.tabs.flat_map(&.feeds)).index_by(&.url)
-  STDERR.puts "[#{Time.local}] refresh_all: existing_data.size=#{existing_data.size}"
+  if config.debug?
+    STDERR.puts "[#{Time.local}] refresh_all: existing_data.size=#{existing_data.size}"
+  end
 
   channel = Channel(FeedData).new
   all_configs.each_value do |feed|
@@ -45,14 +49,18 @@ def refresh_all(config : Config)
     if data && !data.items.empty?
       fetched_map[data.url] = data
       success_count += 1
-    else
+    elsif config.debug?
       STDERR.puts "[#{Time.local}] refresh_all: failed to fetch #{data ? data.url : "unknown"}"
     end
   end
 
-  STDERR.puts "[#{Time.local}] refresh_all: fetched #{fetched_map.size}/#{all_configs.size} feeds successfully"
+  if config.debug?
+    STDERR.puts "[#{Time.local}] refresh_all: fetched #{fetched_map.size}/#{all_configs.size} feeds successfully"
+  end
 
-  STDERR.puts "[#{Time.local}] refresh_all: building new state (feeds=#{fetched_map.size}, tabs=#{config.tabs.size})"
+  if config.debug?
+    STDERR.puts "[#{Time.local}] refresh_all: building new state (feeds=#{fetched_map.size}, tabs=#{config.tabs.size})"
+  end
 
   # Build new state immutably
   new_feeds = config.feeds.map { |feed| fetched_map[feed.url]? || error_feed_data(feed, "Failed to fetch") }
@@ -88,7 +96,9 @@ def refresh_all(config : Config)
   # Broadcast update to WebSocket clients
   EventBroadcaster.notify_feed_update(STATE.updated_at.to_unix_ms)
 
-  STDERR.puts "[#{Time.local}] refresh_all: STATE updated - feeds=#{new_feeds.size}, tabs=#{new_tabs.size}"
+  if config.debug?
+    STDERR.puts "[#{Time.local}] refresh_all: STATE updated - feeds=#{new_feeds.size}, tabs=#{new_tabs.size}"
+  end
 
   # Ensure feeds are persisted to database before clustering runs
   # This prevents KeyError on fresh deployments when feeds aren't in DB yet
@@ -96,7 +106,9 @@ def refresh_all(config : Config)
 
   GC.collect
 
-  STDERR.puts "[#{Time.local}] refresh_all: complete - STATE.feeds=#{new_feeds.size}, STATE.tabs=#{new_tabs.size}"
+  if config.debug?
+    STDERR.puts "[#{Time.local}] refresh_all: complete - STATE.feeds=#{new_feeds.size}, STATE.tabs=#{new_tabs.size}"
+  end
 end
 
 def async_clustering(feeds : Array(FeedData))
@@ -167,9 +179,13 @@ def start_refresh_loop(config_path : String)
         # Always run refresh on first iteration to pick up any new feeds
         if first_run
           first_run = false
-          STDERR.puts "[#{Time.local}] Running initial refresh to fetch feeds"
+          if active_config.debug?
+            STDERR.puts "[#{Time.local}] Running initial refresh to fetch feeds"
+          end
           refresh_all(active_config)
-          puts "[#{Time.local}] Initial refresh complete"
+          if active_config.debug?
+            puts "[#{Time.local}] Initial refresh complete"
+          end
         else
           current_mtime = File.info(config_path).modification_time
 
@@ -178,14 +194,20 @@ def start_refresh_loop(config_path : String)
             active_config = new_config
             last_mtime = current_mtime
 
-            puts "[#{Time.local}] Config change detected. Reloaded feeds.yml"
+            if active_config.debug?
+              puts "[#{Time.local}] Config change detected. Reloaded feeds.yml"
+            end
             refresh_all(active_config)
-            puts "[#{Time.local}] Refreshed after config change"
+            if active_config.debug?
+              puts "[#{Time.local}] Refreshed after config change"
+            end
             sleep (active_config.refresh_minutes * 60).seconds
             next
           else
             refresh_all(active_config)
-            puts "[#{Time.local}] Refreshed feeds and ran GC"
+            if active_config.debug?
+              puts "[#{Time.local}] Refreshed feeds and ran GC"
+            end
           end
         end
 

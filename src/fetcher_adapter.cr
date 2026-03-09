@@ -8,7 +8,7 @@ module FetcherAdapter
     etag = previous_data.try(&.etag)
     last_modified = previous_data.try(&.last_modified)
 
-    STDERR.puts "[DEBUG] FetcherAdapter.pull_feed: #{feed.url}"
+    debug_log("FetcherAdapter.pull_feed: #{feed.url}")
 
     if feed.url.includes?("reddit.com/r/")
       result = fetch_reddit_feed(feed.url, limit)
@@ -16,10 +16,10 @@ module FetcherAdapter
       result = Fetcher.pull(feed.url, HTTP::Headers.new, etag, last_modified, limit)
     end
 
-    STDERR.puts "[DEBUG] Fetcher result - error: #{result.error_message.inspect}, entries count: #{result.entries.size}"
+    debug_log("Fetcher result - error: #{result.error_message.inspect}, entries count: #{result.entries.size}")
 
     if error = result.error_message
-      STDERR.puts "[DEBUG] Fetcher error: #{error}"
+      debug_log("Fetcher error: #{error}")
       return Result(FeedData, String).failure(error)
     end
 
@@ -28,7 +28,7 @@ module FetcherAdapter
     end
 
     if items.empty?
-      STDERR.puts "[DEBUG] No items found for #{feed.url}"
+      debug_log("No items found for #{feed.url}")
       return Result(FeedData, String).failure("No items found")
     end
 
@@ -60,16 +60,16 @@ module FetcherAdapter
   private def self.fetch_reddit_feed(url : String, limit : Int32) : Fetcher::Result
     begin
       json_url = "#{url}/hot.json?limit=#{limit}&raw_json=1"
-      STDERR.puts "[DEBUG] Fetching Reddit JSON: #{json_url}"
+      debug_log("Fetching Reddit JSON: #{json_url}")
       items = fetch_reddit_json(json_url, limit)
       return build_reddit_result(items, url)
     rescue ex
-      STDERR.puts "[DEBUG] Reddit JSON failed: #{ex.message}, trying RSS fallback"
+      debug_log("Reddit JSON failed: #{ex.message}, trying RSS fallback")
     end
 
     begin
       rss_url = "#{url}.rss"
-      STDERR.puts "[DEBUG] Fetching Reddit RSS: #{rss_url}"
+      debug_log("Fetching Reddit RSS: #{rss_url}")
       items = fetch_reddit_rss(rss_url, limit)
       build_reddit_result(items, url)
     rescue ex

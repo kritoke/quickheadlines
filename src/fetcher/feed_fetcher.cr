@@ -62,7 +62,7 @@ private def handle_success_response(feed : Feed, response : HTTP::Client::Respon
   last_modified = response.headers["Last-Modified"]?
 
   if items.empty?
-    STDERR.puts "[#{Time.local}] Feed returned no items: #{feed.title} (#{feed.url})"
+    debug_log("Feed returned no items: #{feed.title} (#{feed.url})")
     return error_feed_data(feed, "No items found (or unsupported format)")
   end
 
