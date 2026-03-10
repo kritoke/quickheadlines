@@ -1,16 +1,15 @@
-require "http/client"
-require "json"
+require "fetcher"
 require "./models"
-require "./parser"
+require "./color_extractor"
+require "./fetcher/favicon"
 
-# Generic code icon (SVG) representing software/programming
 CODE_ICON = "internal:code_icon"
 
 def fetch_sw_with_config(sw_config : SoftwareConfig, item_limit : Int32) : FeedData?
   items = [] of Item
   sw_config.repos.each do |repo_entry|
-    if item = fetch_repo(repo_entry, item_limit)
-      items << item
+    if item = fetch_repo_release(repo_entry, item_limit)
+      items.concat(item)
     end
   end
 
@@ -21,7 +20,7 @@ def fetch_sw_with_config(sw_config : SoftwareConfig, item_limit : Int32) : FeedD
   FeedData.new(
     title: sw_config.title,
     url: "software://releases",
-    site_link: "https://github.com", # Default landing
+    site_link: "https://github.com",
     header_color: sw_config.header_color || "#24292e",
     header_text_color: sw_config.header_text_color,
     items: items,
@@ -29,99 +28,46 @@ def fetch_sw_with_config(sw_config : SoftwareConfig, item_limit : Int32) : FeedD
   )
 end
 
-private def fetch_repo(repo_entry : String, item_limit : Int32) : Item?
+private def fetch_repo_release(repo_entry : String, item_limit : Int32) : Array(Item)?
+  url = repo_entry_to_url(repo_entry)
+  return unless url
+
+  result = Fetcher.pull_software(url, HTTP::Headers.new, item_limit)
+
+  if error = result.error_message
+    STDERR.puts "Error fetching software releases for #{repo_entry}: #{error}"
+    return
+  end
+
+  return if result.entries.empty?
+
+  result.entries.map do |entry|
+    Item.new(
+      title: entry.title,
+      link: entry.url,
+      pub_date: entry.published_at,
+      version: entry.version
+    )
+  end
+rescue ex
+  STDERR.puts "Error fetching software releases for #{repo_entry}: #{ex.message}"
+  nil
+end
+
+private def repo_entry_to_url(repo_entry : String) : String?
   parts = repo_entry.split(':')
   repo_path = parts[0]
   provider = parts[1]? || "gh"
 
   case provider
-  when "gh" then fetch_github_release(repo_path, item_limit)
-  when "gl" then fetch_gitlab_release(repo_path, item_limit)
-  when "cb" then fetch_codeberg_release(repo_path, item_limit)
+  when "gh"
+    "https://github.com/#{repo_path}/releases"
+  when "gl"
+    "https://gitlab.com/#{repo_path}/-/releases"
+  when "cb"
+    "https://codeberg.org/#{repo_path}/releases"
+  else
+    STDERR.puts "Unknown provider '#{provider}' for repo #{repo_path}"
+    nil
   end
-end
-
-private def fetch_github_release(repo_path : String, item_limit : Int32) : Item?
-  url = "https://api.github.com/repos/#{repo_path}/releases"
-
-  begin
-    response = HTTP::Client.get(url, HTTP::Headers{"Accept" => "application/vnd.github.v3+json"})
-    if response.status_code == 200
-      # Parse JSON response
-      releases = Array(JSON::Any).from_json(response.body)
-
-      # Filter out prereleases and drafts, get first stable release
-      stable_releases = releases.reject do |release|
-        release["prerelease"].as_bool || release["draft"].as_bool
-      end
-
-      if release = stable_releases.first?
-        tag_name = release["tag_name"].as_s
-        release_name = release["name"].as_s.presence || tag_name
-        html_url = release["html_url"].as_s
-        published_at = release["published_at"].as_s
-
-        # Parse the published date
-        pub_date = Time.parse_iso8601(published_at)
-
-        return Item.new(title: "#{repo_path} #{release_name}", link: html_url, pub_date: pub_date, version: release_name)
-      end
-    end
-  rescue ex
-    STDERR.puts "Error fetching GitHub repo #{repo_path}: #{ex.message}"
-  end
-
-  nil
-end
-
-private def fetch_gitlab_release(repo_path : String, item_limit : Int32) : Item?
-  url = "https://gitlab.com/#{repo_path}/-/releases.atom"
-
-  begin
-    response = HTTP::Client.get(url)
-    if response.status_code == 200
-      parsed = parse_feed(IO::Memory.new(response.body), item_limit)
-      if latest = parsed[:items].first?
-        return Item.new(title: "#{repo_path} #{latest.title}", link: latest.link, pub_date: latest.pub_date, version: latest.title)
-      end
-    elsif response.status_code == 404
-      return gl_tag(repo_path, item_limit)
-    end
-  rescue ex
-    STDERR.puts "Error fetching GitLab repo #{repo_path}: #{ex.message}"
-  end
-
-  nil
-end
-
-private def fetch_codeberg_release(repo_path : String, item_limit : Int32) : Item?
-  url = "https://codeberg.org/#{repo_path}/releases.atom"
-
-  begin
-    response = HTTP::Client.get(url)
-    if response.status_code == 200
-      parsed = parse_feed(IO::Memory.new(response.body), item_limit)
-      if latest = parsed[:items].first?
-        return Item.new(title: "#{repo_path} #{latest.title}", link: latest.link, pub_date: latest.pub_date, version: latest.title)
-      end
-    end
-  rescue ex
-    STDERR.puts "Error fetching Codeberg repo #{repo_path}: #{ex.message}"
-  end
-
-  nil
-end
-
-private def gl_tag(repo_path : String, item_limit : Int32) : Item?
-  tag_url = "https://gitlab.com/#{repo_path}/-/tags?format=atom"
-  tag_res = HTTP::Client.get(tag_url)
-  if tag_res.status_code == 200
-    parsed = parse_feed(IO::Memory.new(tag_res.body), item_limit)
-    if latest = parsed[:items].first?
-      return Item.new(repo_path, latest.link, latest.pub_date, latest.title)
-    end
-  end
-  nil
-rescue
-  nil
 end
