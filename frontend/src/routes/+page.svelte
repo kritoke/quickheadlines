@@ -47,11 +47,11 @@
 	let error = $derived(isError(feedState) ? getError(feedState) : null);
 
 	async function handleTabChange(tab: string) {
-		window.scrollTo(0, 0);
-		
 		if (tabChangeTimeout) clearTimeout(tabChangeTimeout);
 		
 		tabChangeTimeout = setTimeout(async () => {
+			document.documentElement.scrollTo({ top: 0, behavior: 'instant' });
+			
 			const url = new URL(window.location.href);
 			url.searchParams.set('tab', tab);
 			window.history.replaceState({}, '', url);
