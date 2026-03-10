@@ -1,11 +1,11 @@
 <script lang="ts">
 	import { spring } from 'svelte/motion';
-	import { themeState, getThemeTokens } from '$lib/stores/theme.svelte';
+  import { themeState, getCursorColors } from '$lib/stores/theme.svelte';
 
 	let coords = spring({ x: -100, y: -100 }, { stiffness: 0.1, damping: 0.25 });
 	let trail = spring({ x: -100, y: -100 }, { stiffness: 0.05, damping: 0.3 });
 
-	let cursorColors = $derived(getThemeTokens(themeState.theme).cursor);
+  let cursorColors = $derived(getCursorColors(themeState.theme));
 	let enabled = $derived(themeState.mounted && themeState.effects);
 
 	function handleMouseMove(e: MouseEvent) {

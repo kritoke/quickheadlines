@@ -3,7 +3,7 @@ require "./websocket"
 
 begin
   config_result = load_config_with_validation("feeds.yml")
-  port = 8080
+  port = 3000
 
   if config_result.success
     cfg = config_result.config.as(Config)

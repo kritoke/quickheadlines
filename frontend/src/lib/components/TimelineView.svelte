@@ -2,7 +2,7 @@
 	import type { TimelineItemResponse, ClusterItemsResponse } from '$lib/types';
 	import { fetchClusterItems as defaultFetchClusterItems, formatTimestamp } from '$lib/api';
 	import ClusterExpansion from './ClusterExpansion.svelte';
-	import { themeState, getThemeTokens } from '$lib/stores/theme.svelte';
+	import { themeState } from '$lib/stores/theme.svelte';
 	import { layoutState } from '$lib/stores/layout.svelte';
 	import BorderBeam from './BorderBeam.svelte';
 
@@ -14,7 +14,7 @@
 	}
 
 	let { items, hasMore, onLoadMore, fetchClusterItems = defaultFetchClusterItems }: Props = $props();
-	let themeColors = $derived(getThemeTokens(themeState.theme).colors);
+	let resolvedTheme = $derived(themeState.theme);
 
 	let expandedClusterId = $state<string | null>(null);
 	let clusterItems = $state<Record<string, TimelineItemResponse[]>>({});
@@ -240,8 +240,7 @@
 			<button
 				type="button"
 				onclick={onLoadMore}
-				class="px-4 py-2 text-sm rounded-lg transition-colors"
-				style="background-color: {themeColors.bgSecondary}; color: {themeColors.text}; border: 1px solid {themeColors.border};"
+				class="px-4 py-2 text-sm rounded-lg transition-colors bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700"
 			>
 				Load More
 			</button>

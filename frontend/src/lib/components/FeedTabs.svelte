@@ -2,7 +2,7 @@
 	import { Tabs } from 'bits-ui';
 	import { fly } from 'svelte/transition';
 	import { cubicOut } from 'svelte/easing';
-	import { themeState, getThemeTokens } from '$lib/stores/theme.svelte';
+	import { themeState } from '$lib/stores/theme.svelte';
 	import type { TabResponse } from '$lib/types';
 
 	interface Props {
@@ -12,8 +12,6 @@
 	}
 
 	let { tabs, activeTab, onTabChange }: Props = $props();
-
-	let themeColors = $derived(getThemeTokens(themeState.theme).colors);
 
 	let listElement: HTMLDivElement | undefined = $state();
 
@@ -54,8 +52,7 @@
 >
 	<div
 		bind:this={listElement}
-		class="sticky top-16 z-20 relative flex items-center gap-1 p-2 overflow-x-auto backdrop-blur-xl rounded-xl shadow-sm"
-		style="background-color: {themeColors.bgSecondary}; border: 1px solid {themeColors.border};"
+		class="sticky top-16 z-20 relative flex items-center gap-1 p-2 overflow-x-auto backdrop-blur-xl rounded-xl shadow-sm bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700"
 	>
 		{#each allTabs as tab (tab.name)}
 			<Tabs.Trigger
@@ -73,8 +70,8 @@
 				{#if activeTab === tab.name}
 					<div
 						in:fly={{ x: 5, duration: 300, easing: cubicOut }}
-						class="absolute inset-0 rounded-lg -z-10 shadow-sm {themeState.effects ? 'border-accent/30' : ''}"
-						style="background-color: {themeColors.bg}; border: 1px solid {themeColors.border}; {themeState.effects ? `box-shadow: 0 0 12px ${themeColors.shadow}` : ''}; view-transition-name: tab-pill;"
+						class="absolute inset-0 rounded-lg -z-10 shadow-sm bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 {themeState.effects ? 'shadow-blue-500/30' : ''}"
+						style="view-transition-name: tab-pill;"
 					></div>
 				{/if}
 			</Tabs.Trigger>

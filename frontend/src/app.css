@@ -33,11 +33,7 @@
 	animation: item-appear 300ms cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
 }
 
-::view-transition-old(root),
-::view-transition-new(root) {
-	animation: none;
-	mix-blend-mode: normal;
-}
+
 
 ::view-transition-old(root) {
 	z-index: 1;
@@ -49,11 +45,7 @@
 	animation: reveal 250ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
 }
 
-@keyframes reveal {
-	to {
-		clip-path: circle(150% at var(--x) var(--y));
-	}
-}
+
 
 
 
@@ -151,11 +143,7 @@ body::-webkit-scrollbar-thumb:hover {
 }
 
 /* View Transitions for tab pill */
-::view-transition-old(tab-pill),
-::view-transition-new(tab-pill) {
-	animation-duration: 0.3s;
-	animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-}
+
 
 /* Cursor trail CSS variables */
 :root {
@@ -204,145 +192,39 @@ html.custom-theme header * {
 	visibility: visible !important;
 }
 
-/* Sunset warm tones - apply to everything */
-html[data-theme="sunset"],
-html[data-theme="sunset"] body,
-html[data-theme="sunset"] #app,
-html[data-theme="sunset"] [data-name="feeds-page"],
-html[data-theme="sunset"] [data-name="app-layout"] {
-	background-color: #1c1309 !important;
-	color: #fed7aa !important;
-	--theme-shadow: rgba(249, 115, 22, 0.25);
-}
 
-/* Hot Dog Stand theme - Windows 3.1 vibes */
-html[data-theme="hotdog"],
-html[data-theme="hotdog"] body,
-html[data-theme="hotdog"] #app,
-html[data-theme="hotdog"] [data-name="feeds-page"],
-html[data-theme="hotdog"] [data-name="app-layout"],
-html[data-theme="hotdog"] .min-h-screen {
-	background-color: #008080 !important;
-	color: #ffff00 !important;
-}
 
-/* Override all slate background colors for hotdog */
-html[data-theme="hotdog"] .bg-slate-50,
-html[data-theme="hotdog"] .bg-slate-100,
-html[data-theme="hotdog"] .bg-slate-200,
-html[data-theme="hotdog"] .bg-slate-300,
-html[data-theme="hotdog"] .bg-slate-400,
-html[data-theme="hotdog"] .bg-slate-500,
-html[data-theme="hotdog"] .bg-slate-600,
-html[data-theme="hotdog"] .bg-slate-700,
-html[data-theme="hotdog"] .bg-slate-800,
-html[data-theme="hotdog"] .bg-slate-900,
-html[data-theme="hotdog"] .bg-white,
-html[data-theme="hotdog"] header,
-html[data-theme="hotdog"] .header,
-html[data-theme="hotdog"] [data-name="main-header"],
-html[data-theme="hotdog"] [data-name="feed-tabs"],
-html[data-theme="hotdog"] [data-name="timeline-page"] {
-	background-color: #008080 !important;
-}
 
-/* Hotdog text colors */
-html[data-theme="hotdog"] .text-slate-900,
-html[data-theme="hotdog"] .text-slate-800,
-html[data-theme="hotdog"] .text-slate-700,
-html[data-theme="hotdog"] .text-slate-600,
-html[data-theme="hotdog"] .text-slate-500,
-html[data-theme="hotdog"] .text-slate-400,
-html[data-theme="hotdog"] .text-white,
-html[data-theme="hotdog"] header *,
-html[data-theme="hotdog"] a {
-	color: #ffff00 !important;
-}
 
-/* Hotdog border colors */
-html[data-theme="hotdog"] .border-slate-200,
-html[data-theme="hotdog"] .border-slate-300,
-html[data-theme="hotdog"] .border-slate-600,
-html[data-theme="hotdog"] .border-slate-700,
-html[data-theme="hotdog"] header.border-b {
-	border-color: #c0c0c0 !important;
-}
-
-/* Prevent focus ring in hotdog theme - only outline, not background */
-html[data-theme="hotdog"] *:focus,
-html[data-theme="hotdog"] *:focus-visible {
-	outline-color: #ff0000 !important;
-	--tw-ring-color: #ff0000 !important;
-}
-
-/* Hotdog button focus/active - text color only, allow background from inline styles */
-html[data-theme="hotdog"] button:focus-visible,
-html[data-theme="hotdog"] button:active,
-html[data-theme="hotdog"] a:focus-visible,
-html[data-theme="hotdog"] a:active {
-	color: #ffff00 !important;
-	outline: none !important;
-	box-shadow: none !important;
-}
-
-/* Override all slate background colors for sunset */
-html[data-theme="sunset"] .bg-slate-50,
-html[data-theme="sunset"] .bg-slate-100,
-html[data-theme="sunset"] .bg-slate-200,
-html[data-theme="sunset"] .bg-slate-300,
-html[data-theme="sunset"] .bg-slate-400,
-html[data-theme="sunset"] .bg-slate-500,
-html[data-theme="sunset"] .bg-slate-600,
-html[data-theme="sunset"] .bg-slate-700,
-html[data-theme="sunset"] .bg-slate-800,
-html[data-theme="sunset"] .bg-slate-900,
-html[data-theme="sunset"] .bg-white,
-html[data-theme="sunset"] header,
-html[data-theme="sunset"] .header,
-html[data-theme="sunset"] [data-name="main-header"],
-html[data-theme="sunset"] [data-name="feed-tabs"],
-html[data-theme="sunset"] [data-name="timeline-page"],
-html[data-theme="sunset"] .min-h-screen {
-	background-color: #1c1309 !important;
-}
-
-/* Text colors for sunset */
-html[data-theme="sunset"] .text-slate-900,
-html[data-theme="sunset"] .text-slate-800,
-html[data-theme="sunset"] .text-slate-700,
-html[data-theme="sunset"] .text-slate-600,
-html[data-theme="sunset"] .text-slate-500,
-html[data-theme="sunset"] .text-slate-400,
-html[data-theme="sunset"] .text-white,
-html[data-theme="sunset"] header *,
-html[data-theme="sunset"] a {
-	color: #fed7aa !important;
-}
-
-/* Border colors for sunset */
-html[data-theme="sunset"] .border-slate-200,
-html[data-theme="sunset"] .border-slate-300,
-html[data-theme="sunset"] .border-slate-600,
-html[data-theme="sunset"] .border-slate-700,
-html[data-theme="sunset"] header.border-b {
-	border-color: #7c2d12 !important;
-}
-
-/* Apply custom theme colors to main elements */
+/* Apply custom theme colors to main elements - comprehensive coverage */
 html.custom-theme .bg-white,
 html.custom-theme .bg-slate-50,
-html.custom-theme .bg-slate-100 {
+html.custom-theme .bg-slate-100,
+html.custom-theme .bg-slate-200,
+html.custom-theme .bg-slate-300,
+html.custom-theme .bg-slate-400,
+html.custom-theme .bg-slate-500,
+html.custom-theme .bg-slate-600,
+html.custom-theme .bg-slate-700,
+html.custom-theme .bg-slate-800,
+html.custom-theme .bg-slate-900 {
 	background-color: var(--theme-bg) !important;
 }
 
 html.custom-theme .text-slate-900,
 html.custom-theme .text-slate-800,
-html.custom-theme .text-slate-700 {
+html.custom-theme .text-slate-700,
+html.custom-theme .text-slate-600,
+html.custom-theme .text-slate-500,
+html.custom-theme .text-slate-400,
+html.custom-theme .text-white {
 	color: var(--theme-text) !important;
 }
 
 html.custom-theme .border-slate-200,
-html.custom-theme .border-slate-300 {
+html.custom-theme .border-slate-300,
+html.custom-theme .border-slate-600,
+html.custom-theme .border-slate-700 {
 	border-color: var(--theme-border) !important;
 }
 
@@ -360,4 +242,19 @@ html.custom-theme .dark\:text-slate-300 {
 html.custom-theme .dark\:border-slate-700,
 html.custom-theme .dark\:border-slate-600 {
 	border-color: var(--theme-border) !important;
+}
+
+/* Custom theme focus ring handling */
+html.custom-theme *:focus,
+html.custom-theme *:focus-visible {
+	outline-color: var(--theme-accent) !important;
+	--tw-ring-color: var(--theme-accent) !important;
+}
+
+/* Custom theme button focus/active - text color only */
+html.custom-theme button:focus-visible,
+html.custom-theme button:active,
+html.custom-theme a:focus-visible,
+html.custom-theme a:active {
+	color: var(--theme-text) !important;
 }

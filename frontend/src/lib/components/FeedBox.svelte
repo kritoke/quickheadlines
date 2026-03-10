@@ -1,7 +1,7 @@
 <script lang="ts">
 	import type { FeedResponse, ItemResponse } from '$lib/types';
 	import { formatTimestamp } from '$lib/api';
-	import { themeState, getThemeTokens } from '$lib/stores/theme.svelte';
+	import { themeState } from '$lib/stores/theme.svelte';
 	import { slide } from 'svelte/transition';
 	import { cubicOut } from 'svelte/easing';
 	import ScrollToTop from './ScrollToTop.svelte';
@@ -16,18 +16,20 @@
 	}
 
 	let { feed, onLoadMore, loading = false }: Props = $props();
-
+	
 	let scrollContainer: HTMLDivElement | undefined = $state();
 	let isScrolledToBottom = $state(false);
 
-	let themeColors = $derived(getThemeTokens(themeState.theme).colors);
-	let isCustomTheme = $derived(['retro80s', 'matrix', 'ocean', 'sunset', 'hotdog', 'dracula', 'nord', 'cyberpunk', 'forest', 'coffee', 'vaporwave'].includes(themeState.theme));
+	let resolvedTheme = $derived(themeState.theme);
 
+	// For backward compatibility, components can still access global state
 	const isIOS = typeof navigator !== 'undefined' && /iPad|iPhone|iPod/.test(navigator.userAgent);
 	const beamThemes = ['cyberpunk', 'matrix', 'vaporwave', 'retro80s', 'dracula', 'ocean'] as const;
 	type BeamTheme = typeof beamThemes[number];
 
-	let showBorderBeam = $derived(!isIOS && beamThemes.includes(themeState.theme as BeamTheme));
+	let showBorderBeam = $derived(!isIOS && beamThemes.includes(resolvedTheme as BeamTheme));
+	let cardHasShadow = $derived(!showBorderBeam && themeState.effects);
+	let isCustomTheme = $derived(['retro80s', 'matrix', 'ocean', 'sunset', 'hotdog', 'dracula', 'nord', 'cyberpunk', 'forest', 'coffee', 'vaporwave'].includes(resolvedTheme));
 
 	let beamColors: Record<BeamTheme, { from: string; to: string; via?: string }> = {
 		matrix: { from: '#00ff00', to: '#22c55e' },
@@ -38,9 +40,7 @@
 		ocean: { from: '#06b6d4', to: '#0ea5e9', via: '#22d3ee' }
 	};
 
-	let currentBeamColors = $derived(beamColors[themeState.theme as BeamTheme] || { from: '#ff00ff', to: '#00ffff' });
-
-	let cardHasShadow = $derived(!showBorderBeam && themeState.effects);
+	let currentBeamColors = $derived(beamColors[resolvedTheme as BeamTheme] || { from: '#ff00ff', to: '#00ffff' });
 	let headerStyle = $derived.by(() => {
 		const dark = themeState.theme === 'dark';
 		const bgColor = feed.header_color || '#64748b';

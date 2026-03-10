@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { themeState, toggleEffects, getThemeTokens } from '$lib/stores/theme.svelte';
+	import { themeState, toggleEffects, getThemeColors } from '$lib/stores/theme.svelte';
 	import ThemePicker from './ThemePicker.svelte';
 	import { goto } from '$app/navigation';
 	import type { Snippet } from 'svelte';
@@ -16,7 +16,7 @@
 	}
 
 	let { title, viewLink, searchExpanded, onSearchToggle, onLogoClick, metadata, tabContent, actions }: Props = $props();
-	let themeColors = $derived(getThemeTokens(themeState.theme).colors);
+	let resolvedThemeColors = $derived(getThemeColors(themeState.theme));
 	let headerElement: HTMLElement | undefined = $state();
 
 	function handleViewSwitch(e: Event) {
@@ -103,14 +103,14 @@
 				<button
 					onclick={toggleEffects}
 					class="p-1.5 sm:p-2 rounded-lg transition-colors"
-					style="background-color: {themeState.effects ? themeColors.bgSecondary : 'transparent'}; opacity: {themeState.effects ? 1 : 0.7};"
+					style="background-color: {themeState.effects ? resolvedThemeColors.bgSecondary : 'transparent'}; opacity: {themeState.effects ? 1 : 0.7};"
 					aria-label="Toggle effects"
 					title="Effects"
 				>
 					<svg 
 						class="w-5 h-5 transition-all duration-200"
 						class:drop-shadow-lg={themeState.effects}
-						style="color: {themeState.effects ? themeColors.accent : '#94a3b8'};"
+						style="color: {themeState.effects ? resolvedThemeColors.accent : '#94a3b8'};"
 						viewBox="0 0 24 24" 
 						fill="currentColor"
 					>

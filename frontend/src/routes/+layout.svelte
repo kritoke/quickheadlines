@@ -7,9 +7,19 @@
 	import ScrollToTop from '$lib/components/ScrollToTop.svelte';
 	import ToastContainer from '$lib/components/ToastContainer.svelte';
 	
+	function isIOS(): boolean {
+		if (typeof navigator === 'undefined') return false;
+		return /iPad|iPhone|iPod/.test(navigator.userAgent);
+	}
+	
 	let { children } = $props();
 	
 	$effect(() => {
+		// Detect iOS and add class for CSS targeting
+		if (typeof window !== 'undefined' && isIOS()) {
+			document.documentElement.classList.add('ios-device');
+		}
+		
 		initTheme();
 		initLayout();
 	});

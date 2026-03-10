@@ -227,15 +227,26 @@ export interface ThemeTokens {
 	dotIndicator: string;
 }
 
+// Memoized theme tokens by theme
+const themeTokenCache = new Map<string, ThemeTokens>();
+
 export function getThemeTokens(theme: ThemeStyle): ThemeTokens {
-	const t = themes[theme];
-	return {
-		colors: t,
-		preview: t.preview,
-		cursor: t.cursor,
-		scrollButton: t.scrollButton,
-		dotIndicator: t.dotIndicator
-	};
+	const cacheKey = theme;
+	if (!themeTokenCache.has(cacheKey)) {
+		const t = themes[theme];
+		themeTokenCache.set(cacheKey, {
+			colors: t,
+			preview: t.preview,
+			cursor: t.cursor,
+			scrollButton: t.scrollButton,
+			dotIndicator: t.dotIndicator
+		});
+	}
+	return themeTokenCache.get(cacheKey)!;
+}
+
+export function clearThemeTokenCache() {
+	themeTokenCache.clear();
 }
 
 export function initTheme() {
@@ -288,6 +299,7 @@ function applyCustomThemeColors(theme: ThemeStyle) {
 export function setTheme(theme: ThemeStyle) {
 	themeState.theme = theme;
 	applyTheme(theme);
+	clearThemeTokenCache(); // Clear cache when theme changes
 	try {
 		localStorage.setItem('quickheadlines-theme', theme);
 	} catch {

@@ -5,9 +5,12 @@
 	import { fetchTimeline, fetchConfig } from '$lib/api';
 	import type { TimelineItemResponse } from '$lib/types';
 	import { SvelteSet } from 'svelte/reactivity';
-	import { createTimelineEffects } from '$lib/stores/effects.svelte';
+	import {
+		createTimelineEffects,
+	} from '$lib/stores/effects.svelte';
 	import { logger, initDebug, setDebugEnabled } from '$lib/utils/debug';
 	import { goto } from '$app/navigation';
+	import { themeState } from '$lib/stores/theme.svelte';
 	import {
 		timelineState,
 		loadTimeline,
@@ -111,7 +114,7 @@
 
 <div class="min-h-screen bg-white dark:bg-slate-900 transition-colors">
 	<AppHeader 
-		title="Timeline"
+		title="QuickHeadlines"
 		viewLink={{ href: '/', icon: 'rss' }}
 		{searchExpanded}
 		onSearchToggle={() => searchExpanded = !searchExpanded}

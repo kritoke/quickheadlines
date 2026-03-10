@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { DropdownMenu } from 'bits-ui';
 	import { layoutState, setTimelineColumns, columnOptions, type ColumnCount } from '$lib/stores/layout.svelte';
-	import { themeState, getThemeTokens } from '$lib/stores/theme.svelte';
+	import { themeState } from '$lib/stores/theme.svelte';
 
 	let isMobile = $state(false);
 
@@ -17,9 +17,6 @@
 		return () => window.removeEventListener('resize', checkMobile);
 	});
 
-	let dotColor = $derived(getThemeTokens(themeState.theme).dotIndicator);
-	let accentColors = $derived(getThemeTokens(themeState.theme).colors);
-
 	function getItemClass(selected: boolean): string {
 		const base = "px-2 py-1.5 text-left hover:opacity-80 rounded-md transition-colors flex items-center gap-3 cursor-pointer outline-none";
 		return selected ? `${base} ring-2 ring-offset-1` : base;
@@ -29,8 +26,7 @@
 {#if !isMobile}
 <DropdownMenu.Root>
 	<DropdownMenu.Trigger
-		class="flex items-center gap-1 p-2 rounded-lg transition-colors hover:opacity-80"
-		style="color: {accentColors.text}"
+		class="flex items-center gap-1 p-2 rounded-lg transition-colors hover:opacity-80 text-slate-700 dark:text-slate-300"
 		aria-label="Timeline layout"
 		title="Timeline layout"
 	>
@@ -51,8 +47,7 @@
 
 	<DropdownMenu.Portal>
 		<DropdownMenu.Content
-			class="z-50 w-48 rounded-lg shadow-lg py-2"
-			style="background-color: {accentColors.bg}; border-color: {accentColors.border}; color: {accentColors.text}"
+			class="z-50 w-48 rounded-lg shadow-lg py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100"
 			sideOffset={8}
 		>
 			<div class="px-3 py-1 text-xs font-semibold uppercase tracking-wider opacity-70">
@@ -61,19 +56,18 @@
 			{#each columnOptions as option (option.id)}
 				<DropdownMenu.Item
 					onSelect={() => setTimelineColumns(option.id)}
-					class={getItemClass(layoutState.timelineColumns === option.id)}
-					style="background-color: {layoutState.timelineColumns === option.id ? accentColors.bgSecondary : 'transparent'}; color: {accentColors.text}"
+					class="{getItemClass(layoutState.timelineColumns === option.id)} {layoutState.timelineColumns === option.id ? 'bg-slate-100 dark:bg-slate-700' : ''}"
 				>
 					<div class="flex items-center gap-0.5 w-12 shrink-0">
 						{#each Array(option.id) as _, i (`dot-${i}`)}
-							<div class="w-2 h-2 rounded-sm" style="background-color: {dotColor}"></div>
+							<div class="w-2 h-2 rounded-sm bg-slate-400 dark:bg-slate-500"></div>
 						{/each}
 					</div>
 					<div class="flex-1 min-w-0">
 						<div class="text-sm">{option.name}</div>
 					</div>
 					{#if layoutState.timelineColumns === option.id}
-						<svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: {accentColors.accent}">
+						<svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 shrink-0 text-blue-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
 							<polyline points="20 6 9 17 4 12"/>
 						</svg>
 					{/if}
