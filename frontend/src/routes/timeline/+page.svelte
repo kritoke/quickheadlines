@@ -7,6 +7,16 @@
 	import { SvelteSet } from 'svelte/reactivity';
 	import { createTimelineEffects } from '$lib/stores/effects.svelte';
 	import { logger, initDebug, setDebugEnabled } from '$lib/utils/debug';
+	import {
+		timelineState,
+		loadTimeline,
+		loadTimelineConfig,
+		handleLoadMore as doLoadMore,
+		getFilteredItems,
+		isLoading,
+		isError,
+		getError
+	} from '$lib/stores/timelineStore.svelte';
 
 	let LazyTimelineView: any = null;
 	const loadTimelineView = async () => {
@@ -26,100 +36,25 @@
 		return LazySearchModal;
 	};
 
-	let items = $state<TimelineItemResponse[]>([]);
-	let itemIds = $state(new SvelteSet<string>());
-	let hasMore = $state(false);
-	let loading = $state(true);
-	let loadingMore = $state(false);
-	let error = $state<string | null>(null);
-	let offset = $state(0);
-	let sentinelElement: HTMLDivElement | undefined = $state();
-	let isClustering = $state(false);
-	let isRefreshing = $state(false);
-	let saveScrollY = $state(0);
-	
-	let refreshMinutes = $state(10);
-	const limit = 100;
-
 	let searchQuery = $state('');
 	let searchExpanded = $state(false);
-	let pageVisible = $state(true);
 	let timelineEffects: ReturnType<typeof createTimelineEffects> | null = null;
-
-	let filteredItems = $derived.by(() => {
-		if (!searchQuery.trim()) return [...items];
-		const q = searchQuery.toLowerCase();
-		return items.filter(item => 
-			item.title.toLowerCase().includes(q) ||
-			item.feed_title.toLowerCase().includes(q)
-		);
-	});
+	let sentinelElement: HTMLDivElement | undefined = $state();
+	let visibilityHandler: (() => void) | null = null;
 	
-	async function loadConfig() {
-		try {
-			const config = await fetchConfig();
-			const newRefreshMinutes = config.refresh_minutes || 10;
-			
-			refreshMinutes = newRefreshMinutes;
-			logger.log('[Timeline] Refresh interval set to', newRefreshMinutes, 'minutes');
-			
-			// Initialize debug logging
-			if (config.debug) {
-				setDebugEnabled(config.debug);
-			}
-		} catch (e) {
-			// Use default 10 minutes on failure
-		}
-	}
-
-	async function loadTimeline(append: boolean = false) {
-		if (!append && isRefreshing) return;
-		
-		try {
-			if (append) {
-				loadingMore = true;
-			} else {
-				isRefreshing = true;
-				loading = true;
-			}
-			error = null;
-			
-			const response = await fetchTimeline(limit, offset);
-			
-			if (append) {
-				const newItems = response.items.filter((item: TimelineItemResponse) => !itemIds.has(item.id));
-				newItems.forEach((item: TimelineItemResponse) => itemIds.add(item.id));
-				items = [...items, ...newItems];
-			} else {
-				itemIds = new SvelteSet(response.items.map((item: TimelineItemResponse) => item.id));
-				items = response.items;
-			}
-			
-			hasMore = response.has_more;
-			offset += response.items.length;
-		} catch (e) {
-			error = e instanceof Error ? e.message : 'Failed to load timeline';
-		} finally {
-			loading = false;
-			loadingMore = false;
-			isRefreshing = false;
-		}
-	}
-
-	async function handleLoadMore() {
-		if (!loadingMore && hasMore) {
-			await loadTimeline(true);
-		}
-	}
-
+	let filteredItems = $derived(getFilteredItems(searchQuery));
+	
+	let loading = $derived(isLoading(timelineState));
+	let error = $derived(isError(timelineState) ? getError(timelineState) : null);
+	
 	$effect(() => {
-		if (!sentinelElement || !hasMore) return;
+		if (!sentinelElement || !timelineState.hasMore) return;
 		
 		const observer = new IntersectionObserver(
 			(entries) => {
 				entries.forEach(entry => {
-					if (entry.isIntersecting && !loadingMore && hasMore) {
-						handleLoadMore();
+					if (entry.isIntersecting && !timelineState.loadingMore && timelineState.hasMore) {
+						doLoadMore();
 					}
 				});
 			},
@@ -130,30 +65,23 @@
 		
 		return () => observer.disconnect();
 	});
-
-	let mounted = $state(false);
-	let initialized = $state(false);
-	let visibilityHandler: (() => void) | null = null;
 	
 	$effect(() => {
+		const initialized = timelineState.status !== 'idle' || timelineState.items.length > 0;
+		
 		if (!initialized) {
-			initialized = true;
-			mounted = true;
 			loadTimeline();
-			loadConfig();
+			loadTimelineConfig();
 			
-			// Initialize timeline effects for WebSocket handling
 			timelineEffects = createTimelineEffects();
 			timelineEffects.start();
 
 			visibilityHandler = () => {
-				pageVisible = !document.hidden;
 			};
 			document.addEventListener('visibilitychange', visibilityHandler);
 		}
 		
 		return () => {
-			mounted = false;
 			if (timelineEffects) {
 				timelineEffects.stop();
 			}
@@ -163,6 +91,10 @@
 			}
 		};
 	});
+	
+	async function handleRetry() {
+		await loadTimeline();
+	}
 </script>
 
 <svelte:head>
@@ -203,15 +135,15 @@
 	{/if}
 
 	<main class="max-w-[1800px] mx-auto px-4 md:px-8 xl:px-12 py-4 overflow-visible" style="padding-top: calc(var(--header-height, 4rem) + 2rem);">
-		{#if loading && items.length === 0}
+		{#if loading && timelineState.items.length === 0}
 			<div class="flex items-center justify-center py-20">
 				<div class="text-slate-500 dark:text-slate-400">Loading timeline...</div>
 			</div>
-		{:else if error && items.length === 0}
+		{:else if error && timelineState.items.length === 0}
 			<div class="bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 p-4 rounded-lg">
 				{error}
 				<button
-					onclick={() => loadTimeline()}
+					onclick={handleRetry}
 					class="ml-2 underline hover:no-underline"
 				>
 					Retry
@@ -224,7 +156,7 @@
 						<div class="text-slate-500 dark:text-slate-400">Loading timeline view...</div>
 					</div>
 				{:then TimelineView}
-					<TimelineView items={filteredItems} {hasMore} onLoadMore={handleLoadMore} />
+					<TimelineView items={filteredItems} hasMore={timelineState.hasMore} onLoadMore={doLoadMore} />
 				{/await}
 			{:else if searchQuery}
 				<div class="text-center py-20 text-slate-500 dark:text-slate-400">
@@ -232,7 +164,7 @@
 				</div>
 			{/if}
 
-			{#if loadingMore}
+			{#if timelineState.loadingMore}
 				<div class="text-center py-4">
 					<span class="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
 						<svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-slate-500 dark:text-slate-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -244,7 +176,7 @@
 				</div>
 			{/if}
 			
-			{#if hasMore}
+			{#if timelineState.hasMore}
 				<div bind:this={sentinelElement} class="h-1"></div>
 			{/if}
 		{/if}

@@ -9,6 +9,18 @@
 	import { websocketConnection } from '$lib/websocket';
 	import { createFeedEffects } from '$lib/stores/effects.svelte';
 	import { logger, initDebug, setDebugEnabled } from '$lib/utils/debug';
+	import {
+		feedState,
+		loadFeeds,
+		loadMoreFeedItems,
+		loadFeedConfig,
+		setActiveTab,
+		getFilteredFeeds,
+		isLoading,
+		isRefreshing,
+		isError,
+		getError
+	} from '$lib/stores/feedStore.svelte';
 
 	let LazySearchModal: any = null;
 	const loadSearchModal = async () => {
@@ -19,112 +31,20 @@
 		return LazySearchModal;
 	};
 
-	let feeds = $state<FeedResponse[]>([]);
-	let tabs = $state<{ name: string }[]>([]);
-	let activeTab = $state('all');
-	let loading = $state(false);
-	let error = $state<string | null>(null);
-	let lastUpdated = $state<Date | null>(null);
-	let saveScrollY = $state(0);
-
-	let loadingFeeds = $state<Record<string, boolean>>({});
-	let tabCache = $state<Record<string, { feeds: FeedResponse[], loaded: boolean, updatedAt: Date | null }>>({});
-	const MAX_TAB_CACHE_SIZE = 10;
-	
-	let refreshMinutes = $state(10);
-	let configFetched = $state(false);
-	let mounted = $state(false);
-	let isRefreshing = $state(false);
-
 	let searchQuery = $state('');
 	let searchExpanded = $state(false);
 	let tabChangeTimeout: ReturnType<typeof setTimeout> | null = null;
-	let pageVisible = $state(true);
+
 	let feedEffects: ReturnType<typeof createFeedEffects> | null = null;
 
-	let filteredFeeds = $derived.by(() => {
-		if (!searchQuery.trim()) return feeds;
-		const q = searchQuery.toLowerCase();
-		return feeds.map(feed => ({
-			...feed,
-			items: feed.items.filter(item => 
-				item.title.toLowerCase().includes(q) ||
-				feed.title.toLowerCase().includes(q)
-			)
-		})).filter(feed => feed.items.length > 0);
-	});
+	let filteredFeeds = $derived(getFilteredFeeds(searchQuery));
 
-	async function loadFeeds(tab: string = activeTab, force: boolean = false) {
-		const isAutoRefresh = force && tabCache[tab]?.loaded;
-		if (isAutoRefresh) {
-			isRefreshing = true;
-		}
+	let lastUpdated = $derived(
+		feedState.lastUpdated ? new Date(feedState.lastUpdated) : null
+	);
 
-		if (!force && tabCache[tab]?.loaded) {
-			feeds = tabCache[tab].feeds;
-			activeTab = tab;
-			lastUpdated = tabCache[tab].updatedAt;
-			return;
-		}
-
-		try {
-			loading = !isAutoRefresh;
-			error = null;
-			logger.log('[loadFeeds] Fetching feeds for tab:', tab);
-			const response: FeedsPageResponse = await fetchFeeds(tab);
-			logger.log('[loadFeeds] Got response, feeds count:', response.feeds?.length, 'swReleases:', response.software_releases?.length);
-			const swReleases = response.software_releases || [];
-			feeds = [...swReleases, ...(response.feeds || [])];
-			tabs = response.tabs || [];
-			lastUpdated = new Date(response.updated_at);
-			logger.log('[loadFeeds] Set feeds, total:', feeds.length);
-			
-			let newCache = {
-				...tabCache,
-				[tab]: { feeds, loaded: true, updatedAt: lastUpdated }
-			};
-			
-			const keys = Object.keys(newCache);
-			if (keys.length > MAX_TAB_CACHE_SIZE) {
-				const sorted = keys.sort((a, b) => {
-					const aTime = newCache[a].updatedAt?.getTime() ?? 0;
-					const bTime = newCache[b].updatedAt?.getTime() ?? 0;
-					return aTime - bTime;
-				});
-				const toRemove = keys.length - MAX_TAB_CACHE_SIZE;
-				for (let i = 0; i < toRemove; i++) {
-					delete newCache[sorted[i]];
-				}
-			}
-			tabCache = newCache;
-		} catch (e) {
-			error = e instanceof Error ? e.message : 'Failed to load feeds';
-		} finally {
-			loading = false;
-			isRefreshing = false;
-		}
-	}
-	
-	async function updateRefreshConfig() {
-		try {
-			const config = await fetchConfig();
-			const newRefreshMinutes = config.refresh_minutes || 10;
-			
-			if (newRefreshMinutes !== refreshMinutes) {
-				refreshMinutes = newRefreshMinutes;
-				logger.log('[Feeds] Config refresh interval updated from feeds.yml:', newRefreshMinutes, 'minutes');
-			}
-			
-			// Also initialize debug logging
-			if (config.debug) {
-				setDebugEnabled(config.debug);
-			}
-			
-			configFetched = true;
-		} catch (e) {
-			logger.warn('[Feeds] Failed to load config from feeds.yml, using default 10 minute interval');
-		}
-	}
+	let loading = $derived(isLoading(feedState) || isRefreshing(feedState));
+	let error = $derived(isError(feedState) ? getError(feedState) : null);
 
 	async function handleTabChange(tab: string) {
 		window.scrollTo(0, 0);
@@ -132,85 +52,53 @@
 		if (tabChangeTimeout) clearTimeout(tabChangeTimeout);
 		
 		tabChangeTimeout = setTimeout(async () => {
-			activeTab = tab;
 			const url = new URL(window.location.href);
 			url.searchParams.set('tab', tab);
 			window.history.replaceState({}, '', url);
 			
+			setActiveTab(tab);
 			await loadFeeds(tab);
 		}, 150);
 	}
 
 	async function handleLoadMore(feed: FeedResponse) {
-		try {
-			loadingFeeds = { ...loadingFeeds, [feed.url]: true };
-			
-			const currentOffset = feed.items.length;
-			const response = await fetchMoreFeedItems(feed.url, 10, currentOffset);
-			
-			const feedIndex = feeds.findIndex(f => f.url === feed.url);
-			if (feedIndex !== -1) {
-				const updatedFeed = {
-					...feeds[feedIndex],
-					items: [...feeds[feedIndex].items, ...response.items],
-					total_item_count: response.total_item_count
-				};
-				feeds = feeds.map((f, i) => i === feedIndex ? updatedFeed : f);
-				
-				tabCache = {
-					...tabCache,
-					[activeTab]: { feeds, loaded: true, updatedAt: lastUpdated }
-				};
-			}
-		} catch (e) {
-			error = e instanceof Error ? e.message : 'Failed to load more items';
-		} finally {
-			loadingFeeds = { ...loadingFeeds, [feed.url]: false };
-		}
+		await loadMoreFeedItems(feed);
+	}
+	
+	async function handleRetry() {
+		await loadFeeds(feedState.activeTab, true);
 	}
 	
 	$effect(() => {
-		logger.log('[Page] $effect running, mounted:', mounted);
-		if (!mounted) {
-			mounted = true;
+		logger.log('[Page] $effect running, mounted:', feedState.status);
+		const initialized = feedState.status !== 'idle' || feedState.feeds.length > 0;
+		
+		if (!initialized) {
 			logger.log('[Page] Initializing, loading feeds...');
 			const params = new URLSearchParams(window.location.search);
 			const urlTab = params.get('tab') || 'all';
-			activeTab = urlTab;
 			
 			loadFeeds(urlTab, true);
-			updateRefreshConfig();
+			loadFeedConfig();
 			initDebug();
 			
-			// Connect to WebSocket for real-time updates
 			websocketConnection.connect();
 			const handleWebSocketMessage = (message: any) => {
 				if (message.type === 'feed_update') {
 					logger.log('[FeedPage] Feed update received, reloading...');
-					saveScrollY = window.scrollY;
-					loadFeeds(activeTab, true);
+					const saveScrollY = window.scrollY;
+					loadFeeds(feedState.activeTab, true);
 					window.scrollTo(0, saveScrollY);
 				} else if (message.type === 'clustering_status') {
-					// Handle clustering status if needed
 				}
 			};
 			websocketConnection.addEventListener(handleWebSocketMessage);
 
-			const handleVisibilityChange = () => {
-				pageVisible = !document.hidden;
-			};
-			document.addEventListener('visibilitychange', handleVisibilityChange);
-
 			return () => {
 				if (tabChangeTimeout) clearTimeout(tabChangeTimeout);
-				document.removeEventListener('visibilitychange', handleVisibilityChange);
 			};
 		}
 	});
-
-	function handleScrollToTop() {
-		window.scrollTo({ top: 0, behavior: 'smooth' });
-	}
 </script>
 
 <svelte:head>
@@ -227,7 +115,7 @@
 		{#snippet metadata()}
 			{#if lastUpdated}
 				<span class="text-xs text-slate-500 dark:text-slate-400 hidden md:block whitespace-nowrap flex items-center gap-1">
-					{#if isRefreshing}
+					{#if isRefreshing(feedState)}
 						<span class="inline-block w-2 h-2 bg-blue-500 rounded-full animate-pulse"></span>
 					{/if}
 					Updated {lastUpdated.toLocaleTimeString()}
@@ -236,8 +124,8 @@
 		{/snippet}
 		
 		{#snippet tabContent()}
-			{#if tabs.length > 0}
-				<FeedTabs {tabs} {activeTab} onTabChange={handleTabChange} />
+			{#if feedState.tabs.length > 0}
+				<FeedTabs tabs={feedState.tabs} activeTab={feedState.activeTab} onTabChange={handleTabChange} />
 			{/if}
 		{/snippet}
 	</AppHeader>
@@ -257,15 +145,15 @@
 	{/if}
 
 	<main class="mx-auto px-4 md:px-8 xl:px-12 py-4 overflow-visible" style="padding-top: calc(var(--header-height, 6rem) + 1rem); max-width: 1800px;">
-		{#if loading && feeds.length === 0}
+		{#if loading && feedState.feeds.length === 0}
 			<div class="flex items-center justify-center py-20">
 				<div class="text-slate-500 dark:text-slate-400">Loading feeds...</div>
 			</div>
-		{:else if error && feeds.length === 0}
+		{:else if error && feedState.feeds.length === 0}
 			<div class="bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 p-4 rounded-lg">
 				{error}
 				<button
-					onclick={() => loadFeeds(activeTab, true)}
+					onclick={handleRetry}
 					class="ml-2 underline hover:no-underline"
 				>
 					Retry
@@ -279,10 +167,10 @@
 			{/if}
 
 			{#if filteredFeeds.length > 0}
-				{#key activeTab}
+				{#key feedState.activeTab}
 					<div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4">
 						{#each filteredFeeds as feed, i (`feed-${i}`)}
-							<FeedBox {feed} onLoadMore={() => handleLoadMore(feed)} loading={loadingFeeds[feed.url] ?? false} />
+							<FeedBox {feed} onLoadMore={() => handleLoadMore(feed)} loading={feedState.loadingFeeds[feed.url] ?? false} />
 						{/each}
 					</div>
 				{/key}
