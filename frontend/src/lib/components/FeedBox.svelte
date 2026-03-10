@@ -6,6 +6,7 @@
 	import { cubicOut } from 'svelte/easing';
 	import ScrollToTop from './ScrollToTop.svelte';
 	import BorderBeam from './BorderBeam.svelte';
+	import CustomScrollbar from './CustomScrollbar.svelte';
 
 	interface Props {
 		feed: FeedResponse;
@@ -62,18 +63,6 @@
 		isScrolledToBottom = maxScroll > 0 && scrollTop >= maxScroll - 10;
 	}
 
-	$effect(() => {
-		const container = scrollContainer;
-		if (!container) return;
-		
-		container.addEventListener('scroll', checkScrollPosition);
-		checkScrollPosition();
-		
-		return () => {
-			container.removeEventListener('scroll', checkScrollPosition);
-		};
-	});
-
 	function getFaviconSrc(): string {
 		if (feed.favicon_data) {
 			if (feed.favicon_data.startsWith('internal:')) {
@@ -125,12 +114,9 @@
 		<span class="truncate" class:drop-shadow-sm={!showBorderBeam}>{feed.title}</span>
 	</a>
 
-	<!-- Feed Items with Scroll Hint -->
+	<!-- Feed Items with Scroll -->
 	<div class="flex-1 relative min-h-0">
-		<div
-			bind:this={scrollContainer}
-			class="absolute inset-0 overflow-y-auto auto-hide-scroll ios-scroll"
-		>
+		<CustomScrollbar bind:scrollContainer onScroll={checkScrollPosition} class="absolute inset-0">
 			<ul class="divide-y divide-slate-100 dark:divide-slate-700">
 				{#each feed.items as item, i (`${feed.url}-${i}`)}
 					<li transition:slide={{ duration: 350, easing: cubicOut, axis: 'y' }}>
@@ -152,7 +138,7 @@
 					</li>
 				{/each}
 			</ul>
-		</div>
+		</CustomScrollbar>
 
 		<!-- Scroll Hint - positioned at bottom of visible area -->
 		{#if !isScrolledToBottom && feed.items.length > 5}
