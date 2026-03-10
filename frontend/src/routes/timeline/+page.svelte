@@ -6,6 +6,7 @@
 	import type { TimelineItemResponse } from '$lib/types';
 	import { SvelteSet } from 'svelte/reactivity';
 	import { createTimelineEffects } from '$lib/stores/effects.svelte';
+	import { logger, initDebug, setDebugEnabled } from '$lib/utils/debug';
 
 	let LazyTimelineView: any = null;
 	const loadTimelineView = async () => {
@@ -60,7 +61,12 @@
 			const newRefreshMinutes = config.refresh_minutes || 10;
 			
 			refreshMinutes = newRefreshMinutes;
-			console.log('[Timeline] Refresh interval set to', newRefreshMinutes, 'minutes');
+			logger.log('[Timeline] Refresh interval set to', newRefreshMinutes, 'minutes');
+			
+			// Initialize debug logging
+			if (config.debug) {
+				setDebugEnabled(config.debug);
+			}
 		} catch (e) {
 			// Use default 10 minutes on failure
 		}

@@ -1,13 +1,14 @@
 <script lang="ts">
-import FeedBox from '$lib/components/FeedBox.svelte';
-import FeedTabs from '$lib/components/FeedTabs.svelte';
-import AppHeader from '$lib/components/AppHeader.svelte';
-import BitsSearchModal from '$lib/components/BitsSearchModal.svelte';
-import { fetchFeeds, fetchMoreFeedItems, fetchConfig } from '$lib/api';
-import type { FeedResponse, FeedsPageResponse } from '$lib/types';
-import { themeState, toggleEffects } from '$lib/stores/theme.svelte';
-import { websocketConnection } from '$lib/websocket';
+	import FeedBox from '$lib/components/FeedBox.svelte';
+	import FeedTabs from '$lib/components/FeedTabs.svelte';
+	import AppHeader from '$lib/components/AppHeader.svelte';
+	import BitsSearchModal from '$lib/components/BitsSearchModal.svelte';
+	import { fetchFeeds, fetchMoreFeedItems, fetchConfig } from '$lib/api';
+	import type { FeedResponse, FeedsPageResponse } from '$lib/types';
+	import { themeState, toggleEffects } from '$lib/stores/theme.svelte';
+	import { websocketConnection } from '$lib/websocket';
 	import { createFeedEffects } from '$lib/stores/effects.svelte';
+	import { logger, initDebug, setDebugEnabled } from '$lib/utils/debug';
 
 	let LazySearchModal: any = null;
 	const loadSearchModal = async () => {
@@ -69,14 +70,14 @@ import { websocketConnection } from '$lib/websocket';
 		try {
 			loading = !isAutoRefresh;
 			error = null;
-			console.log('[loadFeeds] Fetching feeds for tab:', tab);
+			logger.log('[loadFeeds] Fetching feeds for tab:', tab);
 			const response: FeedsPageResponse = await fetchFeeds(tab);
-			console.log('[loadFeeds] Got response, feeds count:', response.feeds?.length, 'swReleases:', response.software_releases?.length);
+			logger.log('[loadFeeds] Got response, feeds count:', response.feeds?.length, 'swReleases:', response.software_releases?.length);
 			const swReleases = response.software_releases || [];
 			feeds = [...swReleases, ...(response.feeds || [])];
 			tabs = response.tabs || [];
 			lastUpdated = new Date(response.updated_at);
-			console.log('[loadFeeds] Set feeds, total:', feeds.length);
+			logger.log('[loadFeeds] Set feeds, total:', feeds.length);
 			
 			let newCache = {
 				...tabCache,
@@ -111,12 +112,17 @@ import { websocketConnection } from '$lib/websocket';
 			
 			if (newRefreshMinutes !== refreshMinutes) {
 				refreshMinutes = newRefreshMinutes;
-				console.log('[Feeds] Config refresh interval updated from feeds.yml:', newRefreshMinutes, 'minutes');
+				logger.log('[Feeds] Config refresh interval updated from feeds.yml:', newRefreshMinutes, 'minutes');
+			}
+			
+			// Also initialize debug logging
+			if (config.debug) {
+				setDebugEnabled(config.debug);
 			}
 			
 			configFetched = true;
 		} catch (e) {
-			console.warn('[Feeds] Failed to load config from feeds.yml, using default 10 minute interval');
+			logger.warn('[Feeds] Failed to load config from feeds.yml, using default 10 minute interval');
 		}
 	}
 
@@ -164,22 +170,23 @@ import { websocketConnection } from '$lib/websocket';
 	}
 	
 	$effect(() => {
-		console.log('[Page] $effect running, mounted:', mounted);
+		logger.log('[Page] $effect running, mounted:', mounted);
 		if (!mounted) {
 			mounted = true;
-			console.log('[Page] Initializing, loading feeds...');
+			logger.log('[Page] Initializing, loading feeds...');
 			const params = new URLSearchParams(window.location.search);
 			const urlTab = params.get('tab') || 'all';
 			activeTab = urlTab;
 			
 			loadFeeds(urlTab, true);
 			updateRefreshConfig();
+			initDebug();
 			
 			// Connect to WebSocket for real-time updates
 			websocketConnection.connect();
 			const handleWebSocketMessage = (message: any) => {
 				if (message.type === 'feed_update') {
-					console.log('[FeedPage] Feed update received, reloading...');
+					logger.log('[FeedPage] Feed update received, reloading...');
 					saveScrollY = window.scrollY;
 					loadFeeds(activeTab, true);
 					window.scrollTo(0, saveScrollY);

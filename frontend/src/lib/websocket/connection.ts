@@ -6,6 +6,8 @@ export type WebSocketMessage = {
 	is_clustering?: boolean;
 };
 
+import { logger } from '$lib/utils/debug';
+
 // Shared WebSocket connection instance
 let sharedConnection: WebSocket | null = null;
 let sharedState: ConnectionState = 'disconnected';
@@ -54,7 +56,7 @@ function scheduleReconnect() {
 	}
 
 	const delay = calculateDelay();
-	console.log(`[WebSocket] Reconnecting in ${Math.round(delay)}ms (current delay: ${currentDelayMs}ms)`);
+	logger.log(`[WebSocket] Reconnecting in ${Math.round(delay)}ms (current delay: ${currentDelayMs}ms)`);
 
 	reconnectTimeout = setTimeout(() => {
 		reconnectTimeout = null;
@@ -79,7 +81,7 @@ function connectWebSocket() {
 	sharedConnection.onopen = () => {
 		sharedState = 'connected';
 		currentDelayMs = INITIAL_DELAY_MS; // Reset delay on successful connection
-		console.log('[WebSocket] Connected');
+		logger.log('[WebSocket] Connected');
 
 		// Flush any queued messages
 		flushMessageQueue();
@@ -92,12 +94,12 @@ function connectWebSocket() {
 			// Dispatch to all registered listeners
 			listeners.forEach(listener => listener(data));
 		} catch (e) {
-			console.error('[WebSocket] Failed to parse message:', e);
+			logger.error('[WebSocket] Failed to parse message:', e);
 		}
 	};
 
 	sharedConnection.onerror = (error) => {
-		console.error('[WebSocket] Error:', error);
+		logger.error('[WebSocket] Error:', error);
 		// Error will trigger onclose, so we don't need to set state here
 	};
 
@@ -105,7 +107,7 @@ function connectWebSocket() {
 		const wasConnected = sharedState === 'connected';
 		sharedConnection = null;
 		sharedState = 'disconnected';
-		console.log('[WebSocket] Disconnected');
+		logger.log('[WebSocket] Disconnected');
 
 		if (!intentionalClose) {
 			// Increase delay for next attempt (exponential backoff)

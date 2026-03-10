@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { themeState, getScrollButtonColors } from '$lib/stores/theme.svelte';
+	import { logger } from '$lib/utils/debug';
 	
 	let colors = $derived(getScrollButtonColors(themeState.theme));
 	
@@ -14,7 +15,7 @@
 		document.body.scrollIntoView({ behavior: 'auto', block: 'start' });
 		document.documentElement.scrollIntoView({ behavior: 'auto', block: 'start' });
 		
-		console.log('Scroll triggered!');
+		logger.log('Scroll triggered!');
 	}
 </script>
 

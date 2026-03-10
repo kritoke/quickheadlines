@@ -96,4 +96,5 @@ export interface VersionResponse {
 export interface ConfigResponse {
 	refresh_minutes: number;
 	item_limit: number;
+	debug: boolean;
 }

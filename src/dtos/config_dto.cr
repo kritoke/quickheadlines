@@ -6,7 +6,8 @@ class Quickheadlines::DTOs::ConfigResponse
 
   property refresh_minutes : Int32
   property item_limit : Int32
+  property debug : Bool
 
-  def initialize(@refresh_minutes : Int32, @item_limit : Int32)
+  def initialize(@refresh_minutes : Int32, @item_limit : Int32, @debug : Bool)
   end
 end

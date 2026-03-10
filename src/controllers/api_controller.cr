@@ -353,10 +353,12 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
     config = STATE.config
     refresh_minutes = config.try(&.refresh_minutes) || 10
     item_limit = config.try(&.item_limit) || 20
+    debug = config.try(&.debug?) || false
 
     view(Quickheadlines::DTOs::ConfigResponse.new(
       refresh_minutes: refresh_minutes,
-      item_limit: item_limit
+      item_limit: item_limit,
+      debug: debug
     ))
   end
 

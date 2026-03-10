@@ -2,6 +2,7 @@ import { loadFeeds, feedState } from './feedStore.svelte';
 import { loadTimeline, timelineState } from './timelineStore.svelte';
 import { websocketConnection } from '$lib/websocket';
 import { fetchConfig } from '$lib/api';
+import { logger } from '$lib/utils/debug';
 
 export interface EffectConfig {
 	refreshInterval?: number;
@@ -28,7 +29,7 @@ let saveScrollY = 0;
 
 function handleFeedUpdate(timestamp: number) {
 	if (timestamp > lastUpdate) {
-		console.log('[Effects] Feed update received, reloading...');
+		logger.log('[Effects] Feed update received, reloading...');
 		lastUpdate = timestamp;
 		saveScrollY = window.scrollY;
 		
