@@ -7,6 +7,7 @@
 	import { SvelteSet } from 'svelte/reactivity';
 	import { createTimelineEffects } from '$lib/stores/effects.svelte';
 	import { logger, initDebug, setDebugEnabled } from '$lib/utils/debug';
+	import { goto } from '$app/navigation';
 	import {
 		timelineState,
 		loadTimeline,
@@ -95,6 +96,13 @@
 	async function handleRetry() {
 		await loadTimeline();
 	}
+
+	function handleLogoClick() {
+		document.body.scrollTop = 0;
+		document.documentElement.scrollTop = 0;
+		window.scrollTo(0, 0);
+		goto('/?tab=all');
+	}
 </script>
 
 <svelte:head>
@@ -107,6 +115,7 @@
 		viewLink={{ href: '/', icon: 'rss' }}
 		{searchExpanded}
 		onSearchToggle={() => searchExpanded = !searchExpanded}
+		onLogoClick={handleLogoClick}
 	>
 		{#snippet metadata()}
 			<span class="text-xs sm:text-sm text-slate-500 dark:text-slate-400 whitespace-nowrap">

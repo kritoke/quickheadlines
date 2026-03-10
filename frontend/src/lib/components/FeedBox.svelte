@@ -1,12 +1,13 @@
 <script lang="ts">
 	import type { FeedResponse, ItemResponse } from '$lib/types';
 	import { formatTimestamp } from '$lib/api';
-	import { themeState, getThemeAccentColors } from '$lib/stores/theme.svelte';
+	import { themeState, getThemeTokens } from '$lib/stores/theme.svelte';
 	import { slide } from 'svelte/transition';
 	import { cubicOut } from 'svelte/easing';
 	import ScrollToTop from './ScrollToTop.svelte';
 	import BorderBeam from './BorderBeam.svelte';
 	import CustomScrollbar from './CustomScrollbar.svelte';
+	import Card from './ui/Card.svelte';
 
 	interface Props {
 		feed: FeedResponse;
@@ -19,7 +20,8 @@
 	let scrollContainer: HTMLDivElement | undefined = $state();
 	let isScrolledToBottom = $state(false);
 
-	let themeColors = $derived(getThemeAccentColors(themeState.theme));
+	let themeColors = $derived(getThemeTokens(themeState.theme).colors);
+	let isCustomTheme = $derived(['retro80s', 'matrix', 'ocean', 'sunset', 'hotdog', 'dracula', 'nord', 'cyberpunk', 'forest', 'coffee', 'vaporwave'].includes(themeState.theme));
 
 	const isIOS = typeof navigator !== 'undefined' && /iPad|iPhone|iPod/.test(navigator.userAgent);
 	const beamThemes = ['cyberpunk', 'matrix', 'vaporwave', 'retro80s', 'dracula', 'ocean'] as const;
@@ -80,7 +82,11 @@
 	}
 </script>
 
-<div class="rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 overflow-hidden flex flex-col h-[400px] transform-gpu relative" class:shadow-sm={cardHasShadow} class:shadow-theme={cardHasShadow} data-name="feed-box">
+<Card 
+	class="overflow-hidden flex flex-col h-[400px] transform-gpu relative {!cardHasShadow ? '' : 'shadow-theme'}" 
+	themeVariant={isCustomTheme}
+	data-name="feed-box"
+>
 	{#if showBorderBeam}
 		<BorderBeam 
 			colorFrom={currentBeamColors.from} 
@@ -170,4 +176,4 @@
 			</button>
 		</div>
 	{/if}
-</div>
+</Card>

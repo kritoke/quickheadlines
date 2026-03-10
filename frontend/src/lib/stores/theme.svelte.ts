@@ -219,6 +219,25 @@ export function getDotIndicatorColors(theme: ThemeStyle): string {
 	return themes[theme].dotIndicator;
 }
 
+export interface ThemeTokens {
+	colors: ThemeColors;
+	preview: string;
+	cursor: { primary: string; trail: string };
+	scrollButton: { bg: string; text: string; hover: string };
+	dotIndicator: string;
+}
+
+export function getThemeTokens(theme: ThemeStyle): ThemeTokens {
+	const t = themes[theme];
+	return {
+		colors: t,
+		preview: t.preview,
+		cursor: t.cursor,
+		scrollButton: t.scrollButton,
+		dotIndicator: t.dotIndicator
+	};
+}
+
 export function initTheme() {
 	if (typeof window === 'undefined') return;
 

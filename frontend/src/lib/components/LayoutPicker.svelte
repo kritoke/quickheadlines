@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { DropdownMenu } from 'bits-ui';
 	import { layoutState, setTimelineColumns, columnOptions, type ColumnCount } from '$lib/stores/layout.svelte';
-	import { themeState, getDotIndicatorColors, getThemeAccentColors } from '$lib/stores/theme.svelte';
+	import { themeState, getThemeTokens } from '$lib/stores/theme.svelte';
 
 	let isMobile = $state(false);
 
@@ -17,8 +17,8 @@
 		return () => window.removeEventListener('resize', checkMobile);
 	});
 
-	let dotColor = $derived(getDotIndicatorColors(themeState.theme));
-	let accentColors = $derived(getThemeAccentColors(themeState.theme));
+	let dotColor = $derived(getThemeTokens(themeState.theme).dotIndicator);
+	let accentColors = $derived(getThemeTokens(themeState.theme).colors);
 
 	function getItemClass(selected: boolean): string {
 		const base = "px-2 py-1.5 text-left hover:opacity-80 rounded-md transition-colors flex items-center gap-3 cursor-pointer outline-none";

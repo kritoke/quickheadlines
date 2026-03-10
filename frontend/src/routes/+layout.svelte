@@ -13,6 +13,26 @@
 		initTheme();
 		initLayout();
 	});
+
+	$effect(() => {
+		if (typeof window === 'undefined') return;
+
+		const handleNavigation = () => {
+			requestAnimationFrame(() => {
+				document.body.scrollTop = 0;
+				document.documentElement.scrollTop = 0;
+				window.scrollTo(0, 0);
+			});
+		};
+
+		window.addEventListener('popstate', handleNavigation);
+		window.addEventListener('pageshow', handleNavigation);
+
+		return () => {
+			window.removeEventListener('popstate', handleNavigation);
+			window.removeEventListener('pageshow', handleNavigation);
+		};
+	});
 </script>
 
 <Effects />

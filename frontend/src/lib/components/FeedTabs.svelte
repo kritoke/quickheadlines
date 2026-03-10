@@ -2,7 +2,7 @@
 	import { Tabs } from 'bits-ui';
 	import { fly } from 'svelte/transition';
 	import { cubicOut } from 'svelte/easing';
-	import { themeState, getThemeAccentColors } from '$lib/stores/theme.svelte';
+	import { themeState, getThemeTokens } from '$lib/stores/theme.svelte';
 	import type { TabResponse } from '$lib/types';
 
 	interface Props {
@@ -13,7 +13,7 @@
 
 	let { tabs, activeTab, onTabChange }: Props = $props();
 
-	let themeColors = $derived(getThemeAccentColors(themeState.theme));
+	let themeColors = $derived(getThemeTokens(themeState.theme).colors);
 
 	let listElement: HTMLDivElement | undefined = $state();
 

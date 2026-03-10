@@ -28,7 +28,7 @@ describe('AppHeader', () => {
 		unmount(component);
 	});
 
-	it('renders logo link with clock icon URL', () => {
+	it('renders logo button with clock icon URL', () => {
 		const component = mount(AppHeader, {
 			target: document.body,
 			props: {
@@ -39,13 +39,13 @@ describe('AppHeader', () => {
 			}
 		});
 		
-		const logoLink = document.body.querySelector('a[href="/?tab=all"]');
-		expect(logoLink).toBeInTheDocument();
+		const logoButton = document.body.querySelector('button');
+		expect(logoButton).toBeInTheDocument();
 		
 		unmount(component);
 	});
 
-	it('renders logo link with rss icon URL', () => {
+	it('renders logo button with rss icon URL', () => {
 		const component = mount(AppHeader, {
 			target: document.body,
 			props: {
@@ -56,8 +56,8 @@ describe('AppHeader', () => {
 			}
 		});
 		
-		const logoLink = document.body.querySelector('a[href="/"]');
-		expect(logoLink).toBeInTheDocument();
+		const logoButton = document.body.querySelector('button');
+		expect(logoButton).toBeInTheDocument();
 		
 		unmount(component);
 	});

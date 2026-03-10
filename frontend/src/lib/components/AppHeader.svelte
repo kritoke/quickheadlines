@@ -1,6 +1,7 @@
 <script lang="ts">
-	import { themeState, toggleEffects, getThemeAccentColors } from '$lib/stores/theme.svelte';
+	import { themeState, toggleEffects, getThemeTokens } from '$lib/stores/theme.svelte';
 	import ThemePicker from './ThemePicker.svelte';
+	import { goto } from '$app/navigation';
 	import type { Snippet } from 'svelte';
 
 	interface Props {
@@ -8,14 +9,35 @@
 		viewLink: { href: string; icon: 'clock' | 'rss' };
 		searchExpanded: boolean;
 		onSearchToggle: () => void;
+		onLogoClick?: () => void;
 		metadata?: Snippet;
 		tabContent?: Snippet;
 		actions?: Snippet;
 	}
 
-	let { title, viewLink, searchExpanded, onSearchToggle, metadata, tabContent, actions }: Props = $props();
-	let themeColors = $derived(getThemeAccentColors(themeState.theme));
+	let { title, viewLink, searchExpanded, onSearchToggle, onLogoClick, metadata, tabContent, actions }: Props = $props();
+	let themeColors = $derived(getThemeTokens(themeState.theme).colors);
 	let headerElement: HTMLElement | undefined = $state();
+
+	function handleViewSwitch(e: Event) {
+		e.preventDefault();
+		document.body.scrollTop = 0;
+		document.documentElement.scrollTop = 0;
+		window.scrollTo(0, 0);
+		goto(viewLink.href);
+	}
+
+	function handleLogoClick(e: Event) {
+		e.preventDefault();
+		document.body.scrollTop = 0;
+		document.documentElement.scrollTop = 0;
+		window.scrollTo(0, 0);
+		if (onLogoClick) {
+			onLogoClick();
+		} else {
+			goto('/?tab=all');
+		}
+	}
 
 	$effect(() => {
 		if (typeof window === 'undefined' || !headerElement) return;
@@ -35,10 +57,10 @@
 	<div class="mx-auto px-4 md:px-8 xl:px-12" style="max-width: 1800px;">
 		<div class="flex items-center justify-between py-2">
 			<div class="flex items-center gap-2 sm:gap-3 min-w-0">
-				<a href="/?tab=all" class="flex items-center gap-2 hover:opacity-80 transition-opacity shrink-0">
+				<button onclick={handleLogoClick} class="flex items-center gap-2 hover:opacity-80 transition-opacity shrink-0">
 					<img src="/logo.svg" alt="Logo" class="w-7 h-7 sm:w-8 sm:h-8" />
 					<span class="text-lg sm:text-xl font-bold text-slate-900 dark:text-white">{title}</span>
-				</a>
+				</button>
 				{#if metadata}
 					{@render metadata()}
 				{/if}
@@ -59,8 +81,8 @@
 						<path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
 					</svg>
 				</button>
-				<a 
-					href={viewLink.href} 
+				<button 
+					onclick={handleViewSwitch}
 					class="p-1.5 sm:p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
 					aria-label={viewLink.icon === 'clock' ? 'Timeline view' : 'Feed view'}
 					title={viewLink.icon === 'clock' ? 'Timeline' : 'Feeds'}
@@ -77,7 +99,7 @@
 							<circle cx="5" cy="19" r="1" fill="currentColor" />
 						</svg>
 					{/if}
-				</a>
+				</button>
 				<button
 					onclick={toggleEffects}
 					class="p-1.5 sm:p-2 rounded-lg transition-colors"

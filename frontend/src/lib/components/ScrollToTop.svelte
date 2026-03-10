@@ -1,8 +1,7 @@
 <script lang="ts">
-	import { themeState, getScrollButtonColors } from '$lib/stores/theme.svelte';
-	import { logger } from '$lib/utils/debug';
+	import { themeState, getThemeTokens } from '$lib/stores/theme.svelte';
 	
-	let colors = $derived(getScrollButtonColors(themeState.theme));
+	let colors = $derived(getThemeTokens(themeState.theme).scrollButton);
 	
 	function doScroll(e: Event) {
 		e.preventDefault();

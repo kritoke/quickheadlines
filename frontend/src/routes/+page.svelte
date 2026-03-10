@@ -50,7 +50,9 @@
 		if (tabChangeTimeout) clearTimeout(tabChangeTimeout);
 		
 		tabChangeTimeout = setTimeout(async () => {
-			document.documentElement.scrollTo({ top: 0, behavior: 'instant' });
+			document.body.scrollTop = 0;
+			document.documentElement.scrollTop = 0;
+			window.scrollTo(0, 0);
 			
 			const url = new URL(window.location.href);
 			url.searchParams.set('tab', tab);
@@ -99,11 +101,19 @@
 			};
 		}
 	});
+	async function handleLogoClick() {
+		const currentTab = feedState.activeTab;
+		document.body.scrollTop = 0;
+		document.documentElement.scrollTop = 0;
+		window.scrollTo(0, 0);
+		
+		const url = new URL(window.location.href);
+		url.searchParams.set('tab', currentTab);
+		window.history.replaceState({}, '', url);
+		
+		await loadFeeds(currentTab, true);
+	}
 </script>
-
-<svelte:head>
-	<title>QuickHeadlines</title>
-</svelte:head>
 
 <div class="min-h-screen bg-white dark:bg-slate-900 transition-colors duration-200" data-name="feeds-page">
 	<AppHeader 
@@ -111,6 +121,7 @@
 		viewLink={{ href: '/timeline', icon: 'clock' }}
 		{searchExpanded}
 		onSearchToggle={() => searchExpanded = !searchExpanded}
+		onLogoClick={handleLogoClick}
 	>
 		{#snippet metadata()}
 			{#if lastUpdated}

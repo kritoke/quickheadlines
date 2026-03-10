@@ -1,11 +1,11 @@
 <script lang="ts">
 	import { DropdownMenu } from 'bits-ui';
-	import { themeState, setTheme, themeStyles, getThemeAccentColors, getThemePreview, type ThemeStyle } from '$lib/stores/theme.svelte';
+	import { themeState, setTheme, themeStyles, getThemeTokens, type ThemeStyle } from '$lib/stores/theme.svelte';
 
-	let accentColors = $derived(getThemeAccentColors(themeState.theme));
+	let accentColors = $derived(getThemeTokens(themeState.theme).colors);
 	let themePreviews = $derived(
 		themeStyles.reduce((acc, t) => {
-			acc[t.id] = getThemePreview(t.id);
+			acc[t.id] = getThemeTokens(t.id).preview;
 			return acc;
 		}, {} as Record<ThemeStyle, string>)
 	);
