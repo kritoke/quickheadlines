@@ -285,7 +285,11 @@ end
 def fetch_feed(feed : Feed, display_item_limit : Int32, db_fetch_limit : Int32, previous_data : FeedData? = nil) : FeedData
   if feed.url.includes?("reddit.com/r/")
     result = FetcherAdapter.pull_feed(feed, previous_data)
-    return result.value_or(error_feed_data(feed, "Fetcher error"))
+    if result.success?
+      return result.value
+    else
+      return error_feed_data(feed, "Fetcher error: #{result.error}")
+    end
   end
 
   if feed.url.includes?("github.com") && feed.url.includes?("/releases")

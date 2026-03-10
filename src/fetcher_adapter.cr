@@ -10,15 +10,11 @@ module FetcherAdapter
     etag = previous_data.try(&.etag)
     last_modified = previous_data.try(&.last_modified)
 
-    debug_log("FetcherAdapter.pull_feed: #{feed.url}")
-
     headers = HTTP::Headers{
       "User-Agent" => USER_AGENT
     }
 
     result = Fetcher.pull(feed.url, headers, etag, last_modified, limit)
-
-    debug_log("Fetcher result - error: #{result.error_message.inspect}, entries count: #{result.entries.size}")
 
     if error = result.error_message
       debug_log("Fetcher error: #{error}")
@@ -27,6 +23,11 @@ module FetcherAdapter
 
     items = result.entries.map do |entry|
       Item.new(entry.title, entry.url, entry.published_at)
+    end
+
+    if items.empty?
+      debug_log("No items found for #{feed.url}")
+      return Result(FeedData, String).failure("No items found")
     end
 
     if items.empty?
@@ -57,10 +58,6 @@ module FetcherAdapter
   rescue ex
     STDERR.puts "[ERROR] FetcherAdapter: #{ex.message}"
     Result(FeedData, String).failure("Error: #{ex.class}")
-  end
-
-  def self.configure_logger
-    Fetcher.logger = ->(msg : String) { STDERR.puts "[Fetcher] #{msg}" }
   end
 
   private def self.extract_header_colors_simple(feed : Feed, favicon_path : String?) : {String?, String?}
