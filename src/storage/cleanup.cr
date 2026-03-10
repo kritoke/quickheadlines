@@ -1,5 +1,7 @@
+require "../constants"
+
 module CleanupRepository
-  def cleanup_old_entries(retention_hours : Int32 = CACHE_RETENTION_HOURS, config_urls : Array(String)? = nil)
+  def cleanup_old_entries(retention_hours : Int32 = Constants::CACHE_RETENTION_HOURS, config_urls : Array(String)? = nil)
     @mutex.synchronize do
       log_db_size(@db_path, "before cleanup")
 
@@ -18,7 +20,7 @@ module CleanupRepository
     end
   end
 
-  def cleanup_old_articles(retention_days : Int32 = CACHE_RETENTION_DAYS)
+  def cleanup_old_articles(retention_days : Int32 = Constants::CACHE_RETENTION_DAYS)
     @mutex.synchronize do
       cutoff = (Time.utc - retention_days.days).to_s("%Y-%m-%d %H:%M:%S")
 

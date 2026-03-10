@@ -1,5 +1,7 @@
 require "db"
 require "sqlite3"
+require "../config"
+require "../storage/schema"
 
 # Database service for managing SQLite connections
 # Provides dependency injection for database access
@@ -84,45 +86,29 @@ class DatabaseService
     db.exec("PRAGMA cache_size = -64000")
 
     # Feeds table
-    db.exec <<-SQL
-      CREATE TABLE IF NOT EXISTS feeds (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        url TEXT UNIQUE NOT NULL,
-        title TEXT NOT NULL,
-        site_link TEXT,
-        header_color TEXT,
-        etag TEXT,
-        last_modified TEXT,
-        favicon TEXT,
-        favicon_data TEXT,
-        last_fetched TEXT NOT NULL,
-        created_at TEXT NOT NULL DEFAULT (datetime('now'))
-      )
-      SQL
+    db.exec(Schema::FEEDS_TABLE)
 
-    # Add favicon_data column if needed (migration)
+    # Add columns if needed (migration)
     begin
       db.exec("ALTER TABLE feeds ADD COLUMN favicon_data TEXT")
     rescue ex : SQLite3::Exception
       # Column already exists
     end
 
+    begin
+      db.exec("ALTER TABLE feeds ADD COLUMN header_text_color TEXT")
+    rescue ex : SQLite3::Exception
+      # Column already exists
+    end
+
+    begin
+      db.exec("ALTER TABLE feeds ADD COLUMN header_theme_colors TEXT")
+    rescue ex : SQLite3::Exception
+      # Column already exists
+    end
+
     # Items table
-    db.exec <<-SQL
-      CREATE TABLE IF NOT EXISTS items (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        feed_id INTEGER NOT NULL,
-        title TEXT NOT NULL,
-        link TEXT NOT NULL,
-        pub_date TEXT,
-        version TEXT,
-        position INTEGER NOT NULL,
-        minhash_signature BLOB,
-        cluster_id INTEGER REFERENCES items(id),
-        FOREIGN KEY (feed_id) REFERENCES feeds(id) ON DELETE CASCADE,
-        UNIQUE(feed_id, link)
-      )
-      SQL
+    db.exec(Schema::ITEMS_TABLE)
 
     # Add columns if needed (migration)
     begin
@@ -138,26 +124,10 @@ class DatabaseService
     end
 
     # LSH bands table
-    db.exec <<-SQL
-      CREATE TABLE IF NOT EXISTS lsh_bands (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        item_id INTEGER NOT NULL,
-        band_index INTEGER NOT NULL,
-        band_hash INTEGER NOT NULL,
-        created_at TEXT NOT NULL DEFAULT (datetime('now')),
-        FOREIGN KEY (item_id) REFERENCES items(id) ON DELETE CASCADE,
-        UNIQUE(item_id, band_index)
-      )
-      SQL
+    db.exec(Schema::LSH_BANDS_TABLE)
 
     # Indexes for performance
-    db.exec("CREATE INDEX IF NOT EXISTS idx_items_feed_id ON items(feed_id)")
-    db.exec("CREATE INDEX IF NOT EXISTS idx_items_pub_date ON items(pub_date DESC)")
-    db.exec("CREATE INDEX IF NOT EXISTS idx_feeds_last_fetched ON feeds(last_fetched DESC)")
-    db.exec("CREATE INDEX IF NOT EXISTS idx_feeds_url ON feeds(url)")
-    db.exec("CREATE INDEX IF NOT EXISTS idx_items_cluster ON items(cluster_id)")
-    db.exec("CREATE INDEX IF NOT EXISTS idx_lsh_band_search ON lsh_bands(band_index, band_hash)")
-    db.exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_items_unique_feed_link ON items(feed_id, link)")
+    db.exec(Schema::INDEXES)
   end
 
   def close

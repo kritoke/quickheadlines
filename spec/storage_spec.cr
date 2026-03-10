@@ -1,6 +1,7 @@
 require "spec"
 require "../src/storage"
 require "../src/config"
+require "../src/constants"
 
 describe "Storage" do
   describe "format_bytes" do
@@ -40,16 +41,16 @@ describe "Storage" do
 
   describe "Constants" do
     it "has correct default cache retention" do
-      CACHE_RETENTION_HOURS.should eq(168)
+      Constants::CACHE_RETENTION_HOURS.should eq(168)
     end
 
     it "has correct database size limits" do
-      DB_SIZE_WARNING_THRESHOLD.should eq(50 * 1024 * 1024)
-      DB_SIZE_HARD_LIMIT.should eq(100 * 1024 * 1024)
+      Constants::DB_SIZE_WARNING_THRESHOLD.should eq(50 * 1024 * 1024)
+      Constants::DB_SIZE_HARD_LIMIT.should eq(100 * 1024 * 1024)
     end
 
     it "has correct cache retention days" do
-      CACHE_RETENTION_DAYS.should eq(7)
+      Constants::CACHE_RETENTION_DAYS.should eq(7)
     end
   end
 

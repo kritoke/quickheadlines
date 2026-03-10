@@ -2,29 +2,14 @@ require "db"
 require "sqlite3"
 require "../config"
 require "./cache_utils"
+require "./schema"
 
 def create_schema(db : DB::Database, db_path : String)
   db.exec("PRAGMA journal_mode = WAL")
   db.exec("PRAGMA synchronous = NORMAL")
   db.exec("PRAGMA cache_size = -64000")
 
-  db.exec <<-SQL
-    CREATE TABLE IF NOT EXISTS feeds (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      url TEXT UNIQUE NOT NULL,
-      title TEXT NOT NULL,
-      site_link TEXT,
-      header_color TEXT,
-      header_theme_colors TEXT,
-      header_text_color TEXT,
-      etag TEXT,
-      last_modified TEXT,
-      favicon TEXT,
-      favicon_data TEXT,
-      last_fetched TEXT NOT NULL,
-      created_at TEXT NOT NULL DEFAULT (datetime('now'))
-    )
-    SQL
+  db.exec(Schema::FEEDS_TABLE)
 
   begin
     db.exec("ALTER TABLE feeds ADD COLUMN favicon_data TEXT")
@@ -44,21 +29,7 @@ def create_schema(db : DB::Database, db_path : String)
   rescue ex : SQLite3::Exception
   end
 
-  db.exec <<-SQL
-    CREATE TABLE IF NOT EXISTS items (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      feed_id INTEGER NOT NULL,
-      title TEXT NOT NULL,
-      link TEXT NOT NULL,
-      pub_date TEXT,
-      version TEXT,
-      position INTEGER NOT NULL,
-      minhash_signature BLOB,
-      cluster_id INTEGER REFERENCES items(id),
-      FOREIGN KEY (feed_id) REFERENCES feeds(id) ON DELETE CASCADE,
-      UNIQUE(feed_id, link)
-    )
-    SQL
+  db.exec(Schema::ITEMS_TABLE)
 
   begin
     db.exec("ALTER TABLE items ADD COLUMN minhash_signature BLOB")
@@ -72,17 +43,7 @@ def create_schema(db : DB::Database, db_path : String)
   rescue ex : SQLite3::Exception
   end
 
-  db.exec <<-SQL
-    CREATE TABLE IF NOT EXISTS lsh_bands (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      item_id INTEGER NOT NULL,
-      band_index INTEGER NOT NULL,
-      band_hash INTEGER NOT NULL,
-      created_at TEXT NOT NULL DEFAULT (datetime('now')),
-      FOREIGN KEY (item_id) REFERENCES items(id) ON DELETE CASCADE,
-      UNIQUE(item_id, band_index)
-    )
-    SQL
+  db.exec(Schema::LSH_BANDS_TABLE)
 
   cleanup_result = db.exec(<<-SQL
     DELETE FROM items

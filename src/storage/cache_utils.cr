@@ -3,13 +3,13 @@ require "sqlite3"
 require "file_utils"
 require "time"
 require "../config"
+require "../constants"
 
-CACHE_RETENTION_HOURS = 168
-
-CACHE_RETENTION_DAYS = 7
-
-DB_SIZE_WARNING_THRESHOLD = 50 * 1024 * 1024
-DB_SIZE_HARD_LIMIT        = 100 * 1024 * 1024
+# Cache retention settings - imported from Constants module
+# CACHE_RETENTION_HOURS = Constants::CACHE_RETENTION_HOURS  (168 hours = 7 days)
+# CACHE_RETENTION_DAYS = Constants::CACHE_RETENTION_DAYS    (7 days)
+# DB_SIZE_WARNING_THRESHOLD = Constants::DB_SIZE_WARNING_THRESHOLD
+# DB_SIZE_HARD_LIMIT = Constants::DB_SIZE_HARD_LIMIT
 
 def get_cache_dir(config : Config?) : String
   if env = ENV["QUICKHEADLINES_CACHE_DIR"]?
@@ -97,10 +97,10 @@ def log_db_size(db_path : String, context : String = "")
 
   STDERR.puts "[#{Time.local}] Database size: #{size_str}#{context_msg}"
 
-  if size > DB_SIZE_HARD_LIMIT
-    STDERR.puts "[Cache WARNING] Database exceeds hard limit (#{format_bytes(DB_SIZE_HARD_LIMIT)})"
-  elsif size > DB_SIZE_WARNING_THRESHOLD
-    STDERR.puts "[Cache WARNING] Database exceeds warning threshold (#{format_bytes(DB_SIZE_WARNING_THRESHOLD)})"
+  if size > Constants::DB_SIZE_HARD_LIMIT
+    STDERR.puts "[Cache WARNING] Database exceeds hard limit (#{format_bytes(Constants::DB_SIZE_HARD_LIMIT)})"
+  elsif size > Constants::DB_SIZE_WARNING_THRESHOLD
+    STDERR.puts "[Cache WARNING] Database exceeds warning threshold (#{format_bytes(Constants::DB_SIZE_WARNING_THRESHOLD)})"
   end
 end
 

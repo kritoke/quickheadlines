@@ -4,6 +4,7 @@ require "mutex"
 require "time"
 require "openssl"
 require "../config"
+require "../constants"
 require "../models"
 require "../result"
 require "../errors"
@@ -218,10 +219,10 @@ def load_feed_cache(config : Config?) : FeedCache
   cache.sync_favicon_paths
 
   if health_status == DbHealthStatus::Healthy
-    cache.cleanup_old_articles(CACHE_RETENTION_DAYS)
+    cache.cleanup_old_articles(Constants::CACHE_RETENTION_DAYS)
   end
 
-  retention_hours = config.try(&.cache_retention_hours) || CACHE_RETENTION_HOURS
+  retention_hours = config.try(&.cache_retention_hours) || Constants::CACHE_RETENTION_HOURS
 
   config_urls = config.try do |conf|
     urls = conf.feeds.map(&.url)
@@ -233,7 +234,7 @@ def load_feed_cache(config : Config?) : FeedCache
 
   cache.cleanup_old_entries(retention_hours, config_urls)
 
-  cache.check_size_limit(DB_SIZE_HARD_LIMIT)
+  cache.check_size_limit(Constants::DB_SIZE_HARD_LIMIT)
 
   db_size = get_db_size(cache.db_path)
   if db_size > 10 * 1024 * 1024
@@ -243,7 +244,7 @@ def load_feed_cache(config : Config?) : FeedCache
   cache
 end
 
-def save_feed_cache(cache : FeedCache, retention_hours : Int32 = CACHE_RETENTION_HOURS, max_cache_size_mb : Int32 = 100)
+def save_feed_cache(cache : FeedCache, retention_hours : Int32 = Constants::CACHE_RETENTION_HOURS, max_cache_size_mb : Int32 = 100)
   cache.check_size_limit(max_cache_size_mb)
 
   if rand(100) < 5
@@ -259,7 +260,7 @@ def save_feed_cache(cache : FeedCache, retention_hours : Int32 = CACHE_RETENTION
   end
 
   if rand(100) < 10
-    cache.cleanup_old_articles(CACHE_RETENTION_DAYS)
+    cache.cleanup_old_articles(Constants::CACHE_RETENTION_DAYS)
   end
 
   cache.sync_favicon_paths

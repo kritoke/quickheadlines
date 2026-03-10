@@ -1,5 +1,6 @@
 require "http/client"
 require "uri"
+require "./constants"
 
 # ----- HTTP client pooling and concurrency control -----
 
@@ -57,8 +58,7 @@ end
 
 # Limit concurrent fetches (helps smooth peak allocations)
 # Adjust capacity to your environment (5–10 is a good start).
-CONCURRENCY = 8
-SEM         = Channel(Nil).new(CONCURRENCY).tap { |channel| CONCURRENCY.times { channel.send(nil) } }
+SEM = Channel(Nil).new(Constants::CONCURRENCY).tap { |channel| Constants::CONCURRENCY.times { channel.send(nil) } }
 
 def parse_time(str : String?) : Time?
   return unless str

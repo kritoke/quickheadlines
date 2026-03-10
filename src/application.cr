@@ -2,6 +2,7 @@ require "athena"
 
 # Load all dependencies
 require "./config"
+require "./constants"
 require "./models"
 require "./utils"
 require "./parser"
@@ -20,6 +21,7 @@ require "./entities/feed"
 require "./services/clustering_service"
 require "./services/heat_map_service"
 require "./services/database_service"
+require "./services/app_bootstrap"
 
 require "./repositories/story_repository"
 require "./repositories/feed_repository"
@@ -42,7 +44,6 @@ require "./dtos/feed_dto"
 
 # Initialize application state
 begin
-  # Load configuration
   config_result = load_config_with_validation("feeds.yml")
   unless config_result.success
     STDERR.puts "\n[ERROR] Failed to load configuration from feeds.yml:"
@@ -58,114 +59,10 @@ begin
 
   initial_config = config_result.config.as(Config)
 
-  # Initialize database service with dependency injection
-  db_service = DatabaseService.new(initial_config)
-  DatabaseService.instance = db_service
-
-  # Load feed cache from disk (creates SQLite connection)
-  FeedCache.instance = load_feed_cache(initial_config)
-  # Normalize any non-canonical pub_date values on startup to fix legacy or
-  # mixed-format timestamps. This runs once at startup to fix stored data.
-  begin
-    FeedCache.instance.normalize_pub_dates
-  rescue ex
-    STDERR.puts "[#{Time.local}] Warning: normalize_pub_dates failed on startup: #{ex.message}"
-  end
-  STDERR.puts "[#{Time.local}] Loaded #{FeedCache.instance.size} feeds from cache"
-
-  # Initialize favicon storage directory
-  FaviconStorage.init
-
-  # Clear in-memory favicon cache to prevent stale base64 data from previous runs
-  FAVICON_CACHE.clear
-
-  # Load from cache first so server can respond immediately
-  load_feeds_from_cache(initial_config)
-
-  # Start EventBroadcaster for WebSocket push updates
-  EventBroadcaster.start
-
-  # Start Janitor for cleaning up dead WebSocket connections
-  spawn do
-    loop do
-      sleep 60.seconds
-      begin
-        removed = SocketManager.instance.cleanup_dead_connections
-        STDERR.puts "[#{Time.local}] Janitor: #{removed} dead connections cleaned up, #{SocketManager.instance.connection_count} active"
-      rescue ex
-        STDERR.puts "[#{Time.local}] Janitor error: #{ex.message}"
-      end
-    end
-  end
-
-  # Start background refresh loop for automatic feed updates
-  spawn do
-    start_refresh_loop("feeds.yml")
-  end
-
-  # Clustering scheduler
-  spawn do
-    loop do
-      sleep 60.minutes
-      next if STATE.clustering?
-      threshold = STATE.config.try(&.clustering).try(&.threshold) || 0.35
-      clustering_service.recluster_with_lsh(initial_config.db_fetch_limit, threshold)
-    end
-  end
-
-  # Run clustering on startup if enabled (default: true)
-  run_on_startup = initial_config.clustering.try(&.run_on_startup?)
-  if run_on_startup.nil? || run_on_startup
-    spawn do
-      # Wait a bit for feeds to be loaded first
-      sleep 30.seconds
-      begin
-        STDERR.puts "[#{Time.local}] Running initial clustering on startup..."
-        threshold = initial_config.clustering.try(&.threshold) || 0.35
-        clustering_service.recluster_with_lsh(initial_config.db_fetch_limit, threshold)
-      rescue ex
-        STDERR.puts "[#{Time.local}] Initial clustering failed: #{ex.message}"
-      end
-    end
-  end
-
-  # Old articles cleanup scheduler - runs every 6 hours
-  spawn do
-    loop do
-      sleep 6.hours
-      begin
-        cache = FeedCache.instance
-        cache.cleanup_old_articles(CACHE_RETENTION_DAYS)
-        cache.cleanup_old_entries(initial_config.cache_retention_hours || CACHE_RETENTION_HOURS)
-        STDERR.puts "[#{Time.local}] Scheduled cleanup completed"
-      rescue ex
-        STDERR.puts "[#{Time.local}] Scheduled cleanup failed: #{ex.message}"
-      end
-    end
-  end
-
-  # WebSocket connection janitor - runs every 5 minutes
-  spawn do
-    loop do
-      sleep 5.minutes
-      begin
-        removed = SocketManager.instance.cleanup_dead_connections
-        stats = SocketManager.instance.get_stats
-        STDERR.puts "[WebSocket] Janitor: #{stats["connections"]} active, #{removed} removed, " \
-                    "#{stats["messages_sent"]} sent, #{stats["messages_dropped"]} dropped, " \
-                    "#{stats["send_errors"]} errors"
-      rescue ex
-        STDERR.puts "[WebSocket] Janitor failed: #{ex.message}"
-      end
-    end
-  end
-
-  # Verify feeds are loaded before starting server
-  STDERR.puts "[#{Time.local}] Verifying feeds loaded..."
-  STDERR.puts "[#{Time.local}] STATE.feeds.size=#{STATE.feeds.size}"
-  STATE.tabs.each do |tab|
-    STDERR.puts "[#{Time.local}] STATE.tabs[#{tab.name}].feeds.size=#{tab.feeds.size}"
-  end
+  bootstrap = AppBootstrap.new(initial_config)
+  bootstrap.initialize_services
+  bootstrap.start_background_tasks
+  bootstrap.verify_feeds_loaded
 rescue ex : Exception
   STDERR.puts "[ERROR] Failed to initialize application: #{ex.message}"
   STDERR.puts ex.backtrace.join("\n")

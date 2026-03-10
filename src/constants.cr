@@ -1,0 +1,7 @@
+module Constants
+  CONCURRENCY               =   8
+  CACHE_RETENTION_HOURS     = 168
+  CACHE_RETENTION_DAYS      =   7
+  DB_SIZE_WARNING_THRESHOLD = 50 * 1024 * 1024
+  DB_SIZE_HARD_LIMIT        = 100 * 1024 * 1024
+end
