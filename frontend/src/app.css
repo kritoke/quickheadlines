@@ -138,6 +138,16 @@ html[data-theme="vaporwave"]::-webkit-scrollbar-thumb:hover { background-color: 
 	overflow-y: auto;
 }
 
+/* Shadow with theme accent color */
+.shadow-theme {
+	box-shadow: 0 4px 12px var(--theme-shadow, rgba(59, 130, 246, 0.15));
+}
+
+/* iOS momentum scrolling */
+.ios-scroll {
+	-webkit-overflow-scrolling: touch;
+}
+
 /* Tab bar horizontal scrollbar */
 .tab-bar::-webkit-scrollbar {
 	height: 6px;

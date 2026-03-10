@@ -37,12 +37,7 @@
 
 	let currentBeamColors = $derived(beamColors[themeState.theme as BeamTheme] || { from: '#ff00ff', to: '#00ffff' });
 
-	let cardStyle = $derived.by(() => {
-		if (showBorderBeam) return '';
-		const shadow = themeState.effects ? `0 4px 12px ${themeColors.shadow}` : '';
-		return `box-shadow: ${shadow};`;
-	});
-
+	let cardHasShadow = $derived(!showBorderBeam && themeState.effects);
 	let headerStyle = $derived.by(() => {
 		const dark = themeState.theme === 'dark';
 		const bgColor = feed.header_color || '#64748b';
@@ -96,7 +91,7 @@
 	}
 </script>
 
-<div class="rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 overflow-hidden flex flex-col h-[400px] transform-gpu relative" class:shadow-sm={!showBorderBeam} style={cardStyle} data-name="feed-box">
+<div class="rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 overflow-hidden flex flex-col h-[400px] transform-gpu relative" class:shadow-sm={cardHasShadow} class:shadow-theme={cardHasShadow} data-name="feed-box">
 	{#if showBorderBeam}
 		<BorderBeam 
 			colorFrom={currentBeamColors.from} 
@@ -134,8 +129,7 @@
 	<div class="flex-1 relative min-h-0">
 		<div
 			bind:this={scrollContainer}
-			class="absolute inset-0 overflow-y-auto auto-hide-scroll"
-			style="-webkit-overflow-scrolling: touch;"
+			class="absolute inset-0 overflow-y-auto auto-hide-scroll ios-scroll"
 		>
 			<ul class="divide-y divide-slate-100 dark:divide-slate-700">
 				{#each feed.items as item, i (`${feed.url}-${i}`)}
