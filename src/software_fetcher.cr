@@ -1,7 +1,5 @@
 require "fetcher"
 require "./models"
-require "./color_extractor"
-require "./fetcher/favicon"
 
 CODE_ICON = "internal:code_icon"
 

@@ -7,7 +7,6 @@ require "../storage"
 require "../health_monitor"
 require "../color_extractor"
 require "./favicon"
-require "../fetcher_adapter"
 
 private def build_fetch_headers(feed : Feed, current_url : String, previous_data : FeedData?) : HTTP::Headers
   headers = HTTP::Headers{
@@ -283,30 +282,6 @@ private def handle_feed_response(feed : Feed, response : HTTP::Client::Response,
 end
 
 def fetch_feed(feed : Feed, display_item_limit : Int32, db_fetch_limit : Int32, previous_data : FeedData? = nil) : FeedData
-  if feed.url.includes?("reddit.com/r/")
-    result = FetcherAdapter.pull_feed(feed, previous_data)
-    if result.success?
-      return result.value
-    else
-      return error_feed_data(feed, "Fetcher error: #{result.error}")
-    end
-  end
-
-  if feed.url.includes?("github.com") && feed.url.includes?("/releases")
-    result = FetcherAdapter.pull_feed(feed, previous_data)
-    return result.value_or(error_feed_data(feed, "Fetcher error"))
-  end
-
-  if feed.url.includes?("gitlab.com") && feed.url.includes?("/-/releases")
-    result = FetcherAdapter.pull_feed(feed, previous_data)
-    return result.value_or(error_feed_data(feed, "Fetcher error"))
-  end
-
-  if feed.url.includes?("codeberg.org") && feed.url.includes?("/releases")
-    result = FetcherAdapter.pull_feed(feed, previous_data)
-    return result.value_or(error_feed_data(feed, "Fetcher error"))
-  end
-
   effective_item_limit = feed.item_limit || display_item_limit
 
   if cached_data = get_cached_feed(feed, effective_item_limit, previous_data)
