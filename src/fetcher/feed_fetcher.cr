@@ -473,9 +473,14 @@ def fetch_feed(feed : Feed, display_item_limit : Int32, db_fetch_limit : Int32, 
 end
 
 private def fetch_reddit_feed(feed : Feed, limit : Int32) : FeedData
+  cache_url = feed.url
+  normalized = normalize_url(feed.url)
+
   # First try to return cached data if available and fresh
-  if cached = FeedCache.instance.get(feed.url)
-    if last_fetched = FeedCache.instance.get_fetched_time(feed.url)
+  # Try both original URL and normalized URL
+  cached = FeedCache.instance.get(cache_url) || FeedCache.instance.get(normalized)
+  if cached
+    if last_fetched = FeedCache.instance.get_fetched_time(cache_url) || FeedCache.instance.get_fetched_time(normalized)
       cache_age = (Time.utc - last_fetched).total_minutes
       if cache_age < 5 && cached.items.size >= limit
         # Cache is fresh, return it while fetching in background
@@ -490,7 +495,8 @@ private def fetch_reddit_feed(feed : Feed, limit : Int32) : FeedData
 
   if error = result.error_message
     # On error, try to return stale cache
-    if cached = FeedCache.instance.get(feed.url)
+    cached = FeedCache.instance.get(cache_url) || FeedCache.instance.get(normalized)
+    if cached
       return cached
     end
     return FeedFetcher.instance.build_error_feed_data(feed, error)
@@ -513,13 +519,26 @@ private def fetch_reddit_feed(feed : Feed, limit : Int32) : FeedData
     nil
   )
 
-  # Store in cache for next load
-  FeedCache.instance.add(feed_data)
+  # Store in cache using normalized URL for consistency
+  cached_data = FeedData.new(
+    feed.title,
+    normalize_url(feed.url),
+    result.site_link || feed.url,
+    feed.header_color,
+    feed.header_text_color,
+    items,
+    result.etag,
+    result.last_modified,
+    result.favicon,
+    nil
+  )
+  FeedCache.instance.add(cached_data)
 
   feed_data
 rescue ex
   # On exception, try to return stale cache
-  if cached = FeedCache.instance.get(feed.url)
+  cached = FeedCache.instance.get(feed.url) || FeedCache.instance.get(normalize_url(feed.url))
+  if cached
     return cached
   end
   FeedFetcher.instance.build_error_feed_data(feed, "Error: #{ex.message}")
@@ -536,7 +555,7 @@ private def fetch_reddit_background(feed : Feed, limit : Int32)
 
   feed_data = FeedData.new(
     feed.title,
-    feed.url,
+    normalize_url(feed.url),
     result.site_link || feed.url,
     feed.header_color,
     feed.header_text_color,
@@ -548,6 +567,11 @@ private def fetch_reddit_background(feed : Feed, limit : Int32)
   )
 
   FeedCache.instance.add(feed_data)
+end
+
+private def normalize_url(url : String) : String
+  # Normalize URLs by removing www. prefix for consistency
+  url.sub("https://www.", "https://").sub("http://www.", "http://")
 end
 
 def error_feed_data(feed : Feed, message : String) : FeedData
