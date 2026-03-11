@@ -193,7 +193,7 @@ export const themes: Record<ThemeStyle, ThemeColors> = {
 
 export const themeState = $state({
 	theme: 'light' as ThemeStyle,
-	effects: false,
+	effects: true,
 	mounted: false
 });
 
@@ -266,7 +266,7 @@ export function initTheme() {
 
 		const savedEffects = localStorage.getItem('quickheadlines-effects');
 		const savedCoolMode = localStorage.getItem('quickheadlines-coolmode');
-		themeState.effects = savedEffects === 'true' || savedCoolMode === 'true';
+		themeState.effects = savedEffects !== 'false' && savedCoolMode !== 'false';
 	} catch {
 		themeState.theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
 		applyTheme(themeState.theme);
@@ -281,6 +281,8 @@ export function applyTheme(theme: ThemeStyle) {
 	
 	document.documentElement.setAttribute('data-theme', theme);
 	document.documentElement.classList.toggle('dark', isDarkMode || isCustomTheme);
+	
+	document.documentElement.style.setProperty('--theme-shadow', themes[theme].shadow);
 	
 	if (isCustomTheme) {
 		document.documentElement.classList.add('custom-theme');
