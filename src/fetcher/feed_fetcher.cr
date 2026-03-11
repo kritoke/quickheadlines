@@ -1,6 +1,7 @@
 require "base64"
 require "time"
 require "json"
+require "fetcher"
 require "../config"
 require "../models"
 require "../storage"
@@ -464,7 +465,38 @@ end
 # Global functions for backward compatibility - delegate to singleton
 
 def fetch_feed(feed : Feed, display_item_limit : Int32, db_fetch_limit : Int32, previous_data : FeedData? = nil) : FeedData
+  if feed.url.includes?("reddit.com/r/")
+    return fetch_reddit_feed(feed, display_item_limit)
+  end
+
   FeedFetcher.instance.fetch(feed, display_item_limit, db_fetch_limit, previous_data)
+end
+
+private def fetch_reddit_feed(feed : Feed, limit : Int32) : FeedData
+  result = Fetcher.pull(feed.url, HTTP::Headers.new, limit)
+
+  if error = result.error_message
+    return FeedFetcher.instance.build_error_feed_data(feed, error)
+  end
+
+  items = result.entries.map do |entry|
+    Item.new(entry.title, entry.url, entry.published_at)
+  end
+
+  FeedData.new(
+    feed.title,
+    feed.url,
+    result.site_link || feed.url,
+    feed.header_color,
+    feed.header_text_color,
+    items,
+    result.etag,
+    result.last_modified,
+    result.favicon,
+    nil
+  )
+rescue ex
+  FeedFetcher.instance.build_error_feed_data(feed, "Error: #{ex.message}")
 end
 
 def error_feed_data(feed : Feed, message : String) : FeedData
