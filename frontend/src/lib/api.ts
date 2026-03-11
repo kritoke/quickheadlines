@@ -12,6 +12,60 @@ const API_BASE = '/api';
 
 const pendingRequests = new Map<string, Promise<any>>();
 
+interface FetchOptions {
+	method?: 'GET' | 'POST' | 'PUT' | 'DELETE';
+	timeout?: number;
+	body?: object;
+	errorContext?: string;
+}
+
+async function apiFetch<T>(url: string, options: FetchOptions = {}): Promise<T> {
+	const { method = 'GET', timeout = 0, body, errorContext = 'Request' } = options;
+
+	const fetchOptions: RequestInit = { method };
+	if (body) {
+		fetchOptions.headers = { 'Content-Type': 'application/json' };
+		fetchOptions.body = JSON.stringify(body);
+	}
+
+	const controller = timeout > 0 ? new AbortController() : null;
+	if (controller) {
+		fetchOptions.signal = controller.signal;
+		const timeoutId = setTimeout(() => controller.abort(), timeout);
+		try {
+			const response = await fetch(url, fetchOptions);
+			clearTimeout(timeoutId);
+			if (!response.ok) {
+				throw new Error(`Failed to ${errorContext.toLowerCase()}: ${response.statusText}`);
+			}
+			return response.json();
+		} catch (error) {
+			clearTimeout(timeoutId);
+			if (error instanceof Error && error.name === 'AbortError') {
+				throw error;
+			}
+			const msg = error instanceof Error ? error.message : `Failed to ${errorContext.toLowerCase()}`;
+			toastStore.error(msg, errorContext);
+			throw error;
+		}
+	}
+
+	try {
+		const response = await fetch(url, fetchOptions);
+		if (!response.ok) {
+			throw new Error(`Failed to ${errorContext.toLowerCase()}: ${response.statusText}`);
+		}
+		return response.json();
+	} catch (error) {
+		if (error instanceof Error && error.name === 'AbortError') {
+			throw error;
+		}
+		const msg = error instanceof Error ? error.message : `Failed to ${errorContext.toLowerCase()}`;
+		toastStore.error(msg, errorContext);
+		throw error;
+	}
+}
+
 async function doFetchFeeds(tab: string, signal?: AbortSignal): Promise<FeedsPageResponse> {
 	const url = `${API_BASE}/feeds?tab=${encodeURIComponent(tab)}`;
 	
@@ -76,47 +130,17 @@ export async function fetchTimeline(
 	days: number = 14
 ): Promise<TimelinePageResponse> {
 	const url = `${API_BASE}/timeline?limit=${limit}&offset=${offset}&days=${days}`;
-	try {
-		const response = await fetch(url);
-		if (!response.ok) {
-			throw new Error(`Failed to fetch timeline: ${response.statusText}`);
-		}
-		return response.json();
-	} catch (error) {
-		const errorMessage = error instanceof Error ? error.message : 'Failed to fetch timeline';
-		toastStore.error(errorMessage, 'Timeline Error');
-		throw error;
-	}
+	return apiFetch<TimelinePageResponse>(url, { errorContext: 'Fetch Timeline' });
 }
 
 export async function fetchClusters(): Promise<ClustersResponse> {
 	const url = `${API_BASE}/clusters`;
-	try {
-		const response = await fetch(url);
-		if (!response.ok) {
-			throw new Error(`Failed to fetch clusters: ${response.statusText}`);
-		}
-		return response.json();
-	} catch (error) {
-		const errorMessage = error instanceof Error ? error.message : 'Failed to fetch clusters';
-		toastStore.error(errorMessage, 'Clustering Error');
-		throw error;
-	}
+	return apiFetch<ClustersResponse>(url, { errorContext: 'Fetch Clusters' });
 }
 
 export async function fetchClusterItems(clusterId: string): Promise<ClusterItemsResponse> {
 	const url = `${API_BASE}/clusters/${clusterId}/items`;
-	try {
-		const response = await fetch(url);
-		if (!response.ok) {
-			throw new Error(`Failed to fetch cluster items: ${response.statusText}`);
-		}
-		return response.json();
-	} catch (error) {
-		const errorMessage = error instanceof Error ? error.message : 'Failed to fetch cluster items';
-		toastStore.error(errorMessage, 'Cluster Error');
-		throw error;
-	}
+	return apiFetch<ClusterItemsResponse>(url, { errorContext: 'Fetch Cluster Items' });
 }
 
 export async function fetchMoreFeedItems(
@@ -125,17 +149,7 @@ export async function fetchMoreFeedItems(
 	offset: number = 0
 ): Promise<FeedResponse> {
 	const url = `${API_BASE}/feed_more?url=${encodeURIComponent(feedUrl)}&limit=${limit}&offset=${offset}`;
-	try {
-		const response = await fetch(url);
-		if (!response.ok) {
-			throw new Error(`Failed to fetch more items: ${response.statusText}`);
-		}
-		return response.json();
-	} catch (error) {
-		const errorMessage = error instanceof Error ? error.message : 'Failed to fetch more items';
-		toastStore.error(errorMessage, 'Load More Error');
-		throw error;
-	}
+	return apiFetch<FeedResponse>(url, { errorContext: 'Fetch More Items' });
 }
 
 export async function saveHeaderColor(
@@ -143,26 +157,16 @@ export async function saveHeaderColor(
 	color: string,
 	textColor: string
 ): Promise<void> {
-	try {
-		const response = await fetch(`${API_BASE}/header_color`, {
-			method: 'POST',
-			headers: {
-				'Content-Type': 'application/json'
-			},
-			body: JSON.stringify({
-				feed_url: feedUrl,
-				color,
-				text_color: textColor
-			})
-		});
-		if (!response.ok) {
-			throw new Error(`Failed to save header color: ${response.statusText}`);
-		}
-	} catch (error) {
-		const errorMessage = error instanceof Error ? error.message : 'Failed to save header color';
-		toastStore.error(errorMessage, 'Save Error');
-		throw error;
-	}
+	const url = `${API_BASE}/header_color`;
+	await apiFetch<void>(url, {
+		method: 'POST',
+		body: {
+			feed_url: feedUrl,
+			color,
+			text_color: textColor
+		},
+		errorContext: 'Save Header Color'
+	});
 }
 
 export function formatTimestamp(ms?: number): string {
@@ -195,15 +199,5 @@ export function formatDate(ms?: number): string {
 
 export async function fetchConfig(): Promise<ConfigResponse> {
 	const url = `${API_BASE}/config`;
-	try {
-		const response = await fetch(url);
-		if (!response.ok) {
-			throw new Error(`Failed to fetch config: ${response.statusText}`);
-		}
-		return response.json();
-	} catch (error) {
-		const errorMessage = error instanceof Error ? error.message : 'Failed to fetch config';
-		toastStore.error(errorMessage, 'Config Error');
-		throw error;
-	}
+	return apiFetch<ConfigResponse>(url, { errorContext: 'Fetch Config' });
 }

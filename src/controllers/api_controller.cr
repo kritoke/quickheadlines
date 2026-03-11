@@ -23,60 +23,31 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
   def initialize(@db_service : DatabaseService)
   end
 
-  # Validate query parameters with sensible defaults and bounds
-  private def validate_limit(value : String?, default : Int32, min : Int32 = 1, max : Int32 = 1000) : Int32
-    if value.nil?
-      return default
-    end
+  # Generic integer validation with bounds
+  private def validate_int(value : String?, default : Int32, min : Int32? = nil, max : Int32? = nil) : Int32
+    return default if value.nil?
 
     begin
-      limit = value.to_i
-      if limit < min
-        min
-      elsif limit > max
-        max
-      else
-        limit
-      end
+      num = value.to_i
+      num = min if min && num < min
+      num = max if max && num > max
+      num
     rescue
       default
     end
+  end
+
+  # Validate query parameters with sensible defaults and bounds
+  private def validate_limit(value : String?, default : Int32, min : Int32 = 1, max : Int32 = 1000) : Int32
+    validate_int(value, default, min, max)
   end
 
   private def validate_offset(value : String?, default : Int32 = 0) : Int32
-    if value.nil?
-      return default
-    end
-
-    begin
-      offset = value.to_i
-      if offset < 0
-        0
-      else
-        offset
-      end
-    rescue
-      default
-    end
+    validate_int(value, default, min: 0)
   end
 
   private def validate_days(value : String?, default : Int32, min : Int32 = 1, max : Int32 = 365) : Int32
-    if value.nil?
-      return default
-    end
-
-    begin
-      days = value.to_i
-      if days < min
-        min
-      elsif days > max
-        max
-      else
-        days
-      end
-    rescue
-      default
-    end
+    validate_int(value, default, min, max)
   end
 
   private def story_service : Quickheadlines::Services::StoryService

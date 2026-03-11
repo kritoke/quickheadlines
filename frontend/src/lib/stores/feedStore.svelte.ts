@@ -1,4 +1,5 @@
 import { fetchFeeds, fetchMoreFeedItems, fetchConfig } from '$lib/api';
+import { deepClone } from '$lib/utils/clone';
 import type { FeedResponse, FeedsPageResponse } from '$lib/types';
 
 export type LoadStatus = 'idle' | 'loading' | 'refreshing' | 'error';
@@ -58,7 +59,7 @@ const initialState: FeedStateIdle = {
 export const feedState = $state<FeedState>({ ...initialState });
 
 function clone<T>(obj: T): T {
-	return JSON.parse(JSON.stringify(obj));
+	return deepClone(obj);
 }
 
 export function setLoading(state: FeedState, tab: string): FeedStateLoading | FeedStateRefreshing {

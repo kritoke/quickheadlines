@@ -28,20 +28,7 @@ module Quickheadlines::Repositories
           favicon = rows.read(String?)
           header_color = rows.read(String?)
 
-          pub_date = pub_date_str.try { |str| Time.parse(str, "%Y-%m-%d %H:%M:%S", Time::Location::UTC) }
-
-          stories << Quickheadlines::Entities::Story.new(
-            id: id.to_s,
-            title: title,
-            link: link,
-            pub_date: pub_date,
-            feed_title: feed_title,
-            feed_url: feed_url,
-            feed_link: feed_link || "",
-            favicon: favicon,
-            favicon_data: favicon,
-            header_color: header_color
-          )
+          stories << build_story(id, title, link, pub_date_str, feed_title, feed_url, feed_link, favicon, header_color)
         end
       end
 
@@ -65,20 +52,7 @@ module Quickheadlines::Repositories
         favicon = row.read(String?)
         header_color = row.read(String?)
 
-        pub_date = pub_date_str.try { |str| Time.parse(str, "%Y-%m-%d %H:%M:%S", Time::Location::UTC) }
-
-        Quickheadlines::Entities::Story.new(
-          id: id.to_s,
-          title: title,
-          link: link,
-          pub_date: pub_date,
-          feed_title: feed_title,
-          feed_url: feed_url,
-          feed_link: feed_link || "",
-          favicon: favicon,
-          favicon_data: favicon,
-          header_color: header_color
-        )
+        build_story(id, title, link, pub_date_str, feed_title, feed_url, feed_link, favicon, header_color)
       end
     end
 
@@ -104,20 +78,7 @@ module Quickheadlines::Repositories
           favicon = rows.read(String?)
           header_color = rows.read(String?)
 
-          pub_date = pub_date_str.try { |str| Time.parse(str, "%Y-%m-%d %H:%M:%S", Time::Location::UTC) }
-
-          stories << Quickheadlines::Entities::Story.new(
-            id: id.to_s,
-            title: title,
-            link: link,
-            pub_date: pub_date,
-            feed_title: feed_title,
-            feed_url: feed_url,
-            feed_link: feed_link || "",
-            favicon: favicon,
-            favicon_data: favicon,
-            header_color: header_color
-          )
+          stories << build_story(id, title, link, pub_date_str, feed_title, feed_url, feed_link, favicon, header_color)
         end
       end
 
@@ -265,6 +226,22 @@ module Quickheadlines::Repositories
           favicon_data: favicon_data
         )
       end
+    end
+
+    private def build_story(id : Int64, title : String, link : String, pub_date_str : String?, feed_title : String, feed_url : String, feed_link : String?, favicon : String?, header_color : String?) : Quickheadlines::Entities::Story
+      pub_date = pub_date_str.try { |str| Time.parse(str, "%Y-%m-%d %H:%M:%S", Time::Location::UTC) }
+      Quickheadlines::Entities::Story.new(
+        id: id.to_s,
+        title: title,
+        link: link,
+        pub_date: pub_date,
+        feed_title: feed_title,
+        feed_url: feed_url,
+        feed_link: feed_link || "",
+        favicon: favicon,
+        favicon_data: favicon,
+        header_color: header_color
+      )
     end
   end
 
