@@ -15,7 +15,6 @@
 		y: number;
 		endX: number;
 		endY: number;
-		opacity: number;
 	}
 
 	let particles = $state<Particle[]>([]);
@@ -47,16 +46,15 @@
 		for (let i = 0; i < particleCount; i++) {
 			const angle = i * angleStep + (Math.random() * 0.3);
 			const dist = distance + (Math.random() * 20);
-			const endX = x + Math.cos(angle) * dist;
-			const endY = y + Math.sin(angle) * dist;
+			const endX = Math.cos(angle) * dist;
+			const endY = Math.sin(angle) * dist;
 			
 			const particle: Particle = {
 				id: nextParticleId++,
 				x,
 				y,
 				endX,
-				endY,
-				opacity: 1
+				endY
 			};
 			newParticles.push(particle);
 		}
@@ -64,17 +62,8 @@
 		particles = [...particles, ...newParticles];
 
 		setTimeout(() => {
-			particles = particles.map(p => {
-				if (newParticles.find(np => np.id === p.id)) {
-					return { ...p, opacity: 0 };
-				}
-				return p;
-			});
-		}, 50);
-
-		setTimeout(() => {
 			particles = particles.filter(p => !newParticles.find(np => np.id === p.id));
-		}, 500);
+		}, 400);
 	}
 </script>
 
@@ -87,31 +76,42 @@
 {#if effectsEnabled}
 	<div
 		class="pointer-events-none fixed z-[9999999] w-3 h-3 rounded-full"
-		style="left: {$coords.x}px; top: {$coords.y}px; background: {cursorColors.primary};"
+		style="transform: translate({$coords.x}px, {$coords.y}px); background: {cursorColors.primary};"
 	></div>
 	<div
 		class="pointer-events-none fixed z-[9999998] w-8 h-8 rounded-full"
-		style="left: {$trail.x - 16}px; top: {$trail.y - 16}px; background: {cursorColors.trail}; filter: blur(12px);"
+		style="transform: translate({$trail.x - 16}px, {$trail.y - 16}px); background: {cursorColors.trail}; filter: blur(12px);"
 	></div>
 {/if}
 
 {#each particles as particle (particle.id)}
 	<div
-		class="pointer-events-none fixed rounded-full particle-burst"
+		class="particle-burst pointer-events-none fixed rounded-full"
 		style="
+			--end-x: {particle.endX}px;
+			--end-y: {particle.endY}px;
 			left: {particle.x}px; 
 			top: {particle.y}px; 
-			width: 6px; 
-			height: 6px; 
+			width: 8px; 
+			height: 8px; 
 			background: {accentColor};
-			opacity: {particle.opacity};
-			transform: translate(-50%, -50%);
 		"
 	></div>
 {/each}
 
 <style>
 	.particle-burst {
-		transition: left 0.4s ease-out, top 0.4s ease-out, opacity 0.4s ease-out;
+		animation: burst 0.4s ease-out forwards;
+	}
+
+	@keyframes burst {
+		0% {
+			transform: translate(-50%, -50%) scale(1);
+			opacity: 1;
+		}
+		100% {
+			transform: translate(calc(-50% + var(--end-x)), calc(-50% + var(--end-y))) scale(0.5);
+			opacity: 0;
+		}
 	}
 </style>

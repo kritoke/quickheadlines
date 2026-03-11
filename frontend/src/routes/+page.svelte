@@ -153,7 +153,8 @@
 
 	<main class="mx-auto px-4 md:px-8 xl:px-12 py-4 overflow-visible" style="padding-top: calc(var(--header-height, 6rem) + 1rem); max-width: 1800px;">
 		{#if loading && feedState.feeds.length === 0}
-			<div class="flex items-center justify-center py-20">
+			<div class="flex items-center justify-center py-20 gap-3">
+				<div class="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
 				<div class="text-slate-500 dark:text-slate-400">Loading feeds...</div>
 			</div>
 		{:else if error && feedState.feeds.length === 0}
@@ -168,8 +169,9 @@
 			</div>
 		{:else}
 			{#if loading}
-				<div class="absolute inset-0 bg-white/50 dark:bg-slate-900/50 flex items-center justify-center z-10 pointer-events-none">
-					<div class="text-slate-500 dark:text-slate-400">Loading...</div>
+				<div class="sticky top-0 z-20 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm py-2 flex items-center justify-center gap-2">
+					<div class="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+					<span class="text-sm text-slate-600 dark:text-slate-400">Loading feeds...</span>
 				</div>
 			{/if}
 
