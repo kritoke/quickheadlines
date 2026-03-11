@@ -47,6 +47,8 @@
 
 	let loading = $derived(isLoading(feedState) || isRefreshing(feedState));
 	let error = $derived(isError(feedState) ? getError(feedState) : null);
+	let currentTab = $derived(feedState.activeTab);
+	let timelineLink = $derived('/timeline?tab=' + currentTab);
 
 	async function handleTabChange(tab: string) {
 		if (tabChangeTimeout) clearTimeout(tabChangeTimeout);
@@ -77,8 +79,10 @@
 		if (!initialized) {
 			logger.log('[Page] Initializing, loading feeds...');
 			const params = new URLSearchParams(window.location.search);
-			const urlTab = params.get('tab') || 'all';
+			const urlTab = params.get('tab') || getFeedsTab() || 'all';
 			
+			setActiveTab(urlTab);
+			setFeedsTab(urlTab);
 			loadFeeds(urlTab, true);
 			loadFeedConfig();
 			initDebug();
@@ -110,14 +114,14 @@
 	}
 </script>
 
-<div class="min-h-screen bg-white dark:bg-slate-900 transition-colors duration-200" data-name="feeds-page">
-	<AppHeader 
-		title="QuickHeadlines"
-		viewLink={{ href: '/timeline', icon: 'clock' }}
-		{searchExpanded}
-		onSearchToggle={() => searchExpanded = !searchExpanded}
-		onLogoClick={handleLogoClick}
-	>
+	<div class="min-h-screen bg-white dark:bg-slate-900 transition-colors duration-200" data-name="feeds-page">
+		<AppHeader 
+			title="QuickHeadlines"
+			viewLink={{ href: timelineLink, icon: 'clock' }}
+			{searchExpanded}
+			onSearchToggle={() => searchExpanded = !searchExpanded}
+			onLogoClick={handleLogoClick}
+		>
 		{#snippet metadata()}
 			{#if lastUpdated}
 				<span class="text-xs text-slate-500 dark:text-slate-400 hidden md:block whitespace-nowrap flex items-center gap-1">
