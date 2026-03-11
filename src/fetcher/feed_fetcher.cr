@@ -473,9 +473,26 @@ def fetch_feed(feed : Feed, display_item_limit : Int32, db_fetch_limit : Int32, 
 end
 
 private def fetch_reddit_feed(feed : Feed, limit : Int32) : FeedData
+  # First try to return cached data if available and fresh
+  if cached = FeedCache.instance.get(feed.url)
+    if last_fetched = FeedCache.instance.get_fetched_time(feed.url)
+      cache_age = (Time.utc - last_fetched).total_minutes
+      if cache_age < 5 && cached.items.size >= limit
+        # Cache is fresh, return it while fetching in background
+        spawn fetch_reddit_background(feed, limit)
+        return cached
+      end
+    end
+  end
+
+  # No fresh cache, fetch new data
   result = Fetcher.pull(feed.url, HTTP::Headers.new, limit)
 
   if error = result.error_message
+    # On error, try to return stale cache
+    if cached = FeedCache.instance.get(feed.url)
+      return cached
+    end
     return FeedFetcher.instance.build_error_feed_data(feed, error)
   end
 
@@ -483,7 +500,7 @@ private def fetch_reddit_feed(feed : Feed, limit : Int32) : FeedData
     Item.new(entry.title, entry.url, entry.published_at)
   end
 
-  FeedData.new(
+  feed_data = FeedData.new(
     feed.title,
     feed.url,
     result.site_link || feed.url,
@@ -495,8 +512,42 @@ private def fetch_reddit_feed(feed : Feed, limit : Int32) : FeedData
     result.favicon,
     nil
   )
+
+  # Store in cache for next load
+  FeedCache.instance.add(feed_data)
+
+  feed_data
 rescue ex
+  # On exception, try to return stale cache
+  if cached = FeedCache.instance.get(feed.url)
+    return cached
+  end
   FeedFetcher.instance.build_error_feed_data(feed, "Error: #{ex.message}")
+end
+
+private def fetch_reddit_background(feed : Feed, limit : Int32)
+  result = Fetcher.pull(feed.url, HTTP::Headers.new, limit)
+  return unless result.success?
+  return if result.entries.empty?
+
+  items = result.entries.map do |entry|
+    Item.new(entry.title, entry.url, entry.published_at)
+  end
+
+  feed_data = FeedData.new(
+    feed.title,
+    feed.url,
+    result.site_link || feed.url,
+    feed.header_color,
+    feed.header_text_color,
+    items,
+    result.etag,
+    result.last_modified,
+    result.favicon,
+    nil
+  )
+
+  FeedCache.instance.add(feed_data)
 end
 
 def error_feed_data(feed : Feed, message : String) : FeedData
