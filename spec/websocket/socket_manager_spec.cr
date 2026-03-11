@@ -5,7 +5,7 @@ describe SocketManager do
     it "returns true for valid registration" do
       mock_ws = HTTP::WebSocket.new("ws://localhost/test")
       result = SocketManager.instance.register(mock_ws, "192.168.1.200")
-      result.should eq(true)
+      result.should be_true
     end
 
     it "increments connection count" do
@@ -33,7 +33,7 @@ describe SocketManager do
       # Should not raise
       SocketManager.instance.unregister(ws, "192.168.1.203")
       # Test passes if no exception
-      true.should eq(true)
+      true.should be_true
     end
   end
 
@@ -41,7 +41,7 @@ describe SocketManager do
     it "does not raise when broadcasting to no clients" do
       SocketManager.instance.broadcast("{\"type\":\"test\"}")
       # Test passes if no exception
-      true.should eq(true)
+      true.should be_true
     end
 
     it "broadcasts to connected clients" do
@@ -53,7 +53,7 @@ describe SocketManager do
 
       # Should not raise
       SocketManager.instance.broadcast("{\"type\":\"test\"}")
-      true.should eq(true)
+      true.should be_true
     end
 
     it "handles rapid broadcasts without blocking" do
@@ -141,7 +141,7 @@ describe SocketManager do
       end
 
       10.times { channel.receive }
-      success.should eq(true)
+      success.should be_true
     end
   end
 end

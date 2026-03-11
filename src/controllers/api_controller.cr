@@ -642,8 +642,8 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
   # GET /api/status - Get current system status
   @[ARTA::Get(path: "/api/status")]
   def status : Quickheadlines::DTOs::StatusResponse
-    ws_stats = SocketManager.instance.get_stats
-    broadcaster_stats = EventBroadcaster.get_stats
+    ws_stats = SocketManager.instance.stats
+    broadcaster_stats = EventBroadcaster.stats
 
     Quickheadlines::DTOs::StatusResponse.new(
       clustering: STATE.clustering?,

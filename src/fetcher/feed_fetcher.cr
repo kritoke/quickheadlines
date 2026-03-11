@@ -82,7 +82,7 @@ class FeedFetcher
             retries = handle_server_error(feed, retries, response.status_code)
           end
         end
-      rescue ex : IO::TimeoutError
+      rescue IO::TimeoutError
         HealthMonitor.log_warning("fetch_feed(#{feed.url}) timeout after #{feed.timeout}s")
         HealthMonitor.update_feed_health(feed.url, FeedHealthStatus::Timeout)
 

@@ -127,7 +127,7 @@ class AppBootstrap
         sleep @ws_janitor_interval
         begin
           removed = SocketManager.instance.cleanup_dead_connections
-          stats = SocketManager.instance.get_stats
+          stats = SocketManager.instance.stats
           STDERR.puts "[WebSocket] Janitor: #{stats["connections"]} active, #{removed} removed, " \
                       "#{stats["messages_sent"]} sent, #{stats["messages_dropped"]} dropped, " \
                       "#{stats["send_errors"]} errors"

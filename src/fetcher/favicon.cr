@@ -299,7 +299,7 @@ private def try_html_fallback(site_link : String) : {String?, String?}
     else
       debug_log("No HTML favicon found for: #{site_link}")
     end
-  rescue ex : Socket::Addrinfo::Error
+  rescue Socket::Addrinfo::Error
     debug_log("DNS lookup failed for favicon: #{site_link}")
   rescue ex
     HealthMonitor.log_error("try_html_fallback(#{site_link})", ex)

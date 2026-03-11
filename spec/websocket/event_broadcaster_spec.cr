@@ -5,7 +5,7 @@ describe EventBroadcaster do
     it "starts broadcaster without errors" do
       EventBroadcaster.start
       # Test passes if no exception
-      true.should eq(true)
+      true.should be_true
     end
   end
 
@@ -13,7 +13,7 @@ describe EventBroadcaster do
     it "sends event without raising" do
       EventBroadcaster.notify_feed_update(1234567890)
       # Test passes if no exception
-      true.should eq(true)
+      true.should be_true
     end
 
     it "handles multiple rapid notifications" do
@@ -21,7 +21,7 @@ describe EventBroadcaster do
         EventBroadcaster.notify_feed_update(1234567890 + i)
       end
       # Test passes if no exception
-      true.should eq(true)
+      true.should be_true
     end
 
     it "completes quickly" do

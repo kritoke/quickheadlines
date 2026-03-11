@@ -114,7 +114,7 @@ describe "Config Validation" do
         feeds:
           - title: "Test"
             url: "https://example.com/feed.xml"
-      YAML
+        YAML
       config = Config.from_yaml(yaml)
       config.refresh_minutes.should eq(15)
       config.item_limit.should eq(30)
@@ -135,12 +135,12 @@ describe "Config Validation" do
         feeds:
           - title: "Test"
             url: "https://example.com/feed.xml"
-      YAML
+        YAML
       config = Config.from_yaml(yaml)
       config.clustering.should_not be_nil
       cluster = config.clustering.as(ClusteringConfig)
-      cluster.enabled?.should eq(true)
-      cluster.run_on_startup?.should eq(false)
+      cluster.enabled?.should be_true
+      cluster.run_on_startup?.should be_false
       cluster.threshold.should eq(0.5)
       cluster.max_items.should eq(10000)
     end
@@ -157,11 +157,11 @@ describe "Config Validation" do
         feeds:
           - title: "Test"
             url: "https://example.com/feed.xml"
-      YAML
+        YAML
       config = Config.from_yaml(yaml)
       config.rate_limiting.should_not be_nil
       rate_limit = config.rate_limiting.as(RateLimitingConfig)
-      rate_limit.enabled?.should eq(true)
+      rate_limit.enabled?.should be_true
       rate_limit.max_entries.should eq(5000)
     end
 
@@ -175,7 +175,7 @@ describe "Config Validation" do
         feeds:
           - title: "Test"
             url: "https://example.com/feed.xml"
-      YAML
+        YAML
       config = Config.from_yaml(yaml)
       config.http_client.should_not be_nil
       http_config = config.http_client.as(HttpClientConfig)

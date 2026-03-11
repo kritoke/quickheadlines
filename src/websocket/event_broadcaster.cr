@@ -40,7 +40,7 @@ class EventBroadcaster
     end
   end
 
-  def self.get_stats
+  def self.stats
     {
       "dropped"   => DROPPED_EVENTS.get,
       "processed" => PROCESSED_EVENTS.get,
