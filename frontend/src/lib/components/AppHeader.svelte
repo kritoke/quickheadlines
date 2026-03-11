@@ -21,16 +21,12 @@
 
 	function handleViewSwitch(e: Event) {
 		e.preventDefault();
-		document.body.scrollTop = 0;
-		document.documentElement.scrollTop = 0;
 		window.scrollTo(0, 0);
 		goto(viewLink.href);
 	}
 
 	function handleLogoClick(e: Event) {
 		e.preventDefault();
-		document.body.scrollTop = 0;
-		document.documentElement.scrollTop = 0;
 		window.scrollTo(0, 0);
 		if (onLogoClick) {
 			onLogoClick();

@@ -1,11 +1,10 @@
 <script lang="ts">
 	import type { FeedResponse, ItemResponse } from '$lib/types';
 	import { formatTimestamp } from '$lib/api';
-	import { themeState } from '$lib/stores/theme.svelte';
-	import { slide } from 'svelte/transition';
+	import { themeState, customThemeIds } from '$lib/stores/theme.svelte';
+	import { slide, fly } from 'svelte/transition';
 	import { cubicOut } from 'svelte/easing';
 	import ScrollToTop from './ScrollToTop.svelte';
-	import BorderBeam from './BorderBeam.svelte';
 	import CustomScrollbar from './CustomScrollbar.svelte';
 	import Card from './ui/Card.svelte';
 
@@ -22,25 +21,9 @@
 
 	let resolvedTheme = $derived(themeState.theme);
 
-	// For backward compatibility, components can still access global state
-	const isIOS = typeof navigator !== 'undefined' && /iPad|iPhone|iPod/.test(navigator.userAgent);
-	const beamThemes = ['cyberpunk', 'matrix', 'vaporwave', 'retro80s', 'dracula', 'ocean'] as const;
-	type BeamTheme = typeof beamThemes[number];
+	let cardHasShadow = $derived(themeState.effects);
+	let isCustomTheme = $derived(customThemeIds.includes(resolvedTheme as any));
 
-	let showBorderBeam = $derived(!isIOS && beamThemes.includes(resolvedTheme as BeamTheme));
-	let cardHasShadow = $derived(!showBorderBeam && themeState.effects);
-	let isCustomTheme = $derived(['retro80s', 'matrix', 'ocean', 'sunset', 'hotdog', 'dracula', 'nord', 'cyberpunk', 'forest', 'coffee', 'vaporwave'].includes(resolvedTheme));
-
-	let beamColors: Record<BeamTheme, { from: string; to: string; via?: string }> = {
-		matrix: { from: '#00ff00', to: '#22c55e' },
-		cyberpunk: { from: '#ff00ff', to: '#00ffff' },
-		vaporwave: { from: '#ff71ce', to: '#b967ff', via: '#01cdfe' },
-		retro80s: { from: '#ff2e63', to: '#00d4ff' },
-		dracula: { from: '#bd93f9', to: '#50fa7b', via: '#ff79c6' },
-		ocean: { from: '#06b6d4', to: '#0ea5e9', via: '#22d3ee' }
-	};
-
-	let currentBeamColors = $derived(beamColors[resolvedTheme as BeamTheme] || { from: '#ff00ff', to: '#00ffff' });
 	let headerStyle = $derived.by(() => {
 		const dark = themeState.theme === 'dark';
 		const bgColor = feed.header_color || '#64748b';
@@ -83,19 +66,10 @@
 </script>
 
 <Card 
-	class="overflow-hidden flex flex-col h-[400px] transform-gpu relative {!cardHasShadow ? '' : 'shadow-theme'}" 
+	class="overflow-hidden flex flex-col h-[400px] transform-gpu relative {cardHasShadow ? 'hover:shadow-[var(--theme-shadow)] transition-shadow duration-300' : ''}" 
 	themeVariant={isCustomTheme}
 	data-name="feed-box"
 >
-	{#if showBorderBeam}
-		<BorderBeam 
-			colorFrom={currentBeamColors.from} 
-			colorTo={currentBeamColors.to}
-			colorVia={currentBeamColors.via}
-			duration={5}
-			size={250}
-		/>
-	{/if}
 	<!-- Feed Header -->
 	<a
 		href={feed.site_link || '#'}
@@ -105,7 +79,7 @@
 		style={headerStyle}
 	>
 		{#if feed.favicon || feed.favicon_data || getFaviconSrc()}
-			<div class="w-5 h-5 rounded bg-white/90 p-0.5 flex items-center justify-center" class:shadow-sm={!showBorderBeam}>
+			<div class="w-5 h-5 rounded bg-white/90 p-0.5 flex items-center justify-center shadow-sm">
 				<img
 					src={getFaviconSrc()}
 					alt="{feed.title} favicon"
@@ -117,7 +91,7 @@
 				/>
 			</div>
 		{/if}
-		<span class="truncate" class:drop-shadow-sm={!showBorderBeam}>{feed.title}</span>
+		<span class="truncate drop-shadow-sm">{feed.title}</span>
 	</a>
 
 	<!-- Feed Items with Scroll -->
@@ -125,7 +99,7 @@
 		<CustomScrollbar bind:scrollContainer onScroll={checkScrollPosition} class="absolute inset-0">
 			<ul class="divide-y divide-slate-100 dark:divide-slate-700">
 				{#each feed.items as item, i (`${feed.url}-${i}`)}
-					<li transition:slide={{ duration: 350, easing: cubicOut, axis: 'y' }}>
+					<li in:fly={{ y: 10, duration: 300, delay: i * 50 }}>
 						<a
 							href={item.link}
 							target="_blank"

@@ -22,7 +22,7 @@
 		getError
 	} from '$lib/stores/feedStore.svelte';
 
-	let LazySearchModal: any = null;
+	let LazySearchModal: typeof BitsSearchModal | null = null;
 	const loadSearchModal = async () => {
 		if (!LazySearchModal) {
 			const { default: component } = await import('$lib/components/BitsSearchModal.svelte');
@@ -50,8 +50,6 @@
 		if (tabChangeTimeout) clearTimeout(tabChangeTimeout);
 		
 		tabChangeTimeout = setTimeout(async () => {
-			document.body.scrollTop = 0;
-			document.documentElement.scrollTop = 0;
 			window.scrollTo(0, 0);
 			
 			const url = new URL(window.location.href);
@@ -103,8 +101,6 @@
 	});
 	async function handleLogoClick() {
 		const currentTab = feedState.activeTab;
-		document.body.scrollTop = 0;
-		document.documentElement.scrollTop = 0;
 		window.scrollTo(0, 0);
 		
 		const url = new URL(window.location.href);
