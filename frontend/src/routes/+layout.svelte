@@ -3,7 +3,15 @@
 	import { themeState, initTheme } from '$lib/stores/theme.svelte';
 	import { initLayout } from '$lib/stores/layout.svelte';
 	import { isIOS } from '$lib/utils/theme';
-	import { scrollToTop } from '$lib/utils/scroll';
+	import { onNavigate } from '$app/navigation';
+	import {
+		saveScroll,
+		getScroll,
+		hasVisited,
+		markVisited,
+		scrollToPosition,
+		resetScroll
+	} from '$lib/stores/navigation.svelte';
 	import Effects from '$lib/components/Effects.svelte';
 	import CrystalBadge from '$lib/components/CrystalBadge.svelte';
 	import ScrollToTop from '$lib/components/ScrollToTop.svelte';
@@ -11,32 +19,39 @@
 	
 	let { children } = $props();
 	
+	onNavigate((navigation) => {
+		if (!navigation.from || !navigation.to) return;
+		
+		const fromPath = navigation.from.url.pathname;
+		const toPath = navigation.to.url.pathname;
+		
+		if (navigation.type === 'enter' || navigation.type === 'goto') {
+			markVisited(toPath);
+			return;
+		}
+		
+		saveScroll(fromPath);
+		markVisited(toPath);
+		
+		if (!navigation.complete) {
+			navigation.complete.then(() => {
+				const savedScroll = getScroll(toPath);
+				if (savedScroll !== undefined) {
+					scrollToPosition(savedScroll);
+				} else {
+					resetScroll();
+				}
+			});
+		}
+	});
+	
 	$effect(() => {
-		// Detect iOS and add class for CSS targeting
 		if (typeof window !== 'undefined' && isIOS()) {
 			document.documentElement.classList.add('ios-device');
 		}
 		
 		initTheme();
 		initLayout();
-	});
-
-	$effect(() => {
-		if (typeof window === 'undefined') return;
-
-		const handleNavigation = () => {
-			requestAnimationFrame(() => {
-				scrollToTop();
-			});
-		};
-
-		window.addEventListener('popstate', handleNavigation);
-		window.addEventListener('pageshow', handleNavigation);
-
-		return () => {
-			window.removeEventListener('popstate', handleNavigation);
-			window.removeEventListener('pageshow', handleNavigation);
-		};
 	});
 </script>
 

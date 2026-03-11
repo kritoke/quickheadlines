@@ -9,7 +9,7 @@
 	import { websocketConnection } from '$lib/websocket';
 	import { createFeedEffects } from '$lib/stores/effects.svelte';
 	import { logger, initDebug, setDebugEnabled } from '$lib/utils/debug';
-	import { scrollToTop, scrollToPosition } from '$lib/utils/scroll';
+	import { goto } from '$app/navigation';
 	import {
 		feedState,
 		loadFeeds,
@@ -53,16 +53,10 @@
 		tabChangeTimeout = setTimeout(async () => {
 			const url = new URL(window.location.href);
 			url.searchParams.set('tab', tab);
-			window.history.replaceState({}, '', url);
 			
 			setActiveTab(tab);
 			await loadFeeds(tab);
-			
-			requestAnimationFrame(() => {
-				requestAnimationFrame(() => {
-					scrollToTop();
-				});
-			});
+			await goto(url.toString());
 		}, 150);
 	}
 
@@ -91,9 +85,7 @@
 			const handleWebSocketMessage = (message: any) => {
 				if (message.type === 'feed_update') {
 					logger.log('[FeedPage] Feed update received, reloading...');
-					const saveScrollY = window.scrollY;
 					loadFeeds(feedState.activeTab, true);
-					scrollToPosition(saveScrollY);
 				} else if (message.type === 'clustering_status') {
 				}
 			};
@@ -104,6 +96,7 @@
 			};
 		}
 	});
+	
 	async function handleLogoClick() {
 		const currentTab = feedState.activeTab;
 		
@@ -112,14 +105,6 @@
 		window.history.replaceState({}, '', url);
 		
 		await loadFeeds(currentTab, true);
-		
-		requestAnimationFrame(() => {
-			requestAnimationFrame(() => {
-				document.body.scrollTop = 0;
-				document.documentElement.scrollTop = 0;
-				window.scrollTo(0, 0);
-			});
-		});
 	}
 </script>
 
@@ -163,7 +148,7 @@
 		{/await}
 	{/if}
 
-	<main class="mx-auto px-4 md:px-8 xl:px-12 py-4 overflow-visible" style="padding-top: calc(var(--header-height, 6rem) + 1rem); max-width: 1800px;">
+	<main class="mx-auto px-4 md:px-8 xl:px-12 py-4 overflow-visible" style="padding-top: calc(var(--header-height, 6rem) + 1rem); max-width: 1400px;">
 		{#if loading && feedState.feeds.length === 0}
 			<div class="flex items-center justify-center py-20 gap-3">
 				<div class="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
@@ -189,7 +174,7 @@
 
 			{#if filteredFeeds.length > 0}
 				{#key feedState.activeTab}
-					<div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4">
+					<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
 						{#each filteredFeeds as feed, i (`feed-${i}`)}
 							<FeedBox {feed} onLoadMore={() => handleLoadMore(feed)} loading={feedState.loadingFeeds[feed.url] ?? false} />
 						{/each}

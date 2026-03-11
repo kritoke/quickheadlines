@@ -11,7 +11,6 @@
 	import { logger, initDebug, setDebugEnabled } from '$lib/utils/debug';
 	import { goto } from '$app/navigation';
 	import { themeState } from '$lib/stores/theme.svelte';
-	import { scrollToTop } from '$lib/utils/scroll';
 	import {
 		timelineState,
 		loadTimeline,
@@ -102,8 +101,9 @@
 	}
 
 	function handleLogoClick() {
-		goto('/?tab=all');
-		scrollToTop();
+		const params = new URLSearchParams(window.location.search);
+		const tab = params.get('tab') || 'all';
+		goto('/?tab=' + tab);
 	}
 </script>
 
@@ -145,7 +145,7 @@
 		{/await}
 	{/if}
 
-	<main class="max-w-[1800px] mx-auto px-4 md:px-8 xl:px-12 py-4 overflow-visible" style="padding-top: calc(var(--header-height, 4rem) + 2rem);">
+	<main class="max-w-[1400px] mx-auto px-4 md:px-8 xl:px-12 py-4 overflow-visible" style="padding-top: calc(var(--header-height, 4rem) + 2rem);">
 		{#if loading && timelineState.items.length === 0}
 			<div class="flex items-center justify-center py-20 gap-3">
 				<div class="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
