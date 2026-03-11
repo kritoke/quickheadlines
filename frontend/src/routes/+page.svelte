@@ -50,14 +50,13 @@
 		if (tabChangeTimeout) clearTimeout(tabChangeTimeout);
 		
 		tabChangeTimeout = setTimeout(async () => {
-			window.scrollTo(0, 0);
-			
 			const url = new URL(window.location.href);
 			url.searchParams.set('tab', tab);
 			window.history.replaceState({}, '', url);
 			
 			setActiveTab(tab);
 			await loadFeeds(tab);
+			window.scrollTo(0, 0);
 		}, 150);
 	}
 
@@ -101,13 +100,13 @@
 	});
 	async function handleLogoClick() {
 		const currentTab = feedState.activeTab;
-		window.scrollTo(0, 0);
 		
 		const url = new URL(window.location.href);
 		url.searchParams.set('tab', currentTab);
 		window.history.replaceState({}, '', url);
 		
 		await loadFeeds(currentTab, true);
+		window.scrollTo(0, 0);
 	}
 </script>
 

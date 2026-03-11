@@ -2,7 +2,7 @@
 	import type { FeedResponse, ItemResponse } from '$lib/types';
 	import { formatTimestamp } from '$lib/api';
 	import { themeState, customThemeIds } from '$lib/stores/theme.svelte';
-	import { slide, fly } from 'svelte/transition';
+	import { slide } from 'svelte/transition';
 	import { cubicOut } from 'svelte/easing';
 	import ScrollToTop from './ScrollToTop.svelte';
 	import CustomScrollbar from './CustomScrollbar.svelte';
@@ -99,7 +99,7 @@
 		<CustomScrollbar bind:scrollContainer onScroll={checkScrollPosition} class="absolute inset-0">
 			<ul class="divide-y divide-slate-100 dark:divide-slate-700">
 				{#each feed.items as item, i (`${feed.url}-${i}`)}
-					<li in:fly={{ y: 10, duration: 300, delay: i * 50 }}>
+					<li>
 						<a
 							href={item.link}
 							target="_blank"
