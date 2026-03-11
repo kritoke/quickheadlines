@@ -26,11 +26,11 @@ describe EventBroadcaster do
 
     it "completes quickly" do
       start_time = Time.monotonic
-      
+
       1000.times do |i|
         EventBroadcaster.notify_feed_update(1234567890 + i)
       end
-      
+
       elapsed = Time.monotonic - start_time
       # Should complete in reasonable time (< 1 second)
       elapsed.total_seconds.should be < 1.0
@@ -40,7 +40,7 @@ describe EventBroadcaster do
   describe ".get_stats" do
     it "returns statistics" do
       stats = EventBroadcaster.get_stats
-      
+
       stats["dropped"].should be >= 0
       stats["processed"].should be >= 0
     end
@@ -50,7 +50,7 @@ describe EventBroadcaster do
     it "serializes to JSON with correct format" do
       event = FeedUpdateEvent.new(1234567890)
       json = event.to_json
-      
+
       json.should contain("\"type\":\"feed_update\"")
       json.should contain("\"timestamp\":1234567890")
     end
@@ -71,7 +71,7 @@ describe EventBroadcaster do
     it "serializes to JSON with heartbeat type" do
       event = HeartbeatEvent.new
       json = event.to_json
-      
+
       json.should contain("\"type\":\"heartbeat\"")
     end
 
@@ -90,19 +90,19 @@ describe EventBroadcaster do
     it "broadcasts to connected clients" do
       # Start broadcaster
       EventBroadcaster.start
-      
+
       # Create and register a connection
       ws = HTTP::WebSocket.new("ws://localhost/test")
       SocketManager.instance.register(ws, "192.168.4.1")
-      
+
       initial_sent = SocketManager.instance.messages_sent
-      
+
       # Send notification
       EventBroadcaster.notify_feed_update(1234567890)
-      
+
       # Give time for async processing
       sleep 0.2
-      
+
       # Verify message was sent
       SocketManager.instance.messages_sent.should be > initial_sent
     end

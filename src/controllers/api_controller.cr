@@ -28,7 +28,7 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
     if value.nil?
       return default
     end
-    
+
     begin
       limit = value.to_i
       if limit < min
@@ -47,7 +47,7 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
     if value.nil?
       return default
     end
-    
+
     begin
       offset = value.to_i
       if offset < 0
@@ -64,7 +64,7 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
     if value.nil?
       return default
     end
-    
+
     begin
       days = value.to_i
       if days < min
