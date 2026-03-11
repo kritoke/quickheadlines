@@ -66,7 +66,7 @@
 </script>
 
 <Card 
-	class="overflow-hidden flex flex-col h-[400px] transform-gpu relative {cardHasShadow ? 'hover:shadow-[var(--theme-shadow)] transition-shadow duration-300' : ''}" 
+	class="overflow-hidden flex flex-col h-[400px] transform-gpu relative hover-glow" 
 	themeVariant={isCustomTheme}
 	data-name="feed-box"
 >

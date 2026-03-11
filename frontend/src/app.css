@@ -95,6 +95,11 @@ body::-webkit-scrollbar-thumb:hover {
 	box-shadow: 0 4px 12px var(--theme-shadow, rgba(59, 130, 246, 0.15));
 }
 
+/* Hover glow with theme accent */
+.hover-glow:hover {
+	box-shadow: 0 0 20px var(--theme-shadow, rgba(59, 130, 246, 0.3));
+}
+
 /* iOS momentum scrolling */
 .ios-scroll {
 	-webkit-overflow-scrolling: touch;

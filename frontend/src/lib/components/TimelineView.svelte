@@ -139,7 +139,7 @@
 					{@const globalIndex = groupStartIndex + i}
 					<div 
 						in:fly={{ y: 10, duration: 300, delay: globalIndex * 50 }}
-						class="timeline-item bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden transition-all duration-200 relative {themeState.effects ? 'hover:shadow-[var(--theme-shadow)]' : ''}"
+						class="timeline-item bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden transition-all duration-200 relative hover-glow"
 						class:col-span-full={expandedClusterId === item.id && columns > 1}
 					>
 						<!-- Item Header with Feed Info -->
