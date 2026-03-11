@@ -79,9 +79,11 @@ record Tab,
   feeds : Array(FeedData) = [] of FeedData,
   software_releases : Array(FeedData) = [] of FeedData
 
+# AppState provides both instance and class-level access to application state.
+# Instance access via STATE global, class access via AppState.method.
+# All methods delegate to StateStore for thread-safe state management.
 class AppState
-  @mutex = Mutex.new
-
+  # Instance methods (used via STATE global)
   def feeds
     StateStore.feeds
   end
@@ -122,8 +124,77 @@ class AppState
     StateStore.refreshing?
   end
 
-  def self.with_lock(&)
-    yield
+  # Class methods (used via AppState.method)
+  def self.feeds
+    StateStore.feeds
+  end
+
+  def self.tabs
+    StateStore.tabs
+  end
+
+  def self.software_releases
+    StateStore.software_releases
+  end
+
+  def self.updated_at
+    StateStore.updated_at
+  end
+
+  def self.config
+    StateStore.config
+  end
+
+  def self.config_title
+    StateStore.config_title
+  end
+
+  def self.config_title=(value : String)
+    StateStore.update(&.copy_with(config_title: value))
+  end
+
+  def self.config=(value : Config?)
+    StateStore.update(&.copy_with(config: value))
+  end
+
+  def self.feeds=(value : Array(FeedData))
+    StateStore.update(&.copy_with(feeds: value))
+  end
+
+  def self.tabs=(value : Array(Tab))
+    StateStore.update(&.copy_with(tabs: value))
+  end
+
+  def self.software_releases=(value : Array(FeedData))
+    StateStore.update(&.copy_with(software_releases: value))
+  end
+
+  def self.updated_at=(value : Time)
+    StateStore.update(&.copy_with(updated_at: value))
+  end
+
+  def self.clustering?
+    StateStore.clustering?
+  end
+
+  def self.clustering=(value : Bool)
+    StateStore.update(&.copy_with(clustering: value))
+  end
+
+  def self.refreshing?
+    StateStore.refreshing?
+  end
+
+  def self.refreshing=(value : Bool)
+    StateStore.update(&.copy_with(refreshing: value))
+  end
+
+  def self.feeds_for_tab(tab_name : String)
+    StateStore.feeds_for_tab_impl(tab_name)
+  end
+
+  def self.all_timeline_items
+    StateStore.all_timeline_items_impl
   end
 end
 
@@ -212,89 +283,6 @@ module StateStore
   end
 end
 
-# Legacy compatibility - delegates to StateStore
-class AppState
-  def self.feeds
-    StateStore.feeds
-  end
-
-  def self.tabs
-    StateStore.tabs
-  end
-
-  def self.software_releases
-    StateStore.software_releases
-  end
-
-  def self.updated_at
-    StateStore.updated_at
-  end
-
-  def self.config
-    StateStore.config
-  end
-
-  def self.config_title
-    StateStore.config_title
-  end
-
-  def self.config_title=(value : String)
-    StateStore.update(&.copy_with(config_title: value))
-  end
-
-  def self.config=(value : Config?)
-    StateStore.update(&.copy_with(config: value))
-  end
-
-  def self.feeds=(value : Array(FeedData))
-    StateStore.update(&.copy_with(feeds: value))
-  end
-
-  def self.tabs=(value : Array(Tab))
-    StateStore.update(&.copy_with(tabs: value))
-  end
-
-  def self.software_releases=(value : Array(FeedData))
-    StateStore.update(&.copy_with(software_releases: value))
-  end
-
-  def self.updated_at=(value : Time)
-    StateStore.update(&.copy_with(updated_at: value))
-  end
-
-  def self.clustering?
-    StateStore.clustering?
-  end
-
-  def self.clustering=(value : Bool)
-    StateStore.update(&.copy_with(clustering: value))
-  end
-
-  def self.refreshing?
-    StateStore.refreshing?
-  end
-
-  def self.refreshing=(value : Bool)
-    StateStore.update(&.copy_with(refreshing: value))
-  end
-
-  def self.with_lock(&)
-    # Locking is now handled internally by StateStore
-    yield
-  end
-
-  # Legacy methods that need access to internal state
-  def self.feeds_for_tab(tab_name : String)
-    StateStore.update(&.itself) # Ensure thread-safe read
-    StateStore.feeds_for_tab_impl(tab_name)
-  end
-
-  def self.all_timeline_items
-    StateStore.update(&.itself) # Ensure thread-safe read
-    StateStore.all_timeline_items_impl
-  end
-end
-
 # Extend StateStore with implementation methods
 module StateStore
   def self.feeds_for_tab_impl(tab_name : String) : Array(FeedData)
@@ -356,9 +344,13 @@ module StateStore
   end
 end
 
+# DEPRECATED: Use AppState class methods directly instead of this global instance.
+# This will be removed in a future version when full DI is implemented.
 STATE = AppState.new
 
 # Global feed cache (singleton accessor)
+# DEPRECATED: Use FeedFetcher with injected FeedCache instead.
+# This will be removed in a future version when full DI is implemented.
 class FeedCache
   @@instance : FeedCache?
 
@@ -371,6 +363,8 @@ class FeedCache
   end
 end
 
+# DEPRECATED: Use FeedFetcher.instance or inject FeedCache for testing.
+# This will be removed in a future version when full DI is implemented.
 FEED_CACHE = if ENV["SKIP_FEED_CACHE_INIT"] == "1"
                nil
              else
