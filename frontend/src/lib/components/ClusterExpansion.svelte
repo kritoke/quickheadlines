@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { StoryResponse } from '$lib/types';
 	import { formatTimestamp } from '$lib/api';
+	import { getFaviconSrc } from '$lib/utils/feedItem';
 
 	interface Props {
 		items: StoryResponse[];
@@ -8,22 +9,6 @@
 	}
 
 	let { items, loading = false }: Props = $props();
-
-	function getFaviconSrc(item: StoryResponse): string {
-		if (item.favicon_data) {
-			if (item.favicon_data.startsWith('internal:')) {
-				const iconName = item.favicon_data.replace('internal:', '');
-				if (iconName === 'code_icon') return '/code_icon.svg';
-				return '/favicon.svg';
-			}
-			return item.favicon_data;
-		}
-		if (item.favicon) {
-			if (item.favicon.startsWith('internal:')) return '/favicon.svg';
-			return item.favicon;
-		}
-		return '/favicon.svg';
-	}
 </script>
 
 {#if loading}

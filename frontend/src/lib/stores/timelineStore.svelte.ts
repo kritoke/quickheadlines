@@ -1,8 +1,11 @@
 import { fetchTimeline, fetchConfig } from '$lib/api';
+import { deepClone } from '$lib/utils/clone';
+import { isIdle, isLoading, isRefreshing, isError, getError } from '$lib/utils/storeTypes';
+import type { LoadStatus } from '$lib/utils/storeTypes';
 import type { TimelineItemResponse } from '$lib/types';
 import { SvelteSet } from 'svelte/reactivity';
 
-export type LoadStatus = 'idle' | 'loading' | 'refreshing' | 'error';
+export type { LoadStatus };
 
 type BaseTimelineState = {
 	items: TimelineItemResponse[];
@@ -21,25 +24,7 @@ export type TimelineStateError = BaseTimelineState & { status: 'error'; error: s
 
 export type TimelineState = TimelineStateIdle | TimelineStateLoading | TimelineStateRefreshing | TimelineStateError;
 
-export function isIdle(state: TimelineState): state is TimelineStateIdle {
-	return state.status === 'idle';
-}
-
-export function isLoading(state: TimelineState): state is TimelineStateLoading {
-	return state.status === 'loading';
-}
-
-export function isRefreshing(state: TimelineState): state is TimelineStateRefreshing {
-	return state.status === 'refreshing';
-}
-
-export function isError(state: TimelineState): state is TimelineStateError {
-	return state.status === 'error';
-}
-
-export function getError(state: TimelineState): string | null {
-	return isError(state) ? state.error : null;
-}
+export { isIdle, isLoading, isRefreshing, isError, getError };
 
 const initialBaseState: BaseTimelineState = {
 	items: [],
@@ -61,9 +46,7 @@ export const timelineState = $state<TimelineState>({
 	itemIds: new SvelteSet<string>()
 });
 
-function clone<T>(obj: T): T {
-	return JSON.parse(JSON.stringify(obj));
-}
+const clone = deepClone;
 
 export function setLoading(state: TimelineState, isAppend: boolean): TimelineState {
 	if (isAppend) {

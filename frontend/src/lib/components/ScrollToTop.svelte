@@ -8,12 +8,7 @@
 		e.preventDefault();
 		e.stopPropagation();
 		
-		document.documentElement.scrollTop = 0;
-		document.body.scrollTop = 0;
-		window.scrollTo(0, 0);
-		
-		document.body.scrollIntoView({ behavior: 'auto', block: 'start' });
-		document.documentElement.scrollIntoView({ behavior: 'auto', block: 'start' });
+		window.scrollTo({ top: 0, behavior: 'auto' });
 		
 		logger.log('Scroll triggered!');
 	}
@@ -27,10 +22,9 @@
 	title="Back to top"
 	onclick={doScroll}
 >
-	<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+	<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5">
 		<path d="M5 15l7-7 7 7"/>
 	</svg>
-	<span style="font-size: 0.6rem; font-weight: bold;">TOP</span>
 </button>
 
 <style>
@@ -38,10 +32,9 @@
 		position: fixed;
 		bottom: 2rem;
 		right: 2rem;
-		width: 3.5rem;
-		height: 3.5rem;
+		width: 3rem;
+		height: 3rem;
 		display: flex;
-		flex-direction: column;
 		align-items: center;
 		justify-content: center;
 		border-radius: 9999px;

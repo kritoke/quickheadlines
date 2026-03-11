@@ -3,6 +3,13 @@ require "sqlite3"
 require "../config"
 require "../storage/schema"
 
+# Forward declaration - will be defined in application.cr
+module QuickHeadlines
+  class Application
+    class_property initial_config : Config?
+  end
+end
+
 # Database service for managing SQLite connections
 # Provides dependency injection for database access
 @[ADI::Register]
@@ -25,10 +32,7 @@ class DatabaseService
 
   # Singleton access for backward compatibility
   def self.instance : DatabaseService
-    @@instance ||= begin
-      config = load_config_with_validation("feeds.yml").config
-      DatabaseService.new(config)
-    end
+    @@instance ||= DatabaseService.new(QuickHeadlines::Application.initial_config.not_nil!)
   end
 
   def self.instance=(service : DatabaseService)
@@ -89,45 +93,28 @@ class DatabaseService
     db.exec(Schema::FEEDS_TABLE)
 
     # Add columns if needed (migration)
-    begin
-      db.exec("ALTER TABLE feeds ADD COLUMN favicon_data TEXT")
-    rescue
-      # Column already exists
-    end
-
-    begin
-      db.exec("ALTER TABLE feeds ADD COLUMN header_text_color TEXT")
-    rescue
-      # Column already exists
-    end
-
-    begin
-      db.exec("ALTER TABLE feeds ADD COLUMN header_theme_colors TEXT")
-    rescue
-      # Column already exists
-    end
+    add_column_if_missing(db, "feeds", "favicon_data", "TEXT")
+    add_column_if_missing(db, "feeds", "header_text_color", "TEXT")
+    add_column_if_missing(db, "feeds", "header_theme_colors", "TEXT")
 
     # Items table
     db.exec(Schema::ITEMS_TABLE)
 
     # Add columns if needed (migration)
-    begin
-      db.exec("ALTER TABLE items ADD COLUMN minhash_signature BLOB")
-    rescue
-      # Column already exists
-    end
-
-    begin
-      db.exec("ALTER TABLE items ADD COLUMN cluster_id INTEGER REFERENCES items(id)")
-    rescue
-      # Column already exists
-    end
+    add_column_if_missing(db, "items", "minhash_signature", "BLOB")
+    add_column_if_missing(db, "items", "cluster_id", "INTEGER REFERENCES items(id)")
 
     # LSH bands table
     db.exec(Schema::LSH_BANDS_TABLE)
 
     # Indexes for performance
     db.exec(Schema::INDEXES)
+  end
+
+  private def add_column_if_missing(db : DB::Database, table : String, column : String, type : String)
+    db.exec("ALTER TABLE #{table} ADD COLUMN #{column} #{type}")
+  rescue
+    # Column already exists
   end
 
   def close

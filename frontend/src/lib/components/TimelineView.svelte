@@ -4,6 +4,7 @@
 	import ClusterExpansion from './ClusterExpansion.svelte';
 	import { themeState, customThemeIds } from '$lib/stores/theme.svelte';
 	import { layoutState } from '$lib/stores/layout.svelte';
+	import { getFaviconSrc, getHeaderStyle } from '$lib/utils/feedItem';
 
 
 	interface Props {
@@ -15,6 +16,7 @@
 
 	let { items, hasMore, onLoadMore, fetchClusterItems = defaultFetchClusterItems }: Props = $props();
 	let resolvedTheme = $derived(themeState.theme);
+	let isDark = $derived(resolvedTheme === 'dark');
 
 	let expandedClusterId = $state<string | null>(null);
 	let clusterItems = $state<Record<string, TimelineItemResponse[]>>({});
@@ -69,27 +71,7 @@
 		}
 	}
 
-	function getHeaderStyle(item: TimelineItemResponse): string {
-		const bgColor = item.header_color || '#64748b';
-		const textColor = item.header_text_color || '#ffffff';
-		return `background-color: ${bgColor}; color: ${textColor};`;
-	}
 
-	function getFaviconSrc(item: TimelineItemResponse): string {
-		if (item.favicon_data) {
-			if (item.favicon_data.startsWith('internal:')) {
-				const iconName = item.favicon_data.replace('internal:', '');
-				if (iconName === 'code_icon') return '/code_icon.svg';
-				return '/favicon.svg';
-			}
-			return item.favicon_data;
-		}
-		if (item.favicon) {
-			if (item.favicon.startsWith('internal:')) return '/favicon.svg';
-			return item.favicon;
-		}
-		return '/favicon.svg';
-	}
 
 	function groupByDate(items: TimelineItemResponse[]): Map<string, TimelineItemResponse[]> {
 		const groups = new Map<string, TimelineItemResponse[]>();
@@ -144,7 +126,7 @@
 						<!-- Item Header with Feed Info -->
 						<div
 							class="flex items-center gap-2 px-3 py-2 text-xs font-medium"
-							style={getHeaderStyle(item)}
+							style={getHeaderStyle(item, isDark)}
 						>
 							<div class="w-4 h-4 rounded bg-white/90 p-0.5 flex items-center justify-center shadow-sm">
 								<img

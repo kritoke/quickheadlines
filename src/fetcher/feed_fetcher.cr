@@ -419,29 +419,17 @@ class FeedFetcher
 
     return unless cache_fresh?(last_fetched, 5) && cached.items.size >= item_limit
 
-    if previous_data && (prev_favicon_data = previous_data.favicon_data)
-      favicon = prev_favicon_data.starts_with?("/favicons/") ? prev_favicon_data : cached.favicon
-      return FeedData.new(
-        cached.title,
-        cached.url,
-        cached.site_link,
-        cached.header_color,
-        cached.header_text_color,
-        cached.items,
-        cached.etag,
-        cached.last_modified,
-        favicon,
-        prev_favicon_data
-      )
-    end
-
-    cached
+    build_cached_feed_data(cached, previous_data)
   end
 
   private def get_stale_cached_feed(feed : Feed, item_limit : Int32, previous_data : FeedData?) : FeedData?
     cached = @cache.get(feed.url)
     return unless cached
 
+    build_cached_feed_data(cached, previous_data)
+  end
+
+  private def build_cached_feed_data(cached : FeedData, previous_data : FeedData?) : FeedData?
     if previous_data && (prev_favicon_data = previous_data.favicon_data)
       favicon = prev_favicon_data.starts_with?("/favicons/") ? prev_favicon_data : cached.favicon
       return FeedData.new(

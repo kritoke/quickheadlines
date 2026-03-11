@@ -2,6 +2,7 @@
 	import { themeState, toggleEffects, getThemeColors } from '$lib/stores/theme.svelte';
 	import ThemePicker from './ThemePicker.svelte';
 	import { goto } from '$app/navigation';
+	import { scrollToTop } from '$lib/utils/scroll';
 	import type { Snippet } from 'svelte';
 
 	interface Props {
@@ -22,9 +23,7 @@
 	function handleViewSwitch(e: Event) {
 		e.preventDefault();
 		goto(viewLink.href);
-		document.body.scrollTop = 0;
-		document.documentElement.scrollTop = 0;
-		window.scrollTo(0, 0);
+		scrollToTop();
 	}
 
 	function handleLogoClick(e: Event) {
@@ -34,9 +33,7 @@
 		} else {
 			goto('/?tab=all');
 		}
-		document.body.scrollTop = 0;
-		document.documentElement.scrollTop = 0;
-		window.scrollTo(0, 0);
+		scrollToTop();
 	}
 
 	$effect(() => {

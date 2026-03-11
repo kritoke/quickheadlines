@@ -11,6 +11,7 @@
 	import { logger, initDebug, setDebugEnabled } from '$lib/utils/debug';
 	import { goto } from '$app/navigation';
 	import { themeState } from '$lib/stores/theme.svelte';
+	import { scrollToTop } from '$lib/utils/scroll';
 	import {
 		timelineState,
 		loadTimeline,
@@ -102,9 +103,7 @@
 
 	function handleLogoClick() {
 		goto('/?tab=all');
-		document.body.scrollTop = 0;
-		document.documentElement.scrollTop = 0;
-		window.scrollTo(0, 0);
+		scrollToTop();
 	}
 </script>
 

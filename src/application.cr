@@ -42,9 +42,13 @@ require "./dtos/status_dto"
 require "./dtos/cluster_dto"
 require "./dtos/feed_dto"
 
+module QuickHeadlines
+  CONFIG_PATH = "feeds.yml"
+end
+
 # Initialize application state
 begin
-  config_result = load_config_with_validation("feeds.yml")
+  config_result = load_config_with_validation(QuickHeadlines::CONFIG_PATH)
   unless config_result.success
     STDERR.puts "\n[ERROR] Failed to load configuration from feeds.yml:"
     STDERR.puts "  #{config_result.error_message}"
@@ -57,9 +61,9 @@ begin
     exit 1
   end
 
-  initial_config = config_result.config.as(Config)
+  QuickHeadlines::Application.initial_config = config_result.config.as(Config)
 
-  bootstrap = AppBootstrap.new(initial_config)
+  bootstrap = AppBootstrap.new(QuickHeadlines::Application.initial_config.not_nil!)
   bootstrap.initialize_services
   bootstrap.start_background_tasks
   bootstrap.verify_feeds_loaded

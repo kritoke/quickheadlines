@@ -2,15 +2,7 @@ require "./application"
 require "./websocket"
 
 begin
-  config_result = load_config_with_validation("feeds.yml")
-  port = 3000
-
-  if config_result.success
-    cfg = config_result.config.as(Config)
-    port = cfg.server_port
-  else
-    STDERR.puts "[WARN] Could not load feeds.yml to determine server_port; defaulting to #{port}"
-  end
+  port = QuickHeadlines::Application.initial_config.not_nil!.server_port
 
   handlers = [] of HTTP::Handler
 

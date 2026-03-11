@@ -9,6 +9,7 @@
 	import { websocketConnection } from '$lib/websocket';
 	import { createFeedEffects } from '$lib/stores/effects.svelte';
 	import { logger, initDebug, setDebugEnabled } from '$lib/utils/debug';
+	import { scrollToTop, scrollToPosition } from '$lib/utils/scroll';
 	import {
 		feedState,
 		loadFeeds,
@@ -59,9 +60,7 @@
 			
 			requestAnimationFrame(() => {
 				requestAnimationFrame(() => {
-					document.body.scrollTop = 0;
-					document.documentElement.scrollTop = 0;
-					window.scrollTo(0, 0);
+					scrollToTop();
 				});
 			});
 		}, 150);
@@ -94,7 +93,7 @@
 					logger.log('[FeedPage] Feed update received, reloading...');
 					const saveScrollY = window.scrollY;
 					loadFeeds(feedState.activeTab, true);
-					window.scrollTo(0, saveScrollY);
+					scrollToPosition(saveScrollY);
 				} else if (message.type === 'clustering_status') {
 				}
 			};

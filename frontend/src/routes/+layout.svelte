@@ -2,15 +2,12 @@
 	import '../app.css';
 	import { themeState, initTheme } from '$lib/stores/theme.svelte';
 	import { initLayout } from '$lib/stores/layout.svelte';
+	import { isIOS } from '$lib/utils/theme';
+	import { scrollToTop } from '$lib/utils/scroll';
 	import Effects from '$lib/components/Effects.svelte';
 	import CrystalBadge from '$lib/components/CrystalBadge.svelte';
 	import ScrollToTop from '$lib/components/ScrollToTop.svelte';
 	import ToastContainer from '$lib/components/ToastContainer.svelte';
-	
-	function isIOS(): boolean {
-		if (typeof navigator === 'undefined') return false;
-		return /iPad|iPhone|iPod/.test(navigator.userAgent);
-	}
 	
 	let { children } = $props();
 	
@@ -29,9 +26,7 @@
 
 		const handleNavigation = () => {
 			requestAnimationFrame(() => {
-				document.body.scrollTop = 0;
-				document.documentElement.scrollTop = 0;
-				window.scrollTo(0, 0);
+				scrollToTop();
 			});
 		};
 

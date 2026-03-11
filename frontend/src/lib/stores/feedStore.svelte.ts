@@ -1,8 +1,10 @@
 import { fetchFeeds, fetchMoreFeedItems, fetchConfig } from '$lib/api';
 import { deepClone } from '$lib/utils/clone';
+import { isIdle, isLoading, isRefreshing, isError, getError } from '$lib/utils/storeTypes';
+import type { LoadStatus } from '$lib/utils/storeTypes';
 import type { FeedResponse, FeedsPageResponse } from '$lib/types';
 
-export type LoadStatus = 'idle' | 'loading' | 'refreshing' | 'error';
+export type { LoadStatus };
 
 type BaseFeedState = {
 	feeds: FeedResponse[];
@@ -21,25 +23,7 @@ export type FeedStateError = BaseFeedState & { status: 'error'; error: string };
 
 export type FeedState = FeedStateIdle | FeedStateLoading | FeedStateRefreshing | FeedStateError;
 
-export function isIdle(state: FeedState): state is FeedStateIdle {
-	return state.status === 'idle';
-}
-
-export function isLoading(state: FeedState): state is FeedStateLoading {
-	return state.status === 'loading';
-}
-
-export function isRefreshing(state: FeedState): state is FeedStateRefreshing {
-	return state.status === 'refreshing';
-}
-
-export function isError(state: FeedState): state is FeedStateError {
-	return state.status === 'error';
-}
-
-export function getError(state: FeedState): string | null {
-	return isError(state) ? state.error : null;
-}
+export { isIdle, isLoading, isRefreshing, isError, getError };
 
 const initialBaseState: BaseFeedState = {
 	feeds: [],
@@ -58,9 +42,7 @@ const initialState: FeedStateIdle = {
 
 export const feedState = $state<FeedState>({ ...initialState });
 
-function clone<T>(obj: T): T {
-	return deepClone(obj);
-}
+const clone = deepClone;
 
 export function setLoading(state: FeedState, tab: string): FeedStateLoading | FeedStateRefreshing {
 	const base: BaseFeedState = {

@@ -4,6 +4,7 @@
 	import { themeState, customThemeIds } from '$lib/stores/theme.svelte';
 	import { slide } from 'svelte/transition';
 	import { cubicOut } from 'svelte/easing';
+	import { getFaviconSrc } from '$lib/utils/feedItem';
 	import ScrollToTop from './ScrollToTop.svelte';
 	import CustomScrollbar from './CustomScrollbar.svelte';
 	import Card from './ui/Card.svelte';
@@ -24,8 +25,8 @@
 	let cardHasShadow = $derived(themeState.effects);
 	let isCustomTheme = $derived(customThemeIds.includes(resolvedTheme as any));
 
-	let headerStyle = $derived.by(() => {
-		const dark = themeState.theme === 'dark';
+	function getHeaderStyle(): string {
+		const dark = resolvedTheme === 'dark';
 		const bgColor = feed.header_color || '#64748b';
 		const textColor = feed.header_text_color || '#ffffff';
 		
@@ -37,7 +38,7 @@
 		}
 		
 		return `background-color: ${bgColor}; color: ${textColor};`;
-	});
+	}
 
 	function checkScrollPosition() {
 		if (!scrollContainer) return;
@@ -47,26 +48,10 @@
 		
 		isScrolledToBottom = maxScroll > 0 && scrollTop >= maxScroll - 10;
 	}
-
-	function getFaviconSrc(): string {
-		if (feed.favicon_data) {
-			if (feed.favicon_data.startsWith('internal:')) {
-				const iconName = feed.favicon_data.replace('internal:', '');
-				if (iconName === 'code_icon') return '/code_icon.svg';
-				return '/favicon.svg';
-			}
-			return feed.favicon_data;
-		}
-		if (feed.favicon) {
-			if (feed.favicon.startsWith('internal:')) return '/favicon.svg';
-			return feed.favicon;
-		}
-		return '/favicon.svg';
-	}
 </script>
 
 <Card 
-	class="overflow-hidden flex flex-col h-[400px] transform-gpu relative hover-glow" 
+	class="overflow-hidden flex flex-col h-[400px] relative hover-glow" 
 	themeVariant={isCustomTheme}
 	data-name="feed-box"
 >
@@ -76,12 +61,12 @@
 		target="_blank"
 		rel="noopener noreferrer"
 		class="flex items-center gap-2 px-3 py-2 font-semibold text-sm hover:opacity-90 transition-opacity"
-		style={headerStyle}
+		style={getHeaderStyle()}
 	>
-		{#if feed.favicon || feed.favicon_data || getFaviconSrc()}
+		{#if feed.favicon || feed.favicon_data || getFaviconSrc(feed)}
 			<div class="w-5 h-5 rounded bg-white/90 p-0.5 flex items-center justify-center shadow-sm">
 				<img
-					src={getFaviconSrc()}
+					src={getFaviconSrc(feed)}
 					alt="{feed.title} favicon"
 					class="w-4 h-4 rounded"
 					onerror={(e) => {
