@@ -10,6 +10,7 @@
 	import { createFeedEffects } from '$lib/stores/effects.svelte';
 	import { logger, initDebug, setDebugEnabled } from '$lib/utils/debug';
 	import { goto } from '$app/navigation';
+	import { setFeedsTab, getFeedsTab } from '$lib/stores/navigation.svelte';
 	import {
 		feedState,
 		loadFeeds,
@@ -55,6 +56,7 @@
 			url.searchParams.set('tab', tab);
 			
 			setActiveTab(tab);
+			setFeedsTab(tab);
 			await loadFeeds(tab);
 			await goto(url.toString());
 		}, 150);

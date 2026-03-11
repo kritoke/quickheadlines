@@ -10,6 +10,7 @@
 	} from '$lib/stores/effects.svelte';
 	import { logger, initDebug, setDebugEnabled } from '$lib/utils/debug';
 	import { goto } from '$app/navigation';
+	import { getFeedsTab } from '$lib/stores/navigation.svelte';
 	import { themeState } from '$lib/stores/theme.svelte';
 	import {
 		timelineState,
@@ -102,7 +103,9 @@
 
 	function handleLogoClick() {
 		const params = new URLSearchParams(window.location.search);
-		const tab = params.get('tab') || 'all';
+		const urlTab = params.get('tab');
+		const savedTab = getFeedsTab();
+		const tab = urlTab || savedTab || 'all';
 		goto('/?tab=' + tab);
 	}
 </script>
