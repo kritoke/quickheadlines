@@ -168,6 +168,13 @@
 				</div>
 			{/if}
 
+			{#if timelineState.isClustering}
+				<div class="sticky top-12 z-10 bg-amber-50 dark:bg-amber-900/20 py-2 flex items-center justify-center gap-2">
+					<div class="w-4 h-4 border-2 border-amber-500 border-t-transparent rounded-full animate-spin"></div>
+					<span class="text-sm text-amber-700 dark:text-amber-400">Grouping similar articles...</span>
+				</div>
+			{/if}
+
 			{#if filteredItems.length > 0}
 				{#await loadTimelineView()}
 					<div class="flex items-center justify-center py-8">

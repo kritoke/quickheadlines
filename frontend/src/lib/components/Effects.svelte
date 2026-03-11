@@ -34,6 +34,7 @@
 	}
 
 	function handleClick(e: MouseEvent) {
+		if (!effectsEnabled) return;
 		spawnParticles(e.clientX, e.clientY);
 	}
 
@@ -82,22 +83,22 @@
 		class="pointer-events-none fixed z-[9999998] w-8 h-8 rounded-full"
 		style="transform: translate({$trail.x - 16}px, {$trail.y - 16}px); background: {cursorColors.trail}; filter: blur(12px);"
 	></div>
-{/if}
 
-{#each particles as particle (particle.id)}
-	<div
-		class="particle-burst pointer-events-none fixed rounded-full"
-		style="
-			--end-x: {particle.endX}px;
-			--end-y: {particle.endY}px;
-			left: {particle.x}px; 
-			top: {particle.y}px; 
-			width: 8px; 
-			height: 8px; 
-			background: {accentColor};
-		"
-	></div>
-{/each}
+	{#each particles as particle (particle.id)}
+		<div
+			class="particle-burst pointer-events-none fixed rounded-full"
+			style="
+				--end-x: {particle.endX}px;
+				--end-y: {particle.endY}px;
+				left: {particle.x}px; 
+				top: {particle.y}px; 
+				width: 8px; 
+				height: 8px; 
+				background: {accentColor};
+			"
+		></div>
+	{/each}
+{/if}
 
 <style>
 	.particle-burst {
