@@ -10,14 +10,13 @@ module Quickheadlines::Repositories
     def find_all(limit : Int32 = 100, offset : Int32 = 0) : Array(Quickheadlines::Entities::Story)
       stories = [] of Quickheadlines::Entities::Story
 
-      @db.query(
-        "SELECT i.id, i.title, i.link, i.pub_date, f.title as feed_title, f.url as feed_url, f.site_link as feed_link, f.favicon, f.header_color
+      @db.query(<<-SQL, limit, offset) do |rows|
+        SELECT i.id, i.title, i.link, i.pub_date, f.title as feed_title, f.url as feed_url, f.site_link as feed_link, f.favicon, f.header_color
          FROM items i
          JOIN feeds f ON i.feed_id = f.id
          ORDER BY COALESCE(i.pub_date, '1970-01-01 00:00:00') DESC, i.id DESC
-         LIMIT ? OFFSET ?",
-        limit, offset
-      ) do |rows|
+         LIMIT ? OFFSET ?
+        SQL
         rows.each do
           id = rows.read(Int64)
           title = rows.read(String)
@@ -50,13 +49,12 @@ module Quickheadlines::Repositories
     end
 
     def find_by_id(id : Int64) : Quickheadlines::Entities::Story?
-      @db.query_one?(
-        "SELECT i.id, i.title, i.link, i.pub_date, f.title as feed_title, f.url as feed_url, f.site_link as feed_link, f.favicon, f.header_color
+      @db.query_one?(<<-SQL, id) do |row|
+        SELECT i.id, i.title, i.link, i.pub_date, f.title as feed_title, f.url as feed_url, f.site_link as feed_link, f.favicon, f.header_color
          FROM items i
          JOIN feeds f ON i.feed_id = f.id
-         WHERE i.id = ?",
-        id
-      ) do |row|
+         WHERE i.id = ?
+        SQL
         id = row.read(Int64)
         title = row.read(String)
         link = row.read(String)
@@ -87,15 +85,14 @@ module Quickheadlines::Repositories
     def find_by_feed(feed_id : Int64, limit : Int32 = 20, offset : Int32 = 0) : Array(Quickheadlines::Entities::Story)
       stories = [] of Quickheadlines::Entities::Story
 
-      @db.query(
-        "SELECT i.id, i.title, i.link, i.pub_date, f.title as feed_title, f.url as feed_url, f.site_link as feed_link, f.favicon, f.header_color
+      @db.query(<<-SQL, feed_id, limit, offset) do |rows|
+        SELECT i.id, i.title, i.link, i.pub_date, f.title as feed_title, f.url as feed_url, f.site_link as feed_link, f.favicon, f.header_color
          FROM items i
          JOIN feeds f ON i.feed_id = f.id
          WHERE f.id = ?
          ORDER BY COALESCE(i.pub_date, '1970-01-01 00:00:00') DESC, i.id DESC
-         LIMIT ? OFFSET ?",
-        feed_id, limit, offset
-      ) do |rows|
+         LIMIT ? OFFSET ?
+        SQL
         rows.each do
           id = rows.read(Int64)
           title = rows.read(String)
