@@ -56,7 +56,14 @@
 			
 			setActiveTab(tab);
 			await loadFeeds(tab);
-			window.scrollTo(0, 0);
+			
+			requestAnimationFrame(() => {
+				requestAnimationFrame(() => {
+					document.body.scrollTop = 0;
+					document.documentElement.scrollTop = 0;
+					window.scrollTo(0, 0);
+				});
+			});
 		}, 150);
 	}
 
@@ -106,7 +113,14 @@
 		window.history.replaceState({}, '', url);
 		
 		await loadFeeds(currentTab, true);
-		window.scrollTo(0, 0);
+		
+		requestAnimationFrame(() => {
+			requestAnimationFrame(() => {
+				document.body.scrollTop = 0;
+				document.documentElement.scrollTop = 0;
+				window.scrollTo(0, 0);
+			});
+		});
 	}
 </script>
 

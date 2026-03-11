@@ -21,18 +21,22 @@
 
 	function handleViewSwitch(e: Event) {
 		e.preventDefault();
-		window.scrollTo(0, 0);
 		goto(viewLink.href);
+		document.body.scrollTop = 0;
+		document.documentElement.scrollTop = 0;
+		window.scrollTo(0, 0);
 	}
 
 	function handleLogoClick(e: Event) {
 		e.preventDefault();
-		window.scrollTo(0, 0);
 		if (onLogoClick) {
 			onLogoClick();
 		} else {
 			goto('/?tab=all');
 		}
+		document.body.scrollTop = 0;
+		document.documentElement.scrollTop = 0;
+		window.scrollTo(0, 0);
 	}
 
 	$effect(() => {

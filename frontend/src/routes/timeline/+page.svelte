@@ -101,8 +101,10 @@
 	}
 
 	function handleLogoClick() {
-		window.scrollTo(0, 0);
 		goto('/?tab=all');
+		document.body.scrollTop = 0;
+		document.documentElement.scrollTop = 0;
+		window.scrollTo(0, 0);
 	}
 </script>
 
