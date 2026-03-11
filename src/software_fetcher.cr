@@ -4,15 +4,17 @@ require "./models"
 CODE_ICON = "internal:code_icon"
 
 def fetch_sw_with_config(sw_config : SoftwareConfig, item_limit : Int32) : FeedData?
-  items = [] of Item
+  latest_by_repo = Hash(String, Item).new
   sw_config.repos.each do |repo_entry|
-    if item = fetch_repo_release(repo_entry, item_limit)
-      items.concat(item)
+    if releases = fetch_repo_release(repo_entry, item_limit)
+      next if releases.empty?
+      latest_by_repo[repo_entry] = releases.first
     end
   end
 
-  return if items.empty?
+  return if latest_by_repo.empty?
 
+  items = latest_by_repo.values.to_a
   items.sort_by! { |i| i.pub_date || Time.unix(0) }.reverse!
 
   FeedData.new(
@@ -28,16 +30,16 @@ end
 
 private def fetch_repo_release(repo_entry : String, item_limit : Int32) : Array(Item)?
   url = repo_entry_to_url(repo_entry)
-  return unless url
+  return nil unless url
 
   result = Fetcher.pull_software(url, HTTP::Headers.new, item_limit)
 
   if error = result.error_message
     STDERR.puts "Error fetching software releases for #{repo_entry}: #{error}"
-    return
+    return nil
   end
 
-  return if result.entries.empty?
+  return nil if result.entries.empty?
 
   result.entries.map do |entry|
     Item.new(
