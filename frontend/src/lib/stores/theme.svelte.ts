@@ -1,5 +1,8 @@
 export type ThemeStyle = 'light' | 'dark' | 'retro80s' | 'matrix' | 'ocean' | 'sunset' | 'hotdog' | 'dracula' | 'nord' | 'cyberpunk' | 'forest' | 'coffee' | 'vaporwave';
 
+export const customThemeIds = ['retro80s', 'matrix', 'ocean', 'sunset', 'hotdog', 'dracula', 'nord', 'cyberpunk', 'forest', 'coffee', 'vaporwave'] as const;
+export type CustomThemeId = typeof customThemeIds[number];
+
 export const themeStyles: { id: ThemeStyle; name: string; description: string }[] = [
 	{ id: 'light', name: 'Light', description: 'Clean light theme' },
 	{ id: 'dark', name: 'Dark', description: 'Easy on the eyes' },
@@ -190,7 +193,7 @@ export const themes: Record<ThemeStyle, ThemeColors> = {
 
 export const themeState = $state({
 	theme: 'light' as ThemeStyle,
-	effects: false,
+	effects: true,
 	mounted: false
 });
 
@@ -263,7 +266,7 @@ export function initTheme() {
 
 		const savedEffects = localStorage.getItem('quickheadlines-effects');
 		const savedCoolMode = localStorage.getItem('quickheadlines-coolmode');
-		themeState.effects = savedEffects === 'true' || savedCoolMode === 'true';
+		themeState.effects = savedEffects !== 'false' && savedCoolMode !== 'false';
 	} catch {
 		themeState.theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
 		applyTheme(themeState.theme);
@@ -274,10 +277,12 @@ export function initTheme() {
 
 export function applyTheme(theme: ThemeStyle) {
 	const isDarkMode = theme === 'dark';
-	const isCustomTheme = ['retro80s', 'matrix', 'ocean', 'sunset', 'hotdog', 'dracula', 'nord', 'cyberpunk', 'forest', 'coffee', 'vaporwave'].includes(theme);
+	const isCustomTheme = customThemeIds.includes(theme as CustomThemeId);
 	
 	document.documentElement.setAttribute('data-theme', theme);
 	document.documentElement.classList.toggle('dark', isDarkMode || isCustomTheme);
+	
+	document.documentElement.style.setProperty('--theme-shadow', themes[theme].shadow);
 	
 	if (isCustomTheme) {
 		document.documentElement.classList.add('custom-theme');

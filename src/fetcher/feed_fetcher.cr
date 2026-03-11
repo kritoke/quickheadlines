@@ -1,6 +1,7 @@
 require "base64"
 require "time"
 require "json"
+require "fetcher"
 require "../config"
 require "../models"
 require "../storage"
@@ -81,7 +82,7 @@ class FeedFetcher
             retries = handle_server_error(feed, retries, response.status_code)
           end
         end
-      rescue ex : IO::TimeoutError
+      rescue IO::TimeoutError
         HealthMonitor.log_warning("fetch_feed(#{feed.url}) timeout after #{feed.timeout}s")
         HealthMonitor.update_feed_health(feed.url, FeedHealthStatus::Timeout)
 
@@ -464,7 +465,113 @@ end
 # Global functions for backward compatibility - delegate to singleton
 
 def fetch_feed(feed : Feed, display_item_limit : Int32, db_fetch_limit : Int32, previous_data : FeedData? = nil) : FeedData
+  if feed.url.includes?("reddit.com/r/")
+    return fetch_reddit_feed(feed, display_item_limit)
+  end
+
   FeedFetcher.instance.fetch(feed, display_item_limit, db_fetch_limit, previous_data)
+end
+
+private def fetch_reddit_feed(feed : Feed, limit : Int32) : FeedData
+  cache_url = feed.url
+  normalized = normalize_url(feed.url)
+
+  # First try to return cached data if available and fresh
+  # Try both original URL and normalized URL
+  cached = FeedCache.instance.get(cache_url) || FeedCache.instance.get(normalized)
+  if cached
+    if last_fetched = FeedCache.instance.get_fetched_time(cache_url) || FeedCache.instance.get_fetched_time(normalized)
+      cache_age = (Time.utc - last_fetched).total_minutes
+      if cache_age < 5 && cached.items.size >= limit
+        # Cache is fresh, return it while fetching in background
+        spawn fetch_reddit_background(feed, limit)
+        return cached
+      end
+    end
+  end
+
+  # No fresh cache, fetch new data
+  result = Fetcher.pull(feed.url, HTTP::Headers.new, limit)
+
+  if error = result.error_message
+    # On error, try to return stale cache
+    cached = FeedCache.instance.get(cache_url) || FeedCache.instance.get(normalized)
+    if cached
+      return cached
+    end
+    return FeedFetcher.instance.build_error_feed_data(feed, error)
+  end
+
+  items = result.entries.map do |entry|
+    Item.new(entry.title, entry.url, entry.published_at)
+  end
+
+  feed_data = FeedData.new(
+    feed.title,
+    feed.url,
+    result.site_link || feed.url,
+    feed.header_color,
+    feed.header_text_color,
+    items,
+    result.etag,
+    result.last_modified,
+    result.favicon,
+    nil
+  )
+
+  # Store in cache using normalized URL for consistency
+  cached_data = FeedData.new(
+    feed.title,
+    normalize_url(feed.url),
+    result.site_link || feed.url,
+    feed.header_color,
+    feed.header_text_color,
+    items,
+    result.etag,
+    result.last_modified,
+    result.favicon,
+    nil
+  )
+  FeedCache.instance.add(cached_data)
+
+  feed_data
+rescue ex
+  # On exception, try to return stale cache
+  cached = FeedCache.instance.get(feed.url) || FeedCache.instance.get(normalize_url(feed.url))
+  if cached
+    return cached
+  end
+  FeedFetcher.instance.build_error_feed_data(feed, "Error: #{ex.message}")
+end
+
+private def fetch_reddit_background(feed : Feed, limit : Int32)
+  result = Fetcher.pull(feed.url, HTTP::Headers.new, limit)
+  return unless result.success?
+  return if result.entries.empty?
+
+  items = result.entries.map do |entry|
+    Item.new(entry.title, entry.url, entry.published_at)
+  end
+
+  feed_data = FeedData.new(
+    feed.title,
+    normalize_url(feed.url),
+    result.site_link || feed.url,
+    feed.header_color,
+    feed.header_text_color,
+    items,
+    result.etag,
+    result.last_modified,
+    result.favicon,
+    nil
+  )
+
+  FeedCache.instance.add(feed_data)
+end
+
+private def normalize_url(url : String) : String
+  # Normalize URLs by removing www. prefix for consistency
+  url.sub("https://www.", "https://").sub("http://www.", "http://")
 end
 
 def error_feed_data(feed : Feed, message : String) : FeedData

@@ -14,19 +14,19 @@ def create_schema(db : DB::Database, db_path : String)
   begin
     db.exec("ALTER TABLE feeds ADD COLUMN favicon_data TEXT")
     STDERR.puts "[Cache] Added favicon_data column to existing database"
-  rescue ex : SQLite3::Exception
+  rescue
   end
 
   begin
     db.exec("ALTER TABLE feeds ADD COLUMN header_text_color TEXT")
     STDERR.puts "[Cache] Added header_text_color column to existing database"
-  rescue ex : SQLite3::Exception
+  rescue
   end
 
   begin
     db.exec("ALTER TABLE feeds ADD COLUMN header_theme_colors TEXT")
     STDERR.puts "[Cache] Added header_theme_colors column to existing database"
-  rescue ex : SQLite3::Exception
+  rescue
   end
 
   db.exec(Schema::ITEMS_TABLE)
@@ -34,13 +34,13 @@ def create_schema(db : DB::Database, db_path : String)
   begin
     db.exec("ALTER TABLE items ADD COLUMN minhash_signature BLOB")
     STDERR.puts "[Cache] Added minhash_signature column to existing database"
-  rescue ex : SQLite3::Exception
+  rescue
   end
 
   begin
     db.exec("ALTER TABLE items ADD COLUMN cluster_id INTEGER REFERENCES items(id)")
     STDERR.puts "[Cache] Added cluster_id column to existing database"
-  rescue ex : SQLite3::Exception
+  rescue
   end
 
   db.exec(Schema::LSH_BANDS_TABLE)

@@ -109,16 +109,16 @@ def ensure_cache_dir(cache_dir : String)
     begin
       Dir.mkdir_p(cache_dir)
       STDERR.puts "[#{Time.local}] Created cache directory: #{cache_dir}"
-    rescue ex : File::AccessDeniedError
+    rescue ex : Exception
+      STDERR.puts "Error: Cannot create cache directory '#{cache_dir}': #{ex.message}"
+      exit 1
+    rescue
       STDERR.puts "Error: Cannot create cache directory '#{cache_dir}': Permission denied"
       STDERR.puts ""
       STDERR.puts "Solutions:"
       STDERR.puts "  1. Set QUICKHEADLINES_CACHE_DIR to a writable location"
       STDERR.puts "  2. Add 'cache_dir: /path/to/cache' to your feeds.yml"
       STDERR.puts "  3. Run in a directory where you have write permissions"
-      exit 1
-    rescue ex : Exception
-      STDERR.puts "Error: Cannot create cache directory '#{cache_dir}': #{ex.message}"
       exit 1
     end
   end

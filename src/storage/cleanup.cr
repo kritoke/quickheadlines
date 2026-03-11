@@ -103,8 +103,6 @@ module CleanupRepository
           next
         end
 
-        parsed = nil.as(Time?)
-
         begin
           begin
             parsed = Time.parse(str, "%Y-%m-%d %H:%M:%S", Time::Location::UTC)

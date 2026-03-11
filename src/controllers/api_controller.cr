@@ -28,7 +28,7 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
     if value.nil?
       return default
     end
-    
+
     begin
       limit = value.to_i
       if limit < min
@@ -47,7 +47,7 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
     if value.nil?
       return default
     end
-    
+
     begin
       offset = value.to_i
       if offset < 0
@@ -64,7 +64,7 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
     if value.nil?
       return default
     end
-    
+
     begin
       days = value.to_i
       if days < min
@@ -642,8 +642,8 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
   # GET /api/status - Get current system status
   @[ARTA::Get(path: "/api/status")]
   def status : Quickheadlines::DTOs::StatusResponse
-    ws_stats = SocketManager.instance.get_stats
-    broadcaster_stats = EventBroadcaster.get_stats
+    ws_stats = SocketManager.instance.stats
+    broadcaster_stats = EventBroadcaster.stats
 
     Quickheadlines::DTOs::StatusResponse.new(
       clustering: STATE.clustering?,

@@ -244,7 +244,7 @@ class SocketManager
     removed
   end
 
-  def get_stats
+  def stats
     {
       "connections"      => connection_count,
       "messages_sent"    => messages_sent,

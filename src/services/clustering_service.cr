@@ -100,7 +100,7 @@ class Quickheadlines::Services::ClusteringService
         rows.each do
           id = rows.read(Int64)
           title = rows.read(String)
-          link = rows.read(String)
+          _link = rows.read(String)
           feed_id = rows.read(Int64)
 
           next if title.empty?
@@ -175,7 +175,6 @@ class Quickheadlines::Services::ClusteringService
     STDERR.puts "[#{Time.local}] Found #{items.size} items to re-cluster with LSH (threshold: #{threshold}, bands: #{bands})"
 
     STATE.clustering = true
-    processed = 0
     begin
       rep_map = ClusteringEngine.cluster_items(items, threshold, bands)
       cache.assign_clusters_bulk(rep_map)

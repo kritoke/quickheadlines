@@ -37,7 +37,7 @@ class StaticController < Athena::Framework::Controller
     end
 
     response
-  rescue ex : BakedFileSystem::NoSuchFileError
+  rescue BakedFileSystem::NoSuchFileError
     ATH::Response.new("Not Found: #{path}", 404, HTTP::Headers{"Content-Type" => "text/plain"})
   rescue ex
     ATH::Response.new("Error: #{ex.message}", 500, HTTP::Headers{"Content-Type" => "text/plain"})
@@ -78,7 +78,7 @@ class StaticController < Athena::Framework::Controller
     end
 
     response
-  rescue ex : BakedFileSystem::NoSuchFileError
+  rescue BakedFileSystem::NoSuchFileError
     ATH::Response.new("Not Found: favicon.ico", 404, HTTP::Headers{"Content-Type" => "text/plain"})
   rescue ex
     ATH::Response.new("Error: #{ex.message}", 500, HTTP::Headers{"Content-Type" => "text/plain"})

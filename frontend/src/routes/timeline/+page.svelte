@@ -101,10 +101,10 @@
 	}
 
 	function handleLogoClick() {
+		goto('/?tab=all');
 		document.body.scrollTop = 0;
 		document.documentElement.scrollTop = 0;
 		window.scrollTo(0, 0);
-		goto('/?tab=all');
 	}
 </script>
 
@@ -148,7 +148,8 @@
 
 	<main class="max-w-[1800px] mx-auto px-4 md:px-8 xl:px-12 py-4 overflow-visible" style="padding-top: calc(var(--header-height, 4rem) + 2rem);">
 		{#if loading && timelineState.items.length === 0}
-			<div class="flex items-center justify-center py-20">
+			<div class="flex items-center justify-center py-20 gap-3">
+				<div class="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
 				<div class="text-slate-500 dark:text-slate-400">Loading timeline...</div>
 			</div>
 		{:else if error && timelineState.items.length === 0}
@@ -162,6 +163,20 @@
 				</button>
 			</div>
 		{:else}
+			{#if loading && timelineState.items.length > 0}
+				<div class="sticky top-0 z-20 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm py-2 flex items-center justify-center gap-2">
+					<div class="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+					<span class="text-sm text-slate-600 dark:text-slate-400">Refreshing...</span>
+				</div>
+			{/if}
+
+			{#if timelineState.isClustering}
+				<div class="sticky top-12 z-10 bg-amber-50 dark:bg-amber-900/20 py-2 flex items-center justify-center gap-2">
+					<div class="w-4 h-4 border-2 border-amber-500 border-t-transparent rounded-full animate-spin"></div>
+					<span class="text-sm text-amber-700 dark:text-amber-400">Grouping similar articles...</span>
+				</div>
+			{/if}
+
 			{#if filteredItems.length > 0}
 				{#await loadTimelineView()}
 					<div class="flex items-center justify-center py-8">

@@ -91,19 +91,19 @@ class DatabaseService
     # Add columns if needed (migration)
     begin
       db.exec("ALTER TABLE feeds ADD COLUMN favicon_data TEXT")
-    rescue ex : SQLite3::Exception
+    rescue
       # Column already exists
     end
 
     begin
       db.exec("ALTER TABLE feeds ADD COLUMN header_text_color TEXT")
-    rescue ex : SQLite3::Exception
+    rescue
       # Column already exists
     end
 
     begin
       db.exec("ALTER TABLE feeds ADD COLUMN header_theme_colors TEXT")
-    rescue ex : SQLite3::Exception
+    rescue
       # Column already exists
     end
 
@@ -113,13 +113,13 @@ class DatabaseService
     # Add columns if needed (migration)
     begin
       db.exec("ALTER TABLE items ADD COLUMN minhash_signature BLOB")
-    rescue ex : SQLite3::Exception
+    rescue
       # Column already exists
     end
 
     begin
       db.exec("ALTER TABLE items ADD COLUMN cluster_id INTEGER REFERENCES items(id)")
-    rescue ex : SQLite3::Exception
+    rescue
       # Column already exists
     end
 

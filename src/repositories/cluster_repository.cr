@@ -111,14 +111,13 @@ module Quickheadlines::Repositories
     def find_items(cluster_id : Int64) : Array(Quickheadlines::Entities::Story)
       stories = [] of Quickheadlines::Entities::Story
 
-      @db.query(
-        "SELECT i.id, i.title, i.link, i.pub_date, f.title as feed_title, f.url as feed_url, f.site_link as feed_link, f.favicon, f.header_color
+      @db.query(<<-SQL, cluster_id) do |rows|
+        SELECT i.id, i.title, i.link, i.pub_date, f.title as feed_title, f.url as feed_url, f.site_link as feed_link, f.favicon, f.header_color
          FROM items i
          JOIN feeds f ON i.feed_id = f.id
          WHERE i.cluster_id = ?
-         ORDER BY i.id ASC",
-        cluster_id
-      ) do |rows|
+         ORDER BY i.id ASC
+        SQL
         rows.each do
           id = rows.read(Int64)
           title = rows.read(String)
