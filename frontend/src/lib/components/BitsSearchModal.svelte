@@ -31,7 +31,7 @@
 		<Dialog.Overlay class="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm" />
 		
 		<Dialog.Content class="fixed top-0 left-0 right-0 z-50 bg-white dark:bg-slate-900 shadow-xl border-b border-slate-200 dark:border-slate-700">
-			<div class="mx-auto py-4 px-4 md:px-8 xl:px-12" style="max-width: 1800px;">
+			<div class="mx-auto py-4 px-4 md:px-8 xl:px-12" style="max-width: 1400px;">
 				<div class="flex items-center gap-3 max-w-md mx-auto">
 					<div class="relative flex-1">
 						<input 

@@ -47,8 +47,8 @@
 	});
 </script>
 
-<header bind:this={headerElement} class="fixed top-0 left-0 right-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur border-b border-slate-200 dark:border-slate-700 z-30" data-name="app-header">
-	<div class="mx-auto px-4 md:px-8 xl:px-12" style="max-width: 1800px;">
+<header bind:this={headerElement} class="fixed top-0 left-0 right-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur shadow-sm z-30" data-name="app-header">
+	<div class="mx-auto px-4 md:px-8 xl:px-12" style="max-width: 1400px;">
 		<div class="flex items-center justify-between py-2">
 			<div class="flex items-center gap-2 sm:gap-3 min-w-0">
 				<button onclick={handleLogoClick} class="flex items-center gap-2 hover:opacity-80 transition-opacity shrink-0">

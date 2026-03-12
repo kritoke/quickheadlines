@@ -3,7 +3,7 @@
 	import { themeState, initTheme } from '$lib/stores/theme.svelte';
 	import { initLayout } from '$lib/stores/layout.svelte';
 	import { isIOS } from '$lib/utils/theme';
-	import { onNavigate, afterNavigate } from '$app/navigation';
+	import { onNavigate } from '$app/navigation';
 	import {
 		saveScroll,
 		getScroll,
@@ -29,6 +29,12 @@
 			if (savedScroll !== undefined) {
 				navigation.complete.then(() => scrollToPosition(savedScroll));
 			}
+		} else {
+			navigation.complete.then(() => {
+				document.documentElement.scrollTop = 0;
+				document.body.scrollTop = 0;
+				window.scrollTo(0, 0);
+			});
 		}
 		
 		markVisited(toPath);
@@ -39,12 +45,6 @@
 		if (navigation.type !== 'popstate') {
 			saveScroll(fromPath);
 		}
-	});
-	
-	afterNavigate(() => {
-		document.documentElement.scrollTop = 0;
-		document.body.scrollTop = 0;
-		window.scrollTo(0, 0);
 	});
 	
 	$effect(() => {

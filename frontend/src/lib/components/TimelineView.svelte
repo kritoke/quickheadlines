@@ -27,8 +27,7 @@
 	function getGridClass(cols: number): string {
 		if (cols <= 1) return 'grid-cols-1';
 		if (cols === 2) return 'sm:grid-cols-2';
-		if (cols === 3) return 'sm:grid-cols-2 lg:grid-cols-3';
-		return 'sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4';
+		return 'sm:grid-cols-2 lg:grid-cols-3';
 	}
 
 	async function toggleCluster(item: TimelineItemResponse): Promise<void> {

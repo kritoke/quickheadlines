@@ -59,7 +59,7 @@ describe('ThemePicker', () => {
 		button?.click();
 		flushSync();
 		
-		expect(document.body.textContent).toContain('Retro 80s');
+		expect(document.body.textContent).toContain('Retro');
 		expect(document.body.textContent).toContain('Matrix');
 		expect(document.body.textContent).toContain('Ocean');
 		

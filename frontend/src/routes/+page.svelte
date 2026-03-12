@@ -61,6 +61,7 @@
 			setActiveTab(tab);
 			setFeedsTab(tab);
 			await loadFeeds(tab);
+			await new Promise(r => setTimeout(r, 50));
 			resetScroll();
 		}, 150);
 	}

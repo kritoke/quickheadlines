@@ -1,22 +1,19 @@
-export type ThemeStyle = 'light' | 'dark' | 'retro80s' | 'matrix' | 'ocean' | 'sunset' | 'hotdog' | 'dracula' | 'nord' | 'cyberpunk' | 'forest' | 'coffee' | 'vaporwave';
+export type ThemeStyle = 'light' | 'dark' | 'retro' | 'matrix' | 'ocean' | 'sunset' | 'hotdog' | 'dracula' | 'cyberpunk' | 'forest';
 
-export const customThemeIds = ['retro80s', 'matrix', 'ocean', 'sunset', 'hotdog', 'dracula', 'nord', 'cyberpunk', 'forest', 'coffee', 'vaporwave'] as const;
+export const customThemeIds = ['retro', 'matrix', 'ocean', 'sunset', 'hotdog', 'dracula', 'cyberpunk', 'forest'] as const;
 export type CustomThemeId = typeof customThemeIds[number];
 
 export const themeStyles: { id: ThemeStyle; name: string; description: string }[] = [
 	{ id: 'light', name: 'Light', description: 'Clean light theme' },
 	{ id: 'dark', name: 'Dark', description: 'Easy on the eyes' },
-	{ id: 'retro80s', name: 'Retro 80s', description: 'Neon and synthwave' },
+	{ id: 'retro', name: 'Retro', description: 'Neon synthwave vibes' },
 	{ id: 'matrix', name: 'Matrix', description: 'Digital green rain' },
 	{ id: 'ocean', name: 'Ocean', description: 'Deep blue waves' },
 	{ id: 'sunset', name: 'Sunset', description: 'Warm amber tones' },
 	{ id: 'hotdog', name: 'Hot Dog Stand', description: 'Windows 3.1 vibes' },
 	{ id: 'dracula', name: 'Dracula', description: 'Popular purple dark' },
-	{ id: 'nord', name: 'Nord', description: 'Arctic bluish-gray' },
 	{ id: 'cyberpunk', name: 'Cyberpunk', description: 'Neon magenta cyan' },
-	{ id: 'forest', name: 'Forest', description: 'Earthy greens' },
-	{ id: 'coffee', name: 'Coffee', description: 'Warm browns' },
-	{ id: 'vaporwave', name: 'Vaporwave', description: 'Aesthetic pink teal' }
+	{ id: 'forest', name: 'Forest', description: 'Earthy greens' }
 ];
 
 export interface ThemeColors {
@@ -57,17 +54,17 @@ export const themes: Record<ThemeStyle, ThemeColors> = {
 		dotIndicator: '#94a3b8',
 		preview: 'linear-gradient(135deg, #1e293b 50%, #0f172a 50%)'
 	},
-	retro80s: {
+	retro: {
 		bg: '#1a1a2e',
 		bgSecondary: '#0d0d1a',
 		text: '#f1f5f9',
-		border: '#ff2e63',
+		border: '#ff71ce',
 		accent: '#00d4ff',
-		shadow: 'rgba(255, 46, 99, 0.3)',
-		cursor: { primary: '#00d4ff', trail: 'rgba(0, 212, 255, 0.4)' },
-		scrollButton: { bg: '#00d4ff', text: '#000000', hover: '#33ddff' },
+		shadow: 'rgba(255, 113, 206, 0.3)',
+		cursor: { primary: '#ff71ce', trail: 'rgba(255, 113, 206, 0.4)' },
+		scrollButton: { bg: '#ff71ce', text: '#000000', hover: '#ff99da' },
 		dotIndicator: '#00d4ff',
-		preview: 'linear-gradient(135deg, #00d4ff 50%, #ff2e63 50%)'
+		preview: 'linear-gradient(135deg, #00d4ff 50%, #ff71ce 50%)'
 	},
 	matrix: {
 		bg: '#000a00',
@@ -82,16 +79,16 @@ export const themes: Record<ThemeStyle, ThemeColors> = {
 		preview: 'linear-gradient(135deg, #22c55e 50%, #166534 50%)'
 	},
 	ocean: {
-		bg: '#0c1929',
-		bgSecondary: '#061018',
-		text: '#7dd3fc',
-		border: '#06b6d4',
-		accent: '#fb7185',
-		shadow: 'rgba(6, 182, 212, 0.25)',
-		cursor: { primary: '#fb7185', trail: 'rgba(251, 113, 133, 0.4)' },
-		scrollButton: { bg: '#fb7185', text: '#ffffff', hover: '#fda4af' },
-		dotIndicator: '#7dd3fc',
-		preview: 'linear-gradient(135deg, #06b6d4 50%, #f472b6 50%)'
+		bg: '#2e3440',
+		bgSecondary: '#242933',
+		text: '#88c0d0',
+		border: '#5e81ac',
+		accent: '#88c0d0',
+		shadow: 'rgba(136, 192, 208, 0.25)',
+		cursor: { primary: '#88c0d0', trail: 'rgba(136, 192, 208, 0.4)' },
+		scrollButton: { bg: '#88c0d0', text: '#2e3440', hover: '#a3d4e0' },
+		dotIndicator: '#88c0d0',
+		preview: 'linear-gradient(135deg, #88c0d0 50%, #5e81ac 50%)'
 	},
 	sunset: {
 		bg: '#1c1309',
@@ -129,18 +126,6 @@ export const themes: Record<ThemeStyle, ThemeColors> = {
 		dotIndicator: '#bd93f9',
 		preview: 'linear-gradient(135deg, #bd93f9 50%, #282a36 50%)'
 	},
-	nord: {
-		bg: '#2e3440',
-		bgSecondary: '#242933',
-		text: '#d8dee9',
-		border: '#3b4252',
-		accent: '#88c0d0',
-		shadow: 'rgba(136, 192, 208, 0.25)',
-		cursor: { primary: '#88c0d0', trail: 'rgba(136, 192, 208, 0.4)' },
-		scrollButton: { bg: '#88c0d0', text: '#000000', hover: '#a3d4e0' },
-		dotIndicator: '#88c0d0',
-		preview: 'linear-gradient(135deg, #88c0d0 50%, #2e3440 50%)'
-	},
 	cyberpunk: {
 		bg: '#0d0221',
 		bgSecondary: '#060115',
@@ -164,30 +149,6 @@ export const themes: Record<ThemeStyle, ThemeColors> = {
 		scrollButton: { bg: '#4ade80', text: '#000000', hover: '#6ee7a0' },
 		dotIndicator: '#4ade80',
 		preview: 'linear-gradient(135deg, #4ade80 50%, #1a2e1a 50%)'
-	},
-	coffee: {
-		bg: '#2c1810',
-		bgSecondary: '#1a0d09',
-		text: '#fef3c7',
-		border: '#78350f',
-		accent: '#d97706',
-		shadow: 'rgba(217, 119, 6, 0.25)',
-		cursor: { primary: '#d97706', trail: 'rgba(217, 119, 6, 0.4)' },
-		scrollButton: { bg: '#d97706', text: '#ffffff', hover: '#f59e0b' },
-		dotIndicator: '#d97706',
-		preview: 'linear-gradient(135deg, #d97706 50%, #2c1810 50%)'
-	},
-	vaporwave: {
-		bg: '#1a0a2e',
-		bgSecondary: '#0f0520',
-		text: '#b967ff',
-		border: '#ff71ce',
-		accent: '#ff71ce',
-		shadow: 'rgba(255, 113, 206, 0.3)',
-		cursor: { primary: '#ff71ce', trail: 'rgba(255, 113, 206, 0.4)' },
-		scrollButton: { bg: '#ff71ce', text: '#000000', hover: '#ff99da' },
-		dotIndicator: '#b967ff',
-		preview: 'linear-gradient(135deg, #ff71ce 50%, #b967ff 50%)'
 	}
 };
 
@@ -282,11 +243,10 @@ export function applyTheme(theme: ThemeStyle) {
 	document.documentElement.setAttribute('data-theme', theme);
 	document.documentElement.classList.toggle('dark', isDarkMode || isCustomTheme);
 	
-	document.documentElement.style.setProperty('--theme-shadow', themes[theme].shadow);
+	applyCustomThemeColors(theme);
 	
 	if (isCustomTheme) {
 		document.documentElement.classList.add('custom-theme');
-		applyCustomThemeColors(theme);
 	} else {
 		document.documentElement.classList.remove('custom-theme');
 	}
