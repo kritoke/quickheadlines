@@ -61,8 +61,13 @@
 			setActiveTab(tab);
 			setFeedsTab(tab);
 			await loadFeeds(tab);
-			await new Promise(r => setTimeout(r, 50));
-			resetScroll();
+			
+			// Force scroll to top after content loads
+			setTimeout(() => {
+				window.scrollTo(0, 0);
+				document.documentElement.scrollTop = 0;
+				document.body.scrollTop = 0;
+			}, 100);
 		}, 150);
 	}
 
