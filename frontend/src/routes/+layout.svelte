@@ -3,7 +3,7 @@
 	import { themeState, initTheme } from '$lib/stores/theme.svelte';
 	import { initLayout } from '$lib/stores/layout.svelte';
 	import { isIOS } from '$lib/utils/theme';
-	import { onNavigate } from '$app/navigation';
+	import { onNavigate, afterNavigate } from '$app/navigation';
 	import {
 		saveScroll,
 		getScroll,
@@ -20,29 +20,31 @@
 	let { children } = $props();
 	
 	onNavigate((navigation) => {
-		if (!navigation.from || !navigation.to) return;
+		if (!navigation.to) return;
 		
-		const fromPath = navigation.from.url.pathname;
 		const toPath = navigation.to.url.pathname;
 		
-		if (navigation.type === 'enter' || navigation.type === 'goto') {
-			markVisited(toPath);
-			return;
+		if (navigation.type === 'popstate') {
+			const savedScroll = getScroll(toPath);
+			if (savedScroll !== undefined) {
+				navigation.complete.then(() => scrollToPosition(savedScroll));
+			}
 		}
 		
-		saveScroll(fromPath);
 		markVisited(toPath);
 		
-		if (!navigation.complete) {
-			navigation.complete.then(() => {
-				const savedScroll = getScroll(toPath);
-				if (savedScroll !== undefined) {
-					scrollToPosition(savedScroll);
-				} else {
-					resetScroll();
-				}
-			});
+		if (!navigation.from || !navigation.complete) return;
+		
+		const fromPath = navigation.from.url.pathname;
+		if (navigation.type !== 'popstate') {
+			saveScroll(fromPath);
 		}
+	});
+	
+	afterNavigate(() => {
+		document.documentElement.scrollTop = 0;
+		document.body.scrollTop = 0;
+		window.scrollTo(0, 0);
 	});
 	
 	$effect(() => {
