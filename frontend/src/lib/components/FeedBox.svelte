@@ -17,6 +17,7 @@
 
 	let { feed, onLoadMore, loading = false }: Props = $props();
 	
+	let expanded = $state(false);
 	let scrollContainer: HTMLDivElement | undefined = $state();
 	let isScrolledToBottom = $state(false);
 
@@ -24,6 +25,11 @@
 
 	let cardHasShadow = $derived(themeState.effects);
 	let isCustomTheme = $derived(customThemeIds.includes(resolvedTheme as any));
+
+	const INITIAL_ITEMS = 15;
+
+	let displayedItems = $derived(expanded ? feed.items : feed.items.slice(0, INITIAL_ITEMS));
+	let hasMore = $derived(!expanded && feed.items.length > INITIAL_ITEMS);
 
 	function getHeaderStyle(): string {
 		const dark = resolvedTheme === 'dark';
@@ -40,6 +46,11 @@
 		return `background-color: ${bgColor}; color: ${textColor};`;
 	}
 
+	function handleLoadMore() {
+		expanded = true;
+		onLoadMore?.();
+	}
+
 	function checkScrollPosition() {
 		if (!scrollContainer) return;
 		
@@ -51,7 +62,7 @@
 </script>
 
 <Card 
-	class="overflow-hidden flex flex-col h-[500px] relative hover-glow" 
+	class="overflow-hidden flex flex-col relative hover-glow {expanded ? 'h-auto' : 'h-[500px]'} max-sm:h-auto max-sm:mb-2"
 	themeVariant={isCustomTheme}
 	data-name="feed-box"
 >
@@ -79,11 +90,12 @@
 		<span class="truncate drop-shadow-sm">{feed.title}</span>
 	</a>
 
-	<!-- Feed Items with Scroll -->
-	<div class="flex-1 relative min-h-0">
-		<CustomScrollbar bind:scrollContainer onScroll={checkScrollPosition} class="absolute inset-0">
+	<!-- Feed Items -->
+	<div class="flex-1 relative min-h-0 max-sm:max-h-none">
+		<!-- Mobile: no scrollbar, auto expand -->
+		<div class="max-sm:overflow-visible overflow-auto h-full">
 			<ul class="divide-y divide-slate-100 dark:divide-slate-700">
-				{#each feed.items as item, i (`${feed.url}-${i}`)}
+				{#each displayedItems as item, i (`${feed.url}-${i}`)}
 					<li>
 						<a
 							href={item.link}
@@ -103,22 +115,22 @@
 					</li>
 				{/each}
 			</ul>
-		</CustomScrollbar>
+		</div>
 
-		<!-- Scroll Hint - positioned at bottom of visible area -->
-		{#if !isScrolledToBottom && feed.items.length > 5}
+		<!-- Scroll Hint - only show on desktop when not expanded -->
+		{#if !expanded && !isScrolledToBottom && feed.items.length > 5}
 			<div class="absolute bottom-0 left-0 right-0 h-6 pointer-events-none bg-gradient-to-t from-white dark:from-slate-800 via-white/80 dark:via-slate-800/80 to-transparent"></div>
 		{/if}
 	</div>
 
-	<!-- Load More -->
-	{#if feed.total_item_count > feed.items.length}
+	<!-- Load More / Show Less -->
+	{#if feed.items.length > INITIAL_ITEMS}
 		<div class="p-2 border-t border-slate-200 dark:border-slate-700">
 			<button
 				type="button"
 				data-name="load-more"
 				disabled={loading}
-				onclick={onLoadMore}
+				onclick={handleLoadMore}
 				class="w-full text-xs text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 py-1 transition-all duration-200 disabled:opacity-50 active:scale-95"
 			>
 				{#if loading}
@@ -129,8 +141,10 @@
 						</svg>
 						Loading...
 					</span>
+				{:else if expanded}
+					Show less
 				{:else}
-					+{feed.total_item_count - feed.items.length} more
+					+{feed.items.length - INITIAL_ITEMS} more
 				{/if}
 			</button>
 		</div>
