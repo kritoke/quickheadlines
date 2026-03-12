@@ -8,9 +8,9 @@
 		e.preventDefault();
 		e.stopPropagation();
 		
-		window.scrollTo({ top: 0, behavior: 'auto' });
-		
-		logger.log('Scroll triggered!');
+		document.documentElement.scrollTop = 0;
+		document.body.scrollTop = 0;
+		window.scrollTo(0, 0);
 	}
 </script>
 
