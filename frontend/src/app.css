@@ -34,7 +34,6 @@
 }
 
 
-
 ::view-transition-old(root) {
 	z-index: 1;
 }
@@ -48,14 +47,13 @@
 
 
 
-
 html, body {
 	margin: 0;
 	padding: 0;
 	height: 100%;
-	overflow-x: hidden !important;
+	overflow-x: hidden;
 	scrollbar-width: thin;
-	scrollbar-color: var(--theme-accent, #94a3b8) transparent;
+	scrollbar-color: var(--color-accent, var(--theme-accent, #94a3b8)) transparent;
 }
 
 html::-webkit-scrollbar,
@@ -71,19 +69,19 @@ body::-webkit-scrollbar-track {
 
 html::-webkit-scrollbar-thumb,
 body::-webkit-scrollbar-thumb {
-	background-color: var(--theme-accent, #94a3b8);
+	background-color: var(--color-accent, var(--theme-accent, #94a3b8));
 	border-radius: 4px;
 }
 
 html::-webkit-scrollbar-thumb:hover,
 body::-webkit-scrollbar-thumb:hover {
-	background-color: var(--theme-accent, #64748b);
+	background-color: var(--color-accent, var(--theme-accent, #64748b));
 }
 
 #app {
 	width: 100vw;
 	min-height: 100vh;
-	overflow-x: hidden !important;
+	overflow-x: hidden;
 }
 
 .auto-hide-scroll {
@@ -100,7 +98,7 @@ body::-webkit-scrollbar-thumb:hover {
 	transition: box-shadow 0.3s ease;
 }
 .hover-glow:hover {
-	box-shadow: 0 0 25px rgba(150, 173, 141, 0.6) !important;
+	box-shadow: 0 0 25px var(--theme-shadow, rgba(150, 173, 141, 0.6));
 }
 
 /* Always show a subtle glow for touch devices */
@@ -125,12 +123,12 @@ body::-webkit-scrollbar-thumb:hover {
 }
 
 .tab-bar::-webkit-scrollbar-thumb {
-	background-color: #94a3b8;
+	background-color: var(--color-text-secondary, #94a3b8);
 	border-radius: 3px;
 }
 
 .tab-bar::-webkit-scrollbar-thumb:hover {
-	background-color: #64748b;
+	background-color: var(--color-text-secondary, #64748b);
 }
 
 /* Auto-hide scrollbar styles */
@@ -144,21 +142,18 @@ body::-webkit-scrollbar-thumb:hover {
 }
 
 .auto-hide-scroll::-webkit-scrollbar-thumb {
-	background-color: var(--theme-accent, #94a3b8);
+	background-color: var(--color-accent, var(--theme-accent, #94a3b8));
 	border-radius: 3px;
 }
 
 .auto-hide-scroll::-webkit-scrollbar-thumb:hover {
-	background-color: var(--theme-accent, #64748b);
+	background-color: var(--color-accent, var(--theme-accent, #64748b));
 }
 
 /* Accent color utility */
 .text-accent {
-	color: #96ad8d;
+	color: var(--color-accent, var(--theme-accent, #96ad8d));
 }
-
-/* View Transitions for tab pill */
-
 
 /* Cursor trail CSS variables */
 :root {
@@ -178,98 +173,70 @@ html[data-theme="dark"] {
 	--theme-accent: #60a5fa;
 }
 
-/* Custom theme styles */
-html.custom-theme {
-	background-color: var(--theme-bg);
-	color: var(--theme-text);
+/* ============================================
+   SEMANTIC TOKEN UTILITY CLASSES
+   These use CSS variables set by theme.svelte.ts
+   with fallbacks to maintain backward compat
+   ============================================ */
+
+/* Semantic background colors */
+.theme-bg-primary {
+	background-color: var(--color-bg-primary, var(--theme-bg));
 }
 
-html.custom-theme body {
-	background-color: var(--theme-bg);
-	color: var(--theme-text);
+.theme-bg-secondary {
+	background-color: var(--color-bg-secondary, var(--theme-bg));
 }
 
-/* Header styling for custom themes */
-html.custom-theme header,
-html.custom-theme [data-name="main-header"] {
-	background-color: var(--theme-bg) !important;
-	border-color: var(--theme-border) !important;
+/* Semantic text colors */
+.theme-text-primary {
+	color: var(--color-text-primary, var(--theme-text));
 }
 
-html.custom-theme header * {
-	color: var(--theme-text) !important;
+.theme-text-secondary {
+	color: var(--color-text-secondary, var(--theme-text));
+}
+
+/* Semantic border colors */
+.theme-border {
+	border-color: var(--color-border, var(--theme-border));
+}
+
+/* Semantic accent color */
+.theme-accent {
+	color: var(--color-accent, var(--theme-accent));
+}
+
+.theme-accent-bg {
+	background-color: var(--color-accent, var(--theme-accent));
+}
+
+.theme-accent-border {
+	border-color: var(--color-accent, var(--theme-accent));
+}
+
+/* Semantic shadow */
+.theme-shadow {
+	box-shadow: 0 4px 12px var(--color-shadow, var(--theme-shadow));
+}
+
+/* Combined semantic card styles */
+.theme-card {
+	background-color: var(--color-bg-primary, var(--theme-bg));
+	color: var(--color-text-primary, var(--theme-text));
+	border-color: var(--color-border, var(--theme-border));
+}
+
+/* Combined semantic header styles */
+.theme-header {
+	background-color: var(--color-bg-primary, var(--theme-bg));
+	color: var(--color-text-primary, var(--theme-text));
+	border-color: var(--color-border, var(--theme-border));
 }
 
 /* Ensure scroll to top button is always clickable */
 .scroll-to-top-btn {
-	pointer-events: auto !important;
-	opacity: 1 !important;
-	visibility: visible !important;
-}
-
-
-
-
-
-/* Apply custom theme colors to main elements - comprehensive coverage */
-html.custom-theme .bg-white,
-html.custom-theme .bg-slate-50,
-html.custom-theme .bg-slate-100,
-html.custom-theme .bg-slate-200,
-html.custom-theme .bg-slate-300,
-html.custom-theme .bg-slate-400,
-html.custom-theme .bg-slate-500,
-html.custom-theme .bg-slate-600,
-html.custom-theme .bg-slate-700,
-html.custom-theme .bg-slate-800,
-html.custom-theme .bg-slate-900 {
-	background-color: var(--theme-bg) !important;
-}
-
-html.custom-theme .text-slate-900,
-html.custom-theme .text-slate-800,
-html.custom-theme .text-slate-700,
-html.custom-theme .text-slate-600,
-html.custom-theme .text-slate-500,
-html.custom-theme .text-slate-400,
-html.custom-theme .text-white {
-	color: var(--theme-text) !important;
-}
-
-html.custom-theme .border-slate-200,
-html.custom-theme .border-slate-300,
-html.custom-theme .border-slate-600,
-html.custom-theme .border-slate-700 {
-	border-color: var(--theme-border) !important;
-}
-
-html.custom-theme .dark\:bg-slate-900,
-html.custom-theme .dark\:bg-slate-800 {
-	background-color: var(--theme-bg) !important;
-}
-
-html.custom-theme .dark\:text-slate-100,
-html.custom-theme .dark\:text-slate-200,
-html.custom-theme .dark\:text-slate-300 {
-	color: var(--theme-text) !important;
-}
-
-html.custom-theme .dark\:border-slate-700,
-html.custom-theme .dark\:border-slate-600 {
-	border-color: var(--theme-border) !important;
-}
-
-/* Custom theme focus ring handling */
-html.custom-theme *:focus,
-html.custom-theme *:focus-visible {
-	outline-color: var(--theme-accent) !important;
-	--tw-ring-color: var(--theme-accent) !important;
-}
-
-/* Custom theme button focus/active - text color only */
-html.custom-theme button:focus-visible,
-html.custom-theme button:active,
-html.custom-theme a:focus-visible,
-html.custom-theme a:active {
-	color: var(--theme-text) !important;
+	pointer-events: auto;
+	opacity: 1;
+	visibility: visible;
 }
