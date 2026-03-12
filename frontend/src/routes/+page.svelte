@@ -161,14 +161,14 @@
 		{/await}
 	{/if}
 
-	<main class="mx-auto px-2 sm:px-4 md:px-8 py-2 sm:py-4 overflow-visible" style="padding-top: calc(var(--header-height, 6rem) + 0.5rem);">
+	<main class="mx-auto px-4 sm:px-4 md:px-8 py-2 sm:py-4 overflow-visible" style="padding-top: calc(var(--header-height, 6rem) + 0.5rem);">
 		{#if loading && feedState.feeds.length === 0}
 			<div class="flex items-center justify-center py-20 gap-3">
 				<div class="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
 				<div class="text-slate-500 dark:text-slate-400">Loading feeds...</div>
 			</div>
 		{:else if error && feedState.feeds.length === 0}
-			<div class="bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 p-4 rounded-lg">
+			<div class="bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 p-4 rounded-lg mx-4">
 				{error}
 				<button
 					onclick={handleRetry}
@@ -187,7 +187,7 @@
 
 			{#if filteredFeeds.length > 0}
 				{#key feedState.activeTab}
-					<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3 max-w-[75%] mx-auto">
+					<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3 max-w-full sm:max-w-[75%] mx-auto">
 						{#each filteredFeeds as feed, i (`feed-${i}`)}
 							<FeedBox {feed} onLoadMore={() => handleLoadMore(feed)} loading={feedState.loadingFeeds[feed.url] ?? false} />
 						{/each}
