@@ -101,6 +101,8 @@ tabs:
         url: "https://9to5mac.com/feed/"
       - title: "The Register"
         url: "https://www.theregister.co.uk/headlines.atom"
+      - title: "Tom's Hardware"
+        url: "https://www.tomshardware.com/feeds.xml"
   - name: "Security"
     feeds:
       - title: "Sophos News"
