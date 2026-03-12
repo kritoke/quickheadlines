@@ -64,15 +64,15 @@
 	});
 </script>
 
-<header bind:this={headerElement} class="fixed top-0 left-0 right-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur shadow-sm z-30" data-name="app-header">
+<header bind:this={headerElement} class="fixed top-0 left-0 right-0 theme-bg-primary/95 backdrop-blur shadow-sm z-30" data-name="app-header">
 	<div class="mx-auto px-4 md:px-8 xl:px-12" style="max-width: 1400px;">
 		<div class="flex items-center justify-between h-14">
 			<!-- Logo + Tabs -->
 			<div class="flex items-center gap-4 min-w-0">
 				<button onclick={handleLogoClick} class="flex items-center gap-2 hover:opacity-80 transition-opacity shrink-0">
 					<img src="/logo.svg" alt="Logo" class="w-7 h-7 sm:w-8 sm:h-8" />
-					<span class="text-lg sm:text-xl font-bold text-slate-900 dark:text-white hidden sm:block">{title}</span>
-					<span class="text-lg font-bold text-slate-900 dark:text-white sm:hidden">{title}</span>
+					<span class="text-lg sm:text-xl font-bold theme-text-primary hidden sm:block">{title}</span>
+					<span class="text-lg font-bold theme-text-primary sm:hidden">{title}</span>
 				</button>
 				
 				{#if tabs.length > 0}

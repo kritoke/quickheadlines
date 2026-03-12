@@ -197,6 +197,10 @@ html[data-theme="dark"] {
 	color: var(--color-text-secondary, var(--theme-text));
 }
 
+.hover\:theme-text-primary:hover {
+	color: var(--color-text-primary, var(--theme-text));
+}
+
 /* Semantic border colors */
 .theme-border {
 	border-color: var(--color-border, var(--theme-border));

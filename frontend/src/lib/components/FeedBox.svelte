@@ -75,7 +75,7 @@
 		style={getHeaderStyle()}
 	>
 		{#if feed.favicon || feed.favicon_data || getFaviconSrc(feed)}
-			<div class="w-5 h-5 rounded bg-white/90 p-0.5 flex items-center justify-center shadow-sm">
+			<div class="w-5 h-5 rounded theme-bg-secondary p-0.5 flex items-center justify-center shadow-sm">
 				<img
 					src={getFaviconSrc(feed)}
 					alt="{feed.title} favicon"
@@ -94,20 +94,20 @@
 	<div class="flex-1 relative min-h-0 max-sm:max-h-none">
 		<!-- Mobile: no scrollbar, auto expand -->
 		<div class="max-sm:overflow-visible overflow-auto h-full">
-			<ul class="divide-y divide-slate-100 dark:divide-slate-700">
+			<ul class="divide-y theme-border/30">
 				{#each displayedItems as item, i (`${feed.url}-${i}`)}
 					<li>
 						<a
 							href={item.link}
 							target="_blank"
 							rel="noopener noreferrer"
-							class="block px-3 py-2 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
+							class="block px-3 py-2 hover:opacity-80 transition-opacity"
 						>
-							<p class="text-sm text-slate-800 dark:text-slate-200 line-clamp-2 leading-snug">
+							<p class="text-sm theme-text-primary line-clamp-2 leading-snug">
 								{item.title}
 							</p>
 							{#if item.pub_date}
-								<p class="text-xs text-slate-500 dark:text-slate-400 mt-1">
+								<p class="text-xs theme-text-secondary mt-1">
 									{formatTimestamp(item.pub_date)}
 								</p>
 							{/if}
@@ -119,19 +119,19 @@
 
 		<!-- Scroll Hint - only show on desktop when not expanded -->
 		{#if !expanded && !isScrolledToBottom && feed.items.length > 5}
-			<div class="absolute bottom-0 left-0 right-0 h-6 pointer-events-none bg-gradient-to-t from-white dark:from-slate-800 via-white/80 dark:via-slate-800/80 to-transparent"></div>
+			<div class="absolute bottom-0 left-0 right-0 h-6 pointer-events-none bg-gradient-to-t theme-bg-primary/80 to-transparent"></div>
 		{/if}
 	</div>
 
 	<!-- Load More / Show Less -->
 	{#if feed.items.length > INITIAL_ITEMS}
-		<div class="p-2 border-t border-slate-200 dark:border-slate-700">
+		<div class="p-2 border-t theme-border">
 			<button
 				type="button"
 				data-name="load-more"
 				disabled={loading}
 				onclick={handleLoadMore}
-				class="w-full text-xs text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 py-1 transition-all duration-200 disabled:opacity-50 active:scale-95"
+				class="w-full text-xs theme-text-secondary hover:theme-text-primary py-1 transition-all duration-200 disabled:opacity-50 active:scale-95"
 			>
 				{#if loading}
 					<span class="inline-flex items-center gap-1">
