@@ -51,7 +51,7 @@
 </script>
 
 <Card 
-	class="overflow-hidden flex flex-col h-[400px] relative hover-glow" 
+	class="overflow-hidden flex flex-col h-[500px] relative hover-glow" 
 	themeVariant={isCustomTheme}
 	data-name="feed-box"
 >
