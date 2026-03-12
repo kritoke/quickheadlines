@@ -25,7 +25,7 @@ begin
   handlers << ws_handler
   STDERR.puts "[WebSocket] Enabled - clients can connect to ws://host/api/ws"
 
-  ATH.run(port: port, prepend_handlers: handlers)
+  ATH.run(host: "0.0.0.0", port: port, prepend_handlers: handlers)
 rescue ex
   STDERR.puts "[ERROR] Failed to start server: #{ex.message}"
   exit 1

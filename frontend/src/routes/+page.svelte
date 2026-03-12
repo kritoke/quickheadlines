@@ -1,7 +1,7 @@
 <script lang="ts">
 	import FeedBox from '$lib/components/FeedBox.svelte';
-	import FeedTabs from '$lib/components/FeedTabs.svelte';
 	import AppHeader from '$lib/components/AppHeader.svelte';
+	import TabSelector from '$lib/components/TabSelector.svelte';
 	import BitsSearchModal from '$lib/components/BitsSearchModal.svelte';
 	import { fetchFeeds, fetchMoreFeedItems, fetchConfig } from '$lib/api';
 	import type { FeedResponse, FeedsPageResponse } from '$lib/types';
@@ -64,9 +64,7 @@
 			
 			// Force scroll to top after content loads
 			setTimeout(() => {
-				window.scrollTo(0, 0);
-				document.documentElement.scrollTop = 0;
-				document.body.scrollTop = 0;
+				resetScroll();
 			}, 100);
 		}, 150);
 	}
@@ -124,28 +122,26 @@
 	<div class="min-h-screen bg-white dark:bg-slate-900 transition-colors duration-200" data-name="feeds-page">
 		<AppHeader 
 			title="QuickHeadlines"
+			tabs={feedState.tabs}
+			activeTab={feedState.activeTab}
+			onTabChange={handleTabChange}
 			viewLink={{ href: timelineLink, icon: 'clock' }}
 			{searchExpanded}
 			onSearchToggle={() => searchExpanded = !searchExpanded}
 			onLogoClick={handleLogoClick}
-		>
-		{#snippet metadata()}
-			{#if lastUpdated}
-				<span class="text-xs text-slate-500 dark:text-slate-400 hidden md:block whitespace-nowrap flex items-center gap-1">
-					{#if isRefreshing(feedState)}
-						<span class="inline-block w-2 h-2 bg-blue-500 rounded-full animate-pulse"></span>
-					{/if}
-					Updated {lastUpdated.toLocaleTimeString()}
-				</span>
-			{/if}
-		{/snippet}
-		
-		{#snippet tabContent()}
-			{#if feedState.tabs.length > 0}
-				<FeedTabs tabs={feedState.tabs} activeTab={feedState.activeTab} onTabChange={handleTabChange} />
-			{/if}
-		{/snippet}
-	</AppHeader>
+		/>
+
+		<!-- Mobile tabs outside header -->
+		{#if feedState.tabs.length > 0}
+			<div class="md:hidden fixed top-14 left-0 right-0 z-40">
+				<TabSelector 
+					tabs={feedState.tabs}
+					activeTab={feedState.activeTab}
+					onTabChange={handleTabChange}
+					maxInline={0}
+				/>
+			</div>
+		{/if}
 
 	{#if searchExpanded}
 		{#await loadSearchModal()}
@@ -161,7 +157,9 @@
 		{/await}
 	{/if}
 
-	<main class="mx-auto px-4 sm:px-4 md:px-8 py-2 sm:py-4 overflow-visible" style="padding-top: calc(var(--header-height, 6rem) + 0.5rem);">
+	<main class="mx-auto px-4 sm:px-4 md:px-8 py-2 sm:py-4 overflow-visible md:py-6" style="padding-top: calc(var(--header-height, 3.5rem) + 0.5rem);">
+		<!-- Spacer for mobile tabs -->
+		<div class="h-8 md:hidden"></div>
 		{#if loading && feedState.feeds.length === 0}
 			<div class="flex items-center justify-center py-20 gap-3">
 				<div class="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>

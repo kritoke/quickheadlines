@@ -6,9 +6,18 @@
 		setTheme(theme);
 	}
 
+	function getPreview(themeId: ThemeStyle): string {
+		try {
+			const preview = getThemePreview(themeId);
+			return preview || 'linear-gradient(135deg, #94a3b8 50%, #64748b 50%)';
+		} catch {
+			return 'linear-gradient(135deg, #94a3b8 50%, #64748b 50%)';
+		}
+	}
+
 	let themePreviews = $derived(
 		themeStyles.reduce((acc, t) => {
-			acc[t.id] = getThemePreview(t.id);
+			acc[t.id] = getPreview(t.id);
 			return acc;
 		}, {} as Record<ThemeStyle, string>)
 	);
