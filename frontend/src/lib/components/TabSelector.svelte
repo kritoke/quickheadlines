@@ -140,7 +140,7 @@
 
 				{#if showMore}
 					<div 
-						class="absolute top-full left-0 mt-1 bg-white dark:bg-slate-800 rounded-lg shadow-lg border border-slate-200 dark:border-slate-700 py-1 min-w-[120px] z-50"
+						class="absolute top-full left-0 mt-1 theme-bg-primary rounded-lg shadow-lg theme-border py-1 min-w-[120px] z-50"
 						role="menu"
 					>
 						{#each overflowTabs as tab (tab.name)}
@@ -148,10 +148,10 @@
 								type="button"
 								role="menuitem"
 								onclick={() => selectTab(tab.name)}
-								class="w-full px-4 py-2 text-sm text-left hover:bg-slate-50 dark:hover:bg-slate-700 cursor-pointer
+								class="w-full px-4 py-2 text-sm text-left hover:opacity-80 cursor-pointer
 									{activeTab === tab.name 
-										? 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20' 
-										: 'text-slate-700 dark:text-slate-300'}"
+										? 'theme-accent theme-accent-bg/10' 
+										: 'theme-text-primary'}"
 							>
 								{tab.name === 'all' ? 'All' : tab.name}
 							</button>

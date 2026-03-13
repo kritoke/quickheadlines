@@ -40,27 +40,27 @@
 
 	<DropdownMenu.Portal>
 		<DropdownMenu.Content
-			class="z-50 w-80 rounded-lg shadow-lg py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100"
+			class="z-50 w-80 rounded-lg shadow-lg py-2 theme-bg-primary theme-border"
 			sideOffset={8}
 		>
-			<div class="px-3 py-1 text-xs font-semibold uppercase tracking-wider opacity-70">
+			<div class="px-3 py-1 text-xs font-semibold uppercase tracking-wider opacity-70 theme-text-secondary">
 				Theme
 			</div>
 			<div class="grid grid-cols-2 gap-1 px-1 mt-1">
 				{#each themeStyles as theme (theme.id)}
 					<DropdownMenu.Item
 						onSelect={() => selectTheme(theme.id)}
-						class="px-2 py-1.5 text-left hover:opacity-80 rounded-md transition-colors flex items-center gap-2 cursor-pointer outline-none {themeState.theme === theme.id ? 'bg-slate-100 dark:bg-slate-700' : 'bg-transparent'}"
+						class="px-2 py-1.5 text-left hover:opacity-80 rounded-md transition-colors flex items-center gap-2 cursor-pointer outline-none {themeState.theme === theme.id ? 'theme-bg-secondary' : 'bg-transparent'}"
 					>
 						<span
 							class="w-4 h-4 rounded-full border border-slate-300 dark:border-slate-600 shrink-0"
 							style="background: {themePreviews[theme.id]}"
 						></span>
 						<div class="flex-1 min-w-0">
-							<div class="text-sm truncate">{theme.name}</div>
+							<div class="text-sm truncate theme-text-primary">{theme.name}</div>
 						</div>
 						{#if themeState.theme === theme.id}
-							<svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 shrink-0 text-blue-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+							<svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 shrink-0 theme-accent" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
 								<polyline points="20 6 9 17 4 12"/>
 							</svg>
 						{/if}

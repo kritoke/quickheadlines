@@ -60,13 +60,14 @@
 			
 			setActiveTab(tab);
 			setFeedsTab(tab);
-			await loadFeeds(tab);
 			
-			// Force scroll to top after content loads
-			setTimeout(() => {
-				resetScroll();
-			}, 100);
-		}, 150);
+			// Scroll to top IMMEDIATELY when tab is clicked
+			window.scrollTo(0, 0);
+			document.documentElement.scrollTop = 0;
+			document.body.scrollTop = 0;
+			
+			await loadFeeds(tab);
+		}, 50);
 	}
 
 	async function handleLoadMore(feed: FeedResponse) {
@@ -119,7 +120,7 @@
 	}
 </script>
 
-	<div class="min-h-screen bg-white dark:bg-slate-900 transition-colors duration-200" data-name="feeds-page">
+	<div class="min-h-screen theme-bg-primary transition-colors duration-200" data-name="feeds-page">
 		<AppHeader 
 			title="QuickHeadlines"
 			tabs={feedState.tabs}
@@ -177,9 +178,9 @@
 			</div>
 		{:else}
 			{#if loading}
-				<div class="sticky top-0 z-20 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm py-2 flex items-center justify-center gap-2">
-					<div class="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-					<span class="text-sm text-slate-600 dark:text-slate-400">Loading feeds...</span>
+				<div class="sticky top-0 z-20 theme-bg-primary/80 backdrop-blur-sm py-2 flex items-center justify-center gap-2">
+					<div class="w-4 h-4 border-2 theme-accent border-t-transparent rounded-full animate-spin"></div>
+					<span class="text-sm theme-text-secondary">Loading feeds...</span>
 				</div>
 			{/if}
 

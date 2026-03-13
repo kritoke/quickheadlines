@@ -15,21 +15,18 @@
 </script>
 
 <div 
-	class="pointer-events-auto relative flex w-full max-w-sm items-center justify-between space-x-4 overflow-hidden rounded-lg border p-6 pr-8 shadow-lg bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700"
-	class:text-red-600={toast.type === 'error'}
-	class:text-green-600={toast.type === 'success'}
-	class:text-yellow-600={toast.type === 'warning'}
-	class:text-blue-600={toast.type === 'info'}
+	class="pointer-events-auto relative flex w-full max-w-sm items-center justify-between space-x-4 overflow-hidden rounded-lg border p-6 pr-8 shadow-lg theme-bg-primary theme-border"
+	class:theme-accent={toast.type === 'error' || toast.type === 'success' || toast.type === 'warning' || toast.type === 'info'}
 	in:fade={{ duration: 300 }}
 	out:fade={{ duration: 200 }}
 >
 	<div class="grid gap-1 flex-1">
 		{#if toast.title}
-			<div class="text-sm font-medium text-slate-900 dark:text-slate-100">
+			<div class="text-sm font-medium theme-text-primary">
 				{toast.title}
 			</div>
 		{/if}
-		<div class="text-sm text-slate-700 dark:text-slate-300">
+		<div class="text-sm theme-text-secondary">
 			{toast.description}
 		</div>
 	</div>

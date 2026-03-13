@@ -111,7 +111,7 @@
 	{#each groupIndex as [date, dateItems], groupIdx (date)}
 		{@const groupStartIndex = getGroupStartIndex(groupIdx)}
 		<div class="day-group mb-6">
-			<h2 class="text-lg font-semibold text-slate-700 dark:text-slate-300 mb-3 sticky top-16 bg-white dark:bg-slate-900 py-2 z-10">
+			<h2 class="text-lg font-semibold theme-text-secondary mb-3 sticky top-16 theme-bg-primary py-2 z-10">
 				{date}
 			</h2>
 			
@@ -119,7 +119,7 @@
 				{#each dateItems as item, i (`${date}-${item.id}`)}
 					{@const globalIndex = groupStartIndex + i}
 					<div 
-						class="timeline-item bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden transition-all duration-200 relative hover-glow"
+						class="timeline-item theme-bg-primary rounded-lg shadow-sm theme-border overflow-hidden transition-all duration-200 relative hover-glow"
 						class:col-span-full={expandedClusterId === item.id && columns > 1}
 					>
 						<!-- Item Header with Feed Info -->
@@ -127,7 +127,7 @@
 							class="flex items-center gap-2 px-3 py-2 text-xs font-medium"
 							style={getHeaderStyle(item, isDark)}
 						>
-							<div class="w-4 h-4 rounded bg-white/90 p-0.5 flex items-center justify-center shadow-sm">
+							<div class="w-4 h-4 rounded theme-bg-secondary p-0.5 flex items-center justify-center shadow-sm">
 								<img
 									src={getFaviconSrc(item)}
 									alt="{item.feed_title} favicon"
@@ -143,7 +143,7 @@
 								<button
 									type="button"
 									onclick={() => toggleCluster(item)}
-									class="ml-auto bg-white/20 hover:bg-white/30 px-1.5 py-0.5 rounded text-[10px] transition-colors cursor-pointer flex items-center gap-1"
+									class="ml-auto theme-accent-bg/20 hover:theme-accent-bg/30 px-1.5 py-0.5 rounded text-[10px] transition-colors cursor-pointer flex items-center gap-1"
 									aria-label="Show {item.cluster_size} similar stories"
 								>
 									{item.cluster_size} sources
@@ -165,12 +165,12 @@
 							href={item.link}
 							target="_blank"
 							rel="noopener noreferrer"
-							class="block px-3 py-2 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
+							class="block px-3 py-2 hover:opacity-80 transition-opacity"
 						>
-							<h3 class="text-sm font-medium text-slate-900 dark:text-slate-100 line-clamp-2">
+							<h3 class="text-sm font-medium theme-text-primary line-clamp-2">
 								{item.title}
 							</h3>
-							<p class="text-xs text-slate-500 dark:text-slate-400 mt-1">
+							<p class="text-xs theme-text-secondary mt-1">
 								{formatTimestamp(item.pub_date)}
 							</p>
 						</a>
@@ -193,7 +193,7 @@
 			<button
 				type="button"
 				onclick={onLoadMore}
-				class="px-4 py-2 text-sm rounded-lg transition-colors bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700"
+				class="px-4 py-2 text-sm rounded-lg transition-colors theme-bg-secondary theme-text-primary theme-border"
 			>
 				Load More
 			</button>

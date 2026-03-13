@@ -29,9 +29,9 @@
 						href={item.link}
 						target="_blank"
 						rel="noopener noreferrer"
-						class="flex items-start gap-2 px-3 py-2 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
+						class="flex items-start gap-2 px-3 py-2 hover:opacity-80 transition-opacity"
 					>
-						<div class="w-4 h-4 rounded bg-white/90 dark:bg-slate-700 p-0.5 flex items-center justify-center shadow-sm flex-shrink-0 mt-0.5">
+						<div class="w-4 h-4 rounded theme-bg-secondary p-0.5 flex items-center justify-center shadow-sm flex-shrink-0 mt-0.5">
 							<img
 								src={getFaviconSrc(item)}
 								alt="{item.feed_title} favicon"
@@ -43,10 +43,10 @@
 							/>
 						</div>
 						<div class="flex-1 min-w-0">
-							<h4 class="text-sm text-slate-800 dark:text-slate-200 line-clamp-2">
+							<h4 class="text-sm theme-text-primary line-clamp-2">
 								{item.title}
 							</h4>
-							<p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+							<p class="text-xs theme-text-secondary mt-0.5">
 								{item.feed_title}
 								{#if item.pub_date}
 									<span class="mx-1">&middot;</span>

@@ -30,7 +30,7 @@
 	<Dialog.Portal>
 		<Dialog.Overlay class="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm" />
 		
-		<Dialog.Content class="fixed top-0 left-0 right-0 z-50 bg-white dark:bg-slate-900 shadow-xl border-b border-slate-200 dark:border-slate-700">
+		<Dialog.Content class="fixed top-0 left-0 right-0 z-50 theme-bg-primary shadow-xl theme-border">
 			<div class="mx-auto py-4 px-4 md:px-8 xl:px-12" style="max-width: 1400px;">
 				<div class="flex items-center gap-3 max-w-md mx-auto">
 					<div class="relative flex-1">
@@ -40,7 +40,7 @@
 							oninput={(e) => onQueryChange(e.currentTarget.value)}
 							onkeydown={handleInputKeydown}
 							{placeholder}
-							class="w-full px-4 py-3 text-base bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500"
+							class="w-full px-4 py-3 text-base theme-bg-secondary theme-border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 theme-text-primary placeholder-slate-400"
 						/>
 						{#if query}
 							<button 

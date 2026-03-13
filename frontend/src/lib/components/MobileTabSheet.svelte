@@ -52,7 +52,7 @@
 		aria-label="Close menu"
 	>
 		<div
-			class="absolute bottom-0 left-0 right-0 bg-white dark:bg-slate-900 rounded-t-2xl p-4 animate-slide-up"
+			class="absolute bottom-0 left-0 right-0 theme-bg-primary rounded-t-2xl p-4 animate-slide-up"
 			onclick={(e) => { e.preventDefault(); e.stopPropagation(); }}
 			onkeydown={(e) => { e.preventDefault(); e.stopPropagation(); }}
 			role="dialog"
@@ -61,9 +61,9 @@
 			tabindex="-1"
 		>
 			<!-- Drag handle -->
-			<div class="w-12 h-1 bg-slate-300 dark:bg-slate-600 rounded-full mx-auto mb-4"></div>
+			<div class="w-12 h-1 theme-text-secondary/30 rounded-full mx-auto mb-4"></div>
 			
-			<h3 class="text-sm font-semibold text-slate-900 dark:text-white mb-3">Select Category</h3>
+			<h3 class="text-sm font-semibold theme-text-primary mb-3">Select Category</h3>
 			
 			<div class="space-y-1 max-h-[60vh] overflow-y-auto">
 				{#each tabs as tab (tab.name)}

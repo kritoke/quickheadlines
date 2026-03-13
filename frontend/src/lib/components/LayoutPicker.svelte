@@ -47,16 +47,16 @@
 
 	<DropdownMenu.Portal>
 		<DropdownMenu.Content
-			class="z-50 w-48 rounded-lg shadow-lg py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100"
+			class="z-50 w-48 rounded-lg shadow-lg py-2 theme-bg-primary theme-border"
 			sideOffset={8}
 		>
-			<div class="px-3 py-1 text-xs font-semibold uppercase tracking-wider opacity-70">
+			<div class="px-3 py-1 text-xs font-semibold uppercase tracking-wider opacity-70 theme-text-secondary">
 				Columns
 			</div>
 			{#each columnOptions as option (option.id)}
 				<DropdownMenu.Item
 					onSelect={() => setTimelineColumns(option.id)}
-					class="{getItemClass(layoutState.timelineColumns === option.id)} {layoutState.timelineColumns === option.id ? 'bg-slate-100 dark:bg-slate-700' : ''}"
+					class="{getItemClass(layoutState.timelineColumns === option.id)} {layoutState.timelineColumns === option.id ? 'theme-bg-secondary' : ''}"
 				>
 					<div class="flex items-center gap-0.5 w-12 shrink-0">
 						{#each Array(option.id) as _, i (`dot-${i}`)}

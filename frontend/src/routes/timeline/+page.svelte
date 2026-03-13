@@ -114,7 +114,7 @@
 	<title>Timeline - QuickHeadlines</title>
 </svelte:head>
 
-<div class="min-h-screen bg-white dark:bg-slate-900 transition-colors">
+<div class="min-h-screen theme-bg-primary transition-colors">
 	<AppHeader 
 		title="QuickHeadlines"
 		viewLink={{ href: '/', icon: 'rss' }}
@@ -166,9 +166,9 @@
 			</div>
 		{:else}
 			{#if loading && timelineState.items.length > 0}
-				<div class="sticky top-0 z-20 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm py-2 flex items-center justify-center gap-2">
-					<div class="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-					<span class="text-sm text-slate-600 dark:text-slate-400">Refreshing...</span>
+				<div class="sticky top-0 z-20 theme-bg-primary/80 backdrop-blur-sm py-2 flex items-center justify-center gap-2">
+					<div class="w-4 h-4 border-2 theme-accent border-t-transparent rounded-full animate-spin"></div>
+					<span class="text-sm theme-text-secondary">Refreshing...</span>
 				</div>
 			{/if}
 
