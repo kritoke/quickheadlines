@@ -11,7 +11,7 @@ describe('TimelineView', () => {
 		vi.clearAllMocks();
 		mockFetchClusterItems = vi.fn().mockImplementation((clusterId: string) => {
 			return Promise.resolve({
-				items: [createMockClusterItem({ id: 'c1', cluster_id: clusterId })],
+				items: [createMockClusterItem({ id: 'c1' })],
 				cluster_id: clusterId
 			});
 		});
@@ -98,7 +98,7 @@ describe('TimelineView', () => {
 			props: { items, hasMore: true, onLoadMore, fetchClusterItems: mockFetchClusterItems }
 		});
 		
-		const button = document.body.querySelector('.load-more button');
+		const button = document.body.querySelector('.load-more button') as HTMLElement;
 		button?.click();
 		flushSync();
 		

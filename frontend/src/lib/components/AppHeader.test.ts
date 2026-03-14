@@ -75,7 +75,7 @@ describe('AppHeader', () => {
 			}
 		});
 		
-		const searchButton = document.body.querySelector('button[aria-label="Search"]');
+		const searchButton = document.body.querySelector('button[aria-label="Search"]') as HTMLElement;
 		searchButton?.click();
 		flushSync();
 		

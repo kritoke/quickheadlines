@@ -4,19 +4,19 @@ export type BaseState<S extends LoadStatus> = {
 	status: S;
 };
 
-export function isIdle<S extends LoadStatus>(state: { status: S }): state is { status: 'idle' } & BaseState<'idle'> {
+export function isIdle(state: { status: LoadStatus }): state is { status: 'idle' } & BaseState<'idle'> {
 	return state.status === 'idle';
 }
 
-export function isLoading<S extends LoadStatus>(state: { status: S }): state is { status: 'loading' } & BaseState<'loading'> {
+export function isLoading(state: { status: LoadStatus }): state is { status: 'loading' } & BaseState<'loading'> {
 	return state.status === 'loading';
 }
 
-export function isRefreshing<S extends LoadStatus>(state: { status: S }): state is { status: 'refreshing' } & BaseState<'refreshing'> {
+export function isRefreshing(state: { status: LoadStatus }): state is { status: 'refreshing' } & BaseState<'refreshing'> {
 	return state.status === 'refreshing';
 }
 
-export function isError<S extends LoadStatus>(state: { status: S }): state is { status: 'error'; error: string } & BaseState<'error'> {
+export function isError(state: { status: LoadStatus }): state is { status: 'error'; error: string } & BaseState<'error'> {
 	return state.status === 'error';
 }
 

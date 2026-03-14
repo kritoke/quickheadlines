@@ -4,6 +4,7 @@
 	import { initLayout } from '$lib/stores/layout.svelte';
 	import { isIOS } from '$lib/utils/theme';
 	import { onNavigate } from '$app/navigation';
+	import type { Navigation } from '@sveltejs/kit';
 	import {
 		saveScroll,
 		getScroll,
@@ -19,7 +20,7 @@
 	
 	let { children } = $props();
 	
-	onNavigate((navigation) => {
+	onNavigate((navigation: Navigation) => {
 		if (!navigation.to) return;
 		
 		const toPath = navigation.to.url.pathname;

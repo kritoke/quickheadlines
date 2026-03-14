@@ -68,7 +68,7 @@ describe('FeedBox', () => {
 			props: { feed, onLoadMore }
 		});
 		
-		const button = document.body.querySelector('[data-name="load-more"]');
+		const button = document.body.querySelector('[data-name="load-more"]') as HTMLElement;
 		button?.click();
 		flushSync();
 		

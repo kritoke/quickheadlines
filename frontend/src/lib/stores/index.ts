@@ -14,7 +14,6 @@ export {
 	timelineState,
 	loadTimeline,
 	loadTimelineConfig,
-	checkClusteringStatus,
 	getFilteredItems,
 	handleLoadMore,
 	resetTimelineStore,

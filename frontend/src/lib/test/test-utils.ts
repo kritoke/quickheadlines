@@ -5,9 +5,11 @@ import type { FeedResponse, ItemResponse, TimelineItemResponse, ClusterItemsResp
 
 export function createMockFeed(overrides: Partial<FeedResponse> = {}): FeedResponse {
 	return {
+		tab: 'default',
 		url: 'https://example.com/feed',
 		title: 'Test Feed',
 		site_link: 'https://example.com',
+		display_link: 'example.com',
 		items: [createMockItem()],
 		total_item_count: 1,
 		header_color: '#64748b',
