@@ -16,6 +16,7 @@
 		onSearchToggle: () => void;
 		onLogoClick?: () => void;
 		actions?: import('svelte').Snippet;
+		children?: import('svelte').Snippet;
 	}
 
 	let { 
@@ -27,7 +28,8 @@
 		searchExpanded, 
 		onSearchToggle, 
 		onLogoClick,
-		actions
+		actions,
+		children
 	}: Props = $props();
 	
 	let resolvedThemeColors = $derived(getThemeColors(themeState.theme));
@@ -93,6 +95,9 @@
 			<div class="flex items-center gap-1 sm:gap-2">
 				{#if actions}
 					{@render actions()}
+				{/if}
+				{#if children}
+					{@render children()}
 				{/if}
 				<button
 					onclick={onSearchToggle}

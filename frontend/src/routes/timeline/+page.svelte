@@ -122,12 +122,10 @@
 		onSearchToggle={() => searchExpanded = !searchExpanded}
 		onLogoClick={handleLogoClick}
 	>
-		{#snippet metadata()}
-			<span class="text-xs sm:text-sm text-slate-500 dark:text-slate-400 whitespace-nowrap">
-				<span class="sm:hidden">{filteredItems.length}</span>
-				<span class="hidden sm:inline">{filteredItems.length} items</span>
-			</span>
-		{/snippet}
+		<span class="text-xs sm:text-sm text-slate-500 dark:text-slate-400 whitespace-nowrap">
+			<span class="sm:hidden">{filteredItems.length}</span>
+			<span class="hidden sm:inline">{filteredItems.length} items</span>
+		</span>
 		
 		{#snippet actions()}
 			<LayoutPicker />
