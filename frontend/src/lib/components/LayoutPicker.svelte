@@ -2,6 +2,7 @@
 	import { DropdownMenu } from 'bits-ui';
 	import { layoutState, setTimelineColumns, columnOptions, type ColumnCount } from '$lib/stores/layout.svelte';
 	import { themeState } from '$lib/stores/theme.svelte';
+	import { spacing } from '$lib/design/tokens';
 
 	let isMobile = $state(false);
 
@@ -18,7 +19,7 @@
 	});
 
 	function getItemClass(selected: boolean): string {
-		const base = "px-2 py-2 text-left hover:opacity-80 rounded-md transition-colors flex items-center gap-2 cursor-pointer outline-none";
+		const base = `px-2 ${spacing.default} text-left hover:opacity-80 rounded-md transition-colors flex items-center gap-2 cursor-pointer outline-none`;
 		return selected ? `${base} ring-2 ring-offset-1` : base;
 	}
 </script>
@@ -50,7 +51,7 @@
 		class="z-50 w-48 rounded-lg shadow-lg py-2 theme-bg-primary theme-border"
 		sideOffset={8}
 	>
-		<div class="px-3 py-2 text-xs font-semibold uppercase tracking-wider opacity-70 theme-text-secondary">
+		<div class="px-3 {spacing.default} text-xs font-semibold uppercase tracking-wider opacity-70 theme-text-secondary">
 			Columns
 		</div>
 		{#each columnOptions as option (option.id)}

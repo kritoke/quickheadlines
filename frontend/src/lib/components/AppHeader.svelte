@@ -4,6 +4,7 @@
 	import TabSelector from './TabSelector.svelte';
 	import { goto } from '$app/navigation';
 	import type { TabResponse } from '$lib/types';
+	import { spacing } from '$lib/design/tokens';
 
 	interface Props {
 		title: string;

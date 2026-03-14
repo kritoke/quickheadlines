@@ -5,6 +5,7 @@
 	import { themeState, customThemeIds } from '$lib/stores/theme.svelte';
 	import { layoutState } from '$lib/stores/layout.svelte';
 	import { getFaviconSrc, getHeaderStyle } from '$lib/utils/feedItem';
+	import { spacing } from '$lib/design/tokens';
 
 
 	interface Props {
@@ -115,7 +116,7 @@
 				{date}
 			</h2>
 			
-			<div class="grid gap-3 {gridClass} transition-all duration-200">
+				<div class="grid {spacing.default} {gridClass} transition-all duration-200">
 				{#each dateItems as item, i (`${date}-${item.id}`)}
 					{@const globalIndex = groupStartIndex + i}
 					<div 
@@ -124,7 +125,7 @@
 					>
 						<!-- Item Header with Feed Info -->
 						<div
-							class="flex items-center gap-2 p-3 text-xs font-medium"
+							class="flex items-center gap-2 {spacing.default} text-xs font-medium"
 							style={getHeaderStyle(item, isDark)}
 						>
 							<div class="w-4 h-4 rounded theme-bg-secondary p-0.5 flex items-center justify-center shadow-sm">
@@ -189,11 +190,11 @@
 	{/each}
 
 	{#if hasMore}
-		<div class="load-more text-center py-4">
+		<div class="load-more text-center {spacing.spacious}">
 			<button
 				type="button"
 				onclick={onLoadMore}
-				class="px-4 py-2 text-sm rounded-lg transition-colors theme-bg-secondary theme-text-primary theme-border"
+				class="px-4 {spacing.default} text-sm rounded-lg transition-colors theme-bg-secondary theme-text-primary theme-border"
 			>
 				Load More
 			</button>

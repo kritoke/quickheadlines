@@ -2,6 +2,7 @@
 	import type { StoryResponse } from '$lib/types';
 	import { formatTimestamp } from '$lib/api';
 	import { getFaviconSrc } from '$lib/utils/feedItem';
+	import { spacing } from '$lib/design/tokens';
 
 	interface Props {
 		items: StoryResponse[];
@@ -12,12 +13,12 @@
 </script>
 
 {#if loading}
-	<div class="py-3 px-3 text-center text-slate-500 dark:text-slate-400 text-sm">
+	<div class="{spacing.default} px-3 text-center text-slate-500 dark:text-slate-400 text-sm">
 		Loading similar stories...
 	</div>
 {:else if items.length > 0}
 	<div class="cluster-expansion border-t border-slate-200 dark:border-slate-700" data-name="cluster-expansion">
-		<div class="py-2 px-3 bg-slate-50 dark:bg-slate-800/50">
+		<div class="{spacing.default} px-3 bg-slate-50 dark:bg-slate-800/50">
 			<span class="text-xs font-medium text-slate-600 dark:text-slate-400">
 				Similar stories ({items.length})
 			</span>
@@ -29,7 +30,7 @@
 						href={item.link}
 						target="_blank"
 						rel="noopener noreferrer"
-						class="flex items-start gap-2 px-3 py-2 hover:opacity-80 transition-opacity"
+						class="flex items-start gap-2 px-3 {spacing.default} hover:opacity-80 transition-opacity"
 					>
 						<div class="w-4 h-4 rounded theme-bg-secondary p-0.5 flex items-center justify-center shadow-sm flex-shrink-0 mt-0.5">
 							<img

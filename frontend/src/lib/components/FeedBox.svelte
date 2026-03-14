@@ -8,6 +8,7 @@
 	import ScrollToTop from './ScrollToTop.svelte';
 	import CustomScrollbar from './CustomScrollbar.svelte';
 	import Card from './ui/Card.svelte';
+	import { spacing } from '$lib/design/tokens';
 
 	interface Props {
 		feed: FeedResponse;
@@ -125,13 +126,13 @@
 
 	<!-- Load More / Show Less -->
 	{#if feed.items.length > INITIAL_ITEMS}
-		<div class="p-2 border-t theme-border">
+		<div class="{spacing.default} border-t theme-border">
 			<button
 				type="button"
 				data-name="load-more"
 				disabled={loading}
 				onclick={handleLoadMore}
-				class="w-full text-xs theme-text-secondary hover:theme-text-primary py-2 transition-all duration-200 disabled:opacity-50 active:scale-95"
+				class="w-full text-xs theme-text-secondary hover:theme-text-primary {spacing.default} transition-all duration-200 disabled:opacity-50 active:scale-95"
 			>
 				{#if loading}
 					<span class="inline-flex items-center gap-1">

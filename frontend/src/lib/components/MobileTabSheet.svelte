@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { themeState } from '$lib/stores/theme.svelte';
 	import type { TabResponse } from '$lib/types';
+	import { spacing } from '$lib/design/tokens';
 
 	interface Props {
 		tabs: TabResponse[];
@@ -69,7 +70,7 @@
 				{#each tabs as tab (tab.name)}
 					<button
 						onclick={() => selectTab(tab.name)}
-						class="w-full px-4 py-3 text-left rounded-lg transition-colors
+						class="w-full px-4 {spacing.spacious} text-left rounded-lg transition-colors
 							{activeTab === tab.name 
 								? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 font-medium' 
 								: 'hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300'}"
