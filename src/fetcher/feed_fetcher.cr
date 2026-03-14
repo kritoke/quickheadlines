@@ -28,6 +28,52 @@ class FeedFetcher
     @@instance = fetcher
   end
 
+  private def should_fallback_to_stale_cache?(result : FeedData, feed : Feed) : Bool
+    result.items.size >= 1 &&
+      (first_item = result.items.first) &&
+      first_item.title.starts_with?("Error:") &&
+      first_item.link == feed.url
+  end
+
+  private def handle_fetch_exception(ex : Exception, feed : Feed, effective_item_limit : Int32, previous_data : FeedData?, retries : Int32) : Tuple(FeedData?, Int32)
+    error_msg = ex.message
+    is_timeout = error_msg.is_a?(String) && error_msg.downcase.includes?("timeout")
+
+    if is_timeout
+      HealthMonitor.log_warning("fetch_feed(#{feed.url}) timeout: #{error_msg}")
+      HealthMonitor.update_feed_health(feed.url, FeedHealthStatus::Timeout)
+      {nil, handle_timeout_error(feed, retries)}
+    else
+      HealthMonitor.log_error("fetch_feed(#{feed.url})", ex)
+      HealthMonitor.update_feed_health(feed.url, FeedHealthStatus::Unreachable)
+      if stale_cache = get_stale_cached_feed(feed, effective_item_limit, previous_data)
+        {stale_cache, retries}
+      else
+        {build_error_feed_data(feed, "Error: #{ex.class} - #{error_msg}"), retries}
+      end
+    end
+  end
+
+  private def handle_abort_condition(feed : Feed, effective_item_limit : Int32, previous_data : FeedData?, abort_msg : Tuple(Bool, String?)) : FeedData?
+    return unless abort_msg[0]
+
+    message = abort_msg[1] || "Error: Unknown fetch error"
+    HealthMonitor.log_warning("fetch_feed(#{feed.url}) #{message}")
+    if stale_cache = get_stale_cached_feed(feed, effective_item_limit, previous_data)
+      stale_cache
+    else
+      build_error_feed_data(feed, message)
+    end
+  end
+
+  private def process_response_result(result_data : FeedData, feed : Feed, effective_item_limit : Int32, previous_data : FeedData?) : FeedData?
+    if should_fallback_to_stale_cache?(result_data, feed)
+      get_stale_cached_feed(feed, effective_item_limit, previous_data) || result_data
+    else
+      result_data
+    end
+  end
+
   # Main entry point - fetch a feed with caching and retry logic
   def fetch(feed : Feed, display_item_limit : Int32, db_fetch_limit : Int32, previous_data : FeedData? = nil) : FeedData
     effective_item_limit = feed.item_limit || display_item_limit
@@ -43,16 +89,11 @@ class FeedFetcher
 
     loop do
       timeout_seconds = feed.timeout > 0 ? feed.timeout : 60
-
       elapsed_seconds = (Time.monotonic - start_time).total_seconds
       abort_msg = should_abort_fetch?(feed, elapsed_seconds, retries, redirects, timeout_seconds)
-      if abort_msg[0]
-        message = abort_msg[1] || "Error: Unknown fetch error"
-        HealthMonitor.log_warning("fetch_feed(#{feed.url}) #{message}")
-        if stale_cache = get_stale_cached_feed(feed, effective_item_limit, previous_data)
-          return stale_cache
-        end
-        return build_error_feed_data(feed, message)
+
+      if abort_result = handle_abort_condition(feed, effective_item_limit, previous_data, abort_msg)
+        return abort_result
       end
 
       begin
@@ -68,10 +109,8 @@ class FeedFetcher
 
           if should_return
             result_data = result.as(FeedData)
-            if result_data.items.size >= 1 && (first_item = result_data.items.first) && first_item.title.starts_with?("Error:") && first_item.link == feed.url
-              if stale_cache = get_stale_cached_feed(feed, effective_item_limit, previous_data)
-                return stale_cache
-              end
+            if final_result = process_response_result(result_data, feed, effective_item_limit, previous_data)
+              return final_result
             end
             return result_data
           end
@@ -85,24 +124,10 @@ class FeedFetcher
       rescue IO::TimeoutError
         HealthMonitor.log_warning("fetch_feed(#{feed.url}) timeout after #{feed.timeout}s")
         HealthMonitor.update_feed_health(feed.url, FeedHealthStatus::Timeout)
-
         retries = handle_timeout_error(feed, retries)
       rescue ex
-        error_msg = ex.message
-        is_timeout = error_msg.is_a?(String) && error_msg.downcase.includes?("timeout")
-
-        if is_timeout
-          HealthMonitor.log_warning("fetch_feed(#{feed.url}) timeout: #{error_msg}")
-          HealthMonitor.update_feed_health(feed.url, FeedHealthStatus::Timeout)
-          retries = handle_timeout_error(feed, retries)
-        else
-          HealthMonitor.log_error("fetch_feed(#{feed.url})", ex)
-          HealthMonitor.update_feed_health(feed.url, FeedHealthStatus::Unreachable)
-          if stale_cache = get_stale_cached_feed(feed, effective_item_limit, previous_data)
-            return stale_cache
-          end
-          return build_error_feed_data(feed, "Error: #{ex.class} - #{error_msg}")
-        end
+        result, retries = handle_fetch_exception(ex, feed, effective_item_limit, previous_data, retries)
+        return result if result
       end
     end
   end
@@ -243,29 +268,33 @@ class FeedFetcher
     fd
   end
 
+  private def extract_theme_text_value(parsed_text : JSON::Any, current_text : String?) : String?
+    return current_text unless current_text.nil? || current_text == ""
+
+    begin
+      new_text = (parsed_text.is_a?(Hash) && parsed_text["light"]? ? parsed_text["light"] : parsed_text["dark"]?)
+      new_text.to_s if new_text
+    rescue ex
+      HealthMonitor.log_error("extract_theme_text_value", ex)
+      nil
+    end
+  end
+
   private def extract_legacy_header_from_theme(header_color : String?, header_text_color : String?, header_theme_json : String?) : {String?, String?}
+    return {header_color, header_text_color} unless header_theme_json
+
     final_header_color = header_color
     final_header_text = header_text_color
 
-    return {final_header_color, final_header_text} unless header_theme_json
-
     begin
       parsed = JSON.parse(header_theme_json).as_h
-      if parsed_text = parsed["text"]
-        if final_header_text.nil? || final_header_text == ""
-          begin
-            new_text = (parsed_text.is_a?(Hash) && parsed_text["light"] ? parsed_text["light"] : parsed_text["dark"])
-            final_header_text = new_text.to_s if new_text
-          rescue ex
-            HealthMonitor.log_error("extract_legacy_header_from_theme(text)", ex)
-          end
-        end
+
+      if (parsed_text = parsed["text"]?) && (new_text = extract_theme_text_value(parsed_text, final_header_text))
+        final_header_text = new_text
       end
 
-      if parsed_bg = parsed["bg"]
-        if final_header_color.nil? || final_header_color == ""
-          final_header_color = parsed_bg.to_s
-        end
+      if (parsed_bg = parsed["bg"]?) && (final_header_color.nil? || final_header_color == "")
+        final_header_color = parsed_bg.to_s
       end
     rescue ex
       HealthMonitor.log_error("extract_legacy_header_from_theme(parse)", ex)
@@ -458,40 +487,25 @@ def fetch_feed(feed : Feed, display_item_limit : Int32, db_fetch_limit : Int32, 
   FeedFetcher.instance.fetch(feed, display_item_limit, db_fetch_limit, previous_data)
 end
 
-private def fetch_reddit_feed(feed : Feed, limit : Int32) : FeedData
+private def get_reddit_cached_data(feed : Feed, limit : Int32) : FeedData?
   cache_url = feed.url
   normalized = normalize_url(feed.url)
 
-  # First try to return cached data if available and fresh
-  # Try both original URL and normalized URL
   cached = FeedCache.instance.get(cache_url) || FeedCache.instance.get(normalized)
-  if cached
-    if last_fetched = FeedCache.instance.get_fetched_time(cache_url) || FeedCache.instance.get_fetched_time(normalized)
-      cache_age = (Time.utc - last_fetched).total_minutes
-      if cache_age < 5 && cached.items.size >= limit
-        # Cache is fresh, return it while fetching in background
-        spawn fetch_reddit_background(feed, limit)
-        return cached
-      end
-    end
-  end
+  return unless cached
 
-  # No fresh cache, fetch new data
-  result = Fetcher.pull(feed.url, HTTP::Headers.new, limit)
+  last_fetched = FeedCache.instance.get_fetched_time(cache_url) || FeedCache.instance.get_fetched_time(normalized)
+  return unless last_fetched
 
-  if error = result.error_message
-    # On error, try to return stale cache
-    cached = FeedCache.instance.get(cache_url) || FeedCache.instance.get(normalized)
-    if cached
-      return cached
-    end
-    return FeedFetcher.instance.build_error_feed_data(feed, error)
-  end
+  cache_age = (Time.utc - last_fetched).total_minutes
+  return unless cache_age < 5 && cached.items.size >= limit
 
-  items = result.entries.map do |entry|
-    Item.new(entry.title, entry.url, entry.published_at)
-  end
+  # Cache is fresh, trigger background fetch and return cached
+  spawn fetch_reddit_background(feed, limit)
+  cached
+end
 
+private def build_reddit_feed_data(feed : Feed, result, items : Array(Item)) : FeedData
   feed_data = FeedData.new(
     feed.title,
     feed.url,
@@ -521,13 +535,33 @@ private def fetch_reddit_feed(feed : Feed, limit : Int32) : FeedData
   FeedCache.instance.add(cached_data)
 
   feed_data
-rescue ex
-  # On exception, try to return stale cache
+end
+
+private def handle_reddit_error(feed : Feed, error : String?) : FeedData
   cached = FeedCache.instance.get(feed.url) || FeedCache.instance.get(normalize_url(feed.url))
-  if cached
-    return cached
+  cached || FeedFetcher.instance.build_error_feed_data(feed, error || "Unknown error")
+end
+
+private def fetch_reddit_feed(feed : Feed, limit : Int32) : FeedData
+  # First try to return cached data if available and fresh
+  if cached_data = get_reddit_cached_data(feed, limit)
+    return cached_data
   end
-  FeedFetcher.instance.build_error_feed_data(feed, "Error: #{ex.message}")
+
+  # No fresh cache, fetch new data
+  result = Fetcher.pull(feed.url, HTTP::Headers.new, limit)
+
+  if error = result.error_message
+    return handle_reddit_error(feed, error)
+  end
+
+  items = result.entries.map do |entry|
+    Item.new(entry.title, entry.url, entry.published_at)
+  end
+
+  build_reddit_feed_data(feed, result, items)
+rescue ex
+  handle_reddit_error(feed, "Error: #{ex.message}")
 end
 
 private def fetch_reddit_background(feed : Feed, limit : Int32)

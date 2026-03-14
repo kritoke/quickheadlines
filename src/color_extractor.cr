@@ -459,31 +459,45 @@ module ColorExtractor
     end
   end
 
-  # Upgrade existing theme JSON entries that were marked as "auto" to
-  # "auto-corrected" when their light/dark text roles already meet
-  # contrast requirements relative to the bg. Returns a JSON string with
-  # source set to "auto-corrected" when an upgrade is performed, or nil
-  # otherwise.
-  def self.auto_upgrade_to_auto_corrected(theme_json : String?) : String?
+  private def self.parse_theme_json_for_upgrade(theme_json : String?) : Hash(String, JSON::Any)?
     return if theme_json.nil? || theme_json.empty?
 
     parsed = JSON.parse(theme_json) rescue nil
     return unless parsed.is_a?(JSON::Any)
+
     h = parsed.as_h rescue nil
     return unless h
 
     src = h["source"]? ? h["source"].to_s : nil
     return unless src == "auto"
 
-    bg_val = h["bg"] || h["background"]
+    h
+  end
+
+  private def self.extract_bg_rgb_from_theme(h : Hash(String, JSON::Any)) : Array(Int32)?
+    bg_val = h["bg"]? || h["background"]?
     return unless bg_val
-    bg_rgb = parse_color_to_rgb(bg_val.to_s)
+
+    parse_color_to_rgb(bg_val.to_s)
+  end
+
+  # Upgrade existing theme JSON entries that were marked as "auto" to
+  # "auto-corrected" when their light/dark text roles already meet
+  # contrast requirements relative to the bg. Returns a JSON string with
+  # source set to "auto-corrected" when an upgrade is performed, or nil
+  # otherwise.
+  def self.auto_upgrade_to_auto_corrected(theme_json : String?) : String?
+    h = parse_theme_json_for_upgrade(theme_json)
+    return unless h
+
+    bg_rgb = extract_bg_rgb_from_theme(h)
     return unless bg_rgb
 
-    txt = h["text"]
+    txt = h["text"]?
     txt_h = parse_text_hash(txt)
 
     if roles_meet_contrast(txt_h, bg_rgb)
+      bg_val = h["bg"]? || h["background"]?
       final = {"bg" => bg_val.to_s, "text" => {"light" => txt_h["light"], "dark" => txt_h["dark"]}, "source" => "auto-corrected"}
       return final.to_json
     end

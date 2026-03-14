@@ -83,6 +83,28 @@ module CleanupRepository
     end
   end
 
+  private def try_parse_date_format(str : String, format : String) : Time?
+    Time.parse(str, format, Time::Location::UTC)
+  rescue
+    nil
+  end
+
+  private def parse_date_with_formats(str : String) : Time?
+    formats = [
+      "%Y-%m-%d %H:%M:%S",
+      "%Y-%m-%dT%H:%M:%S%z",
+      "%Y-%m-%dT%H:%M:%SZ",
+      "%a, %d %b %Y %H:%M:%S %z",
+    ]
+
+    formats.each do |fmt|
+      if parsed = try_parse_date_format(str, fmt)
+        return parsed
+      end
+    end
+    nil
+  end
+
   def normalize_pub_dates
     @mutex.synchronize do
       STDERR.puts "[#{Time.local}] Normalizing pub_date values..."
@@ -99,41 +121,10 @@ module CleanupRepository
         next if raw.nil?
         str = raw.as(String)
 
-        if str =~ /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/
-          next
-        end
+        # Skip if already in correct format
+        next if str =~ /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/
 
-        begin
-          begin
-            parsed = Time.parse(str, "%Y-%m-%d %H:%M:%S", Time::Location::UTC)
-          rescue
-          end
-
-          if !parsed
-            begin
-              parsed = Time.parse(str, "%Y-%m-%dT%H:%M:%S%z", Time::Location::UTC)
-            rescue
-            end
-          end
-
-          if !parsed
-            begin
-              parsed = Time.parse(str, "%Y-%m-%dT%H:%M:%SZ", Time::Location::UTC)
-            rescue
-            end
-          end
-
-          if !parsed
-            begin
-              parsed = Time.parse(str, "%a, %d %b %Y %H:%M:%S %z", Time::Location::UTC)
-            rescue
-            end
-          end
-        rescue
-          parsed = nil
-        end
-
-        if parsed
+        if parsed = parse_date_with_formats(str)
           formatted = parsed.to_s("%Y-%m-%d %H:%M:%S")
           if formatted != str
             @db.exec("UPDATE items SET pub_date = ? WHERE id = ?", formatted, id)

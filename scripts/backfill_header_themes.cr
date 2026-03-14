@@ -27,9 +27,7 @@ def update_feed_theme_colors_db(feed_url : String, theme_json : String)
   end
 end
 
-def main
-  puts "Starting backfill: compute header_theme_colors for feeds that lack them"
-
+def load_feeds_from_db : Hash(String, FeedData)
   feeds = {} of String => FeedData
   db_path = get_cache_db_path(nil)
   DB.open("sqlite3://#{db_path}") do |db_conn|
@@ -50,6 +48,81 @@ def main
       end
     end
   end
+  feeds
+end
+
+def try_google_favicon_fallback(feed_data : FeedData, processed : Int32, total : Int32) : String?
+  begin
+    # Derive host from feed URL
+    host = URI.parse(feed_data.url).host
+    if host
+      google_url = "https://www.google.com/s2/favicons?domain=#{host}&sz=256"
+      puts "(#{processed}/#{total}) Trying Google fallback for #{feed_data.title}: #{google_url}"
+
+      uri = URI.parse(google_url)
+      # Use URI overload to let HTTP::Client handle TLS/host resolution
+      # Use the class helper to GET the full URI (handles TLS automatically)
+      HTTP::Client.get(uri) do |response|
+        if response.status.success?
+          mem = IO::Memory.new
+          IO.copy(response.body_io, mem)
+          if mem.size > 0
+            saved = FaviconStorage.save_favicon(google_url, mem.to_slice, "image/png")
+            if saved
+              puts "(#{processed}/#{total}) Saved Google favicon to #{saved}"
+              saved
+            end
+          end
+        else
+          puts "(#{processed}/#{total}) Google fallback failed: #{response.status_code}"
+        end
+      end
+    end
+  rescue ex
+    STDERR.puts "Google fallback error for #{feed_data.title}: #{ex.message}"
+  end
+  nil
+end
+
+def extract_and_save_theme(feed_data : FeedData, favicon_path : String, processed : Int32, total : Int32) : Bool
+  full_path = File.join("public", favicon_path)
+  unless File.exists?(full_path)
+    puts "(#{processed}/#{total}) Skipping #{feed_data.title} — favicon file missing: #{full_path}"
+    return false
+  end
+
+  # Run the theme-aware extractor
+  extracted = ColorExtractor.theme_aware_extract_from_favicon(favicon_path, feed_data.url, feed_data.header_color)
+  if extracted && extracted.is_a?(Hash)
+    # Normalize to JSON payload shape { bg: "rgb(...)", text: { light: "#..", dark: "#.." }, source: "backfill" }
+    bg = extracted["bg"] ? extracted["bg"].to_s : nil
+    text = extracted["text"]
+    text_hash = if text.is_a?(Hash)
+                  normalized = {} of String => String
+                  text.each do |k, v|
+                    normalized[k.to_s] = v.to_s
+                  end
+                  normalized
+                else
+                  {"light" => text.to_s, "dark" => text.to_s}
+                end
+
+    payload = {"bg" => bg, "text" => text_hash, "source" => "backfill"}
+    theme_json = payload.to_json
+
+    update_feed_theme_colors_db(feed_data.url, theme_json)
+    puts "(#{processed}/#{total}) Updated #{feed_data.title} — header_theme_colors saved"
+    true
+  else
+    puts "(#{processed}/#{total}) No extractable theme for #{feed_data.title}"
+    false
+  end
+end
+
+def main
+  puts "Starting backfill: compute header_theme_colors for feeds that lack them"
+
+  feeds = load_feeds_from_db
 
   total = feeds.size
   processed = 0
@@ -70,35 +143,7 @@ def main
 
       # If we don't have a local PNG favicon, try Google favicon fallback (PNG)
       if !(favicon_path && favicon_path.starts_with?("/favicons/") && favicon_path.ends_with?(".png"))
-        begin
-          # Derive host from feed URL
-          host = URI.parse(feed_data.url).host
-          if host
-            google_url = "https://www.google.com/s2/favicons?domain=#{host}&sz=256"
-            puts "(#{processed}/#{total}) Trying Google fallback for #{feed_data.title}: #{google_url}"
-
-            uri = URI.parse(google_url)
-            # Use URI overload to let HTTP::Client handle TLS/host resolution
-            # Use the class helper to GET the full URI (handles TLS automatically)
-            HTTP::Client.get(uri) do |response|
-              if response.status.success?
-                mem = IO::Memory.new
-                IO.copy(response.body_io, mem)
-                if mem.size > 0
-                  saved = FaviconStorage.save_favicon(google_url, mem.to_slice, "image/png")
-                  if saved
-                    favicon_path = saved
-                    puts "(#{processed}/#{total}) Saved Google favicon to #{saved}"
-                  end
-                end
-              else
-                puts "(#{processed}/#{total}) Google fallback failed: #{response.status_code}"
-              end
-            end
-          end
-        rescue ex
-          STDERR.puts "Google fallback error for #{feed_data.title}: #{ex.message}"
-        end
+        favicon_path = try_google_favicon_fallback(feed_data, processed, total)
       end
 
       unless favicon_path && favicon_path.starts_with?("/favicons/")
@@ -106,36 +151,8 @@ def main
         next
       end
 
-      full_path = File.join("public", favicon_path)
-      unless File.exists?(full_path)
-        puts "(#{processed}/#{total}) Skipping #{feed_data.title} — favicon file missing: #{full_path}"
-        next
-      end
-
-      # Run the theme-aware extractor
-      extracted = ColorExtractor.theme_aware_extract_from_favicon(favicon_path, feed_data.url, feed_data.header_color)
-      if extracted && extracted.is_a?(Hash)
-        # Normalize to JSON payload shape { bg: "rgb(...)", text: { light: "#..", dark: "#.." }, source: "backfill" }
-        bg = extracted["bg"] ? extracted["bg"].to_s : nil
-        text = extracted["text"]
-        text_hash = if text.is_a?(Hash)
-                      normalized = {} of String => String
-                      text.each do |k, v|
-                        normalized[k.to_s] = v.to_s
-                      end
-                      normalized
-                    else
-                      {"light" => text.to_s, "dark" => text.to_s}
-                    end
-
-        payload = {"bg" => bg, "text" => text_hash, "source" => "backfill"}
-        theme_json = payload.to_json
-
-        update_feed_theme_colors_db(feed_data.url, theme_json)
-        puts "(#{processed}/#{total}) Updated #{feed_data.title} — header_theme_colors saved"
+      if extract_and_save_theme(feed_data, favicon_path, processed, total)
         updated += 1
-      else
-        puts "(#{processed}/#{total}) No extractable theme for #{feed_data.title}"
       end
     rescue ex
       STDERR.puts "Error processing #{feed_data.title} (#{feed_data.url}): #{ex.message}"

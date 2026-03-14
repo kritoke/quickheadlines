@@ -15,6 +15,52 @@ class Quickheadlines::Services::ClusteringService
     @cluster_repository ||= Quickheadlines::Repositories::ClusterRepository.new(@db)
   end
 
+  private def find_best_cluster_match(candidates : Array(Int64), item_id : Int64, title_set : Set(String), cache : FeedCache, item_feed_id : Int64?) : Tuple(Int64?, Float64, String, Int64?)
+    best_match = nil
+    best_similarity = 0.0_f64
+    best_title = ""
+    best_feed_id = nil
+
+    candidates.each do |candidate_id|
+      next if candidate_id == item_id
+
+      candidate_signature = cache.get_item_signature(candidate_id)
+      next unless candidate_signature
+
+      candidate_feed_id = cache.get_item_feed_id(candidate_id)
+      next if item_feed_id && candidate_feed_id == item_feed_id
+
+      candidate_title = cache.get_item_title(candidate_id)
+      next unless candidate_title
+
+      candidate_set = ClusteringEngine.word_set(candidate_title)
+      similarity = ClusteringEngine.overlap_coefficient(title_set, candidate_set)
+
+      if similarity > best_similarity
+        best_similarity = similarity
+        best_match = candidate_id
+        best_title = candidate_title
+        best_feed_id = candidate_feed_id
+      end
+    end
+
+    {best_match, best_similarity, best_title, best_feed_id}
+  end
+
+  private def assign_item_to_cluster(item_id : Int64, best_match : Int64?, best_similarity : Float64, best_title : String, threshold : Float64, title : String, cache : FeedCache) : Int64
+    if best_match && best_similarity >= threshold
+      cluster_items = cache.get_cluster_items(best_match)
+      cluster_id = cluster_items.any? { |id| id != best_match } ? cluster_items.first : best_match
+      cache.assign_cluster(item_id, cluster_id)
+      STDERR.puts "[Clustering] Clustered '#{title[0...50]}...' with '#{best_title[0...50]}...'" if ENV["DEBUG_CLUSTERING"]?
+      cluster_id
+    else
+      cache.assign_cluster(item_id, item_id)
+      STDERR.puts "[Clustering] Created new cluster for '#{title[0...50]}...'" if ENV["DEBUG_CLUSTERING"]?
+      item_id
+    end
+  end
+
   def compute_cluster_for_item(item_id : Int64, title : String, cache : FeedCache, item_feed_id : Int64? = nil, threshold : Float64 = 0.35) : Int64?
     return unless ClusteringEngine.can_cluster?(title)
 
@@ -34,53 +80,11 @@ class Quickheadlines::Services::ClusteringService
       return item_id
     end
 
-    best_match = nil
-    best_similarity = 0.0_f64
-    best_title = ""
-    best_feed_id = nil
-
-    candidates.each do |candidate_id|
-      next if candidate_id == item_id
-
-      candidate_signature = cache.get_item_signature(candidate_id)
-      next unless candidate_signature
-
-      candidate_feed_id = cache.get_item_feed_id(candidate_id)
-      if item_feed_id && candidate_feed_id == item_feed_id
-        next
-      end
-
-      candidate_title = cache.get_item_title(candidate_id)
-      next unless candidate_title
-
-      candidate_set = ClusteringEngine.word_set(candidate_title)
-      similarity = ClusteringEngine.overlap_coefficient(title_set, candidate_set)
-
-      if similarity > best_similarity
-        best_similarity = similarity
-        best_match = candidate_id
-        best_title = candidate_title
-        best_feed_id = candidate_feed_id
-      end
-    end
+    best_match, best_similarity, best_title, _feed_id = find_best_cluster_match(candidates, item_id, title_set, cache, item_feed_id)
 
     STDERR.puts "[Clustering] Best match similarity: #{best_similarity.round(2)} (threshold: #{threshold})" if ENV["DEBUG_CLUSTERING"]?
 
-    if best_match && best_similarity >= threshold
-      cluster_items = cache.get_cluster_items(best_match)
-      if cluster_items.any? { |id| id != best_match }
-        cluster_id = cluster_items.first
-      else
-        cluster_id = best_match
-      end
-      cache.assign_cluster(item_id, cluster_id)
-      STDERR.puts "[Clustering] Clustered '#{title[0...50]}...' with '#{best_title[0...50]}...'" if ENV["DEBUG_CLUSTERING"]?
-      cluster_id
-    else
-      cache.assign_cluster(item_id, item_id)
-      STDERR.puts "[Clustering] Created new cluster for '#{title[0...50]}...'" if ENV["DEBUG_CLUSTERING"]?
-      item_id
-    end
+    assign_item_to_cluster(item_id, best_match, best_similarity, best_title, threshold, title, cache)
   end
 
   def get_all_clusters_from_db : Array(Quickheadlines::Entities::Cluster)

@@ -12,23 +12,14 @@ require "./feed_fetcher"
 
 CLUSTERING_JOBS = Atomic(Int32).new(0)
 
-def refresh_all(config : Config)
-  StateStore.update(&.copy_with(refreshing: true))
-  StateStore.update(&.copy_with(config_title: config.page_title, config: config))
-
+private def collect_all_feed_configs(config : Config) : Hash(String, Feed)
   all_configs = {} of String => Feed
   config.feeds.each { |feed| all_configs[feed.url] = feed }
   config.tabs.each { |tab| tab.feeds.each { |feed| all_configs[feed.url] = feed } }
+  all_configs
+end
 
-  if config.debug?
-    STDERR.puts "[#{Time.local}] refresh_all: starting - #{all_configs.size} feeds to fetch"
-  end
-
-  existing_data = (StateStore.feeds + StateStore.tabs.flat_map(&.feeds)).index_by(&.url)
-  if config.debug?
-    STDERR.puts "[#{Time.local}] refresh_all: existing_data.size=#{existing_data.size}"
-  end
-
+private def fetch_feeds_concurrently(all_configs : Hash(String, Feed), existing_data : Hash(String, FeedData), config : Config) : Hash(String, FeedData)
   channel = Channel(FeedData).new
   all_configs.each_value do |feed|
     spawn do
@@ -43,45 +34,58 @@ def refresh_all(config : Config)
   end
 
   fetched_map = {} of String => FeedData
-  success_count = 0
   all_configs.size.times do
     data = channel.receive
     if data && !data.items.empty?
       fetched_map[data.url] = data
-      success_count += 1
     elsif config.debug?
       STDERR.puts "[#{Time.local}] refresh_all: failed to fetch #{data ? data.url : "unknown"}"
     end
   end
+  fetched_map
+end
+
+private def build_software_releases(sw_config : SoftwareConfig?, item_limit : Int32) : Array(FeedData)
+  return [] of FeedData unless sw_config
+  if sw_box = fetch_sw_with_config(sw_config, item_limit)
+    [sw_box]
+  else
+    [] of FeedData
+  end
+end
+
+private def build_tab_feeds(tab_config : TabConfig, fetched_map : Hash(String, FeedData), item_limit : Int32) : Tab
+  tab_feeds = tab_config.feeds.map { |feed| fetched_map[feed.url]? || error_feed_data(feed, "Failed to fetch") }
+  tab_releases = build_software_releases(tab_config.software_releases, item_limit)
+  Tab.new(tab_config.name, tab_feeds, tab_releases)
+end
+
+def refresh_all(config : Config)
+  StateStore.update(&.copy_with(refreshing: true))
+  StateStore.update(&.copy_with(config_title: config.page_title, config: config))
+
+  all_configs = collect_all_feed_configs(config)
+
+  if config.debug?
+    STDERR.puts "[#{Time.local}] refresh_all: starting - #{all_configs.size} feeds to fetch"
+  end
+
+  existing_data = (StateStore.feeds + StateStore.tabs.flat_map(&.feeds)).index_by(&.url)
+  if config.debug?
+    STDERR.puts "[#{Time.local}] refresh_all: existing_data.size=#{existing_data.size}"
+  end
+
+  fetched_map = fetch_feeds_concurrently(all_configs, existing_data, config)
 
   if config.debug?
     STDERR.puts "[#{Time.local}] refresh_all: fetched #{fetched_map.size}/#{all_configs.size} feeds successfully"
-  end
-
-  if config.debug?
     STDERR.puts "[#{Time.local}] refresh_all: building new state (feeds=#{fetched_map.size}, tabs=#{config.tabs.size})"
   end
 
   # Build new state immutably
   new_feeds = config.feeds.map { |feed| fetched_map[feed.url]? || error_feed_data(feed, "Failed to fetch") }
-
-  new_software_releases = [] of FeedData
-  if sw = config.software_releases
-    if sw_box = fetch_sw_with_config(sw, config.item_limit)
-      new_software_releases = [sw_box]
-    end
-  end
-
-  new_tabs = config.tabs.map do |tab_config|
-    tab_feeds = tab_config.feeds.map { |feed| fetched_map[feed.url]? || error_feed_data(feed, "Failed to fetch") }
-    tab_releases = [] of FeedData
-    if sw = tab_config.software_releases
-      if sw_box = fetch_sw_with_config(sw, config.item_limit)
-        tab_releases = [sw_box]
-      end
-    end
-    Tab.new(tab_config.name, tab_feeds, tab_releases)
-  end
+  new_software_releases = build_software_releases(config.software_releases, config.item_limit)
+  new_tabs = config.tabs.map { |tab_config| build_tab_feeds(tab_config, fetched_map, config.item_limit) }
 
   # Atomic state update - no mutations
   StateStore.update do |state|

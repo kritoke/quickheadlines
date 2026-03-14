@@ -339,58 +339,51 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
     STATE.updated_at.to_unix_ms.to_s
   end
 
+  private def parse_header_color_params(body : JSON::Any) : Tuple(String?, String?, String?)
+    feed_url = (val = body["feed_url"]?) && val.is_a?(JSON::Any) ? val.as_s : nil
+    color = (val = body["color"]?) && val.is_a?(JSON::Any) ? val.as_s : nil
+    text_color = (val = body["text_color"]?) && val.is_a?(JSON::Any) ? val.as_s : nil
+    {feed_url, color, text_color}
+  end
+
+  private def normalize_feed_url(url : String) : String
+    url.strip
+      .rstrip('/')
+      .gsub(/\/rss(\.xml)?$/i, "")
+      .gsub(/\/feed(\.xml)?$/i, "")
+  end
+
+  private def has_manual_color_override?(config : Config, feed_url : String) : Bool
+    all_feeds = config.feeds + config.tabs.flat_map(&.feeds)
+    all_feeds.any? { |feed| feed.url == feed_url && !feed.header_color.to_s.empty? }
+  end
+
   # POST /api/header_color - Save extracted header color and text color from favicon
   # Takes feed_url, color (bg color), and text_color (text color). Manual header_color in config takes priority.
   @[ARTA::Post(path: "/api/header_color")]
   def save_header_color(request : ATH::Request) : ATH::Response
     body_io = request.body
     return ATH::Response.new("Missing request body", 400) if body_io.nil?
+
     body = JSON.parse(body_io.gets_to_end)
-
-    feed_url_raw = body["feed_url"]?
-    color_raw = body["color"]?
-    text_color_raw = body["text_color"]?
-
-    feed_url = feed_url_raw.is_a?(JSON::Any) ? feed_url_raw.as_s : nil
-    color = color_raw.is_a?(JSON::Any) ? color_raw.as_s : nil
-    text_color = text_color_raw.is_a?(JSON::Any) ? text_color_raw.as_s : nil
+    feed_url, color, text_color = parse_header_color_params(body)
 
     if feed_url.nil? || color.nil? || text_color.nil?
       return ATH::Response.new("Missing feed_url, color, or text_color", 400)
     end
 
-    # Normalize URL to match database format (remove trailing slashes, /feed, etc.)
-    normalized_url = feed_url.strip
-      .rstrip('/')
-      .gsub(/\/rss(\.xml)?$/i, "")
-      .gsub(/\/feed(\.xml)?$/i, "")
-
-    # Check if this feed has a manual header_color in config (takes priority)
     config = STATE.config
-    if config.nil?
-      return ATH::Response.new("Configuration not loaded", 500)
-    end
+    return ATH::Response.new("Configuration not loaded", 500) if config.nil?
 
-    all_feeds = config.feeds + config.tabs.flat_map(&.feeds)
-    has_manual_color = all_feeds.any? do |feed|
-      feed.url == feed_url && !feed.header_color.nil? && feed.header_color != ""
-    end
-
-    if has_manual_color
+    if has_manual_color_override?(config, feed_url)
       return ATH::Response.new("Skipped: manual config exists", 200)
     end
 
-    # Try to find matching feed in database with normalized URL
+    normalized_url = normalize_feed_url(feed_url)
     cache = FeedCache.instance
-    db_url = cache.find_feed_url_by_pattern(normalized_url)
-
-    if db_url.nil?
-      # Fallback: try original URL
-      db_url = feed_url
-    end
+    db_url = cache.find_feed_url_by_pattern(normalized_url) || feed_url
 
     cache.update_header_colors(db_url, color, text_color)
-
     ATH::Response.new("OK", 200)
   rescue ex
     ATH::Response.new(ex.message, 500)

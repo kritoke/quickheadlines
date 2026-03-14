@@ -8,18 +8,12 @@ require "../health_monitor"
 private def valid_image?(data : Bytes) : Bool
   return false if data.size < 4
 
-  return true if data[0..7] == Bytes[0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]
-
-  return true if data[0..2] == Bytes[0xFF, 0xD8, 0xFF]
-
-  return true if data[0] == 0x00 && data[1] == 0x00 && (data[2] == 0x01 || data[2] == 0x02) && data[3] == 0x00
-
-  return true if data[0..4] == Bytes[0x3C, 0x3F, 0x78, 0x6D, 0x6C]
-  return true if data[0..3] == Bytes[0x3C, 0x73, 0x76, 0x67]
-
-  return true if data[0..3] == Bytes[0x52, 0x49, 0x46, 0x46] && data[8..11] == Bytes[0x57, 0x45, 0x42, 0x50]
-
-  false
+  (data[0..7] == Bytes[0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]) ||
+    (data[0..2] == Bytes[0xFF, 0xD8, 0xFF]) ||
+    (data[0] == 0x00 && data[1] == 0x00 && (data[2] == 0x01 || data[2] == 0x02) && data[3] == 0x00) ||
+    (data[0..4] == Bytes[0x3C, 0x3F, 0x78, 0x6D, 0x6C]) ||
+    (data[0..3] == Bytes[0x3C, 0x73, 0x76, 0x67]) ||
+    (data[0..3] == Bytes[0x52, 0x49, 0x46, 0x46] && data[8..11] == Bytes[0x57, 0x45, 0x42, 0x50])
 end
 
 module FaviconHelper
@@ -84,6 +78,83 @@ end
 
 FAVICON_CACHE = FaviconCache.new
 
+private def handle_favicon_redirect(response : HTTP::Client::Response, uri : URI, current_url : String, redirects : Int32) : {String, Int32}?
+  if response.status.redirection? && (location = response.headers["Location"]?)
+    new_url = uri.resolve(location).to_s
+    debug_log("Favicon redirect #{redirects + 1}: #{new_url}")
+    {new_url, redirects + 1}
+  end
+end
+
+private def handle_gray_placeholder(current_url : String, memory_size : Int32) : String?
+  if memory_size == 198
+    debug_log("Gray placeholder detected (#{memory_size} bytes) for #{current_url}")
+    if current_url.includes?("google.com/s2/favicons")
+      larger_url = current_url.gsub(/sz=\d+/, "sz=256")
+      cached = FaviconStorage.get_or_fetch(larger_url)
+      if cached
+        return cached
+      end
+      return fetch_favicon_uri(larger_url)
+    else
+      debug_log("Gray placeholder from non-Google source, trying Google fallback")
+      # Try Google favicon service as fallback for gray placeholder
+      begin
+        if host = URI.parse(current_url).host
+          google_favicon = "https://www.google.com/s2/favicons?domain=#{host}&sz=256"
+          debug_log("Google fallback URL: #{google_favicon}")
+          if google_data = fetch_favicon_uri(google_favicon)
+            FAVICON_CACHE.set(google_favicon, google_data)
+            return google_data
+          end
+        end
+      rescue ex
+        HealthMonitor.log_error("gray placeholder fallback(#{current_url})", ex)
+      end
+    end
+  end
+  nil
+end
+
+private def handle_http_response(response : HTTP::Client::Response, current_url : String, content_type : String, memory : IO::Memory) : String?
+  if memory.size == 0
+    debug_log("Empty favicon response: #{current_url}")
+    return
+  end
+
+  # Handle gray placeholder
+  if gray_result = handle_gray_placeholder(current_url, memory.size)
+    return gray_result
+  end
+
+  unless valid_image?(memory.to_slice)
+    debug_log("Invalid favicon content (not an image): #{current_url}")
+    return
+  end
+
+  debug_log("Favicon fetched: #{current_url}, size=#{memory.size}, type=#{content_type}")
+
+  if saved_url = FaviconStorage.save_favicon(current_url, memory.to_slice, content_type)
+    debug_log("Favicon saved: #{saved_url}")
+    saved_url
+  else
+    debug_log("Favicon save failed: #{current_url}")
+    nil
+  end
+end
+
+private def handle_http_error(response : HTTP::Client::Response, current_url : String) : String?
+  case response.status_code
+  when 404
+    debug_log("Favicon 404: #{current_url}")
+  when 403
+    debug_log("Favicon 403: #{current_url}")
+  else
+    debug_log("Favicon error #{response.status_code}: #{current_url}")
+  end
+  nil
+end
+
 def fetch_favicon_uri(url : String) : String?
   debug_log("Fetching favicon: #{url}")
   current_url = url
@@ -119,72 +190,30 @@ def fetch_favicon_uri(url : String) : String?
 
     begin
       client.get(uri.request_target, headers: headers) do |response|
-        if response.status.redirection? && (location = response.headers["Location"]?)
-          current_url = uri.resolve(location).to_s
-          redirects += 1
-          debug_log("Favicon redirect #{redirects}: #{current_url}")
+        # Handle redirects
+        if redirect_result = handle_favicon_redirect(response, uri, current_url, redirects)
+          current_url = redirect_result[0]
+          redirects = redirect_result[1]
           next
-        elsif response.status.success?
+        end
+
+        # Handle successful responses
+        if response.status.success?
           content_type = response.content_type || "image/png"
           memory = IO::Memory.new
           IO.copy(response.body_io, memory, limit: 100 * 1024)
-          if memory.size == 0
-            debug_log("Empty favicon response: #{current_url}")
-            return
-          end
 
-          if memory.size == 198
-            debug_log("Gray placeholder detected (#{memory.size} bytes) for #{current_url}")
-            if current_url.includes?("google.com/s2/favicons")
-              larger_url = current_url.gsub(/sz=\d+/, "sz=256")
-              cached = FaviconStorage.get_or_fetch(larger_url)
-              if cached
-                return cached
-              end
-              return fetch_favicon_uri(larger_url)
-            else
-              debug_log("Gray placeholder from non-Google source, trying Google fallback")
-              # Try Google favicon service as fallback for gray placeholder
-              begin
-                if host = URI.parse(current_url).host
-                  google_favicon = "https://www.google.com/s2/favicons?domain=#{host}&sz=256"
-                  debug_log("Google fallback URL: #{google_favicon}")
-                  if google_data = fetch_favicon_uri(google_favicon)
-                    FAVICON_CACHE.set(google_favicon, google_data)
-                    return google_data
-                  end
-                end
-              rescue ex
-                HealthMonitor.log_error("gray placeholder fallback(#{current_url})", ex)
-              end
-              return
-            end
+          if result = handle_http_response(response, current_url, content_type, memory)
+            return result
           end
-
-          unless valid_image?(memory.to_slice)
-            debug_log("Invalid favicon content (not an image): #{current_url}")
-            return
-          end
-
-          debug_log("Favicon fetched: #{current_url}, size=#{memory.size}, type=#{content_type}")
-
-          if saved_url = FaviconStorage.save_favicon(current_url, memory.to_slice, content_type)
-            debug_log("Favicon saved: #{saved_url}")
-            return saved_url
-          else
-            debug_log("Favicon save failed: #{current_url}")
-            return
-          end
-        elsif response.status.not_found?
-          debug_log("Favicon 404: #{current_url}")
-          return
-        elsif response.status.forbidden?
-          debug_log("Favicon 403: #{current_url}")
-          return
         else
-          debug_log("Favicon error #{response.status_code}: #{current_url}")
-          return
+          # Handle HTTP errors
+          if result = handle_http_error(response, current_url)
+            return result
+          end
         end
+
+        return
       end
     rescue ex
       HealthMonitor.log_error("fetch_favicon_uri(#{url})", ex)

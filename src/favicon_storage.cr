@@ -24,11 +24,11 @@ module FaviconStorage
 
     # Generate a hash-based filename from the URL (or fetch source) so different
     # fetch paths that point to the same content still produce the same file.
-    hash_input = url
-    begin
+    hash_input = begin
       # If the url is actually a data URI, use its prefix
-      hash_input = url[0..255]
+      url[0..255]
     rescue
+      url
     end
     hash = OpenSSL::Digest.new("SHA256").update(hash_input).final.hexstring
     filename = "#{hash[0...16]}.#{extension_from_content_type(content_type)}"
