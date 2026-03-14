@@ -41,7 +41,7 @@
 
 	<DropdownMenu.Portal>
 	<DropdownMenu.Content
-		class="z-50 w-80 rounded-lg shadow-lg py-2 theme-bg-primary theme-border"
+		class="z-50 w-80 rounded-lg shadow-lg {spacing.default} theme-bg-primary theme-border"
 		sideOffset={8}
 	>
 		<div class="px-3 {spacing.default} text-xs font-semibold uppercase tracking-wider opacity-70 theme-text-secondary">

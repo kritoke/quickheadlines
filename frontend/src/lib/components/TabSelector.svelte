@@ -2,6 +2,7 @@
 	import { themeState } from '$lib/stores/theme.svelte';
 	import MobileTabSheet from './MobileTabSheet.svelte';
 	import type { TabResponse } from '$lib/types';
+	import { spacing } from '$lib/design/tokens';
 
 	interface Props {
 		tabs: TabResponse[];
@@ -70,7 +71,7 @@
 	<button
 		onclick={(e) => { e.preventDefault(); console.log('Mobile tab button clicked'); showMobileSheet = true; }}
 		type="button"
-		class="w-full px-4 py-2 flex items-center justify-between bg-slate-50 dark:bg-slate-800 border-t border-slate-200 dark:border-slate-700 cursor-pointer pointer-events-auto touch-manipulation"
+		class="w-full px-4 {spacing.default} flex items-center justify-between bg-slate-50 dark:bg-slate-800 border-t border-slate-200 dark:border-slate-700 cursor-pointer pointer-events-auto touch-manipulation"
 	>
 		<span class="text-sm text-slate-600 dark:text-slate-400">Viewing:</span>
 		<span class="flex items-center gap-2 text-sm font-medium text-slate-900 dark:text-white">
@@ -103,7 +104,7 @@
 			aria-selected={activeTab === tab.name}
 			onclick={() => selectTab(tab.name)}
 			onkeydown={(e) => handleKeyDown(e, i)}
-			class="relative px-3 py-2 text-sm font-medium rounded-md transition-colors cursor-pointer
+			class="relative px-3 {spacing.default} text-sm font-medium rounded-md transition-colors cursor-pointer
 				{activeTab === tab.name 
 					? 'text-slate-900 dark:text-white' 
 					: 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'}"
@@ -124,7 +125,7 @@
 				role="tab"
 				type="button"
 				onclick={toggleMore}
-				class="px-3 py-2 text-sm font-medium text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300 rounded-md flex items-center gap-1 cursor-pointer"
+				class="px-3 {spacing.default} text-sm font-medium text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300 rounded-md flex items-center gap-1 cursor-pointer"
 				aria-expanded={showMore}
 			>
 				More
@@ -140,7 +141,7 @@
 
 			{#if showMore}
 				<div 
-					class="absolute top-full left-0 mt-1 theme-bg-primary rounded-lg shadow-lg theme-border py-2 min-w-[120px] z-50"
+					class="absolute top-full left-0 mt-1 theme-bg-primary rounded-lg shadow-lg theme-border {spacing.default} min-w-[120px] z-50"
 					role="menu"
 				>
 					{#each overflowTabs as tab (tab.name)}
@@ -148,7 +149,7 @@
 							type="button"
 							role="menuitem"
 							onclick={() => selectTab(tab.name)}
-							class="w-full px-4 py-2 text-sm text-left hover:opacity-80 cursor-pointer
+							class="w-full px-4 {spacing.default} text-sm text-left hover:opacity-80 cursor-pointer
 								{activeTab === tab.name 
 									? 'theme-accent theme-accent-bg/10' 
 									: 'theme-text-primary'}"
