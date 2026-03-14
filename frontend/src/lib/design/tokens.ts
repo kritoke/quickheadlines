@@ -1,7 +1,12 @@
 export const spacing = {
 	compact: '8px',
 	default: '12px',
-	spacious: '16px'
+	spacious: '16px',
+	horizontal: {
+		compact: '8px',
+		default: '12px',
+		spacious: '16px'
+	}
 } as const;
 
 export const typography = {

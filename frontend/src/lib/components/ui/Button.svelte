@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { cn } from '$lib/utils';
 	import type { HTMLAttributes } from 'svelte/elements';
+	import { spacing } from '$lib/design/tokens';
 
 	type Variant = 'default' | 'secondary' | 'destructive' | 'outline' | 'ghost' | 'link';
 	type Size = 'default' | 'sm' | 'lg' | 'icon';
@@ -30,7 +31,7 @@
 	};
 
 	const sizes: Record<Size, string> = {
-		default: 'h-9 px-4 py-2',
+		default: `h-9 px-4 ${spacing.default}`,
 		sm: 'h-8 rounded-md px-3 text-xs',
 		lg: 'h-10 rounded-md px-8',
 		icon: 'h-9 w-9'
