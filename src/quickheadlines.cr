@@ -2,7 +2,12 @@ require "./application"
 require "./websocket"
 
 begin
-  port = QuickHeadlines::Application.initial_config.server_port
+  config = QuickHeadlines::Application.initial_config
+  if config.nil?
+    STDERR.puts "[ERROR] Configuration not loaded - check feeds.yml"
+    exit 1
+  end
+  port = config.server_port
 
   handlers = [] of HTTP::Handler
 

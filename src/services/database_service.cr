@@ -6,7 +6,7 @@ require "../storage/schema"
 # Forward declaration - will be defined in application.cr
 module QuickHeadlines
   class Application
-    class_property initial_config : Config
+    class_property initial_config : Config? = nil
   end
 end
 
@@ -32,7 +32,13 @@ class DatabaseService
 
   # Singleton access for backward compatibility
   def self.instance : DatabaseService
-    @@instance ||= DatabaseService.new(QuickHeadlines::Application.initial_config)
+    @@instance ||= begin
+      config = QuickHeadlines::Application.initial_config
+      if config.nil?
+        raise "DatabaseService: Configuration not initialized"
+      end
+      DatabaseService.new(config)
+    end
   end
 
   def self.instance=(service : DatabaseService)

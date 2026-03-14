@@ -61,9 +61,10 @@ begin
     exit 1
   end
 
-  QuickHeadlines::Application.initial_config = config_result.config.as(Config)
+  config = config_result.config.as(Config)
+  QuickHeadlines::Application.initial_config = config
 
-  bootstrap = AppBootstrap.new(QuickHeadlines::Application.initial_config)
+  bootstrap = AppBootstrap.new(config)
   bootstrap.initialize_services
   bootstrap.start_background_tasks
   bootstrap.verify_feeds_loaded
