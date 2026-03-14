@@ -90,9 +90,9 @@ describe SocketManager do
     end
   end
 
-  describe "#get_stats" do
+  describe "#stats" do
     it "returns statistics" do
-      stats = SocketManager.instance.get_stats
+      stats = SocketManager.instance.stats
 
       stats["connections"].should be >= 0
       stats["messages_sent"].should be >= 0

@@ -13,7 +13,7 @@ describe "EventBroadcaster Backpressure" do
 
       # Should complete without blocking
       # Some events may be dropped due to channel full
-      stats = EventBroadcaster.get_stats
+      stats = EventBroadcaster.stats
 
       # Should have processed at least some events
       stats["processed"].should be > 0
@@ -43,7 +43,7 @@ describe "EventBroadcaster Backpressure" do
     it "tracks dropped events when channel is full" do
       EventBroadcaster.start
 
-      initial_stats = EventBroadcaster.get_stats
+      initial_stats = EventBroadcaster.stats
       initial_dropped = initial_stats["dropped"]
 
       # Flood the channel
@@ -54,7 +54,7 @@ describe "EventBroadcaster Backpressure" do
       # Give time for processing
       sleep 0.5.seconds
 
-      final_stats = EventBroadcaster.get_stats
+      final_stats = EventBroadcaster.stats
 
       # If any were dropped, counter should increase
       # (May not increase if broadcast is fast enough)

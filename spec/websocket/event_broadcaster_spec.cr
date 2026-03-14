@@ -37,9 +37,9 @@ describe EventBroadcaster do
     end
   end
 
-  describe ".get_stats" do
+  describe ".stats" do
     it "returns statistics" do
-      stats = EventBroadcaster.get_stats
+      stats = EventBroadcaster.stats
 
       stats["dropped"].should be >= 0
       stats["processed"].should be >= 0

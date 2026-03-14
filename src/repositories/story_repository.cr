@@ -117,8 +117,19 @@ module Quickheadlines::Repositories
 
       cutoff_clause = days_back ? "AND i.pub_date >= ?" : ""
 
-      # Only show cluster representatives to avoid duplicates
+      cutoff_value = days_back ? Time.local - days_back.days : nil
+
+      # Use CTE to pre-compute cluster representatives and sizes (eliminates per-row subqueries)
       query = <<-SQL
+        WITH cluster_info AS (
+          SELECT 
+            cluster_id,
+            MIN(id) as representative_id,
+            COUNT(*) as cluster_size
+          FROM items
+          WHERE cluster_id IS NOT NULL
+          GROUP BY cluster_id
+        )
         SELECT
           i.id,
           i.title,
@@ -131,18 +142,23 @@ module Quickheadlines::Repositories
           f.header_color,
           f.header_text_color,
           i.cluster_id,
-          CASE WHEN i.cluster_id IS NULL OR i.id = (SELECT MIN(id) FROM items WHERE cluster_id = i.cluster_id AND cluster_id IS NOT NULL) THEN 1 ELSE 0 END as is_representative,
-          (SELECT COUNT(*) FROM items WHERE cluster_id = i.cluster_id AND cluster_id IS NOT NULL) as cluster_size
+          CASE WHEN i.cluster_id IS NULL OR i.id = ci.representative_id THEN 1 ELSE 0 END as is_representative,
+          COALESCE(ci.cluster_size, 0) as cluster_size
         FROM items i
         JOIN feeds f ON i.feed_id = f.id
-        AND (i.pub_date IS NULL OR i.pub_date <= datetime('now', '+1 day'))
-        AND (i.cluster_id IS NULL OR i.id = (SELECT MIN(id) FROM items WHERE cluster_id = i.cluster_id))
+        LEFT JOIN cluster_info ci ON i.cluster_id = ci.cluster_id
+        WHERE (i.pub_date IS NULL OR i.pub_date <= datetime('now', '+1 day'))
+        AND (i.cluster_id IS NULL OR i.id = ci.representative_id)
         #{cutoff_clause}
         ORDER BY COALESCE(i.pub_date, '1970-01-01 00:00:00') DESC, i.id DESC
         LIMIT ? OFFSET ?
-        SQL
+      SQL
 
-      query_args = days_back ? [Time.local - days_back.days, limit, offset] : [limit, offset]
+      if cutoff_value
+        query_args = [cutoff_value, limit, offset]
+      else
+        query_args = [limit, offset]
+      end
 
       @db.query(query, args: query_args) do |rows|
         rows.each do
