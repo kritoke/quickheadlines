@@ -128,7 +128,7 @@
 							class="flex items-center gap-2 px-3 py-2 text-xs font-medium"
 							style={getHeaderStyle(item, isDark)}
 						>
-							<div class="w-4 h-4 rounded theme-bg-secondary p-0.5 flex items-center justify-center shadow-sm">
+							<div class="w-4 h-4 rounded bg-white/80 dark:bg-white/70 p-0.5 flex items-center justify-center shadow-sm border border-white/20">
 								<img
 									src={getFaviconSrc(item)}
 									alt="{item.feed_title} favicon"
