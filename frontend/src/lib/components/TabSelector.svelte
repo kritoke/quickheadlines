@@ -64,13 +64,13 @@
 	});
 </script>
 
-	{#if isMobile}
-	<!-- Mobile: Dropdown button + Bottom sheet -->
-	<div class="relative z-50">
-		<button
-			onclick={(e) => { e.preventDefault(); console.log('Mobile tab button clicked'); showMobileSheet = true; }}
-			type="button"
-			class="w-full px-4 py-2 flex items-center justify-between bg-slate-50 dark:bg-slate-800 border-t border-slate-200 dark:border-slate-700 cursor-pointer pointer-events-auto touch-manipulation"
+{#if isMobile}
+<!-- Mobile: Dropdown button + Bottom sheet -->
+<div class="relative z-50">
+	<button
+		onclick={(e) => { e.preventDefault(); console.log('Mobile tab button clicked'); showMobileSheet = true; }}
+		type="button"
+		class="w-full px-4 py-2 flex items-center justify-between bg-slate-50 dark:bg-slate-800 border-t border-slate-200 dark:border-slate-700 cursor-pointer pointer-events-auto touch-manipulation"
 	>
 		<span class="text-sm text-slate-600 dark:text-slate-400">Viewing:</span>
 		<span class="flex items-center gap-2 text-sm font-medium text-slate-900 dark:text-white">
@@ -80,94 +80,94 @@
 			</svg>
 		</span>
 	</button>
-	</div>
+</div>
 
-	<MobileTabSheet
-		tabs={allTabs}
-		{activeTab}
-		open={showMobileSheet}
-		onClose={() => showMobileSheet = false}
-		onTabChange={selectTab}
-	/>
+<MobileTabSheet
+	tabs={allTabs}
+	{activeTab}
+	open={showMobileSheet}
+	onClose={() => showMobileSheet = false}
+	onTabChange={selectTab}
+/>
 {:else}
-	<!-- Desktop: Inline tabs + More dropdown -->
-	<div 
-		bind:this={tabListElement}
-		class="flex items-center gap-1" 
-		role="tablist"
-	>
-		{#each visibleTabs as tab, i (tab.name)}
-			<button
-				type="button"
-				role="tab"
-				aria-selected={activeTab === tab.name}
-				onclick={() => selectTab(tab.name)}
-				onkeydown={(e) => handleKeyDown(e, i)}
-				class="relative px-3 py-1.5 text-sm font-medium rounded-md transition-colors cursor-pointer
-					{activeTab === tab.name 
-						? 'text-slate-900 dark:text-white' 
-						: 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'}"
-			>
-				{tab.name === 'all' ? 'All' : tab.name}
-				{#if activeTab === tab.name}
-					<div 
-						class="absolute bottom-0 left-3 right-3 h-0.5 bg-blue-500 rounded-full"
-						style="view-transition-name: tab-indicator;"
-					></div>
-				{/if}
-			</button>
-		{/each}
-
-		{#if hasOverflow}
-			<div class="relative">
-				<button
-					role="tab"
-					type="button"
-					onclick={toggleMore}
-					class="px-3 py-1.5 text-sm font-medium text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300 rounded-md flex items-center gap-1 cursor-pointer"
-					aria-expanded={showMore}
-				>
-					More
-					<svg 
-						class="w-4 h-4 transition-transform {showMore ? 'rotate-180' : ''}" 
-						fill="none" 
-						viewBox="0 0 24 24" 
-						stroke="currentColor"
-					>
-						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-					</svg>
-				</button>
-
-				{#if showMore}
-					<div 
-						class="absolute top-full left-0 mt-1 theme-bg-primary rounded-lg shadow-lg theme-border py-1 min-w-[120px] z-50"
-						role="menu"
-					>
-						{#each overflowTabs as tab (tab.name)}
-							<button
-								type="button"
-								role="menuitem"
-								onclick={() => selectTab(tab.name)}
-								class="w-full px-4 py-2 text-sm text-left hover:opacity-80 cursor-pointer
-									{activeTab === tab.name 
-										? 'theme-accent theme-accent-bg/10' 
-										: 'theme-text-primary'}"
-							>
-								{tab.name === 'all' ? 'All' : tab.name}
-							</button>
-						{/each}
-					</div>
-				{/if}
-			</div>
-		{/if}
-	</div>
-
-	<!-- Click outside to close dropdown -->
-	{#if showMore}
+<!-- Desktop: Inline tabs + More dropdown -->
+<div 
+	bind:this={tabListElement}
+	class="flex items-center gap-1" 
+	role="tablist"
+>
+	{#each visibleTabs as tab, i (tab.name)}
 		<button
-			class="fixed inset-0 z-40"
-			onclick={() => showMore = false}
-			aria-label="Close dropdown"
-		></button>
+			type="button"
+			role="tab"
+			aria-selected={activeTab === tab.name}
+			onclick={() => selectTab(tab.name)}
+			onkeydown={(e) => handleKeyDown(e, i)}
+			class="relative px-3 py-2 text-sm font-medium rounded-md transition-colors cursor-pointer
+				{activeTab === tab.name 
+					? 'text-slate-900 dark:text-white' 
+					: 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'}"
+		>
+			{tab.name === 'all' ? 'All' : tab.name}
+			{#if activeTab === tab.name}
+				<div 
+					class="absolute bottom-0 left-3 right-3 h-0.5 bg-blue-500 rounded-full"
+					style="view-transition-name: tab-indicator;"
+				></div>
+			{/if}
+		</button>
+	{/each}
+
+	{#if hasOverflow}
+		<div class="relative">
+			<button
+				role="tab"
+				type="button"
+				onclick={toggleMore}
+				class="px-3 py-2 text-sm font-medium text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300 rounded-md flex items-center gap-1 cursor-pointer"
+				aria-expanded={showMore}
+			>
+				More
+				<svg 
+					class="w-4 h-4 transition-transform {showMore ? 'rotate-180' : ''}" 
+					fill="none" 
+					viewBox="0 0 24 24" 
+					stroke="currentColor"
+				>
+					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+				</svg>
+			</button>
+
+			{#if showMore}
+				<div 
+					class="absolute top-full left-0 mt-1 theme-bg-primary rounded-lg shadow-lg theme-border py-2 min-w-[120px] z-50"
+					role="menu"
+				>
+					{#each overflowTabs as tab (tab.name)}
+						<button
+							type="button"
+							role="menuitem"
+							onclick={() => selectTab(tab.name)}
+							class="w-full px-4 py-2 text-sm text-left hover:opacity-80 cursor-pointer
+								{activeTab === tab.name 
+									? 'theme-accent theme-accent-bg/10' 
+									: 'theme-text-primary'}"
+						>
+							{tab.name === 'all' ? 'All' : tab.name}
+						</button>
+					{/each}
+				</div>
+			{/if}
+		</div>
 	{/if}
+</div>
+
+<!-- Click outside to close dropdown -->
+{#if showMore}
+	<button
+		class="fixed inset-0 z-40"
+		onclick={() => showMore = false}
+		aria-label="Close dropdown"
+	></button>
+{/if}
 {/if}

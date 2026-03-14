@@ -39,19 +39,19 @@
 	</DropdownMenu.Trigger>
 
 	<DropdownMenu.Portal>
-		<DropdownMenu.Content
-			class="z-50 w-80 rounded-lg shadow-lg py-2 theme-bg-primary theme-border"
-			sideOffset={8}
-		>
-			<div class="px-3 py-1 text-xs font-semibold uppercase tracking-wider opacity-70 theme-text-secondary">
-				Theme
-			</div>
-			<div class="grid grid-cols-2 gap-1 px-1 mt-1">
-				{#each themeStyles as theme (theme.id)}
-					<DropdownMenu.Item
-						onSelect={() => selectTheme(theme.id)}
-						class="px-2 py-1.5 text-left hover:opacity-80 rounded-md transition-colors flex items-center gap-2 cursor-pointer outline-none {themeState.theme === theme.id ? 'theme-bg-secondary' : 'bg-transparent'}"
-					>
+	<DropdownMenu.Content
+		class="z-50 w-80 rounded-lg shadow-lg py-2 theme-bg-primary theme-border"
+		sideOffset={8}
+	>
+		<div class="px-3 py-2 text-xs font-semibold uppercase tracking-wider opacity-70 theme-text-secondary">
+			Theme
+		</div>
+		<div class="grid grid-cols-2 gap-2 px-1 mt-1">
+			{#each themeStyles as theme (theme.id)}
+				<DropdownMenu.Item
+					onSelect={() => selectTheme(theme.id)}
+					class="px-2 py-2 text-left hover:opacity-80 rounded-md transition-colors flex items-center gap-2 cursor-pointer outline-none {themeState.theme === theme.id ? 'theme-bg-secondary' : 'bg-transparent'}"
+				>
 						<span
 							class="w-4 h-4 rounded-full border border-slate-300 dark:border-slate-600 shrink-0"
 							style="background: {themePreviews[theme.id]}"

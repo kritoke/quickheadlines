@@ -111,11 +111,11 @@
 	{#each groupIndex as [date, dateItems], groupIdx (date)}
 		{@const groupStartIndex = getGroupStartIndex(groupIdx)}
 		<div class="day-group mb-6">
-			<h2 class="text-lg font-semibold theme-text-secondary mb-3 sticky top-16 theme-bg-primary py-2 z-10">
+			<h2 class="text-lg font-semibold theme-text-secondary mb-4 sticky top-16 theme-bg-primary p-2 z-10">
 				{date}
 			</h2>
 			
-			<div class="grid gap-2 {gridClass} transition-all duration-200">
+			<div class="grid gap-3 {gridClass} transition-all duration-200">
 				{#each dateItems as item, i (`${date}-${item.id}`)}
 					{@const globalIndex = groupStartIndex + i}
 					<div 
@@ -124,7 +124,7 @@
 					>
 						<!-- Item Header with Feed Info -->
 						<div
-							class="flex items-center gap-2 px-3 py-2 text-xs font-medium"
+							class="flex items-center gap-2 p-3 text-xs font-medium"
 							style={getHeaderStyle(item, isDark)}
 						>
 							<div class="w-4 h-4 rounded theme-bg-secondary p-0.5 flex items-center justify-center shadow-sm">
@@ -143,7 +143,7 @@
 								<button
 									type="button"
 									onclick={() => toggleCluster(item)}
-									class="ml-auto theme-accent-bg/20 hover:theme-accent-bg/30 px-1.5 py-0.5 rounded text-[10px] transition-colors cursor-pointer flex items-center gap-1"
+									class="ml-auto theme-accent-bg/20 hover:theme-accent-bg/30 px-2 py-1 rounded text-xs transition-colors cursor-pointer flex items-center gap-1"
 									aria-label="Show {item.cluster_size} similar stories"
 								>
 									{item.cluster_size} sources
@@ -165,12 +165,12 @@
 							href={item.link}
 							target="_blank"
 							rel="noopener noreferrer"
-							class="block px-3 py-2 hover:opacity-80 transition-opacity"
+							class="block p-3 hover:opacity-80 transition-opacity"
 						>
-							<h3 class="text-sm font-medium theme-text-primary line-clamp-2">
+							<h3 class="text-base font-medium theme-text-primary line-clamp-2">
 								{item.title}
 							</h3>
-							<p class="text-xs theme-text-secondary mt-1">
+							<p class="text-sm theme-text-secondary mt-2">
 								{formatTimestamp(item.pub_date)}
 							</p>
 						</a>

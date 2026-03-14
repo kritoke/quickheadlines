@@ -18,7 +18,7 @@
 	});
 
 	function getItemClass(selected: boolean): string {
-		const base = "px-2 py-1.5 text-left hover:opacity-80 rounded-md transition-colors flex items-center gap-3 cursor-pointer outline-none";
+		const base = "px-2 py-2 text-left hover:opacity-80 rounded-md transition-colors flex items-center gap-2 cursor-pointer outline-none";
 		return selected ? `${base} ring-2 ring-offset-1` : base;
 	}
 </script>
@@ -46,34 +46,34 @@
 	</DropdownMenu.Trigger>
 
 	<DropdownMenu.Portal>
-		<DropdownMenu.Content
-			class="z-50 w-48 rounded-lg shadow-lg py-2 theme-bg-primary theme-border"
-			sideOffset={8}
-		>
-			<div class="px-3 py-1 text-xs font-semibold uppercase tracking-wider opacity-70 theme-text-secondary">
-				Columns
-			</div>
-			{#each columnOptions as option (option.id)}
-				<DropdownMenu.Item
-					onSelect={() => setTimelineColumns(option.id)}
-					class="{getItemClass(layoutState.timelineColumns === option.id)} {layoutState.timelineColumns === option.id ? 'theme-bg-secondary' : ''}"
-				>
-					<div class="flex items-center gap-0.5 w-12 shrink-0">
-						{#each Array(option.id) as _, i (`dot-${i}`)}
-							<div class="w-2 h-2 rounded-sm bg-slate-400 dark:bg-slate-500"></div>
-						{/each}
-					</div>
-					<div class="flex-1 min-w-0">
-						<div class="text-sm">{option.name}</div>
-					</div>
-					{#if layoutState.timelineColumns === option.id}
-						<svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 shrink-0 text-blue-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-							<polyline points="20 6 9 17 4 12"/>
-						</svg>
-					{/if}
-				</DropdownMenu.Item>
-			{/each}
-		</DropdownMenu.Content>
+	<DropdownMenu.Content
+		class="z-50 w-48 rounded-lg shadow-lg py-2 theme-bg-primary theme-border"
+		sideOffset={8}
+	>
+		<div class="px-3 py-2 text-xs font-semibold uppercase tracking-wider opacity-70 theme-text-secondary">
+			Columns
+		</div>
+		{#each columnOptions as option (option.id)}
+			<DropdownMenu.Item
+				onSelect={() => setTimelineColumns(option.id)}
+				class="{getItemClass(layoutState.timelineColumns === option.id)} {layoutState.timelineColumns === option.id ? 'theme-bg-secondary' : ''}"
+			>
+				<div class="flex items-center gap-0.5 w-12 shrink-0">
+					{#each Array(option.id) as _, i (`dot-${i}`)}
+						<div class="w-2 h-2 rounded-sm bg-slate-400 dark:bg-slate-500"></div>
+					{/each}
+				</div>
+				<div class="flex-1 min-w-0">
+					<div class="text-sm">{option.name}</div>
+				</div>
+				{#if layoutState.timelineColumns === option.id}
+					<svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 shrink-0 text-blue-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+						<polyline points="20 6 9 17 4 12"/>
+					</svg>
+				{/if}
+			</DropdownMenu.Item>
+		{/each}
+	</DropdownMenu.Content>
 	</DropdownMenu.Portal>
 </DropdownMenu.Root>
 {/if}

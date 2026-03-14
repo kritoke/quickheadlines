@@ -24,6 +24,12 @@
 	};
 
 	const themeStyles = 'bg-[var(--theme-bg)] text-[var(--theme-text)] border-[var(--theme-border)] shadow-[var(--theme-shadow)]';
+
+	const spacing = {
+		compact: 'p-2',
+		default: 'p-3',
+		spacious: 'p-4'
+	} as const;
 </script>
 
 <div 

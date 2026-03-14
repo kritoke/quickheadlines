@@ -44,15 +44,15 @@ describe('FeedBox', () => {
 
 	it('shows load more button when there are more items', () => {
 		const feed = createMockFeed({
-			items: [createMockItem({ title: 'Item 1' })],
-			total_item_count: 10
+			items: Array.from({ length: 16 }, () => createMockItem()),
+			total_item_count: 20
 		});
 		const component = mount(FeedBox, {
 			target: document.body,
 			props: { feed }
 		});
 		
-		expect(document.body.textContent).toContain('+9 more');
+		expect(document.body.textContent).toContain('+1 more');
 		
 		unmount(component);
 	});
@@ -60,8 +60,8 @@ describe('FeedBox', () => {
 	it('calls onLoadMore when button clicked', () => {
 		const onLoadMore = vi.fn();
 		const feed = createMockFeed({
-			items: [createMockItem()],
-			total_item_count: 10
+			items: Array.from({ length: 16 }, () => createMockItem()),
+			total_item_count: 20
 		});
 		const component = mount(FeedBox, {
 			target: document.body,

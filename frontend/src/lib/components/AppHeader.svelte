@@ -14,6 +14,7 @@
 		searchExpanded: boolean;
 		onSearchToggle: () => void;
 		onLogoClick?: () => void;
+		actions?: import('svelte').Snippet;
 	}
 
 	let { 
@@ -24,7 +25,8 @@
 		viewLink, 
 		searchExpanded, 
 		onSearchToggle, 
-		onLogoClick
+		onLogoClick,
+		actions
 	}: Props = $props();
 	
 	let resolvedThemeColors = $derived(getThemeColors(themeState.theme));
@@ -65,14 +67,13 @@
 </script>
 
 <header bind:this={headerElement} class="fixed top-0 left-0 right-0 theme-bg-primary/95 backdrop-blur shadow-sm z-30" data-name="app-header">
-	<div class="mx-auto px-4 md:px-8 xl:px-12" style="max-width: 1400px;">
+	<div class="mx-auto px-4 md:px-8" style="max-width: 1400px;">
 		<div class="flex items-center justify-between h-14">
 			<!-- Logo + Tabs -->
-			<div class="flex items-center gap-4 min-w-0">
+			<div class="flex items-center gap-2 sm:gap-4 min-w-0">
 				<button onclick={handleLogoClick} class="flex items-center gap-2 hover:opacity-80 transition-opacity shrink-0">
 					<img src="/logo.svg" alt="Logo" class="w-7 h-7 sm:w-8 sm:h-8" />
 					<span class="text-lg sm:text-xl font-bold theme-text-primary hidden sm:block">{title}</span>
-					<span class="text-lg font-bold theme-text-primary sm:hidden">{title}</span>
 				</button>
 				
 				{#if tabs.length > 0}
@@ -89,9 +90,12 @@
 			
 			<!-- Actions -->
 			<div class="flex items-center gap-1 sm:gap-2">
+				{#if actions}
+					{@render actions()}
+				{/if}
 				<button
 					onclick={onSearchToggle}
-					class="p-1.5 sm:p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+					class="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
 					class:bg-slate-100={searchExpanded}
 					class:dark:bg-slate-800={searchExpanded}
 					aria-label="Search"
@@ -103,7 +107,7 @@
 				</button>
 				<button 
 					onclick={handleViewSwitch}
-					class="p-1.5 sm:p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+					class="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
 					aria-label={viewLink.icon === 'clock' ? 'Timeline view' : 'Feed view'}
 					title={viewLink.icon === 'clock' ? 'Timeline' : 'Feeds'}
 				>
@@ -122,7 +126,7 @@
 				</button>
 				<button
 					onclick={toggleEffects}
-					class="p-1.5 sm:p-2 rounded-lg transition-colors"
+					class="p-2 rounded-lg transition-colors"
 					style="background-color: {themeState.effects ? resolvedThemeColors.bgSecondary : 'transparent'}; opacity: {themeState.effects ? 1 : 0.7};"
 					aria-label="Toggle effects"
 					title="Effects"
@@ -141,4 +145,5 @@
 				<ThemePicker />
 			</div>
 		</div>
+	</div>
 </header>
