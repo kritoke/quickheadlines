@@ -304,19 +304,17 @@ class FeedFetcher
     return unless extracted && extracted.has_key?("bg")
 
     raw_bg = extracted["bg"]
-    bg_val = nil.as(String?)
     if raw_bg.is_a?(String)
-      bg_val = raw_bg
+      raw_bg
     elsif raw_bg.is_a?(JSON::Any)
       begin
-        bg_val = raw_bg.as_s
+        raw_bg.as_s
       rescue
-        bg_val = raw_bg.to_s
+        raw_bg.to_s
       end
     else
-      bg_val = raw_bg.to_s
+      raw_bg.to_s
     end
-    bg_val
   end
 
   private def extract_header_colors(feed : Feed, favicon_path : String?) : {String?, String?, String?}

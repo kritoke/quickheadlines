@@ -29,7 +29,7 @@ module FaviconHelper
     return unless parsed_host = parsed.host
 
     "https://www.google.com/s2/favicons?domain=#{parsed_host}&sz=64"
-  rescue ex
+  rescue
     nil
   end
 end

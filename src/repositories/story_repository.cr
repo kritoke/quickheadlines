@@ -122,7 +122,7 @@ module Quickheadlines::Repositories
       # Use CTE to pre-compute cluster representatives and sizes (eliminates per-row subqueries)
       query = <<-SQL
         WITH cluster_info AS (
-          SELECT 
+          SELECT
             cluster_id,
             MIN(id) as representative_id,
             COUNT(*) as cluster_size
@@ -152,7 +152,7 @@ module Quickheadlines::Repositories
         #{cutoff_clause}
         ORDER BY COALESCE(i.pub_date, '1970-01-01 00:00:00') DESC, i.id DESC
         LIMIT ? OFFSET ?
-      SQL
+        SQL
 
       if cutoff_value
         query_args = [cutoff_value, limit, offset]

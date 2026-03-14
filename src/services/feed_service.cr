@@ -38,7 +38,7 @@ module Quickheadlines::Services
       ))
     end
 
-    def update_feed_colors(url : String, bg : String, text : String) : Void
+    def update_feed_colors(url : String, bg : String, text : String) : Nil
       @feed_repository.update_header_colors(url, bg, text)
     end
 

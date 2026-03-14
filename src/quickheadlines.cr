@@ -2,7 +2,7 @@ require "./application"
 require "./websocket"
 
 begin
-  port = QuickHeadlines::Application.initial_config.not_nil!.server_port
+  port = QuickHeadlines::Application.initial_config.server_port
 
   handlers = [] of HTTP::Handler
 

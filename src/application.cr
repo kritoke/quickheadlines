@@ -63,7 +63,7 @@ begin
 
   QuickHeadlines::Application.initial_config = config_result.config.as(Config)
 
-  bootstrap = AppBootstrap.new(QuickHeadlines::Application.initial_config.not_nil!)
+  bootstrap = AppBootstrap.new(QuickHeadlines::Application.initial_config)
   bootstrap.initialize_services
   bootstrap.start_background_tasks
   bootstrap.verify_feeds_loaded

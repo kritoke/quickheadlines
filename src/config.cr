@@ -459,7 +459,7 @@ private def valid_url?(feed : Feed) : Bool
       STDERR.puts "[WARN] Invalid feed URL (missing host): #{url}"
       return false
     end
-  rescue ex
+  rescue
     STDERR.puts "[WARN] Invalid feed URL (parse error): #{url}"
     return false
   end
@@ -603,7 +603,7 @@ def detect_github_repo : String?
         return "#{owner}/#{repo}"
       end
     end
-  rescue ex
+  rescue
     # Silently fail if git is not available or not in a git repo
   end
 
@@ -622,7 +622,7 @@ def fetch_config_from_github(repo_path : String, branch : String = "main") : Str
       # Try master as fallback
       return fetch_config_from_github(repo_path, "master")
     end
-  rescue ex
+  rescue
     STDERR.puts "Error fetching config from GitHub: #{ex.message}"
   end
 

@@ -30,16 +30,16 @@ end
 
 private def fetch_repo_release(repo_entry : String, item_limit : Int32) : Array(Item)?
   url = repo_entry_to_url(repo_entry)
-  return nil unless url
+  return unless url
 
   result = Fetcher.pull_software(url, HTTP::Headers.new, item_limit)
 
   if error = result.error_message
     STDERR.puts "Error fetching software releases for #{repo_entry}: #{error}"
-    return nil
+    return
   end
 
-  return nil if result.entries.empty?
+  return if result.entries.empty?
 
   result.entries.map do |entry|
     Item.new(

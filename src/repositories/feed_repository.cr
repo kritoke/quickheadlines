@@ -65,7 +65,7 @@ module Quickheadlines::Repositories
       result = @db.query_one?("SELECT last_fetched FROM feeds WHERE url = ?", url, as: String?)
       return TimeResult.failure(RepositoryError::NotFound) unless result
       TimeResult.success(Time.parse(result, "%Y-%m-%d %H:%M:%S", Time::Location::UTC))
-    rescue ex
+    rescue
       TimeResult.failure(RepositoryError::DatabaseError)
     end
 
@@ -100,7 +100,7 @@ module Quickheadlines::Repositories
       result = find_by_url(url)
       return FeedResult.failure(RepositoryError::NotFound) unless result
       FeedResult.success(result)
-    rescue ex
+    rescue
       FeedResult.failure(RepositoryError::DatabaseError)
     end
 
@@ -116,7 +116,7 @@ module Quickheadlines::Repositories
       result = find_by_pattern(pattern)
       return FeedResult.failure(RepositoryError::NotFound) unless result
       FeedResult.success(result)
-    rescue ex
+    rescue
       FeedResult.failure(RepositoryError::DatabaseError)
     end
 
@@ -151,7 +151,7 @@ module Quickheadlines::Repositories
       feed
     end
 
-    def update_last_fetched(url : String, time : Time = Time.utc) : Void
+    def update_last_fetched(url : String, time : Time = Time.utc) : Nil
       @db.exec(
         "UPDATE feeds SET last_fetched = ? WHERE url = ?",
         time.to_s("%Y-%m-%d %H:%M:%S"),
@@ -159,7 +159,7 @@ module Quickheadlines::Repositories
       )
     end
 
-    def update_header_colors(url : String, bg : String?, text : String?) : Void
+    def update_header_colors(url : String, bg : String?, text : String?) : Nil
       if bg || text
         existing_bg = @db.query_one?("SELECT header_color FROM feeds WHERE url = ?", url, as: String?)
         existing_text = @db.query_one?("SELECT header_text_color FROM feeds WHERE url = ?", url, as: String?)
@@ -176,7 +176,7 @@ module Quickheadlines::Repositories
       end
     end
 
-    def delete_by_url(url : String) : Void
+    def delete_by_url(url : String) : Nil
       @db.exec("DELETE FROM items WHERE feed_id IN (SELECT id FROM feeds WHERE url = ?)", url)
       @db.exec("DELETE FROM feeds WHERE url = ?", url)
     end
@@ -190,14 +190,14 @@ module Quickheadlines::Repositories
       result ? result.to_i : 0
     end
 
-    def upsert_with_items(feed_data : FeedData) : Void
+    def upsert_with_items(feed_data : FeedData) : Nil
       @db.exec("BEGIN TRANSACTION")
 
       begin
         feed_id = upsert_feed(feed_data)
         insert_items(feed_id, feed_data.items)
         @db.exec("COMMIT")
-      rescue ex
+      rescue
         STDERR.puts "[FeedRepository ERROR] Failed to upsert feed #{feed_data.title}: #{ex.message}"
         @db.exec("ROLLBACK")
         raise ex
@@ -258,7 +258,7 @@ module Quickheadlines::Repositories
       @db.scalar("SELECT last_insert_rowid()").as(Int64)
     end
 
-    private def insert_items(feed_id : Int64, items : Array(Item)) : Void
+    private def insert_items(feed_id : Int64, items : Array(Item)) : Nil
       existing_titles = @db.query_all("SELECT title FROM items WHERE feed_id = ?", feed_id, as: String).to_set
 
       items.each_with_index do |item, index|
@@ -345,7 +345,7 @@ module Quickheadlines::Repositories
       result = find_with_items(url)
       return FeedDataResult.failure(RepositoryError::NotFound) unless result
       FeedDataResult.success(result)
-    rescue ex
+    rescue
       FeedDataResult.failure(RepositoryError::DatabaseError)
     end
 
@@ -404,7 +404,7 @@ module Quickheadlines::Repositories
       result = find_with_items_slice(url, limit, offset)
       return FeedDataResult.failure(RepositoryError::NotFound) unless result
       FeedDataResult.success(result)
-    rescue ex
+    rescue
       FeedDataResult.failure(RepositoryError::DatabaseError)
     end
   end

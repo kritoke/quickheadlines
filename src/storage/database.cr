@@ -100,7 +100,7 @@ def check_db_health(db_path : String) : DbHealthStatus
       if fk_result && !fk_result.empty?
         STDERR.puts "[WARN] Database has #{fk_result.size} foreign key violations"
       end
-    rescue ex
+    rescue
     end
 
     feed_count = database.query_one("SELECT COUNT(*) FROM feeds", as: {Int64})

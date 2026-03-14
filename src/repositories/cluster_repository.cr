@@ -149,7 +149,7 @@ module Quickheadlines::Repositories
       stories
     end
 
-    def assign_cluster(item_id : Int64, cluster_id : Int64?) : Void
+    def assign_cluster(item_id : Int64, cluster_id : Int64?) : Nil
       @db.exec(
         "UPDATE items SET cluster_id = ? WHERE id = ?",
         cluster_id,
@@ -157,7 +157,7 @@ module Quickheadlines::Repositories
       )
     end
 
-    def clear_all_metadata : Void
+    def clear_all_metadata : Nil
       @db.exec("UPDATE items SET cluster_id = NULL")
       @db.exec("DELETE FROM lsh_bands")
     end

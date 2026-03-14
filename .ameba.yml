@@ -34,3 +34,7 @@ Naming/BlockParameterName:
   Excluded:
   - scripts/print_feed_sample.cr
   - src/storage.cr
+
+Naming/QueryBoolMethods:
+  Excluded:
+  - src/dtos/config_dto.cr
