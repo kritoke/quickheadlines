@@ -248,7 +248,7 @@ html[data-theme="dark"] {
 /* ============================================
    CUSTOM THEME ROOT STYLING  
    These make Tailwind dark mode work with custom themes
-   by using element selectors that cascade to children
+   by using semantic classes that set proper CSS variables
    ============================================ */
 
 /* Root background for custom themes - applies to everything */
@@ -263,15 +263,24 @@ html.custom-theme #app {
 	color: var(--theme-text);
 }
 
-/* Force background colors to use theme via cascade - using :where for compatibility */
-html.custom-theme :where(.bg-white, .bg-slate-50, .bg-slate-100, .bg-slate-200, .bg-slate-900, .bg-slate-800) {
-	background-color: var(--theme-bg) !important;
+/* Semantic classes provide theme-aware styling without !important */
+html.custom-theme .theme-bg-primary {
+	background-color: var(--theme-bg);
 }
 
-html.custom-theme :where(.text-slate-900, .text-slate-800, .text-slate-700, .text-white) {
-	color: var(--theme-text) !important;
+html.custom-theme .theme-bg-secondary {
+	background-color: var(--theme-bg-secondary);
 }
 
-html.custom-theme :where(.border-slate-200, .border-slate-300, .border-slate-700) {
-	border-color: var(--theme-border) !important;
+html.custom-theme .theme-text-primary {
+	color: var(--theme-text);
+}
+
+html.custom-theme .theme-text-secondary {
+	color: var(--theme-text);
+	opacity: 0.8;
+}
+
+html.custom-theme .theme-border {
+	border-color: var(--theme-border);
 }

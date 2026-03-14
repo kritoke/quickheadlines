@@ -5,7 +5,6 @@
 	import { themeState, customThemeIds } from '$lib/stores/theme.svelte';
 	import { layoutState } from '$lib/stores/layout.svelte';
 	import { getFaviconSrc, getHeaderStyle } from '$lib/utils/feedItem';
-	import { spacing } from '$lib/design/tokens';
 
 
 	interface Props {
@@ -28,7 +27,8 @@
 	function getGridClass(cols: number): string {
 		if (cols <= 1) return 'grid-cols-1';
 		if (cols === 2) return 'sm:grid-cols-2';
-		return 'sm:grid-cols-2 lg:grid-cols-3';
+		if (cols === 3) return 'sm:grid-cols-2 lg:grid-cols-3';
+		return 'sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4';
 	}
 
 	async function toggleCluster(item: TimelineItemResponse): Promise<void> {
@@ -112,20 +112,20 @@
 	{#each groupIndex as [date, dateItems], groupIdx (date)}
 		{@const groupStartIndex = getGroupStartIndex(groupIdx)}
 		<div class="day-group mb-6">
-			<h2 class="text-lg font-semibold theme-text-secondary mb-4 sticky top-16 theme-bg-primary p-2 z-10">
+			<h2 class="text-lg font-semibold theme-text-secondary mb-3 sticky top-16 theme-bg-primary py-2 z-10">
 				{date}
 			</h2>
 			
-				<div class="grid {spacing.default} {gridClass} transition-all duration-200">
+				<div class="grid gap-3 {gridClass} transition-all duration-200">
 				{#each dateItems as item, i (`${date}-${item.id}`)}
 					{@const globalIndex = groupStartIndex + i}
 					<div 
 						class="timeline-item theme-bg-primary rounded-lg shadow-sm theme-border overflow-hidden transition-all duration-200 relative hover-glow"
-						class:col-span-full={expandedClusterId === item.id && columns > 1}
+						class:col-span-full={expandedClusterId === item.cluster_id && item.cluster_id && columns > 1}
 					>
 						<!-- Item Header with Feed Info -->
 						<div
-							class="flex items-center gap-2 {spacing.default} text-xs font-medium"
+							class="flex items-center gap-2 px-3 py-2 text-xs font-medium"
 							style={getHeaderStyle(item, isDark)}
 						>
 							<div class="w-4 h-4 rounded theme-bg-secondary p-0.5 flex items-center justify-center shadow-sm">
@@ -166,7 +166,7 @@
 							href={item.link}
 							target="_blank"
 							rel="noopener noreferrer"
-							class="block p-3 hover:opacity-80 transition-opacity"
+							class="block px-3 py-2 hover:theme-bg-secondary transition-colors gap-2"
 						>
 							<h3 class="text-base font-medium theme-text-primary line-clamp-2">
 								{item.title}
@@ -190,11 +190,11 @@
 	{/each}
 
 	{#if hasMore}
-		<div class="load-more text-center {spacing.spacious}">
+		<div class="load-more text-center py-4">
 			<button
 				type="button"
 				onclick={onLoadMore}
-				class="px-4 {spacing.default} text-sm rounded-lg transition-colors theme-bg-secondary theme-text-primary theme-border"
+				class="px-4 py-2 text-sm rounded-lg transition-colors theme-bg-secondary theme-text-primary theme-border"
 			>
 				Load More
 			</button>
