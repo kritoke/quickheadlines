@@ -76,8 +76,6 @@ describe SocketManager do
     it "removes closed connections" do
       ws = HTTP::WebSocket.new("ws://localhost/test")
       SocketManager.instance.register(ws, "192.168.1.207")
-      initial_count = SocketManager.instance.connection_count
-
       # Close the websocket
       ws.close
 

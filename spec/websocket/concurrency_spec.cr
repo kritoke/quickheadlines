@@ -62,8 +62,6 @@ describe "SocketManager Concurrency" do
       ws = HTTP::WebSocket.new("ws://localhost/test")
       SocketManager.instance.register(ws, "192.168.201.1")
 
-      initial_dropped = SocketManager.instance.messages_dropped
-
       # Broadcast 200 messages rapidly
       # With 100ms timeout each, slow clients should drop some
       start_time = Time.monotonic
@@ -76,7 +74,6 @@ describe "SocketManager Concurrency" do
       elapsed.total_seconds.should be < 5.0
 
       # Some messages may be dropped
-      final_dropped = SocketManager.instance.messages_dropped
       # Note: May or may not drop depending on buffer speed
     end
   end
