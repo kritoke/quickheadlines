@@ -43,6 +43,15 @@ def create_schema(db : DB::Database, db_path : String)
   rescue
   end
 
+  begin
+    old_schema = db.query_one?("SELECT band_hash FROM lsh_bands LIMIT 1", as: {Int64?})
+    if old_schema
+      db.exec("DROP TABLE lsh_bands")
+      STDERR.puts "[Cache] Migrated lsh_bands table from INTEGER to TEXT column type"
+    end
+  rescue
+  end
+
   db.exec(Schema::LSH_BANDS_TABLE)
 
   cleanup_result = db.exec(<<-SQL

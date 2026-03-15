@@ -110,6 +110,9 @@ class DatabaseService
     add_column_if_missing(db, "items", "minhash_signature", "BLOB")
     add_column_if_missing(db, "items", "cluster_id", "INTEGER REFERENCES items(id)")
 
+    # LSH bands table - migrate from INTEGER to TEXT if needed
+    migrate_lsh_bands_if_needed(db)
+
     # LSH bands table
     db.exec(Schema::LSH_BANDS_TABLE)
 
@@ -121,6 +124,18 @@ class DatabaseService
     db.exec("ALTER TABLE #{table} ADD COLUMN #{column} #{type}")
   rescue
     # Column already exists
+  end
+
+  private def migrate_lsh_bands_if_needed(db : DB::Database)
+    begin
+      old_schema = db.query_one?("SELECT band_hash FROM lsh_bands LIMIT 1", as: {Int64?})
+      if old_schema
+        db.exec("DROP TABLE lsh_bands")
+        STDERR.puts "[Cache] Migrated lsh_bands table from INTEGER to TEXT column type"
+      end
+    rescue
+      # Table doesn't exist or other error - will be created below
+    end
   end
 
   def close

@@ -66,7 +66,7 @@ shards:
 
   db:
     git: https://github.com/crystal-lang/crystal-db.git
-    version: 0.11.0
+    version: 0.14.0
 
   fetcher:
     git: https://github.com/kritoke/fetcher.cr.git
@@ -94,9 +94,9 @@ shards:
 
   sqlite3:
     git: https://github.com/crystal-lang/crystal-sqlite3.git
-    version: 0.19.0
+    version: 0.22.0
 
   vug:
     git: https://github.com/kritoke/vug.cr.git
-    version: 0.1.0+git.commit.503c29198b67cd3411b91fea7d4a6de7a7e15cb6
+    version: 0.1.0+git.commit.25138148f828e0cc3fa49adcc3751c73e3f17f33
 

@@ -38,12 +38,12 @@ module Schema
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       item_id INTEGER NOT NULL,
       band_index INTEGER NOT NULL,
-      band_hash INTEGER NOT NULL,
+      band_hash TEXT NOT NULL,
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
       FOREIGN KEY (item_id) REFERENCES items(id) ON DELETE CASCADE,
       UNIQUE(item_id, band_index)
     )
-    SQL
+  SQL
 
   INDEXES = <<-SQL
     CREATE INDEX IF NOT EXISTS idx_items_feed_id ON items(feed_id);

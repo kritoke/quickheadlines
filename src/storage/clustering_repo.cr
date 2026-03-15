@@ -60,7 +60,7 @@ module ClusteringRepository
             "INSERT INTO lsh_bands (item_id, band_index, band_hash, created_at) VALUES (?, ?, ?, ?)",
             item_id,
             band_index,
-            band_hash.to_i64,
+            band_hash.to_s(16),
             Time.utc.to_s("%Y-%m-%d %H:%M:%S")
           )
         end
@@ -78,7 +78,7 @@ module ClusteringRepository
 
     @mutex.synchronize do
       bands.each do |band_index, band_hash|
-        @db.query("SELECT DISTINCT item_id FROM lsh_bands WHERE band_index = ? AND band_hash = ?", band_index, band_hash.to_i64) do |rows|
+        @db.query("SELECT DISTINCT item_id FROM lsh_bands WHERE band_index = ? AND band_hash = ?", band_index, band_hash.to_s(16)) do |rows|
           rows.each do
             item_id = rows.read(Int64)
             candidates << item_id
