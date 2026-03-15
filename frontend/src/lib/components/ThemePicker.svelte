@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { DropdownMenu } from 'bits-ui';
 	import { themeState, setTheme, themeStyles, getThemePreview, type ThemeStyle } from '$lib/stores/theme.svelte';
-	import { spacing } from '$lib/design/tokens';
 
 	function selectTheme(theme: ThemeStyle) {
 		setTheme(theme);
@@ -41,17 +40,17 @@
 
 	<DropdownMenu.Portal>
 	<DropdownMenu.Content
-		class="z-50 w-80 rounded-lg shadow-lg {spacing.default} theme-bg-primary theme-border"
+		class="z-50 w-80 rounded-lg shadow-lg p-3 theme-bg-primary theme-border"
 		sideOffset={8}
 	>
-		<div class="px-3 {spacing.default} text-xs font-semibold uppercase tracking-wider opacity-70 theme-text-secondary">
+		<div class="pb-2 text-xs font-semibold uppercase tracking-wider opacity-70 theme-text-secondary">
 			Theme
 		</div>
-		<div class="grid grid-cols-2 gap-2 px-1 mt-1">
+		<div class="grid grid-cols-2 gap-2">
 			{#each themeStyles as theme (theme.id)}
 				<DropdownMenu.Item
 					onSelect={() => selectTheme(theme.id)}
-					class="px-2 {spacing.compact} text-left hover:opacity-80 rounded-md transition-colors flex items-center gap-2 cursor-pointer outline-none {themeState.theme === theme.id ? 'theme-bg-secondary' : 'bg-transparent'}"
+					class="px-3 py-2 text-left hover:opacity-80 rounded-md transition-colors flex items-center gap-2 cursor-pointer outline-none {themeState.theme === theme.id ? 'theme-bg-secondary' : 'bg-transparent'}"
 				>
 						<span
 							class="w-4 h-4 rounded-full border border-slate-300 dark:border-slate-600 shrink-0"
@@ -66,8 +65,8 @@
 							</svg>
 						{/if}
 					</DropdownMenu.Item>
-				{/each}
-			</div>
-		</DropdownMenu.Content>
+			{/each}
+		</div>
+	</DropdownMenu.Content>
 	</DropdownMenu.Portal>
 </DropdownMenu.Root>

@@ -63,7 +63,7 @@
 </script>
 
 <Card 
-	class="overflow-hidden flex flex-col relative hover-glow {expanded ? 'h-auto' : 'h-[500px]'} max-sm:h-auto max-sm:mb-2"
+	class="overflow-hidden flex flex-col relative hover-glow {expanded ? 'h-auto' : 'min-h-[350px] sm:min-h-[450px]'} max-sm:h-auto max-sm:mb-2"
 	themeVariant={isCustomTheme}
 	data-name="feed-box"
 >
