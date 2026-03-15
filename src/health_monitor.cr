@@ -129,6 +129,11 @@ module HealthMonitor
     STDERR.puts exception.backtrace.first(10).join("\n")
   end
 
+  # Log error with context (string message)
+  def self.log_error(context : String, error_message : String)
+    STDERR.puts "[#{Time.local}] ERROR in #{context}: #{error_message}"
+  end
+
   # Log warning
   def self.log_warning(message : String)
     STDERR.puts "[#{Time.local}] WARNING: #{message}"

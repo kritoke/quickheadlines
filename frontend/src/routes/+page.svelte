@@ -158,7 +158,7 @@
 		{/await}
 	{/if}
 
-	<main class="mx-auto px-4 sm:px-4 md:px-8 py-2 sm:py-4 overflow-visible md:py-6" style="padding-top: calc(var(--header-height, 3.5rem) + 0.5rem);">
+	<main class="max-w-[1400px] mx-auto px-4 md:px-8 py-2 sm:py-4 overflow-visible md:py-6" style="padding-top: calc(var(--header-height, 3.5rem) + 0.5rem);">
 		<!-- Spacer for mobile tabs -->
 		<div class="h-8 md:hidden"></div>
 		{#if loading && feedState.feeds.length === 0}
@@ -186,7 +186,7 @@
 
 			{#if filteredFeeds.length > 0}
 				{#key feedState.activeTab}
-					<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3 max-w-full sm:max-w-[75%] mx-auto">
+					<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3 mx-auto">
 						{#each filteredFeeds as feed, i (`feed-${i}`)}
 							<FeedBox {feed} onLoadMore={() => handleLoadMore(feed)} loading={feedState.loadingFeeds[feed.url] ?? false} />
 						{/each}

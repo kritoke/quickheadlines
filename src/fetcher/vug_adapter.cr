@@ -19,8 +19,8 @@ module VugAdapter
       on_debug: ->(msg : String) do
         debug_log(msg)
       end,
-      on_error: ->(ctx : String, ex : Exception) do
-        HealthMonitor.log_error(ctx, ex)
+      on_error: ->(ctx : String, error_msg : String) do
+        HealthMonitor.log_error(ctx, error_msg)
       end,
       on_warning: ->(msg : String) do
         HealthMonitor.log_warning(msg)
