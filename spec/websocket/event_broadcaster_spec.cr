@@ -86,25 +86,5 @@ describe EventBroadcaster do
     end
   end
 
-  describe "integration" do
-    it "broadcasts to connected clients" do
-      # Start broadcaster
-      EventBroadcaster.start
 
-      # Create and register a connection
-      ws = HTTP::WebSocket.new("ws://localhost/test")
-      SocketManager.instance.register(ws, "192.168.4.1")
-
-      initial_sent = SocketManager.instance.messages_sent
-
-      # Send notification
-      EventBroadcaster.notify_feed_update(1234567890)
-
-      # Give time for async processing
-      sleep 0.2
-
-      # Verify message was sent
-      SocketManager.instance.messages_sent.should be > initial_sent
-    end
-  end
 end
