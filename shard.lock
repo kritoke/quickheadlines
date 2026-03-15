@@ -2,7 +2,7 @@ version: 2.0
 shards:
   ameba:
     git: https://github.com/crystal-ameba/ameba.git
-    version: 1.7.0-dev+git.commit.29c934ed7b4d4917d23a936d6464a7fa729a85df
+    version: 1.7.0-dev+git.commit.a753933e6c8becc93883766b6696414cf49a1469
 
   athena:
     git: https://github.com/athena-framework/framework.git
@@ -56,6 +56,10 @@ shards:
     git: https://github.com/schovi/baked_file_system.git
     version: 0.10.0
 
+  crest:
+    git: https://github.com/mamantoha/crest.git
+    version: 1.6.2
+
   crimage:
     git: https://github.com/naqvis/crimage.git
     version: 1.0.4+git.commit.b65f67df27f4cb8807a34d94a90dfd4162acf45a
@@ -66,7 +70,15 @@ shards:
 
   fetcher:
     git: https://github.com/kritoke/fetcher.cr.git
-    version: 0.6.1
+    version: 0.6.4
+
+  http-client-digest_auth:
+    git: https://github.com/mamantoha/http-client-digest_auth.git
+    version: 0.6.0
+
+  http_proxy:
+    git: https://github.com/mamantoha/http_proxy.git
+    version: 0.14.0
 
   lexis-minhash:
     git: https://github.com/kritoke/lexis-minhash.git
