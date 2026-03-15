@@ -54,7 +54,7 @@ shards:
 
   baked_file_system:
     git: https://github.com/schovi/baked_file_system.git
-    version: 0.10.0
+    version: 0.13.0
 
   crest:
     git: https://github.com/mamantoha/crest.git
@@ -80,9 +80,13 @@ shards:
     git: https://github.com/mamantoha/http_proxy.git
     version: 0.14.0
 
+  lexbor:
+    git: https://github.com/kostya/lexbor.git
+    version: 3.6.0
+
   lexis-minhash:
     git: https://github.com/kritoke/lexis-minhash.git
-    version: 0.4.2
+    version: 0.5.0
 
   sanitize:
     git: https://github.com/straight-shoota/sanitize.git
@@ -94,5 +98,5 @@ shards:
 
   vug:
     git: https://github.com/kritoke/vug.cr.git
-    version: 0.1.0+git.commit.b253c7080e9b1ba1b2bfa94a3a0bd4b48e57e478
+    version: 0.1.0+git.commit.503c29198b67cd3411b91fea7d4a6de7a7e15cb6
 
