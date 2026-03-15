@@ -26,6 +26,8 @@ dependencies:
   fetcher:
     github: kritoke/fetcher.cr
     version: "~> 0.6.3"
+  vug:
+    github: kritoke/vug.cr
 
 development_dependencies:
   ameba:

@@ -4,6 +4,7 @@ require "../storage"
 require "./database_service"
 require "../websocket"
 require "../events/story_fetched_event"
+require "../fetcher/vug_adapter"
 
 class AppBootstrap
   @config : Config
@@ -34,7 +35,7 @@ class AppBootstrap
     STDERR.puts "[#{Time.local}] Loaded #{FeedCache.instance.size} feeds from cache"
 
     FaviconStorage.init
-    FAVICON_CACHE.clear
+    VugAdapter.clear_cache
 
     load_feeds_from_cache(@config)
 

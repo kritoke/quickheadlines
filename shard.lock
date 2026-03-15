@@ -92,3 +92,7 @@ shards:
     git: https://github.com/crystal-lang/crystal-sqlite3.git
     version: 0.19.0
 
+  vug:
+    git: https://github.com/kritoke/vug.cr.git
+    version: 0.1.0+git.commit.b253c7080e9b1ba1b2bfa94a3a0bd4b48e57e478
+

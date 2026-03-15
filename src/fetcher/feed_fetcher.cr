@@ -7,7 +7,7 @@ require "../models"
 require "../storage"
 require "../health_monitor"
 require "../color_extractor"
-require "./favicon"
+require "./vug_adapter"
 
 # FeedFetcher encapsulates all feed fetching logic with proper dependency injection.
 # Use FeedFetcher.instance for singleton access or inject FeedCache for testing.
@@ -166,12 +166,12 @@ class FeedFetcher
 
     STDERR.puts "[#{Time.local}] Feed temporarily disabled due to error: #{feed.title} (#{feed.url}) - #{message}"
 
-    favicon, favicon_data = get_favicon(feed, site_link, nil, nil)
+    favicon, favicon_data = VugAdapter.get_favicon(site_link, nil, nil, nil)
 
     header_color, header_text_color = extract_header_colors(feed, favicon_data)
 
     if favicon.nil? && favicon_data.nil?
-      favicon = FaviconHelper.google_favicon_url(site_link, feed.url)
+      favicon = VugAdapter.google_favicon_url(site_link.presence || feed.url)
     end
 
     FeedData.new(
@@ -235,7 +235,7 @@ class FeedFetcher
     items = parsed[:items]
     site_link = parsed[:site_link] || feed.url
 
-    favicon, favicon_data = get_favicon(feed, site_link, parsed[:favicon], previous_data)
+    favicon, favicon_data = VugAdapter.get_favicon(site_link, parsed[:favicon], previous_data.try(&.favicon), previous_data.try(&.favicon_data))
 
     local_favicon_path = favicon_data || (favicon && favicon.starts_with?("/favicons/") ? favicon : nil)
     header_color, header_text_color, header_theme_json = extract_header_colors(feed, local_favicon_path)
