@@ -1,6 +1,6 @@
 import { loadFeeds, feedState } from './feedStore.svelte';
 import { loadTimeline, timelineState } from './timelineStore.svelte';
-import { websocketConnection } from '$lib/websocket';
+import { websocketConnection, onReconnect } from '$lib/websocket';
 import { fetchConfig } from '$lib/api';
 import { logger } from '$lib/utils/debug';
 
@@ -62,6 +62,15 @@ function handleWebSocketMessage(message: any) {
 		handleClusteringStatus(message.is_clustering);
 	}
 }
+
+// Set up reconnect hook to refresh data after connection is restored
+onReconnect(() => {
+	logger.log('[Effects] Reconnected, refreshing data...');
+	saveScrollY = window.scrollY;
+	loadFeeds(feedState.activeTab, true);
+	loadTimeline();
+	window.scrollTo(0, saveScrollY);
+});
 
 async function checkConfig() {
 	try {

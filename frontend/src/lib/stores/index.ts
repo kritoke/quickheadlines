@@ -44,3 +44,12 @@ export {
 	setTimelineColumns,
 	type ColumnCount
 } from './layout.svelte';
+
+export {
+	connectionState,
+	setConnectionState,
+	hideConnectionStatus,
+	setLatency,
+	incrementReconnectAttempts,
+	resetReconnectAttempts
+} from './connection.svelte';

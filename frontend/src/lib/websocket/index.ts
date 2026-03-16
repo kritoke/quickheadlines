@@ -1,2 +1,2 @@
-export { websocketConnection } from './connection';
+export { websocketConnection, onReconnect } from './connection';
 export type { ConnectionState, WebSocketMessage } from './connection';

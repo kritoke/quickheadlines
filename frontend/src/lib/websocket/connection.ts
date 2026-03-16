@@ -7,12 +7,14 @@ export type WebSocketMessage = {
 };
 
 import { logger } from '$lib/utils/debug';
+import { setConnectionState, setLatency, incrementReconnectAttempts, resetReconnectAttempts } from '$lib/stores/connection.svelte';
 
 // Shared WebSocket connection instance
 let sharedConnection: WebSocket | null = null;
 let sharedState: ConnectionState = 'disconnected';
 let reconnectTimeout: ReturnType<typeof setTimeout> | null = null;
 let intentionalClose = false;
+let onReconnectCallback: (() => void) | null = null;
 
 // Exponential backoff state
 const INITIAL_DELAY_MS = 1000;
@@ -56,12 +58,17 @@ function scheduleReconnect() {
 	}
 
 	const delay = calculateDelay();
+	incrementReconnectAttempts();
 	logger.log(`[WebSocket] Reconnecting in ${Math.round(delay)}ms (current delay: ${currentDelayMs}ms)`);
 
 	reconnectTimeout = setTimeout(() => {
 		reconnectTimeout = null;
 		connectWebSocket();
 	}, delay);
+}
+
+export function onReconnect(callback: () => void) {
+	onReconnectCallback = callback;
 }
 
 // Reconnection logic with exponential backoff
@@ -72,6 +79,7 @@ function connectWebSocket() {
 	}
 
 	sharedState = 'connecting';
+	setConnectionState('connecting');
 
 	const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
 	const wsUrl = `${protocol}//${window.location.host}/api/ws`;
@@ -79,9 +87,17 @@ function connectWebSocket() {
 	sharedConnection = new WebSocket(wsUrl);
 
 	sharedConnection.onopen = () => {
+		const wasReconnect = currentDelayMs > INITIAL_DELAY_MS;
 		sharedState = 'connected';
+		setConnectionState('connected');
+		resetReconnectAttempts();
 		currentDelayMs = INITIAL_DELAY_MS; // Reset delay on successful connection
 		logger.log('[WebSocket] Connected');
+
+		if (wasReconnect && onReconnectCallback) {
+			logger.log('[WebSocket] Reconnected, calling hook');
+			onReconnectCallback();
+		}
 
 		// Flush any queued messages
 		flushMessageQueue();
@@ -90,6 +106,12 @@ function connectWebSocket() {
 	sharedConnection.onmessage = (event) => {
 		try {
 			const data: WebSocketMessage = JSON.parse(event.data);
+
+			// Track latency from heartbeats
+			if (data.type === 'heartbeat') {
+				const latency = Date.now() - data.timestamp;
+				setLatency(latency);
+			}
 
 			// Dispatch to all registered listeners
 			listeners.forEach(listener => listener(data));
@@ -107,6 +129,7 @@ function connectWebSocket() {
 		const wasConnected = sharedState === 'connected';
 		sharedConnection = null;
 		sharedState = 'disconnected';
+		setConnectionState('disconnected');
 		logger.log('[WebSocket] Disconnected');
 
 		if (!intentionalClose) {
