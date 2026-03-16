@@ -64,6 +64,10 @@ shards:
     git: https://github.com/naqvis/crimage.git
     version: 1.0.4+git.commit.b65f67df27f4cb8807a34d94a90dfd4162acf45a
 
+  crtemp:
+    git: https://github.com/kritoke/crtemp.git
+    version: 0.1.0
+
   db:
     git: https://github.com/crystal-lang/crystal-db.git
     version: 0.14.0
@@ -87,6 +91,10 @@ shards:
   lexis-minhash:
     git: https://github.com/kritoke/lexis-minhash.git
     version: 0.5.0
+
+  prismatiq:
+    git: https://github.com/kritoke/prismatiq.git
+    version: 0.5.2
 
   sanitize:
     git: https://github.com/straight-shoota/sanitize.git

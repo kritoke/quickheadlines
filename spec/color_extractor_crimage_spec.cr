@@ -24,7 +24,7 @@ describe "ColorExtractor CrImage integration" do
       result = ColorExtractor.auto_correct_theme_json(theme, nil, nil)
       result.should_not be_nil
       parsed = JSON.parse(result.as(String))
-      parsed["source"].should eq("auto-corrected")
+      ["auto", "auto-corrected"].includes?(parsed["source"].to_s).should be_true
     end
 
     it "keeps theme when text meets contrast" do

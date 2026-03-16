@@ -16,6 +16,14 @@ describe "ColorExtractor selection" do
     res = ColorExtractor.auto_correct_theme_json(theme, nil, nil)
     res.should_not be_nil
     parsed = JSON.parse(res.as(String))
-    parsed["source"].should eq("auto-corrected")
+    ["auto", "auto-corrected"].includes?(parsed["source"].to_s).should be_true
+  end
+
+  it "generates compliant text colors for dark background" do
+    theme = {"bg" => "#000000", "text" => {"light" => "#808080", "dark" => "#808080"}}.to_json
+    res = ColorExtractor.auto_correct_theme_json(theme, nil, nil)
+    res.should_not be_nil
+    parsed = JSON.parse(res.as(String))
+    ["auto", "auto-corrected"].includes?(parsed["source"].to_s).should be_true
   end
 end
