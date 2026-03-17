@@ -66,17 +66,17 @@
 </script>
 
 {#if isMobile}
-<!-- Mobile: Dropdown button + Bottom sheet -->
-<div class="relative z-50">
+<!-- Mobile: iOS-style tab bar with frosted glass -->
+<div class="fixed bottom-0 left-0 right-0 z-50">
 	<button
-		onclick={(e) => { e.preventDefault(); console.log('Mobile tab button clicked'); showMobileSheet = true; }}
+		onclick={(e) => { e.preventDefault(); showMobileSheet = true; }}
 		type="button"
-		class="w-full px-4 {spacing.default} flex items-center justify-between bg-slate-50 dark:bg-slate-800 border-t border-slate-200 dark:border-slate-700 cursor-pointer pointer-events-auto touch-manipulation"
+		class="w-full h-16 px-4 flex items-center justify-between theme-bg-primary/80 backdrop-blur-xl border-t-0 shadow-[0_-4px_20px_rgba(0,0,0,0.1)] dark:shadow-[0_-4px_20px_rgba(0,0,0,0.3)] cursor-pointer pointer-events-auto touch-manual"
 	>
-		<span class="text-sm text-slate-600 dark:text-slate-400">Viewing:</span>
-		<span class="flex items-center gap-2 text-sm font-medium text-slate-900 dark:text-white">
+		<span class="text-sm theme-text-secondary">Viewing:</span>
+		<span class="flex items-center gap-2 text-sm font-semibold theme-text-primary">
 			{activeTab === 'all' ? 'All' : activeTab}
-			<svg class="w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+			<svg class="w-4 h-4 theme-text-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
 				<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
 			</svg>
 		</span>
