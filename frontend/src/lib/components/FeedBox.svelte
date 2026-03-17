@@ -60,10 +60,22 @@
 		
 		isScrolledToBottom = maxScroll > 0 && scrollTop >= maxScroll - 10;
 	}
+
+	$effect(() => {
+		const container = scrollContainer;
+		if (!container) return;
+		
+		container.addEventListener('scroll', checkScrollPosition);
+		checkScrollPosition();
+		
+		return () => {
+			container.removeEventListener('scroll', checkScrollPosition);
+		};
+	});
 </script>
 
 <Card 
-	class="overflow-hidden flex flex-col relative hover-glow {expanded ? 'h-auto' : 'min-h-[350px] sm:min-h-[450px]'} max-sm:h-auto max-sm:mb-2"
+	class="overflow-hidden flex flex-col h-[400px] transform-gpu relative"
 	themeVariant={isCustomTheme}
 	data-name="feed-box"
 >
@@ -91,10 +103,9 @@
 		<span class="truncate drop-shadow-sm">{feed.title}</span>
 	</a>
 
-	<!-- Feed Items -->
-	<div class="flex-1 relative min-h-0 max-sm:max-h-none">
-		<!-- Mobile: no scrollbar, auto expand -->
-		<div class="max-sm:overflow-visible overflow-auto h-full">
+	<!-- Feed Items with Scroll -->
+	<div class="flex-1 relative min-h-0">
+		<CustomScrollbar bind:scrollContainer onScroll={checkScrollPosition} class="absolute inset-0">
 			<ul class="divide-y theme-border/30">
 				{#each displayedItems as item, i (`${feed.url}-${i}`)}
 					<li>
@@ -116,22 +127,22 @@
 					</li>
 				{/each}
 			</ul>
-		</div>
+		</CustomScrollbar>
 
-		<!-- Scroll Hint - only show on desktop when not expanded -->
-		{#if !expanded && !isScrolledToBottom && feed.items.length > 5}
+		<!-- Scroll Hint - positioned at bottom of visible area -->
+		{#if !isScrolledToBottom && feed.items.length > 5}
 			<div class="absolute bottom-0 left-0 right-0 h-6 pointer-events-none bg-gradient-to-t theme-bg-primary/80 to-transparent"></div>
 		{/if}
 	</div>
 
-	<!-- Load More / Show Less -->
-	{#if feed.items.length > INITIAL_ITEMS}
+	<!-- Load More -->
+	{#if feed.total_item_count > feed.items.length}
 		<div class="{spacing.default} border-t theme-border">
 			<button
 				type="button"
 				data-name="load-more"
 				disabled={loading}
-				onclick={handleLoadMore}
+				onclick={onLoadMore}
 				class="w-full text-xs theme-text-secondary hover:theme-text-primary {spacing.default} transition-all duration-200 disabled:opacity-50 active:scale-95"
 			>
 				{#if loading}
@@ -142,10 +153,8 @@
 						</svg>
 						Loading...
 					</span>
-				{:else if expanded}
-					Show less
 				{:else}
-					+{feed.items.length - INITIAL_ITEMS} more
+					Show more
 				{/if}
 			</button>
 		</div>
