@@ -27,7 +27,6 @@ require "./repositories/story_repository"
 require "./repositories/feed_repository"
 require "./repositories/heat_map_repository"
 
-require "./rate_limiter"
 require "./controllers/api_controller"
 
 # Svelte frontend with baked assets

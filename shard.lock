@@ -74,7 +74,7 @@ shards:
 
   fetcher:
     git: https://github.com/kritoke/fetcher.cr.git
-    version: 0.6.4
+    version: 0.7.1
 
   http-client-digest_auth:
     git: https://github.com/mamantoha/http-client-digest_auth.git
@@ -94,7 +94,7 @@ shards:
 
   prismatiq:
     git: https://github.com/kritoke/prismatiq.git
-    version: 0.5.3.1
+    version: 0.5.4.0
 
   sanitize:
     git: https://github.com/straight-shoota/sanitize.git

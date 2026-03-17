@@ -32,26 +32,9 @@ def create_client(url : String) : HTTP::Client
   client = HTTP::Client.new(uri)
   client.compress = true
 
-  # Apply configuration from STATE.config if available
-  if config = STATE.config
-    if http_config = config.http_client
-      client.read_timeout = http_config.timeout.seconds
-      client.connect_timeout = http_config.connect_timeout.seconds
-
-      # Note: Proxy support would require creating client with proxy URI directly
-      # For now, proxy configuration is logged but not applied
-      if http_config.proxy
-        STDERR.puts "[INFO] Proxy configured but not yet supported: #{http_config.proxy}"
-      end
-    else
-      # Default timeouts if no config
-      client.read_timeout = 30.seconds
-      client.connect_timeout = 10.seconds
-    end
-  else
-    client.read_timeout = 30.seconds
-    client.connect_timeout = 10.seconds
-  end
+  # Apply default timeouts
+  client.read_timeout = 30.seconds
+  client.connect_timeout = 10.seconds
 
   client
 end

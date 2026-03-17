@@ -91,39 +91,7 @@ class Quickheadlines::Services::ClusteringService
     cluster_repository.find_all
   end
 
-  def cluster_uncategorized(limit : Int32 = 5000, threshold : Float64 = 0.35) : Int32
-    cache = FeedCache.instance
-    db = @db
 
-    processed = 0
-    STATE.clustering = true
-    begin
-      STDERR.puts "[#{Time.local}] Starting clustering (streaming rows, threshold: #{threshold})"
-
-      db.query("SELECT id, title, link, feed_id FROM items WHERE (cluster_id IS NULL OR cluster_id = id) AND (pub_date IS NULL OR pub_date <= datetime('now', '+1 day')) ORDER BY pub_date DESC LIMIT ?", limit) do |rows|
-        rows.each do
-          id = rows.read(Int64)
-          title = rows.read(String)
-          _link = rows.read(String)
-          feed_id = rows.read(Int64)
-
-          next if title.empty?
-
-          compute_cluster_for_item(id, title, FeedCache.instance, feed_id, threshold)
-          processed += 1
-          if processed % 50 == 0
-            STDERR.puts "[#{Time.local}] Processed #{processed} items..."
-          end
-        end
-      end
-
-      STDERR.puts "[#{Time.local}] Clustering complete: #{processed} items processed"
-    ensure
-      STATE.clustering = false
-    end
-
-    processed
-  end
 
   def recluster_all(limit : Int32 = 5000, threshold : Float64 = 0.35) : Int32
     cluster_repository.clear_all_metadata

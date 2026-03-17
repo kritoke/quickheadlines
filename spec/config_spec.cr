@@ -29,37 +29,9 @@ describe "Config Validation" do
       config.feeds.first.header_text_color.should eq("#ffffff")
     end
 
-    it "parses feed with auth configuration" do
-      yaml = <<-YAML
-        feeds:
-          - title: "Private Feed"
-            url: "https://example.com/private.xml"
-            auth:
-              type: "bearer"
-              token: "secret-token"
-        YAML
-      config = Config.from_yaml(yaml)
-      feed = config.feeds.first
-      feed.auth.should_not be_nil
-      feed.auth.try(&.type).should eq("bearer")
-      feed.auth.try(&.token).should eq("secret-token")
-    end
 
-    it "parses feed with retry configuration" do
-      yaml = <<-YAML
-        feeds:
-          - title: "Slow Feed"
-            url: "https://example.com/slow.xml"
-            max_retries: 5
-            retry_delay: 10
-            timeout: 60
-        YAML
-      config = Config.from_yaml(yaml)
-      feed = config.feeds.first
-      feed.max_retries.should eq(5)
-      feed.retry_delay.should eq(10)
-      feed.timeout.should eq(60)
-    end
+
+
 
     it "parses tab configuration" do
       yaml = <<-YAML
@@ -145,44 +117,8 @@ describe "Config Validation" do
       cluster.max_items.should eq(10000)
     end
 
-    it "parses rate limiting configuration" do
-      yaml = <<-YAML
-        rate_limiting:
-          enabled: true
-          max_entries: 5000
-          categories:
-            expensive:
-              limit: 10
-              window_minutes: 60
-        feeds:
-          - title: "Test"
-            url: "https://example.com/feed.xml"
-        YAML
-      config = Config.from_yaml(yaml)
-      config.rate_limiting.should_not be_nil
-      rate_limit = config.rate_limiting.as(RateLimitingConfig)
-      rate_limit.enabled?.should be_true
-      rate_limit.max_entries.should eq(5000)
-    end
 
-    it "parses http client configuration" do
-      yaml = <<-YAML
-        http_client:
-          connect_timeout: 30
-          timeout: 60
-          max_redirects: 5
-          user_agent: "MyBot/1.0"
-        feeds:
-          - title: "Test"
-            url: "https://example.com/feed.xml"
-        YAML
-      config = Config.from_yaml(yaml)
-      config.http_client.should_not be_nil
-      http_config = config.http_client.as(HttpClientConfig)
-      http_config.connect_timeout.should eq(30)
-      http_config.timeout.should eq(60)
-      http_config.max_redirects.should eq(5)
-      http_config.user_agent.should eq("MyBot/1.0")
-    end
+
+
   end
 end

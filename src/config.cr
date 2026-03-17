@@ -17,16 +17,8 @@ struct Feed
   property header_color : String?
   property header_text_color : String?
 
-  # Retry and timeout configuration
-  property max_retries : Int32 = 3 # Number of retry attempts on failure
-  property retry_delay : Int32 = 5 # Base delay between retries (seconds)
-  property timeout : Int32 = 30    # Request timeout (seconds)
-
   # Feed-specific item limit (nil = use global default)
   property item_limit : Int32? = nil
-
-  # Feed-specific authentication
-  property auth : AuthConfig? = nil
 
   # Reddit subreddit feed configuration
   property subreddit : String? = nil
@@ -34,48 +26,7 @@ struct Feed
   getter? over18 : Bool? = nil
 end
 
-# HTTP client configuration for global settings
-struct HttpClientConfig
-  include YAML::Serializable
 
-  # Connection timeout in seconds (default: 10)
-  property connect_timeout : Int32 = 10
-
-  # Read timeout in seconds (default: 30)
-  property timeout : Int32 = 30
-
-  # Maximum redirects to follow (default: 10)
-  property max_redirects : Int32 = 10
-
-  # Custom User-Agent header (default: QuickHeadlines/version)
-  property user_agent : String = "QuickHeadlines/0.3"
-
-  # HTTP proxy URL (optional)
-  property proxy : String? = nil
-end
-
-# Authentication configuration for feeds
-struct AuthConfig
-  include YAML::Serializable
-
-  # Authentication type: "basic", "bearer", or "apikey"
-  property type : String = "basic"
-
-  # Username for Basic auth (optional)
-  property username : String? = nil
-
-  # Password for Basic auth (optional)
-  property password : String? = nil
-
-  # Token for Bearer or API Key auth (optional)
-  property token : String? = nil
-
-  # Custom header name (default: "Authorization")
-  property header : String = "Authorization"
-
-  # Header value prefix (e.g., "Bearer " for Bearer tokens)
-  property prefix : String = ""
-end
 
 struct SoftwareConfig
   include YAML::Serializable
@@ -85,19 +36,7 @@ struct SoftwareConfig
   property repos : Array(String)
 end
 
-struct RateLimitingCategoryConfig
-  include YAML::Serializable
-  property limit : Int32?
-  property window_minutes : Int32?
-end
 
-struct RateLimitingConfig
-  include YAML::Serializable
-  property? enabled : Bool = true
-  property cleanup_interval_minutes : Int32 = 5
-  property max_entries : Int32 = 10_000
-  property categories : Hash(String, RateLimitingCategoryConfig)? = nil
-end
 
 struct TabConfig
   include YAML::Serializable
@@ -138,12 +77,6 @@ struct Config
 
   # Maximum cache size in MB (default: 100). When exceeded, cleanup tasks run.
   property max_cache_size_mb : Int32 = 100
-
-  # Rate limiting configuration (optional)
-  property rate_limiting : RateLimitingConfig? = nil
-
-  # HTTP client configuration (optional)
-  property http_client : HttpClientConfig? = nil
 
   property feeds : Array(Feed) = [] of Feed
 
@@ -256,40 +189,10 @@ def load_config(path : String) : Config
   # (result is logged but not used - validation errors are printed to stderr)
   validate_config_feeds(config)
 
-  # Initialize rate limiting if configured
-  if rate_limit_config = config.rate_limiting
-    if rate_limit_config.enabled?
-      initialize_rate_limiter(rate_limit_config)
-    end
-  end
-
   config
 end
 
-private def initialize_rate_limiter(rate_limit_config : RateLimitingConfig)
-  if categories = rate_limit_config.categories
-    limits = Hash(String, Int32).new
-    windows = Hash(String, Time::Span).new
 
-    categories.each do |cat, config|
-      if limit = config.limit
-        limits[cat] = limit
-      end
-      if window_minutes = config.window_minutes
-        windows[cat] = window_minutes.minutes
-      end
-    end
-
-    unless limits.empty?
-      Quickheadlines::RateLimiting::RateLimitConfig.custom_limits = limits
-    end
-    unless windows.empty?
-      Quickheadlines::RateLimiting::RateLimitConfig.custom_windows = windows
-    end
-  end
-
-  STDERR.puts "[#{Time.local}] Rate limiting configured with custom limits"
-end
 
 def find_default_config : String?
   DEFAULT_CONFIG_CANDIDATES.find { |path| File.exists?(path) }
@@ -433,9 +336,7 @@ end
 def validate_feed(feed : Feed) : Bool
   return false unless valid_url?(feed)
   return false unless valid_item_limit?(feed)
-  return false unless valid_retry_config?(feed)
-  return false unless valid_subreddit_config?(feed)
-  valid_auth_config?(feed)
+  true
 end
 
 # Validate feed URL
@@ -482,57 +383,7 @@ private def valid_item_limit?(feed : Feed) : Bool
   true
 end
 
-# Validate retry and timeout configuration
-private def valid_retry_config?(feed : Feed) : Bool
-  if feed.max_retries < 0 || feed.max_retries > 10
-    STDERR.puts "[WARN] Invalid max_retries for '#{feed.title}' (0-10), using default"
-  end
 
-  if feed.retry_delay < 1 || feed.retry_delay > 60
-    STDERR.puts "[WARN] Invalid retry_delay for '#{feed.title}' (1-60s), using default"
-  end
-
-  if feed.timeout < 5 || feed.timeout > 120
-    STDERR.puts "[WARN] Invalid timeout for '#{feed.title}' (5-120s), using default"
-  end
-
-  true
-end
-
-# Validate authentication configuration
-private def valid_auth_config?(feed : Feed) : Bool
-  auth = feed.auth
-  return true unless auth
-
-  # Validate auth type
-  valid_types = ["basic", "bearer", "apikey"]
-  unless valid_types.includes?(auth.type)
-    STDERR.puts "[WARN] Invalid auth type for '#{feed.title}' (must be: basic, bearer, apikey), ignoring auth"
-    return true # Warning only, don't fail validation
-  end
-
-  # Validate Basic auth requires username and password
-  if auth.type == "basic"
-    username = auth.username
-    if username.nil? || username.strip.empty?
-      STDERR.puts "[WARN] Basic auth for '#{feed.title}' missing username"
-    end
-    password = auth.password
-    if password.nil? || password.strip.empty?
-      STDERR.puts "[WARN] Basic auth for '#{feed.title}' missing password"
-    end
-  end
-
-  # Validate Bearer/API Key auth requires token
-  if auth.type == "bearer" || auth.type == "apikey"
-    token = auth.token
-    if token.nil? || token.strip.empty?
-      STDERR.puts "[WARN] #{auth.type.capitalize} auth for '#{feed.title}' missing token"
-    end
-  end
-
-  true
-end
 
 # Validate subreddit configuration
 private def valid_subreddit_config?(feed : Feed) : Bool

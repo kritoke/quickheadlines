@@ -33,11 +33,7 @@ module ColorExtractor
     full_path = "public#{favicon_path}"
     return unless File.exists?(full_path)
 
-    result = if full_path.downcase.ends_with?(".svg")
-               extract_theme_from_svg(full_path)
-             else
-               theme_extractor.extract(full_path)
-             end
+    result = theme_extractor.extract(full_path)
     return unless result
 
     extracted = {
@@ -50,22 +46,6 @@ module ColorExtractor
 
     cache_result_theme_aware(favicon_path, extracted)
     extracted
-  end
-
-  private def self.extract_theme_from_svg(path : String) : PrismatIQ::ThemeResult?
-    svg_result = PrismatIQ::SVGColorExtractor.extract_from_file(path)
-    return unless svg_result.ok?
-
-    colors = svg_result.value
-    return if colors.empty?
-
-    dominant = colors.first
-    bg = [dominant.r, dominant.g, dominant.b]
-
-    bg_rgb = PrismatIQ::RGB.new(bg[0], bg[1], bg[2])
-    text_colors = theme_detector.suggest_text_palette(bg_rgb)
-
-    PrismatIQ::ThemeResult.new(bg, text_colors.primary.to_hex, text_colors.secondary.to_hex)
   end
 
   private def self.get_cached_theme_aware(path : String) : Hash(String, String | Hash(String, String))?

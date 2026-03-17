@@ -88,7 +88,7 @@ class FeedFetcher
     start_time = Time.monotonic
 
     loop do
-      timeout_seconds = feed.timeout > 0 ? feed.timeout : 60
+      timeout_seconds = 60
       elapsed_seconds = (Time.monotonic - start_time).total_seconds
       abort_msg = should_abort_fetch?(feed, elapsed_seconds, retries, redirects, timeout_seconds)
 
@@ -122,7 +122,7 @@ class FeedFetcher
           end
         end
       rescue IO::TimeoutError
-        HealthMonitor.log_warning("fetch_feed(#{feed.url}) timeout after #{feed.timeout}s")
+        HealthMonitor.log_warning("fetch_feed(#{feed.url}) timeout after 60s")
         HealthMonitor.update_feed_health(feed.url, FeedHealthStatus::Timeout)
         retries = handle_timeout_error(feed, retries)
       rescue ex
@@ -199,9 +199,6 @@ class FeedFetcher
       "Connection"      => "keep-alive",
     }
 
-    if auth = feed.auth
-      apply_auth_headers(headers, auth)
-    end
 
     if previous_data && current_url == feed.url
       previous_data.etag.try { |v| headers["If-None-Match"] = v }
@@ -211,24 +208,7 @@ class FeedFetcher
     headers
   end
 
-  private def apply_auth_headers(headers : HTTP::Headers, auth : AuthConfig) : Nil
-    case auth.type
-    when "basic"
-      if username = auth.username
-        password = auth.password || ""
-        credentials = Base64.encode("#{username}:#{password}")
-        headers[auth.header] = "#{auth.prefix}#{credentials}"
-      end
-    when "bearer"
-      if token = auth.token
-        headers[auth.header] = "#{auth.prefix}#{token}"
-      end
-    when "apikey"
-      if token = auth.token
-        headers[auth.header] = "#{auth.prefix}#{token}"
-      end
-    end
-  end
+
 
   private def handle_success_response(feed : Feed, response : HTTP::Client::Response, display_limit : Int32, db_fetch_limit : Int32, previous_data : FeedData?) : FeedData
     parsed = parse_feed(response.body_io, db_fetch_limit)
@@ -389,7 +369,7 @@ class FeedFetcher
       return {true, "Error: Too many redirects (#{redirects})"}
     end
 
-    if retries >= feed.max_retries
+    if retries >= 3
       return {true, "Error: Failed after #{retries} retries"}
     end
 
@@ -397,13 +377,13 @@ class FeedFetcher
   end
 
   private def calculate_backoff(feed : Feed, retries : Int32) : Int32
-    feed.retry_delay * retries
+    5 * retries
   end
 
   private def handle_server_error(feed : Feed, retries : Int32, status_code : Int32) : Int32
     new_retries = retries + 1
     backoff_seconds = calculate_backoff(feed, new_retries)
-    HealthMonitor.log_warning("fetch_feed(#{feed.url}) server error #{status_code}, retry #{new_retries}/#{feed.max_retries} in #{backoff_seconds}s")
+    HealthMonitor.log_warning("fetch_feed(#{feed.url}) server error #{status_code}, retry #{new_retries}/3 in #{backoff_seconds}s")
     sleep(backoff_seconds.seconds)
     new_retries
   end
@@ -411,7 +391,7 @@ class FeedFetcher
   private def handle_timeout_error(feed : Feed, retries : Int32) : Int32
     new_retries = retries + 1
     backoff_seconds = calculate_backoff(feed, new_retries)
-    HealthMonitor.log_warning("fetch_feed(#{feed.url}) timeout, retry #{new_retries}/#{feed.max_retries} in #{backoff_seconds}s")
+    HealthMonitor.log_warning("fetch_feed(#{feed.url}) timeout, retry #{new_retries}/3 in #{backoff_seconds}s")
     sleep(backoff_seconds.seconds)
     new_retries
   end

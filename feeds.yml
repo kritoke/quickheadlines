@@ -21,32 +21,6 @@ clustering:
 # Override with: cache_dir: "/path/to/cache"
 # Or via env: QUICKHEADLINES_CACHE_DIR="/path/to/cache"
 
-# HTTP client configuration (optional)
-# http_client:
-#   timeout: 30              # Read timeout in seconds (default: 30)
-#   connect_timeout: 10      # Connection timeout in seconds (default: 10)
-#   user_agent: "QuickHeadlines/0.3"  # Custom User-Agent
-
-# Rate limiting configuration (optional)
-# Uncomment to customize rate limits per category:
-# rate_limiting:
-#   enabled: true
-#   cleanup_interval_minutes: 5
-#   max_entries: 10000
-#   categories:
-#     expensive:       # /api/recluster, /api/cluster - default: 5 requests/hour
-#       limit: 5
-#       window_minutes: 60
-#     moderately:      # /api/refresh, /api/clear-cache - default: 10 requests/hour
-#       limit: 10
-#       window_minutes: 60
-#     very_expensive: # /api/cleanup-orphaned - default: 3 requests/hour
-#       limit: 3
-#       window_minutes: 60
-#     read:           # All other endpoints - default: 60 requests/minute
-#       limit: 60
-#       window_minutes: 1
-
 tabs:
   - name: "Tech"
     feeds:
