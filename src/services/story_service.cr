@@ -11,10 +11,19 @@ module Quickheadlines::Services
       limit : Int32,
       offset : Int32,
       days : Int32?,
+      cursor : String? = nil,
     ) : TimelineResult
-      items = story_repo.find_timeline_items(limit, offset, days)
-      total_count = story_repo.count_timeline_items(days)
-      has_more = offset + limit < total_count
+      items = story_repo.find_timeline_items(limit + 1, offset, days, cursor)
+      total_count = story_repo.count_timeline_items(days, cursor)
+      has_more = items.size > limit
+      
+      if has_more
+        items = items[0...limit]
+      end
+      
+      next_cursor = if has_more && (last_item = items.last)
+        last_item.pub_date.try(&.to_unix_ms).try(&.to_s)
+      end
 
       timeline_items = items.map do |item|
         TimelineItemResponse.new(
@@ -37,7 +46,8 @@ module Quickheadlines::Services
       TimelineResult.new(
         items: timeline_items,
         has_more: has_more,
-        total_count: total_count
+        total_count: total_count,
+        cursor: next_cursor
       )
     end
 
@@ -81,8 +91,9 @@ module Quickheadlines::Services
     property items : Array(TimelineItemResponse)
     getter? has_more : Bool
     property total_count : Int32
+    property cursor : String? = nil
 
-    def initialize(@items, @has_more, @total_count)
+    def initialize(@items, @has_more, @total_count, @cursor = nil)
     end
   end
 

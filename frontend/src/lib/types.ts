@@ -76,6 +76,7 @@ export interface TimelinePageResponse {
 	has_more: boolean;
 	total_count: number;
 	is_clustering: boolean;
+	cursor?: string;
 }
 
 export interface ClustersResponse {

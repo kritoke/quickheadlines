@@ -157,8 +157,9 @@ class TimelinePageResponse
   property? has_more : Bool
   property total_count : Int32
   property? clustering : Bool = false
+  property? cursor : String? = nil
 
-  def initialize(@items : Array(TimelineItemResponse), @has_more : Bool, @total_count : Int32, @clustering : Bool = false)
+  def initialize(@items : Array(TimelineItemResponse), @has_more : Bool, @total_count : Int32, @clustering : Bool = false, @cursor : String? = nil)
   end
 end
 

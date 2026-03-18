@@ -112,12 +112,16 @@ module Quickheadlines::Repositories
       story
     end
 
-    def find_timeline_items(limit : Int32, offset : Int32, days_back : Int32?) : Array(TimelineItem)
+    def find_timeline_items(limit : Int32, offset : Int32, days_back : Int32?, cursor : String? = nil) : Array(TimelineItem)
       items = [] of TimelineItem
 
       cutoff_clause = days_back ? "AND i.pub_date >= ?" : ""
+      cursor_clause = cursor ? "AND i.pub_date < ?" : ""
 
       cutoff_value = days_back ? Time.local - days_back.days : nil
+      cursor_time = if cursor && (ts = cursor.to_i64?)
+                     Time.unix_ms(ts)
+                     end
 
       # Use CTE to pre-compute cluster representatives and sizes (eliminates per-row subqueries)
       query = <<-SQL
@@ -150,15 +154,16 @@ module Quickheadlines::Repositories
         WHERE (i.pub_date IS NULL OR i.pub_date <= datetime('now', '+1 day'))
         AND (i.cluster_id IS NULL OR i.id = ci.representative_id)
         #{cutoff_clause}
+        #{cursor_clause}
         ORDER BY COALESCE(i.pub_date, '1970-01-01 00:00:00') DESC, i.id DESC
         LIMIT ? OFFSET ?
         SQL
 
-      if cutoff_value
-        query_args = [cutoff_value, limit, offset]
-      else
-        query_args = [limit, offset]
-      end
+      query_args = [] of (Time | Int32 | Int64 | Nil)
+      query_args << cutoff_value if cutoff_value
+      query_args << cursor_time if cursor_time
+      query_args << limit
+      query_args << offset
 
       @db.query(query, args: query_args) do |rows|
         rows.each do
@@ -199,10 +204,28 @@ module Quickheadlines::Repositories
       items
     end
 
-    def count_timeline_items(days_back : Int32?) : Int32
-      if days_back
+    def count_timeline_items(days_back : Int32?, cursor : String? = nil) : Int32
+      cursor_clause = cursor ? "AND pub_date < ?" : ""
+      cursor_time = if cursor && (ts = cursor.to_i64?)
+                      Time.unix_ms(ts)
+                      end
+      
+      if days_back && cursor
+        cutoff_date = Time.local - days_back.days
+        @db.query_one(
+          "SELECT COUNT(*) FROM items WHERE pub_date >= ? #{cursor_clause}",
+          cutoff_date, cursor_time,
+          as: Int64
+        )
+      elsif days_back
         cutoff_date = Time.local - days_back.days
         @db.query_one("SELECT COUNT(*) FROM items WHERE pub_date >= ?", cutoff_date, as: Int64)
+      elsif cursor
+        @db.query_one(
+          "SELECT COUNT(*) FROM items WHERE #{cursor_clause}",
+          cursor_time,
+          as: Int64
+        )
       else
         @db.query_one("SELECT COUNT(*) FROM items", as: Int64)
       end.to_i

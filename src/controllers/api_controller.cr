@@ -282,13 +282,14 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
     limit = validate_limit(request.query_params["limit"]?, default_limit, max: 1000)
     offset = validate_offset(request.query_params["offset"]?)
     days = validate_days(request.query_params["days"]?, default_days.to_i32)
+    cursor = request.query_params["cursor"]?
 
     story_repo = Quickheadlines::Repositories::StoryRepository.new(@db_service.db)
-    result = Quickheadlines::Services::StoryService.get_timeline(story_repo, limit, offset, days)
+    result = Quickheadlines::Services::StoryService.get_timeline(story_repo, limit, offset, days, cursor)
 
     # If timeline has very few items and we're not already clustering, trigger a background refresh
     # This ensures the timeline populates quickly after server startup
-    if result.total_count < 100 && !STATE.clustering? && offset == 0
+    if result.total_count < 100 && !STATE.clustering? && offset == 0 && cursor.nil?
       spawn do
         begin
           config = STATE.config
@@ -305,7 +306,8 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
       items: result.items,
       has_more: result.has_more?,
       total_count: result.total_count,
-      clustering: STATE.clustering?
+      clustering: STATE.clustering?,
+      cursor: result.cursor
     )
   end
 

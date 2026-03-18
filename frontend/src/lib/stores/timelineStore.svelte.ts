@@ -12,6 +12,7 @@ type BaseTimelineState = {
 	itemIds: Set<string>;
 	hasMore: boolean;
 	offset: number;
+	cursor?: string;
 	loadingMore: boolean;
 	isClustering: boolean;
 	refreshMinutes: number;
@@ -62,7 +63,8 @@ export function setTimelineData(
 	state: TimelineState, 
 	items: TimelineItemResponse[], 
 	hasMore: boolean,
-	isAppend: boolean
+	isAppend: boolean,
+	cursor?: string
 ): TimelineStateIdle {
 	if (isAppend) {
 		const newItems = items.filter(item => !state.itemIds.has(item.id));
@@ -74,6 +76,7 @@ export function setTimelineData(
 			itemIds: newItemIds,
 			hasMore,
 			offset: state.offset + newItems.length,
+			cursor: cursor,
 			loadingMore: false,
 			status: 'idle'
 		};
@@ -85,6 +88,7 @@ export function setTimelineData(
 		itemIds: new SvelteSet(items.map(i => i.id)),
 		hasMore,
 		offset: items.length,
+		cursor: cursor,
 		loadingMore: false,
 		status: 'idle'
 	};
@@ -116,7 +120,8 @@ export function setRefreshMinutes(state: TimelineState, minutes: number): Timeli
 export function resetTimelineStore(): void {
 	Object.assign(timelineState, {
 		...clone(initialBaseState),
-		itemIds: new SvelteSet<string>()
+		itemIds: new SvelteSet<string>(),
+		cursor: undefined
 	});
 }
 
@@ -127,8 +132,9 @@ export async function loadTimeline(append: boolean = false): Promise<void> {
 	Object.assign(timelineState, setLoading(timelineState, append));
 	
 	try {
-		const response = await fetchTimeline(100, append ? timelineState.offset : 0);
-		Object.assign(timelineState, setTimelineData(timelineState, response.items, response.has_more, append));
+		const cursor = append ? timelineState.cursor : undefined;
+		const response = await fetchTimeline(100, append ? timelineState.offset : 0, 14, cursor);
+		Object.assign(timelineState, setTimelineData(timelineState, response.items, response.has_more, append, response.cursor));
 	} catch (e) {
 		Object.assign(timelineState, setError(timelineState, e instanceof Error ? e.message : 'Failed to load timeline'));
 	}

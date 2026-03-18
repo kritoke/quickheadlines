@@ -127,9 +127,13 @@ export async function fetchFeeds(tab: string = 'all', signal?: AbortSignal): Pro
 export async function fetchTimeline(
 	limit: number = 500,
 	offset: number = 0,
-	days: number = 14
+	days: number = 14,
+	cursor?: string
 ): Promise<TimelinePageResponse> {
-	const url = `${API_BASE}/timeline?limit=${limit}&offset=${offset}&days=${days}`;
+	let url = `${API_BASE}/timeline?limit=${limit}&offset=${offset}&days=${days}`;
+	if (cursor) {
+		url += `&cursor=${cursor}`;
+	}
 	return apiFetch<TimelinePageResponse>(url, { errorContext: 'Fetch Timeline' });
 }
 
