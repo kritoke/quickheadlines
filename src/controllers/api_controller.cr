@@ -163,11 +163,11 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
                          end
                        end
 
-                       all_feeds_with_tabs.map { |entry| Api.feed_to_response(entry[:feed], entry[:tab_name], cache.item_count(entry[:feed].url), item_limit) }
+                       all_feeds_with_tabs.map { |entry| Api.build_feed(entry[:feed], entry[:tab_name], cache.item_count(entry[:feed].url), item_limit) }
                      else
                        found_tab = tabs_snapshot.find { |tab| tab.name.to_s.downcase == active_tab.downcase }
                        active_feeds = found_tab ? found_tab.feeds.reject(&.failed?) : [] of FeedData
-                       active_feeds.map { |feed| Api.feed_to_response(feed, active_tab, cache.item_count(feed.url), item_limit) }
+                       active_feeds.map { |feed| Api.build_feed(feed, active_tab, cache.item_count(feed.url), item_limit) }
                      end
 
     # Get software releases - from all tabs when active_tab=all, otherwise from specific tab
@@ -177,12 +177,12 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
                           tabs_snapshot.each do |tab|
                             all_software.concat(tab.software_releases)
                           end
-                          all_software.map { |release| Api.feed_to_response(release, "software", release.items.size, item_limit) }
+                          all_software.map { |release| Api.build_feed(release, "software", release.items.size, item_limit) }
                         else
                           found_tab = tabs_snapshot.find { |tab| tab.name.to_s.downcase == active_tab.downcase }
                           tab_software = found_tab ? found_tab.software_releases : [] of FeedData
                           if tab_software
-                            tab_software.map { |release| Api.feed_to_response(release, "software", release.items.size, item_limit) }
+                            tab_software.map { |release| Api.build_feed(release, "software", release.items.size, item_limit) }
                           else
                             [] of FeedResponse
                           end

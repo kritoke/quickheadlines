@@ -263,7 +263,7 @@ end
 
 module Api
   # Convert FeedData to FeedResponse
-  def self.feed_to_response(feed : FeedData, tab_name : String = "", total_count : Int32? = nil, display_item_limit : Int32? = nil) : FeedResponse
+  def self.build_feed(feed : FeedData, tab_name : String = "", total_count : Int32? = nil, display_item_limit : Int32? = nil) : FeedResponse
     cache = FeedCache.instance
 
     # Prefer freshly extracted colors from FeedData over database cache
@@ -326,9 +326,9 @@ module Api
   end
 
   # Convert Tab to TabResponse
-  def self.tab_to_response(tab : Tab, feeds : Array(FeedData), releases : Array(FeedData)) : TabResponse
-    feeds_response = feeds.map { |feed| feed_to_response(feed) }
-    releases_response = releases.map { |feed| feed_to_response(feed) }
+  def self.build_tab(tab : Tab, feeds : Array(FeedData), releases : Array(FeedData)) : TabResponse
+    feeds_response = feeds.map { |feed| build_feed(feed) }
+    releases_response = releases.map { |feed| build_feed(feed) }
 
     TabResponse.new(
       name: tab.name,
@@ -338,7 +338,7 @@ module Api
   end
 
   # Convert TimelineItem to TimelineItemResponse
-  def self.timeline_item_to_response(item : TimelineItem) : TimelineItemResponse
+  def self.build_timeline_item(item : TimelineItem) : TimelineItemResponse
     # Look up cluster info from FeedCache (same logic as server.cr add_cluster_info)
     cache = FeedCache.instance
     item_id = cache.get_item_id(item.feed_url, item.item.link)
@@ -357,7 +357,7 @@ module Api
     cluster_id_str = cluster_id.try(&.to_s)
 
     TimelineItemResponse.new(
-      id: generate_item_id(item),
+      id: make_item_id(item),
       title: item.item.title,
       link: item.item.link,
       pub_date: item.item.pub_date.try(&.to_unix_ms),
@@ -376,13 +376,8 @@ module Api
   end
 
   # Generate unique ID for timeline item
-  private def self.generate_item_id(item : TimelineItem) : String
+  private def self.make_item_id(item : TimelineItem) : String
     "#{item.feed_url}::#{item.item.link}"
-  end
-
-  # Convert Time to Unix milliseconds
-  def self.to_unix_ms(time : Time) : Int64
-    time.to_unix_ms
   end
 
   # Send JSON response
@@ -443,7 +438,7 @@ module Api
                            STDERR.puts "[DEBUG] handle_feeds: tab=#{active_tab}, top_level_feeds=#{STATE.feeds.size}, tab_count=#{STATE.tabs.size}, total_feeds=#{all_feeds_with_tabs.size}"
                          end
                        end
-                       all_feeds_with_tabs.map { |entry| feed_to_response(entry[:feed], entry[:tab_name]) }
+                       all_feeds_with_tabs.map { |entry| build_feed(entry[:feed], entry[:tab_name]) }
                      else
                        active_feeds = STATE.feeds_for_tab(active_tab)
                        if config = STATE.config
@@ -451,7 +446,7 @@ module Api
                            STDERR.puts "[DEBUG] handle_feeds: tab=#{active_tab}, feeds=#{active_feeds.size}"
                          end
                        end
-                       active_feeds.map { |feed| feed_to_response(feed, active_tab) }
+                       active_feeds.map { |feed| build_feed(feed, active_tab) }
                      end
 
     response = FeedsPageResponse.new(
@@ -561,7 +556,7 @@ module Api
 
     # Convert to timeline item responses
     items_response = raw_items.map do |item|
-      timeline_item_to_response(item)
+      build_timeline_item(item)
     end
 
     has_more = offset + limit < total_count

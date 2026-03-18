@@ -219,7 +219,7 @@ describe "API Response Types" do
 end
 
 describe "API Module" do
-  describe ".feed_to_response" do
+  describe ".build_feed" do
     it "converts FeedData to FeedResponse" do
       cache = FeedCache.new(nil)
       FeedCache.instance = cache
@@ -236,7 +236,7 @@ describe "API Module" do
         ]
       )
 
-      response = Api.feed_to_response(feed_data, "tech", 2, 10)
+      response = Api.build_feed(feed_data, "tech", 2, 10)
 
       response.title.should eq("Test Feed")
       response.url.should eq(feed_data.url)
