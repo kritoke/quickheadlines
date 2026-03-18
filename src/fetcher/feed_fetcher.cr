@@ -530,7 +530,7 @@ private def fetch_reddit_feed(feed : Feed, limit : Int32) : FeedData
 
   # No fresh cache, fetch new data
   # Use pull_reddit directly to avoid header conflicts
-  result = Fetcher.pull_reddit(feed.url, HTTP::Headers.new, limit)
+  result = Fetcher.pull_reddit(feed.url, HTTP::Headers.new, limit, fetcher_config)
 
   if error = result.error_message
     return handle_reddit_error(feed, error)
@@ -546,7 +546,7 @@ rescue ex
 end
 
 private def fetch_reddit_background(feed : Feed, limit : Int32)
-  result = Fetcher.pull_reddit(feed.url, HTTP::Headers.new, limit)
+  result = Fetcher.pull_reddit(feed.url, HTTP::Headers.new, limit, fetcher_config)
   return unless result.success?
   return if result.entries.empty?
 
@@ -573,6 +573,12 @@ end
 private def normalize_url(url : String) : String
   # Normalize URLs by removing www. prefix for consistency
   url.sub("https://www.", "https://").sub("http://www.", "http://")
+end
+
+private def fetcher_config : Fetcher::RequestConfig
+  config = StateStore.config
+  debug_enabled = config.try(&.debug?) || false
+  Fetcher::RequestConfig.new(debug_streaming: debug_enabled)
 end
 
 def error_feed_data(feed : Feed, message : String) : FeedData

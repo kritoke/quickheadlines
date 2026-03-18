@@ -3,6 +3,12 @@ require "./models"
 
 CODE_ICON = "internal:code_icon"
 
+private def fetcher_config : Fetcher::RequestConfig
+  config = StateStore.config
+  debug_enabled = config.try(&.debug?) || false
+  Fetcher::RequestConfig.new(debug_streaming: debug_enabled)
+end
+
 def fetch_sw_with_config(sw_config : SoftwareConfig, item_limit : Int32) : FeedData?
   latest_by_repo = Hash(String, Item).new
   sw_config.repos.each do |repo_entry|
@@ -32,7 +38,7 @@ private def fetch_repo_release(repo_entry : String, item_limit : Int32) : Array(
   url = repo_entry_to_url(repo_entry)
   return unless url
 
-  result = Fetcher.pull_software(url, HTTP::Headers.new, item_limit)
+  result = Fetcher.pull_software(url, HTTP::Headers.new, item_limit, fetcher_config)
 
   if error = result.error_message
     STDERR.puts "Error fetching software releases for #{repo_entry}: #{error}"
