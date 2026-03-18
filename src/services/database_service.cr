@@ -109,6 +109,9 @@ class DatabaseService
     # Add columns if needed (migration)
     add_column_if_missing(db, "items", "minhash_signature", "BLOB")
     add_column_if_missing(db, "items", "cluster_id", "INTEGER REFERENCES items(id)")
+    add_column_if_missing(db, "items", "comment_url", "TEXT")
+    add_column_if_missing(db, "items", "commentary_url", "TEXT")
+    add_column_if_missing(db, "items", "is_discussion_url", "INTEGER DEFAULT 0")
 
     # LSH bands table - migrate from INTEGER to TEXT if needed
     migrate_lsh_bands_if_needed(db)
