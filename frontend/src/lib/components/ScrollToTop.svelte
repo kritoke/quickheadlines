@@ -3,6 +3,17 @@
   import { logger } from '$lib/utils/debug';
   
   let colors = $derived(getScrollButtonColors(themeState.theme));
+  let isMobile = $state(false);
+  
+  $effect(() => {
+    if (typeof window === 'undefined') return;
+    isMobile = window.innerWidth < 768;
+    const handleResize = () => {
+      isMobile = window.innerWidth < 768;
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  });
 	
 	function doScroll(e: Event) {
 		e.preventDefault();
@@ -17,6 +28,7 @@
 <button
 	type="button"
 	class="scroll-btn"
+	class:mobile={isMobile}
 	style="background-color: {colors.bg}; color: {colors.text}; z-index: 999999;"
 	aria-label="Scroll to top"
 	title="Back to top"
@@ -45,6 +57,11 @@
 		text-decoration: none;
 		border: none;
 		outline: none;
+		transition: bottom 0.2s ease;
+	}
+	
+	.scroll-btn.mobile {
+		bottom: 5rem;
 	}
 	
 	.scroll-btn:hover {

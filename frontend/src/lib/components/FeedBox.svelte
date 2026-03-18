@@ -21,6 +21,7 @@
 	let expanded = $state(false);
 	let scrollContainer: HTMLDivElement | undefined = $state();
 	let isScrolledToBottom = $state(false);
+	let isMobile = $state(false);
 
 	let resolvedTheme = $derived(themeState.theme);
 
@@ -28,9 +29,11 @@
 	let isCustomTheme = $derived(customThemeIds.includes(resolvedTheme as any));
 
 	const INITIAL_ITEMS = 15;
+	const MOBILE_INITIAL_ITEMS = 10;
 
-	let displayedItems = $derived(expanded ? feed.items : feed.items.slice(0, INITIAL_ITEMS));
-	let hasMore = $derived(!expanded && feed.items.length > INITIAL_ITEMS);
+	// Mobile shows 10 items with expand toggle, desktop uses scroll with initial limit
+	let displayedItems = $derived((isMobile && !expanded) ? feed.items.slice(0, MOBILE_INITIAL_ITEMS) : (expanded ? feed.items : feed.items.slice(0, INITIAL_ITEMS)));
+	let hasMore = $derived((isMobile && !expanded && feed.items.length > MOBILE_INITIAL_ITEMS) || (!isMobile && !expanded && feed.items.length > INITIAL_ITEMS));
 
 	function getHeaderStyle(): string {
 		const dark = resolvedTheme === 'dark';
@@ -72,10 +75,22 @@
 			container.removeEventListener('scroll', checkScrollPosition);
 		};
 	});
+
+	// Detect mobile viewport
+	$effect(() => {
+		isMobile = window.innerWidth < 768 || 'ontouchstart' in window;
+		
+		const handleResize = () => {
+			isMobile = window.innerWidth < 768 || 'ontouchstart' in window;
+		};
+		
+		window.addEventListener('resize', handleResize);
+		return () => window.removeEventListener('resize', handleResize);
+	});
 </script>
 
 <Card 
-	class="overflow-hidden flex flex-col h-[400px] transform-gpu relative"
+	class="overflow-hidden flex flex-col {isMobile ? 'h-auto min-h-[200px]' : 'h-[400px]'} transform-gpu relative"
 	themeVariant={isCustomTheme}
 	data-name="feed-box"
 >
@@ -103,8 +118,9 @@
 		<span class="truncate drop-shadow-sm">{feed.title}</span>
 	</a>
 
-	<!-- Feed Items with Scroll -->
-	<div class="flex-1 relative min-h-0">
+	<!-- Feed Items -->
+	<div class="flex-1 relative {isMobile ? 'overflow-visible' : 'min-h-0'}">
+		{#if !isMobile}
 		<CustomScrollbar bind:scrollContainer onScroll={checkScrollPosition} class="absolute inset-0">
 			<ul class="divide-y theme-border/30">
 				{#each displayedItems as item, i (`${feed.url}-${i}`)}
@@ -133,17 +149,41 @@
 		{#if !isScrolledToBottom && feed.items.length > 5}
 			<div class="absolute bottom-0 left-0 right-0 h-6 pointer-events-none bg-gradient-to-t theme-bg-primary/80 to-transparent"></div>
 		{/if}
+		{:else}
+		<!-- Mobile: Show items with expand toggle -->
+		<ul class="divide-y theme-border/30">
+			{#each displayedItems as item, i (`${feed.url}-${i}`)}
+				<li>
+					<a
+						href={item.link}
+						target="_blank"
+						rel="noopener noreferrer"
+						class="block p-3 hover:opacity-80 transition-opacity"
+					>
+						<p class="text-base theme-text-primary line-clamp-2 leading-snug">
+							{item.title}
+						</p>
+						{#if item.pub_date}
+							<p class="text-sm theme-text-secondary mt-2">
+								{formatTimestamp(item.pub_date)}
+							</p>
+						{/if}
+					</a>
+				</li>
+			{/each}
+		</ul>
+		{/if}
 	</div>
 
-	<!-- Load More -->
-	{#if feed.total_item_count > feed.items.length}
+	<!-- Load More (both mobile and desktop) -->
+	{#if hasMore}
 		<div class="{spacing.default} border-t theme-border">
 			<button
 				type="button"
 				data-name="load-more"
 				disabled={loading}
-				onclick={onLoadMore}
-				class="w-full text-xs theme-text-secondary hover:theme-text-primary {spacing.default} transition-all duration-200 disabled:opacity-50 active:scale-95"
+				onclick={handleLoadMore}
+				class="w-full py-3 text-sm font-medium theme-text-secondary hover:theme-text-primary {spacing.default} transition-all duration-200 disabled:opacity-50 active:scale-95"
 			>
 				{#if loading}
 					<span class="inline-flex items-center gap-1">
@@ -153,6 +193,8 @@
 						</svg>
 						Loading...
 					</span>
+				{:else if isMobile}
+					Show more ({feed.items.length - MOBILE_INITIAL_ITEMS} more)
 				{:else}
 					Show more
 				{/if}

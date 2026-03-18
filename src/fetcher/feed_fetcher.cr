@@ -529,8 +529,8 @@ private def fetch_reddit_feed(feed : Feed, limit : Int32) : FeedData
   end
 
   # No fresh cache, fetch new data
-  headers = build_reddit_headers
-  result = Fetcher.pull(feed.url, headers, limit)
+  # Use pull_reddit directly to avoid header conflicts
+  result = Fetcher.pull_reddit(feed.url, HTTP::Headers.new, limit)
 
   if error = result.error_message
     return handle_reddit_error(feed, error)
@@ -546,8 +546,7 @@ rescue ex
 end
 
 private def fetch_reddit_background(feed : Feed, limit : Int32)
-  headers = build_reddit_headers
-  result = Fetcher.pull(feed.url, headers, limit)
+  result = Fetcher.pull_reddit(feed.url, HTTP::Headers.new, limit)
   return unless result.success?
   return if result.entries.empty?
 
@@ -569,16 +568,6 @@ private def fetch_reddit_background(feed : Feed, limit : Int32)
   )
 
   FeedCache.instance.add(feed_data)
-end
-
-private def build_reddit_headers : HTTP::Headers
-  HTTP::Headers{
-    "User-Agent"      => "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-    "Accept"          => "application/rss+xml, application/atom+xml, application/json, application/xml;q=0.9, text/xml;q=0.8, */*;q=0.7",
-    "Accept-Language" => "en-US,en;q=0.9",
-    "Accept-Encoding" => "gzip, deflate",
-    "Connection"      => "keep-alive",
-  }
 end
 
 private def normalize_url(url : String) : String

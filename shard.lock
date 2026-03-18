@@ -74,7 +74,7 @@ shards:
 
   fetcher:
     git: https://github.com/kritoke/fetcher.cr.git
-    version: 0.7.1
+    version: 0.7.3
 
   http-client-digest_auth:
     git: https://github.com/mamantoha/http-client-digest_auth.git
@@ -86,7 +86,7 @@ shards:
 
   lexbor:
     git: https://github.com/kostya/lexbor.git
-    version: 3.6.0
+    version: 3.6.1
 
   lexis-minhash:
     git: https://github.com/kritoke/lexis-minhash.git
@@ -106,5 +106,5 @@ shards:
 
   vug:
     git: https://github.com/kritoke/vug.cr.git
-    version: 0.1.0+git.commit.25138148f828e0cc3fa49adcc3751c73e3f17f33
+    version: 0.1.0
 

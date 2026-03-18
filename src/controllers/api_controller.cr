@@ -646,10 +646,17 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
     end
 
     cached_tabs = config.tabs.map do |tab_config|
-      tab_feeds = tab_config.feeds.compact_map { |feed_config| cache.get(feed_config.url) }
+      tab_feeds = tab_config.feeds.compact_map do |feed_config|
+        cached = cache.get(feed_config.url)
+        cached || cache.get(normalize_url(feed_config.url))
+      end
       {name: tab_config.name, feeds: tab_feeds, software_releases: [] of FeedData}
     end
 
     {cached_feeds, cached_tabs}
+  end
+
+  private def normalize_url(url : String) : String
+    url.sub("https://www.", "https://").sub("http://www.", "http://")
   end
 end
