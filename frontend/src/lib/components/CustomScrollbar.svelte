@@ -1,6 +1,4 @@
 <script lang="ts">
-	import { themeState } from '$lib/stores/theme.svelte';
-
 	interface Props {
 		class?: string;
 		scrollContainer?: HTMLDivElement | undefined;
@@ -14,9 +12,15 @@
 	let thumbHeight = $state(20);
 	let isVisible = $state(false);
 	let hideTimeout: number;
+	let lastScrollTime = 0;
+	const THROTTLE_MS = 16;
 
 	function handleScroll() {
 		if (!scrollContainer) return;
+		
+		const now = performance.now();
+		if (now - lastScrollTime < THROTTLE_MS) return;
+		lastScrollTime = now;
 		
 		isVisible = true;
 		const { scrollTop, scrollHeight, clientHeight } = scrollContainer;
