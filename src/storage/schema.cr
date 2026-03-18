@@ -43,7 +43,7 @@ module Schema
       FOREIGN KEY (item_id) REFERENCES items(id) ON DELETE CASCADE,
       UNIQUE(item_id, band_index)
     )
-  SQL
+    SQL
 
   INDEXES = <<-SQL
     CREATE INDEX IF NOT EXISTS idx_items_feed_id ON items(feed_id);
