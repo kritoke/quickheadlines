@@ -109,14 +109,36 @@ module ColorExtractor
   def self.auto_correct_theme_json(theme_json : String?, legacy_bg : String?, legacy_text : String?) : String?
     return unless theme_json || legacy_bg
 
+    bg = extract_background(theme_json)
+    text_hash = extract_text_hash(theme_json)
+
+    return if bg.nil? || bg.empty?
+
+    bg_rgb = parse_color_to_rgb(bg)
+    return unless bg_rgb
+
+    bg_rgb_obj = PrismatIQ::RGB.new(bg_rgb[0], bg_rgb[1], bg_rgb[2])
+
+    needs_correction = check_accessibility(text_hash, bg_rgb_obj)
+    corrected_text = apply_palette_corrections(text_hash, bg_rgb_obj, needs_correction)
+
+    source = needs_correction ? "auto-corrected" : "auto"
+    build_theme_json(bg, corrected_text, source)
+  end
+
+  private def self.extract_background(theme_json : String?) : String?
     parsed = JSON.parse(theme_json || "{}") rescue nil
-    return unless parsed
+    return unless parsed.is_a?(JSON::Any)
+    h = parsed.as_h
+    bg_val = (h["bg"]?) || (h["background"]?)
+    bg_val ? bg_val.to_s : nil
+  end
 
-    h = parsed.as_h rescue nil
-    bg_val = (h.try &.["bg"]?) || (h.try &.["background"]?)
-    bg = bg_val ? bg_val.to_s : nil
-
-    text_val = h.try &.["text"]?
+  private def self.extract_text_hash(theme_json : String?) : Hash(String, String)
+    parsed = JSON.parse(theme_json || "{}") rescue nil
+    return {} of String => String unless parsed.is_a?(JSON::Any)
+    h = parsed.as_h
+    text_val = h["text"]?
     text_hash = {} of String => String
 
     if text_val && text_val.is_a?(Hash)
@@ -132,16 +154,11 @@ module ColorExtractor
         end
       end
     end
+    text_hash
+  end
 
-    return if bg.nil? || bg.empty?
-
-    bg_rgb = parse_color_to_rgb(bg)
-    return unless bg_rgb
-
-    bg_rgb_obj = PrismatIQ::RGB.new(bg_rgb[0], bg_rgb[1], bg_rgb[2])
-
+  private def self.check_accessibility(text_hash : Hash(String, String), bg_rgb_obj : PrismatIQ::RGB) : Bool
     needs_correction = false
-    corrected_text = text_hash.dup
 
     if text_hash.has_key?("light")
       light_rgb = parse_color_to_rgb(text_hash["light"])
@@ -159,19 +176,27 @@ module ColorExtractor
       end
     end
 
+    needs_correction
+  end
+
+  private def self.apply_palette_corrections(text_hash : Hash(String, String), bg_rgb_obj : PrismatIQ::RGB, needs_correction : Bool) : Hash(String, String)
+    corrected_text = text_hash.dup
+
     if !text_hash.has_key?("light") || !text_hash.has_key?("dark") || needs_correction
       palette = theme_detector.suggest_text_palette(bg_rgb_obj)
       corrected_text["light"] = palette.primary.to_hex unless corrected_text.has_key?("light")
       corrected_text["dark"] = palette.primary.to_hex unless corrected_text.has_key?("dark")
     end
 
-    source = needs_correction ? "auto-corrected" : "auto"
+    corrected_text
+  end
 
+  private def self.build_theme_json(bg : String, text_hash : Hash(String, String), source : String) : String
     result = {
       "bg"   => bg,
       "text" => {
-        "light" => corrected_text["light"],
-        "dark"  => corrected_text["dark"],
+        "light" => text_hash["light"],
+        "dark"  => text_hash["dark"],
       },
       "source" => source,
     }
@@ -182,68 +207,67 @@ module ColorExtractor
     return if str.nil? || str.empty?
     s = str.to_s.strip
 
-    if s.starts_with?("rgb(")
-      s = s.sub("rgb(", "").sub(")", "").gsub(" ", "")
-      parts = s.split(",")
-      return unless parts.size == 3
-      r = parts[0].to_i32?
-      g = parts[1].to_i32?
-      b = parts[2].to_i32?
-      return unless r && g && b
-      return [r, g, b]
-    end
+    parse_rgb_format(s) || parse_hex_format(s)
+  end
 
-    if s.starts_with?("#")
-      s = s[1..-1] if s.size == 7
-      return unless s.size == 6
-      begin
-        r = s[0..1].to_i(16)
-        g = s[2..3].to_i(16)
-        b = s[4..5].to_i(16)
-        return [r, g, b]
-      rescue
-        return
-      end
-    end
+  private def self.parse_rgb_format(s : String) : Array(Int32)?
+    return unless s.starts_with?("rgb(")
+    s = s.sub("rgb(", "").sub(")", "").gsub(" ", "")
+    parts = s.split(",")
+    return unless parts.size == 3
+    r = parts[0].to_i32?
+    g = parts[1].to_i32?
+    b = parts[2].to_i32?
+    return unless r && g && b
+    [r, g, b]
+  end
 
-    if s =~ /^[0-9a-fA-F]{6}$/
-      begin
-        r = s[0..1].to_i(16)
-        g = s[2..3].to_i(16)
-        b = s[4..5].to_i(16)
-        return [r, g, b]
-      rescue
-        return
-      end
-    end
+  private def self.parse_hex_format(s : String) : Array(Int32)?
+    hex = extract_hex_digits(s)
+    return unless hex && hex.size == 6
+    parse_hex_bytes(hex)
+  end
 
+  private def self.extract_hex_digits(s : String) : String?
+    return s[1..-1] if s.starts_with?("#") && s.size == 7
+    return s if s =~ /^[0-9a-fA-F]{6}$/
+    nil
+  end
+
+  private def self.parse_hex_bytes(hex : String) : Array(Int32)?
+    [hex[0..1].to_i(16), hex[2..3].to_i(16), hex[4..5].to_i(16)]
+  rescue
     nil
   end
 
   def self.auto_upgrade_to_auto_corrected(theme_json : String?) : String?
     return unless theme_json
 
-    parsed = JSON.parse(theme_json) rescue nil
-    return unless parsed.is_a?(JSON::Any)
-
-    h = parsed.as_h rescue nil
+    h = parse_json_hash(theme_json)
     return unless h
-
-    src = h["source"]? ? h["source"].to_s : nil
-    return unless src == "auto"
-
-    bg_val = h["bg"]? || h["background"]?
-    return unless bg_val
+    return unless auto_source?(h)
 
     fixed = theme_extractor.fix_theme(theme_json, nil, nil)
     return unless fixed
 
-    parsed_fixed = JSON.parse(fixed) rescue nil
-    return unless parsed_fixed
-
-    h_fixed = parsed_fixed.as_h rescue nil
+    h_fixed = parse_json_hash(fixed)
     return unless h_fixed
 
+    build_upgraded_theme(h_fixed)
+  end
+
+  private def self.parse_json_hash(json_str : String) : Hash(String, JSON::Any)?
+    parsed = JSON.parse(json_str) rescue nil
+    return unless parsed.is_a?(JSON::Any)
+    parsed.as_h rescue nil
+  end
+
+  private def self.auto_source?(h : Hash(String, JSON::Any)) : Bool
+    src = h["source"]? ? h["source"].to_s : nil
+    src == "auto"
+  end
+
+  private def self.build_upgraded_theme(h_fixed : Hash(String, JSON::Any)) : String
     final = {
       "bg"     => h_fixed["background"]? || h_fixed["bg"],
       "text"   => h_fixed["text"],
