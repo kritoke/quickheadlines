@@ -4,7 +4,9 @@ require "json"
 module ColorExtractor
   VERSION = "3.0.0"
 
-  @@extraction_cache = Hash(String, {bg: String, text: String | Hash(String, String), timestamp: Time}).new
+  # Type alias for cache entry
+  alias CacheEntry = {bg: String, text: String | Hash(String, String), timestamp: Time}
+  @@extraction_cache = Hash(String, CacheEntry).new
   @@cache_mutex = Mutex.new
 
   @@theme_extractor : PrismatIQ::ThemeExtractor?
@@ -23,11 +25,11 @@ module ColorExtractor
     @@theme_detector ||= PrismatIQ::ThemeDetector.new
   end
 
-  def self.theme_aware_extract_from_favicon(favicon_path : String, feed_url : String, config_header_color : String?) : Hash(String, String | Hash(String, String))?
+  def self.extract_from_favicon(favicon_path : String, feed_url : String, config_header_color : String?) : Hash(String, String | Hash(String, String))?
     has_manual_override = !config_header_color.nil? && config_header_color != ""
     return if has_manual_override
 
-    cached = get_cached_theme_aware(favicon_path)
+    cached = get_cached(favicon_path)
     return cached if cached
 
     full_path = "public#{favicon_path}"
@@ -44,69 +46,36 @@ module ColorExtractor
       },
     }
 
-    cache_result_theme_aware(favicon_path, extracted)
+    cache_result(favicon_path, extracted)
     extracted
   end
 
-  private def self.get_cached_theme_aware(path : String) : Hash(String, String | Hash(String, String))?
-    @@cache_mutex.synchronize do
-      if entry = @@extraction_cache[path]?
-        if (Time.local - entry[:timestamp]).to_i < 7 * 24 * 60 * 60
-          text_val = entry[:text]
+  private def self.get_cached(path : String) : Hash(String, String | Hash(String, String))?
+    entry = @@extraction_cache[path]?
+    return unless entry
 
-          text_hash = if text_val.is_a?(Hash)
-                        text_val.as(Hash(String, String))
-                      elsif text_val.is_a?(String)
-                        begin
-                          tmp = JSON.parse(text_val.to_s).as_h
-                          normalized = {} of String => String
-                          tmp.each do |k, v|
-                            normalized[k.to_s] = v.to_s
-                          end
-                          normalized
-                        rescue
-                          {"light" => text_val.to_s, "dark" => text_val.to_s}
-                        end
-                      else
-                        {"light" => "", "dark" => ""}
-                      end
+    age = Time.local - entry[:timestamp]
+    return unless age < 10.minutes
 
-          return {"bg" => entry[:bg], "text" => text_hash}
-        else
-          @@extraction_cache.delete(path)
-        end
-      end
-    end
-    nil
+    bg_val = entry[:bg] || ""
+    text_val = entry[:text]
+
+    result = Hash(String, String | Hash(String, String)).new
+    result["bg"] = bg_val.to_s
+    result["text"] = text_val.is_a?(Hash(String, String)) ? text_val : text_val.to_s
+    result
   end
 
-  private def self.cache_result_theme_aware(path : String, result : Hash(String, String | Hash(String, String)))
-    @@cache_mutex.synchronize do
-      bg_val = result["bg"] ? result["bg"].to_s : ""
-      text_val = result["text"]
+  private def self.cache_result(path : String, result : Hash(String, String | Hash(String, String)))
+    bg_val = result["bg"]?.try(&.to_s) || ""
+    text_val = result["text"]?
+    text_content = text_val.nil? ? "" : text_val
 
-      stored_text = if text_val.is_a?(JSON::Any)
-                      begin
-                        h = text_val.as_h
-                        normalized = {} of String => String
-                        h.each do |k, v|
-                          normalized[k.to_s] = v.to_s
-                        end
-                        normalized
-                      rescue
-                        text_val.to_s
-                      end
-                    elsif text_val.is_a?(Hash)
-                      text_val.as(Hash(String, String))
-                    else
-                      text_val.to_s
-                    end
-
-      @@extraction_cache[path] = {bg: bg_val, text: stored_text, timestamp: Time.local}
-    end
+    entry : CacheEntry = {bg: bg_val, text: text_content, timestamp: Time.local}
+    @@extraction_cache[path] = entry
   end
 
-  def self.auto_correct_theme_json(theme_json : String?, legacy_bg : String?, legacy_text : String?) : String?
+  def self.correct_theme_json(theme_json : String?, legacy_bg : String?, legacy_text : String?) : String?
     return unless theme_json || legacy_bg
 
     bg = extract_background(theme_json)
@@ -114,7 +83,7 @@ module ColorExtractor
 
     return if bg.nil? || bg.empty?
 
-    bg_rgb = parse_color_to_rgb(bg)
+    bg_rgb = color_to_rgb(bg)
     return unless bg_rgb
 
     bg_rgb_obj = PrismatIQ::RGB.new(bg_rgb[0], bg_rgb[1], bg_rgb[2])
@@ -161,7 +130,7 @@ module ColorExtractor
     needs_correction = false
 
     if text_hash.has_key?("light")
-      light_rgb = parse_color_to_rgb(text_hash["light"])
+      light_rgb = color_to_rgb(text_hash["light"])
       if light_rgb
         light_obj = PrismatIQ::RGB.new(light_rgb[0], light_rgb[1], light_rgb[2])
         needs_correction = true unless accessibility.wcag_aa_compliant?(light_obj, bg_rgb_obj)
@@ -169,7 +138,7 @@ module ColorExtractor
     end
 
     if text_hash.has_key?("dark")
-      dark_rgb = parse_color_to_rgb(text_hash["dark"])
+      dark_rgb = color_to_rgb(text_hash["dark"])
       if dark_rgb
         dark_obj = PrismatIQ::RGB.new(dark_rgb[0], dark_rgb[1], dark_rgb[2])
         needs_correction = true unless accessibility.wcag_aa_compliant?(dark_obj, bg_rgb_obj)
@@ -203,7 +172,7 @@ module ColorExtractor
     result.to_json
   end
 
-  private def self.parse_color_to_rgb(str : String?) : Array(Int32)?
+  private def self.color_to_rgb(str : String?) : Array(Int32)?
     return if str.nil? || str.empty?
     s = str.to_s.strip
 
@@ -240,7 +209,7 @@ module ColorExtractor
     nil
   end
 
-  def self.auto_upgrade_to_auto_corrected(theme_json : String?) : String?
+  def self.upgrade_theme(theme_json : String?) : String?
     return unless theme_json
 
     h = parse_json_hash(theme_json)
@@ -287,24 +256,24 @@ module ColorExtractor
     accessibility.contrast_ratio(fg_obj, bg_obj)
   end
 
-  def self.find_dark_text_for_bg_public(bg : Array(Int32)) : String
+  def self.dark_text(bg : Array(Int32)) : String
     rgb_obj = PrismatIQ::RGB.new(bg[0], bg[1], bg[2])
     fg = theme_detector.suggest_foreground(rgb_obj)
     fg.to_hex
   end
 
-  def self.find_light_text_for_bg_public(bg : Array(Int32)) : String
+  def self.light_text(bg : Array(Int32)) : String
     rgb_obj = PrismatIQ::RGB.new(bg[0], bg[1], bg[2])
     fg = theme_detector.suggest_foreground(rgb_obj)
     fg.to_hex
   end
 
-  def self.rgb_to_hex_public(rgb : Array(Int32)) : String
+  def self.rgb_to_hex(rgb : Array(Int32)) : String
     rgb_obj = PrismatIQ::RGB.new(rgb[0], rgb[1], rgb[2])
     rgb_obj.to_hex
   end
 
-  def self.test_calculate_dominant_color_from_buffer(pixels : Array(UInt8), width : Int32, height : Int32) : Array(Int32)
+  def self.test_dominant_color(pixels : Array(UInt8), width : Int32, height : Int32) : Array(Int32)
     options = PrismatIQ::Options.new(color_count: 1, quality: 10)
     slice = Slice(UInt8).new(pixels.size) { |i| pixels[i] }
     result = PrismatIQ.get_palette_from_buffer(slice, width, height, options)

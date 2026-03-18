@@ -326,7 +326,7 @@ class FeedFetcher
   private def extract_header_colors(feed : Feed, favicon_path : String?) : {String?, String?, String?}
     if favicon_path && favicon_path.starts_with?("/favicons/")
       begin
-        extracted = ColorExtractor.theme_aware_extract_from_favicon(favicon_path, feed.url, feed.header_color)
+        extracted = ColorExtractor.extract_from_favicon(favicon_path, feed.url, feed.header_color)
 
         if extracted && extracted.is_a?(Hash) && extracted.has_key?("text")
           text_val = extracted["text"]

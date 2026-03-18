@@ -2,7 +2,7 @@ require "./spec_helper"
 
 describe "ColorExtractor helpers" do
   it "converts rgb array to hex" do
-    ColorExtractor.rgb_to_hex_public([255, 0, 0]).should eq("#ff0000")
+    ColorExtractor.rgb_to_hex([255, 0, 0]).should eq("#ff0000")
   end
 
   it "samples pixels from a small canvas buffer" do
@@ -14,7 +14,7 @@ describe "ColorExtractor helpers" do
     pixels.concat([0_u8, 0_u8, 255_u8, 255_u8])
     pixels.concat([255_u8, 255_u8, 255_u8, 255_u8])
 
-    avg = ColorExtractor.test_calculate_dominant_color_from_buffer(pixels, width, height)
+    avg = ColorExtractor.test_dominant_color(pixels, width, height)
     avg.should_not be_nil
     avg.should be_a(Array(Int32))
     avg.size.should eq(3)
@@ -28,14 +28,14 @@ describe "ColorExtractor helpers" do
 
   it "finds readable dark text for a light background" do
     rgb = [250, 250, 250]
-    t = ColorExtractor.find_dark_text_for_bg_public(rgb)
+    t = ColorExtractor.dark_text(rgb)
     t.should be_a(String)
     t.should start_with("#")
   end
 
   it "upgrades auto theme when both roles meet contrast" do
     theme = {"bg" => "#ffffff", "text" => {"light" => "#000000", "dark" => "#000000"}, "source" => "auto"}.to_json
-    res = ColorExtractor.auto_upgrade_to_auto_corrected(theme)
+    res = ColorExtractor.upgrade_theme(theme)
     res.should_not be_nil
     parsed = JSON.parse(res.as(String))
     parsed["source"].should eq("auto-corrected")
@@ -43,6 +43,6 @@ describe "ColorExtractor helpers" do
 
   it "does not upgrade when source is not auto" do
     theme = {"bg" => "#ffffff", "text" => {"light" => "#000000", "dark" => "#000000"}, "source" => "manual"}.to_json
-    ColorExtractor.auto_upgrade_to_auto_corrected(theme).should be_nil
+    ColorExtractor.upgrade_theme(theme).should be_nil
   end
 end
