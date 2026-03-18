@@ -29,10 +29,6 @@ describe "Config Validation" do
       config.feeds.first.header_text_color.should eq("#ffffff")
     end
 
-
-
-
-
     it "parses tab configuration" do
       yaml = <<-YAML
         tabs:
@@ -116,9 +112,5 @@ describe "Config Validation" do
       cluster.threshold.should eq(0.5)
       cluster.max_items.should eq(10000)
     end
-
-
-
-
   end
 end

@@ -16,14 +16,14 @@ module Quickheadlines::Services
       items = story_repo.find_timeline_items(limit + 1, offset, days, cursor)
       total_count = story_repo.count_timeline_items(days, cursor)
       has_more = items.size > limit
-      
+
       if has_more
         items = items[0...limit]
       end
-      
+
       next_cursor = if has_more && (last_item = items.last)
-        last_item.pub_date.try(&.to_unix_ms).try(&.to_s)
-      end
+                      last_item.pub_date.try(&.to_unix_ms).try(&.to_s)
+                    end
 
       timeline_items = items.map do |item|
         TimelineItemResponse.new(

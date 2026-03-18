@@ -120,8 +120,8 @@ module Quickheadlines::Repositories
 
       cutoff_value = days_back ? Time.local - days_back.days : nil
       cursor_time = if cursor && (ts = cursor.to_i64?)
-                     Time.unix_ms(ts)
-                     end
+                      Time.unix_ms(ts)
+                    end
 
       # Use CTE to pre-compute cluster representatives and sizes (eliminates per-row subqueries)
       query = <<-SQL
@@ -159,7 +159,7 @@ module Quickheadlines::Repositories
         LIMIT ? OFFSET ?
         SQL
 
-      query_args = [] of (Time | Int32 | Int64 | Nil)
+      query_args = [] of (Time? | Int32 | Int64)
       query_args << cutoff_value if cutoff_value
       query_args << cursor_time if cursor_time
       query_args << limit
@@ -208,8 +208,8 @@ module Quickheadlines::Repositories
       cursor_clause = cursor ? "AND pub_date < ?" : ""
       cursor_time = if cursor && (ts = cursor.to_i64?)
                       Time.unix_ms(ts)
-                      end
-      
+                    end
+
       if days_back && cursor
         cutoff_date = Time.local - days_back.days
         @db.query_one(
