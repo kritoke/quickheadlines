@@ -107,7 +107,31 @@ private def parse_rss_item(node : XML::Node) : Item
                  node.xpath_node(".//*[local-name()='date']").try(&.text)
   pub_date = parse_time(pub_date_str)
 
-  Item.new(title, link, pub_date)
+  # Extract comment/commentary URLs from RSS elements
+  comment_url = extract_comment_url(node)
+  commentary_url = extract_commentary_url(node)
+  is_discussion = comment_url != nil || commentary_url != nil
+
+  Item.new(title, link, pub_date, nil, comment_url, commentary_url, is_discussion)
+end
+
+private def extract_comment_url(node : XML::Node) : String?
+  # Try <comments> element
+  node.xpath_node("./*[local-name()='comments']").try(&.text).try(&.strip).presence ||
+  # Try <slash:comments> element
+  node.xpath_node("./*[local-name()='comments']").try(&.text).try(&.strip).presence ||
+  # Try <link rel="replies"> with type text/html
+  extract_link_by_rel(node, "replies")
+end
+
+private def extract_commentary_url(node : XML::Node) : String?
+  # Try <link rel="discussion"> or <link rel="comments">
+  extract_link_by_rel(node, "discussion") ||
+  extract_link_by_rel(node, "comments")
+end
+
+private def extract_link_by_rel(node : XML::Node, rel : String) : String?
+  node.xpath_node("./*[local-name()='link'][@rel='#{rel}']").try(&.[]?("href")).try(&.strip).presence
 end
 
 private def parse_atom_entry(node : XML::Node) : Item
@@ -127,7 +151,23 @@ private def parse_atom_entry(node : XML::Node) : Item
                   node.xpath_node("./*[local-name()='updated']").try(&.text)
   pub_date = parse_time(published_str)
 
-  Item.new(title, link, pub_date)
+  # Extract comment/commentary URLs from Atom elements
+  comment_url = extract_atom_comment_url(node)
+  commentary_url = extract_atom_commentary_url(node)
+  is_discussion = comment_url != nil || commentary_url != nil
+
+  Item.new(title, link, pub_date, nil, comment_url, commentary_url, is_discussion)
+end
+
+private def extract_atom_comment_url(node : XML::Node) : String?
+  # Try <link rel="replies"> with type text/html
+  node.xpath_node("./*[local-name()='link'][@rel='replies']").try(&.[]?("href")).try(&.strip).presence
+end
+
+private def extract_atom_commentary_url(node : XML::Node) : String?
+  # Try <link rel="discussion"> or <link rel="comments">
+  node.xpath_node("./*[local-name()='link'][@rel='discussion']").try(&.[]?("href")).try(&.strip).presence ||
+  node.xpath_node("./*[local-name()='link'][@rel='comments']").try(&.[]?("href")).try(&.strip).presence
 end
 
 private def parse_atom(xml : XML::Node, limit : Int32) : {site_link: String?, items: Array(Item), favicon: String?}
