@@ -267,12 +267,15 @@ module Quickheadlines::Repositories
         pub_date_str = item.pub_date.try(&.to_s("%Y-%m-%d %H:%M:%S"))
 
         @db.exec(
-          "INSERT OR IGNORE INTO items (feed_id, title, link, pub_date, version, position) VALUES (?, ?, ?, ?, ?, ?)",
+          "INSERT OR IGNORE INTO items (feed_id, title, link, pub_date, version, comment_url, commentary_url, is_discussion_url, position) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
           feed_id,
           item.title,
           item.link,
           pub_date_str,
           item.version,
+          item.comment_url,
+          item.commentary_url,
+          item.is_discussion_url ? 1 : 0,
           index
         )
 
@@ -313,15 +316,18 @@ module Quickheadlines::Repositories
       feed_id = feed_id_result
 
       items = [] of Item
-      @db.query("SELECT title, link, pub_date, version FROM items WHERE feed_id = ? AND (pub_date IS NULL OR pub_date <= datetime('now', '+1 day')) ORDER BY pub_date DESC", feed_id) do |rows|
+      @db.query("SELECT title, link, pub_date, version, comment_url, commentary_url, is_discussion_url FROM items WHERE feed_id = ? AND (pub_date IS NULL OR pub_date <= datetime('now', '+1 day')) ORDER BY pub_date DESC", feed_id) do |rows|
         rows.each do
           title = rows.read(String)
           link = rows.read(String)
           pub_date_str = rows.read(String?)
           version = rows.read(String?)
+          comment_url = rows.read(String?)
+          commentary_url = rows.read(String?)
+          is_discussion_url = rows.read(Int32)
 
           pub_date = pub_date_str.try { |date_str| Time.parse(date_str, "%Y-%m-%d %H:%M:%S", Time::Location::UTC) }
-          items << Item.new(title, link, pub_date, version)
+          items << Item.new(title, link, pub_date, version, comment_url, commentary_url, is_discussion_url == 1)
         end
       end
 
@@ -370,7 +376,7 @@ module Quickheadlines::Repositories
       return unless feed_result
 
       items = [] of Item
-      query = "SELECT title, link, pub_date, version FROM items WHERE feed_id = (SELECT id FROM feeds WHERE url = ?) AND (pub_date IS NULL OR pub_date <= datetime('now', '+1 day')) ORDER BY pub_date DESC LIMIT ? OFFSET ?"
+      query = "SELECT title, link, pub_date, version, comment_url, commentary_url, is_discussion_url FROM items WHERE feed_id = (SELECT id FROM feeds WHERE url = ?) AND (pub_date IS NULL OR pub_date <= datetime('now', '+1 day')) ORDER BY pub_date DESC LIMIT ? OFFSET ?"
 
       @db.query(query, url, limit, offset) do |rows|
         rows.each do
@@ -378,9 +384,12 @@ module Quickheadlines::Repositories
           link = rows.read(String)
           pub_date_str = rows.read(String?)
           version = rows.read(String?)
+          comment_url = rows.read(String?)
+          commentary_url = rows.read(String?)
+          is_discussion_url = rows.read(Int32)
 
           pub_date = pub_date_str.try { |date_str| Time.parse(date_str, "%Y-%m-%d %H:%M:%S", Time::Location::UTC) }
-          items << Item.new(title, link, pub_date, version)
+          items << Item.new(title, link, pub_date, version, comment_url, commentary_url, is_discussion_url == 1)
         end
       end
 

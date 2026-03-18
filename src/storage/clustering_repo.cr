@@ -271,12 +271,12 @@ module ClusteringRepository
     end
   end
 
-  def get_cluster_items_full(cluster_id : Int64) : Array({id: Int64, title: String, link: String, pub_date: Time?, feed_url: String, feed_title: String, favicon: String?, header_color: String?})
+  def get_cluster_items_full(cluster_id : Int64) : Array({id: Int64, title: String, link: String, pub_date: Time?, feed_url: String, feed_title: String, favicon: String?, header_color: String?, comment_url: String?, commentary_url: String?})
     @mutex.synchronize do
-      items = [] of {id: Int64, title: String, link: String, pub_date: Time?, feed_url: String, feed_title: String, favicon: String?, header_color: String?}
+      items = [] of {id: Int64, title: String, link: String, pub_date: Time?, feed_url: String, feed_title: String, favicon: String?, header_color: String?, comment_url: String?, commentary_url: String?}
 
       query = <<-SQL
-        SELECT i.id, i.title, i.link, i.pub_date, f.url as feed_url, f.title as feed_title, f.favicon, f.header_color
+        SELECT i.id, i.title, i.link, i.pub_date, f.url as feed_url, f.title as feed_title, f.favicon, f.header_color, i.comment_url, i.commentary_url
         FROM items i
         JOIN feeds f ON i.feed_id = f.id
         WHERE i.cluster_id = ?
@@ -293,6 +293,8 @@ module ClusteringRepository
           feed_title = rows.read(String)
           favicon = rows.read(String?)
           header_color = rows.read(String?)
+          comment_url = rows.read(String?)
+          commentary_url = rows.read(String?)
 
           pub_date = pub_date_str.try { |date_str| Time.parse(date_str, "%Y-%m-%d %H:%M:%S", Time::Location::UTC) }
 
@@ -305,6 +307,8 @@ module ClusteringRepository
             feed_title:   feed_title,
             favicon:      favicon,
             header_color: header_color,
+            comment_url:  comment_url,
+            commentary_url: commentary_url,
           }
         end
       end

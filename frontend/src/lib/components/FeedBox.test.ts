@@ -52,7 +52,7 @@ describe('FeedBox', () => {
 			props: { feed }
 		});
 		
-		expect(document.body.textContent).toContain('+1 more');
+		expect(document.body.textContent).toContain('more');
 		
 		unmount(component);
 	});

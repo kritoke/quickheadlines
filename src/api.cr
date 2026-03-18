@@ -72,12 +72,18 @@ class ItemResponse
   property version : String?
   @[JSON::Field(emit_null: true)]
   property pub_date : Int64?
+  @[JSON::Field(emit_null: true)]
+  property comment_url : String?
+  @[JSON::Field(emit_null: true)]
+  property commentary_url : String?
 
   def initialize(
     @title : String,
     @link : String,
     @version : String? = nil,
     @pub_date : Int64? = nil,
+    @comment_url : String? = nil,
+    @commentary_url : String? = nil,
   )
   end
 end
@@ -114,6 +120,12 @@ class TimelineItemResponse
   @[JSON::Field(emit_null: true)]
   property cluster_size : Int32?
 
+  @[JSON::Field(emit_null: true)]
+  property comment_url : String?
+
+  @[JSON::Field(emit_null: true)]
+  property commentary_url : String?
+
   def initialize(
     @id : String,
     @title : String,
@@ -130,6 +142,8 @@ class TimelineItemResponse
     @cluster_id : String? = nil,
     @is_representative : Bool = false,
     @cluster_size : Int32? = nil,
+    @comment_url : String? = nil,
+    @commentary_url : String? = nil,
   )
   end
 end
@@ -205,6 +219,12 @@ class StoryResponse
   @[JSON::Field(emit_null: true)]
   property header_color : String?
 
+  @[JSON::Field(emit_null: true)]
+  property comment_url : String?
+
+  @[JSON::Field(emit_null: true)]
+  property commentary_url : String?
+
   def initialize(
     @id : String,
     @title : String,
@@ -216,6 +236,8 @@ class StoryResponse
     @favicon : String? = nil,
     @favicon_data : String? = nil,
     @header_color : String? = nil,
+    @comment_url : String? = nil,
+    @commentary_url : String? = nil,
   )
   end
 end
@@ -305,7 +327,9 @@ module Api
         title: item.title,
         link: item.link,
         version: item.version,
-        pub_date: item.pub_date.try(&.to_unix_ms)
+        pub_date: item.pub_date.try(&.to_unix_ms),
+        comment_url: item.comment_url,
+        commentary_url: item.commentary_url
       )
     end
 
@@ -371,7 +395,9 @@ module Api
       header_theme_colors: item.header_theme_colors ? (JSON.parse(item.header_theme_colors) rescue nil) : nil,
       cluster_id: cluster_id_str,
       is_representative: is_representative,
-      cluster_size: cluster_size
+      cluster_size: cluster_size,
+      comment_url: item.item.comment_url,
+      commentary_url: item.item.commentary_url
     )
   end
 

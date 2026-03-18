@@ -124,12 +124,12 @@
 		<CustomScrollbar bind:scrollContainer onScroll={checkScrollPosition} class="absolute inset-0">
 			<ul class="divide-y theme-border/30">
 				{#each displayedItems as item, i (`${feed.url}-${i}`)}
-					<li>
+					<li class="flex items-start gap-2 p-3 hover:opacity-80 transition-opacity">
 						<a
 							href={item.link}
 							target="_blank"
 							rel="noopener noreferrer"
-							class="block p-3 hover:opacity-80 transition-opacity"
+							class="flex-1 min-w-0"
 						>
 							<p class="text-base theme-text-primary line-clamp-2 leading-snug">
 								{item.title}
@@ -140,6 +140,32 @@
 								</p>
 							{/if}
 						</a>
+						<div class="flex shrink-0 gap-1 mt-1">
+							{#if item.comment_url}
+								<a
+									href={item.comment_url}
+									target="_blank"
+									rel="noopener noreferrer"
+									title="Comments"
+								>
+									<svg class="w-4 h-4 theme-text-secondary hover:theme-text-primary" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+										<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+									</svg>
+								</a>
+							{/if}
+							{#if item.commentary_url && item.commentary_url !== item.comment_url}
+								<a
+									href={item.commentary_url}
+									target="_blank"
+									rel="noopener noreferrer"
+									title="Discussion"
+								>
+									<svg class="w-4 h-4 theme-text-secondary hover:theme-text-primary" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+										<path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path>
+									</svg>
+								</a>
+							{/if}
+						</div>
 					</li>
 				{/each}
 			</ul>
@@ -153,12 +179,12 @@
 		<!-- Mobile: Show items with expand toggle -->
 		<ul class="divide-y theme-border/30">
 			{#each displayedItems as item, i (`${feed.url}-${i}`)}
-				<li>
+				<li class="flex items-start gap-2 p-3 hover:opacity-80 transition-opacity">
 					<a
 						href={item.link}
 						target="_blank"
 						rel="noopener noreferrer"
-						class="block p-3 hover:opacity-80 transition-opacity"
+						class="flex-1 min-w-0"
 					>
 						<p class="text-base theme-text-primary line-clamp-2 leading-snug">
 							{item.title}
@@ -169,6 +195,32 @@
 							</p>
 						{/if}
 					</a>
+					<div class="flex shrink-0 gap-1 mt-1">
+						{#if item.comment_url}
+							<a
+								href={item.comment_url}
+								target="_blank"
+								rel="noopener noreferrer"
+								title="Comments"
+							>
+								<svg class="w-4 h-4 theme-text-secondary hover:theme-text-primary" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+									<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+								</svg>
+							</a>
+						{/if}
+						{#if item.commentary_url && item.commentary_url !== item.comment_url}
+							<a
+								href={item.commentary_url}
+								target="_blank"
+								rel="noopener noreferrer"
+								title="Discussion"
+							>
+								<svg class="w-4 h-4 theme-text-secondary hover:theme-text-primary" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+									<path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path>
+								</svg>
+							</a>
+						{/if}
+					</div>
 				</li>
 			{/each}
 		</ul>

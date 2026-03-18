@@ -7,6 +7,8 @@ export interface ItemResponse {
 	link: string;
 	version?: string;
 	pub_date?: number;
+	comment_url?: string;
+	commentary_url?: string;
 }
 
 export interface FeedResponse {
@@ -40,6 +42,8 @@ export interface TimelineItemResponse {
 	cluster_id?: string;
 	is_representative: boolean;
 	cluster_size?: number;
+	comment_url?: string;
+	commentary_url?: string;
 }
 
 export interface StoryResponse {
@@ -53,6 +57,8 @@ export interface StoryResponse {
 	favicon?: string;
 	favicon_data?: string;
 	header_color?: string;
+	comment_url?: string;
+	commentary_url?: string;
 }
 
 export interface ClusterResponse {

@@ -11,7 +11,7 @@ module Quickheadlines::Repositories
       stories = [] of Quickheadlines::Entities::Story
 
       @db.query(<<-SQL, limit, offset) do |rows|
-        SELECT i.id, i.title, i.link, i.pub_date, f.title as feed_title, f.url as feed_url, f.site_link as feed_link, f.favicon, f.header_color
+        SELECT i.id, i.title, i.link, i.pub_date, f.title as feed_title, f.url as feed_url, f.site_link as feed_link, f.favicon, f.header_color, i.comment_url, i.commentary_url
          FROM items i
          JOIN feeds f ON i.feed_id = f.id
          ORDER BY COALESCE(i.pub_date, '1970-01-01 00:00:00') DESC, i.id DESC
@@ -27,8 +27,10 @@ module Quickheadlines::Repositories
           feed_link = rows.read(String?)
           favicon = rows.read(String?)
           header_color = rows.read(String?)
+          comment_url = rows.read(String?)
+          commentary_url = rows.read(String?)
 
-          stories << build_story(id, title, link, pub_date_str, feed_title, feed_url, feed_link, favicon, header_color)
+          stories << build_story(id, title, link, pub_date_str, feed_title, feed_url, feed_link, favicon, header_color, comment_url, commentary_url)
         end
       end
 
@@ -37,7 +39,7 @@ module Quickheadlines::Repositories
 
     def find_by_id(id : Int64) : Quickheadlines::Entities::Story?
       @db.query_one?(<<-SQL, id) do |row|
-        SELECT i.id, i.title, i.link, i.pub_date, f.title as feed_title, f.url as feed_url, f.site_link as feed_link, f.favicon, f.header_color
+        SELECT i.id, i.title, i.link, i.pub_date, f.title as feed_title, f.url as feed_url, f.site_link as feed_link, f.favicon, f.header_color, i.comment_url, i.commentary_url
          FROM items i
          JOIN feeds f ON i.feed_id = f.id
          WHERE i.id = ?
@@ -51,8 +53,10 @@ module Quickheadlines::Repositories
         feed_link = row.read(String?)
         favicon = row.read(String?)
         header_color = row.read(String?)
+        comment_url = row.read(String?)
+        commentary_url = row.read(String?)
 
-        build_story(id, title, link, pub_date_str, feed_title, feed_url, feed_link, favicon, header_color)
+        build_story(id, title, link, pub_date_str, feed_title, feed_url, feed_link, favicon, header_color, comment_url, commentary_url)
       end
     end
 
@@ -60,7 +64,7 @@ module Quickheadlines::Repositories
       stories = [] of Quickheadlines::Entities::Story
 
       @db.query(<<-SQL, feed_id, limit, offset) do |rows|
-        SELECT i.id, i.title, i.link, i.pub_date, f.title as feed_title, f.url as feed_url, f.site_link as feed_link, f.favicon, f.header_color
+        SELECT i.id, i.title, i.link, i.pub_date, f.title as feed_title, f.url as feed_url, f.site_link as feed_link, f.favicon, f.header_color, i.comment_url, i.commentary_url
          FROM items i
          JOIN feeds f ON i.feed_id = f.id
          WHERE f.id = ?
@@ -77,8 +81,10 @@ module Quickheadlines::Repositories
           feed_link = rows.read(String?)
           favicon = rows.read(String?)
           header_color = rows.read(String?)
+          comment_url = rows.read(String?)
+          commentary_url = rows.read(String?)
 
-          stories << build_story(id, title, link, pub_date_str, feed_title, feed_url, feed_link, favicon, header_color)
+          stories << build_story(id, title, link, pub_date_str, feed_title, feed_url, feed_link, favicon, header_color, comment_url, commentary_url)
         end
       end
 
@@ -147,7 +153,9 @@ module Quickheadlines::Repositories
           f.header_text_color,
           i.cluster_id,
           CASE WHEN i.cluster_id IS NULL OR i.id = ci.representative_id THEN 1 ELSE 0 END as is_representative,
-          COALESCE(ci.cluster_size, 0) as cluster_size
+          COALESCE(ci.cluster_size, 0) as cluster_size,
+          i.comment_url,
+          i.commentary_url
         FROM items i
         JOIN feeds f ON i.feed_id = f.id
         LEFT JOIN cluster_info ci ON i.cluster_id = ci.cluster_id
@@ -180,6 +188,8 @@ module Quickheadlines::Repositories
           cluster_id = rows.read(Int64?)
           is_representative = rows.read(Int32) == 1
           cluster_size = rows.read(Int32)
+          comment_url = rows.read(String?)
+          commentary_url = rows.read(String?)
 
           pub_date = pub_date_str.try { |str| Time.parse(str, "%Y-%m-%d %H:%M:%S", Time::Location::UTC) }
 
@@ -196,7 +206,9 @@ module Quickheadlines::Repositories
             header_text_color: header_text_color,
             cluster_id: cluster_id,
             representative: is_representative,
-            cluster_size: cluster_size
+            cluster_size: cluster_size,
+            comment_url: comment_url,
+            commentary_url: commentary_url
           )
         end
       end
@@ -267,7 +279,7 @@ module Quickheadlines::Repositories
       end
     end
 
-    private def build_story(id : Int64, title : String, link : String, pub_date_str : String?, feed_title : String, feed_url : String, feed_link : String?, favicon : String?, header_color : String?) : Quickheadlines::Entities::Story
+    private def build_story(id : Int64, title : String, link : String, pub_date_str : String?, feed_title : String, feed_url : String, feed_link : String?, favicon : String?, header_color : String?, comment_url : String?, commentary_url : String?) : Quickheadlines::Entities::Story
       pub_date = pub_date_str.try { |str| Time.parse(str, "%Y-%m-%d %H:%M:%S", Time::Location::UTC) }
       Quickheadlines::Entities::Story.new(
         id: id.to_s,
@@ -279,7 +291,9 @@ module Quickheadlines::Repositories
         feed_link: feed_link || "",
         favicon: favicon,
         favicon_data: favicon,
-        header_color: header_color
+        header_color: header_color,
+        comment_url: comment_url,
+        commentary_url: commentary_url
       )
     end
   end
@@ -298,6 +312,8 @@ module Quickheadlines::Repositories
     property cluster_id : Int64?
     getter? representative : Bool
     property cluster_size : Int32
+    property comment_url : String?
+    property commentary_url : String?
 
     def initialize(
       @id,
@@ -313,6 +329,8 @@ module Quickheadlines::Repositories
       @cluster_id,
       @representative,
       @cluster_size,
+      @comment_url,
+      @commentary_url,
     )
     end
 

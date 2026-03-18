@@ -104,7 +104,9 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
         feed_link: "",
         favicon: item[:favicon],
         favicon_data: item[:favicon],
-        header_color: item[:header_color]
+        header_color: item[:header_color],
+        comment_url: item[:comment_url],
+        commentary_url: item[:commentary_url]
       )
     end
 
