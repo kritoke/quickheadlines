@@ -88,16 +88,6 @@ struct Config
   property security : SecurityConfig? = nil
 end
 
-struct SecurityConfig
-  include YAML::Serializable
-
-  property rate_limit_enabled : Bool = true
-  property rate_limit_requests_per_minute : Int32 = 60
-  property proxy_allowed_domains : Array(String) = ["google.com", "reddit.com", "github.com"]
-
-  property user_agent : String?
-end
-
 struct ClusteringConfig
   include YAML::Serializable
 

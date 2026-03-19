@@ -1,6 +1,22 @@
 require "./application"
 require "./websocket"
 
+module QuickHeadlines
+  TRUSTED_PROXIES = {"127.0.0.1", "::1", "10.", "172.16.", "192.168."}
+
+  def self.extract_client_ip(ctx : HTTP::Server::Context) : String
+    remote = ctx.request.remote_address.to_s.split(":").first
+
+    if xff = ctx.request.headers.get?("X-Forwarded-For")
+      if TRUSTED_PROXIES.any? { |proxy| remote.starts_with?(proxy) }
+        return xff.first.split(",").first.strip
+      end
+    end
+
+    remote
+  end
+end
+
 begin
   config = QuickHeadlines::Application.initial_config
   if config.nil?
@@ -12,7 +28,7 @@ begin
   handlers = [] of HTTP::Handler
 
   ws_handler = HTTP::WebSocketHandler.new do |ws, ctx|
-    ip = ctx.request.remote_address.to_s.split(":").first
+    ip = QuickHeadlines.extract_client_ip(ctx)
 
     unless SocketManager.instance.register(ws, ip)
       ws.close

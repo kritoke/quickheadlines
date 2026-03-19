@@ -1,5 +1,6 @@
 require "athena"
 require "../constants"
+require "../quickheadlines"
 require "../dtos/config_dto"
 require "../web/assets"
 require "../services/feed_service"
@@ -459,6 +460,11 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
 
         loop do
           loop_uri = URI.parse(current_url)
+
+          if redirects > 0 && !validate_redirect_url(current_url)
+            return ATH::Response.new("Redirect to unallowed domain", 403, HTTP::Headers{"content-type" => "text/plain"})
+          end
+
           loop_client = create_client(current_url)
           loop_headers = HTTP::Headers{
             "User-Agent"      => proxy_user_agent,
@@ -688,6 +694,31 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
     end
   end
 
+  private def validate_redirect_url(url : String) : Bool
+    config = STATE.config
+    allowed = config.try(&.security).try(&.proxy_allowed_domains)
+    allowed ||= ["google.com", "reddit.com", "github.com"]
+
+    begin
+      uri = URI.parse(url)
+      return false unless uri.scheme.in?("http", "https")
+
+      host = uri.host
+      return false if host.nil?
+
+      return false if host.starts_with?("127.") ||
+                      host.starts_with?("192.168.") ||
+                      host.starts_with?("10.") ||
+                      host.starts_with?("172.16.") ||
+                      host.starts_with?("169.254") ||
+                      host == "localhost"
+
+      allowed.any? { |domain| host.ends_with?(domain) }
+    rescue
+      false
+    end
+  end
+
   private def check_rate_limit(request : ATH::Request) : Bool
     config = STATE.config
     security = config.try(&.security)
@@ -696,8 +727,19 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
     return true unless security.rate_limit_enabled?
 
     max_requests = security.rate_limit_requests_per_minute
-    identifier = request.headers.get?("X-Forwarded-For").try(&.first) || request.headers.get?("CF-Connecting-IP").try(&.first) || "unknown"
+
+    identifier = if xff = request.headers.get?("X-Forwarded-For")
+                   xff.first.split(",").first.strip
+                 elsif cf = request.headers.get?("CF-Connecting-IP")
+                   cf.first
+                 else
+                   "unknown"
+                 end
 
     RateLimiter.instance.allow?(identifier)
+  end
+
+  private def trusted_proxy?(remote : String) : Bool
+    QuickHeadlines::TRUSTED_PROXIES.any? { |proxy| remote.starts_with?(proxy) }
   end
 end
