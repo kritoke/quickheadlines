@@ -534,7 +534,25 @@ private def fetch_reddit_feed(feed : Feed, limit : Int32) : FeedData
   end
 
   items = result.entries.map do |entry|
-    Item.new(entry.title, entry.url, entry.published_at, nil, entry.comment_url, entry.commentary_url, entry.is_discussion_url)
+    # For Reddit posts, construct comment URL from post URL if not provided
+    comment_url = entry.comment_url
+    commentary_url = entry.commentary_url
+    is_discussion = entry.is_discussion_url
+    
+    if !comment_url && entry.url.includes?("reddit.com/r/")
+      # Extract subreddit and post ID from URL to construct comments URL
+      # Example: https://www.reddit.com/r/programming/comments/abc123/title/
+      # becomes: https://www.reddit.com/r/programming/comments/abc123/
+      parts = entry.url.split('/')
+      if parts.size >= 7 && parts[4] == "r" && parts[6] == "comments"
+        post_id = parts[7]
+        subreddit = parts[5]
+        comment_url = "https://www.reddit.com/r/#{subreddit}/comments/#{post_id}/"
+        is_discussion = true
+      end
+    end
+    
+    Item.new(entry.title, entry.url, entry.published_at, nil, comment_url, commentary_url, is_discussion)
   end
 
   build_reddit_feed_data(feed, result, items)
@@ -548,7 +566,25 @@ private def fetch_reddit_background(feed : Feed, limit : Int32)
   return if result.entries.empty?
 
   items = result.entries.map do |entry|
-    Item.new(entry.title, entry.url, entry.published_at, nil, entry.comment_url, entry.commentary_url, entry.is_discussion_url)
+    # For Reddit posts, construct comment URL from post URL if not provided
+    comment_url = entry.comment_url
+    commentary_url = entry.commentary_url
+    is_discussion = entry.is_discussion_url
+    
+    if !comment_url && entry.url.includes?("reddit.com/r/")
+      # Extract subreddit and post ID from URL to construct comments URL
+      # Example: https://www.reddit.com/r/programming/comments/abc123/title/
+      # becomes: https://www.reddit.com/r/programming/comments/abc123/
+      parts = entry.url.split('/')
+      if parts.size >= 7 && parts[4] == "r" && parts[6] == "comments"
+        post_id = parts[7]
+        subreddit = parts[5]
+        comment_url = "https://www.reddit.com/r/#{subreddit}/comments/#{post_id}/"
+        is_discussion = true
+      end
+    end
+    
+    Item.new(entry.title, entry.url, entry.published_at, nil, comment_url, commentary_url, is_discussion)
   end
 
   feed_data = FeedData.new(

@@ -165,9 +165,10 @@ private def extract_atom_comment_url(node : XML::Node) : String?
 end
 
 private def extract_atom_commentary_url(node : XML::Node) : String?
-  # Try <link rel="discussion"> or <link rel="comments">
+  # Try <link rel="discussion"> or <link rel="comments"> or <link rel="related">
   node.xpath_node("./*[local-name()='link'][@rel='discussion']").try(&.[]?("href")).try(&.strip).presence ||
-  node.xpath_node("./*[local-name()='link'][@rel='comments']").try(&.[]?("href")).try(&.strip).presence
+  node.xpath_node("./*[local-name()='link'][@rel='comments']").try(&.[]?("href")).try(&.strip).presence ||
+  node.xpath_node("./*[local-name()='link'][@rel='related']").try(&.[]?("href")).try(&.strip).presence
 end
 
 private def parse_atom(xml : XML::Node, limit : Int32) : {site_link: String?, items: Array(Item), favicon: String?}
