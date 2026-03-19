@@ -1,4 +1,5 @@
 require "athena"
+require "../constants"
 require "../dtos/config_dto"
 require "../web/assets"
 require "../services/feed_service"
@@ -9,6 +10,7 @@ require "../repositories/story_repository"
 require "../repositories/cluster_repository"
 require "../fetcher/refresh_loop"
 require "../websocket"
+require "../rate_limiter"
 
 class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
   @db_service : DatabaseService
@@ -203,6 +205,10 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
   # GET /api/feed_more - Get more items for a specific feed
   @[ARTA::Get(path: "/api/feed_more")]
   def feed_more(request : ATH::Request) : FeedResponse
+    unless check_rate_limit(request)
+      raise Athena::Framework::Exception::TooManyRequests.new("Rate limit exceeded. Try again later.")
+    end
+
     url = request.query_params["url"]?
     limit = validate_limit(request.query_params["limit"]?, 10)
     offset = validate_offset(request.query_params["offset"]?)
@@ -279,6 +285,10 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
   # GET /api/timeline - Get timeline items
   @[ARTA::Get(path: "/api/timeline")]
   def timeline(request : ATH::Request) : TimelinePageResponse
+    unless check_rate_limit(request)
+      raise Athena::Framework::Exception::TooManyRequests.new("Rate limit exceeded. Try again later.")
+    end
+
     default_limit = STATE.config.try(&.db_fetch_limit) || 500
     default_days = (STATE.config.try(&.cache_retention_hours) || 168) / 24
     limit = validate_limit(request.query_params["limit"]?, default_limit, max: 1000)
@@ -676,5 +686,18 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
     rescue
       false
     end
+  end
+
+  private def check_rate_limit(request : ATH::Request) : Bool
+    config = STATE.config
+    security = config.try(&.security)
+
+    return true if security.nil?
+    return true unless security.rate_limit_enabled?
+
+    max_requests = security.rate_limit_requests_per_minute
+    identifier = request.headers.get?("X-Forwarded-For").try(&.first) || request.headers.get?("CF-Connecting-IP").try(&.first) || "unknown"
+
+    RateLimiter.instance.allow?(identifier)
   end
 end

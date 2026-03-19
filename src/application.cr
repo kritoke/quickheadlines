@@ -12,6 +12,7 @@ require "./fetcher"
 require "./storage"
 require "./favicon_storage"
 require "./health_monitor"
+require "./rate_limiter"
 require "./api"
 require "./websocket"
 
@@ -68,6 +69,13 @@ begin
   if config.debug?
     AppLogger.configure(&.level=(AppLogger::Level::DEBUG))
     AppLogger.info("Debug logging enabled")
+  end
+
+  if security = config.security
+    if security.rate_limit_enabled?
+      RateLimiter.configure(security.rate_limit_requests_per_minute, 60)
+      STDERR.puts "[INFO] Rate limiting enabled: #{security.rate_limit_requests_per_minute} requests/minute"
+    end
   end
 
   bootstrap = AppBootstrap.new(config)
