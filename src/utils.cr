@@ -1,16 +1,13 @@
 require "http/client"
 require "uri"
 require "./constants"
+require "./logger"
 
 # ----- HTTP client pooling and concurrency control -----
 
 # Debug mode helper - only logs if debug is enabled
 def debug_log(message : String) : Nil
-  if config = STATE.config
-    if config.debug?
-      STDOUT.puts "[DEBUG] #{message}"
-    end
-  end
+  AppLogger.debug(message)
 end
 
 # Try HTTPS first for HTTP URLs (upgrades URLs for security)
@@ -33,8 +30,8 @@ def create_client(url : String) : HTTP::Client
   client.compress = true
 
   # Apply default timeouts
-  client.read_timeout = 30.seconds
-  client.connect_timeout = 10.seconds
+  client.read_timeout = Constants::HTTP_TIMEOUT_SECONDS.seconds
+  client.connect_timeout = Constants::HTTP_CONNECT_TIMEOUT.seconds
 
   client
 end
@@ -91,4 +88,11 @@ def resolve_url(url : String?, base : String) : String?
   URI.parse(base).resolve(url.strip).to_s
 rescue
   nil
+end
+
+def normalize_url(url : String) : String
+  url.strip
+    .rstrip('/')
+    .sub("https://www.", "https://")
+    .sub("http://www.", "http://")
 end

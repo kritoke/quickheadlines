@@ -3,6 +3,8 @@ require "athena"
 # Load all dependencies
 require "./config"
 require "./constants"
+require "./logger"
+require "./errors"
 require "./models"
 require "./utils"
 require "./parser"
@@ -62,6 +64,11 @@ begin
 
   config = config_result.config.as(Config)
   QuickHeadlines::Application.initial_config = config
+
+  if config.debug?
+    AppLogger.configure(&.level=(AppLogger::Level::DEBUG))
+    AppLogger.info("Debug logging enabled")
+  end
 
   bootstrap = AppBootstrap.new(config)
   bootstrap.initialize_services

@@ -118,16 +118,16 @@ end
 private def extract_comment_url(node : XML::Node) : String?
   # Try <comments> element
   node.xpath_node("./*[local-name()='comments']").try(&.text).try(&.strip).presence ||
-  # Try <slash:comments> element
-  node.xpath_node("./*[local-name()='comments']").try(&.text).try(&.strip).presence ||
-  # Try <link rel="replies"> with type text/html
-  extract_link_by_rel(node, "replies")
+    # Try <slash:comments> element
+    node.xpath_node("./*[local-name()='comments']").try(&.text).try(&.strip).presence ||
+    # Try <link rel="replies"> with type text/html
+    extract_link_by_rel(node, "replies")
 end
 
 private def extract_commentary_url(node : XML::Node) : String?
   # Try <link rel="discussion"> or <link rel="comments">
   extract_link_by_rel(node, "discussion") ||
-  extract_link_by_rel(node, "comments")
+    extract_link_by_rel(node, "comments")
 end
 
 private def extract_link_by_rel(node : XML::Node, rel : String) : String?
@@ -167,8 +167,8 @@ end
 private def extract_atom_commentary_url(node : XML::Node) : String?
   # Try <link rel="discussion"> or <link rel="comments"> or <link rel="related">
   node.xpath_node("./*[local-name()='link'][@rel='discussion']").try(&.[]?("href")).try(&.strip).presence ||
-  node.xpath_node("./*[local-name()='link'][@rel='comments']").try(&.[]?("href")).try(&.strip).presence ||
-  node.xpath_node("./*[local-name()='link'][@rel='related']").try(&.[]?("href")).try(&.strip).presence
+    node.xpath_node("./*[local-name()='link'][@rel='comments']").try(&.[]?("href")).try(&.strip).presence ||
+    node.xpath_node("./*[local-name()='link'][@rel='related']").try(&.[]?("href")).try(&.strip).presence
 end
 
 private def parse_atom(xml : XML::Node, limit : Int32) : {site_link: String?, items: Array(Item), favicon: String?}

@@ -436,6 +436,10 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
   @[ARTA::Get(path: "/proxy_image")]
   def proxy_image(request : ATH::Request) : ATH::Response
     if url = request.query_params["url"]?
+      unless proxy_domain_allowed?(url)
+        return ATH::Response.new("Domain not allowed for proxy", 403, HTTP::Headers{"content-type" => "text/plain"})
+      end
+
       begin
         current_url = url
         redirects = 0
@@ -447,7 +451,7 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
           loop_uri = URI.parse(current_url)
           loop_client = create_client(current_url)
           loop_headers = HTTP::Headers{
-            "User-Agent"      => "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            "User-Agent"      => proxy_user_agent,
             "Accept-Language" => "en-US,en;q=0.9",
             "Connection"      => "keep-alive",
           }
@@ -651,5 +655,26 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
 
   private def normalize_url(url : String) : String
     url.sub("https://www.", "https://").sub("http://www.", "http://")
+  end
+
+  private def proxy_user_agent : String
+    config = STATE.config
+    config.try(&.security).try(&.user_agent) || Constants::HTTP_DEFAULT_USER_AGENT
+  end
+
+  private def proxy_domain_allowed?(url : String) : Bool
+    config = STATE.config
+    allowed = config.try(&.security).try(&.proxy_allowed_domains)
+    return true if allowed.nil? || allowed.empty?
+
+    begin
+      uri = URI.parse(url)
+      host = uri.host
+      return true if host.nil?
+
+      allowed.any? { |domain| host.ends_with?(domain) }
+    rescue
+      false
+    end
   end
 end

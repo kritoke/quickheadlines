@@ -1,4 +1,5 @@
 require "vug"
+require "../constants"
 require "../favicon_storage"
 require "../health_monitor"
 require "../config"
@@ -8,8 +9,8 @@ module VugAdapter
 
   def self.config : Vug::Config
     Vug::Config.new(
-      timeout: 30.seconds,
-      connect_timeout: 10.seconds,
+      timeout: Constants::HTTP_TIMEOUT_SECONDS.seconds,
+      connect_timeout: Constants::HTTP_CONNECT_TIMEOUT.seconds,
       on_save: ->(url : String, data : Bytes, content_type : String) do
         FaviconStorage.save_favicon(url, data, content_type)
       end,

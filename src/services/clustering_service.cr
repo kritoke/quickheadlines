@@ -1,6 +1,7 @@
 require "athena"
 require "json"
 require "lexis-minhash"
+require "../constants"
 require "../repositories/cluster_repository"
 require "./clustering_engine"
 
@@ -91,7 +92,7 @@ class Quickheadlines::Services::ClusteringService
     cluster_repository.find_all
   end
 
-  def recluster_all(limit : Int32 = 5000, threshold : Float64 = 0.35) : Int32
+  def recluster_all(limit : Int32 = Constants::CLUSTERING_MAX_ITEMS, threshold : Float64 = Constants::CLUSTERING_DEFAULT_THRESHOLD) : Int32
     cluster_repository.clear_all_metadata
 
     items = [] of {id: Int64, title: String, link: String, pub_date: Time?, feed_id: Int64}
@@ -128,7 +129,7 @@ class Quickheadlines::Services::ClusteringService
     processed
   end
 
-  def recluster_with_lsh(limit : Int32 = 5000, threshold : Float64 = 0.35, bands : Int32 = 20) : Int32
+  def recluster_with_lsh(limit : Int32 = Constants::CLUSTERING_MAX_ITEMS, threshold : Float64 = Constants::CLUSTERING_DEFAULT_THRESHOLD, bands : Int32 = Constants::CLUSTERING_DEFAULT_BANDS) : Int32
     cache = FeedCache.instance
 
     items = [] of ClusteringItem

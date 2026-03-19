@@ -1,6 +1,7 @@
 require "http"
 require "mutex"
 require "channel"
+require "../constants"
 
 class SocketManager
   @@instance : SocketManager?
@@ -22,7 +23,7 @@ class SocketManager
   MAX_CONNECTIONS        = 1000
   MAX_CONNECTIONS_PER_IP =   10
   CONNECTION_QUEUE_SIZE  =  100
-  STALE_CONNECTION_AGE   =  120 # seconds
+  STALE_CONNECTION_AGE   = Constants::WEBSOCKET_STALE_CONNECTION_AGE
 
   def initialize
     @connections = [] of Connection

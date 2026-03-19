@@ -83,6 +83,19 @@ struct Config
   # Clustering configuration (optional)
   # If omitted, clustering is enabled by default and runs hourly.
   property clustering : ClusteringConfig? = nil
+
+  # Security configuration (optional)
+  property security : SecurityConfig? = nil
+end
+
+struct SecurityConfig
+  include YAML::Serializable
+
+  property rate_limit_enabled : Bool = true
+  property rate_limit_requests_per_minute : Int32 = 60
+  property proxy_allowed_domains : Array(String) = ["google.com", "reddit.com", "github.com"]
+
+  property user_agent : String?
 end
 
 struct ClusteringConfig
@@ -114,6 +127,20 @@ struct ClusteringConfig
   # Higher values = stricter matching, lower values = more clusters
   # 0.35 works well with overlap coefficient for short headlines
   property threshold : Float64 = 0.35
+end
+
+struct SecurityConfig
+  include YAML::Serializable
+
+  # Rate limiting settings
+  property? rate_limit_enabled : Bool = true
+  property rate_limit_requests_per_minute : Int32 = 60
+
+  # Domains allowed for image proxy
+  property proxy_allowed_domains : Array(String) = ["google.com", "reddit.com", "github.com"]
+
+  # Custom user agent (optional, uses default if not set)
+  property user_agent : String?
 end
 
 # YAML parsing result with detailed error information

@@ -1,9 +1,10 @@
 require "db"
 require "time"
+require "../constants"
 require "../services/clustering_service"
 
 module ClusteringRepository
-  def find_all_items_excluding(item_id : Int64, limit : Int32 = 500) : Array(Int64)
+  def find_all_items_excluding(item_id : Int64, limit : Int32 = Constants::CLUSTERING_PAGE_SIZE) : Array(Int64)
     items = [] of Int64
     @mutex.synchronize do
       @db.query("SELECT id FROM items WHERE id != ? ORDER BY id DESC LIMIT ?", item_id, limit) do |rows|
@@ -299,15 +300,15 @@ module ClusteringRepository
           pub_date = pub_date_str.try { |date_str| Time.parse(date_str, "%Y-%m-%d %H:%M:%S", Time::Location::UTC) }
 
           items << {
-            id:           id,
-            title:        title,
-            link:         link,
-            pub_date:     pub_date,
-            feed_url:     feed_url,
-            feed_title:   feed_title,
-            favicon:      favicon,
-            header_color: header_color,
-            comment_url:  comment_url,
+            id:             id,
+            title:          title,
+            link:           link,
+            pub_date:       pub_date,
+            feed_url:       feed_url,
+            feed_title:     feed_title,
+            favicon:        favicon,
+            header_color:   header_color,
+            comment_url:    comment_url,
             commentary_url: commentary_url,
           }
         end

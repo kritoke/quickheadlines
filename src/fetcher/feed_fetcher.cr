@@ -5,6 +5,7 @@ require "fetcher"
 require "../config"
 require "../models"
 require "../storage"
+require "../utils"
 require "../health_monitor"
 require "../color_extractor"
 require "./vug_adapter"
@@ -533,27 +534,7 @@ private def fetch_reddit_feed(feed : Feed, limit : Int32) : FeedData
     return handle_reddit_error(feed, error)
   end
 
-  items = result.entries.map do |entry|
-    # For Reddit posts, construct comment URL from post URL if not provided
-    comment_url = entry.comment_url
-    commentary_url = entry.commentary_url
-    is_discussion = entry.is_discussion_url
-    
-    if !comment_url && entry.url.includes?("reddit.com/r/")
-      # Extract subreddit and post ID from URL to construct comments URL
-      # Example: https://www.reddit.com/r/programming/comments/abc123/title/
-      # becomes: https://www.reddit.com/r/programming/comments/abc123/
-      parts = entry.url.split('/')
-      if parts.size >= 7 && parts[4] == "r" && parts[6] == "comments"
-        post_id = parts[7]
-        subreddit = parts[5]
-        comment_url = "https://www.reddit.com/r/#{subreddit}/comments/#{post_id}/"
-        is_discussion = true
-      end
-    end
-    
-    Item.new(entry.title, entry.url, entry.published_at, nil, comment_url, commentary_url, is_discussion)
-  end
+  items = result.entries.map { |entry| process_reddit_entry(entry) }
 
   build_reddit_feed_data(feed, result, items)
 rescue ex
@@ -565,27 +546,7 @@ private def fetch_reddit_background(feed : Feed, limit : Int32)
   return unless result.success?
   return if result.entries.empty?
 
-  items = result.entries.map do |entry|
-    # For Reddit posts, construct comment URL from post URL if not provided
-    comment_url = entry.comment_url
-    commentary_url = entry.commentary_url
-    is_discussion = entry.is_discussion_url
-    
-    if !comment_url && entry.url.includes?("reddit.com/r/")
-      # Extract subreddit and post ID from URL to construct comments URL
-      # Example: https://www.reddit.com/r/programming/comments/abc123/title/
-      # becomes: https://www.reddit.com/r/programming/comments/abc123/
-      parts = entry.url.split('/')
-      if parts.size >= 7 && parts[4] == "r" && parts[6] == "comments"
-        post_id = parts[7]
-        subreddit = parts[5]
-        comment_url = "https://www.reddit.com/r/#{subreddit}/comments/#{post_id}/"
-        is_discussion = true
-      end
-    end
-    
-    Item.new(entry.title, entry.url, entry.published_at, nil, comment_url, commentary_url, is_discussion)
-  end
+  items = result.entries.map { |entry| process_reddit_entry(entry) }
 
   feed_data = FeedData.new(
     feed.title,
@@ -603,9 +564,22 @@ private def fetch_reddit_background(feed : Feed, limit : Int32)
   FeedCache.instance.add(feed_data)
 end
 
-private def normalize_url(url : String) : String
-  # Normalize URLs by removing www. prefix for consistency
-  url.sub("https://www.", "https://").sub("http://www.", "http://")
+private def process_reddit_entry(entry) : Item
+  comment_url = entry.comment_url
+  commentary_url = entry.commentary_url
+  is_discussion = entry.is_discussion_url
+
+  if !comment_url && entry.url.includes?("reddit.com/r/")
+    parts = entry.url.split('/')
+    if parts.size >= 7 && parts[4] == "r" && parts[6] == "comments"
+      post_id = parts[7]
+      subreddit = parts[5]
+      comment_url = "https://www.reddit.com/r/#{subreddit}/comments/#{post_id}/"
+      is_discussion = true
+    end
+  end
+
+  Item.new(entry.title, entry.url, entry.published_at, nil, comment_url, commentary_url, is_discussion)
 end
 
 private def fetcher_config : Fetcher::RequestConfig
