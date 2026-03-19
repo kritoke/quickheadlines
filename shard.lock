@@ -74,7 +74,7 @@ shards:
 
   fetcher:
     git: https://github.com/kritoke/fetcher.cr.git
-    version: 0.7.3
+    version: 0.8.0
 
   fnv:
     git: https://github.com/naqvis/crystal-fnv.git
