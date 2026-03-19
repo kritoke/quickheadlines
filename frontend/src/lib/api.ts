@@ -128,11 +128,15 @@ export async function fetchTimeline(
 	limit: number = 500,
 	offset: number = 0,
 	days: number = 14,
-	cursor?: string
+	cursor?: string,
+	tab?: string
 ): Promise<TimelinePageResponse> {
 	let url = `${API_BASE}/timeline?limit=${limit}&offset=${offset}&days=${days}`;
 	if (cursor) {
 		url += `&cursor=${cursor}`;
+	}
+	if (tab && tab !== 'all') {
+		url += `&tab=${encodeURIComponent(tab)}`;
 	}
 	return apiFetch<TimelinePageResponse>(url, { errorContext: 'Fetch Timeline' });
 }

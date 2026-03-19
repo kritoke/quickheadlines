@@ -16,6 +16,8 @@ type BaseTimelineState = {
 	loadingMore: boolean;
 	isClustering: boolean;
 	refreshMinutes: number;
+	// Tab name for timeline (all = global, specific tab = tab-specific)
+	tabName: string;
 };
 
 export type TimelineStateIdle = BaseTimelineState & { status: 'idle' };
@@ -34,7 +36,8 @@ const initialBaseState: BaseTimelineState = {
 	offset: 0,
 	loadingMore: false,
 	isClustering: false,
-	refreshMinutes: 10
+	refreshMinutes: 10,
+	tabName: 'all'
 };
 
 const initialState: TimelineStateIdle = {
@@ -125,7 +128,7 @@ export function resetTimelineStore(): void {
 	});
 }
 
-export async function loadTimeline(append: boolean = false): Promise<void> {
+export async function loadTimeline(append: boolean = false, tabName: string = 'all'): Promise<void> {
 	if (!append && (isRefreshing(timelineState) || isLoading(timelineState))) return;
 	
 	// Mutate the state instead of reassigning
@@ -133,8 +136,10 @@ export async function loadTimeline(append: boolean = false): Promise<void> {
 	
 	try {
 		const cursor = append ? timelineState.cursor : undefined;
-		const response = await fetchTimeline(100, append ? timelineState.offset : 0, 14, cursor);
+		const response = await fetchTimeline(100, append ? timelineState.offset : 0, 14, cursor, tabName);
 		Object.assign(timelineState, setTimelineData(timelineState, response.items, response.has_more, append, response.cursor));
+		// Update tab in state
+		timelineState.tabName = tabName;
 	} catch (e) {
 		Object.assign(timelineState, setError(timelineState, e instanceof Error ? e.message : 'Failed to load timeline'));
 	}

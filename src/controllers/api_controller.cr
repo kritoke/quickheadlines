@@ -296,9 +296,16 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
     offset = validate_offset(request.query_params["offset"]?)
     days = validate_days(request.query_params["days"]?, default_days.to_i32)
     cursor = request.query_params["cursor"]?
+    tab_name = request.query_params["tab"]?
 
     story_repo = Quickheadlines::Repositories::StoryRepository.new(@db_service.db)
-    result = Quickheadlines::Services::StoryService.get_timeline(story_repo, limit, offset, days, cursor)
+
+    # Get feed URLs for the specified tab (if any)
+    feed_urls_for_tab = if tab_name && !tab_name.strip.empty?
+                          get_feed_urls_for_tab(tab_name.strip)
+                        end
+
+    result = Quickheadlines::Services::StoryService.get_timeline(story_repo, limit, offset, days, cursor, feed_urls_for_tab)
 
     # If timeline has very few items and we're not already clustering, trigger a background refresh
     # This ensures the timeline populates quickly after server startup
@@ -667,6 +674,36 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
     end
 
     {cached_feeds, cached_tabs}
+  end
+
+  private def get_feed_urls_for_tab(tab_name : String) : Array(String)?
+    # Handle "all" tab - return nil to indicate no filtering
+    return if tab_name.downcase == "all"
+
+    # Get consistent snapshot of state
+    state = StateStore.get
+    feeds_snapshot = state.feeds
+    tabs_snapshot = state.tabs
+
+    # Total feeds check - fallback to cache if STATE is empty
+    total_feeds = feeds_snapshot.size + tabs_snapshot.sum(&.feeds.size)
+    if total_feeds == 0
+      cache = FeedCache.instance
+      feeds_snapshot, tabs_snapshot_hash = load_feeds_from_cache_fallback(cache)
+      # Convert tabs hash back to Tab records for consistency
+      tabs_snapshot = tabs_snapshot_hash.map { |tab| Tab.new(tab[:name], tab[:feeds], tab[:software_releases]) }
+    end
+
+    # Find the tab and get its feed URLs
+    if found_tab = tabs_snapshot.find { |tab| tab.name.to_s.downcase == tab_name.downcase }
+      feed_urls = found_tab.feeds.map(&.url)
+      # Add top-level feeds if this is a special case (shouldn't happen normally)
+      # but include them for completeness
+      return feed_urls unless feed_urls.empty?
+    end
+
+    # If tab not found, return empty array (no items will be shown)
+    [] of String
   end
 
   private def normalize_url(url : String) : String

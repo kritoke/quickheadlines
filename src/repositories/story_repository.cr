@@ -118,11 +118,24 @@ module Quickheadlines::Repositories
       story
     end
 
-    def find_timeline_items(limit : Int32, offset : Int32, days_back : Int32?, cursor : String? = nil) : Array(TimelineItem)
+    def find_timeline_items(limit : Int32, offset : Int32, days_back : Int32?, cursor : String? = nil, feed_urls : Array(String)? = nil) : Array(TimelineItem)
+      # Handle empty feed_urls case - return empty result
+      if feed_urls && feed_urls.empty?
+        return [] of TimelineItem
+      end
+
       items = [] of TimelineItem
 
       cutoff_clause = days_back ? "AND i.pub_date >= ?" : ""
       cursor_clause = cursor ? "AND i.pub_date < ?" : ""
+
+      # Handle feed URLs filtering
+      feed_filter_clause = ""
+      if feed_urls && !feed_urls.empty?
+        # Create placeholders for IN clause
+        placeholders = feed_urls.map { "?" }.join(", ")
+        feed_filter_clause = "AND f.url IN (#{placeholders})"
+      end
 
       cutoff_value = days_back ? Time.local - days_back.days : nil
       cursor_time = if cursor && (ts = cursor.to_i64?)
@@ -161,13 +174,15 @@ module Quickheadlines::Repositories
         LEFT JOIN cluster_info ci ON i.cluster_id = ci.cluster_id
         WHERE (i.pub_date IS NULL OR i.pub_date <= datetime('now', '+1 day'))
         AND (i.cluster_id IS NULL OR i.id = ci.representative_id)
+        #{feed_filter_clause}
         #{cutoff_clause}
         #{cursor_clause}
         ORDER BY COALESCE(i.pub_date, '1970-01-01 00:00:00') DESC, i.id DESC
         LIMIT ? OFFSET ?
         SQL
 
-      query_args = [] of (Time? | Int32 | Int64)
+      query_args = [] of (Time? | Int32 | Int64 | String)
+      query_args.concat(feed_urls) if feed_urls && !feed_urls.empty?
       query_args << cutoff_value if cutoff_value
       query_args << cursor_time if cursor_time
       query_args << limit
@@ -216,30 +231,76 @@ module Quickheadlines::Repositories
       items
     end
 
-    def count_timeline_items(days_back : Int32?, cursor : String? = nil) : Int32
+    def count_timeline_items(days_back : Int32?, cursor : String? = nil, feed_urls : Array(String)? = nil) : Int32
+      # Handle empty feed_urls case - return 0
+      if feed_urls && feed_urls.empty?
+        return 0
+      end
+
       cursor_clause = cursor ? "AND pub_date < ?" : ""
       cursor_time = if cursor && (ts = cursor.to_i64?)
                       Time.unix_ms(ts)
                     end
 
+      # Handle feed URLs filtering
+      feed_filter_clause = ""
+      feed_join_clause = ""
+      if feed_urls && !feed_urls.empty?
+        placeholders = feed_urls.map { "?" }.join(", ")
+        feed_filter_clause = "AND f.url IN (#{placeholders})"
+        feed_join_clause = "JOIN feeds f ON i.feed_id = f.id"
+      end
+
       if days_back && cursor
         cutoff_date = Time.local - days_back.days
-        @db.query_one(
-          "SELECT COUNT(*) FROM items WHERE pub_date >= ? #{cursor_clause}",
-          cutoff_date, cursor_time,
-          as: Int64
-        )
+        if feed_urls && !feed_urls.empty?
+          @db.query_one(
+            "SELECT COUNT(*) FROM items i #{feed_join_clause} WHERE i.pub_date >= ? #{cursor_clause} #{feed_filter_clause}",
+            args: [cutoff_date, cursor_time] + feed_urls,
+            as: Int64
+          )
+        else
+          @db.query_one(
+            "SELECT COUNT(*) FROM items WHERE pub_date >= ? #{cursor_clause}",
+            cutoff_date, cursor_time,
+            as: Int64
+          )
+        end
       elsif days_back
         cutoff_date = Time.local - days_back.days
-        @db.query_one("SELECT COUNT(*) FROM items WHERE pub_date >= ?", cutoff_date, as: Int64)
+        if feed_urls && !feed_urls.empty?
+          @db.query_one(
+            "SELECT COUNT(*) FROM items i #{feed_join_clause} WHERE i.pub_date >= ? #{feed_filter_clause}",
+            args: [cutoff_date] + feed_urls,
+            as: Int64
+          )
+        else
+          @db.query_one("SELECT COUNT(*) FROM items WHERE pub_date >= ?", cutoff_date, as: Int64)
+        end
       elsif cursor
-        @db.query_one(
-          "SELECT COUNT(*) FROM items WHERE #{cursor_clause}",
-          cursor_time,
-          as: Int64
-        )
+        if feed_urls && !feed_urls.empty?
+          @db.query_one(
+            "SELECT COUNT(*) FROM items i #{feed_join_clause} WHERE #{cursor_clause} #{feed_filter_clause}",
+            args: [cursor_time] + feed_urls,
+            as: Int64
+          )
+        else
+          @db.query_one(
+            "SELECT COUNT(*) FROM items WHERE #{cursor_clause}",
+            cursor_time,
+            as: Int64
+          )
+        end
       else
-        @db.query_one("SELECT COUNT(*) FROM items", as: Int64)
+        if feed_urls && !feed_urls.empty?
+          @db.query_one(
+            "SELECT COUNT(*) FROM items i #{feed_join_clause} WHERE 1=1 #{feed_filter_clause}",
+            args: feed_urls,
+            as: Int64
+          )
+        else
+          @db.query_one("SELECT COUNT(*) FROM items", as: Int64)
+        end
       end.to_i
     end
 

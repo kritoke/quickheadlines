@@ -104,7 +104,7 @@
 			aria-selected={activeTab === tab.name}
 			onclick={() => selectTab(tab.name)}
 			onkeydown={(e) => handleKeyDown(e, i)}
-			class="relative px-3 {spacing.default} text-sm font-medium rounded-md transition-colors cursor-pointer
+			class="relative px-3 py-2 text-sm font-medium rounded-md transition-colors cursor-pointer
 				{activeTab === tab.name 
 					? 'text-slate-900 dark:text-white' 
 					: 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'}"
@@ -125,7 +125,7 @@
 				role="tab"
 				type="button"
 				onclick={toggleMore}
-				class="px-3 {spacing.default} text-sm font-medium text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300 rounded-md flex items-center gap-1 cursor-pointer"
+				class="px-3 py-2 text-sm font-medium text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300 rounded-md flex items-center gap-1 cursor-pointer"
 				aria-expanded={showMore}
 			>
 				More
@@ -149,7 +149,7 @@
 							type="button"
 							role="menuitem"
 							onclick={() => selectTab(tab.name)}
-							class="w-full px-4 {spacing.default} text-sm text-left hover:opacity-80 cursor-pointer
+							class="w-full px-4 py-2 text-sm text-left hover:opacity-80 cursor-pointer
 								{activeTab === tab.name 
 									? 'theme-accent theme-accent-bg/10' 
 									: 'theme-text-primary'}"

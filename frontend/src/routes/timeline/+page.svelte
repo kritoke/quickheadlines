@@ -47,6 +47,13 @@
 	let sentinelElement: HTMLDivElement | undefined = $state();
 	let visibilityHandler: (() => void) | null = null;
 	
+	let currentTab = $derived.by(() => {
+		if (typeof window === 'undefined') return 'all';
+		const params = new URLSearchParams(window.location.search);
+		const urlTab = params.get('tab');
+		return urlTab || getFeedsTab() || 'all';
+	});
+	
 	let filteredItems = $derived(getFilteredItems(searchQuery));
 	
 	let loading = $derived(isLoading(timelineState));
@@ -73,9 +80,10 @@
 	
 	$effect(() => {
 		const initialized = timelineState.status !== 'idle' || timelineState.items.length > 0;
+		const tab = currentTab;
 		
 		if (!initialized) {
-			loadTimeline();
+			loadTimeline(false, tab);
 			loadTimelineConfig();
 			
 			timelineEffects = createTimelineEffects();
@@ -114,14 +122,14 @@
 	<title>Timeline - QuickHeadlines</title>
 </svelte:head>
 
-<div class="min-h-screen theme-bg-primary transition-colors">
-	<AppHeader 
-		title="QuickHeadlines"
-		viewLink={{ href: '/', icon: 'rss' }}
-		{searchExpanded}
-		onSearchToggle={() => searchExpanded = !searchExpanded}
-		onLogoClick={handleLogoClick}
-	>
+	<div class="min-h-screen theme-bg-primary transition-colors">
+		<AppHeader 
+			title="QuickHeadlines"
+			viewLink={{ href: `/?tab=${currentTab}`, icon: 'rss' }}
+			{searchExpanded}
+			onSearchToggle={() => searchExpanded = !searchExpanded}
+			onLogoClick={handleLogoClick}
+		>
 		<span class="text-xs sm:text-sm text-slate-500 dark:text-slate-400 whitespace-nowrap">
 			<span class="sm:hidden">{filteredItems.length}</span>
 			<span class="hidden sm:inline">{filteredItems.length} items</span>

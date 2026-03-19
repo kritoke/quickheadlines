@@ -12,9 +12,10 @@ module Quickheadlines::Services
       offset : Int32,
       days : Int32?,
       cursor : String? = nil,
+      feed_urls : Array(String)? = nil,
     ) : TimelineResult
-      items = story_repo.find_timeline_items(limit + 1, offset, days, cursor)
-      total_count = story_repo.count_timeline_items(days, cursor)
+      items = story_repo.find_timeline_items(limit + 1, offset, days, cursor, feed_urls)
+      total_count = story_repo.count_timeline_items(days, cursor, feed_urls)
       has_more = items.size > limit
 
       if has_more
