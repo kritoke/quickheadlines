@@ -56,7 +56,7 @@
 	});
 	
 	let tabs = $state<TabResponse[]>([]);
-	let currentTabForEffect = $state<string | null>(null);
+	let lastLoadedTab = $state<string | null>(null);
 	let effectsStarted = $state(false);
 	
 	async function loadTabs() {
@@ -98,27 +98,34 @@
 		return () => observer.disconnect();
 	});
 	
-	// One-time initialization
+	// Single unified effect - automatically tracks currentTab via Svelte 5 reactivity
 	$effect(() => {
-		if (effectsStarted) return;
-		effectsStarted = true;
+		const tab = currentTab;
 		
-		// Load tabs
-		loadTabs();
+		// Load tabs once
+		if (tabs.length === 0) {
+			loadTabs();
+		}
 		
-		// Load config
-		loadTimelineConfig();
+		// Load config once
+		if (!effectsStarted) {
+			loadTimelineConfig();
+		}
 		
-		// Start effects
-		timelineEffects = createTimelineEffects();
-		timelineEffects.start();
-
-		visibilityHandler = () => {
-		};
-		document.addEventListener('visibilitychange', visibilityHandler);
+		// Start effects once
+		if (!timelineEffects) {
+			effectsStarted = true;
+			timelineEffects = createTimelineEffects();
+			timelineEffects.start();
+			visibilityHandler = () => {};
+			document.addEventListener('visibilitychange', visibilityHandler);
+		}
 		
-		// Initial load
-		loadTimeline(false, currentTab);
+		// Load timeline when tab changes (tracked via lastLoadedTab)
+		if (tab !== lastLoadedTab) {
+			loadTimeline(false, tab);
+			lastLoadedTab = tab;
+		}
 		
 		return () => {
 			if (timelineEffects) {
@@ -130,22 +137,6 @@
 				visibilityHandler = null;
 			}
 		};
-	});
-	
-	// Watch for tab changes only
-	$effect(() => {
-		const tab = currentTab;
-		
-		// Check if we need to reload
-		if (effectsStarted && tab !== currentTabForEffect) {
-			const previous = currentTabForEffect;
-			currentTabForEffect = tab;
-			if (previous !== null && tab !== previous) {
-				loadTimeline(false, tab);
-			}
-		} else if (!currentTabForEffect) {
-			currentTabForEffect = tab;
-		}
 	});
 	
 	async function handleRetry() {
