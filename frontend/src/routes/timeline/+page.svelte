@@ -25,6 +25,7 @@
 		isError,
 		getError
 	} from '$lib/stores/timelineStore.svelte';
+	import { feedState, setActiveTab } from '$lib/stores/feedStore.svelte';
 
 	let LazyTimelineView: any = null;
 	const loadTimelineView = async () => {
@@ -52,7 +53,7 @@
 	
 	let currentTab = $derived.by(() => {
 		const urlTab = $page.url.searchParams.get('tab');
-		return urlTab || getFeedsTab() || 'all';
+		return urlTab || feedState.activeTab || getFeedsTab() || 'all';
 	});
 	
 	let tabs = $state<TabResponse[]>([]);
@@ -69,8 +70,10 @@
 	}
 	
 	async function handleTabChange(tab: string) {
+		// Sync tab with feedState so both views use the same tab
+		setActiveTab(tab);
+		setFeedsTab(tab);
 		await goto(`/timeline?tab=${tab}`, { replaceState: true, noScroll: true });
-		// Invalidate to force reactivity update
 		invalidateAll();
 	}
 	
