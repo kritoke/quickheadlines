@@ -188,6 +188,18 @@
 		{/await}
 	{/if}
 
+	<!-- Mobile tabs outside header -->
+	{#if tabs.length > 0}
+		<div class="md:hidden fixed top-14 left-0 right-0 z-40">
+			<TabSelector 
+				tabs={tabs}
+				activeTab={currentTab}
+				onTabChange={handleTabChange}
+				maxInline={0}
+			/>
+		</div>
+	{/if}
+
 	<main class="max-w-[1400px] mx-auto px-4 md:px-8 xl:px-12 py-4 overflow-visible" style="padding-top: calc(var(--header-height, 4rem) + 2rem);">
 		{#if loading && timelineState.items.length === 0}
 			<div class="flex items-center justify-center py-20 gap-3">
