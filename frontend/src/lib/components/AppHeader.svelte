@@ -113,7 +113,7 @@
 				</button>
 				<!-- Global Timeline button -->
 				<button 
-					onclick={() => goto('/timeline')}
+					onclick={() => goto('/timeline?tab=all')}
 					class="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
 					aria-label="Global Timeline"
 					title="Global Timeline"

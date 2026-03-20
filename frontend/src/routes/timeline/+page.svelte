@@ -1,16 +1,17 @@
 <script lang="ts">
 	import AppHeader from '$lib/components/AppHeader.svelte';
+	import TabSelector from '$lib/components/TabSelector.svelte';
 	import LayoutPicker from '$lib/components/LayoutPicker.svelte';
 	import BitsSearchModal from '$lib/components/BitsSearchModal.svelte';
-	import { fetchTimeline, fetchConfig } from '$lib/api';
-	import type { TimelineItemResponse } from '$lib/types';
+	import { fetchTimeline, fetchConfig, fetchFeeds } from '$lib/api';
+	import type { TimelineItemResponse, TabResponse } from '$lib/types';
 	import { SvelteSet } from 'svelte/reactivity';
 	import {
 		createTimelineEffects,
 	} from '$lib/stores/effects.svelte';
 	import { logger, initDebug, setDebugEnabled } from '$lib/utils/debug';
 	import { goto } from '$app/navigation';
-	import { getFeedsTab } from '$lib/stores/navigation.svelte';
+	import { getFeedsTab, setFeedsTab } from '$lib/stores/navigation.svelte';
 	import { themeState } from '$lib/stores/theme.svelte';
 	import {
 		timelineState,
@@ -54,6 +55,24 @@
 		return urlTab || getFeedsTab() || 'all';
 	});
 	
+	let tabs = $state<TabResponse[]>([]);
+	
+	async function loadTabs() {
+		try {
+			const response = await fetchFeeds('all');
+			tabs = response.tabs;
+		} catch (e) {
+			logger.log('[Timeline] Failed to load tabs:', e);
+		}
+	}
+	
+	function handleTabChange(tab: string) {
+		const url = new URL(window.location.href);
+		url.searchParams.set('tab', tab);
+		history.replaceState({}, '', url.toString());
+		setFeedsTab(tab);
+	}
+	
 	let filteredItems = $derived(getFilteredItems(searchQuery));
 	
 	let loading = $derived(isLoading(timelineState));
@@ -79,24 +98,29 @@
 	});
 	
 	$effect(() => {
-		const initialized = timelineState.status !== 'idle' || timelineState.items.length > 0;
 		const tab = currentTab;
+		const state = timelineState as typeof timelineState & { tabName: string };
+		const initialized = (timelineState.status !== 'idle' || timelineState.items.length > 0) && state.tabName === tab;
 		
 		if (!initialized) {
 			loadTimeline(false, tab);
 			loadTimelineConfig();
+			loadTabs();
 			
-			timelineEffects = createTimelineEffects();
-			timelineEffects.start();
+			if (!timelineEffects) {
+				timelineEffects = createTimelineEffects();
+				timelineEffects.start();
 
-			visibilityHandler = () => {
-			};
-			document.addEventListener('visibilitychange', visibilityHandler);
+				visibilityHandler = () => {
+				};
+				document.addEventListener('visibilitychange', visibilityHandler);
+			}
 		}
 		
 		return () => {
 			if (timelineEffects) {
 				timelineEffects.stop();
+				timelineEffects = null;
 			}
 			if (visibilityHandler) {
 				document.removeEventListener('visibilitychange', visibilityHandler);
@@ -125,6 +149,9 @@
 	<div class="min-h-screen theme-bg-primary transition-colors">
 		<AppHeader 
 			title="QuickHeadlines"
+			tabs={tabs}
+			activeTab={currentTab}
+			onTabChange={handleTabChange}
 			viewLink={{ href: `/?tab=${currentTab}`, icon: 'rss' }}
 			{searchExpanded}
 			onSearchToggle={() => searchExpanded = !searchExpanded}
