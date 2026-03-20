@@ -43,7 +43,10 @@
 
 	function handleViewSwitch(e: Event) {
 		e.preventDefault();
-		goto(viewLink.href);
+		// Read current tab from URL at click time to ensure it's fresh
+		const params = new URLSearchParams(window.location.search);
+		const currentTab = params.get('tab') || 'all';
+		goto(viewLink.icon === 'clock' ? `/timeline?tab=${currentTab}` : viewLink.href);
 	}
 
 	function handleLogoClick(e: Event) {
