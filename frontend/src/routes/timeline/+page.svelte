@@ -56,7 +56,8 @@
 	});
 	
 	let tabs = $state<TabResponse[]>([]);
-	let initialized = $state(false);
+	let currentTabForEffect = $state<string | null>(null);
+	let effectsStarted = $state(false);
 	
 	async function loadTabs() {
 		try {
@@ -68,7 +69,7 @@
 	}
 	
 	function handleTabChange(tab: string) {
-		goto(`/timeline?tab=${tab}`);
+		goto(`/timeline?tab=${tab}`, { keepFocus: false });
 	}
 	
 	let filteredItems = $derived(getFilteredItems(searchQuery));
@@ -98,25 +99,27 @@
 	});
 	
 	$effect(() => {
-		// Only run initialization once
-		if (initialized) return;
-		initialized = true;
-		
 		const tab = currentTab;
 		
-		// Load tabs
-		loadTabs();
+		// Load tabs only once
+		if (tabs.length === 0) {
+			loadTabs();
+		}
 		
 		// Load timeline for the current tab
 		loadTimeline(false, tab);
 		loadTimelineConfig();
 		
-		timelineEffects = createTimelineEffects();
-		timelineEffects.start();
+		// Start effects only once
+		if (!effectsStarted) {
+			effectsStarted = true;
+			timelineEffects = createTimelineEffects();
+			timelineEffects.start();
 
-		visibilityHandler = () => {
-		};
-		document.addEventListener('visibilitychange', visibilityHandler);
+			visibilityHandler = () => {
+			};
+			document.addEventListener('visibilitychange', visibilityHandler);
+		}
 		
 		return () => {
 			if (timelineEffects) {
@@ -128,16 +131,6 @@
 				visibilityHandler = null;
 			}
 		};
-	});
-	
-	// Watch for tab changes and reload
-	let previousTab = $state<string | null>(null);
-	$effect(() => {
-		const tab = currentTab;
-		if (initialized && tab !== previousTab) {
-			previousTab = tab;
-			loadTimeline(false, tab);
-		}
 	});
 	
 	async function handleRetry() {
