@@ -68,10 +68,7 @@
 	}
 	
 	function handleTabChange(tab: string) {
-		const url = new URL(window.location.href);
-		url.searchParams.set('tab', tab);
-		history.replaceState({}, '', url.toString());
-		setFeedsTab(tab);
+		goto(`/timeline?tab=${tab}`);
 	}
 	
 	let filteredItems = $derived(getFilteredItems(searchQuery));
