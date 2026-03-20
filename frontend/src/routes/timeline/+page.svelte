@@ -56,6 +56,7 @@
 	});
 	
 	let tabs = $state<TabResponse[]>([]);
+	let initialized = $state(false);
 	
 	async function loadTabs() {
 		try {
@@ -100,29 +101,25 @@
 	});
 	
 	$effect(() => {
+		// Only run initialization once
+		if (initialized) return;
+		initialized = true;
+		
 		const tab = currentTab;
 		
-		// Always load tabs when visiting timeline
-		if (tabs.length === 0) {
-			loadTabs();
-		}
+		// Load tabs
+		loadTabs();
 		
-		// Only load timeline if not already loaded for this tab
-		const state = timelineState as typeof timelineState & { tabName: string };
-		if (state.tabName !== tab) {
-			loadTimeline(false, tab);
-		}
-		
+		// Load timeline for the current tab
+		loadTimeline(false, tab);
 		loadTimelineConfig();
 		
-		if (!timelineEffects) {
-			timelineEffects = createTimelineEffects();
-			timelineEffects.start();
+		timelineEffects = createTimelineEffects();
+		timelineEffects.start();
 
-			visibilityHandler = () => {
-			};
-			document.addEventListener('visibilitychange', visibilityHandler);
-		}
+		visibilityHandler = () => {
+		};
+		document.addEventListener('visibilitychange', visibilityHandler);
 		
 		return () => {
 			if (timelineEffects) {
@@ -134,6 +131,16 @@
 				visibilityHandler = null;
 			}
 		};
+	});
+	
+	// Watch for tab changes and reload
+	let previousTab = $state<string | null>(null);
+	$effect(() => {
+		const tab = currentTab;
+		if (initialized && tab !== previousTab) {
+			previousTab = tab;
+			loadTimeline(false, tab);
+		}
 	});
 	
 	async function handleRetry() {
