@@ -101,26 +101,23 @@
 	
 	$effect(() => {
 		const tab = currentTab;
-		const state = timelineState as typeof timelineState & { tabName: string };
-		const initialized = (timelineState.status !== 'idle' || timelineState.items.length > 0) && state.tabName === tab;
 		
 		// Always load tabs when visiting timeline
 		if (tabs.length === 0) {
 			loadTabs();
 		}
 		
-		if (!initialized) {
-			loadTimeline(false, tab);
-			loadTimelineConfig();
-			
-			if (!timelineEffects) {
-				timelineEffects = createTimelineEffects();
-				timelineEffects.start();
+		// Load timeline for the current tab
+		loadTimeline(false, tab);
+		loadTimelineConfig();
+		
+		if (!timelineEffects) {
+			timelineEffects = createTimelineEffects();
+			timelineEffects.start();
 
-				visibilityHandler = () => {
-				};
-				document.addEventListener('visibilitychange', visibilityHandler);
-			}
+			visibilityHandler = () => {
+			};
+			document.addEventListener('visibilitychange', visibilityHandler);
 		}
 		
 		return () => {
