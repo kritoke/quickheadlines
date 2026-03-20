@@ -102,10 +102,14 @@
 		const state = timelineState as typeof timelineState & { tabName: string };
 		const initialized = (timelineState.status !== 'idle' || timelineState.items.length > 0) && state.tabName === tab;
 		
+		// Always load tabs when visiting timeline
+		if (tabs.length === 0) {
+			loadTabs();
+		}
+		
 		if (!initialized) {
 			loadTimeline(false, tab);
 			loadTimelineConfig();
-			loadTabs();
 			
 			if (!timelineEffects) {
 				timelineEffects = createTimelineEffects();
