@@ -6,6 +6,7 @@
 	import { fetchTimeline, fetchConfig, fetchFeeds } from '$lib/api';
 	import type { TimelineItemResponse, TabResponse } from '$lib/types';
 	import { SvelteSet } from 'svelte/reactivity';
+	import { onMount } from 'svelte';
 	import {
 		createTimelineEffects,
 	} from '$lib/stores/effects.svelte';
@@ -98,45 +99,42 @@
 		return () => observer.disconnect();
 	});
 	
-	// Single unified effect - automatically tracks currentTab via Svelte 5 reactivity
-	$effect(() => {
-		const tab = currentTab;
+	// Use onMount for initialization - runs once when component mounts
+	onMount(() => {
+		// Load tabs
+		loadTabs();
 		
-		// Load tabs once
-		if (tabs.length === 0) {
-			loadTabs();
-		}
+		// Load config
+		loadTimelineConfig();
 		
-		// Load config once
-		if (!effectsStarted) {
-			loadTimelineConfig();
-		}
+		// Start effects
+		timelineEffects = createTimelineEffects();
+		timelineEffects.start();
+		visibilityHandler = () => {};
+		document.addEventListener('visibilitychange', visibilityHandler);
+		effectsStarted = true;
 		
-		// Start effects once
-		if (!timelineEffects) {
-			effectsStarted = true;
-			timelineEffects = createTimelineEffects();
-			timelineEffects.start();
-			visibilityHandler = () => {};
-			document.addEventListener('visibilitychange', visibilityHandler);
-		}
-		
-		// Load timeline when tab changes (tracked via lastLoadedTab)
-		if (tab !== lastLoadedTab) {
-			loadTimeline(false, tab);
-			lastLoadedTab = tab;
-		}
+		// Initial load
+		loadTimeline(false, currentTab);
+		lastLoadedTab = currentTab;
 		
 		return () => {
 			if (timelineEffects) {
 				timelineEffects.stop();
-				timelineEffects = null;
 			}
 			if (visibilityHandler) {
 				document.removeEventListener('visibilitychange', visibilityHandler);
-				visibilityHandler = null;
 			}
 		};
+	});
+	
+	// Watch for tab changes - only runs when currentTab changes (not when timelineState changes)
+	$effect(() => {
+		const tab = currentTab;
+		if (effectsStarted && tab !== lastLoadedTab) {
+			loadTimeline(false, tab);
+			lastLoadedTab = tab;
+		}
 	});
 	
 	async function handleRetry() {
