@@ -68,8 +68,10 @@
 		}
 	}
 	
-	function handleTabChange(tab: string) {
-		goto(`/timeline?tab=${tab}`, { replaceState: true, noScroll: true, keepFocus: true });
+	async function handleTabChange(tab: string) {
+		await goto(`/timeline?tab=${tab}`, { replaceState: true, noScroll: true });
+		// Invalidate to force reactivity update
+		invalidateAll();
 	}
 	
 	let filteredItems = $derived(getFilteredItems(searchQuery));
