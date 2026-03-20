@@ -12,6 +12,7 @@
 		activeTab?: string;
 		onTabChange?: (tab: string) => void;
 		viewLink: { href: string; icon: 'clock' | 'rss' };
+		activeView?: 'feeds' | 'global-timeline' | 'tab-timeline';
 		searchExpanded: boolean;
 		onSearchToggle: () => void;
 		onLogoClick?: () => void;
@@ -25,6 +26,7 @@
 		activeTab = 'all', 
 		onTabChange,
 		viewLink, 
+		activeView = 'feeds',
 		searchExpanded, 
 		onSearchToggle, 
 		onLogoClick,
@@ -34,6 +36,10 @@
 	
 	let resolvedThemeColors = $derived(getThemeColors(themeState.theme));
 	let headerElement: HTMLElement | undefined = $state();
+	
+	let isGlobalTimeline = $derived(activeView === 'global-timeline');
+	let isTabTimeline = $derived(activeView === 'tab-timeline');
+	let isFeeds = $derived(activeView === 'feeds');
 
 	function handleViewSwitch(e: Event) {
 		e.preventDefault();
@@ -115,10 +121,12 @@
 				<button 
 					onclick={() => goto('/timeline?tab=all')}
 					class="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+					class:bg-blue-100={isGlobalTimeline}
+					class:dark:bg-blue-900={isGlobalTimeline}
 					aria-label="Global Timeline"
 					title="Global Timeline"
 				>
-					<svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-slate-500 dark:text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+					<svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" class:text-slate-500={!isGlobalTimeline} class:dark:text-slate-400={!isGlobalTimeline} class:text-blue-600={isGlobalTimeline} class:dark:text-blue-400={isGlobalTimeline} fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
 						<circle cx="12" cy="12" r="10" />
 						<path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
 					</svg>
@@ -126,16 +134,18 @@
 				<button 
 					onclick={handleViewSwitch}
 					class="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+					class:bg-blue-100={isTabTimeline}
+					class:dark:bg-blue-900={isTabTimeline}
 					aria-label={viewLink.icon === 'clock' ? 'Tab Timeline view' : 'Feed view'}
 					title={viewLink.icon === 'clock' ? 'Timeline' : 'Feeds'}
 				>
 					{#if viewLink.icon === 'clock'}
-						<svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-slate-500 dark:text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+						<svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" class:text-slate-500={!isTabTimeline} class:dark:text-slate-400={!isTabTimeline} class:text-blue-600={isTabTimeline} class:dark:text-blue-400={isTabTimeline} fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
 							<circle cx="12" cy="12" r="10" />
 							<polyline points="12 6 12 12 16 14" />
 						</svg>
 					{:else}
-						<svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-slate-500 dark:text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+						<svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" class:text-slate-500={!isFeeds} class:dark:text-slate-400={!isFeeds} class:text-blue-600={isFeeds} class:dark:text-blue-400={isFeeds} fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
 							<path d="M4 11a9 9 0 0 1 9 9" />
 							<path d="M4 4a16 16 0 0 1 16 16" />
 							<circle cx="5" cy="19" r="1" fill="currentColor" />

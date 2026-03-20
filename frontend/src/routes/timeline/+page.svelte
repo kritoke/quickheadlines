@@ -75,6 +75,8 @@
 	
 	let filteredItems = $derived(getFilteredItems(searchQuery));
 	
+	let activeView: 'feeds' | 'global-timeline' | 'tab-timeline' = $derived(currentTab === 'all' ? 'global-timeline' : 'tab-timeline');
+	
 	let loading = $derived(isLoading(timelineState));
 	let error = $derived(isError(timelineState) ? getError(timelineState) : null);
 	
@@ -157,6 +159,7 @@
 			activeTab={currentTab}
 			onTabChange={handleTabChange}
 			viewLink={{ href: `/?tab=${currentTab}`, icon: 'rss' }}
+			{activeView}
 			{searchExpanded}
 			onSearchToggle={() => searchExpanded = !searchExpanded}
 			onLogoClick={handleLogoClick}
