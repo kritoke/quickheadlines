@@ -11,7 +11,8 @@
 		createTimelineEffects,
 	} from '$lib/stores/effects.svelte';
 	import { logger, initDebug, setDebugEnabled } from '$lib/utils/debug';
-	import { goto } from '$app/navigation';
+	import { goto, invalidateAll } from '$app/navigation';
+	import { page } from '$app/stores';
 	import { getFeedsTab, setFeedsTab } from '$lib/stores/navigation.svelte';
 	import { themeState } from '$lib/stores/theme.svelte';
 	import {
@@ -50,9 +51,7 @@
 	let visibilityHandler: (() => void) | null = null;
 	
 	let currentTab = $derived.by(() => {
-		if (typeof window === 'undefined') return 'all';
-		const params = new URLSearchParams(window.location.search);
-		const urlTab = params.get('tab');
+		const urlTab = $page.url.searchParams.get('tab');
 		return urlTab || getFeedsTab() || 'all';
 	});
 	
@@ -70,7 +69,7 @@
 	}
 	
 	function handleTabChange(tab: string) {
-		goto(`/timeline?tab=${tab}`, { keepFocus: false });
+		goto(`/timeline?tab=${tab}`, { replaceState: true, noScroll: true, keepFocus: true });
 	}
 	
 	let filteredItems = $derived(getFilteredItems(searchQuery));
