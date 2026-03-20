@@ -107,8 +107,12 @@
 			loadTabs();
 		}
 		
-		// Load timeline for the current tab
-		loadTimeline(false, tab);
+		// Only load timeline if not already loaded for this tab
+		const state = timelineState as typeof timelineState & { tabName: string };
+		if (state.tabName !== tab) {
+			loadTimeline(false, tab);
+		}
+		
 		loadTimelineConfig();
 		
 		if (!timelineEffects) {
