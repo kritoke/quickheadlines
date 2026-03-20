@@ -98,28 +98,27 @@
 		return () => observer.disconnect();
 	});
 	
+	// One-time initialization
 	$effect(() => {
-		const tab = currentTab;
+		if (effectsStarted) return;
+		effectsStarted = true;
 		
-		// Load tabs only once
-		if (tabs.length === 0) {
-			loadTabs();
-		}
+		// Load tabs
+		loadTabs();
 		
-		// Load timeline for the current tab
-		loadTimeline(false, tab);
+		// Load config
 		loadTimelineConfig();
 		
-		// Start effects only once
-		if (!effectsStarted) {
-			effectsStarted = true;
-			timelineEffects = createTimelineEffects();
-			timelineEffects.start();
+		// Start effects
+		timelineEffects = createTimelineEffects();
+		timelineEffects.start();
 
-			visibilityHandler = () => {
-			};
-			document.addEventListener('visibilitychange', visibilityHandler);
-		}
+		visibilityHandler = () => {
+		};
+		document.addEventListener('visibilitychange', visibilityHandler);
+		
+		// Initial load
+		loadTimeline(false, currentTab);
 		
 		return () => {
 			if (timelineEffects) {
@@ -131,6 +130,22 @@
 				visibilityHandler = null;
 			}
 		};
+	});
+	
+	// Watch for tab changes only
+	$effect(() => {
+		const tab = currentTab;
+		
+		// Check if we need to reload
+		if (effectsStarted && tab !== currentTabForEffect) {
+			const previous = currentTabForEffect;
+			currentTabForEffect = tab;
+			if (previous !== null && tab !== previous) {
+				loadTimeline(false, tab);
+			}
+		} else if (!currentTabForEffect) {
+			currentTabForEffect = tab;
+		}
 	});
 	
 	async function handleRetry() {
