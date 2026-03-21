@@ -11,8 +11,6 @@
 		tabs?: TabResponse[];
 		activeTab?: string;
 		onTabChange?: (tab: string) => void;
-		viewHref?: string;
-		viewIcon?: 'clock' | 'rss';
 		activeView?: 'feeds' | 'global-timeline' | 'tab-timeline';
 		searchExpanded: boolean;
 		onSearchToggle: () => void;
@@ -26,8 +24,6 @@
 		tabs = [], 
 		activeTab = 'all', 
 		onTabChange,
-		viewHref = '', 
-		viewIcon = 'clock',
 		activeView = 'feeds',
 		searchExpanded, 
 		onSearchToggle, 
@@ -42,11 +38,23 @@
 	let isGlobalTimeline = $derived(activeView === 'global-timeline');
 	let isTabTimeline = $derived(activeView === 'tab-timeline');
 	let isFeeds = $derived(activeView === 'feeds');
+	
+	// Determine icon based on current path - no prop needed
+	let isOnTimeline = $derived(typeof window !== 'undefined' && window.location.pathname.startsWith('/timeline'));
+	let showClockIcon = $derived(isOnTimeline ? false : true); // Show clock when on feed page (to go to timeline)
 
 	function handleViewSwitch(e: Event) {
 		e.preventDefault();
-		// Use the pre-computed href from parent page - it's already correct based on URL
-		goto(viewHref);
+		// Read current tab from URL directly - this is the single source of truth
+		const params = new URLSearchParams(window.location.search);
+		const currentTab = params.get('tab') || 'all';
+		
+		// Toggle between timeline and feed view based on current page
+		if (window.location.pathname.startsWith('/timeline')) {
+			goto(`/?tab=${currentTab}`);
+		} else {
+			goto(`/timeline?tab=${currentTab}`);
+		}
 	}
 
 	function handleLogoClick(e: Event) {
@@ -137,10 +145,10 @@
 					onclick={handleViewSwitch}
 					class="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
 					style="background-color: {isTabTimeline ? resolvedThemeColors.bgSecondary : 'transparent'}"
-					aria-label={viewIcon === 'clock' ? 'Tab Timeline view' : 'Feed view'}
-					title={viewIcon === 'clock' ? 'Timeline' : 'Feeds'}
+					aria-label={showClockIcon ? 'Tab Timeline view' : 'Feed view'}
+					title={showClockIcon ? 'Timeline' : 'Feeds'}
 				>
-					{#if viewIcon === 'clock'}
+					{#if showClockIcon}
 						<svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" style="color: {isTabTimeline ? resolvedThemeColors.accent : '#94a3b8'}" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
 							<circle cx="12" cy="12" r="10" />
 							<polyline points="12 6 12 12 16 14" />

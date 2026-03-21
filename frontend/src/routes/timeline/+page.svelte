@@ -169,8 +169,6 @@
 			tabs={tabs}
 			activeTab={currentTab}
 			onTabChange={handleTabChange}
-			viewHref={`/?tab=${currentTab}`}
-			viewIcon="rss"
 			{activeView}
 			{searchExpanded}
 			onSearchToggle={() => searchExpanded = !searchExpanded}
