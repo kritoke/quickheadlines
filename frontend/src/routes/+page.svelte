@@ -10,6 +10,7 @@
 	import { createFeedEffects } from '$lib/stores/effects.svelte';
 	import { logger, initDebug, setDebugEnabled } from '$lib/utils/debug';
 	import { goto } from '$app/navigation';
+	import { page } from '$app/stores';
 	import { setFeedsTab, getFeedsTab, resetScroll } from '$lib/stores/navigation.svelte';
 	import {
 		feedState,
@@ -36,6 +37,7 @@
 	let searchQuery = $state('');
 	let searchExpanded = $state(false);
 	let tabChangeTimeout: ReturnType<typeof setTimeout> | null = null;
+	let initialized = $state(false);
 
 	let feedEffects: ReturnType<typeof createFeedEffects> | null = null;
 
@@ -47,17 +49,25 @@
 
 	let loading = $derived(isLoading(feedState) || isRefreshing(feedState));
 	let error = $derived(isError(feedState) ? getError(feedState) : null);
-	let currentTab = $derived(feedState.activeTab);
+	
+	// Single source of truth: URL parameter
+	let currentTab = $derived.by(() => {
+		const urlTab = $page.url.searchParams.get('tab');
+		return urlTab || 'all';
+	});
+	
 	let timelineLink = $derived('/timeline?tab=' + currentTab);
 
 	async function handleTabChange(tab: string) {
 		if (tabChangeTimeout) clearTimeout(tabChangeTimeout);
 		
 		tabChangeTimeout = setTimeout(async () => {
+			// Update URL (single source of truth)
 			const url = new URL(window.location.href);
 			url.searchParams.set('tab', tab);
 			history.replaceState({}, '', url.toString());
 			
+			// Sync state
 			setActiveTab(tab);
 			setFeedsTab(tab);
 			
@@ -75,37 +85,46 @@
 	}
 	
 	async function handleRetry() {
-		await loadFeeds(feedState.activeTab, true);
+		await loadFeeds(currentTab, true);
 	}
 	
+	// One-time initialization
 	$effect(() => {
-		logger.log('[Page] $effect running, mounted:', feedState.status);
-		const initialized = feedState.status !== 'idle' || feedState.feeds.length > 0;
+		if (initialized) return;
+		initialized = true;
 		
-		if (!initialized) {
-			logger.log('[Page] Initializing, loading feeds...');
-			const params = new URLSearchParams(window.location.search);
-			const urlTab = params.get('tab') || getFeedsTab() || 'all';
-			
+		logger.log('[Page] Initializing feeds...');
+		
+		// Load initial data with URL tab
+		const urlTab = currentTab;
+		setActiveTab(urlTab);
+		setFeedsTab(urlTab);
+		loadFeeds(urlTab, true);
+		loadFeedConfig();
+		initDebug();
+		
+		websocketConnection.connect();
+		const handleWebSocketMessage = (message: any) => {
+			if (message.type === 'feed_update') {
+				logger.log('[FeedPage] Feed update received, reloading...');
+				loadFeeds(currentTab, true);
+			}
+		};
+		websocketConnection.addEventListener(handleWebSocketMessage);
+
+		return () => {
+			if (tabChangeTimeout) clearTimeout(tabChangeTimeout);
+		};
+	});
+	
+	// Watch for URL tab changes (from timeline navigation) and sync
+	$effect(() => {
+		const urlTab = $page.url.searchParams.get('tab');
+		if (urlTab && urlTab !== feedState.activeTab && initialized) {
+			logger.log('[Page] URL tab changed to:', urlTab);
 			setActiveTab(urlTab);
 			setFeedsTab(urlTab);
-			loadFeeds(urlTab, true);
-			loadFeedConfig();
-			initDebug();
-			
-			websocketConnection.connect();
-			const handleWebSocketMessage = (message: any) => {
-				if (message.type === 'feed_update') {
-					logger.log('[FeedPage] Feed update received, reloading...');
-					loadFeeds(feedState.activeTab, true);
-				} else if (message.type === 'clustering_status') {
-				}
-			};
-			websocketConnection.addEventListener(handleWebSocketMessage);
-
-			return () => {
-				if (tabChangeTimeout) clearTimeout(tabChangeTimeout);
-			};
+			loadFeeds(urlTab);
 		}
 	});
 	
