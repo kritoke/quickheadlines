@@ -38,6 +38,7 @@
 	let searchExpanded = $state(false);
 	let tabChangeTimeout: ReturnType<typeof setTimeout> | null = null;
 	let initialized = $state(false);
+	let lastLoadedTab = $state<string | null>(null);
 
 	let feedEffects: ReturnType<typeof createFeedEffects> | null = null;
 
@@ -97,6 +98,7 @@
 		
 		// Load initial data with URL tab
 		const urlTab = currentTab;
+		lastLoadedTab = urlTab;
 		setActiveTab(urlTab);
 		setFeedsTab(urlTab);
 		loadFeeds(urlTab, true);
@@ -118,10 +120,13 @@
 	});
 	
 	// Watch for URL tab changes (from timeline navigation) and sync
+	// Always check URL against lastLoadedTab to detect navigation between views
 	$effect(() => {
-		const urlTab = $page.url.searchParams.get('tab');
-		if (urlTab && urlTab !== feedState.activeTab && initialized) {
-			logger.log('[Page] URL tab changed to:', urlTab);
+		const urlTab = $page.url.searchParams.get('tab') || 'all';
+		// Reload if URL tab differs from what we last loaded
+		if (urlTab !== lastLoadedTab) {
+			logger.log('[Page] URL tab changed to:', urlTab, 'lastLoaded:', lastLoadedTab);
+			lastLoadedTab = urlTab;
 			setActiveTab(urlTab);
 			setFeedsTab(urlTab);
 			loadFeeds(urlTab);
