@@ -169,7 +169,8 @@
 			tabs={tabs}
 			activeTab={currentTab}
 			onTabChange={handleTabChange}
-			viewLink={{ href: `/?tab=${currentTab}`, icon: 'rss' }}
+			viewHref={`/?tab=${currentTab}`}
+			viewIcon="rss"
 			{activeView}
 			{searchExpanded}
 			onSearchToggle={() => searchExpanded = !searchExpanded}

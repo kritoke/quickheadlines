@@ -11,7 +11,8 @@
 		tabs?: TabResponse[];
 		activeTab?: string;
 		onTabChange?: (tab: string) => void;
-		viewLink: { href: string; icon: 'clock' | 'rss' };
+		viewHref?: string;
+		viewIcon?: 'clock' | 'rss';
 		activeView?: 'feeds' | 'global-timeline' | 'tab-timeline';
 		searchExpanded: boolean;
 		onSearchToggle: () => void;
@@ -25,7 +26,8 @@
 		tabs = [], 
 		activeTab = 'all', 
 		onTabChange,
-		viewLink, 
+		viewHref = '', 
+		viewIcon = 'clock',
 		activeView = 'feeds',
 		searchExpanded, 
 		onSearchToggle, 
@@ -44,7 +46,7 @@
 	function handleViewSwitch(e: Event) {
 		e.preventDefault();
 		// Use the pre-computed href from parent page - it's already correct based on URL
-		goto(viewLink.href);
+		goto(viewHref);
 	}
 
 	function handleLogoClick(e: Event) {
@@ -135,10 +137,10 @@
 					onclick={handleViewSwitch}
 					class="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
 					style="background-color: {isTabTimeline ? resolvedThemeColors.bgSecondary : 'transparent'}"
-					aria-label={viewLink.icon === 'clock' ? 'Tab Timeline view' : 'Feed view'}
-					title={viewLink.icon === 'clock' ? 'Timeline' : 'Feeds'}
+					aria-label={viewIcon === 'clock' ? 'Tab Timeline view' : 'Feed view'}
+					title={viewIcon === 'clock' ? 'Timeline' : 'Feeds'}
 				>
-					{#if viewLink.icon === 'clock'}
+					{#if viewIcon === 'clock'}
 						<svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" style="color: {isTabTimeline ? resolvedThemeColors.accent : '#94a3b8'}" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
 							<circle cx="12" cy="12" r="10" />
 							<polyline points="12 6 12 12 16 14" />

@@ -150,7 +150,8 @@
 			tabs={feedState.tabs}
 			activeTab={feedState.activeTab}
 			onTabChange={handleTabChange}
-			viewLink={{ href: timelineLink, icon: 'clock' }}
+			viewHref={timelineLink}
+			viewIcon="clock"
 			activeView="feeds"
 			{searchExpanded}
 			onSearchToggle={() => searchExpanded = !searchExpanded}
