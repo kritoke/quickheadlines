@@ -122,6 +122,9 @@
 		loadTimeline(false, currentTab);
 		lastLoadedTab = currentTab;
 		
+		// Sync feedState.activeTab so AppHeader can read it when switching views
+		setActiveTab(currentTab);
+		
 		return () => {
 			if (timelineEffects) {
 				timelineEffects.stop();
@@ -136,6 +139,8 @@
 	$effect(() => {
 		const tab = currentTab;
 		if (effectsStarted && tab !== lastLoadedTab) {
+			// Sync feedState.activeTab so AppHeader gets correct tab when switching views
+			setActiveTab(tab);
 			loadTimeline(false, tab);
 			lastLoadedTab = tab;
 		}
