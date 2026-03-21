@@ -3,6 +3,7 @@
 	import ThemePicker from './ThemePicker.svelte';
 	import TabSelector from './TabSelector.svelte';
 	import { goto } from '$app/navigation';
+	import { page } from '$app/stores';
 	import type { TabResponse } from '$lib/types';
 	import { spacing } from '$lib/design/tokens';
 
@@ -39,18 +40,15 @@
 	let isTabTimeline = $derived(activeView === 'tab-timeline');
 	let isFeeds = $derived(activeView === 'feeds');
 	
-	// Determine icon based on current path - no prop needed
-	let isOnTimeline = $derived(typeof window !== 'undefined' && window.location.pathname.startsWith('/timeline'));
-	let showClockIcon = $derived(isOnTimeline ? false : true); // Show clock when on feed page (to go to timeline)
+	// Use $page store for reactive path tracking
+	let currentPath = $derived($page.url?.pathname ?? '/');
+	let currentTab = $derived($page.url?.searchParams.get('tab') ?? 'all');
+	let isOnTimeline = $derived(currentPath.startsWith('/timeline'));
+	let showClockIcon = $derived(!isOnTimeline);
 
-	function handleViewSwitch(e: Event) {
-		e.preventDefault();
-		// Read current tab from URL directly - this is the single source of truth
-		const params = new URLSearchParams(window.location.search);
-		const currentTab = params.get('tab') || 'all';
-		
-		// Toggle between timeline and feed view based on current page
-		if (window.location.pathname.startsWith('/timeline')) {
+	function handleViewSwitch() {
+		// Use reactive currentTab value - already computed from $page
+		if (isOnTimeline) {
 			goto(`/?tab=${currentTab}`);
 		} else {
 			goto(`/timeline?tab=${currentTab}`);
