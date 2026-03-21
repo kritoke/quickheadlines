@@ -5,7 +5,6 @@
 	import { goto } from '$app/navigation';
 	import type { TabResponse } from '$lib/types';
 	import { spacing } from '$lib/design/tokens';
-	import { feedState } from '$lib/stores/feedStore.svelte';
 
 	interface Props {
 		title: string;
@@ -44,9 +43,8 @@
 
 	function handleViewSwitch(e: Event) {
 		e.preventDefault();
-		// Use feedState's activeTab which persists across views
-		const currentTab = feedState.activeTab || 'all';
-		goto(viewLink.icon === 'clock' ? `/timeline?tab=${currentTab}` : viewLink.href);
+		// Use the pre-computed href from parent page - it's already correct based on URL
+		goto(viewLink.href);
 	}
 
 	function handleLogoClick(e: Event) {
