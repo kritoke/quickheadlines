@@ -40,15 +40,15 @@
 	let isTabTimeline = $derived(activeView === 'tab-timeline');
 	let isFeeds = $derived(activeView === 'feeds');
 	
-	// Use $page store for reactive path tracking
-	let currentPath = $derived($page.url?.pathname ?? '/');
-	let currentTab = $derived($page.url?.searchParams.get('tab') ?? 'all');
-	let isOnTimeline = $derived(currentPath.startsWith('/timeline'));
-	let showClockIcon = $derived(!isOnTimeline);
+	// Determine which icon to show based on current page
+	let showClockIcon = $derived($page.url?.pathname !== '/timeline');
 
 	function handleViewSwitch() {
-		// Use reactive currentTab value - already computed from $page
-		if (isOnTimeline) {
+		// Read current tab directly from URL - this is the single source of truth
+		const currentTab = $page.url.searchParams.get('tab') || 'all';
+		
+		// Toggle between timeline and feed view based on current page
+		if ($page.url.pathname.startsWith('/timeline')) {
 			goto(`/?tab=${currentTab}`);
 		} else {
 			goto(`/timeline?tab=${currentTab}`);

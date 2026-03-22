@@ -52,8 +52,7 @@
 	let visibilityHandler: (() => void) | null = null;
 	
 	let currentTab = $derived.by(() => {
-		const urlTab = $page.url.searchParams.get('tab');
-		return urlTab || feedState.activeTab || getFeedsTab() || 'all';
+		return $page.url.searchParams.get('tab') || 'all';
 	});
 	
 	let tabs = $state<TabResponse[]>([]);
@@ -103,8 +102,10 @@
 		return () => observer.disconnect();
 	});
 	
-	// Use onMount for initialization - runs once when component mounts
-	onMount(() => {
+	// Use $effect for initialization - runs when component mounts and responds to changes
+	$effect(() => {
+		if (effectsStarted) return;
+		
 		// Load tabs
 		loadTabs();
 		
@@ -118,7 +119,7 @@
 		document.addEventListener('visibilitychange', visibilityHandler);
 		effectsStarted = true;
 		
-		// Initial load
+		// Initial load with current tab
 		loadTimeline(false, currentTab);
 		lastLoadedTab = currentTab;
 		
@@ -135,7 +136,7 @@
 		};
 	});
 	
-	// Watch for tab changes - only runs when currentTab changes (not when timelineState changes)
+	// Watch for tab changes - responds to URL changes
 	$effect(() => {
 		const tab = currentTab;
 		if (effectsStarted && tab !== lastLoadedTab) {
@@ -252,6 +253,10 @@
 			{:else if searchQuery}
 				<div class="text-center py-20 text-slate-500 dark:text-slate-400">
 					No results for "{searchQuery}". Try a different search term.
+				</div>
+			{:else if !loading && timelineState.items.length === 0}
+				<div class="text-center py-20 text-slate-500 dark:text-slate-400">
+					No items found for this tab. Try refreshing or checking back later.
 				</div>
 			{/if}
 
