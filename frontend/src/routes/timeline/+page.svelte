@@ -2,8 +2,8 @@
 	import AppHeader from '$lib/components/AppHeader.svelte';
 	import LayoutPicker from '$lib/components/LayoutPicker.svelte';
 	import BitsSearchModal from '$lib/components/BitsSearchModal.svelte';
-	import { fetchTimeline, fetchConfig } from '$lib/api';
-	import type { TimelineItemResponse } from '$lib/types';
+	import { fetchFeeds, fetchTimeline, fetchConfig } from '$lib/api';
+	import type { TimelineItemResponse, TabResponse } from '$lib/types';
 	import { SvelteSet } from 'svelte/reactivity';
 	import {
 		createTimelineEffects,
@@ -44,6 +44,7 @@
 
 	let searchQuery = $state('');
 	let searchExpanded = $state(false);
+	let tabs = $state<TabResponse[]>([]);
 	let timelineEffects: ReturnType<typeof createTimelineEffects> | null = null;
 	let sentinelElement: HTMLDivElement | undefined = $state();
 	let visibilityHandler: (() => void) | null = null;
@@ -82,6 +83,7 @@
       const currentTab = $page.url?.searchParams.get('tab') ?? 'all';
       loadTimeline(false, currentTab);
       loadTimelineConfig();
+      loadTabs();
       
       timelineEffects = createTimelineEffects();
       timelineEffects.start();
@@ -102,25 +104,33 @@
     };
   });
   
-  // Watch for URL changes and reload when tab changes
+	// Watch for URL changes and reload when tab changes
   $effect(() => {
     const urlTab = $page.url?.searchParams.get('tab') ?? 'all';
     if (urlTab !== timelineState.tabName) {
       loadTimeline(false, urlTab);
     }
   });
-  
-  // Watch for URL changes and reload when tab changes
-  $effect(() => {
-    const urlTab = $page.url?.searchParams.get('tab') ?? 'all';
-    if (urlTab !== timelineState.tabName) {
-      loadTimeline(false, urlTab);
+ 	
+  async function handleRetry() {
+    const currentTab = $page.url?.searchParams.get('tab') ?? 'all';
+    await loadTimeline(false, currentTab);
+  }
+
+  // Load tabs data
+  async function loadTabs() {
+    try {
+      const response = await fetchFeeds('all');
+      tabs = response.tabs;
+    } catch (e) {
+      logger.log('[Timeline] Failed to load tabs:', e);
     }
-  });
-	
-	async function handleRetry() {
-		await loadTimeline();
-	}
+  }
+
+  // Handle tab changes
+  async function handleTabChange(tab: string) {
+    await goto(`/timeline?tab=${tab}`, { replaceState: true, noScroll: true });
+  }
 
 	function handleLogoClick() {
 		const params = new URLSearchParams(window.location.search);
@@ -138,6 +148,9 @@
 <div class="min-h-screen theme-bg-primary transition-colors">
 	<AppHeader 
 		title="QuickHeadlines"
+		tabs={tabs}
+		activeTab={$page.url?.searchParams.get('tab') ?? 'all'}
+		onTabChange={handleTabChange}
 		viewLink={{ href: '/', icon: 'rss' }}
 		{searchExpanded}
 		onSearchToggle={() => searchExpanded = !searchExpanded}
