@@ -5,12 +5,11 @@
 	import BitsSearchModal from '$lib/components/BitsSearchModal.svelte';
 	import { fetchFeeds, fetchMoreFeedItems, fetchConfig } from '$lib/api';
 	import type { FeedResponse, FeedsPageResponse } from '$lib/types';
-	import { themeState, toggleEffects } from '$lib/stores/theme.svelte';
-	import { websocketConnection } from '$lib/websocket';
+import { themeState, toggleEffects } from '$lib/stores/theme.svelte';
+import { websocketConnection } from '$lib/websocket';
+import { NavigationService } from '$lib/services/navigationService';
 	import { createFeedEffects } from '$lib/stores/effects.svelte';
 	import { logger, initDebug, setDebugEnabled } from '$lib/utils/debug';
-	import { goto } from '$app/navigation';
-	import { setFeedsTab, getFeedsTab, resetScroll } from '$lib/stores/navigation.svelte';
 	import {
 		feedState,
 		loadFeeds,
@@ -54,12 +53,8 @@
 		if (tabChangeTimeout) clearTimeout(tabChangeTimeout);
 		
 		tabChangeTimeout = setTimeout(async () => {
-			const url = new URL(window.location.href);
-			url.searchParams.set('tab', tab);
-			history.replaceState({}, '', url.toString());
-			
-			setActiveTab(tab);
-			setFeedsTab(tab);
+			// Use navigation service for consistent URL handling
+			await NavigationService.navigateToFeeds(tab);
 			
 			// Scroll to top IMMEDIATELY when tab is clicked
 			window.scrollTo(0, 0);
@@ -85,10 +80,8 @@
 		if (!initialized) {
 			logger.log('[Page] Initializing, loading feeds...');
 			const params = new URLSearchParams(window.location.search);
-			const urlTab = params.get('tab') || getFeedsTab() || 'all';
+			const urlTab = params.get('tab') || 'all';
 			
-			setActiveTab(urlTab);
-			setFeedsTab(urlTab);
 			loadFeeds(urlTab, true);
 			loadFeedConfig();
 			initDebug();
@@ -97,7 +90,9 @@
 			const handleWebSocketMessage = (message: any) => {
 				if (message.type === 'feed_update') {
 					logger.log('[FeedPage] Feed update received, reloading...');
-					loadFeeds(feedState.activeTab, true);
+					const params = new URLSearchParams(window.location.search);
+					const currentTab = params.get('tab') || 'all';
+					loadFeeds(currentTab, true);
 				} else if (message.type === 'clustering_status') {
 				}
 			};
@@ -110,13 +105,7 @@
 	});
 	
 	async function handleLogoClick() {
-		const currentTab = feedState.activeTab;
-		
-		const url = new URL(window.location.href);
-		url.searchParams.set('tab', currentTab);
-		window.history.replaceState({}, '', url);
-		
-		await loadFeeds(currentTab, true);
+		await NavigationService.navigateToGlobalFeeds();
 	}
 </script>
 
@@ -124,9 +113,9 @@
 		<AppHeader 
 			title="QuickHeadlines"
 			tabs={feedState.tabs}
-			activeTab={feedState.activeTab}
+			activeTab={NavigationService.getCurrentTab()}
 			onTabChange={handleTabChange}
-			viewLink={{ href: timelineLink, icon: 'clock' }}
+			viewLink={{ href: '/timeline', icon: 'clock' }}
 			{searchExpanded}
 			onSearchToggle={() => searchExpanded = !searchExpanded}
 			onLogoClick={handleLogoClick}

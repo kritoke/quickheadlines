@@ -10,8 +10,8 @@
 	} from '$lib/stores/effects.svelte';
   import { logger, initDebug, setDebugEnabled } from '$lib/utils/debug';
   import { goto } from '$app/navigation';
+  import { NavigationService } from '$lib/services/navigationService';
   import { page } from '$app/stores';
-  import { getFeedsTab } from '$lib/stores/navigation.svelte';
 	import { themeState } from '$lib/stores/theme.svelte';
 	import {
 		timelineState,
@@ -120,15 +120,11 @@
 
   // Handle tab changes
   async function handleTabChange(tab: string) {
-    await goto(`/timeline?tab=${tab}`, { replaceState: true, noScroll: true });
+    await NavigationService.navigateToTimeline(tab);
   }
 
 	function handleLogoClick() {
-		const params = new URLSearchParams(window.location.search);
-		const urlTab = params.get('tab');
-		const savedTab = getFeedsTab();
-		const tab = urlTab || savedTab || 'all';
-		goto('/?tab=' + tab);
+		NavigationService.navigateToFeeds();
 	}
 </script>
 
@@ -140,7 +136,7 @@
 	<AppHeader 
 		title="QuickHeadlines"
 		tabs={tabs}
-		activeTab={$page.url?.searchParams.get('tab') ?? 'all'}
+		activeTab={NavigationService.getCurrentTab()}
 		onTabChange={handleTabChange}
 		viewLink={{ href: '/', icon: 'rss' }}
 		{searchExpanded}

@@ -9,7 +9,6 @@ export type { LoadStatus };
 type BaseFeedState = {
 	feeds: FeedResponse[];
 	tabs: { name: string }[];
-	activeTab: string;
 	lastUpdated: number | null;
 	loadingFeeds: Record<string, boolean>;
 	tabCache: Record<string, { feeds: FeedResponse[]; loaded: boolean }>;
@@ -28,7 +27,6 @@ export { isIdle, isLoading, isRefreshing, isError, getError };
 const initialBaseState: BaseFeedState = {
 	feeds: [],
 	tabs: [],
-	activeTab: 'all',
 	lastUpdated: null,
 	loadingFeeds: {},
 	tabCache: {},
@@ -132,10 +130,9 @@ export function resetFeedStore(): void {
 	Object.assign(feedState, { ...initialState });
 }
 
-export async function loadFeeds(tab: string = feedState.activeTab, force: boolean = false): Promise<void> {
+export async function loadFeeds(tab: string, force: boolean = false): Promise<void> {
 	if (!force && feedState.tabCache[tab]?.loaded) {
 		feedState.feeds = feedState.tabCache[tab].feeds;
-		feedState.activeTab = tab;
 		return;
 	}
 
@@ -174,13 +171,7 @@ export async function loadFeedConfig(): Promise<number> {
 	}
 }
 
-export function setActiveTab(tab: string): void {
-	feedState.activeTab = tab;
-	
-	if (feedState.tabCache[tab]?.loaded) {
-		feedState.feeds = feedState.tabCache[tab].feeds;
-	}
-}
+
 
 export function getFilteredFeeds(query: string): FeedResponse[] {
 	if (!query.trim()) return feedState.feeds;

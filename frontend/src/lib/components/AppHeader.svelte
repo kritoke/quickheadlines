@@ -35,8 +35,7 @@
 	let resolvedThemeColors = $derived(getThemeColors(themeState.theme));
 	let headerElement: HTMLElement | undefined = $state();
 
-	function handleViewSwitch(e: Event) {
-		e.preventDefault();
+	function handleViewSwitch() {
 		goto(viewLink.href);
 	}
 
