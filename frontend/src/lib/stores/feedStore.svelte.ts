@@ -9,6 +9,7 @@ export type { LoadStatus };
 type BaseFeedState = {
 	feeds: FeedResponse[];
 	tabs: { name: string }[];
+	activeTab: string;
 	lastUpdated: number | null;
 	loadingFeeds: Record<string, boolean>;
 	tabCache: Record<string, { feeds: FeedResponse[]; loaded: boolean }>;
@@ -27,6 +28,7 @@ export { isIdle, isLoading, isRefreshing, isError, getError };
 const initialBaseState: BaseFeedState = {
 	feeds: [],
 	tabs: [],
+	activeTab: 'all',
 	lastUpdated: null,
 	loadingFeeds: {},
 	tabCache: {},
@@ -126,11 +128,20 @@ export function setRefreshMinutes(state: FeedState, minutes: number): FeedState 
 	};
 }
 
+export function setActiveTab(state: FeedState, tab: string): FeedState {
+	return {
+		...state,
+		activeTab: tab
+	};
+}
+
 export function resetFeedStore(): void {
 	Object.assign(feedState, { ...initialState });
 }
 
 export async function loadFeeds(tab: string, force: boolean = false): Promise<void> {
+	Object.assign(feedState, setActiveTab(feedState, tab));
+	
 	if (!force && feedState.tabCache[tab]?.loaded) {
 		feedState.feeds = feedState.tabCache[tab].feeds;
 		return;

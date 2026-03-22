@@ -15,7 +15,6 @@ import { NavigationService } from '$lib/services/navigationService';
 		loadFeeds,
 		loadMoreFeedItems,
 		loadFeedConfig,
-		setActiveTab,
 		getFilteredFeeds,
 		isLoading,
 		isRefreshing,
