@@ -8,9 +8,10 @@
 	import {
 		createTimelineEffects,
 	} from '$lib/stores/effects.svelte';
-	import { logger, initDebug, setDebugEnabled } from '$lib/utils/debug';
-	import { goto } from '$app/navigation';
-	import { getFeedsTab } from '$lib/stores/navigation.svelte';
+  import { logger, initDebug, setDebugEnabled } from '$lib/utils/debug';
+  import { goto } from '$app/navigation';
+  import { page } from '$app/stores';
+  import { getFeedsTab } from '$lib/stores/navigation.svelte';
 	import { themeState } from '$lib/stores/theme.svelte';
 	import {
 		timelineState,
@@ -71,31 +72,51 @@
 		return () => observer.disconnect();
 	});
 	
-	$effect(() => {
-		const initialized = timelineState.status !== 'idle' || timelineState.items.length > 0;
-		
-		if (!initialized) {
-			loadTimeline();
-			loadTimelineConfig();
-			
-			timelineEffects = createTimelineEffects();
-			timelineEffects.start();
+  let currentTab = $derived($page.url?.searchParams.get('tab') ?? 'all');
+  
+  $effect(() => {
+    const initialized = timelineState.status !== 'idle' || timelineState.items.length > 0;
+    
+    if (!initialized) {
+      // Get current tab from URL
+      const currentTab = $page.url?.searchParams.get('tab') ?? 'all';
+      loadTimeline(false, currentTab);
+      loadTimelineConfig();
+      
+      timelineEffects = createTimelineEffects();
+      timelineEffects.start();
 
-			visibilityHandler = () => {
-			};
-			document.addEventListener('visibilitychange', visibilityHandler);
-		}
-		
-		return () => {
-			if (timelineEffects) {
-				timelineEffects.stop();
-			}
-			if (visibilityHandler) {
-				document.removeEventListener('visibilitychange', visibilityHandler);
-				visibilityHandler = null;
-			}
-		};
-	});
+      visibilityHandler = () => {
+      };
+      document.addEventListener('visibilitychange', visibilityHandler);
+    }
+    
+    return () => {
+      if (timelineEffects) {
+        timelineEffects.stop();
+      }
+      if (visibilityHandler) {
+        document.removeEventListener('visibilitychange', visibilityHandler);
+        visibilityHandler = null;
+      }
+    };
+  });
+  
+  // Watch for URL changes and reload when tab changes
+  $effect(() => {
+    const urlTab = $page.url?.searchParams.get('tab') ?? 'all';
+    if (urlTab !== timelineState.tabName) {
+      loadTimeline(false, urlTab);
+    }
+  });
+  
+  // Watch for URL changes and reload when tab changes
+  $effect(() => {
+    const urlTab = $page.url?.searchParams.get('tab') ?? 'all';
+    if (urlTab !== timelineState.tabName) {
+      loadTimeline(false, urlTab);
+    }
+  });
 	
 	async function handleRetry() {
 		await loadTimeline();

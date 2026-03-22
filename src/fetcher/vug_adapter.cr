@@ -33,7 +33,7 @@ module VugAdapter
   end
 
   def self.fetch_for_site(site_url : String) : Vug::Result
-    Vug.fetch_for_site(site_url, config, CACHE)
+    Vug.fetch(site_url, config, CACHE)
   end
 
   def self.google_favicon_url(domain : String) : String
