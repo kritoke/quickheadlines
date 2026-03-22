@@ -46,6 +46,7 @@
 	let searchExpanded = $state(false);
 	let tabs = $state<TabResponse[]>([]);
 	let timelineEffects: ReturnType<typeof createTimelineEffects> | null = null;
+	let initialized = false;
 	let sentinelElement: HTMLDivElement | undefined = $state();
 	let visibilityHandler: (() => void) | null = null;
 	
@@ -76,38 +77,28 @@
   let currentTab = $derived($page.url?.searchParams.get('tab') ?? 'all');
   
   $effect(() => {
-    const initialized = timelineState.status !== 'idle' || timelineState.items.length > 0;
+    if (initialized) return;
     
-    if (!initialized) {
-      // Get current tab from URL
-      const currentTab = $page.url?.searchParams.get('tab') ?? 'all';
-      loadTimeline(false, currentTab);
-      loadTimelineConfig();
-      loadTabs();
-      
-      timelineEffects = createTimelineEffects();
-      timelineEffects.start();
+    // Get current tab from URL
+    const currentTab = $page.url?.searchParams.get('tab') ?? 'all';
+    loadTimeline(false, currentTab);
+    loadTimelineConfig();
+    loadTabs();
+    
+    timelineEffects = createTimelineEffects();
+    timelineEffects.start();
 
-      visibilityHandler = () => {
-      };
-      document.addEventListener('visibilitychange', visibilityHandler);
-    }
-    
-    return () => {
-      if (timelineEffects) {
-        timelineEffects.stop();
-      }
-      if (visibilityHandler) {
-        document.removeEventListener('visibilitychange', visibilityHandler);
-        visibilityHandler = null;
-      }
+    visibilityHandler = () => {
     };
+    document.addEventListener('visibilitychange', visibilityHandler);
+    
+    initialized = true;
   });
   
-	// Watch for URL changes and reload when tab changes
+  // Watch for URL changes and reload when tab changes
   $effect(() => {
     const urlTab = $page.url?.searchParams.get('tab') ?? 'all';
-    if (urlTab !== timelineState.tabName) {
+    if (initialized && urlTab !== timelineState.tabName) {
       loadTimeline(false, urlTab);
     }
   });
