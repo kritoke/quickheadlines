@@ -325,7 +325,16 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
       state = StateStore.get
       tabs_snapshot = state.tabs
       found_tab = tabs_snapshot.find { |t| t.name.downcase == tab.downcase }
-      if found_tab
+      
+      # FALLBACK: if StateStore is empty or tab has no feeds, load from cache
+      if found_tab.nil? || found_tab.feeds.empty?
+        cache = FeedCache.instance
+        _, tabs_hash = load_feeds_from_cache_fallback(cache)
+        found_tab_hash = tabs_hash.find { |t| t[:name].downcase == tab.downcase }
+        if found_tab_hash
+          allowed_feed_urls = found_tab_hash[:feeds].map(&.url)
+        end
+      elsif found_tab
         allowed_feed_urls = found_tab.feeds.map(&.url)
       end
     end
