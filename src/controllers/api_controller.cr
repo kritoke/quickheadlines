@@ -25,7 +25,7 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
     "lh3.googleusercontent.com",
     "i.pravatar.cc",
     "images.unsplash.com",
-    "fastly.picsum.photos"
+    "fastly.picsum.photos",
   }
 
   def self.new : self
@@ -41,9 +41,9 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
       uri = URI.parse(url)
       return false unless uri.scheme.in?("http", "https")
       return false unless uri.host
-      
+
       host = uri.host.as(String).downcase
-      
+
       # Check for private network ranges
       return false if host == "localhost"
       return false if host.starts_with?("127.")
@@ -51,7 +51,7 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
       return false if host.starts_with?("10.")
       return false if host.starts_with?("172.16.") || host.starts_with?("172.17.") || host.starts_with?("172.18.") || host.starts_with?("172.19.") || host.starts_with?("172.2") || host.starts_with?("172.30.") || host.starts_with?("172.31.")
       return false if host.starts_with?("169.254.")
-      
+
       ALLOWED_DOMAINS.includes?(host)
     rescue
       false
@@ -385,7 +385,7 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
   def tabs : ATH::View(TabsResponse)
     state = StateStore.get
     tabs_snapshot = state.tabs
-    
+
     # Fallback: if STATE is empty, read from config
     if tabs_snapshot.empty?
       config = STATE.config
@@ -393,11 +393,11 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
         tabs_snapshot = config.tabs
       end
     end
-    
+
     tabs_response = tabs_snapshot.map do |tab|
       TabResponse.new(name: tab.name)
     end
-    
+
     view(TabsResponse.new(tabs: tabs_response))
   end
 
@@ -606,7 +606,7 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
     limiter = RateLimiter.get_or_create("cluster", 1, 60)
     # Use simple key since Athena doesn't provide remote_ip directly
     client_key = "cluster_endpoint"
-    
+
     unless limiter.allowed?(client_key)
       retry_after = limiter.retry_after(client_key)
       return ATH::Response.new(
@@ -614,7 +614,7 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
         429,
         HTTP::Headers{
           "content-type" => "text/plain",
-          "Retry-After" => retry_after.to_s
+          "Retry-After"  => retry_after.to_s,
         }
       )
     end
@@ -644,7 +644,7 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
     limiter = RateLimiter.get_or_create("admin", 1, 60)
     # Use simple key since Athena doesn't provide remote_ip directly
     client_key = "admin_endpoint"
-    
+
     unless limiter.allowed?(client_key)
       retry_after = limiter.retry_after(client_key)
       return ATH::Response.new(
@@ -652,7 +652,7 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
         429,
         HTTP::Headers{
           "content-type" => "text/plain",
-          "Retry-After" => retry_after.to_s
+          "Retry-After"  => retry_after.to_s,
         }
       )
     end

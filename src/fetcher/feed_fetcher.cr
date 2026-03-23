@@ -164,7 +164,7 @@ class FeedFetcher
   def build_error_feed_data(feed : Feed, message : String) : FeedData
     site_link = feed.url
 
-    STDERR.puts "[#{Time.local}] Feed temporarily disabled due to error: #{feed.title} (#{feed.url}) - #{message}"
+    STDERR.puts "[#{Time.local}] [FEED ERROR] #{feed.title} (#{feed.url}) - #{message}"
 
     favicon, favicon_data = VugAdapter.get_favicon(site_link, nil, nil, nil)
 
@@ -199,7 +199,6 @@ class FeedFetcher
       "Connection"      => "keep-alive",
     }
 
-
     if previous_data && current_url == feed.url
       previous_data.etag.try { |v| headers["If-None-Match"] = v }
       previous_data.last_modified.try { |v| headers["If-Modified-Since"] = v }
@@ -207,8 +206,6 @@ class FeedFetcher
 
     headers
   end
-
-
 
   private def handle_success_response(feed : Feed, response : HTTP::Client::Response, display_limit : Int32, db_fetch_limit : Int32, previous_data : FeedData?) : FeedData
     parsed = parse_feed(response.body_io, db_fetch_limit)

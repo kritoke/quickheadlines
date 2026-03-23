@@ -91,8 +91,6 @@ class Quickheadlines::Services::ClusteringService
     cluster_repository.find_all
   end
 
-
-
   def recluster_all(limit : Int32 = 5000, threshold : Float64 = 0.35) : Int32
     cluster_repository.clear_all_metadata
 
