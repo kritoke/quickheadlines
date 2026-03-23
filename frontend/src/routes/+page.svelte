@@ -111,14 +111,14 @@ import { NavigationService } from '$lib/services/navigationService';
 	<div class="min-h-screen theme-bg-primary transition-colors duration-200" data-name="feeds-page">
 		<AppHeader 
 			title="QuickHeadlines"
-			tabs={feedState.tabs}
-			activeTab={NavigationService.getCurrentTab()}
-			onTabChange={handleTabChange}
-			viewLink={{ href: '/timeline', icon: 'clock' }}
-			{searchExpanded}
-			onSearchToggle={() => searchExpanded = !searchExpanded}
-			onLogoClick={handleLogoClick}
-		/>
+            tabs={feedState.tabs}
+            activeTab={feedState.activeTab}
+            onTabChange={handleTabChange}
+            viewLink={{ href: '/timeline', icon: 'clock' }}
+            {searchExpanded}
+            onSearchToggle={() => searchExpanded = !searchExpanded}
+            onLogoClick={handleLogoClick}
+        />
 
 		<!-- Mobile tabs outside header -->
 		{#if feedState.tabs.length > 0}
