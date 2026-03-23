@@ -317,9 +317,21 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
     limit = validate_limit(request.query_params["limit"]?, default_limit, max: 1000)
     offset = validate_offset(request.query_params["offset"]?)
     days = validate_days(request.query_params["days"]?, default_days.to_i32)
+    tab = request.query_params["tab"]?
+
+    # Get allowed feed URLs for the tab (if specific tab selected)
+    allowed_feed_urls = [] of String
+    if tab && tab.downcase != "all"
+      state = StateStore.get
+      tabs_snapshot = state.tabs
+      found_tab = tabs_snapshot.find { |t| t.name.downcase == tab.downcase }
+      if found_tab
+        allowed_feed_urls = found_tab.feeds.map(&.url)
+      end
+    end
 
     story_repo = Quickheadlines::Repositories::StoryRepository.new(@db_service.db)
-    result = Quickheadlines::Services::StoryService.get_timeline(story_repo, limit, offset, days)
+    result = Quickheadlines::Services::StoryService.get_timeline(story_repo, limit, offset, days, allowed_feed_urls)
 
     # If timeline has very few items and we're not already clustering, trigger a background refresh
     # This ensures the timeline populates quickly after server startup
