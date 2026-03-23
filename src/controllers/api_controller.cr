@@ -9,6 +9,7 @@ require "../repositories/story_repository"
 require "../repositories/cluster_repository"
 require "../fetcher/refresh_loop"
 require "../websocket"
+require "../rate_limiter"
 
 class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
   @db_service : DatabaseService
@@ -16,11 +17,45 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
   @feed_service : Quickheadlines::Services::FeedService?
   @clustering_service : Quickheadlines::Services::ClusteringService?
 
+  # Allowed domains for image proxy (SSRF protection)
+  ALLOWED_DOMAINS = {
+    "i.imgur.com",
+    "pbs.twimg.com",
+    "avatars.githubusercontent.com",
+    "lh3.googleusercontent.com",
+    "i.pravatar.cc",
+    "images.unsplash.com",
+    "fastly.picsum.photos"
+  }
+
   def self.new : self
     new(DatabaseService.instance)
   end
 
   def initialize(@db_service : DatabaseService)
+  end
+
+  # Validate URL for proxy to prevent SSRF attacks
+  private def validate_proxy_url(url : String) : Bool
+    begin
+      uri = URI.parse(url)
+      return false unless uri.scheme.in?("http", "https")
+      return false unless uri.host
+      
+      host = uri.host.as(String).downcase
+      
+      # Check for private network ranges
+      return false if host == "localhost"
+      return false if host.starts_with?("127.")
+      return false if host.starts_with?("192.168.")
+      return false if host.starts_with?("10.")
+      return false if host.starts_with?("172.16.") || host.starts_with?("172.17.") || host.starts_with?("172.18.") || host.starts_with?("172.19.") || host.starts_with?("172.2") || host.starts_with?("172.30.") || host.starts_with?("172.31.")
+      return false if host.starts_with?("169.254.")
+      
+      ALLOWED_DOMAINS.includes?(host)
+    rescue
+      false
+    end
   end
 
   # Generic integer validation with bounds
@@ -464,6 +499,10 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
   @[ARTA::Get(path: "/proxy_image")]
   def proxy_image(request : ATH::Request) : ATH::Response
     if url = request.query_params["url"]?
+      unless validate_proxy_url(url)
+        return ATH::Response.new("Domain not allowed", 400, HTTP::Headers{"content-type" => "text/plain"})
+      end
+
       begin
         current_url = url
         redirects = 0
@@ -482,6 +521,11 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
 
           response.status = 502 if redirects > 10
           break if redirects > 10
+
+          # Validate redirect URL
+          unless validate_proxy_url(current_url)
+            return ATH::Response.new("Domain not allowed", 400, HTTP::Headers{"content-type" => "text/plain"})
+          end
 
           begin
             loop_client.get(loop_uri.request_target, headers: loop_headers) do |client_response|
@@ -546,7 +590,23 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
   # POST /api/cluster - Unified clustering endpoint
   # Actions: run (cluster uncategorized), recluster (clear and re-cluster)
   @[ARTA::Post(path: "/api/cluster")]
-  def cluster : ATH::Response
+  def cluster(request : ATH::Request) : ATH::Response
+    limiter = RateLimiter.get_or_create("cluster", 1, 60)
+    # Use simple key since Athena doesn't provide remote_ip directly
+    client_key = "cluster_endpoint"
+    
+    unless limiter.allowed?(client_key)
+      retry_after = limiter.retry_after(client_key)
+      return ATH::Response.new(
+        "Rate limit exceeded. Try again later.",
+        429,
+        HTTP::Headers{
+          "content-type" => "text/plain",
+          "Retry-After" => retry_after.to_s
+        }
+      )
+    end
+
     spawn do
       begin
         service = clustering_service
@@ -568,7 +628,23 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
 
   # POST /api/admin - Unified admin actions: clear-cache, cleanup-orphaned
   @[ARTA::Post(path: "/api/admin")]
-  def admin : ATH::Response
+  def admin(request : ATH::Request) : ATH::Response
+    limiter = RateLimiter.get_or_create("admin", 1, 60)
+    # Use simple key since Athena doesn't provide remote_ip directly
+    client_key = "admin_endpoint"
+    
+    unless limiter.allowed?(client_key)
+      retry_after = limiter.retry_after(client_key)
+      return ATH::Response.new(
+        "Rate limit exceeded. Try again later.",
+        429,
+        HTTP::Headers{
+          "content-type" => "text/plain",
+          "Retry-After" => retry_after.to_s
+        }
+      )
+    end
+
     action = "cleanup-orphaned"
 
     spawn do
