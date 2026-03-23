@@ -333,6 +333,27 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
     ))
   end
 
+  # GET /api/tabs - Lightweight endpoint to get just tab names (no feed data)
+  @[ARTA::Get(path: "/api/tabs")]
+  def tabs : ATH::View(TabsResponse)
+    state = StateStore.get
+    tabs_snapshot = state.tabs
+    
+    # Fallback: if STATE is empty, read from config
+    if tabs_snapshot.empty?
+      config = STATE.config
+      if config
+        tabs_snapshot = config.tabs
+      end
+    end
+    
+    tabs_response = tabs_snapshot.map do |tab|
+      TabResponse.new(name: tab.name)
+    end
+    
+    view(TabsResponse.new(tabs: tabs_response))
+  end
+
   # GET /version - Get version as plain text (legacy endpoint)
   @[ARTA::Get(path: "/version")]
   def version_text : String

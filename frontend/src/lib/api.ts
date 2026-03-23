@@ -205,3 +205,8 @@ export async function fetchConfig(): Promise<ConfigResponse> {
 	const url = `${API_BASE}/config`;
 	return apiFetch<ConfigResponse>(url, { errorContext: 'Fetch Config' });
 }
+
+export async function fetchTabs(): Promise<TabsResponse> {
+	const url = `${API_BASE}/tabs`;
+	return apiFetch<TabsResponse>(url, { errorContext: 'Fetch Tabs' });
+}
