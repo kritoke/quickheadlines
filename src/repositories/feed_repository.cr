@@ -197,6 +197,7 @@ module Quickheadlines::Repositories
         feed_id = upsert_feed(feed_data)
         insert_items(feed_id, feed_data.items)
         @db.exec("COMMIT")
+        STDERR.puts "[FeedRepository] Upserted feed: #{feed_data.title} (#{feed_data.url}) with #{feed_data.items.size} items"
       rescue ex
         STDERR.puts "[FeedRepository ERROR] Failed to upsert feed #{feed_data.title}: #{ex.message}"
         @db.exec("ROLLBACK")

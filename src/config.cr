@@ -26,8 +26,6 @@ struct Feed
   getter? over18 : Bool? = nil
 end
 
-
-
 struct SoftwareConfig
   include YAML::Serializable
   property title : String = "Software Updates"
@@ -35,8 +33,6 @@ struct SoftwareConfig
   property header_text_color : String?
   property repos : Array(String)
 end
-
-
 
 struct TabConfig
   include YAML::Serializable
@@ -191,8 +187,6 @@ def load_config(path : String) : Config
 
   config
 end
-
-
 
 def find_default_config : String?
   DEFAULT_CONFIG_CANDIDATES.find { |path| File.exists?(path) }
@@ -382,8 +376,6 @@ private def valid_item_limit?(feed : Feed) : Bool
 
   true
 end
-
-
 
 # Validate subreddit configuration
 private def valid_subreddit_config?(feed : Feed) : Bool

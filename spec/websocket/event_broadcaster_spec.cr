@@ -85,6 +85,4 @@ describe EventBroadcaster do
       event.timestamp.should be > 0
     end
   end
-
-
 end

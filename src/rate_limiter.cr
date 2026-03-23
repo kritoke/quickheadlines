@@ -44,17 +44,17 @@ module Quickheadlines
 
     def allowed?(identifier : String) : Bool
       self.class.cleanup_stale_entries
-      
+
       now = Time.utc.to_unix
       cutoff = now - @window_seconds
-      
+
       times = @requests[identifier]? || [] of Int64
       times = times.select { |t| t > cutoff }
-      
+
       if times.size >= @max_requests
         return false
       end
-      
+
       times << now
       @requests[identifier] = times
       true
@@ -63,7 +63,7 @@ module Quickheadlines
     def retry_after(identifier : String) : Int32
       times = @requests[identifier]?
       return @window_seconds unless times && !times.empty?
-      
+
       oldest = times.min
       now = Time.utc.to_unix
       elapsed = now - oldest
