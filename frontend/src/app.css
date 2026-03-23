@@ -113,6 +113,29 @@ body::-webkit-scrollbar-thumb:hover {
 	-webkit-overflow-scrolling: touch;
 }
 
+/* iOS scroll bounce fix - prevents scroll issues when switching views */
+html.ios-device, html.ios-device body {
+	height: 100%;
+	overflow: hidden;
+}
+
+html.ios-device #app {
+	height: 100%;
+	overflow-y: auto;
+	overflow-x: hidden;
+	-webkit-overflow-scrolling: touch;
+}
+
+/* Prevent overscroll bounce on iOS */
+html.ios-device {
+	overscroll-behavior: none;
+}
+
+/* iOS touch action - enables smooth scrolling */
+.touch-native {
+	touch-action: pan-y;
+}
+
 /* Tab bar horizontal scrollbar */
 .tab-bar::-webkit-scrollbar {
 	height: 6px;

@@ -32,9 +32,8 @@
 			}
 		} else {
 			navigation.complete.then(() => {
-				document.documentElement.scrollTop = 0;
-				document.body.scrollTop = 0;
-				window.scrollTo(0, 0);
+				// Force scroll to top - critical for iOS
+				resetScroll();
 			});
 		}
 		

@@ -41,10 +41,20 @@ export function getCurrentPath(): string {
 
 export function resetScroll(): void {
 	if (typeof window === 'undefined') return;
+	// Force scroll to top - multiple methods for iOS compatibility
 	window.scrollTo(0, 0);
+	document.documentElement.scrollTop = 0;
+	document.body.scrollTop = 0;
+	// Additional iOS fix: scroll the main element
+	const app = document.getElementById('app');
+	if (app) {
+		app.scrollTop = 0;
+	}
 }
 
 export function scrollToPosition(y: number): void {
 	if (typeof window === 'undefined') return;
 	window.scrollTo({ top: y, behavior: 'auto' });
+	document.documentElement.scrollTop = y;
+	document.body.scrollTop = y;
 }
