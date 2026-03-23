@@ -135,16 +135,12 @@ export async function loadTimeline(append: boolean = false, tab?: string): Promi
 	if (!append) {
 		if (isRefreshing(timelineState) || isLoading(timelineState)) return;
 		
-		if (targetTab !== timelineState.tabName) {
-			Object.assign(timelineState, {
-				...initialBaseState,
-				itemIds: new SvelteSet<string>(),
-				tabName: targetTab,
-				status: 'loading'
-			});
-		} else {
-			Object.assign(timelineState, setLoading(timelineState, false));
-		}
+		Object.assign(timelineState, {
+			...initialBaseState,
+			itemIds: new SvelteSet<string>(),
+			tabName: targetTab,
+			status: 'loading'
+		});
 	}
 	
 	try {

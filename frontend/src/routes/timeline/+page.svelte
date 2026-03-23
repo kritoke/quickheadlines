@@ -100,6 +100,7 @@
   $effect(() => {
     const urlTab = $page.url?.searchParams.get('tab') ?? 'all';
     if (initialized && urlTab !== timelineState.tabName) {
+      logger.log(`[Timeline] Tab changed from ${timelineState.tabName} to ${urlTab}, reloading...`);
       loadTimeline(false, urlTab);
     }
   });
@@ -121,6 +122,7 @@
 
   // Handle tab changes
   async function handleTabChange(tab: string) {
+    await loadTimeline(false, tab);
     await NavigationService.navigateToTimeline(tab);
   }
 
