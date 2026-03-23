@@ -15,6 +15,7 @@ type BaseTimelineState = {
 	loadingMore: boolean;
 	isClustering: boolean;
 	refreshMinutes: number;
+	tabName: string;
 };
 
 export type TimelineStateIdle = BaseTimelineState & { status: 'idle' };
@@ -33,7 +34,8 @@ const initialBaseState: BaseTimelineState = {
 	offset: 0,
 	loadingMore: false,
 	isClustering: false,
-	refreshMinutes: 10
+	refreshMinutes: 10,
+	tabName: 'all'
 };
 
 const initialState: TimelineStateIdle = {
@@ -113,6 +115,13 @@ export function setRefreshMinutes(state: TimelineState, minutes: number): Timeli
 	};
 }
 
+export function setTabName(state: TimelineState, tab: string): TimelineState {
+	return {
+		...state,
+		tabName: tab
+	};
+}
+
 export function resetTimelineStore(): void {
 	Object.assign(timelineState, {
 		...clone(initialBaseState),
@@ -120,15 +129,24 @@ export function resetTimelineStore(): void {
 	});
 }
 
-export async function loadTimeline(append: boolean = false): Promise<void> {
-	if (!append && (isRefreshing(timelineState) || isLoading(timelineState))) return;
+export async function loadTimeline(append: boolean = false, tab?: string): Promise<void> {
+	const targetTab = tab ?? timelineState.tabName;
 	
-	// Mutate the state instead of reassigning
-	Object.assign(timelineState, setLoading(timelineState, append));
+	if (!append) {
+		if (isRefreshing(timelineState) || isLoading(timelineState)) return;
+		
+		Object.assign(timelineState, {
+			...initialBaseState,
+			itemIds: new SvelteSet<string>(),
+			tabName: targetTab,
+			status: 'loading'
+		});
+	}
 	
 	try {
-		const response = await fetchTimeline(100, append ? timelineState.offset : 0);
+		const response = await fetchTimeline(100, append ? timelineState.offset : 0, 14, targetTab === 'all' ? undefined : targetTab);
 		Object.assign(timelineState, setTimelineData(timelineState, response.items, response.has_more, append));
+		Object.assign(timelineState, setTabName(timelineState, targetTab));
 	} catch (e) {
 		Object.assign(timelineState, setError(timelineState, e instanceof Error ? e.message : 'Failed to load timeline'));
 	}

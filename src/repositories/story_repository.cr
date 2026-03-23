@@ -112,12 +112,14 @@ module Quickheadlines::Repositories
       story
     end
 
-    def find_timeline_items(limit : Int32, offset : Int32, days_back : Int32?) : Array(TimelineItem)
+    def find_timeline_items(limit : Int32, offset : Int32, days_back : Int32?, allowed_feed_urls : Array(String) = [] of String) : Array(TimelineItem)
       items = [] of TimelineItem
 
       cutoff_clause = days_back ? "AND i.pub_date >= ?" : ""
-
+      feed_filter_clause = build_feed_filter_clause(allowed_feed_urls)
+      
       cutoff_value = days_back ? Time.local - days_back.days : nil
+      feed_filter_values = build_feed_filter_values(allowed_feed_urls)
 
       # Use CTE to pre-compute cluster representatives and sizes (eliminates per-row subqueries)
       query = <<-SQL
@@ -150,12 +152,17 @@ module Quickheadlines::Repositories
         WHERE (i.pub_date IS NULL OR i.pub_date <= datetime('now', '+1 day'))
         AND (i.cluster_id IS NULL OR i.id = ci.representative_id)
         #{cutoff_clause}
+        #{feed_filter_clause}
         ORDER BY COALESCE(i.pub_date, '1970-01-01 00:00:00') DESC, i.id DESC
         LIMIT ? OFFSET ?
-        SQL
+      SQL
 
-      if cutoff_value
+      if cutoff_value && !feed_filter_values.empty?
+        query_args = [cutoff_value, *feed_filter_values, limit, offset]
+      elsif cutoff_value
         query_args = [cutoff_value, limit, offset]
+      elsif !feed_filter_values.empty?
+        query_args = [*feed_filter_values, limit, offset]
       else
         query_args = [limit, offset]
       end
@@ -199,13 +206,26 @@ module Quickheadlines::Repositories
       items
     end
 
-    def count_timeline_items(days_back : Int32?) : Int32
-      if days_back
-        cutoff_date = Time.local - days_back.days
-        @db.query_one("SELECT COUNT(*) FROM items WHERE pub_date >= ?", cutoff_date, as: Int64)
+    def count_timeline_items(days_back : Int32?, allowed_feed_urls : Array(String) = [] of String) : Int32
+      cutoff_clause = days_back ? "AND i.pub_date >= ?" : ""
+      feed_filter_clause = build_feed_filter_clause(allowed_feed_urls)
+      
+      cutoff_value = days_back ? Time.local - days_back.days : nil
+      feed_filter_values = build_feed_filter_values(allowed_feed_urls)
+      
+      query = "SELECT COUNT(*) FROM items i JOIN feeds f ON i.feed_id = f.id WHERE 1=1 #{cutoff_clause} #{feed_filter_clause}"
+      
+      if cutoff_value && !feed_filter_values.empty?
+        query_args = [cutoff_value, *feed_filter_values]
+      elsif cutoff_value
+        query_args = [cutoff_value]
+      elsif !feed_filter_values.empty?
+        query_args = feed_filter_values
       else
-        @db.query_one("SELECT COUNT(*) FROM items", as: Int64)
-      end.to_i
+        query_args = [] of String
+      end
+      
+      @db.query_one(query, args: query_args, as: Int64).to_i
     end
 
     def deduplicate(feed_id : Int64, title : String) : Bool
@@ -215,6 +235,17 @@ module Quickheadlines::Repositories
         as: Int64
       )
       (result || 0) > 0
+    end
+
+    private def build_feed_filter_clause(allowed_feed_urls : Array(String)) : String
+      return "" if allowed_feed_urls.empty?
+      
+      placeholders = (1..allowed_feed_urls.size).map { |i| "$#{i}" }.join(", ")
+      "AND f.url IN (#{placeholders})"
+    end
+    
+    private def build_feed_filter_values(allowed_feed_urls : Array(String)) : Array(String)
+      allowed_feed_urls
     end
 
     private def find_feed_by_url(url : String) : Quickheadlines::Entities::Feed?

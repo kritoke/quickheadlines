@@ -5,6 +5,7 @@
 	import { goto } from '$app/navigation';
 	import type { TabResponse } from '$lib/types';
 	import { spacing } from '$lib/design/tokens';
+	import { NavigationService } from '$lib/services/navigationService';
 
 	interface Props {
 		title: string;
@@ -35,9 +36,15 @@
 	let resolvedThemeColors = $derived(getThemeColors(themeState.theme));
 	let headerElement: HTMLElement | undefined = $state();
 
-	function handleViewSwitch(e: Event) {
-		e.preventDefault();
-		goto(viewLink.href);
+	function handleViewSwitch() {
+		const currentTab = NavigationService.getCurrentTab();
+		const isOnTimeline = typeof window !== 'undefined' && window.location.pathname.startsWith('/timeline');
+		
+		if (isOnTimeline) {
+			NavigationService.navigateToFeeds(currentTab);
+		} else {
+			NavigationService.navigateToTimeline(currentTab);
+		}
 	}
 
 	function handleLogoClick(e: Event) {

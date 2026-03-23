@@ -4,14 +4,12 @@ type NavigationState = {
 	scrollPositions: Map<string, number>;
 	visitedRoutes: Set<string>;
 	currentPath: string;
-	feedsTab: string;
 };
 
 const state = $state<NavigationState>({
 	scrollPositions: new Map(),
 	visitedRoutes: new SvelteSet<string>(),
-	currentPath: '',
-	feedsTab: 'all'
+	currentPath: ''
 });
 
 export function saveScroll(path: string): void {
@@ -39,13 +37,7 @@ export function getCurrentPath(): string {
 	return state.currentPath;
 }
 
-export function setFeedsTab(tab: string): void {
-	state.feedsTab = tab;
-}
 
-export function getFeedsTab(): string {
-	return state.feedsTab;
-}
 
 export function resetScroll(): void {
 	if (typeof window === 'undefined') return;

@@ -127,9 +127,13 @@ export async function fetchFeeds(tab: string = 'all', signal?: AbortSignal): Pro
 export async function fetchTimeline(
 	limit: number = 500,
 	offset: number = 0,
-	days: number = 14
+	days: number = 14,
+	tab?: string
 ): Promise<TimelinePageResponse> {
-	const url = `${API_BASE}/timeline?limit=${limit}&offset=${offset}&days=${days}`;
+	let url = `${API_BASE}/timeline?limit=${limit}&offset=${offset}&days=${days}`;
+	if (tab) {
+		url += `&tab=${encodeURIComponent(tab)}`;
+	}
 	return apiFetch<TimelinePageResponse>(url, { errorContext: 'Fetch Timeline' });
 }
 
@@ -200,4 +204,9 @@ export function formatDate(ms?: number): string {
 export async function fetchConfig(): Promise<ConfigResponse> {
 	const url = `${API_BASE}/config`;
 	return apiFetch<ConfigResponse>(url, { errorContext: 'Fetch Config' });
+}
+
+export async function fetchTabs(): Promise<TabsResponse> {
+	const url = `${API_BASE}/tabs`;
+	return apiFetch<TabsResponse>(url, { errorContext: 'Fetch Tabs' });
 }

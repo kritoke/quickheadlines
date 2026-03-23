@@ -13,6 +13,16 @@ class TabResponse
   end
 end
 
+# Tabs list response for /api/tabs endpoint
+class TabsResponse
+  include JSON::Serializable
+
+  property tabs : Array(TabResponse)
+
+  def initialize(@tabs : Array(TabResponse))
+  end
+end
+
 # Feed response for API
 class FeedResponse
   include JSON::Serializable

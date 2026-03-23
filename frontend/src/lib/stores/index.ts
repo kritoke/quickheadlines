@@ -3,7 +3,6 @@ export {
 	loadFeeds,
 	loadMoreFeedItems,
 	loadFeedConfig,
-	setActiveTab,
 	getFilteredFeeds,
 	resetFeedStore,
 	type FeedState,

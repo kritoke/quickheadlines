@@ -1,5 +1,6 @@
 <script lang="ts">
 	import AppHeader from '$lib/components/AppHeader.svelte';
+	import TabSelector from '$lib/components/TabSelector.svelte';
 	import LayoutPicker from '$lib/components/LayoutPicker.svelte';
 	import BitsSearchModal from '$lib/components/BitsSearchModal.svelte';
 	import { fetchFeeds, fetchTimeline, fetchConfig } from '$lib/api';
@@ -10,8 +11,8 @@
 	} from '$lib/stores/effects.svelte';
   import { logger, initDebug, setDebugEnabled } from '$lib/utils/debug';
   import { goto } from '$app/navigation';
+  import { NavigationService } from '$lib/services/navigationService';
   import { page } from '$app/stores';
-  import { getFeedsTab } from '$lib/stores/navigation.svelte';
 	import { themeState } from '$lib/stores/theme.svelte';
 	import {
 		timelineState,
@@ -99,6 +100,7 @@
   $effect(() => {
     const urlTab = $page.url?.searchParams.get('tab') ?? 'all';
     if (initialized && urlTab !== timelineState.tabName) {
+      logger.log(`[Timeline] Tab changed from ${timelineState.tabName} to ${urlTab}, reloading...`);
       loadTimeline(false, urlTab);
     }
   });
@@ -120,15 +122,12 @@
 
   // Handle tab changes
   async function handleTabChange(tab: string) {
-    await goto(`/timeline?tab=${tab}`, { replaceState: true, noScroll: true });
+    await loadTimeline(false, tab);
+    await NavigationService.navigateToTimeline(tab);
   }
 
 	function handleLogoClick() {
-		const params = new URLSearchParams(window.location.search);
-		const urlTab = params.get('tab');
-		const savedTab = getFeedsTab();
-		const tab = urlTab || savedTab || 'all';
-		goto('/?tab=' + tab);
+		NavigationService.navigateToFeeds();
 	}
 </script>
 
@@ -137,16 +136,16 @@
 </svelte:head>
 
 <div class="min-h-screen theme-bg-primary transition-colors">
-	<AppHeader 
-		title="QuickHeadlines"
-		tabs={tabs}
-		activeTab={$page.url?.searchParams.get('tab') ?? 'all'}
-		onTabChange={handleTabChange}
-		viewLink={{ href: '/', icon: 'rss' }}
-		{searchExpanded}
-		onSearchToggle={() => searchExpanded = !searchExpanded}
-		onLogoClick={handleLogoClick}
-	>
+		<AppHeader 
+          title="QuickHeadlines"
+          tabs={tabs}
+          activeTab={timelineState.tabName}
+          onTabChange={handleTabChange}
+          viewLink={{ href: '/', icon: 'rss' }}
+          {searchExpanded}
+          onSearchToggle={() => searchExpanded = !searchExpanded}
+          onLogoClick={handleLogoClick}
+        >
 		<span class="text-xs sm:text-sm text-slate-500 dark:text-slate-400 whitespace-nowrap">
 			<span class="sm:hidden">{filteredItems.length}</span>
 			<span class="hidden sm:inline">{filteredItems.length} items</span>
@@ -156,6 +155,18 @@
 			<LayoutPicker />
 		{/snippet}
 	</AppHeader>
+
+	<!-- Mobile tabs outside header -->
+	{#if tabs.length > 0}
+		<div class="md:hidden fixed top-14 left-0 right-0 z-40">
+			<TabSelector 
+				tabs={tabs}
+				activeTab={timelineState.tabName}
+				onTabChange={handleTabChange}
+				maxInline={0}
+			/>
+		</div>
+	{/if}
 
 	{#if searchExpanded}
 		{#await loadSearchModal()}
@@ -172,6 +183,8 @@
 	{/if}
 
 	<main class="max-w-[1400px] mx-auto px-4 md:px-8 xl:px-12 py-4 overflow-visible" style="padding-top: calc(var(--header-height, 4rem) + 2rem);">
+		<!-- Spacer for mobile tabs -->
+		<div class="h-8 md:hidden"></div>
 		{#if loading && timelineState.items.length === 0}
 			<div class="flex items-center justify-center py-20 gap-3">
 				<div class="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>

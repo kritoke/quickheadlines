@@ -128,14 +128,22 @@ export function setRefreshMinutes(state: FeedState, minutes: number): FeedState 
 	};
 }
 
+export function setActiveTab(state: FeedState, tab: string): FeedState {
+	return {
+		...state,
+		activeTab: tab
+	};
+}
+
 export function resetFeedStore(): void {
 	Object.assign(feedState, { ...initialState });
 }
 
-export async function loadFeeds(tab: string = feedState.activeTab, force: boolean = false): Promise<void> {
+export async function loadFeeds(tab: string, force: boolean = false): Promise<void> {
+	Object.assign(feedState, setActiveTab(feedState, tab));
+	
 	if (!force && feedState.tabCache[tab]?.loaded) {
 		feedState.feeds = feedState.tabCache[tab].feeds;
-		feedState.activeTab = tab;
 		return;
 	}
 
@@ -174,13 +182,7 @@ export async function loadFeedConfig(): Promise<number> {
 	}
 }
 
-export function setActiveTab(tab: string): void {
-	feedState.activeTab = tab;
-	
-	if (feedState.tabCache[tab]?.loaded) {
-		feedState.feeds = feedState.tabCache[tab].feeds;
-	}
-}
+
 
 export function getFilteredFeeds(query: string): FeedResponse[] {
 	if (!query.trim()) return feedState.feeds;

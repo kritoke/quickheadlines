@@ -98,3 +98,7 @@ export interface ConfigResponse {
 	item_limit: number;
 	debug: boolean;
 }
+
+export interface TabsResponse {
+	tabs: TabResponse[];
+}
