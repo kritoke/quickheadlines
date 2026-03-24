@@ -4,25 +4,62 @@
   
   let colors = $derived(getScrollButtonColors(themeState.theme));
   let isMobile = $state(false);
-  
+  let visible = $state(true);
+  let container: Window | HTMLElement | null = null;
+
+  // Keep resize detection for mobile styling
   $effect(() => {
     if (typeof window === 'undefined') return;
     isMobile = window.innerWidth < 768;
-    const handleResize = () => {
-      isMobile = window.innerWidth < 768;
-    };
+    const handleResize = () => (isMobile = window.innerWidth < 768);
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   });
-	
-	function doScroll(e: Event) {
-		e.preventDefault();
-		e.stopPropagation();
-		
-		document.documentElement.scrollTop = 0;
-		document.body.scrollTop = 0;
-		window.scrollTo(0, 0);
-	}
+
+  // Attach scroll listener to the active container
+  $effect(() => {
+    if (typeof window === 'undefined') return;
+    import('$lib/utils/scroll').then((m) => {
+      const getScrollContainer = m.getScrollContainer;
+      const getScrollTop = m.getScrollTop;
+      const c = getScrollContainer();
+      container = c;
+      const handler = () => {
+        const top = getScrollTop(c);
+        visible = top < 100 ? false : true;
+      };
+      // run once to set initial state
+      handler();
+      if ((c as Window) === window) {
+        window.addEventListener('scroll', handler);
+        return () => window.removeEventListener('scroll', handler);
+      } else {
+        (c as HTMLElement).addEventListener('scroll', handler);
+        return () => (c as HTMLElement).removeEventListener('scroll', handler);
+      }
+    }).catch(() => {
+      // fallback to window
+      const handler = () => (visible = (window.scrollY || document.documentElement.scrollTop || document.body.scrollTop || 0) >= 100);
+      handler();
+      window.addEventListener('scroll', handler);
+      return () => window.removeEventListener('scroll', handler);
+    });
+  });
+
+  function doScroll(e: Event) {
+    e.preventDefault();
+    e.stopPropagation();
+    import('$lib/utils/scroll').then((m) => {
+      const scrollToPosition = m.scrollToPosition;
+      const getScrollContainer = m.getScrollContainer;
+      const c = container || getScrollContainer();
+      scrollToPosition(0, c);
+    }).catch(() => {
+      document.documentElement.scrollTop = 0;
+      document.body.scrollTop = 0;
+      window.scrollTo(0, 0);
+    });
+  }
 </script>
 
 <button
