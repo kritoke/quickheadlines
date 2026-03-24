@@ -47,7 +47,7 @@
 	let searchExpanded = $state(false);
 	let tabs = $state<TabResponse[]>([]);
 	let timelineEffects: ReturnType<typeof createTimelineEffects> | null = null;
-	let initialized = false;
+	let initialized = $state(false);
 	let sentinelElement: HTMLDivElement | undefined = $state();
 	let visibilityHandler: (() => void) | null = null;
 	
@@ -120,10 +120,10 @@
     }
   }
 
-  // Handle tab changes
+  // Handle tab changes - URL-first approach, let the URL-watcher $effect trigger the load
   async function handleTabChange(tab: string) {
-    await loadTimeline(false, tab);
     await NavigationService.navigateToTimeline(tab);
+    // loadTimeline will be triggered by the URL-watching $effect below
   }
 
 	function handleLogoClick() {

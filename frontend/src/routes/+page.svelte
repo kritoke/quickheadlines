@@ -10,6 +10,7 @@ import { websocketConnection } from '$lib/websocket';
 import { NavigationService } from '$lib/services/navigationService';
 	import { createFeedEffects } from '$lib/stores/effects.svelte';
 	import { logger, initDebug, setDebugEnabled } from '$lib/utils/debug';
+	import { page } from '$app/stores';
 	import {
 		feedState,
 		loadFeeds,
@@ -49,19 +50,16 @@ import { NavigationService } from '$lib/services/navigationService';
 	let timelineLink = $derived('/timeline?tab=' + currentTab);
 
 	async function handleTabChange(tab: string) {
-		if (tabChangeTimeout) clearTimeout(tabChangeTimeout);
+		// Update state first, then URL - state-first pattern prevents race conditions
+		await loadFeeds(tab);
 		
-		tabChangeTimeout = setTimeout(async () => {
-			// Use navigation service for consistent URL handling
-			await NavigationService.navigateToFeeds(tab);
-			
-			// Scroll to top IMMEDIATELY when tab is clicked
-			window.scrollTo(0, 0);
-			document.documentElement.scrollTop = 0;
-			document.body.scrollTop = 0;
-			
-			await loadFeeds(tab);
-		}, 50);
+		// Use navigation service for consistent URL handling
+		await NavigationService.navigateToFeeds(tab);
+		
+		// Scroll to top when tab is clicked
+		window.scrollTo(0, 0);
+		document.documentElement.scrollTop = 0;
+		document.body.scrollTop = 0;
 	}
 
 	async function handleLoadMore(feed: FeedResponse) {
@@ -100,6 +98,18 @@ import { NavigationService } from '$lib/services/navigationService';
 			return () => {
 				if (tabChangeTimeout) clearTimeout(tabChangeTimeout);
 			};
+		}
+	});
+
+	// Watch for URL tab changes and reload when tab differs from store state
+	$effect(() => {
+		const urlTab = $page.url?.searchParams.get('tab') ?? 'all';
+		const alreadyLoaded = feedState.status !== 'idle' || feedState.feeds.length > 0;
+		
+		// Only reload if already initialized but URL tab differs from store
+		if (alreadyLoaded && urlTab !== feedState.activeTab) {
+			logger.log('[Page] URL tab changed from', feedState.activeTab, 'to', urlTab, ', reloading...');
+			loadFeeds(urlTab);
 		}
 	});
 	

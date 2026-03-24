@@ -396,6 +396,13 @@ class FeedFetcher
   private def handle_feed_response(feed : Feed, response : HTTP::Client::Response, current_url : String, redirects : Int32, display_limit : Int32, db_fetch_limit : Int32, previous_data : FeedData?) : {FeedData?, Int32, Bool, String}
     if response.status.redirection? && (location = response.headers["Location"]?)
       new_url = URI.parse(current_url).resolve(location).to_s
+
+      # Validate redirect URL to prevent SSRF attacks
+      unless validate_redirect_url(new_url)
+        HealthMonitor.log_warning("fetch_feed(#{feed.url}) blocked redirect to private/internal address: #{new_url}")
+        return {nil, redirects, false, current_url}
+      end
+
       return {nil, redirects + 1, false, new_url}
     end
 
@@ -570,6 +577,30 @@ end
 private def normalize_url(url : String) : String
   # Normalize URLs by removing www. prefix for consistency
   url.sub("https://www.", "https://").sub("http://www.", "http://")
+end
+
+# Validate redirect URL to prevent SSRF attacks (similar to api_controller's validate_proxy_url)
+private def validate_redirect_url(url : String) : Bool
+  begin
+    uri = URI.parse(url)
+    return false unless uri.scheme.in?("http", "https")
+    return false unless uri.host
+
+    host = uri.host.as(String).downcase
+
+    # Check for private network ranges
+    return false if host == "localhost"
+    return false if host.starts_with?("127.")
+    return false if host.starts_with?("192.168.")
+    return false if host.starts_with?("10.")
+    return false if host.starts_with?("172.16.") || host.starts_with?("172.17.") || host.starts_with?("172.18.") || host.starts_with?("172.19.") || host.starts_with?("172.2") || host.starts_with?("172.30.") || host.starts_with?("172.31.")
+    return false if host.starts_with?("169.254.")
+
+    # Allow all public URLs (no domain whitelist for feed redirects)
+    true
+  rescue
+    false
+  end
 end
 
 private def fetcher_config : Fetcher::RequestConfig

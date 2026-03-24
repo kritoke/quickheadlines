@@ -137,8 +137,9 @@ class SocketManager
       end
     end
 
-    return if connection_to_remove.nil?
-    unregister_connection(connection_to_remove)
+    # Don't call unregister_connection here - the channel close will trigger
+    # writer_fiber's Channel::ClosedError which will call unregister_connection.
+    # Calling it here would cause double-decrement of IP counts.
   end
 
   def broadcast(message : String) : Nil
@@ -149,7 +150,7 @@ class SocketManager
         # Use send with timeout to avoid blocking on slow clients
         select
         when conn.outgoing.send(message)
-          @messages_sent.add(1)
+          # Don't increment here - it will be counted in writer_fiber when actually sent
         when timeout(100.milliseconds)
           @messages_dropped.add(1)
           STDERR.puts "[SocketManager] Dropped message for slow client: #{conn.ip}"

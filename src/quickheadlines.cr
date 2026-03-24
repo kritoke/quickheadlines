@@ -12,7 +12,10 @@ begin
   handlers = [] of HTTP::Handler
 
   ws_handler = HTTP::WebSocketHandler.new do |ws, ctx|
-    ip = ctx.request.remote_address.to_s.split(":").first
+    ip = case addr = ctx.request.remote_address
+         when Socket::IPAddress then addr.address
+         else ctx.request.remote_address.to_s.split(":").first
+         end
 
     unless SocketManager.instance.register(ws, ip)
       ws.close

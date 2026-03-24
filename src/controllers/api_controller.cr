@@ -277,10 +277,9 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
         fetch_feed(feed_config, needed_count + 50, db_fetch_limit, nil)
       end
 
-      # Get items from cache
+      # Get items from cache - use correct offset for pagination
       if data = cache.get(url)
-        max_index = Math.min(offset + limit, data.items.size)
-        trimmed_items = data.items[0...max_index]
+        trimmed_items = data.items[offset...Math.min(offset + limit, data.items.size)]
 
         items_response = trimmed_items.map do |item|
           ItemResponse.new(
@@ -465,7 +464,8 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
     cache.update_header_colors(db_url, color, text_color)
     ATH::Response.new("OK", 200)
   rescue ex
-    ATH::Response.new(ex.message, 500)
+    STDERR.puts "[ApiController] Header color save error: #{ex.message}"
+    ATH::Response.new("Internal server error", 500)
   end
 
   @[ARTA::Get(path: "/favicon.png")]
@@ -597,8 +597,24 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
   @[ARTA::Get(path: "/favicons/{hash}.{ext}")]
   @[ARTA::Get(path: "/favicons/{hash}.{ext}/")]
   def favicon_file(request : ATH::Request, hash : String, ext : String) : ATH::Response
+    # Validate hash: must be 8-64 hex characters (SHA256)
+    unless hash =~ /\A[a-f0-9]{8,64}\z/
+      return ATH::Response.new("Invalid hash format", 400, HTTP::Headers{"content-type" => "text/plain"})
+    end
+
+    # Validate extension: must be one of the allowed image types
+    allowed_exts = {"png", "jpg", "jpeg", "ico", "svg", "webp"}
+    unless allowed_exts.includes?(ext.downcase)
+      return ATH::Response.new("Invalid file type", 400, HTTP::Headers{"content-type" => "text/plain"})
+    end
+
     filename = "#{hash}.#{ext}"
     filepath = File.join(FaviconStorage::FAVICON_DIR, filename)
+
+    # Security: verify path doesn't escape the favicon directory
+    unless filepath.starts_with?(FaviconStorage::FAVICON_DIR)
+      return ATH::Response.new("Invalid path", 400, HTTP::Headers{"content-type" => "text/plain"})
+    end
 
     if File.exists?(filepath)
       # Determine content type based on extension
