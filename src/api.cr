@@ -334,18 +334,6 @@ module Api
     )
   end
 
-  # Convert Tab to TabResponse
-  def self.tab_to_response(tab : Tab, feeds : Array(FeedData), releases : Array(FeedData)) : TabResponse
-    feeds_response = feeds.map { |feed| feed_to_response(feed) }
-    releases_response = releases.map { |feed| feed_to_response(feed) }
-
-    TabResponse.new(
-      name: tab.name,
-      feeds: feeds_response,
-      software_releases: releases_response
-    )
-  end
-
   # Convert TimelineItem to TimelineItemResponse
   def self.timeline_item_to_response(item : TimelineItem) : TimelineItemResponse
     # Look up cluster info from FeedCache (same logic as server.cr add_cluster_info)

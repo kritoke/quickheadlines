@@ -48,10 +48,23 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
 
       # Check for private network ranges
       return false if host == "localhost"
+      return false if host == "0.0.0.0"
+      return false if host == "::1" || host == "[::1]"
+      return false if host.starts_with?("[::") # IPv6 loopback variations
+      return false if host.starts_with?("fe80::") || host.starts_with?("[fe80::") # Link-local IPv6
       return false if host.starts_with?("127.")
       return false if host.starts_with?("192.168.")
       return false if host.starts_with?("10.")
-      return false if host.starts_with?("172.16.") || host.starts_with?("172.17.") || host.starts_with?("172.18.") || host.starts_with?("172.19.") || host.starts_with?("172.2") || host.starts_with?("172.30.") || host.starts_with?("172.31.")
+
+      # RFC 6598 - 100.64.0.0/10 (100.64.0.0 - 100.127.255.255)
+      if host.starts_with?("100.")
+        parts = host.split('.')
+        if parts.size >= 2 && (second = parts[1].to_i?(strict: true)) && second >= 64 && second <= 127
+          return false
+        end
+      end
+
+      return false if host.starts_with?("172.16.") || host.starts_with?("172.17.") || host.starts_with?("172.18.") || host.starts_with?("172.19.") || host.starts_with?("172.20.") || host.starts_with?("172.21.") || host.starts_with?("172.22.") || host.starts_with?("172.23.") || host.starts_with?("172.24.") || host.starts_with?("172.25.") || host.starts_with?("172.26.") || host.starts_with?("172.27.") || host.starts_with?("172.28.") || host.starts_with?("172.29.") || host.starts_with?("172.30.") || host.starts_with?("172.31.")
       return false if host.starts_with?("169.254.")
 
       ALLOWED_DOMAINS.includes?(host)

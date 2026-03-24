@@ -92,6 +92,12 @@ class Quickheadlines::Services::ClusteringService
   end
 
   def recluster_all(limit : Int32 = 5000, threshold : Float64 = 0.35) : Int32
+    # Prevent concurrent clustering runs
+    if STATE.clustering?
+      STDERR.puts "[#{Time.local}] Clustering already in progress, skipping recluster_all"
+      return 0
+    end
+
     cluster_repository.clear_all_metadata
 
     items = [] of {id: Int64, title: String, link: String, pub_date: Time?, feed_id: Int64}
@@ -129,6 +135,12 @@ class Quickheadlines::Services::ClusteringService
   end
 
   def recluster_with_lsh(limit : Int32 = 5000, threshold : Float64 = 0.35, bands : Int32 = 20) : Int32
+    # Prevent concurrent clustering runs
+    if STATE.clustering?
+      STDERR.puts "[#{Time.local}] Clustering already in progress, skipping recluster_with_lsh"
+      return 0
+    end
+
     cache = FeedCache.instance
 
     items = [] of ClusteringItem

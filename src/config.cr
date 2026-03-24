@@ -465,7 +465,7 @@ def fetch_config_from_github(repo_path : String, branch : String = "main") : Str
       # Try master as fallback
       return fetch_config_from_github(repo_path, "master")
     end
-  rescue
+  rescue ex
     STDERR.puts "Error fetching config from GitHub: #{ex.message}"
   end
 

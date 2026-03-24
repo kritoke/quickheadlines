@@ -96,13 +96,15 @@ class FeedCache
   end
 
   def entries : Hash(String, FeedData)
-    urls = {} of String => FeedData
-    feed_repository.find_all_urls.each do |url|
-      if feed = feed_repository.find_with_items(url)
-        urls[url] = feed
+    @mutex.synchronize do
+      urls = {} of String => FeedData
+      feed_repository.find_all_urls.each do |url|
+        if feed = feed_repository.find_with_items(url)
+          urls[url] = feed
+        end
       end
+      urls
     end
-    urls
   end
 
   def sync_favicon_paths
