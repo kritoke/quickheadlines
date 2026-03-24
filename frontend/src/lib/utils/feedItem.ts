@@ -1,20 +1,50 @@
-export function getFaviconSrc(item: {
+// Memoized favicon cache to prevent repeated calculations
+const faviconCache = new Map<string, string>();
+const MAX_CACHE_SIZE = 1000; // Limit cache size to prevent memory issues
+
+export interface FaviconItem {
 	favicon?: string;
 	favicon_data?: string;
-}): string {
+	url?: string; // Add url for better caching key
+}
+
+export function getFaviconSrc(item: FaviconItem): string {
+	// Create a cache key based on all relevant properties
+	const cacheKey = `${item.favicon || ''}-${item.favicon_data || ''}-${item.url || ''}`;
+	
+	if (faviconCache.has(cacheKey)) {
+		return faviconCache.get(cacheKey)!;
+	}
+	
+	let result = '/favicon.svg';
+	
 	if (item.favicon_data) {
 		if (item.favicon_data.startsWith('internal:')) {
 			const iconName = item.favicon_data.replace('internal:', '');
-			if (iconName === 'code_icon') return '/code_icon.svg';
-			return '/favicon.svg';
+			if (iconName === 'code_icon') result = '/code_icon.svg';
+			else result = '/favicon.svg';
+		} else {
+			result = item.favicon_data;
 		}
-		return item.favicon_data;
+	} else if (item.favicon) {
+		if (item.favicon.startsWith('internal:')) {
+			result = '/favicon.svg';
+		} else {
+			result = item.favicon;
+		}
 	}
-	if (item.favicon) {
-		if (item.favicon.startsWith('internal:')) return '/favicon.svg';
-		return item.favicon;
+	
+	// Manage cache size
+	if (faviconCache.size >= MAX_CACHE_SIZE) {
+		// Remove oldest entry (first inserted)
+		const firstKey = faviconCache.keys().next().value;
+		if (firstKey !== undefined) {
+			faviconCache.delete(firstKey);
+		}
 	}
-	return '/favicon.svg';
+	
+	faviconCache.set(cacheKey, result);
+	return result;
 }
 
 export function getHeaderStyle(item: {

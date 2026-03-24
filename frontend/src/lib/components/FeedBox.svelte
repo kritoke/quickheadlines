@@ -9,6 +9,7 @@
 	import CustomScrollbar from './CustomScrollbar.svelte';
 	import Card from './ui/Card.svelte';
 	import { spacing } from '$lib/design/tokens';
+	import { sanitizeUrl, sanitizeCssColor } from '$lib/utils/validation';
 
 	interface Props {
 		feed: FeedResponse;
@@ -34,16 +35,23 @@
 	// Mobile shows 10 items with expand toggle, desktop uses scroll with initial limit
 	let displayedItems = $derived((isMobile && !expanded) ? feed.items.slice(0, MOBILE_INITIAL_ITEMS) : (expanded ? feed.items : feed.items.slice(0, INITIAL_ITEMS)));
 	let hasMore = $derived((isMobile && !expanded && feed.items.length > MOBILE_INITIAL_ITEMS) || (!isMobile && !expanded && feed.items.length > INITIAL_ITEMS));
+	
+	// Memoized favicon source for this feed
+	let faviconSrc = $derived(getFaviconSrc({ 
+		favicon: feed.favicon, 
+		favicon_data: feed.favicon_data, 
+		url: feed.url 
+	}));
 
 	function getHeaderStyle(): string {
 		const dark = resolvedTheme === 'dark';
-		const bgColor = feed.header_color || '#64748b';
-		const textColor = feed.header_text_color || '#ffffff';
+		const bgColor = sanitizeCssColor(feed.header_color || '#64748b', '#64748b');
+		const textColor = sanitizeCssColor(feed.header_text_color || '#ffffff', '#ffffff');
 		
 		if (feed.header_theme_colors) {
 			const colors = dark ? feed.header_theme_colors.dark : feed.header_theme_colors.light;
 			if (colors) {
-				return `background-color: ${colors.bg}; color: ${colors.text};`;
+				return `background-color: ${sanitizeCssColor(colors.bg, '#64748b')}; color: ${sanitizeCssColor(colors.text, '#ffffff')};`;
 			}
 		}
 		
@@ -96,26 +104,26 @@
 >
 	<!-- Feed Header -->
 	<a
-		href={feed.site_link || '#'}
+		href={sanitizeUrl(feed.site_link || '#')}
 		target="_blank"
 		rel="noopener noreferrer"
 		class="flex items-center gap-2 p-3 font-semibold text-sm hover:opacity-90 transition-opacity"
 		style={getHeaderStyle()}
 	>
-		{#if feed.favicon || feed.favicon_data || getFaviconSrc(feed)}
-			<div class="w-5 h-5 rounded bg-white/90 dark:bg-white/80 p-0.5 flex items-center justify-center shadow-sm border border-white/20">
-				<img
-					src={getFaviconSrc(feed)}
-					alt="{feed.title} favicon"
-					class="w-4 h-4 rounded"
-					onerror={(e) => {
-						const target = e.target as HTMLImageElement;
-						target.src = '/favicon.svg';
-					}}
-				/>
-			</div>
-		{/if}
-		<span class="truncate drop-shadow-sm">{feed.title}</span>
+	{#if feed.favicon || feed.favicon_data || faviconSrc}
+		<div class="w-5 h-5 rounded bg-white/90 dark:bg-white/80 p-0.5 flex items-center justify-center shadow-sm border border-white/20">
+			<img
+				src={faviconSrc}
+				alt="{feed.title} favicon"
+				class="w-4 h-4 rounded"
+				onerror={(e) => {
+					const target = e.target as HTMLImageElement;
+					target.src = '/favicon.svg';
+				}}
+			/>
+		</div>
+	{/if}
+	<span class="truncate drop-shadow-sm">{feed.title}</span>
 	</a>
 
 	<!-- Feed Items -->
@@ -126,7 +134,7 @@
 				{#each displayedItems as item, i (`${feed.url}-${i}`)}
 					<li>
 						<a
-							href={item.link}
+							href={sanitizeUrl(item.link)}
 							target="_blank"
 							rel="noopener noreferrer"
 							class="block p-3 hover:opacity-80 transition-opacity"
@@ -155,7 +163,7 @@
 			{#each displayedItems as item, i (`${feed.url}-${i}`)}
 				<li>
 					<a
-						href={item.link}
+						href={sanitizeUrl(item.link)}
 						target="_blank"
 						rel="noopener noreferrer"
 						class="block p-3 hover:opacity-80 transition-opacity"
