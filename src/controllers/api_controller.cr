@@ -28,6 +28,8 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
     "fastly.picsum.photos",
   }
 
+  MAX_PROXY_IMAGE_BYTES = 5 * 1024 * 1024
+
   def self.new : self
     new(DatabaseService.instance)
   end
@@ -554,12 +556,25 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
                 current_url = loop_uri.resolve(location).to_s
                 redirects += 1
               elsif client_response.status.success?
-                response.headers["content-type"] = client_response.content_type || "image/png"
-                response.headers["Access-Control-Allow-Origin"] = "*"
-                response.headers["Cache-Control"] = "public, max-age=86400"
-                IO.copy(client_response.body_io, content)
-                response.content = content.to_s
-                success = true
+                content_type = client_response.content_type || "application/octet-stream"
+                if !content_type.downcase.starts_with?("image/")
+                  response.status = 415
+                  response.content = "Unsupported media type"
+                  success = true
+                else
+                  response.headers["content-type"] = content_type
+                  response.headers["Access-Control-Allow-Origin"] = "*"
+                  response.headers["Cache-Control"] = "public, max-age=86400"
+
+                  bytes_copied = IO.copy(client_response.body_io, content, limit: MAX_PROXY_IMAGE_BYTES + 1)
+                  if bytes_copied > MAX_PROXY_IMAGE_BYTES
+                    response.status = 413
+                    response.content = "Image too large"
+                  else
+                    response.content = content.to_s
+                  end
+                  success = true
+                end
               else
                 response.status = client_response.status_code
                 success = true

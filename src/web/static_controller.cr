@@ -2,6 +2,17 @@ require "athena"
 require "./assets"
 
 class StaticController < Athena::Framework::Controller
+  private def apply_security_headers(response : ATH::Response, mime : String) : Nil
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
+
+    if mime.starts_with?("text/html")
+      response.headers["Content-Security-Policy"] = "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; img-src 'self' data: https:; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'self' ws: wss:; font-src 'self' data:"
+    end
+  end
+
   private def get_mime_type(path : String) : String
     ext = path.split(".").last?.try(&.downcase) || ""
     case ext
@@ -35,6 +46,8 @@ class StaticController < Athena::Framework::Controller
         response.headers["Cache-Control"] = "public, max-age=3600"
       end
     end
+
+    apply_security_headers(response, mime)
 
     response
   rescue BakedFileSystem::NoSuchFileError
@@ -76,6 +89,8 @@ class StaticController < Athena::Framework::Controller
     else
       response.headers["Cache-Control"] = "public, max-age=3600"
     end
+
+    apply_security_headers(response, "image/svg+xml")
 
     response
   rescue BakedFileSystem::NoSuchFileError
