@@ -24,6 +24,7 @@
 		getError
 	} from '$lib/stores/feedStore.svelte';
 	import { layoutState, getFeedGridClass } from '$lib/stores/layout.svelte';
+	import { searchState, setSearchQuery, toggleSearch, closeSearch } from '$lib/stores/search.svelte';
 
 	let LazySearchModal: typeof BitsSearchModal | null = null;
 	const loadSearchModal = async () => {
@@ -34,11 +35,9 @@
 		return LazySearchModal;
 	};
 
-	let searchQuery = $state('');
-	let searchExpanded = $state(false);
 	let tabChangeTimeout: ReturnType<typeof setTimeout> | null = null;
 
-	let filteredFeeds = $derived(getFilteredFeeds(searchQuery));
+	let filteredFeeds = $derived(getFilteredFeeds(searchState.query));
 
 	let lastUpdated = $derived(
 		feedState.lastUpdated ? new Date(feedState.lastUpdated) : null
@@ -118,8 +117,8 @@
 		activeTab={feedState.activeTab}
 		onTabChange={handleTabChange}
 		viewLink={{ href: '/timeline', icon: 'clock' }}
-		{searchExpanded}
-		onSearchToggle={() => searchExpanded = !searchExpanded}
+		searchExpanded={searchState.expanded}
+		onSearchToggle={toggleSearch}
 		onLogoClick={handleLogoClick}
 	>
 		{#snippet actions()}
@@ -138,16 +137,16 @@
 		</div>
 	{/if}
 
-	{#if searchExpanded}
+	{#if searchState.expanded}
 		{#await loadSearchModal()}
 			<div></div>
 		{:then SearchModal}
 			<SearchModal 
-				open={searchExpanded}
-				query={searchQuery}
+				open={searchState.expanded}
+				query={searchState.query}
 				placeholder="Search feeds..."
-				onClose={() => searchExpanded = false}
-				onQueryChange={(value: string) => searchQuery = value}
+				onClose={closeSearch}
+				onQueryChange={setSearchQuery}
 			/>
 		{/await}
 	{/if}
@@ -186,9 +185,9 @@
 						{/each}
 					</div>
 				{/key}
-			{:else if searchQuery}
+			{:else if searchState.query}
 				<div class="text-center py-24 text-slate-500 dark:text-slate-400">
-					<p class="text-lg">No results for "{searchQuery}"</p>
+					<p class="text-lg">No results for "{searchState.query}"</p>
 					<p class="text-sm mt-2">Try a different search term</p>
 				</div>
 			{:else}

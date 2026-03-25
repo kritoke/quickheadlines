@@ -23,7 +23,7 @@
 	let resolvedTheme = $derived(themeState.theme);
 	let isCustomTheme = $derived(customThemeIds.includes(resolvedTheme as any));
 
-	const INITIAL_ITEMS = 10;
+	const INITIAL_ITEMS = 5;
 
 	let displayedItems = $derived(
 		!expanded 
@@ -110,13 +110,13 @@
 						href={sanitizeUrl(item.link)}
 						target="_blank"
 						rel="noopener noreferrer"
-						class="block py-2.5 hover:opacity-70 transition-opacity"
+						class="block py-2 hover:opacity-70 transition-opacity"
 					>
-						<p class="text-sm theme-text-primary line-clamp-2 leading-snug font-medium">
+						<p class="text-sm theme-text-primary line-clamp-2 leading-tight font-medium">
 							{item.title}
 						</p>
 						{#if item.pub_date}
-							<p class="text-xs theme-text-secondary mt-1">
+							<p class="text-xs theme-text-secondary mt-0.5">
 								{formatTimestamp(item.pub_date)}
 							</p>
 						{/if}

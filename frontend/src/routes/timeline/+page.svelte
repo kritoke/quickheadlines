@@ -24,6 +24,7 @@
 		isError,
 		getError
 	} from '$lib/stores/timelineStore.svelte';
+	import { searchState, setSearchQuery, toggleSearch, closeSearch } from '$lib/stores/search.svelte';
 
 	let LazyTimelineView: any = null;
 	const loadTimelineView = async () => {
@@ -43,15 +44,13 @@
 		return LazySearchModal;
 	};
 
-	let searchQuery = $state('');
-	let searchExpanded = $state(false);
 	let tabs = $state<TabResponse[]>([]);
 	let timelineEffects: ReturnType<typeof createTimelineEffects> | null = null;
 	let initialized = $state(false);
 	let sentinelElement: HTMLDivElement | undefined = $state();
 	let visibilityHandler: (() => void) | null = null;
 	
-	let filteredItems = $derived(getFilteredItems(searchQuery));
+	let filteredItems = $derived(getFilteredItems(searchState.query));
 	
 	let loading = $derived(isLoading(timelineState));
 	let error = $derived(isError(timelineState) ? getError(timelineState) : null);
@@ -76,7 +75,7 @@
 	});
 	
 	let currentTab = $derived($page.url?.searchParams.get('tab') ?? 'all');
-   
+    
 	$effect(() => {
 		if (initialized) return;
 		
@@ -92,7 +91,7 @@
 			initialized = true;
 		})();
 	});
-   
+    
 	$effect(() => {
 		const urlTab = $page.url?.searchParams.get('tab') ?? 'all';
 		if (initialized && urlTab !== timelineState.tabName) {
@@ -135,8 +134,8 @@
 		activeTab={timelineState.tabName}
 		onTabChange={handleTabChange}
 		viewLink={{ href: '/', icon: 'rss' }}
-		{searchExpanded}
-		onSearchToggle={() => searchExpanded = !searchExpanded}
+		searchExpanded={searchState.expanded}
+		onSearchToggle={toggleSearch}
 		onLogoClick={handleLogoClick}
 	>
 		<span class="text-sm text-slate-500 dark:text-slate-400">
@@ -159,16 +158,16 @@
 		</div>
 	{/if}
 
-	{#if searchExpanded}
+	{#if searchState.expanded}
 		{#await loadSearchModal()}
 			<div></div>
 		{:then SearchModal}
 			<SearchModal 
-				open={searchExpanded}
-				query={searchQuery}
+				open={searchState.expanded}
+				query={searchState.query}
 				placeholder="Search timeline..."
-				onClose={() => searchExpanded = false}
-				onQueryChange={(value: string) => searchQuery = value}
+				onClose={closeSearch}
+				onQueryChange={setSearchQuery}
 			/>
 		{/await}
 	{/if}
@@ -216,9 +215,9 @@
 						<TimelineView items={filteredItems} hasMore={timelineState.hasMore} onLoadMore={doLoadMore} />
 					</div>
 				{/await}
-			{:else if searchQuery}
+			{:else if searchState.query}
 				<div class="text-center py-24 text-slate-500 dark:text-slate-400">
-					<p class="text-lg">No results for "{searchQuery}"</p>
+					<p class="text-lg">No results for "{searchState.query}"</p>
 					<p class="text-sm mt-2">Try a different search term</p>
 				</div>
 			{/if}

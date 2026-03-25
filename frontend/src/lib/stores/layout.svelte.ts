@@ -1,10 +1,9 @@
-export type ColumnCount = 1 | 2 | 3 | 4 | 5;
+export type ColumnCount = 2 | 3 | 4;
 
 export const columnOptions: { id: ColumnCount; name: string; description: string }[] = [
 	{ id: 2, name: '2 Columns', description: 'Two column layout' },
 	{ id: 3, name: '3 Columns', description: 'Three column layout' },
-	{ id: 4, name: '4 Columns', description: 'Four column layout' },
-	{ id: 5, name: '5 Columns', description: 'Five column layout' }
+	{ id: 4, name: '4 Columns', description: 'Four column layout' }
 ];
 
 export const layoutState = $state({
@@ -22,7 +21,7 @@ export function initLayout() {
 	}
 
 	const savedFeedColumns = localStorage.getItem('quickheadlines-feed-columns');
-	if (savedFeedColumns && ['2', '3', '4', '5'].includes(savedFeedColumns)) {
+	if (savedFeedColumns && ['2', '3', '4'].includes(savedFeedColumns)) {
 		layoutState.feedColumns = parseInt(savedFeedColumns) as ColumnCount;
 	}
 
@@ -42,6 +41,5 @@ export function setFeedColumns(count: ColumnCount) {
 export function getFeedGridClass(cols: number): string {
 	if (cols <= 2) return 'grid-cols-1 sm:grid-cols-2';
 	if (cols === 3) return 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3';
-	if (cols === 4) return 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-4';
-	return 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5';
+	return 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-4';
 }
