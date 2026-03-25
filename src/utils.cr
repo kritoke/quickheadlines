@@ -92,3 +92,37 @@ def resolve_url(url : String?, base : String) : String?
 rescue
   nil
 end
+
+module Utils
+  def self.validate_feed_url(url : String) : Bool
+    return false if url.nil? || url.strip.empty?
+
+    begin
+      uri = URI.parse(url.strip)
+      return false unless uri.scheme
+      return false unless uri.scheme.in?("http", "https")
+      return false unless uri.host.is_a?(String) && !uri.host.to_s.empty?
+      true
+    rescue
+      false
+    end
+  end
+
+  def self.parse_ip_address(address : String) : String?
+    return nil if address.nil? || address.empty?
+
+    addr_str = address.to_s
+
+    if addr_str.starts_with?("[") && addr_str.includes?("]:")
+      addr_str.split("]:").first.lchop("[")
+    elsif addr_str.count(':') > 1
+      if port_match = addr_str.match(/:(\d+)$/)
+        addr_str[0...-port_match[0].size]
+      else
+        addr_str
+      end
+    else
+      addr_str.split(":").first
+    end
+  end
+end

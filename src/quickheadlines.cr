@@ -15,20 +15,7 @@ begin
     ip = case addr = ctx.request.remote_address
          when Socket::IPAddress then addr.address
          else
-           addr_str = ctx.request.remote_address.to_s
-           # Handle IPv6 format [::1]:port or ::1:port
-           if addr_str.starts_with?("[") && addr_str.includes?("]:")
-             addr_str.split("]:").first.lchop("[")
-           elsif addr_str.count(':') > 1 # IPv6 without brackets
-             # Remove port: find last colon that's followed by digits only
-             if (port_match = addr_str.match(/:(\d+)$/))
-               addr_str[0...-port_match[0].size]
-             else
-               addr_str
-             end
-           else
-             addr_str.split(":").first
-           end
+           Utils.parse_ip_address(ctx.request.remote_address.to_s) || ctx.request.remote_address.to_s
          end
 
     unless SocketManager.instance.register(ws, ip)

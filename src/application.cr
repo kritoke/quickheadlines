@@ -61,6 +61,15 @@ begin
   end
 
   config = config_result.config.as(Config)
+
+  begin
+    validate_feed_urls!(config)
+  rescue ex : ConfigValidationError
+    STDERR.puts "\n[ERROR] Feed URL validation failed:"
+    STDERR.puts ex.message
+    exit 1
+  end
+
   QuickHeadlines::Application.initial_config = config
 
   bootstrap = AppBootstrap.new(config)
