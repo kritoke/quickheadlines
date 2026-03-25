@@ -4,7 +4,6 @@
 	import { themeState, customThemeIds } from '$lib/stores/theme.svelte';
 	import { getFaviconSrc } from '$lib/utils/feedItem';
 	import Card from './ui/Card.svelte';
-	import { spacing } from '$lib/design/tokens';
 	import { sanitizeUrl, sanitizeCssColor } from '$lib/utils/validation';
 
 	interface Props {
@@ -18,7 +17,6 @@
 	let isMobile = $state(false);
 
 	let resolvedTheme = $derived(themeState.theme);
-	let isCustomTheme = $derived(customThemeIds.includes(resolvedTheme as any));
 
 	let faviconSrc = $derived(getFaviconSrc({ 
 		favicon: feed.favicon, 
@@ -40,6 +38,22 @@
 		return `background-color: ${bgColor}; color: ${textColor};`;
 	}
 
+	function getCardColors(): { bg?: string; text?: string } {
+		const dark = resolvedTheme === 'dark';
+		
+		if (feed.header_theme_colors) {
+			const colors = dark ? feed.header_theme_colors.dark : feed.header_theme_colors.light;
+			if (colors) {
+				return {
+					bg: sanitizeCssColor(colors.bg),
+					text: sanitizeCssColor(colors.text)
+				};
+			}
+		}
+		
+		return {};
+	}
+
 	$effect(() => {
 		if (typeof window === 'undefined') return;
 		
@@ -52,10 +66,14 @@
 		
 		return () => window.removeEventListener('resize', checkMobile);
 	});
+
+	let cardColors = $derived(getCardColors());
 </script>
 
 <Card 
 	class="overflow-hidden flex flex-col"
+	headerBgColor={cardColors.bg}
+	headerColor={cardColors.text}
 	data-name="feed-box"
 >
 	<a

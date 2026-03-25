@@ -4,29 +4,47 @@
 
 	interface Props extends HTMLAttributes<HTMLDivElement> {
 		variant?: 'default' | 'secondary' | 'muted';
-		themeVariant?: boolean;
+		headerColor?: string;
+		headerBgColor?: string;
 	}
 
 	let {
 		variant = 'default',
-		themeVariant = false,
+		headerColor,
+		headerBgColor,
 		class: className,
 		children,
+		style,
 		...props
 	}: Props = $props();
 
-	const baseStyles = 'rounded-2xl border transition-shadow duration-200 theme-bg-primary theme-border';
+	const baseStyles = 'rounded-2xl border transition-shadow duration-200';
 
-	const variants = {
-		default: 'shadow-sm',
-		secondary: 'theme-bg-secondary',
-		muted: ''
-	};
+	function getStyle(): string | undefined {
+		const styles: string[] = [];
+		
+		if (headerBgColor) {
+			styles.push(`background-color: ${headerBgColor}`);
+		} else {
+			styles.push('background-color: var(--color-bg-primary, var(--theme-bg))');
+		}
+		
+		if (headerColor) {
+			styles.push(`color: ${headerColor}`);
+		}
+		
+		if (style) {
+			styles.push(style);
+		}
+		
+		return styles.length > 0 ? styles.join('; ') : undefined;
+	}
 </script>
 
 <div 
 	data-name="card" 
-	class={cn(baseStyles, variants[variant], className)} 
+	class={cn(baseStyles, 'theme-border', className)} 
+	style={getStyle()}
 	{...props}
 >
 	{#if children}
