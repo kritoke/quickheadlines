@@ -5,6 +5,7 @@
 		<script>
 (function() {
   var darkThemes = ['dark', 'retro', 'matrix', 'ocean', 'hotdog', 'dracula', 'cyberpunk', 'forest'];
+  var customThemes = ['retro', 'matrix', 'ocean', 'sunset', 'hotdog', 'dracula', 'cyberpunk', 'forest'];
   var themes = {
     light: { bg: '#ffffff', bgSecondary: '#f1f5f9', text: '#0f172a', textSecondary: '#64748b', border: '#e2e8f0', accent: '#3b82f6', shadow: 'rgba(59, 130, 246, 0.15)' },
     dark: { bg: '#1e293b', bgSecondary: '#0f172a', text: '#f1f5f9', textSecondary: '#94a3b8', border: '#334155', accent: '#60a5fa', shadow: 'rgba(96, 165, 250, 0.2)' },
@@ -37,7 +38,12 @@
     document.documentElement.style.setProperty('--color-border', t.border);
     document.documentElement.style.setProperty('--color-accent', t.accent);
     document.documentElement.setAttribute('data-theme', theme);
-    document.documentElement.classList.toggle('dark', darkThemes.indexOf(theme) !== -1);
+    // Toggle dark class for dark/custom themes
+    var isDark = darkThemes.indexOf(theme) !== -1;
+    document.documentElement.classList.toggle('dark', isDark);
+    // Toggle custom-theme class for custom themes
+    var isCustom = customThemes.indexOf(theme) !== -1;
+    document.documentElement.classList.toggle('custom-theme', isCustom);
   }
 
   var theme = 'light';

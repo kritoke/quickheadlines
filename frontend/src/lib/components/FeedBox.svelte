@@ -82,9 +82,9 @@
 		<span class="truncate drop-shadow-sm">{feed.title}</span>
 	</a>
 
-	<div class="flex-1 min-h-0 px-3 py-2 overflow-y-auto feed-box-scroll" style="max-height: 400px;">
+	<div class="flex-1 min-h-0 px-3 py-2 overflow-y-auto feed-box-scroll" style="max-height: 320px;">
 		<ul class="divide-y divide-slate-200 dark:divide-slate-700/50">
-			{#each feed.items.slice(0, 5) as item, i (`${feed.url}-${i}`)}
+			{#each feed.items as item, i (`${feed.url}-${i}`)}
 				<li class="flex items-start gap-2 py-2">
 					<a
 						href={sanitizeUrl(item.link)}
