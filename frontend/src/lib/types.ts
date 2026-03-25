@@ -7,6 +7,8 @@ export interface ItemResponse {
 	link: string;
 	version?: string;
 	pub_date?: number;
+	comment_url?: string;
+	commentary_url?: string;
 }
 
 export interface FeedResponse {

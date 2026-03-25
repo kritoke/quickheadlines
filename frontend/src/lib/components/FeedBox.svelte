@@ -105,12 +105,12 @@
 	<div class="flex-1 min-h-0 px-3 py-2">
 		<ul class="divide-y divide-slate-200 dark:divide-slate-700/50">
 			{#each displayedItems as item, i (`${feed.url}-${i}`)}
-				<li>
+				<li class="flex items-start gap-2 py-2">
 					<a
 						href={sanitizeUrl(item.link)}
 						target="_blank"
 						rel="noopener noreferrer"
-						class="block py-2 hover:opacity-70 transition-opacity"
+						class="flex-1 min-w-0 block hover:opacity-70 transition-opacity"
 					>
 						<p class="text-sm theme-text-primary line-clamp-2 leading-tight font-medium">
 							{item.title}
@@ -121,6 +121,36 @@
 							</p>
 						{/if}
 					</a>
+					{#if item.comment_url || item.commentary_url}
+						<div class="flex shrink-0 gap-1 mt-0.5">
+							{#if item.comment_url}
+								<a
+									href={sanitizeUrl(item.comment_url)}
+									target="_blank"
+									rel="noopener noreferrer"
+									title="Comments"
+									class="p-1 hover:opacity-80 transition-opacity"
+								>
+									<svg class="w-4 h-4 theme-text-secondary" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+										<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+									</svg>
+								</a>
+							{/if}
+							{#if item.commentary_url && item.commentary_url !== item.comment_url}
+								<a
+									href={sanitizeUrl(item.commentary_url)}
+									target="_blank"
+									rel="noopener noreferrer"
+									title="Discussion"
+									class="p-1 hover:opacity-80 transition-opacity"
+								>
+									<svg class="w-4 h-4 theme-text-secondary" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+										<path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path>
+									</svg>
+								</a>
+							{/if}
+						</div>
+					{/if}
 				</li>
 			{/each}
 		</ul>
