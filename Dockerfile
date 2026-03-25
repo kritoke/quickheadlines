@@ -25,7 +25,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 COPY feeds.yml ./
 COPY shard.yml shard.lock ./
-RUN shards install --production
+RUN shards install
 
 COPY src ./src
 COPY --from=svelte-builder /app/frontend/dist ./frontend/dist
