@@ -20,13 +20,13 @@
 {#if !isMobile}
 <DropdownMenu.Root>
 	<DropdownMenu.Trigger
-		class="flex items-center gap-1 p-2 rounded-lg transition-colors hover:opacity-80 text-slate-700 dark:text-slate-300"
+		class="flex items-center gap-1 p-2 rounded-lg transition-colors hover:opacity-80 theme-text-primary"
 		aria-label="Layout options"
 		title="Layout options"
 	>
 		<div class="flex items-end gap-0.5 h-4">
 			{#each Array(4) as _, i (i)}
-				<div class="w-1.5 h-1.5 rounded-full transition-all {i < layoutState.feedColumns ? 'bg-blue-500' : 'bg-slate-400 dark:bg-slate-500'}"></div>
+				<div class="w-1.5 h-1.5 rounded-full transition-all {i < layoutState.feedColumns ? 'bg-blue-500' : 'theme-text-secondary'}"></div>
 			{/each}
 		</div>
 		<svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -37,50 +37,50 @@
 
 	<DropdownMenu.Portal>
 	<DropdownMenu.Content
-		class="z-50 w-48 rounded-xl shadow-lg p-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700"
+		class="z-50 w-48 rounded-xl shadow-lg p-2 theme-bg-primary theme-border border"
 		sideOffset={8}
 	>
-		<div class="px-2 pb-2 text-xs font-medium text-slate-500 dark:text-slate-400">
+		<div class="px-2 pb-2 text-xs font-medium theme-text-secondary">
 			Feeds
 		</div>
 		<div class="flex gap-1 mb-2">
 			{#each columnOptions as option (option.id)}
 				<DropdownMenu.Item
 					onSelect={() => setFeedColumns(option.id)}
-					class="flex-1 flex flex-col items-center gap-1 p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer transition-colors {layoutState.feedColumns === option.id ? 'bg-blue-100 dark:bg-blue-900/30' : ''}"
+					class="flex-1 flex flex-col items-center gap-1 p-2 rounded-lg cursor-pointer transition-colors hover:theme-bg-secondary {layoutState.feedColumns === option.id ? 'bg-blue-100 dark:bg-blue-900/30' : ''}"
 				>
 					<div class="flex gap-0.5">
 						{#each Array(option.id) as _, i (i)}
-							<div class="w-1.5 h-1.5 rounded-full bg-slate-400 dark:bg-slate-500"></div>
+							<div class="w-1.5 h-1.5 rounded-full theme-text-secondary"></div>
 						{/each}
 					</div>
-					<span class="text-xs text-slate-600 dark:text-slate-300">{option.id}</span>
+					<span class="text-xs theme-text-primary">{option.id}</span>
 				</DropdownMenu.Item>
 			{/each}
 		</div>
 
-		<div class="px-2 py-2 text-xs font-medium text-slate-500 dark:text-slate-400 border-t border-slate-200 dark:border-slate-700 pt-2 mt-1">
+		<div class="px-2 py-2 text-xs font-medium theme-text-secondary border-t theme-border pt-2 mt-1">
 			Timeline
 		</div>
 		<div class="flex gap-1">
 			<DropdownMenu.Item
 				onSelect={() => setTimelineColumns(1)}
-				class="flex-1 flex flex-col items-center gap-1 p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer transition-colors {layoutState.timelineColumns === 1 ? 'bg-blue-100 dark:bg-blue-900/30' : ''}"
+				class="flex-1 flex flex-col items-center gap-1 p-2 rounded-lg cursor-pointer transition-colors hover:theme-bg-secondary {layoutState.timelineColumns === 1 ? 'bg-blue-100 dark:bg-blue-900/30' : ''}"
 			>
-				<div class="w-6 h-1.5 rounded-full bg-slate-400 dark:bg-slate-500"></div>
-				<span class="text-xs text-slate-600 dark:text-slate-300">1</span>
+				<div class="w-6 h-1.5 rounded-full theme-text-secondary"></div>
+				<span class="text-xs theme-text-primary">1</span>
 			</DropdownMenu.Item>
 			{#each columnOptions as option (option.id)}
 				<DropdownMenu.Item
 					onSelect={() => setTimelineColumns(option.id)}
-					class="flex-1 flex flex-col items-center gap-1 p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer transition-colors {layoutState.timelineColumns === option.id ? 'bg-blue-100 dark:bg-blue-900/30' : ''}"
+					class="flex-1 flex flex-col items-center gap-1 p-2 rounded-lg cursor-pointer transition-colors hover:theme-bg-secondary {layoutState.timelineColumns === option.id ? 'bg-blue-100 dark:bg-blue-900/30' : ''}"
 				>
 					<div class="flex gap-0.5">
 						{#each Array(option.id) as _, i (i)}
-							<div class="w-1.5 h-1.5 rounded-full bg-slate-400 dark:bg-slate-500"></div>
+							<div class="w-1.5 h-1.5 rounded-full theme-text-secondary"></div>
 						{/each}
 					</div>
-					<span class="text-xs text-slate-600 dark:text-slate-300">{option.id}</span>
+					<span class="text-xs theme-text-primary">{option.id}</span>
 				</DropdownMenu.Item>
 			{/each}
 		</div>
