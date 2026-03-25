@@ -154,7 +154,7 @@
 						<span>Loading...</span>
 					</span>
 				{:else}
-					Load more
+					Load {feed.items.length - 5} more items
 				{/if}
 			</button>
 		</div>
