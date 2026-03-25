@@ -15,21 +15,15 @@
 		...props
 	}: Props = $props();
 
-	const baseStyles = 'rounded-lg border text-card-foreground';
+	const baseStyles = 'rounded-2xl border text-card-foreground bg-white dark:bg-slate-950 transition-shadow duration-200';
 
 	const variants = {
-		default: 'bg-white text-slate-950 shadow-sm dark:bg-slate-950 dark:text-slate-50 border-slate-200 dark:border-slate-800',
-		secondary: 'bg-slate-100 text-slate-900 dark:bg-slate-800 dark:text-slate-50 border-slate-200 dark:border-slate-700',
-		muted: 'bg-slate-50 text-slate-900 dark:bg-slate-800/50 dark:text-slate-50 border-slate-200 dark:border-slate-700'
+		default: 'shadow-sm border-slate-200/80 dark:border-slate-800/80',
+		secondary: 'bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800',
+		muted: 'bg-slate-100/50 dark:bg-slate-900/50 border-slate-200/50 dark:border-slate-800/50'
 	};
 
 	const themeStyles = 'bg-[var(--theme-bg)] text-[var(--theme-text)] border-[var(--theme-border)] shadow-[var(--theme-shadow)]';
-
-	const spacing = {
-		compact: 'p-2',
-		default: 'p-3',
-		spacious: 'p-4'
-	} as const;
 </script>
 
 <div 

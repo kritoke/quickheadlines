@@ -6,7 +6,6 @@
 	import type { TabResponse } from '$lib/types';
 	import { spacing } from '$lib/design/tokens';
 	import { NavigationService } from '$lib/services/navigationService';
-
 	interface Props {
 		title: string;
 		tabs?: TabResponse[];
@@ -76,18 +75,21 @@
 	});
 </script>
 
-<header bind:this={headerElement} class="fixed top-0 left-0 right-0 theme-bg-primary/95 backdrop-blur shadow-sm z-30" data-name="app-header">
-	<div class="mx-auto px-4 md:px-8" style="max-width: 1400px;">
+<header bind:this={headerElement} class="fixed top-0 left-0 right-0 z-30 bg-white/95 dark:bg-slate-950/95 backdrop-blur-xl border-b border-slate-200/80 dark:border-slate-800/80" data-name="app-header">
+	<div class="mx-auto px-4 md:px-6" style="max-width: 1400px;">
 		<div class="flex items-center justify-between h-14">
-			<!-- Logo + Tabs -->
-			<div class="flex items-center gap-2 sm:gap-4 min-w-0">
-				<button onclick={handleLogoClick} class="flex items-center gap-2 hover:opacity-80 transition-opacity shrink-0">
-					<img src="/logo.svg" alt="Logo" class="w-7 h-7 sm:w-8 sm:h-8" />
-					<span class="text-lg sm:text-xl font-bold theme-text-primary hidden sm:block">{title}</span>
-				</button>
+			<div class="flex items-center gap-3 sm:gap-4 min-w-0">
+				<a 
+					href="/" 
+					onclick={handleLogoClick}
+					class="flex items-center gap-2 hover:opacity-80 transition-opacity shrink-0"
+				>
+					<img src="/logo.svg" alt="Logo" class="w-8 h-8" />
+					<span class="text-lg font-semibold text-slate-900 dark:text-white hidden sm:block">{title}</span>
+				</a>
 				
 				{#if tabs.length > 0}
-					<div class="hidden md:block">
+					<div class="hidden md:block pl-2">
 						<TabSelector 
 							{tabs} 
 							{activeTab} 
@@ -98,51 +100,50 @@
 				{/if}
 			</div>
 			
-			<!-- Actions -->
-			<div class="flex items-center gap-1 sm:gap-2">
+			<div class="flex items-center gap-1">
 				{#if actions}
 					{@render actions()}
 				{/if}
 				{#if children}
 					{@render children()}
 				{/if}
+				
 				<button
 					onclick={onSearchToggle}
-					class="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+					class="p-2.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
 					class:bg-slate-100={searchExpanded}
 					class:dark:bg-slate-800={searchExpanded}
 					aria-label="Search"
-					title="Search"
 				>
-					<svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-slate-500 dark:text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+					<svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-slate-600 dark:text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
 						<path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
 					</svg>
 				</button>
+				
 				<button 
 					onclick={handleViewSwitch}
-					class="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+					class="p-2.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
 					aria-label={viewLink.icon === 'clock' ? 'Timeline view' : 'Feed view'}
-					title={viewLink.icon === 'clock' ? 'Timeline' : 'Feeds'}
 				>
 					{#if viewLink.icon === 'clock'}
-						<svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-slate-500 dark:text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+						<svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-slate-600 dark:text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
 							<circle cx="12" cy="12" r="10" />
 							<polyline points="12 6 12 12 16 14" />
 						</svg>
 					{:else}
-						<svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-slate-500 dark:text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+						<svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-slate-600 dark:text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
 							<path d="M4 11a9 9 0 0 1 9 9" />
 							<path d="M4 4a16 16 0 0 1 16 16" />
 							<circle cx="5" cy="19" r="1" fill="currentColor" />
 						</svg>
 					{/if}
 				</button>
+				
 				<button
 					onclick={toggleEffects}
-					class="p-2 rounded-lg transition-colors"
-					style="background-color: {themeState.effects ? resolvedThemeColors.bgSecondary : 'transparent'}; opacity: {themeState.effects ? 1 : 0.7};"
+					class="p-2.5 rounded-lg transition-all duration-200"
+					style="background-color: {themeState.effects ? resolvedThemeColors.bgSecondary : 'transparent'};"
 					aria-label="Toggle effects"
-					title="Effects"
 				>
 					<svg 
 						class="w-5 h-5 transition-all duration-200"
@@ -155,6 +156,7 @@
 						<path d="M13 13l6 6" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" />
 					</svg>
 				</button>
+				
 				<ThemePicker />
 			</div>
 		</div>

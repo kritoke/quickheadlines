@@ -5,9 +5,9 @@
 	import BitsSearchModal from '$lib/components/BitsSearchModal.svelte';
 	import { fetchFeeds, fetchMoreFeedItems, fetchConfig } from '$lib/api';
 	import type { FeedResponse, FeedsPageResponse } from '$lib/types';
-import { themeState, toggleEffects } from '$lib/stores/theme.svelte';
-import { websocketConnection } from '$lib/websocket';
-import { NavigationService } from '$lib/services/navigationService';
+	import { themeState, toggleEffects } from '$lib/stores/theme.svelte';
+	import { websocketConnection } from '$lib/websocket';
+	import { NavigationService } from '$lib/services/navigationService';
 	import { createFeedEffects } from '$lib/stores/effects.svelte';
 	import { logger, initDebug, setDebugEnabled } from '$lib/utils/debug';
 	import { page } from '$app/stores';
@@ -36,8 +36,6 @@ import { NavigationService } from '$lib/services/navigationService';
 	let searchExpanded = $state(false);
 	let tabChangeTimeout: ReturnType<typeof setTimeout> | null = null;
 
-	let feedEffects: ReturnType<typeof createFeedEffects> | null = null;
-
 	let filteredFeeds = $derived(getFilteredFeeds(searchQuery));
 
 	let lastUpdated = $derived(
@@ -50,16 +48,9 @@ import { NavigationService } from '$lib/services/navigationService';
 	let timelineLink = $derived('/timeline?tab=' + currentTab);
 
 	async function handleTabChange(tab: string) {
-		// Update state first, then URL - state-first pattern prevents race conditions
 		await loadFeeds(tab);
-		
-		// Use navigation service for consistent URL handling
 		await NavigationService.navigateToFeeds(tab);
-		
-		// Scroll to top when tab is clicked
-		window.scrollTo(0, 0);
-		document.documentElement.scrollTop = 0;
-		document.body.scrollTop = 0;
+		window.scrollTo({ top: 0, behavior: 'smooth' });
 	}
 
 	async function handleLoadMore(feed: FeedResponse) {
@@ -101,12 +92,10 @@ import { NavigationService } from '$lib/services/navigationService';
 		}
 	});
 
-	// Watch for URL tab changes and reload when tab differs from store state
 	$effect(() => {
 		const urlTab = $page.url?.searchParams.get('tab') ?? 'all';
 		const alreadyLoaded = feedState.status !== 'idle' || feedState.feeds.length > 0;
 		
-		// Only reload if already initialized but URL tab differs from store
 		if (alreadyLoaded && urlTab !== feedState.activeTab) {
 			logger.log('[Page] URL tab changed from', feedState.activeTab, 'to', urlTab, ', reloading...');
 			loadFeeds(urlTab);
@@ -118,29 +107,28 @@ import { NavigationService } from '$lib/services/navigationService';
 	}
 </script>
 
-	<div class="min-h-screen theme-bg-primary transition-colors duration-200" data-name="feeds-page">
-		<AppHeader 
-			title="QuickHeadlines"
-            tabs={feedState.tabs}
-            activeTab={feedState.activeTab}
-            onTabChange={handleTabChange}
-            viewLink={{ href: '/timeline', icon: 'clock' }}
-            {searchExpanded}
-            onSearchToggle={() => searchExpanded = !searchExpanded}
-            onLogoClick={handleLogoClick}
-        />
+<div class="min-h-screen bg-white dark:bg-slate-950 transition-colors duration-200" data-name="feeds-page">
+	<AppHeader 
+		title="QuickHeadlines"
+		tabs={feedState.tabs}
+		activeTab={feedState.activeTab}
+		onTabChange={handleTabChange}
+		viewLink={{ href: '/timeline', icon: 'clock' }}
+		{searchExpanded}
+		onSearchToggle={() => searchExpanded = !searchExpanded}
+		onLogoClick={handleLogoClick}
+	/>
 
-		<!-- Mobile tabs outside header -->
-		{#if feedState.tabs.length > 0}
-			<div class="md:hidden fixed top-14 left-0 right-0 z-40">
-				<TabSelector 
-					tabs={feedState.tabs}
-					activeTab={feedState.activeTab}
-					onTabChange={handleTabChange}
-					maxInline={0}
-				/>
-			</div>
-		{/if}
+	{#if feedState.tabs.length > 0}
+		<div class="md:hidden fixed top-14 left-0 right-0 z-40 bg-white dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800">
+			<TabSelector 
+				tabs={feedState.tabs}
+				activeTab={feedState.activeTab}
+				onTabChange={handleTabChange}
+				maxInline={0}
+			/>
+		</div>
+	{/if}
 
 	{#if searchExpanded}
 		{#await loadSearchModal()}
@@ -156,47 +144,49 @@ import { NavigationService } from '$lib/services/navigationService';
 		{/await}
 	{/if}
 
-	<main class="max-w-[1400px] mx-auto px-4 md:px-8 py-2 sm:py-4 overflow-visible md:py-6" style="padding-top: calc(var(--header-height, 3.5rem) + 0.5rem);">
-		<!-- Spacer for mobile tabs -->
-		<div class="h-8 md:hidden"></div>
+	<main class="max-w-[1400px] mx-auto px-4 md:px-6 py-6" style="padding-top: calc(var(--header-height, 3.5rem) + 1rem);">
+		<div class="h-10 md:hidden"></div>
+		
 		{#if loading && feedState.feeds.length === 0}
-			<div class="flex items-center justify-center py-20 gap-3">
+			<div class="flex items-center justify-center py-24 gap-3">
 				<div class="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-				<div class="text-slate-500 dark:text-slate-400">Loading feeds...</div>
+				<span class="text-slate-600 dark:text-slate-400">Loading feeds...</span>
 			</div>
 		{:else if error && feedState.feeds.length === 0}
-			<div class="bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 p-4 rounded-lg mx-4">
-				{error}
+			<div class="bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 px-4 py-3 rounded-xl mx-4">
+				<span>{error}</span>
 				<button
 					onclick={handleRetry}
-					class="ml-2 underline hover:no-underline"
+					class="ml-3 underline hover:no-underline font-medium"
 				>
 					Retry
 				</button>
 			</div>
 		{:else}
 			{#if loading}
-				<div class="sticky top-0 z-20 theme-bg-primary/80 backdrop-blur-sm py-2 flex items-center justify-center gap-2">
-					<div class="w-4 h-4 border-2 theme-accent border-t-transparent rounded-full animate-spin"></div>
-					<span class="text-sm theme-text-secondary">Loading feeds...</span>
+				<div class="sticky top-[var(--header-height,3.5rem)] z-20 bg-white/90 dark:bg-slate-950/90 backdrop-blur-sm py-3 flex items-center justify-center gap-2 border-b border-slate-200 dark:border-slate-800">
+					<div class="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+					<span class="text-sm text-slate-600 dark:text-slate-400">Loading feeds...</span>
 				</div>
 			{/if}
 
 			{#if filteredFeeds.length > 0}
 				{#key feedState.activeTab}
-					<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3 mx-auto">
+					<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 pt-4 md:pt-6">
 						{#each filteredFeeds as feed, i (`feed-${i}`)}
 							<FeedBox {feed} onLoadMore={() => handleLoadMore(feed)} loading={feedState.loadingFeeds[feed.url] ?? false} />
 						{/each}
 					</div>
 				{/key}
 			{:else if searchQuery}
-				<div class="text-center py-20 text-slate-500 dark:text-slate-400">
-					No results for "{searchQuery}". Try a different search term.
+				<div class="text-center py-24 text-slate-500 dark:text-slate-400">
+					<p class="text-lg">No results for "{searchQuery}"</p>
+					<p class="text-sm mt-2">Try a different search term</p>
 				</div>
 			{:else}
-				<div class="text-center py-20 text-slate-500 dark:text-slate-400">
-					No feeds found. Check your configuration.
+				<div class="text-center py-24 text-slate-500 dark:text-slate-400">
+					<p class="text-lg">No feeds found</p>
+					<p class="text-sm mt-2">Check your configuration</p>
 				</div>
 			{/if}
 		{/if}

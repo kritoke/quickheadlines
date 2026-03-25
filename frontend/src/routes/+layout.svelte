@@ -32,7 +32,6 @@
 			}
 		} else {
 			navigation.complete.then(() => {
-				// Force scroll to top - critical for iOS
 				resetScroll();
 			});
 		}
@@ -58,9 +57,9 @@
 </script>
 
 <Effects />
-<div id="app" class="min-h-screen theme-bg-primary theme-text-primary transition-colors duration-200" data-name="app-layout">
+<div id="app" class="min-h-screen bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-50 transition-colors duration-200" data-name="app-layout">
 	{@render children()}
-	<div class="pb-4 flex justify-center">
+	<div class="pb-6 flex justify-center">
 		<CrystalBadge />
 	</div>
 </div>
