@@ -71,7 +71,9 @@ jobs:
           crystal: 1.18.2
 
       - name: Install OpenSSL and libmagic
-        run: brew install openssl@3 libmagic
+        run: |
+          brew install openssl@3 libmagic
+          echo "PATH=$(brew --prefix openssl@3)/bin:$PATH" >> $GITHUB_ENV
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
