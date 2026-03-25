@@ -151,7 +151,7 @@
 		{#if loading && feedState.feeds.length === 0}
 			<div class="flex items-center justify-center py-24 gap-3">
 				<div class="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-				<span class="text-slate-600 dark:text-slate-400">Loading feeds...</span>
+				<span class="theme-text-secondary">Loading feeds...</span>
 			</div>
 		{:else if error && feedState.feeds.length === 0}
 			<div class="bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 px-4 py-3 rounded-xl mx-4">
@@ -165,9 +165,9 @@
 			</div>
 		{:else}
 			{#if loading}
-				<div class="sticky top-[var(--header-height,3.5rem)] z-20 bg-white/90 dark:bg-slate-950/90 backdrop-blur-sm py-3 flex items-center justify-center gap-2 border-b border-slate-200 dark:border-slate-800">
+				<div class="sticky top-[var(--header-height,3.5rem)] z-20 theme-bg-primary/90 backdrop-blur-sm py-3 flex items-center justify-center gap-2 border-b theme-border">
 					<div class="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-					<span class="text-sm text-slate-600 dark:text-slate-400">Loading feeds...</span>
+					<span class="text-sm theme-text-secondary">Loading feeds...</span>
 				</div>
 			{/if}
 
