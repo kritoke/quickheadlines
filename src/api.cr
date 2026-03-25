@@ -82,12 +82,18 @@ class ItemResponse
   property version : String?
   @[JSON::Field(emit_null: true)]
   property pub_date : Int64?
+  @[JSON::Field(emit_null: true)]
+  property comment_url : String?
+  @[JSON::Field(emit_null: true)]
+  property commentary_url : String?
 
   def initialize(
     @title : String,
     @link : String,
     @version : String? = nil,
     @pub_date : Int64? = nil,
+    @comment_url : String? = nil,
+    @commentary_url : String? = nil,
   )
   end
 end
@@ -314,7 +320,9 @@ module Api
         title: item.title,
         link: item.link,
         version: item.version,
-        pub_date: item.pub_date.try(&.to_unix_ms)
+        pub_date: item.pub_date.try(&.to_unix_ms),
+        comment_url: item.comment_url,
+        commentary_url: item.commentary_url
       )
     end
 

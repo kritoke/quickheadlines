@@ -322,7 +322,7 @@ module Quickheadlines::Repositories
           version = rows.read(String?)
 
           pub_date = pub_date_str.try { |date_str| Time.parse(date_str, "%Y-%m-%d %H:%M:%S", Time::Location::UTC) }
-          items << Item.new(title, link, pub_date, version)
+          items << Item.new(title, link, pub_date, version, nil, nil)
         end
       end
 
@@ -381,7 +381,7 @@ module Quickheadlines::Repositories
           version = rows.read(String?)
 
           pub_date = pub_date_str.try { |date_str| Time.parse(date_str, "%Y-%m-%d %H:%M:%S", Time::Location::UTC) }
-          items << Item.new(title, link, pub_date, version)
+          items << Item.new(title, link, pub_date, version, nil, nil)
         end
       end
 

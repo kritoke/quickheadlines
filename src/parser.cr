@@ -99,7 +99,6 @@ private def parse_rss_item(node : XML::Node) : Item
 
   link = node.xpath_node("./*[local-name()='link']").try(&.text) || "#"
 
-  # Try pubDate first, then dc:date (Dublin Core), then other date elements
   pub_date_str = node.xpath_node("./*[local-name()='pubDate']").try(&.text) ||
                  node.xpath_node("./*[local-name()='dc:date']").try(&.text) ||
                  node.xpath_node("./*[local-name()='date']").try(&.text) ||
@@ -107,16 +106,18 @@ private def parse_rss_item(node : XML::Node) : Item
                  node.xpath_node(".//*[local-name()='date']").try(&.text)
   pub_date = parse_time(pub_date_str)
 
-  Item.new(title, link, pub_date)
+  comment_url = node.xpath_node("./*[local-name()='comments']").try(&.text).try(&.strip).presence
+  commentary_url = node.xpath_node("./*[local-name()='commentRss']").try(&.text).try(&.strip).presence ||
+                   node.xpath_node("./*[local-name()='wfw:commentRss']").try(&.text).try(&.strip).presence
+
+  Item.new(title, link, pub_date, nil, comment_url, commentary_url)
 end
 
 private def parse_atom_entry(node : XML::Node) : Item
-  # Title text
   title = node.xpath_node("./*[local-name()='title']").try(&.text).try(&.strip)
   title = HTML.unescape(title) if title
   title = "Untitled" if title.nil? || title.empty?
 
-  # Entry link preference: rel="alternate" (type text/html) -> any link with href -> text content
   link_node = node.xpath_node("./*[local-name()='link'][@rel='alternate' and (not(@type) or starts-with(@type,'text/html'))]") ||
               node.xpath_node("./*[local-name()='link'][@rel='alternate']") ||
               node.xpath_node("./*[local-name()='link'][@href]") ||
@@ -127,7 +128,11 @@ private def parse_atom_entry(node : XML::Node) : Item
                   node.xpath_node("./*[local-name()='updated']").try(&.text)
   pub_date = parse_time(published_str)
 
-  Item.new(title, link, pub_date)
+  replies_link = node.xpath_node("./*[local-name()='link'][@rel='replies' and (not(@type) or starts-with(@type,'text/html'))]")
+  comment_url = replies_link.try(&.[]?("href")).try(&.strip).presence
+  commentary_url = node.xpath_node("./*[local-name()='link'][@rel='replies' and @type='application/atom+xml']").try(&.[]?("href")).try(&.strip).presence
+
+  Item.new(title, link, pub_date, nil, comment_url, commentary_url)
 end
 
 private def parse_atom(xml : XML::Node, limit : Int32) : {site_link: String?, items: Array(Item), favicon: String?}

@@ -52,7 +52,9 @@ private def fetch_repo_release(repo_entry : String, item_limit : Int32) : Array(
       title: entry.title,
       link: entry.url,
       pub_date: entry.published_at,
-      version: entry.version
+      version: entry.version,
+      comment_url: nil,
+      commentary_url: nil
     )
   end
 rescue ex
