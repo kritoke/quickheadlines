@@ -56,7 +56,6 @@
 
 <Card 
 	class="overflow-hidden flex flex-col"
-	themeVariant={isCustomTheme}
 	data-name="feed-box"
 >
 	<a
