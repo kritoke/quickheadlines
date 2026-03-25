@@ -3,6 +3,7 @@
 	import AppHeader from '$lib/components/AppHeader.svelte';
 	import TabSelector from '$lib/components/TabSelector.svelte';
 	import BitsSearchModal from '$lib/components/BitsSearchModal.svelte';
+	import LayoutPicker from '$lib/components/LayoutPicker.svelte';
 	import { fetchFeeds, fetchMoreFeedItems, fetchConfig } from '$lib/api';
 	import type { FeedResponse, FeedsPageResponse } from '$lib/types';
 	import { themeState, toggleEffects } from '$lib/stores/theme.svelte';
@@ -120,7 +121,11 @@
 		{searchExpanded}
 		onSearchToggle={() => searchExpanded = !searchExpanded}
 		onLogoClick={handleLogoClick}
-	/>
+	>
+		{#snippet actions()}
+			<LayoutPicker />
+		{/snippet}
+	</AppHeader>
 
 	{#if feedState.tabs.length > 0}
 		<div class="md:hidden fixed top-14 left-0 right-0 z-40 bg-white dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800">
