@@ -127,7 +127,7 @@
 	<title>Timeline - QuickHeadlines</title>
 </svelte:head>
 
-<div class="min-h-screen bg-white dark:bg-slate-950 transition-colors">
+<div class="min-h-screen theme-bg-primary transition-colors">
 	<AppHeader 
 		title="QuickHeadlines"
 		tabs={tabs}
@@ -148,7 +148,7 @@
 	</AppHeader>
 
 	{#if tabs.length > 0}
-		<div class="md:hidden fixed top-14 left-0 right-0 z-40 bg-white dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800">
+		<div class="md:hidden fixed top-14 left-0 right-0 z-40 theme-bg-primary border-b theme-border">
 			<TabSelector 
 				tabs={tabs}
 				activeTab={timelineState.tabName}

@@ -110,7 +110,7 @@
 	}
 </script>
 
-<div class="min-h-screen bg-white dark:bg-slate-950 transition-colors duration-200" data-name="feeds-page">
+<div class="min-h-screen theme-bg-primary transition-colors duration-200" data-name="feeds-page">
 	<AppHeader 
 		title="QuickHeadlines"
 		tabs={feedState.tabs}
@@ -127,7 +127,7 @@
 	</AppHeader>
 
 	{#if feedState.tabs.length > 0}
-		<div class="md:hidden fixed top-14 left-0 right-0 z-40 bg-white dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800">
+		<div class="md:hidden fixed top-14 left-0 right-0 z-40 theme-bg-primary border-b theme-border">
 			<TabSelector 
 				tabs={feedState.tabs}
 				activeTab={feedState.activeTab}
