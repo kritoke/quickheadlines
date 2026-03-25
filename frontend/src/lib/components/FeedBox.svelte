@@ -2,8 +2,6 @@
 	import type { FeedResponse, ItemResponse } from '$lib/types';
 	import { formatTimestamp } from '$lib/api';
 	import { themeState, customThemeIds } from '$lib/stores/theme.svelte';
-	import { slide } from 'svelte/transition';
-	import { cubicOut } from 'svelte/easing';
 	import { getFaviconSrc } from '$lib/utils/feedItem';
 	import Card from './ui/Card.svelte';
 	import { spacing } from '$lib/design/tokens';
@@ -17,24 +15,11 @@
 
 	let { feed, onLoadMore, loading = false }: Props = $props();
 	
-	let expanded = $state(false);
 	let isMobile = $state(false);
 
 	let resolvedTheme = $derived(themeState.theme);
 	let isCustomTheme = $derived(customThemeIds.includes(resolvedTheme as any));
 
-	const INITIAL_ITEMS = 5;
-
-	let displayedItems = $derived(
-		!expanded 
-			? feed.items.slice(0, INITIAL_ITEMS) 
-			: feed.items
-	);
-	
-	let hasMore = $derived(
-		!expanded && feed.items.length > INITIAL_ITEMS
-	);
-	
 	let faviconSrc = $derived(getFaviconSrc({ 
 		favicon: feed.favicon, 
 		favicon_data: feed.favicon_data
@@ -53,11 +38,6 @@
 		}
 		
 		return `background-color: ${bgColor}; color: ${textColor};`;
-	}
-
-	function handleLoadMore() {
-		expanded = true;
-		onLoadMore?.();
 	}
 
 	$effect(() => {
@@ -102,9 +82,9 @@
 		<span class="truncate drop-shadow-sm">{feed.title}</span>
 	</a>
 
-	<div class="flex-1 min-h-0 px-3 py-2">
+	<div class="flex-1 min-h-0 px-3 py-2 overflow-y-auto" style="max-height: 320px;">
 		<ul class="divide-y divide-slate-200 dark:divide-slate-700/50">
-			{#each displayedItems as item, i (`${feed.url}-${i}`)}
+			{#each feed.items as item, i (`${feed.url}-${i}`)}
 				<li class="flex items-start gap-2 py-2">
 					<a
 						href={sanitizeUrl(item.link)}
@@ -156,13 +136,13 @@
 		</ul>
 	</div>
 
-	{#if hasMore}
+	{#if feed.has_more}
 		<div class="px-3 py-2 border-t border-slate-200 dark:border-slate-700/50">
 			<button
 				type="button"
 				data-name="load-more"
 				disabled={loading}
-				onclick={handleLoadMore}
+				onclick={() => onLoadMore?.()}
 				class="w-full py-2 text-sm font-medium theme-text-secondary hover:theme-text-primary transition-colors disabled:opacity-50"
 			>
 				{#if loading}
@@ -174,7 +154,7 @@
 						<span>Loading...</span>
 					</span>
 				{:else}
-					Show {feed.items.length - INITIAL_ITEMS} more items
+					Load more
 				{/if}
 			</button>
 		</div>
