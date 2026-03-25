@@ -9,7 +9,11 @@ class StaticController < Athena::Framework::Controller
     response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
 
     if mime.starts_with?("text/html")
-      response.headers["Content-Security-Policy"] = "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; img-src 'self' data: https:; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'self' ws: wss:; font-src 'self' data:"
+      csp = "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; " \
+            "img-src 'self' data: https:; script-src 'self' 'unsafe-inline'; " \
+            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " \
+            "connect-src 'self' ws: wss:; font-src 'self' data: https://fonts.gstatic.com; frame-src 'none'"
+      response.headers["Content-Security-Policy"] = csp
     end
   end
 
