@@ -1,7 +1,7 @@
 <script lang="ts">
 	import type { FeedResponse, ItemResponse } from '$lib/types';
 	import { formatTimestamp } from '$lib/api';
-	import { themeState, customThemeIds } from '$lib/stores/theme.svelte';
+	import { themeState } from '$lib/stores/theme.svelte';
 	import { getFaviconSrc } from '$lib/utils/feedItem';
 	import Card from './ui/Card.svelte';
 	import { sanitizeUrl, sanitizeCssColor } from '$lib/utils/validation';
@@ -54,6 +54,19 @@
 		return {};
 	}
 
+	function getFaviconBgStyle(): string {
+		const dark = resolvedTheme === 'dark';
+		
+		if (feed.header_theme_colors) {
+			const colors = dark ? feed.header_theme_colors.dark : feed.header_theme_colors.light;
+			if (colors) {
+				return `background-color: ${sanitizeCssColor(colors.text, '#ffffff')}20; border-color: ${sanitizeCssColor(colors.text, '#ffffff')}40`;
+			}
+		}
+		
+		return 'background-color: rgba(255,255,255,0.9); border-color: rgba(255,255,255,0.2)';
+	}
+
 	$effect(() => {
 		if (typeof window === 'undefined') return;
 		
@@ -84,7 +97,7 @@
 		style={getHeaderStyle()}
 	>
 		{#if feed.favicon || feed.favicon_data || faviconSrc}
-			<div class="w-5 h-5 rounded bg-white/90 dark:bg-white/80 p-0.5 flex items-center justify-center shadow-sm border border-white/20 shrink-0">
+			<div class="w-5 h-5 rounded p-0.5 flex items-center justify-center shadow-sm shrink-0" style={getFaviconBgStyle()}>
 				<img
 					src={faviconSrc}
 					alt="{feed.title} favicon"
