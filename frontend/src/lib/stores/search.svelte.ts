@@ -7,14 +7,14 @@ export function setSearchQuery(query: string) {
 	searchState.query = query;
 }
 
-export function toggleSearch() {
-	searchState.expanded = !searchState.expanded;
-	if (!searchState.expanded) {
-		searchState.query = '';
-	}
+export function openSearch() {
+	searchState.expanded = true;
 }
 
 export function closeSearch() {
 	searchState.expanded = false;
-	searchState.query = '';
+}
+
+export function toggleSearch() {
+	searchState.expanded = !searchState.expanded;
 }

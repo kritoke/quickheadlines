@@ -1,33 +1,32 @@
 <script lang="ts">
 	import { Dialog } from 'bits-ui';
 	import { spacing } from '$lib/design/tokens';
+	import { searchState, closeSearch, setSearchQuery } from '$lib/stores/search.svelte';
 
 	interface Props {
-		open: boolean;
-		query: string;
 		placeholder: string;
-		onClose: () => void;
-		onQueryChange: (value: string) => void;
 	}
 
-	let { open, query, placeholder, onClose, onQueryChange }: Props = $props();
+	let { placeholder }: Props = $props();
 	let inputEl: HTMLInputElement | undefined = $state();
 
 	$effect(() => {
-		if (open && inputEl) {
+		if (searchState.expanded && inputEl) {
 			inputEl.focus();
 		}
 	});
 
-	function handleInputKeydown(e: KeyboardEvent) {
-		if (e.key === 'Enter') {
+	function handleKeydown(e: KeyboardEvent) {
+		if (e.key === 'Escape') {
+			closeSearch();
+		} else if (e.key === 'Enter') {
 			e.preventDefault();
-			onClose();
+			closeSearch();
 		}
 	}
 </script>
 
-<Dialog.Root open={open} onOpenChange={(open) => !open && onClose()}>
+<Dialog.Root bind:open={searchState.expanded}>
 	<Dialog.Portal>
 		<Dialog.Overlay class="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm" />
 		
@@ -37,15 +36,15 @@
 					<div class="relative flex-1">
 						<input 
 							bind:this={inputEl}
-							value={query}
-							oninput={(e) => onQueryChange(e.currentTarget.value)}
-							onkeydown={handleInputKeydown}
+							value={searchState.query}
+							oninput={(e) => setSearchQuery(e.currentTarget.value)}
+							onkeydown={handleKeydown}
 							{placeholder}
 							class="w-full px-4 {spacing.spacious} text-base theme-bg-secondary theme-border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 theme-text-primary placeholder-slate-400"
 						/>
-						{#if query}
+						{#if searchState.query}
 							<button 
-								onclick={() => onQueryChange('')} 
+								onclick={() => setSearchQuery('')} 
 								class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
 								aria-label="Clear search"
 							>
@@ -57,7 +56,7 @@
 					</div>
 					
 					<button 
-						onclick={onClose}
+						onclick={closeSearch}
 						class="p-2 text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
 						aria-label="Close search"
 					>

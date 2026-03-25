@@ -162,13 +162,7 @@
 		{#await loadSearchModal()}
 			<div></div>
 		{:then SearchModal}
-			<SearchModal 
-				open={searchState.expanded}
-				query={searchState.query}
-				placeholder="Search timeline..."
-				onClose={closeSearch}
-				onQueryChange={setSearchQuery}
-			/>
+			<SearchModal placeholder="Search timeline..." />
 		{/await}
 	{/if}
 
