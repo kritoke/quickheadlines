@@ -111,8 +111,8 @@
 <div class="timeline-view" data-name="timeline-view">
 	{#each groupIndex as [date, dateItems], groupIdx (date)}
 		{@const groupStartIndex = getGroupStartIndex(groupIdx)}
-		<div class="day-group mb-6">
-			<h2 class="text-lg font-semibold theme-text-secondary mb-3 sticky top-16 theme-bg-primary py-2 z-10">
+		<div class="day-group mb-4 sm:mb-6">
+			<h2 class="text-base sm:text-lg font-semibold theme-text-secondary mb-2 sm:mb-3 sticky top-14 sm:top-16 bg-white dark:bg-slate-950 py-2 z-10">
 				{date}
 			</h2>
 			

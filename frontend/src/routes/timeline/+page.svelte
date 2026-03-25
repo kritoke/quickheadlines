@@ -173,8 +173,8 @@
 		{/await}
 	{/if}
 
-	<main class="max-w-[1400px] mx-auto px-4 md:px-6 py-6" style="padding-top: calc(var(--header-height, 3.5rem) + 1rem);">
-		<div class="h-10 md:hidden"></div>
+	<main class="max-w-[1400px] mx-auto px-4 md:px-6 py-3 sm:py-5" style="padding-top: calc(var(--header-height, 3.5rem) + 0.25rem);">
+		<div class="h-8 md:hidden"></div>
 		
 		{#if loading && timelineState.items.length === 0}
 			<div class="flex items-center justify-center py-24 gap-3">

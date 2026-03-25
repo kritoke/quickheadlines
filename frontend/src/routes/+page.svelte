@@ -22,6 +22,7 @@
 		isError,
 		getError
 	} from '$lib/stores/feedStore.svelte';
+	import { layoutState, getFeedGridClass } from '$lib/stores/layout.svelte';
 
 	let LazySearchModal: typeof BitsSearchModal | null = null;
 	const loadSearchModal = async () => {
@@ -46,6 +47,8 @@
 	let error = $derived(isError(feedState) ? getError(feedState) : null);
 	let currentTab = $derived(feedState.activeTab);
 	let timelineLink = $derived('/timeline?tab=' + currentTab);
+
+	let feedGridClass = $derived(getFeedGridClass(layoutState.feedColumns));
 
 	async function handleTabChange(tab: string) {
 		await loadFeeds(tab);
@@ -144,8 +147,8 @@
 		{/await}
 	{/if}
 
-	<main class="max-w-[1400px] mx-auto px-4 md:px-6 py-6" style="padding-top: calc(var(--header-height, 3.5rem) + 1rem);">
-		<div class="h-10 md:hidden"></div>
+	<main class="max-w-[1400px] mx-auto px-4 md:px-6 py-3 sm:py-5" style="padding-top: calc(var(--header-height, 3.5rem) + 0.25rem);">
+		<div class="h-8 md:hidden"></div>
 		
 		{#if loading && feedState.feeds.length === 0}
 			<div class="flex items-center justify-center py-24 gap-3">
@@ -170,9 +173,9 @@
 				</div>
 			{/if}
 
-			{#if filteredFeeds.length > 0}
+				{#if filteredFeeds.length > 0}
 				{#key feedState.activeTab}
-					<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 pt-4 md:pt-6">
+					<div class="grid {feedGridClass} gap-3 sm:gap-4 md:gap-5 pt-2 sm:pt-4 md:pt-6">
 						{#each filteredFeeds as feed, i (`feed-${i}`)}
 							<FeedBox {feed} onLoadMore={() => handleLoadMore(feed)} loading={feedState.loadingFeeds[feed.url] ?? false} />
 						{/each}

@@ -83,7 +83,7 @@
 		href={sanitizeUrl(feed.site_link || '#')}
 		target="_blank"
 		rel="noopener noreferrer"
-		class="flex items-center gap-3 px-4 py-3 font-semibold text-sm hover:opacity-90 transition-opacity"
+		class="flex items-center gap-2 px-3 py-2 font-semibold text-sm hover:opacity-90 transition-opacity"
 		style={getHeaderStyle()}
 	>
 		{#if feed.favicon || feed.favicon_data || faviconSrc}
@@ -102,7 +102,7 @@
 		<span class="truncate drop-shadow-sm">{feed.title}</span>
 	</a>
 
-	<div class="flex-1 min-h-0 px-4 py-3">
+	<div class="flex-1 min-h-0 px-3 py-2">
 		<ul class="divide-y divide-slate-200 dark:divide-slate-700/50">
 			{#each displayedItems as item, i (`${feed.url}-${i}`)}
 				<li>
@@ -110,13 +110,13 @@
 						href={sanitizeUrl(item.link)}
 						target="_blank"
 						rel="noopener noreferrer"
-						class="block py-3 hover:opacity-70 transition-opacity"
+						class="block py-2.5 hover:opacity-70 transition-opacity"
 					>
-						<p class="text-base theme-text-primary line-clamp-2 leading-snug font-medium">
+						<p class="text-sm theme-text-primary line-clamp-2 leading-snug font-medium">
 							{item.title}
 						</p>
 						{#if item.pub_date}
-							<p class="text-sm theme-text-secondary mt-1.5">
+							<p class="text-xs theme-text-secondary mt-1">
 								{formatTimestamp(item.pub_date)}
 							</p>
 						{/if}
@@ -127,13 +127,13 @@
 	</div>
 
 	{#if hasMore}
-		<div class="px-4 py-3 border-t border-slate-200 dark:border-slate-700/50">
+		<div class="px-3 py-2 border-t border-slate-200 dark:border-slate-700/50">
 			<button
 				type="button"
 				data-name="load-more"
 				disabled={loading}
 				onclick={handleLoadMore}
-				class="w-full py-2.5 text-sm font-medium theme-text-secondary hover:theme-text-primary transition-colors disabled:opacity-50"
+				class="w-full py-2 text-sm font-medium theme-text-secondary hover:theme-text-primary transition-colors disabled:opacity-50"
 			>
 				{#if loading}
 					<span class="inline-flex items-center gap-2">
