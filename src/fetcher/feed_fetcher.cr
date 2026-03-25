@@ -214,6 +214,10 @@ class FeedFetcher
 
     favicon, favicon_data = VugAdapter.get_favicon(site_link, parsed[:favicon], previous_data.try(&.favicon), previous_data.try(&.favicon_data))
 
+    if favicon.nil? && favicon_data.nil?
+      favicon = VugAdapter.google_favicon_url(site_link.presence || feed.url)
+    end
+
     local_favicon_path = favicon_data || (favicon && favicon.starts_with?("/favicons/") ? favicon : nil)
     header_color, header_text_color, header_theme_json = extract_header_colors(feed, local_favicon_path)
 
