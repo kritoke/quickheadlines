@@ -2,7 +2,7 @@ version: 2.0
 shards:
   ameba:
     git: https://github.com/crystal-ameba/ameba.git
-    version: 1.7.0-dev+git.commit.a753933e6c8becc93883766b6696414cf49a1469
+    version: 1.7.0-dev+git.commit.ae09e383a062d50cec1dd7cc93382ca6ad2363ce
 
   athena:
     git: https://github.com/athena-framework/framework.git
@@ -66,7 +66,7 @@ shards:
 
   crtemp:
     git: https://github.com/kritoke/crtemp.git
-    version: 0.1.0
+    version: 0.1.1
 
   db:
     git: https://github.com/crystal-lang/crystal-db.git
@@ -74,7 +74,15 @@ shards:
 
   fetcher:
     git: https://github.com/kritoke/fetcher.cr.git
-    version: 0.7.3
+    version: 0.8.0
+
+  fnv:
+    git: https://github.com/naqvis/crystal-fnv.git
+    version: 0.1.3
+
+  html5:
+    git: https://github.com/naqvis/crystal-html5.git
+    version: 0.5.1
 
   http-client-digest_auth:
     git: https://github.com/mamantoha/http-client-digest_auth.git
@@ -84,17 +92,13 @@ shards:
     git: https://github.com/mamantoha/http_proxy.git
     version: 0.14.0
 
-  lexbor:
-    git: https://github.com/kostya/lexbor.git
-    version: 3.6.1
-
   lexis-minhash:
     git: https://github.com/kritoke/lexis-minhash.git
     version: 0.5.0
 
   prismatiq:
     git: https://github.com/kritoke/prismatiq.git
-    version: 0.5.4.0
+    version: 0.5.6.0
 
   sanitize:
     git: https://github.com/straight-shoota/sanitize.git
@@ -106,5 +110,9 @@ shards:
 
   vug:
     git: https://github.com/kritoke/vug.cr.git
-    version: 0.1.0
+    version: 0.1.4.1
+
+  xpath2:
+    git: https://github.com/naqvis/crystal-xpath2.git
+    version: 0.1.3
 

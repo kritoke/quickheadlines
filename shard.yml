@@ -22,13 +22,13 @@ dependencies:
     github: naqvis/crimage
   prismatiq:
     github: kritoke/prismatiq
-    version: "~> 0.5.4"
+    version: "~> 0.5.6"
   baked_file_system:
     github: schovi/baked_file_system
     version: ~> 0.13.0
   fetcher:
     github: kritoke/fetcher.cr
-    version: "~> 0.7.3"
+    version: "~> 0.8.0"
   vug:
     github: kritoke/vug.cr
     version: "~> 0.1.1"
