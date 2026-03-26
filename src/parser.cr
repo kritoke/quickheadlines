@@ -92,6 +92,10 @@ private def resolve_rss_site_link(channel : XML::Node) : String
   link.strip.presence || "#"
 end
 
+private def extract_link_by_rel(node : XML::Node, rel : String) : String?
+  node.xpath_node("./*[local-name()='link'][@rel='#{rel}']").try(&.[]?("href")).try(&.strip).presence
+end
+
 private def parse_rss_item(node : XML::Node) : Item
   title = node.xpath_node("./*[local-name()='title']").try(&.text).try(&.strip)
   title = HTML.unescape(title) if title
@@ -106,9 +110,12 @@ private def parse_rss_item(node : XML::Node) : Item
                  node.xpath_node(".//*[local-name()='date']").try(&.text)
   pub_date = parse_time(pub_date_str)
 
-  comment_url = node.xpath_node("./*[local-name()='comments']").try(&.text).try(&.strip).presence
+  comment_url = node.xpath_node("./*[local-name()='comments']").try(&.text).try(&.strip).presence ||
+                extract_link_by_rel(node, "replies")
+  commentary_url = extract_link_by_rel(node, "discussion") ||
+                   extract_link_by_rel(node, "comments")
 
-  Item.new(title, link, pub_date, nil, comment_url, nil)
+  Item.new(title, link, pub_date, nil, comment_url, commentary_url)
 end
 
 private def parse_atom_entry(node : XML::Node) : Item

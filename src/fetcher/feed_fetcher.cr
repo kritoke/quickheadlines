@@ -545,7 +545,7 @@ private def fetch_reddit_feed(feed : Feed, limit : Int32) : FeedData
   end
 
   items = result.entries.map do |entry|
-    Item.new(entry.title, entry.url, entry.published_at, nil, nil, nil)
+    Item.new(entry.title, entry.url, entry.published_at, nil, entry.comment_url, entry.commentary_url)
   end
 
   build_reddit_feed_data(feed, result, items)
@@ -559,7 +559,7 @@ private def fetch_reddit_background(feed : Feed, limit : Int32)
   return if result.entries.empty?
 
   items = result.entries.map do |entry|
-    Item.new(entry.title, entry.url, entry.published_at, nil, nil, nil)
+    Item.new(entry.title, entry.url, entry.published_at, nil, entry.comment_url, entry.commentary_url)
   end
 
   feed_data = FeedData.new(
