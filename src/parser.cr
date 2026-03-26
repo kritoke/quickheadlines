@@ -107,10 +107,8 @@ private def parse_rss_item(node : XML::Node) : Item
   pub_date = parse_time(pub_date_str)
 
   comment_url = node.xpath_node("./*[local-name()='comments']").try(&.text).try(&.strip).presence
-  commentary_url = node.xpath_node("./*[local-name()='commentRss']").try(&.text).try(&.strip).presence ||
-                   node.xpath_node("./*[local-name()='wfw:commentRss']").try(&.text).try(&.strip).presence
 
-  Item.new(title, link, pub_date, nil, comment_url, commentary_url)
+  Item.new(title, link, pub_date, nil, comment_url, nil)
 end
 
 private def parse_atom_entry(node : XML::Node) : Item
@@ -128,9 +126,9 @@ private def parse_atom_entry(node : XML::Node) : Item
                   node.xpath_node("./*[local-name()='updated']").try(&.text)
   pub_date = parse_time(published_str)
 
-  replies_link = node.xpath_node("./*[local-name()='link'][@rel='replies' and (not(@type) or starts-with(@type,'text/html'))]")
-  comment_url = replies_link.try(&.[]?("href")).try(&.strip).presence
-  commentary_url = node.xpath_node("./*[local-name()='link'][@rel='replies' and @type='application/atom+xml']").try(&.[]?("href")).try(&.strip).presence
+  comment_url = node.xpath_node("./*[local-name()='link'][@rel='replies' and (not(@type) or starts-with(@type,'text/html'))]").try(&.[]?("href")).try(&.strip).presence
+  commentary_url = node.xpath_node("./*[local-name()='link'][@rel='discussion']").try(&.[]?("href")).try(&.strip).presence ||
+                   node.xpath_node("./*[local-name()='link'][@rel='comments']").try(&.[]?("href")).try(&.strip).presence
 
   Item.new(title, link, pub_date, nil, comment_url, commentary_url)
 end
