@@ -128,7 +128,8 @@ private def parse_atom_entry(node : XML::Node) : Item
 
   comment_url = node.xpath_node("./*[local-name()='link'][@rel='replies' and (not(@type) or starts-with(@type,'text/html'))]").try(&.[]?("href")).try(&.strip).presence
   commentary_url = node.xpath_node("./*[local-name()='link'][@rel='discussion']").try(&.[]?("href")).try(&.strip).presence ||
-                   node.xpath_node("./*[local-name()='link'][@rel='comments']").try(&.[]?("href")).try(&.strip).presence
+                   node.xpath_node("./*[local-name()='link'][@rel='comments']").try(&.[]?("href")).try(&.strip).presence ||
+                   node.xpath_node("./*[local-name()='link'][@rel='related']").try(&.[]?("href")).try(&.strip).presence
 
   Item.new(title, link, pub_date, nil, comment_url, commentary_url)
 end
