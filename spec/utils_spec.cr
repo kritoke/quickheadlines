@@ -78,6 +78,94 @@ describe "Utils" do
       Utils.parse_ip_address("").should be_nil
     end
   end
+
+  describe "private_host?" do
+    it "returns true for localhost" do
+      Utils.private_host?("localhost").should be_true
+    end
+
+    it "returns true for 127.0.0.1" do
+      Utils.private_host?("127.0.0.1").should be_true
+    end
+
+    it "returns true for 127.0.0.2" do
+      Utils.private_host?("127.0.0.2").should be_true
+    end
+
+    it "returns true for 192.168.x.x" do
+      Utils.private_host?("192.168.1.1").should be_true
+    end
+
+    it "returns true for 10.x.x.x" do
+      Utils.private_host?("10.0.0.1").should be_true
+    end
+
+    it "returns true for 172.16.0.0 range" do
+      Utils.private_host?("172.16.0.1").should be_true
+    end
+
+    it "returns true for 172.31.255.255" do
+      Utils.private_host?("172.31.255.255").should be_true
+    end
+
+    it "returns true for 169.254.x.x (link-local)" do
+      Utils.private_host?("169.254.1.1").should be_true
+    end
+
+    it "returns true for 100.64.x.x (CGN)" do
+      Utils.private_host?("100.64.1.1").should be_true
+    end
+
+    it "returns true for ::1" do
+      Utils.private_host?("::1").should be_true
+    end
+
+    it "returns true for 0.0.0.0" do
+      Utils.private_host?("0.0.0.0").should be_true
+    end
+
+    it "returns false for public IP 8.8.8.8" do
+      Utils.private_host?("8.8.8.8").should be_false
+    end
+
+    it "returns false for public hostname" do
+      Utils.private_host?("example.com").should be_false
+    end
+
+    it "returns false for public IP 1.1.1.1" do
+      Utils.private_host?("1.1.1.1").should be_false
+    end
+  end
+
+  describe "validate_proxy_host" do
+    it "returns true for public https URL" do
+      Utils.validate_proxy_host("https://example.com/image.png").should be_true
+    end
+
+    it "returns true for public http URL" do
+      Utils.validate_proxy_host("http://example.com/image.png").should be_true
+    end
+
+    it "returns false for localhost URL" do
+      Utils.validate_proxy_host("http://localhost/image.png").should be_false
+    end
+
+    it "returns false for private IP URL" do
+      Utils.validate_proxy_host("http://192.168.1.1/image.png").should be_false
+    end
+
+    it "returns false for invalid URL" do
+      Utils.validate_proxy_host("not-a-url").should be_false
+    end
+
+    it "returns false for URL without host" do
+      Utils.validate_proxy_host("https://").should be_false
+    end
+
+    it "returns false for ftp URL" do
+      Utils.validate_proxy_host("ftp://example.com/image.png").should be_false
+    end
+  end
 end
 
 describe "ConfigValidationError" do
