@@ -4,7 +4,22 @@ require "json"
 module ColorExtractor
   VERSION = "3.0.0"
 
-  @@extraction_cache = Hash(String, {bg: String, text: String | Hash(String, String), timestamp: Time}).new
+  MAX_CACHE_SIZE       = 1000
+  CACHE_EXPIRY_SECONDS = 7 * 24 * 60 * 60
+
+  struct CacheEntry
+    property bg : String
+    property text : String | Hash(String, String)
+    property timestamp : Time
+    property access_order : Int32
+
+    def initialize(@bg : String, @text : String | Hash(String, String), @timestamp : Time, @access_order : Int32)
+    end
+  end
+
+  @@extraction_cache = Hash(String, CacheEntry).new
+  @@cache_order = Deque(String).new
+  @@cache_counter = 0
   @@cache_mutex = Mutex.new
 
   @@theme_extractor : PrismatIQ::ThemeExtractor?
@@ -51,8 +66,10 @@ module ColorExtractor
   private def self.get_cached_theme_aware(path : String) : Hash(String, String | Hash(String, String))?
     @@cache_mutex.synchronize do
       if entry = @@extraction_cache[path]?
-        if (Time.local - entry[:timestamp]).to_i < 7 * 24 * 60 * 60
-          text_val = entry[:text]
+        if (Time.local - entry.timestamp).to_i < CACHE_EXPIRY_SECONDS
+          entry.access_order = @@cache_counter
+          @@cache_counter += 1
+          text_val = entry.text
 
           text_hash = if text_val.is_a?(Hash)
                         text_val.as(Hash(String, String))
@@ -71,7 +88,7 @@ module ColorExtractor
                         {"light" => "", "dark" => ""}
                       end
 
-          return {"bg" => entry[:bg], "text" => text_hash}
+          return {"bg" => entry.bg, "text" => text_hash}
         else
           @@extraction_cache.delete(path)
         end
@@ -82,6 +99,15 @@ module ColorExtractor
 
   private def self.cache_result_theme_aware(path : String, result : Hash(String, String | Hash(String, String)))
     @@cache_mutex.synchronize do
+      evictions_needed = @@extraction_cache.size >= MAX_CACHE_SIZE ? 1 : 0
+
+      if evictions_needed > 0
+        lru_key = @@extraction_cache.min_by { |_, v| v.access_order }[0]?
+        if lru_key
+          @@extraction_cache.delete(lru_key)
+        end
+      end
+
       bg_val = result["bg"] ? result["bg"].to_s : ""
       text_val = result["text"]
 
@@ -102,7 +128,8 @@ module ColorExtractor
                       text_val.to_s
                     end
 
-      @@extraction_cache[path] = {bg: bg_val, text: stored_text, timestamp: Time.local}
+      @@cache_counter += 1
+      @@extraction_cache[path] = CacheEntry.new(bg_val, stored_text, Time.local, @@cache_counter)
     end
   end
 

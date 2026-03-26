@@ -109,7 +109,7 @@ module Utils
   end
 
   def self.parse_ip_address(address : String) : String?
-    return nil if address.nil? || address.empty?
+    return if address.nil? || address.empty?
 
     addr_str = address.to_s
 
@@ -124,5 +124,42 @@ module Utils
     else
       addr_str.split(":").first
     end
+  end
+
+  def self.is_private_host?(host : String) : Bool
+    return true if host == "localhost"
+    return true if host == "0.0.0.0"
+    return true if host == "::1" || host == "[::1]"
+    return true if host.starts_with?("[::")
+    return true if host.starts_with?("fe80::") || host.starts_with?("[fe80::")
+    return true if host.starts_with?("127.")
+    return true if host.starts_with?("192.168.")
+    return true if host.starts_with?("10.")
+
+    if host.starts_with?("100.")
+      parts = host.split('.')
+      if parts.size >= 2 && (second = parts[1].to_i?(strict: true)) && second >= 64 && second <= 127
+        return true
+      end
+    end
+
+    if host.starts_with?("172.16.") || host.starts_with?("172.17.") || host.starts_with?("172.18.") || host.starts_with?("172.19.") || host.starts_with?("172.20.") || host.starts_with?("172.21.") || host.starts_with?("172.22.") || host.starts_with?("172.23.") || host.starts_with?("172.24.") || host.starts_with?("172.25.") || host.starts_with?("172.26.") || host.starts_with?("172.27.") || host.starts_with?("172.28.") || host.starts_with?("172.29.") || host.starts_with?("172.30.") || host.starts_with?("172.31.")
+      return true
+    end
+
+    return true if host.starts_with?("169.254.")
+
+    false
+  end
+
+  def self.validate_proxy_host(url : String) : Bool
+    uri = URI.parse(url)
+    return false unless uri.scheme.in?("http", "https")
+    return false unless uri.host
+
+    host = uri.host.as(String).downcase
+    !is_private_host?(host)
+  rescue
+    false
   end
 end

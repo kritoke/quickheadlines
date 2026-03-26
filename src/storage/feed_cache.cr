@@ -140,7 +140,7 @@ class FeedCache
           found_local = false
           possible_extensions.each do |ext|
             filename = "#{hash[0...16]}.#{ext}"
-            filepath = File.join(FaviconStorage::FAVICON_DIR, filename)
+            filepath = File.join(FaviconStorage.favicon_dir, filename)
             if File.exists?(filepath)
               local_path = "/favicons/#{filename}"
               @db.exec("UPDATE feeds SET favicon = ?, favicon_data = ? WHERE id = ?", local_path, local_path, feed_id)

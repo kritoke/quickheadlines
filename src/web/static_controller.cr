@@ -55,9 +55,10 @@ class StaticController < Athena::Framework::Controller
 
     response
   rescue BakedFileSystem::NoSuchFileError
-    ATH::Response.new("Not Found: #{path}", 404, HTTP::Headers{"Content-Type" => "text/plain"})
+    ATH::Response.new("Not Found", 404, HTTP::Headers{"Content-Type" => "text/plain"})
   rescue ex
-    ATH::Response.new("Error: #{ex.message}", 500, HTTP::Headers{"Content-Type" => "text/plain"})
+    STDERR.puts "[ERROR] Static file error for #{path}: #{ex.message}\n#{ex.backtrace.join("\n")}"
+    ATH::Response.new("Internal server error", 500, HTTP::Headers{"Content-Type" => "text/plain"})
   end
 
   @[ARTA::Get(path: "/")]
@@ -98,9 +99,10 @@ class StaticController < Athena::Framework::Controller
 
     response
   rescue BakedFileSystem::NoSuchFileError
-    ATH::Response.new("Not Found: favicon.ico", 404, HTTP::Headers{"Content-Type" => "text/plain"})
+    ATH::Response.new("Not Found", 404, HTTP::Headers{"Content-Type" => "text/plain"})
   rescue ex
-    ATH::Response.new("Error: #{ex.message}", 500, HTTP::Headers{"Content-Type" => "text/plain"})
+    STDERR.puts "[ERROR] Favicon error: #{ex.message}\n#{ex.backtrace.join("\n")}"
+    ATH::Response.new("Internal server error", 500, HTTP::Headers{"Content-Type" => "text/plain"})
   end
 
   @[ARTA::Get(path: "/logo.svg")]

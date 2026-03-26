@@ -27,7 +27,7 @@ module Quickheadlines
         now = Time.utc
         return if (now - @@last_cleanup).total_seconds < 60
 
-        @@instances.each do |key, limiter|
+        @@instances.each do |_, limiter|
           limiter.cleanup
         end
         @@last_cleanup = now
@@ -39,7 +39,7 @@ module Quickheadlines
       @requests.each do |key, times|
         @requests[key] = times.select { |t| t > cutoff }
       end
-      @requests.reject! { |key, times| times.empty? }
+      @requests.reject! { |_, times| times.empty? }
     end
 
     def allowed?(identifier : String) : Bool

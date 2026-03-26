@@ -8,8 +8,9 @@ module CleanupRepository
       cutoff = (Time.utc - retention_hours.hours).to_s("%Y-%m-%d %H:%M:%S")
 
       if config_urls && !config_urls.empty?
-        url_list = config_urls.map { |url| "'#{url.gsub("'", "''")}'" }.join(",")
-        result = @db.exec("DELETE FROM feeds WHERE last_fetched < ? AND url NOT IN (#{url_list})", cutoff)
+        placeholders = Array.new(config_urls.size, "?").join(",")
+        args = [cutoff] + config_urls
+        result = @db.exec("DELETE FROM feeds WHERE last_fetched < ? AND url NOT IN (#{placeholders})", args: args)
       else
         result = @db.exec("DELETE FROM feeds WHERE last_fetched < ?", cutoff)
       end

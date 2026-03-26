@@ -343,23 +343,27 @@ module Api
   end
 
   # Convert TimelineItem to TimelineItemResponse
-  def self.timeline_item_to_response(item : TimelineItem) : TimelineItemResponse
-    # Look up cluster info from FeedCache (same logic as server.cr add_cluster_info)
-    cache = FeedCache.instance
-    item_id = cache.get_item_id(item.feed_url, item.item.link)
+  def self.timeline_item_to_response(item : TimelineItem, cluster_info : ClusteringRepository::ClusterInfo? = nil) : TimelineItemResponse
+    # Use pre-fetched cluster info if available, otherwise query
+    if cluster_info
+      cluster_id_str = cluster_info.cluster_id.try(&.to_s)
+      is_representative = cluster_info.is_representative
+      cluster_size = cluster_info.cluster_size
+    else
+      cache = FeedCache.instance
+      item_id = cache.get_item_id(item.feed_url, item.item.link)
 
-    cluster_id = nil
-    cluster_size = nil
-    is_representative = true
+      cluster_id_str = nil
+      cluster_size = nil
+      is_representative = true
 
-    if item_id
-      cluster_id = cache.db.query_one?("SELECT cluster_id FROM items WHERE id = ?", item_id, as: {Int64?})
-      cluster_size = cache.get_cluster_size(item_id)
-      is_representative = cache.cluster_representative?(item_id)
+      if item_id
+        cluster_id = cache.db.query_one?("SELECT cluster_id FROM items WHERE id = ?", item_id, as: {Int64?})
+        cluster_id_str = cluster_id.try(&.to_s)
+        cluster_size = cache.get_cluster_size(item_id)
+        is_representative = cache.cluster_representative?(item_id)
+      end
     end
-
-    # Convert cluster_id from Int64? to String? for JSON API
-    cluster_id_str = cluster_id.try(&.to_s)
 
     TimelineItemResponse.new(
       id: generate_item_id(item),
@@ -564,9 +568,18 @@ module Api
     max_index = Math.min(offset + limit, total_count)
     raw_items = all_items[offset...max_index]
 
+    # Batch fetch cluster info to avoid N+1 queries
+    cache = FeedCache.instance
+    item_keys = raw_items.map { |item| ClusteringRepository::ItemKey.new(item.feed_url, item.item.link) }
+    item_ids = cache.get_item_ids_batch(item_keys)
+    cluster_info = cache.get_cluster_info_batch(item_ids.values)
+
     # Convert to timeline item responses
     items_response = raw_items.map do |item|
-      timeline_item_to_response(item)
+      item_key = "#{item.feed_url}|#{item.item.link}"
+      item_id = item_ids[item_key]?
+      info = item_id ? cluster_info[item_id]? : nil
+      timeline_item_to_response(item, info)
     end
 
     has_more = offset + limit < total_count

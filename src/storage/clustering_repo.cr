@@ -3,6 +3,8 @@ require "time"
 require "../services/clustering_service"
 
 module ClusteringRepository
+  record ItemKey, feed_url : String, link : String
+
   def find_all_items_excluding(item_id : Int64, limit : Int32 = 500) : Array(Int64)
     items = [] of Int64
     @mutex.synchronize do
@@ -164,6 +166,67 @@ module ClusteringRepository
         as: {Int64}
       )
     end
+  end
+
+  def get_item_ids_batch(items : Array(ItemKey)) : Hash(String, Int64)
+    result = {} of String => Int64
+    return result if items.empty?
+
+    @mutex.synchronize do
+      items.each do |item|
+        id = @db.query_one?(
+          "SELECT items.id FROM items JOIN feeds ON items.feed_id = feeds.id WHERE feeds.url = ? AND items.link = ?",
+          item.feed_url,
+          item.link,
+          as: {Int64}
+        )
+        if id
+          result["#{item.feed_url}|#{item.link}"] = id
+        end
+      end
+    end
+    result
+  end
+
+  record ClusterInfo, item_id : Int64, cluster_id : Int64?, cluster_size : Int32, is_representative : Bool
+
+  def get_cluster_info_batch(item_ids : Array(Int64)) : Hash(Int64, ClusterInfo)
+    result = {} of Int64 => ClusterInfo
+    return result if item_ids.empty?
+
+    placeholders = item_ids.map { |_| "?" }.join(",")
+    query = <<-SQL
+      WITH cluster_info AS (
+        SELECT
+          cluster_id,
+          MIN(id) as representative_id,
+          COUNT(*) as cluster_size
+        FROM items
+        WHERE cluster_id IS NOT NULL
+        GROUP BY cluster_id
+      )
+      SELECT
+        i.id,
+        i.cluster_id,
+        COALESCE(ci.cluster_size, 0) as cluster_size,
+        CASE WHEN i.cluster_id IS NULL OR i.id = ci.representative_id THEN 1 ELSE 0 END as is_representative
+      FROM items i
+      LEFT JOIN cluster_info ci ON i.cluster_id = ci.cluster_id
+      WHERE i.id IN (#{placeholders})
+      SQL
+
+    @mutex.synchronize do
+      @db.query(query, item_ids) do |rows|
+        rows.each do
+          id = rows.read(Int64)
+          cluster_id = rows.read(Int64?)
+          cluster_size = rows.read(Int32)
+          is_rep = rows.read(Int32) == 1
+          result[id] = ClusterInfo.new(id, cluster_id, cluster_size, is_rep)
+        end
+      end
+    end
+    result
   end
 
   def get_item_title(item_id : Int64) : String?

@@ -5,16 +5,73 @@ require "base64"
 # FaviconStorage manages saving and serving favicons as static files
 # instead of embedding them as base64 data URIs in HTML.
 module FaviconStorage
-  FAVICON_DIR = "public/favicons"
-  MAX_SIZE    = 100 * 1024 # 100KB limit per favicon
+  MAX_SIZE = 100 * 1024 # 100KB limit per favicon
 
   @@mutex = Mutex.new
+  @@favicon_dir : String? = nil
+  @@initialized = false
 
-  # Initialize the favicon storage directory
+  def self.favicon_dir : String
+    @@favicon_dir ||= compute_favicon_dir
+    @@favicon_dir.as(String)
+  end
+
+  def self.compute_favicon_dir : String
+    if env = ENV["QUICKHEADLINES_CACHE_DIR"]?
+      return File.join(env, "favicons")
+    end
+
+    if Dir.exists?("/var/cache")
+      begin
+        test_dir = "/var/cache/quickheadlines_test_#{Process.pid}"
+        Dir.mkdir_p(test_dir)
+        File.delete(test_dir)
+        return "/var/cache/quickheadlines/favicons"
+      rescue
+      end
+    end
+
+    if xdg = ENV["XDG_CACHE_HOME"]?
+      return File.join(xdg, "quickheadlines", "favicons")
+    end
+
+    if home = ENV["HOME"]?
+      if home.includes?("/Users/") && Dir.exists?(File.join(home, "Library", "Caches"))
+        return File.join(home, "Library", "Caches", "quickheadlines", "favicons")
+      end
+      return File.join(home, ".cache", "quickheadlines", "favicons")
+    end
+
+    File.join(Dir.current, "cache", "favicons")
+  end
+
   def self.init : Nil
     @@mutex.synchronize do
-      FileUtils.mkdir_p(FAVICON_DIR) unless Dir.exists?(FAVICON_DIR)
+      return if @@initialized
+      dir = favicon_dir
+      FileUtils.mkdir_p(dir) unless Dir.exists?(dir)
+      migrate_old_favicons if Dir.exists?("public/favicons")
+      @@initialized = true
     end
+  end
+
+  def self.migrate_old_favicons : Nil
+    old_dir = "public/favicons"
+    return unless Dir.exists?(old_dir)
+    return unless Dir.exists?(favicon_dir)
+
+    Dir.each_child(old_dir) do |filename|
+      old_path = File.join(old_dir, filename)
+      new_path = File.join(favicon_dir, filename)
+      unless File.exists?(new_path)
+        FileUtils.mv(old_path, new_path)
+        STDERR.puts "[#{Time.local}] Migrated favicon: #{filename}"
+      end
+    end
+  end
+
+  def self.ensure_initialized : Nil
+    init
   end
 
   # Save favicon data to disk and return the URL path
@@ -32,15 +89,15 @@ module FaviconStorage
     end
     hash = OpenSSL::Digest.new("SHA256").update(hash_input).final.hexstring
     filename = "#{hash[0...16]}.#{extension_from_content_type(content_type)}"
-    filepath = File.join(FAVICON_DIR, filename)
+    filepath = File.join(favicon_dir, filename)
 
     @@mutex.synchronize do
-      # Only write if file doesn't exist (avoid redundant writes)
+      ensure_initialized
       unless File.exists?(filepath)
         begin
           File.write(filepath, image_data)
         rescue ex
-          puts "Error saving favicon: #{ex.message}"
+          STDERR.puts "Error saving favicon: #{ex.message}"
           return
         end
       end
@@ -56,9 +113,10 @@ module FaviconStorage
     hash = OpenSSL::Digest.new("SHA256").update(url).final.hexstring
 
     @@mutex.synchronize do
+      ensure_initialized
       possible_extensions.each do |ext|
         filename = "#{hash[0...16]}.#{ext}"
-        filepath = File.join(FAVICON_DIR, filename)
+        filepath = File.join(favicon_dir, filename)
         if File.exists?(filepath)
           return "/favicons/#{filename}"
         end
@@ -87,9 +145,10 @@ module FaviconStorage
       # Use URL hash for consistency (same URL = same filename)
       hash = OpenSSL::Digest.new("SHA256").update(url).final.hexstring
       filename = "#{hash[0...16]}.#{extension_from_content_type(content_type)}"
-      filepath = File.join(FAVICON_DIR, filename)
+      filepath = File.join(favicon_dir, filename)
 
       @@mutex.synchronize do
+        ensure_initialized
         unless File.exists?(filepath)
           File.write(filepath, image_data)
         end
@@ -97,7 +156,7 @@ module FaviconStorage
 
       "/favicons/#{filename}"
     rescue ex
-      puts "Error converting data URI: #{ex.message}"
+      STDERR.puts "Error converting data URI: #{ex.message}"
       nil
     end
   end
@@ -105,9 +164,9 @@ module FaviconStorage
   # Clear all cached favicons
   def self.clear : Nil
     @@mutex.synchronize do
-      if Dir.exists?(FAVICON_DIR)
-        FileUtils.rm_rf(FAVICON_DIR)
-        FileUtils.mkdir_p(FAVICON_DIR)
+      if Dir.exists?(favicon_dir)
+        FileUtils.rm_rf(favicon_dir)
+        FileUtils.mkdir_p(favicon_dir)
       end
     end
   end
@@ -120,7 +179,7 @@ module FaviconStorage
     @@mutex.synchronize do
       possible_extensions.each do |ext|
         filename = "#{hash[0...16]}.#{ext}"
-        filepath = File.join(FAVICON_DIR, filename)
+        filepath = File.join(favicon_dir, filename)
         return true if File.exists?(filepath)
       end
     end

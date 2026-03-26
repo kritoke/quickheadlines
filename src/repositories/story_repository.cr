@@ -155,7 +155,7 @@ module Quickheadlines::Repositories
         #{feed_filter_clause}
         ORDER BY COALESCE(i.pub_date, '1970-01-01 00:00:00') DESC, i.id DESC
         LIMIT ? OFFSET ?
-      SQL
+        SQL
 
       if cutoff_value && !feed_filter_values.empty?
         query_args = [cutoff_value, *feed_filter_values, limit, offset]
@@ -239,7 +239,7 @@ module Quickheadlines::Repositories
 
     private def build_feed_filter_clause(allowed_feed_urls : Array(String)) : String
       return "" if allowed_feed_urls.empty?
-      
+
       placeholders = (1..allowed_feed_urls.size).map { |_| "?" }.join(", ")
       "AND f.url IN (#{placeholders})"
     end

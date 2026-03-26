@@ -127,15 +127,13 @@ class DatabaseService
   end
 
   private def migrate_lsh_bands_if_needed(db : DB::Database)
-    begin
-      old_schema = db.query_one?("SELECT band_hash FROM lsh_bands LIMIT 1", as: {Int64?})
-      if old_schema
-        db.exec("DROP TABLE lsh_bands")
-        STDERR.puts "[Cache] Migrated lsh_bands table from INTEGER to TEXT column type"
-      end
-    rescue
-      # Table doesn't exist or other error - will be created below
+    old_schema = db.query_one?("SELECT band_hash FROM lsh_bands LIMIT 1", as: {Int64?})
+    if old_schema
+      db.exec("DROP TABLE lsh_bands")
+      STDERR.puts "[Cache] Migrated lsh_bands table from INTEGER to TEXT column type"
     end
+  rescue
+    # Table doesn't exist or other error - will be created below
   end
 
   def close

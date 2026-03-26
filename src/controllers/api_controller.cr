@@ -39,38 +39,17 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
 
   # Validate URL for proxy to prevent SSRF attacks
   private def validate_proxy_url(url : String) : Bool
-    begin
-      uri = URI.parse(url)
-      return false unless uri.scheme.in?("http", "https")
-      return false unless uri.host
+    uri = URI.parse(url)
+    return false unless uri.scheme.in?("http", "https")
+    return false unless uri.host
 
-      host = uri.host.as(String).downcase
+    host = uri.host.as(String).downcase
 
-      # Check for private network ranges
-      return false if host == "localhost"
-      return false if host == "0.0.0.0"
-      return false if host == "::1" || host == "[::1]"
-      return false if host.starts_with?("[::") # IPv6 loopback variations
-      return false if host.starts_with?("fe80::") || host.starts_with?("[fe80::") # Link-local IPv6
-      return false if host.starts_with?("127.")
-      return false if host.starts_with?("192.168.")
-      return false if host.starts_with?("10.")
+    return false if Utils.is_private_host?(host)
 
-      # RFC 6598 - 100.64.0.0/10 (100.64.0.0 - 100.127.255.255)
-      if host.starts_with?("100.")
-        parts = host.split('.')
-        if parts.size >= 2 && (second = parts[1].to_i?(strict: true)) && second >= 64 && second <= 127
-          return false
-        end
-      end
-
-      return false if host.starts_with?("172.16.") || host.starts_with?("172.17.") || host.starts_with?("172.18.") || host.starts_with?("172.19.") || host.starts_with?("172.20.") || host.starts_with?("172.21.") || host.starts_with?("172.22.") || host.starts_with?("172.23.") || host.starts_with?("172.24.") || host.starts_with?("172.25.") || host.starts_with?("172.26.") || host.starts_with?("172.27.") || host.starts_with?("172.28.") || host.starts_with?("172.29.") || host.starts_with?("172.30.") || host.starts_with?("172.31.")
-      return false if host.starts_with?("169.254.")
-
-      ALLOWED_DOMAINS.includes?(host)
-    rescue
-      false
-    end
+    ALLOWED_DOMAINS.includes?(host)
+  rescue
+    false
   end
 
   # Generic integer validation with bounds
@@ -341,7 +320,7 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
       state = StateStore.get
       tabs_snapshot = state.tabs
       found_tab = tabs_snapshot.find { |t| t.name.downcase == tab.downcase }
-      
+
       # FALLBACK: if StateStore is empty or tab has no feeds, load from cache
       if found_tab.nil? || found_tab.feeds.empty?
         cache = FeedCache.instance
@@ -624,10 +603,10 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
     end
 
     filename = "#{hash}.#{ext}"
-    filepath = File.join(FaviconStorage::FAVICON_DIR, filename)
+    filepath = File.join(FaviconStorage.favicon_dir, filename)
 
     # Security: verify path doesn't escape the favicon directory
-    unless filepath.starts_with?(FaviconStorage::FAVICON_DIR)
+    unless filepath.starts_with?(FaviconStorage.favicon_dir)
       return ATH::Response.new("Invalid path", 400, HTTP::Headers{"content-type" => "text/plain"})
     end
 
