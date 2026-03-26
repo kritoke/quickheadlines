@@ -158,16 +158,32 @@ export async function loadFeeds(tab: string, force: boolean = false): Promise<vo
 }
 
 export async function loadMoreFeedItems(feed: FeedResponse): Promise<void> {
-	Object.assign(feedState, setFeedLoading(feedState, feed.url, true));
+	const feedUrl = feed.url;
+	const currentOffset = feed.items.length;
+	
+	// Set loading state
+	const feedIdx = feedState.feeds.findIndex(f => f.url === feedUrl);
+	if (feedIdx !== -1) {
+		feedState.loadingFeeds = { ...feedState.loadingFeeds, [feedUrl]: true };
+	}
 	
 	try {
-		const currentOffset = feed.items.length;
-		const response = await fetchMoreFeedItems(feed.url, 10, currentOffset);
-		Object.assign(feedState, appendFeedItems(feedState, feed.url, response.items, response.total_item_count));
+		const response = await fetchMoreFeedItems(feedUrl, 10, currentOffset);
+		
+		// Find the feed and update items directly
+		const idx = feedState.feeds.findIndex(f => f.url === feedUrl);
+		if (idx !== -1) {
+			const existingFeed = feedState.feeds[idx];
+			feedState.feeds[idx] = {
+				...existingFeed,
+				items: [...existingFeed.items, ...response.items],
+				total_item_count: response.total_item_count ?? existingFeed.total_item_count
+			};
+		}
 	} catch (e) {
 		Object.assign(feedState, setError(feedState, e instanceof Error ? e.message : 'Failed to load more items'));
 	} finally {
-		Object.assign(feedState, setFeedLoading(feedState, feed.url, false));
+		feedState.loadingFeeds = { ...feedState.loadingFeeds, [feedUrl]: false };
 	}
 }
 
