@@ -299,7 +299,9 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
             title: item.title,
             link: item.link,
             version: item.version,
-            pub_date: item.pub_date.try(&.to_unix_ms)
+            pub_date: item.pub_date.try(&.to_unix_ms),
+            comment_url: item.comment_url,
+            commentary_url: item.commentary_url
           )
         end
 
