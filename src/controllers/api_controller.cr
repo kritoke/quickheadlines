@@ -45,7 +45,7 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
 
     host = uri.host.as(String).downcase
 
-    return false if Utils.is_private_host?(host)
+    return false if Utils.private_host?(host)
 
     ALLOWED_DOMAINS.includes?(host)
   rescue
@@ -319,13 +319,13 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
     if tab && tab.downcase != "all"
       state = StateStore.get
       tabs_snapshot = state.tabs
-      found_tab = tabs_snapshot.find { |t| t.name.downcase == tab.downcase }
+      found_tab = tabs_snapshot.find { |_t| _t.name.downcase == tab.downcase }
 
       # FALLBACK: if StateStore is empty or tab has no feeds, load from cache
       if found_tab.nil? || found_tab.feeds.empty?
         cache = FeedCache.instance
         _, tabs_hash = load_feeds_from_cache_fallback(cache)
-        found_tab_hash = tabs_hash.find { |t| t[:name].downcase == tab.downcase }
+        found_tab_hash = tabs_hash.find { |_t| _t[:name].downcase == tab.downcase }
         if found_tab_hash
           allowed_feed_urls = found_tab_hash[:feeds].map(&.url)
         end

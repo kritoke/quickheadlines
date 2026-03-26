@@ -160,7 +160,7 @@ module ColorExtractor
       end
     end
 
-    return unless bg && !bg.empty?
+    return if bg.nil? || bg.empty?
 
     bg_rgb = parse_color_to_rgb(bg)
     return unless bg_rgb
@@ -206,7 +206,7 @@ module ColorExtractor
   end
 
   private def self.parse_color_to_rgb(str : String?) : Array(Int32)?
-    return unless str && !str.empty?
+    return if str.nil? || str.empty?
     s = str.to_s.strip
 
     if s.starts_with?("rgb(")

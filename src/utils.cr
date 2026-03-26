@@ -101,7 +101,7 @@ module Utils
       uri = URI.parse(url.strip)
       return false unless uri.scheme
       return false unless uri.scheme.in?("http", "https")
-      return false unless uri.host.is_a?(String) && !uri.host.to_s.empty?
+      return false if !uri.host.is_a?(String) || uri.host.to_s.empty?
       true
     rescue
       false
@@ -126,7 +126,7 @@ module Utils
     end
   end
 
-  def self.is_private_host?(host : String) : Bool
+  def self.private_host?(host : String) : Bool
     return true if host == "localhost"
     return true if host == "0.0.0.0"
     return true if host == "::1" || host == "[::1]"
@@ -158,7 +158,7 @@ module Utils
     return false unless uri.host
 
     host = uri.host.as(String).downcase
-    !is_private_host?(host)
+    !private_host?(host)
   rescue
     false
   end

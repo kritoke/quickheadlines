@@ -475,7 +475,7 @@ private def feed_url_invalid_reason(url : String) : String?
     uri = URI.parse(url.strip)
     return "URL must have http or https scheme" unless uri.scheme
     return "URL must have http or https scheme" unless uri.scheme.in?("http", "https")
-    return "URL must have a host" unless uri.host.is_a?(String) && !uri.host.to_s.empty?
+    return "URL must have a host" if !uri.host.is_a?(String) || uri.host.to_s.empty?
     nil
   rescue ex
     "URL is malformed: #{ex.message}"

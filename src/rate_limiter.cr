@@ -37,9 +37,9 @@ module Quickheadlines
     def cleanup
       cutoff = Time.utc.to_unix - @window_seconds
       @requests.each do |key, times|
-        @requests[key] = times.select { |t| t > cutoff }
+        @requests[key] = times.select { |_t| _t > cutoff }
       end
-      @requests.reject! { |_, times| times.empty? }
+      @requests.reject! { |_, _times| _times.empty? }
     end
 
     def allowed?(identifier : String) : Bool
@@ -49,7 +49,7 @@ module Quickheadlines
       cutoff = now - @window_seconds
 
       times = @requests[identifier]? || [] of Int64
-      times = times.select { |t| t > cutoff }
+      times = times.select { |_t| _t > cutoff }
 
       if times.size >= @max_requests
         return false
@@ -62,7 +62,7 @@ module Quickheadlines
 
     def retry_after(identifier : String) : Int32
       times = @requests[identifier]?
-      return @window_seconds unless times && !times.empty?
+      return @window_seconds if times.nil? || times.empty?
 
       oldest = times.min
       now = Time.utc.to_unix
