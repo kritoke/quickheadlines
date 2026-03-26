@@ -6,9 +6,14 @@ services:
       args:
         BUILD_REV: ${GIT_COMMIT:-0}
     ports:
-      - "3030:3030"
+      - "8080:8080"
     environment:
       TZ: "America/Chicago"
+      QUICKHEADLINES_CACHE_DIR: /home/appuser/.cache/quickheadlines
     volumes:
-       - ./feeds.yml:/app/feeds.yml:rw
+       - ./feeds.yml:/home/appuser/feeds.yml:rw
+       - quickheadlines_cache:/home/appuser/.cache/quickheadlines
     restart: unless-stopped
+
+volumes:
+  quickheadlines_cache:

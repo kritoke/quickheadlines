@@ -31,7 +31,7 @@ dependencies:
     version: "~> 0.8.1.1"
   vug:
     github: kritoke/vug.cr
-    version: "~> 0.1.1"
+    version: "~> 0.1.5"
 
 development_dependencies:
   ameba:
