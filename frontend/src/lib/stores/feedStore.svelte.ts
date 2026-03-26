@@ -116,7 +116,7 @@ export function appendFeedItems(
 		feeds: updatedFeeds,
 		tabCache: {
 			...state.tabCache,
-			[state.activeTab]: { feeds: clone(updatedFeeds), loaded: true }
+			[state.activeTab]: { feeds: deepClone(updatedFeeds), loaded: true }
 		}
 	};
 }
