@@ -115,19 +115,29 @@ class FeedFetcher
           favicon, favicon_data = VugAdapter.get_favicon(site_link, result.favicon, previous_data.try(&.favicon), previous_data.try(&.favicon_data))
 
           if favicon.nil? && favicon_data.nil?
-            favicon = VugAdapter.google_favicon_url(site_link.presence || feed.url)
+            google_url = VugAdapter.google_favicon_url(site_link.presence || feed.url)
+            if saved = FaviconStorage.fetch_and_save(google_url)
+              favicon = saved
+              favicon_data = saved
+            else
+              favicon = google_url
+            end
           end
 
           local_favicon_path = favicon_data || (favicon && favicon.starts_with?("/favicons/") ? favicon : nil)
           header_color, header_text_color, header_theme_json = extract_header_colors(feed, local_favicon_path)
           final_header_color, final_text_color = extract_legacy_header_from_theme(header_color, header_text_color, header_theme_json)
 
+          preserved_header_color = final_header_color || previous_data.try(&.header_color)
+          preserved_text_color = final_text_color || previous_data.try(&.header_text_color)
+          preserved_theme = header_theme_json || previous_data.try(&.header_theme_colors)
+
           fd = FeedData.new(
             feed.title,
             feed.url,
             site_link,
-            final_header_color,
-            final_text_color,
+            preserved_header_color,
+            preserved_text_color,
             items,
             result.etag,
             result.last_modified,
@@ -135,7 +145,7 @@ class FeedFetcher
             favicon_data
           )
 
-          fd = fd.with_header_theme_colors(header_theme_json) if header_theme_json
+          fd = fd.with_header_theme_colors(preserved_theme) if preserved_theme
 
           @cache.add(fd)
 

@@ -1,6 +1,7 @@
 require "openssl"
 require "file_utils"
 require "base64"
+require "http/client"
 
 # FaviconStorage manages saving and serving favicons as static files
 # instead of embedding them as base64 data URIs in HTML.
@@ -99,6 +100,45 @@ module FaviconStorage
     end
 
     "/favicons/#{filename}"
+  end
+
+  def self.fetch_and_save(url : String) : String?
+    return unless url.starts_with?("http")
+
+    begin
+      uri = URI.parse(url)
+      client = HTTP::Client.new(uri.host.not_nil!, port: uri.port, tls: uri.scheme == "https")
+      client.read_timeout = 10.seconds
+      client.connect_timeout = 5.seconds
+
+      headers = HTTP::Headers{
+        "User-Agent" => "Mozilla/5.0 (compatible; QuickHeadlines/1.0)",
+      }
+
+      response = client.get(uri.request_target, headers: headers)
+      if response.status.redirection?
+        redirect_url = response.headers["Location"]?
+        if redirect_url
+          redirected_uri = uri.resolve(redirect_url)
+          redirect_client = HTTP::Client.new(redirected_uri.host.not_nil!, port: redirected_uri.port, tls: redirected_uri.scheme == "https")
+          redirect_client.read_timeout = 10.seconds
+          redirect_client.connect_timeout = 5.seconds
+          response = redirect_client.get(redirected_uri.request_target, headers: headers)
+        end
+      end
+      unless response.status.success?
+        STDERR.puts "[FaviconStorage] HTTP #{response.status.code} for #{url}"
+        return
+      end
+
+      content_type = response.content_type || "image/png"
+      body = response.body
+
+      save_favicon(url, body.to_slice, content_type)
+    rescue ex
+      STDERR.puts "[FaviconStorage] Failed to fetch #{url}: #{ex.message}"
+      nil
+    end
   end
 
   def self.get_or_fetch(url : String) : String?

@@ -96,12 +96,12 @@ module Quickheadlines::Repositories
       end
     end
 
-    def find_by_url_result(url : String) : FeedResult
+    def find_by_url_result(url : String) : Result(Quickheadlines::Entities::Feed?, RepositoryError)
       result = find_by_url(url)
-      return FeedResult.failure(RepositoryError::NotFound) unless result
-      FeedResult.success(result)
+      return Result(Quickheadlines::Entities::Feed?, RepositoryError).failure(RepositoryError::NotFound) unless result
+      Result(Quickheadlines::Entities::Feed?, RepositoryError).success(result)
     rescue
-      FeedResult.failure(RepositoryError::DatabaseError)
+      Result(Quickheadlines::Entities::Feed?, RepositoryError).failure(RepositoryError::DatabaseError)
     end
 
     def find_by_pattern(pattern : String) : Quickheadlines::Entities::Feed?
@@ -112,12 +112,12 @@ module Quickheadlines::Repositories
       find_by_url(normalized) || find_by_url("#{normalized}/") || find_by_url("#{normalized}/rss")
     end
 
-    def find_by_pattern_result(pattern : String) : FeedResult
+    def find_by_pattern_result(pattern : String) : Result(Quickheadlines::Entities::Feed?, RepositoryError)
       result = find_by_pattern(pattern)
-      return FeedResult.failure(RepositoryError::NotFound) unless result
-      FeedResult.success(result)
+      return Result(Quickheadlines::Entities::Feed?, RepositoryError).failure(RepositoryError::NotFound) unless result
+      Result(Quickheadlines::Entities::Feed?, RepositoryError).success(result)
     rescue
-      FeedResult.failure(RepositoryError::DatabaseError)
+      Result(Quickheadlines::Entities::Feed?, RepositoryError).failure(RepositoryError::DatabaseError)
     end
 
     def save(feed : Quickheadlines::Entities::Feed) : Quickheadlines::Entities::Feed
