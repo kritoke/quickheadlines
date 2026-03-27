@@ -97,28 +97,59 @@ class FeedFetcher
       end
 
       begin
-        uri = URI.parse(current_url)
-        client = create_client(current_url)
-        headers = build_fetch_headers(feed, current_url, previous_data)
+        result = Fetcher.pull(current_url, HTTP::Headers.new, db_fetch_limit, fetcher_config)
 
-        client.get(uri.request_target, headers: headers) do |response|
-          result, new_redirects, should_return, new_url = handle_feed_response(
-            feed, response, current_url, redirects, effective_item_limit, db_fetch_limit, previous_data
-          )
-          current_url = new_url
-
-          if should_return
-            result_data = result.as(FeedData)
-            if final_result = process_response_result(result_data, feed, effective_item_limit, previous_data)
-              return final_result
-            end
-            return result_data
+        if result.success?
+          items = result.entries.map do |entry|
+            comment_url = entry.comment_url || (entry.is_discussion_url ? entry.url : nil)
+            Item.new(entry.title, entry.url, entry.published_at, nil, comment_url, entry.commentary_url)
           end
 
-          redirects = new_redirects
+          if items.empty?
+            debug_log("Feed returned no items: #{feed.title} (#{feed.url})")
+            return build_error_feed_data(feed, "No items found (or unsupported format)")
+          end
 
-          if response.status.server_error?
-            retries = handle_server_error(feed, retries, response.status_code)
+          site_link = result.site_link || feed.url
+
+          favicon, favicon_data = VugAdapter.get_favicon(site_link, result.favicon, previous_data.try(&.favicon), previous_data.try(&.favicon_data))
+
+          if favicon.nil? && favicon_data.nil?
+            favicon = VugAdapter.google_favicon_url(site_link.presence || feed.url)
+          end
+
+          local_favicon_path = favicon_data || (favicon && favicon.starts_with?("/favicons/") ? favicon : nil)
+          header_color, header_text_color, header_theme_json = extract_header_colors(feed, local_favicon_path)
+          final_header_color, final_text_color = extract_legacy_header_from_theme(header_color, header_text_color, header_theme_json)
+
+          fd = FeedData.new(
+            feed.title,
+            feed.url,
+            site_link,
+            final_header_color,
+            final_text_color,
+            items,
+            result.etag,
+            result.last_modified,
+            favicon,
+            favicon_data
+          )
+
+          fd = fd.with_header_theme_colors(header_theme_json) if header_theme_json
+
+          @cache.add(fd)
+
+          if final_result = process_response_result(fd, feed, effective_item_limit, previous_data)
+            return final_result
+          end
+          return fd
+        else
+          error_msg = result.error_message || "Unknown error"
+          HealthMonitor.log_warning("fetch_feed(#{feed.url}) error: #{error_msg}")
+          if stale_cache = get_stale_cached_feed(feed, effective_item_limit, previous_data)
+            return stale_cache
+          else
+            return build_error_feed_data(feed, "Error: #{error_msg}")
           end
         end
       rescue IO::TimeoutError
