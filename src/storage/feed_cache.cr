@@ -133,7 +133,7 @@ class FeedCache
           STDERR.puts "[Cache] Synced favicon_data for #{url}: #{favicon}"
         end
 
-        if favicon.starts_with?("http")
+        if favicon.starts_with?("http") && !favicon.includes?("google.com/s2/favicons")
           hash = OpenSSL::Digest.new("SHA256").update(favicon).final.hexstring
           possible_extensions = ["png", "jpg", "jpeg", "ico", "svg", "webp"]
 
