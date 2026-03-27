@@ -28,10 +28,10 @@ dependencies:
     version: ~> 0.13.0
   fetcher:
     github: kritoke/fetcher.cr
-    version: "~> 0.8.1.1"
+    version: "~> 0.8.2"
   vug:
     github: kritoke/vug.cr
-    version: "~> 0.1.5"
+    version: "~> 0.1.5.1"
 
 development_dependencies:
   ameba:
