@@ -35,6 +35,10 @@ MIGRATIONS = [
       db.exec("DROP TABLE lsh_bands")
     end
   end,
+  DatabaseMigration.new(version: 7, name: "add_comment_url_and_commentary_url_columns") do |db|
+    db.exec("ALTER TABLE items ADD COLUMN comment_url TEXT")
+    db.exec("ALTER TABLE items ADD COLUMN commentary_url TEXT")
+  end,
 ]
 
 private def ensure_schema_info_table(db : DB::Database) : Nil
