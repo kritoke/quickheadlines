@@ -72,7 +72,7 @@
 </script>
 
 <Card 
-	class="overflow-hidden flex flex-col"
+	class="overflow-hidden flex flex-col group"
 	headerBgColor={cardColors.bg}
 	headerColor={cardColors.text}
 	data-name="feed-box"

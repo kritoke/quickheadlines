@@ -110,8 +110,12 @@ body::-webkit-scrollbar-thumb:hover {
 }
 
 .feed-box-scroll::-webkit-scrollbar-thumb {
-	background-color: var(--color-border, var(--theme-border, #e2e8f0));
+	background-color: transparent;
 	border-radius: 2px;
+}
+
+.group:hover .feed-box-scroll::-webkit-scrollbar-thumb {
+	background-color: var(--color-border, var(--theme-border, #e2e8f0));
 }
 
 .feed-box-scroll::-webkit-scrollbar-thumb:hover {
@@ -120,6 +124,10 @@ body::-webkit-scrollbar-thumb:hover {
 
 .feed-box-scroll {
 	scrollbar-width: thin;
+	scrollbar-color: transparent transparent;
+}
+
+.group:hover .feed-box-scroll {
 	scrollbar-color: var(--color-border, var(--theme-border, #e2e8f0)) transparent;
 }
 
