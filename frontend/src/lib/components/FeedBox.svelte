@@ -1,7 +1,8 @@
 <script lang="ts">
 	import type { FeedResponse, ItemResponse } from '$lib/types';
 	import { formatTimestamp } from '$lib/api';
-	import { themeState } from '$lib/stores/theme.svelte';
+	import { themeState, isDarkTheme } from '$lib/stores/theme.svelte';
+	import { breakpointState } from '$lib/utils/breakpoint.svelte';
 	import { getFaviconSrc } from '$lib/utils/feedItem';
 	import Card from './ui/Card.svelte';
 	import { sanitizeUrl, sanitizeCssColor } from '$lib/utils/validation';
@@ -14,9 +15,9 @@
 
 	let { feed, onLoadMore, loading = false }: Props = $props();
 	
-	let isMobile = $state(false);
-
 	let resolvedTheme = $derived(themeState.theme);
+
+	let isMobile = $derived(breakpointState.isMobile);
 
 	let faviconSrc = $derived(getFaviconSrc({ 
 		favicon: feed.favicon, 
@@ -24,7 +25,7 @@
 	}));
 
 	function getHeaderStyle(): string {
-		const dark = resolvedTheme === 'dark';
+		const dark = isDarkTheme(resolvedTheme);
 		const bgColor = sanitizeCssColor(feed.header_color || '#64748b', '#64748b');
 		const textColor = sanitizeCssColor(feed.header_text_color || '#ffffff', '#ffffff');
 		
@@ -39,7 +40,7 @@
 	}
 
 	function getCardColors(): { bg?: string; text?: string } {
-		const dark = resolvedTheme === 'dark';
+		const dark = isDarkTheme(resolvedTheme);
 		
 		if (feed.header_theme_colors) {
 			const colors = dark ? feed.header_theme_colors.dark : feed.header_theme_colors.light;
@@ -55,7 +56,7 @@
 	}
 
 	function getFaviconBgStyle(): string {
-		const dark = resolvedTheme === 'dark';
+		const dark = isDarkTheme(resolvedTheme);
 		
 		if (feed.header_theme_colors) {
 			const colors = dark ? feed.header_theme_colors.dark : feed.header_theme_colors.light;
@@ -66,19 +67,6 @@
 		
 		return 'background-color: rgba(255,255,255,0.9); border-color: rgba(255,255,255,0.2)';
 	}
-
-	$effect(() => {
-		if (typeof window === 'undefined') return;
-		
-		const checkMobile = () => {
-			isMobile = window.innerWidth < 768 || 'ontouchstart' in window;
-		};
-		
-		checkMobile();
-		window.addEventListener('resize', checkMobile);
-		
-		return () => window.removeEventListener('resize', checkMobile);
-	});
 
 	let cardColors = $derived(getCardColors());
 </script>
@@ -112,7 +100,7 @@
 		<span class="truncate drop-shadow-sm">{feed.title}</span>
 	</a>
 
-	<div class="flex-1 min-h-0 px-3 py-2 overflow-y-auto feed-box-scroll" style="max-height: 320px;">
+	<div class="flex-1 min-h-0 px-3 py-2 feed-box-scroll" class:overflow-y-auto={!isMobile} class:overflow-y-visible={isMobile} style={!isMobile ? 'max-height: 320px' : ''}>
 		<ul class="divide-y divide-slate-200 dark:divide-slate-700/50">
 			{#each feed.items as item, i (`${feed.url}-${i}`)}
 				<li class="flex items-start gap-2 py-2">

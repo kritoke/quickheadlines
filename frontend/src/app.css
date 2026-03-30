@@ -33,6 +33,18 @@
 	animation: item-appear 300ms cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
 }
 
+@media (prefers-reduced-motion: reduce) {
+	.new-item {
+		animation: none;
+	}
+	.particle-burst {
+		animation: none;
+	}
+	.border-beam-glow {
+		animation: none;
+	}
+}
+
 
 ::view-transition-old(root) {
 	z-index: 1;
@@ -127,7 +139,7 @@ body::-webkit-scrollbar-thumb:hover {
 /* Always show a subtle glow for touch devices */
 @media (hover: none) {
 	.hover-glow {
-		box-shadow: 0 0 15px rgba(150, 173, 141, 0.3);
+		box-shadow: 0 0 15px var(--theme-shadow, rgba(150, 173, 141, 0.3));
 	}
 }
 

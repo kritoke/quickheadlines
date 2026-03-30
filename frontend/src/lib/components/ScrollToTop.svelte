@@ -1,22 +1,14 @@
 <script lang="ts">
   import { themeState, getScrollButtonColors } from '$lib/stores/theme.svelte';
+  import { breakpointState } from '$lib/utils/breakpoint.svelte';
+  import { zIndex } from '$lib/design/tokens';
   import { logger } from '$lib/utils/debug';
   
   let colors = $derived(getScrollButtonColors(themeState.theme));
-  let isMobile = $state(false);
+  let isMobile = $derived(breakpointState.isMobile);
   let visible = $state(true);
   let container: Window | HTMLElement | null = null;
 
-  // Keep resize detection for mobile styling
-  $effect(() => {
-    if (typeof window === 'undefined') return;
-    isMobile = window.innerWidth < 768;
-    const handleResize = () => (isMobile = window.innerWidth < 768);
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  });
-
-  // Attach scroll listener to the active container
   $effect(() => {
     if (typeof window === 'undefined') return;
     import('$lib/utils/scroll').then((m) => {
@@ -66,7 +58,7 @@
 	type="button"
 	class="scroll-btn"
 	class:mobile={isMobile}
-	style="background-color: {colors.bg}; color: {colors.text}; z-index: 999999;"
+	style="background-color: {colors.bg}; color: {colors.text}; z-index: {zIndex.scrollToTop};"
 	aria-label="Scroll to top"
 	title="Back to top"
 	onclick={doScroll}

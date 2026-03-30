@@ -1,7 +1,13 @@
 export type ThemeStyle = 'light' | 'dark' | 'retro' | 'matrix' | 'ocean' | 'sunset' | 'hotdog' | 'dracula' | 'cyberpunk' | 'forest';
 
+export const DARK_THEMES: readonly ThemeStyle[] = ['dark', 'retro', 'matrix', 'ocean', 'sunset', 'hotdog', 'dracula', 'cyberpunk', 'forest'] as const;
+
 export const customThemeIds = ['retro', 'matrix', 'ocean', 'sunset', 'hotdog', 'dracula', 'cyberpunk', 'forest'] as const;
 export type CustomThemeId = typeof customThemeIds[number];
+
+export function isDarkTheme(theme: ThemeStyle): boolean {
+	return (DARK_THEMES as readonly string[]).includes(theme);
+}
 
 export const themeStyles: { id: ThemeStyle; name: string; description: string }[] = [
 	{ id: 'light', name: 'Light', description: 'Clean light theme' },
@@ -336,7 +342,9 @@ export function applyTheme(theme: ThemeStyle) {
 function applyCustomThemeColors(theme: ThemeStyle) {
 	const t = themes[theme];
 	document.documentElement.style.setProperty('--theme-bg', t.bg);
+	document.documentElement.style.setProperty('--theme-bg-secondary', t.bgSecondary);
 	document.documentElement.style.setProperty('--theme-text', t.text);
+	document.documentElement.style.setProperty('--theme-text-secondary', t.semantic?.['--color-text-secondary'] ?? t.text);
 	document.documentElement.style.setProperty('--theme-border', t.border);
 	document.documentElement.style.setProperty('--theme-accent', t.accent);
 	document.documentElement.style.setProperty('--theme-shadow', t.shadow);

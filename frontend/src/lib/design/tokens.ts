@@ -1,4 +1,6 @@
 export const spacing = {
+	default: '16px',
+	spacious: '24px',
 	1: '4px',
 	2: '8px',
 	3: '12px',
@@ -73,6 +75,18 @@ export const semantic = {
 	header: 'rounded-xl border theme-header',
 	button: 'inline-flex items-center justify-center rounded-lg text-sm font-medium transition-all duration-200',
 	input: 'w-full px-4 py-3 text-base rounded-xl border theme-bg-secondary theme-border focus:outline-none focus:ring-2 focus:ring-blue-500 transition-shadow'
+} as const;
+
+export const zIndex = {
+	base: 0,
+	loadingBar: 20,
+	header: 30,
+	dropdown: 40,
+	dialog: 50,
+	sheet: 100,
+	toast: 100,
+	scrollToTop: 200,
+	effects: 300,
 } as const;
 
 export const layout = {

@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { themeState } from '$lib/stores/theme.svelte';
+	import { breakpointState } from '$lib/utils/breakpoint.svelte';
 	import MobileTabSheet from './MobileTabSheet.svelte';
 	import type { TabResponse } from '$lib/types';
 	interface Props {
@@ -13,7 +14,7 @@
 
 	let showMore = $state(false);
 	let showMobileSheet = $state(false);
-	let isMobile = $state(false);
+	let isMobile = $derived(breakpointState.isMobile);
 	let tabListElement: HTMLElement | undefined = $state();
 
 	const allTabs = $derived([{ name: 'all' }, ...tabs]);
@@ -49,18 +50,6 @@
 		}
 	}
 
-	$effect(() => {
-		if (typeof window === 'undefined') return;
-		
-		const checkMobile = () => {
-			isMobile = window.innerWidth < 768;
-		};
-		
-		checkMobile();
-		window.addEventListener('resize', checkMobile);
-		
-		return () => window.removeEventListener('resize', checkMobile);
-	});
 </script>
 
 {#if isMobile}

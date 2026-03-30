@@ -2,7 +2,7 @@
 	import type { TimelineItemResponse, ClusterItemsResponse } from '$lib/types';
 	import { fetchClusterItems as defaultFetchClusterItems, formatTimestamp } from '$lib/api';
 	import ClusterExpansion from './ClusterExpansion.svelte';
-	import { themeState, customThemeIds } from '$lib/stores/theme.svelte';
+	import { themeState, customThemeIds, isDarkTheme } from '$lib/stores/theme.svelte';
 	import { layoutState } from '$lib/stores/layout.svelte';
 	import { getFaviconSrc, getHeaderStyle } from '$lib/utils/feedItem';
 
@@ -16,7 +16,7 @@
 
 	let { items, hasMore, onLoadMore, fetchClusterItems = defaultFetchClusterItems }: Props = $props();
 	let resolvedTheme = $derived(themeState.theme);
-	let isDark = $derived(resolvedTheme === 'dark');
+	let isDark = $derived(isDarkTheme(resolvedTheme));
 
 	let expandedClusterId = $state<string | null>(null);
 	let clusterItems = $state<Record<string, TimelineItemResponse[]>>({});

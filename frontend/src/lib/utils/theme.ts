@@ -1,4 +1,4 @@
-const BEAM_THEMES = ['cyberpunk', 'matrix', 'vaporwave', 'retro80s', 'dracula', 'ocean'] as const;
+const BEAM_THEMES = ['cyberpunk', 'matrix', 'dracula', 'ocean'] as const;
 export type BeamTheme = typeof BEAM_THEMES[number];
 
 export const BEAM_COLORS: Record<BeamTheme, { from: string; to: string; via?: string }> = {

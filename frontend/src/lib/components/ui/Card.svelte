@@ -3,13 +3,11 @@
 	import type { HTMLAttributes } from 'svelte/elements';
 
 	interface Props extends HTMLAttributes<HTMLDivElement> {
-		variant?: 'default' | 'secondary' | 'muted';
 		headerColor?: string;
 		headerBgColor?: string;
 	}
 
 	let {
-		variant = 'default',
 		headerColor,
 		headerBgColor,
 		class: className,

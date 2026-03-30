@@ -3,6 +3,7 @@
 	import { themeState, initTheme } from '$lib/stores/theme.svelte';
 	import { initLayout } from '$lib/stores/layout.svelte';
 	import { isIOS } from '$lib/utils/theme';
+	import { initBreakpoints } from '$lib/utils/breakpoint.svelte';
 	import { onNavigate } from '$app/navigation';
 	import type { Navigation } from '@sveltejs/kit';
 	import {
@@ -53,6 +54,7 @@
 		
 		initTheme();
 		initLayout();
+		initBreakpoints();
 	});
 </script>
 

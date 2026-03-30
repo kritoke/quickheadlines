@@ -5,8 +5,11 @@ export default {
     './src/lib/components/**/*.svelte',
     './src/routes/**/*.svelte'
   ],
-	darkMode: 'class',
+  darkMode: 'class',
 	theme: {
+		fontFamily: {
+			sans: ['Inter', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
+		},
 		extend: {
 			fontFamily: {
 				sans: ['system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif']

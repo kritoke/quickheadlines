@@ -25,7 +25,7 @@
 
 <DropdownMenu.Root>
 	<DropdownMenu.Trigger
-		class="flex items-center gap-1 p-2 rounded-lg transition-colors hover:opacity-80 text-slate-700 dark:text-slate-300"
+		class="flex items-center gap-1 p-2 rounded-lg transition-colors hover:opacity-80 text-slate-700 dark:text-slate-300 focus-visible:ring-2 focus-visible:ring-[var(--theme-accent)] focus-visible:ring-offset-1"
 		title="Theme"
 	>
 		<span

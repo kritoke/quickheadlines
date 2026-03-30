@@ -1,20 +1,9 @@
 <script lang="ts">
 	import { DropdownMenu } from 'bits-ui';
 	import { layoutState, setTimelineColumns, setFeedColumns, columnOptions, type ColumnCount } from '$lib/stores/layout.svelte';
+	import { breakpointState } from '$lib/utils/breakpoint.svelte';
 
-	let isMobile = $state(false);
-
-	$effect(() => {
-		if (typeof window === 'undefined') return;
-		
-		const checkMobile = () => {
-			isMobile = window.innerWidth < 768 || 'ontouchstart' in window;
-		};
-		
-		checkMobile();
-		window.addEventListener('resize', checkMobile);
-		return () => window.removeEventListener('resize', checkMobile);
-	});
+	let isMobile = $derived(breakpointState.isMobile);
 
 	function getColumnBlocks(count: number): string {
 		if (count === 1) return 'grid-cols-1';
@@ -26,7 +15,7 @@
 {#if !isMobile}
 <DropdownMenu.Root>
 	<DropdownMenu.Trigger
-		class="flex items-center gap-1 p-2 rounded-lg transition-colors hover:opacity-80 theme-text-primary"
+		class="flex items-center gap-1 p-2 rounded-lg transition-colors hover:opacity-80 theme-text-primary focus-visible:ring-2 focus-visible:ring-[var(--theme-accent)] focus-visible:ring-offset-1"
 		aria-label="Layout options"
 		title="Layout options"
 	>

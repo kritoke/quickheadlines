@@ -1,31 +1,30 @@
 <script lang="ts">
-  import { onMount, onDestroy } from 'svelte';
   import { browser } from '$app/environment';
   import { CrystalEngine } from '$lib/crystal-engine';
   import { themeState } from '$lib/stores/theme.svelte';
 
   let canvasEl = $state<HTMLCanvasElement | null>(null);
   let engine = $state<CrystalEngine | null>(null);
-  let mounted = $state(false);
 
-  onMount(() => {
+  $effect(() => {
     if (!browser) return;
     
-    mounted = true;
-    
-    requestAnimationFrame(() => {
-      if (canvasEl) {
-        engine = new CrystalEngine(canvasEl, {
-          width: 60,
-          height: 60,
-        });
-        engine.setDarkMode(themeState.theme === 'dark');
-      }
-    });
-  });
-
-  onDestroy(() => {
+    // Cleanup previous engine if exists
     engine?.destroy();
+    
+    // Initialize engine when canvas is available
+    if (canvasEl) {
+      engine = new CrystalEngine(canvasEl, {
+        width: 60,
+        height: 60,
+      });
+      engine.setDarkMode(themeState.theme === 'dark');
+    }
+    
+    // Cleanup function for when canvasEl changes or component unmounts
+    return () => {
+      engine?.destroy();
+    };
   });
 
   $effect(() => {
@@ -35,7 +34,7 @@
   });
 </script>
 
-{#if mounted}
+{#if canvasEl}
 <div class="flex items-center gap-2 select-none">
   <canvas
     bind:this={canvasEl}

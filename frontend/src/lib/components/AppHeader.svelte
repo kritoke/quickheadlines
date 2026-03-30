@@ -85,7 +85,7 @@
 					class="flex items-center gap-2 hover:opacity-80 transition-opacity shrink-0"
 				>
 					<img src="/logo.svg" alt="Logo" class="w-8 h-8" />
-					<span class="text-lg font-semibold text-slate-900 dark:text-white hidden sm:block">{title}</span>
+					<span class="text-lg font-semibold theme-text-primary hidden sm:block">{title}</span>
 				</a>
 				
 				{#if tabs.length > 0}
@@ -110,7 +110,7 @@
 				
 				<button
 					onclick={onSearchToggle}
-					class="p-2.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+					class="p-2.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors focus-visible:ring-2 focus-visible:ring-[var(--theme-accent)] focus-visible:ring-offset-1"
 					class:bg-slate-100={searchExpanded}
 					class:dark:bg-slate-800={searchExpanded}
 					aria-label="Search"
@@ -122,7 +122,7 @@
 				
 				<button 
 					onclick={handleViewSwitch}
-					class="p-2.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+					class="p-2.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors focus-visible:ring-2 focus-visible:ring-[var(--theme-accent)] focus-visible:ring-offset-1"
 					aria-label={viewLink.icon === 'clock' ? 'Timeline view' : 'Feed view'}
 				>
 					{#if viewLink.icon === 'clock'}
@@ -141,7 +141,7 @@
 				
 				<button
 					onclick={toggleEffects}
-					class="p-2.5 rounded-lg transition-all duration-200"
+					class="p-2.5 rounded-lg transition-all duration-200 focus-visible:ring-2 focus-visible:ring-[var(--theme-accent)] focus-visible:ring-offset-1"
 					style="background-color: {themeState.effects ? resolvedThemeColors.bgSecondary : 'transparent'};"
 					aria-label="Toggle effects"
 				>

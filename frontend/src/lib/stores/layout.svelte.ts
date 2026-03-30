@@ -1,4 +1,4 @@
-export type ColumnCount = 2 | 3 | 4;
+export type ColumnCount = 1 | 2 | 3 | 4;
 
 export const columnOptions: { id: ColumnCount; name: string; description: string }[] = [
 	{ id: 2, name: '2 Columns', description: 'Two column layout' },
