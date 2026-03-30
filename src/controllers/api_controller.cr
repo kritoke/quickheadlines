@@ -45,7 +45,24 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
     auth_header = request.headers["Authorization"]?
     return false unless auth_header
 
-    auth_header == "Bearer #{secret}"
+    unless auth_header.starts_with?("Bearer ")
+      return false
+    end
+
+    auth_value = auth_header[7..-1].strip
+    return false unless auth_value.bytesize == secret.bytesize
+
+    timing_safe_compare(secret, auth_value)
+  end
+
+  private def timing_safe_compare(a : String, b : String) : Bool
+    result = 0
+    a_bytes = a.bytes
+    b_bytes = b.bytes
+    a_bytes.each_with_index do |byte, i|
+      result |= byte ^ b_bytes[i]
+    end
+    result == 0
   end
 
   private def unauthorized_response : ATH::Response
@@ -59,8 +76,8 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
   private def client_ip(request : ATH::Request) : String
     if ENV["TRUSTED_PROXY"]?
       if xff = request.headers["X-Forwarded-For"]?
-        if first_ip = xff.split(",").first?.try(&.strip)
-          return first_ip
+        if last_ip = xff.split(",").last?.try(&.strip)
+          return last_ip
         end
       end
     end
@@ -545,6 +562,21 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
   # Proxy images
   @[ARTA::Get(path: "/proxy_image")]
   def proxy_image(request : ATH::Request) : ATH::Response
+    ip = client_ip(request)
+    limiter = RateLimiter.get_or_create("proxy_image:#{ip}", 30, 60)
+
+    unless limiter.allowed?(ip)
+      retry_after = limiter.retry_after(ip)
+      return ATH::Response.new(
+        "Rate limit exceeded. Try again later.",
+        429,
+        HTTP::Headers{
+          "content-type" => "text/plain",
+          "Retry-After"  => retry_after.to_s,
+        }
+      )
+    end
+
     if url = request.query_params["url"]?
       unless validate_proxy_url(url)
         return ATH::Response.new("Domain not allowed", 400, HTTP::Headers{"content-type" => "text/plain"})
