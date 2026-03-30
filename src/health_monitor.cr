@@ -1,4 +1,5 @@
 require "time"
+require "atomic"
 require "./config"
 
 # Health monitoring utilities for tracking system resources and detecting issues
@@ -14,10 +15,10 @@ module HealthMonitor
   # Metrics tracking
   @@last_cpu_time : Process::Tms?
   @@last_check_time = Time.local
-  @@cache_hits = 0
-  @@cache_misses = 0
+  @@cache_hits = Atomic(Int64).new(0)
+  @@cache_misses = Atomic(Int64).new(0)
   @@db_query_times = [] of Float64
-  @@db_query_count = 0
+  @@db_query_count = Atomic(Int64).new(0)
 
   # Feed health tracking
   @@feed_health : Hash(String, FeedHealth) = Hash(String, FeedHealth).new
@@ -29,24 +30,28 @@ module HealthMonitor
     now = Time.local
     cpu_usage = calculate_cpu_usage
 
+    hits = @@cache_hits.get
+    misses = @@cache_misses.get
+    query_count = @@db_query_count.get
+
     # Calculate cache hit rate
-    total_cache_ops = @@cache_hits + @@cache_misses
-    cache_hit_rate = total_cache_ops > 0 ? (@@cache_hits / total_cache_ops * 100).round(2) : 0.0
+    total_cache_ops = hits + misses
+    cache_hit_rate = total_cache_ops > 0 ? (hits.to_f64 / total_cache_ops * 100).round(2) : 0.0
 
     # Calculate average DB query time
-    avg_db_time = @@db_query_count > 0 ? (@@db_query_times.sum / @@db_query_count).round(2) : 0.0
+    avg_db_time = query_count > 0 ? (@@db_query_times.sum / query_count).round(2) : 0.0
 
     # Log metrics
     STDERR.puts "[#{now}] Health Metrics:"
     STDERR.puts "  CPU Usage: #{cpu_usage.round(2)}% #{cpu_usage > CPU_WARNING_THRESHOLD ? "[WARNING]" : ""}"
-    STDERR.puts "  Cache Hit Rate: #{cache_hit_rate}% (hits: #{@@cache_hits}, misses: #{@@cache_misses})"
-    STDERR.puts "  DB Queries: #{@@db_query_count} (avg time: #{avg_db_time}ms)"
+    STDERR.puts "  Cache Hit Rate: #{cache_hit_rate}% (hits: #{hits}, misses: #{misses})"
+    STDERR.puts "  DB Queries: #{query_count} (avg time: #{avg_db_time}ms)"
 
     # Reset counters for next interval
-    @@cache_hits = 0
-    @@cache_misses = 0
+    @@cache_hits.set(0)
+    @@cache_misses.set(0)
     @@db_query_times.clear
-    @@db_query_count = 0
+    @@db_query_count.set(0)
   end
 
   # Start periodic health monitoring
@@ -61,18 +66,18 @@ module HealthMonitor
 
   # Track cache hit
   def self.record_cache_hit
-    @@cache_hits += 1
+    @@cache_hits.add(1)
   end
 
   # Track cache miss
   def self.record_cache_miss
-    @@cache_misses += 1
+    @@cache_misses.add(1)
   end
 
   # Track database query time
   def self.record_db_query(time_ms : Float64)
     @@db_query_times << time_ms
-    @@db_query_count += 1
+    @@db_query_count.add(1)
 
     # Keep only last 100 query times to avoid memory growth
     @@db_query_times.shift if @@db_query_times.size > 100

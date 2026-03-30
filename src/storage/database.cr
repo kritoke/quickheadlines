@@ -4,55 +4,84 @@ require "../config"
 require "./cache_utils"
 require "./schema"
 
+struct DatabaseMigration
+  property version : Int32
+  property name : String
+  property up : DB::Database -> Nil
+
+  def initialize(@version : Int32, @name : String, &@up : DB::Database -> Nil)
+  end
+end
+
+MIGRATIONS = [
+  DatabaseMigration.new(version: 1, name: "add_favicon_data_column") do |db|
+    db.exec("ALTER TABLE feeds ADD COLUMN favicon_data TEXT")
+  end,
+  DatabaseMigration.new(version: 2, name: "add_header_text_color_column") do |db|
+    db.exec("ALTER TABLE feeds ADD COLUMN header_text_color TEXT")
+  end,
+  DatabaseMigration.new(version: 3, name: "add_header_theme_colors_column") do |db|
+    db.exec("ALTER TABLE feeds ADD COLUMN header_theme_colors TEXT")
+  end,
+  DatabaseMigration.new(version: 4, name: "add_minhash_signature_column") do |db|
+    db.exec("ALTER TABLE items ADD COLUMN minhash_signature BLOB")
+  end,
+  DatabaseMigration.new(version: 5, name: "add_cluster_id_column") do |db|
+    db.exec("ALTER TABLE items ADD COLUMN cluster_id INTEGER REFERENCES items(id)")
+  end,
+  DatabaseMigration.new(version: 6, name: "migrate_lsh_bands_to_text") do |db|
+    old_schema = db.query_one?("SELECT band_hash FROM lsh_bands LIMIT 1", as: {Int64?})
+    if old_schema
+      db.exec("DROP TABLE lsh_bands")
+    end
+  end,
+]
+
+private def ensure_schema_info_table(db : DB::Database) : Nil
+  db.exec("CREATE TABLE IF NOT EXISTS schema_info (version INTEGER PRIMARY KEY)")
+  current = db.query_one?("SELECT version FROM schema_info LIMIT 1", as: {Int32?})
+  unless current
+    db.exec("INSERT INTO schema_info (version) VALUES (0)")
+  end
+end
+
+private def get_schema_version(db : DB::Database) : Int32
+  db.query_one("SELECT version FROM schema_info LIMIT 1", as: {Int32})
+end
+
+private def set_schema_version(db : DB::Database, version : Int32) : Nil
+  db.exec("UPDATE schema_info SET version = ?", version)
+end
+
+def run_migrations(db : DB::Database) : Nil
+  ensure_schema_info_table(db)
+  current_version = get_schema_version(db)
+
+  MIGRATIONS.each do |migration|
+    next if migration.version <= current_version
+
+    STDERR.puts "[Schema] Running migration #{migration.version}: #{migration.name}"
+    begin
+      migration.up.call(db)
+    rescue ex : Exception
+      STDERR.puts "[Schema] Migration #{migration.version} (#{migration.name}) failed: #{ex.message}"
+      raise ex
+    end
+    set_schema_version(db, migration.version)
+    STDERR.puts "[Schema] Migration #{migration.version} applied (new version: #{migration.version})"
+  end
+end
+
 def create_schema(db : DB::Database, db_path : String)
   db.exec("PRAGMA journal_mode = WAL")
   db.exec("PRAGMA synchronous = NORMAL")
   db.exec("PRAGMA cache_size = -64000")
 
   db.exec(Schema::FEEDS_TABLE)
-
-  begin
-    db.exec("ALTER TABLE feeds ADD COLUMN favicon_data TEXT")
-    STDERR.puts "[Cache] Added favicon_data column to existing database"
-  rescue
-  end
-
-  begin
-    db.exec("ALTER TABLE feeds ADD COLUMN header_text_color TEXT")
-    STDERR.puts "[Cache] Added header_text_color column to existing database"
-  rescue
-  end
-
-  begin
-    db.exec("ALTER TABLE feeds ADD COLUMN header_theme_colors TEXT")
-    STDERR.puts "[Cache] Added header_theme_colors column to existing database"
-  rescue
-  end
-
   db.exec(Schema::ITEMS_TABLE)
-
-  begin
-    db.exec("ALTER TABLE items ADD COLUMN minhash_signature BLOB")
-    STDERR.puts "[Cache] Added minhash_signature column to existing database"
-  rescue
-  end
-
-  begin
-    db.exec("ALTER TABLE items ADD COLUMN cluster_id INTEGER REFERENCES items(id)")
-    STDERR.puts "[Cache] Added cluster_id column to existing database"
-  rescue
-  end
-
-  begin
-    old_schema = db.query_one?("SELECT band_hash FROM lsh_bands LIMIT 1", as: {Int64?})
-    if old_schema
-      db.exec("DROP TABLE lsh_bands")
-      STDERR.puts "[Cache] Migrated lsh_bands table from INTEGER to TEXT column type"
-    end
-  rescue
-  end
-
   db.exec(Schema::LSH_BANDS_TABLE)
+
+  run_migrations(db)
 
   cleanup_result = db.exec(<<-SQL
     DELETE FROM items

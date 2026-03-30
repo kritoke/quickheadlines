@@ -33,8 +33,8 @@ def create_client(url : String) : HTTP::Client
   client.compress = true
 
   # Apply default timeouts
-  client.read_timeout = 30.seconds
-  client.connect_timeout = 10.seconds
+  client.read_timeout = Constants::HTTP_READ_TIMEOUT.seconds
+  client.connect_timeout = Constants::HTTP_CONNECT_TIMEOUT.seconds
 
   client
 end
@@ -161,5 +161,24 @@ module Utils
     !private_host?(host)
   rescue
     false
+  end
+end
+
+module UrlNormalizer
+  def self.normalize(url : String) : String
+    normalized = url.strip
+
+    normalized = "https://#{normalized[7..-1]}" if normalized.starts_with?("http://")
+
+    normalized = normalized.sub("https://www.", "https://").sub("http://www.", "http://")
+
+    normalized = normalized.rchop('/')
+    normalized = normalized.rchop("/feed")
+    normalized = normalized.rchop("/feed.xml")
+    normalized = normalized.rchop("/rss")
+    normalized = normalized.rchop("/rss.xml")
+    normalized = normalized.rchop("/atom")
+
+    normalized.ends_with?('/') ? normalized : "#{normalized}/"
   end
 end

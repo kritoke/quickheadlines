@@ -11,7 +11,7 @@ require "http/client"
 # OUTSIDE the mutex. Only the atomic file check-and-write is protected.
 # This avoids Boehm GC mutex initialization conflicts on FreeBSD.
 module FaviconStorage
-  MAX_SIZE = 100 * 1024
+  MAX_SIZE            = 100 * 1024
   POSSIBLE_EXTENSIONS = {"png", "jpg", "jpeg", "ico", "svg", "webp"}
 
   @@mutex = Mutex.new(:unchecked)

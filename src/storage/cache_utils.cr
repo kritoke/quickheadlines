@@ -56,12 +56,7 @@ def get_cache_db_path(config : Config?) : String
 end
 
 def normalize_feed_url(url : String) : String
-  normalized = url.rchop('/')
-  normalized = normalized.rchop("/feed")
-  normalized = normalized.rchop("/rss")
-  normalized = normalized.rchop("/atom")
-  normalized = normalized.ends_with?('/') ? normalized : "#{normalized}/"
-  normalized
+  UrlNormalizer.normalize(url)
 end
 
 def get_db_size(db_path : String) : Int64

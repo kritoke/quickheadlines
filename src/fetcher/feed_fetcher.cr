@@ -3,6 +3,7 @@ require "time"
 require "json"
 require "fetcher"
 require "../config"
+require "../constants"
 require "../models"
 require "../storage"
 require "../health_monitor"
@@ -88,7 +89,7 @@ class FeedFetcher
     start_time = Time.monotonic
 
     loop do
-      timeout_seconds = 60
+      timeout_seconds = Constants::FETCH_TIMEOUT_SECONDS
       elapsed_seconds = (Time.monotonic - start_time).total_seconds
       abort_msg = should_abort_fetch?(feed, elapsed_seconds, retries, redirects, timeout_seconds)
 
@@ -407,11 +408,11 @@ class FeedFetcher
       return {true, "Error: Fetch timeout after #{timeout_seconds}s (retries: #{retries})"}
     end
 
-    if redirects > 10
+    if redirects > Constants::MAX_REDIRECTS
       return {true, "Error: Too many redirects (#{redirects})"}
     end
 
-    if retries >= 3
+    if retries >= Constants::MAX_RETRIES
       return {true, "Error: Failed after #{retries} retries"}
     end
 
@@ -419,7 +420,7 @@ class FeedFetcher
   end
 
   private def calculate_backoff(feed : Feed, retries : Int32) : Int32
-    5 * retries
+    Math.min(60, 2 ** retries)
   end
 
   private def handle_server_error(feed : Feed, retries : Int32, status_code : Int32) : Int32
@@ -622,8 +623,7 @@ private def fetch_reddit_background(feed : Feed, limit : Int32)
 end
 
 private def normalize_url(url : String) : String
-  # Normalize URLs by removing www. prefix for consistency
-  url.sub("https://www.", "https://").sub("http://www.", "http://")
+  UrlNormalizer.normalize(url)
 end
 
 # Validate redirect URL to prevent SSRF attacks

@@ -1,4 +1,5 @@
 require "athena"
+require "../constants"
 require "../dtos/config_dto"
 require "../web/assets"
 require "../services/feed_service"
@@ -28,13 +29,42 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
     "fastly.picsum.photos",
   }
 
-  MAX_PROXY_IMAGE_BYTES = 5 * 1024 * 1024
+  # MAX_PROXY_IMAGE_BYTES from Constants
 
   def self.new : self
     new(DatabaseService.instance)
   end
 
   def initialize(@db_service : DatabaseService)
+  end
+
+  private def check_admin_auth(request : ATH::Request) : Bool
+    secret = ENV["ADMIN_SECRET"]?
+    return true if secret.nil? || secret.empty?
+
+    auth_header = request.headers["Authorization"]?
+    return false unless auth_header
+
+    auth_header == "Bearer #{secret}"
+  end
+
+  private def unauthorized_response : ATH::Response
+    ATH::Response.new(
+      "{\"error\": \"Unauthorized\"}",
+      401,
+      HTTP::Headers{"content-type" => "application/json"}
+    )
+  end
+
+  private def client_ip(request : ATH::Request) : String
+    if ENV["TRUSTED_PROXY"]?
+      if xff = request.headers["X-Forwarded-For"]?
+        if first_ip = xff.split(",").first?.try(&.strip)
+          return first_ip
+        end
+      end
+    end
+    request.headers["X-Client-IP"]?.try(&.strip) || request.headers["Host"]? || "unknown"
   end
 
   # Validate URL for proxy to prevent SSRF attacks
@@ -560,8 +590,8 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
                   response.headers["Access-Control-Allow-Origin"] = "*"
                   response.headers["Cache-Control"] = "public, max-age=86400"
 
-                  bytes_copied = IO.copy(client_response.body_io, content, limit: MAX_PROXY_IMAGE_BYTES + 1)
-                  if bytes_copied > MAX_PROXY_IMAGE_BYTES
+                  bytes_copied = IO.copy(client_response.body_io, content, limit: Constants::MAX_PROXY_IMAGE_BYTES + 1)
+                  if bytes_copied > Constants::MAX_PROXY_IMAGE_BYTES
                     response.status = 413
                     response.content = "Image too large"
                   else
@@ -637,12 +667,15 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
   # Actions: run (cluster uncategorized), recluster (clear and re-cluster)
   @[ARTA::Post(path: "/api/cluster")]
   def cluster(request : ATH::Request) : ATH::Response
-    limiter = RateLimiter.get_or_create("cluster", 1, 60)
-    # Use simple key since Athena doesn't provide remote_ip directly
-    client_key = "cluster_endpoint"
+    unless check_admin_auth(request)
+      return unauthorized_response
+    end
 
-    unless limiter.allowed?(client_key)
-      retry_after = limiter.retry_after(client_key)
+    ip = client_ip(request)
+    limiter = RateLimiter.get_or_create("cluster:#{ip}", 1, 60)
+
+    unless limiter.allowed?(ip)
+      retry_after = limiter.retry_after(ip)
       return ATH::Response.new(
         "Rate limit exceeded. Try again later.",
         429,
@@ -675,12 +708,15 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
   # POST /api/admin - Unified admin actions: clear-cache, cleanup-orphaned
   @[ARTA::Post(path: "/api/admin")]
   def admin(request : ATH::Request) : ATH::Response
-    limiter = RateLimiter.get_or_create("admin", 1, 60)
-    # Use simple key since Athena doesn't provide remote_ip directly
-    client_key = "admin_endpoint"
+    unless check_admin_auth(request)
+      return unauthorized_response
+    end
 
-    unless limiter.allowed?(client_key)
-      retry_after = limiter.retry_after(client_key)
+    ip = client_ip(request)
+    limiter = RateLimiter.get_or_create("admin:#{ip}", 1, 60)
+
+    unless limiter.allowed?(ip)
+      retry_after = limiter.retry_after(ip)
       return ATH::Response.new(
         "Rate limit exceeded. Try again later.",
         429,
@@ -691,7 +727,35 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
       )
     end
 
-    action = "cleanup-orphaned"
+    body_io = request.body
+    action = nil
+
+    if body_io
+      body_content = body_io.gets_to_end
+      if !body_content.empty?
+        begin
+          body_json = JSON.parse(body_content)
+          action = body_json["action"]?.try(&.as_s?)
+        rescue
+        end
+      end
+    end
+
+    unless action
+      return ATH::Response.new(
+        "{\"error\": \"Missing action field\"}",
+        400,
+        HTTP::Headers{"content-type" => "application/json"}
+      )
+    end
+
+    unless action.in?("clear-cache", "cleanup-orphaned")
+      return ATH::Response.new(
+        "{\"error\": \"Unknown action\"}",
+        400,
+        HTTP::Headers{"content-type" => "application/json"}
+      )
+    end
 
     spawn do
       begin
@@ -800,6 +864,6 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
   end
 
   private def normalize_url(url : String) : String
-    url.sub("https://www.", "https://").sub("http://www.", "http://")
+    UrlNormalizer.normalize(url)
   end
 end

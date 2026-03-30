@@ -510,6 +510,11 @@ end
 
 # Fetch feeds.yml from GitHub repository
 def fetch_config_from_github(repo_path : String, branch : String = "main") : String?
+  unless repo_path =~ /\A[a-zA-Z0-9_-]+\/[a-zA-Z0-9_-]+\z/
+    STDERR.puts "[WARN] Invalid repo_path format (must be owner/repo): #{repo_path}"
+    return
+  end
+
   url = "https://raw.githubusercontent.com/#{repo_path}/#{branch}/feeds.yml"
 
   begin
