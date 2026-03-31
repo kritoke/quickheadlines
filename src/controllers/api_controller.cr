@@ -14,6 +14,8 @@ require "../rate_limiter"
 
 class QuickHeadlines::Controllers::ApiController < Athena::Framework::Controller
   @db_service : DatabaseService
+  @feed_cache : FeedCache
+  @socket_manager : SocketManager
   @story_service : QuickHeadlines::Services::StoryService?
   @feed_service : QuickHeadlines::Services::FeedService?
   @clustering_service : QuickHeadlines::Services::ClusteringService?
@@ -32,10 +34,16 @@ class QuickHeadlines::Controllers::ApiController < Athena::Framework::Controller
   # MAX_PROXY_IMAGE_BYTES from Constants
 
   def self.new : self
-    new(DatabaseService.instance)
+    db = DatabaseService.instance
+    cache = FeedCache.instance
+    sm = SocketManager.instance
+    new(db, cache, sm)
   end
 
-  def initialize(@db_service : DatabaseService)
+  def initialize(@db_service : DatabaseService, @feed_cache : FeedCache, @socket_manager : SocketManager)
+  end
+
+  def initialize(@db_service : DatabaseService, @feed_cache : FeedCache, @socket_manager : SocketManager)
   end
 
   private def check_admin_auth(request : ATH::Request) : Bool
@@ -166,7 +174,7 @@ class QuickHeadlines::Controllers::ApiController < Athena::Framework::Controller
       )
     end
 
-    cache = FeedCache.instance
+    cache = @feed_cache
     db_items = cache.get_cluster_items_full(cluster_id)
 
     items = db_items.map do |item|
@@ -197,7 +205,7 @@ class QuickHeadlines::Controllers::ApiController < Athena::Framework::Controller
     raw_tab = request.query_params["tab"]?
     active_tab = raw_tab.presence || "all"
 
-    cache = FeedCache.instance
+    cache = @feed_cache
     item_limit = StateStore.get.config.try(&.item_limit) || 20
 
     # Get consistent snapshot of state
@@ -300,7 +308,7 @@ class QuickHeadlines::Controllers::ApiController < Athena::Framework::Controller
         tab_name = tab.name
       end
 
-      cache = FeedCache.instance
+      cache = @feed_cache
 
       # Check if we have enough data in the cache
       current_count = 0
@@ -370,7 +378,7 @@ class QuickHeadlines::Controllers::ApiController < Athena::Framework::Controller
 
       # FALLBACK: if StateStore is empty or tab has no feeds, load from cache
       if found_tab.nil? || found_tab.feeds.empty?
-        cache = FeedCache.instance
+        cache = @feed_cache
         _, tabs_hash = load_feeds_from_cache_fallback(cache)
         found_tab_hash = tabs_hash.find { |_t| _t[:name].downcase == tab.downcase }
         if found_tab_hash
@@ -499,7 +507,7 @@ class QuickHeadlines::Controllers::ApiController < Athena::Framework::Controller
     end
 
     normalized_url = normalize_feed_url(feed_url)
-    cache = FeedCache.instance
+    cache = @feed_cache
     db_url = cache.find_feed_url_by_pattern(normalized_url) || feed_url
 
     cache.update_header_colors(db_url, color, text_color)
@@ -727,7 +735,7 @@ class QuickHeadlines::Controllers::ApiController < Athena::Framework::Controller
         if StateStore.config.try(&.debug?)
           STDERR.puts "[#{Time.local}] Running clustering..."
         end
-        service.recluster_with_lsh(cluster_limit, threshold)
+        service.recluster_with_lsh(@feed_cache, cluster_limit, threshold)
       rescue ex
         STDERR.puts "[#{Time.local}] Clustering error: #{ex.message}"
         STDERR.puts ex.backtrace.join("\n")
@@ -791,7 +799,7 @@ class QuickHeadlines::Controllers::ApiController < Athena::Framework::Controller
 
     spawn do
       begin
-        cache = FeedCache.instance
+        cache = @feed_cache
         db = cache.db
 
         case action
@@ -845,7 +853,7 @@ class QuickHeadlines::Controllers::ApiController < Athena::Framework::Controller
   # GET /api/status - Get current system status
   @[ARTA::Get(path: "/api/status")]
   def status : QuickHeadlines::DTOs::StatusResponse
-    ws_stats = SocketManager.instance.stats
+    ws_stats = @socket_manager.stats
     broadcaster_stats = EventBroadcaster.stats
 
     QuickHeadlines::DTOs::StatusResponse.new(

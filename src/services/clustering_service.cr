@@ -138,14 +138,16 @@ class QuickHeadlines::Services::ClusteringService
     processed
   end
 
-  def recluster_with_lsh(limit : Int32 = 5000, threshold : Float64 = 0.35, bands : Int32 = 20) : Int32
+  def recluster_with_lsh(limit : Int32 = 5000, threshold : Float64 = 0.35, bands : Int32 = 20)
+    recluster_with_lsh(FeedCache.instance, limit, threshold, bands)
+  end
+
+  def recluster_with_lsh(cache : FeedCache, limit : Int32 = 5000, threshold : Float64 = 0.35, bands : Int32 = 20) : Int32
     # Prevent concurrent clustering runs
     if StateStore.clustering?
       STDERR.puts "[#{Time.local}] Clustering already in progress, skipping recluster_with_lsh"
       return 0
     end
-
-    cache = FeedCache.instance
 
     items = [] of ClusteringItem
     @db.query("SELECT i.id, i.title, i.feed_id, f.url FROM items i JOIN feeds f ON i.feed_id = f.id WHERE i.pub_date IS NULL OR i.pub_date <= datetime('now', '+1 day') ORDER BY i.pub_date DESC LIMIT ?", limit) do |rows|

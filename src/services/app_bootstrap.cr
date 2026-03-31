@@ -86,7 +86,7 @@ class AppBootstrap
         sleep @clustering_interval
         next if StateStore.clustering?
         threshold = StateStore.config.try(&.clustering).try(&.threshold) || 0.35
-        clustering_service(@db_service).recluster_with_lsh(@config.db_fetch_limit, threshold)
+        clustering_service(@db_service).recluster_with_lsh(@feed_cache, @config.db_fetch_limit, threshold)
       end
     end
   end
@@ -99,7 +99,7 @@ class AppBootstrap
         begin
           STDERR.puts "[#{Time.local}] Running initial clustering on startup..."
           threshold = @config.clustering.try(&.threshold) || 0.35
-          clustering_service(@db_service).recluster_with_lsh(@config.db_fetch_limit, threshold)
+          clustering_service(@db_service).recluster_with_lsh(@feed_cache, @config.db_fetch_limit, threshold)
         rescue ex
           STDERR.puts "[#{Time.local}] Initial clustering failed: #{ex.message}"
         end
