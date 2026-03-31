@@ -81,8 +81,3 @@ rescue ex : Exception
   STDERR.puts ex.backtrace.join("\n")
   exit 1
 end
-
-# Main entry point
-if PROGRAM_NAME == __FILE__
-  ATH.run
-end
