@@ -77,6 +77,7 @@ module FaviconStorage
 
   def self.save_favicon(url : String, image_data : Bytes, content_type : String) : String?
     return if image_data.size > MAX_SIZE
+    return unless valid_image_data?(image_data)
 
     hash_input = begin
       url[0..255]
@@ -100,6 +101,14 @@ module FaviconStorage
     end
 
     "/favicons/#{filename}"
+  end
+
+  def self.valid_image_data?(data : Bytes) : Bool
+    return false if data.size < 4
+    xml_markers = ["<?xml", "<html", "<!DOCTYPE"]
+    str_start = String.new(data[0..Math.min(data.size - 1, 100)])
+    return false if xml_markers.any? { |m| str_start.starts_with?(m) }
+    true
   end
 
   def self.fetch_and_save(url : String) : String?

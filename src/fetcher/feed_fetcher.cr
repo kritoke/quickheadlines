@@ -109,7 +109,8 @@ class FeedFetcher
             return build_error_feed_data(feed, "No items found (or unsupported format)")
           end
 
-          site_link = result.site_link || feed.url
+          raw_site_link = result.site_link
+          site_link = (raw_site_link && raw_site_link != "#") ? raw_site_link : feed.url
 
           favicon, favicon_data = VugAdapter.get_favicon(site_link, result.favicon, previous_data.try(&.favicon), previous_data.try(&.favicon_data))
 
