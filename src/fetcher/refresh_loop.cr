@@ -61,6 +61,10 @@ private def build_tab_feeds(tab_config : TabConfig, fetched_map : Hash(String, F
 end
 
 def refresh_all(config : Config)
+  refresh_all(config, FeedCache.instance, DatabaseService.instance)
+end
+
+def refresh_all(config : Config, cache : FeedCache, db_service : DatabaseService)
   StateStore.update(&.copy_with(refreshing: true))
   StateStore.update(&.copy_with(config_title: config.page_title, config: config))
 
@@ -106,7 +110,7 @@ def refresh_all(config : Config)
 
   # Ensure feeds are persisted to database before clustering runs
   # This prevents KeyError on fresh deployments when feeds aren't in DB yet
-  async_clustering(fetched_map.values.to_a)
+  async_clustering(fetched_map.values.to_a, cache, db_service)
 
   GC.collect
 
@@ -115,7 +119,7 @@ def refresh_all(config : Config)
   end
 end
 
-def async_clustering(feeds : Array(FeedData))
+def async_clustering(feeds : Array(FeedData), cache : FeedCache, db_service : DatabaseService)
   return if feeds.empty?
 
   clustering_channel = Channel(Nil).new(10)
@@ -128,7 +132,7 @@ def async_clustering(feeds : Array(FeedData))
       spawn do
         clustering_channel.send(nil)
         begin
-          process_feed_item_clustering(feed_data)
+          process_feed_item_clustering(feed_data, cache, db_service)
         rescue ex
           STDERR.puts "[#{Time.local}] async_clustering: error processing #{feed_data.url}: #{ex.message}"
         ensure
@@ -142,16 +146,13 @@ def async_clustering(feeds : Array(FeedData))
   end
 end
 
-def compute_cluster_for_item(item_id : Int64, title : String, item_feed_id : Int64? = nil) : Int64?
-  cache = FeedCache.instance
-  service = clustering_service
+def compute_cluster_for_item(item_id : Int64, title : String, cache : FeedCache, db_service : DatabaseService, item_feed_id : Int64? = nil) : Int64?
+  service = clustering_service(db_service)
   service.compute_cluster_for_item(item_id, title, cache, item_feed_id)
 end
 
-def process_feed_item_clustering(feed_data : FeedData) : Nil
+def process_feed_item_clustering(feed_data : FeedData, cache : FeedCache, db_service : DatabaseService) : Nil
   return if feed_data.items.empty?
-
-  cache = FeedCache.instance
 
   feed_id = cache.get_feed_id(feed_data.url)
   return unless feed_id
@@ -161,18 +162,16 @@ def process_feed_item_clustering(feed_data : FeedData) : Nil
 
     next unless item_id
 
-    compute_cluster_for_item(item_id, item.title, feed_id)
+    compute_cluster_for_item(item_id, item.title, cache, db_service, feed_id)
   end
 end
 
-def start_refresh_loop(config_path : String)
+def start_refresh_loop(config_path : String, cache : FeedCache, db_service : DatabaseService)
   active_config = load_config(config_path)
   last_mtime = File.info(config_path).modification_time
 
-  save_feed_cache(FeedCache.instance, active_config.cache_retention_hours, active_config.max_cache_size_mb)
+  save_feed_cache(cache, active_config.cache_retention_hours, active_config.max_cache_size_mb)
 
-  # Skip initial refresh - cache was already loaded before server started
-  # This allows fast startup, refresh happens after first interval
   first_run = true
 
   spawn do
@@ -180,13 +179,12 @@ def start_refresh_loop(config_path : String)
       refresh_start_time = Time.monotonic
 
       begin
-        # Always run refresh on first iteration to pick up any new feeds
         if first_run
           first_run = false
           if active_config.debug?
             STDERR.puts "[#{Time.local}] Running initial refresh to fetch feeds"
           end
-          refresh_all(active_config)
+          refresh_all(active_config, cache, db_service)
           if active_config.debug?
             puts "[#{Time.local}] Initial refresh complete"
           end
@@ -201,21 +199,21 @@ def start_refresh_loop(config_path : String)
             if active_config.debug?
               puts "[#{Time.local}] Config change detected. Reloaded feeds.yml"
             end
-            refresh_all(active_config)
+            refresh_all(active_config, cache, db_service)
             if active_config.debug?
               puts "[#{Time.local}] Refreshed after config change"
             end
             sleep (active_config.refresh_minutes * 60).seconds
             next
           else
-            refresh_all(active_config)
+            refresh_all(active_config, cache, db_service)
             if active_config.debug?
               puts "[#{Time.local}] Refreshed feeds and ran GC"
             end
           end
         end
 
-        save_feed_cache(FeedCache.instance, active_config.cache_retention_hours, active_config.max_cache_size_mb)
+        save_feed_cache(cache, active_config.cache_retention_hours, active_config.max_cache_size_mb)
 
         refresh_duration = (Time.monotonic - refresh_start_time).total_seconds
         if refresh_duration > (active_config.refresh_minutes * 60) * 2

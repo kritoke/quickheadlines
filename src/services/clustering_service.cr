@@ -174,7 +174,6 @@ class QuickHeadlines::Services::ClusteringService
   end
 end
 
-def clustering_service : QuickHeadlines::Services::ClusteringService
-  db_service = DatabaseService.instance
+def clustering_service(db_service : DatabaseService) : QuickHeadlines::Services::ClusteringService
   QuickHeadlines::Services::ClusteringService.new(db_service)
 end

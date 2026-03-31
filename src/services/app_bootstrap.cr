@@ -8,6 +8,8 @@ require "../fetcher/vug_adapter"
 
 class AppBootstrap
   @config : Config
+  @db_service : DatabaseService
+  @feed_cache : FeedCache
   @janitor_interval : Time::Span
   @clustering_interval : Time::Span
   @cleanup_interval : Time::Span
@@ -20,19 +22,15 @@ class AppBootstrap
     @cleanup_interval = 6.hours,
     @ws_janitor_interval = 5.minutes,
   )
-  end
+    @db_service = DatabaseService.new(@config)
 
-  def initialize_services
-    db_service = DatabaseService.new(@config)
-    DatabaseService.instance = db_service
-
-    FeedCache.instance = load_feed_cache(@config)
+    @feed_cache = load_feed_cache(@config, @db_service)
     begin
-      FeedCache.instance.normalize_pub_dates
+      @feed_cache.normalize_pub_dates
     rescue ex
       STDERR.puts "[#{Time.local}] Warning: normalize_pub_dates failed on startup: #{ex.message}"
     end
-    STDERR.puts "[#{Time.local}] Loaded #{FeedCache.instance.size} feeds from cache"
+    STDERR.puts "[#{Time.local}] Loaded #{@feed_cache.size} feeds from cache"
 
     FaviconStorage.init
     VugAdapter.clear_cache
@@ -40,6 +38,9 @@ class AppBootstrap
     load_feeds_from_cache(@config)
 
     EventBroadcaster.start
+  end
+
+  def initialize_services
   end
 
   def start_background_tasks
@@ -75,7 +76,7 @@ class AppBootstrap
 
   private def start_feed_refresh
     spawn do
-      start_refresh_loop("feeds.yml")
+      start_refresh_loop("feeds.yml", @feed_cache, @db_service)
     end
   end
 
@@ -85,7 +86,7 @@ class AppBootstrap
         sleep @clustering_interval
         next if StateStore.clustering?
         threshold = StateStore.config.try(&.clustering).try(&.threshold) || 0.35
-        clustering_service.recluster_with_lsh(@config.db_fetch_limit, threshold)
+        clustering_service(@db_service).recluster_with_lsh(@config.db_fetch_limit, threshold)
       end
     end
   end
@@ -98,7 +99,7 @@ class AppBootstrap
         begin
           STDERR.puts "[#{Time.local}] Running initial clustering on startup..."
           threshold = @config.clustering.try(&.threshold) || 0.35
-          clustering_service.recluster_with_lsh(@config.db_fetch_limit, threshold)
+          clustering_service(@db_service).recluster_with_lsh(@config.db_fetch_limit, threshold)
         rescue ex
           STDERR.puts "[#{Time.local}] Initial clustering failed: #{ex.message}"
         end
@@ -111,9 +112,8 @@ class AppBootstrap
       loop do
         sleep @cleanup_interval
         begin
-          cache = FeedCache.instance
-          cache.cleanup_old_articles(Constants::CACHE_RETENTION_DAYS)
-          cache.cleanup_old_entries(@config.cache_retention_hours || Constants::CACHE_RETENTION_HOURS)
+          @feed_cache.cleanup_old_articles(Constants::CACHE_RETENTION_DAYS)
+          @feed_cache.cleanup_old_entries(@config.cache_retention_hours || Constants::CACHE_RETENTION_HOURS)
           STDERR.puts "[#{Time.local}] Scheduled cleanup completed"
         rescue ex
           STDERR.puts "[#{Time.local}] Scheduled cleanup failed: #{ex.message}"

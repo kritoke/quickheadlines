@@ -151,7 +151,7 @@ class FeedCache
   end
 end
 
-def load_feed_cache(config : Config?) : FeedCache
+def load_feed_cache(config : Config?, db_service : DatabaseService?) : FeedCache
   cache_dir = get_cache_dir(config)
   ensure_cache_dir(cache_dir)
   db_path : String = get_cache_db_path(config)
@@ -173,7 +173,7 @@ def load_feed_cache(config : Config?) : FeedCache
     end
   end
 
-  cache = FeedCache.new(config)
+  cache = FeedCache.new(config, db_service)
 
   cache.ensure_indexes
 
