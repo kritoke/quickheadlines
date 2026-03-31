@@ -1,3 +1,4 @@
+require "athena"
 require "base64"
 require "time"
 require "json"
@@ -12,6 +13,7 @@ require "./vug_adapter"
 
 # FeedFetcher encapsulates all feed fetching logic with proper dependency injection.
 # Use FeedFetcher.instance for singleton access or inject FeedCache for testing.
+@[ADI::Register]
 class FeedFetcher
   @cache : FeedCache
 

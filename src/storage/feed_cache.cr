@@ -1,3 +1,4 @@
+require "athena"
 require "db"
 require "sqlite3"
 require "mutex"
@@ -16,6 +17,7 @@ require "./header_colors"
 require "./cleanup"
 require "../repositories/feed_repository"
 
+@[ADI::Register]
 class FeedCache
   include ClusteringRepository
   include HeaderColorsRepository
