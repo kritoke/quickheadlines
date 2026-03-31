@@ -179,6 +179,13 @@ module UrlNormalizer
     normalized = normalized.rchop("/rss.xml")
     normalized = normalized.rchop("/atom")
 
+    if q_idx = normalized.index('?')
+      normalized = normalized[0...q_idx]
+    end
+    if f_idx = normalized.index('#')
+      normalized = normalized[0...f_idx]
+    end
+
     normalized.ends_with?('/') ? normalized : "#{normalized}/"
   end
 end
