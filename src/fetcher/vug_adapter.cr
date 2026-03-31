@@ -46,7 +46,10 @@ module VugAdapter
 
   def self.get_favicon(site_url : String, parsed_favicon : String? = nil, previous_favicon : String? = nil, previous_favicon_data : String? = nil) : {String?, String?}
     if previous_favicon_data && previous_favicon_data.starts_with?("/favicons/")
-      return {previous_favicon_data, previous_favicon_data}
+      favicon_path = FaviconStorage.favicon_dir + previous_favicon_data
+      if File.exists?(favicon_path)
+        return {previous_favicon_data, previous_favicon_data}
+      end
     end
 
     if parsed_favicon
