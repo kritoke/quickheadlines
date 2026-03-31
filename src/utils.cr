@@ -143,8 +143,11 @@ module Utils
       end
     end
 
-    if host.starts_with?("172.16.") || host.starts_with?("172.17.") || host.starts_with?("172.18.") || host.starts_with?("172.19.") || host.starts_with?("172.20.") || host.starts_with?("172.21.") || host.starts_with?("172.22.") || host.starts_with?("172.23.") || host.starts_with?("172.24.") || host.starts_with?("172.25.") || host.starts_with?("172.26.") || host.starts_with?("172.27.") || host.starts_with?("172.28.") || host.starts_with?("172.29.") || host.starts_with?("172.30.") || host.starts_with?("172.31.")
-      return true
+    if host.starts_with?("172.")
+      parts = host.split('.')
+      if parts.size >= 2 && (second = parts[1].to_i?(strict: true)) && second >= 16 && second <= 31
+        return true
+      end
     end
 
     return true if host.starts_with?("169.254.")
