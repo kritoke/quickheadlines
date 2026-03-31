@@ -99,10 +99,7 @@ class FeedFetcher
         result = Fetcher.pull(current_url, HTTP::Headers.new, db_fetch_limit, fetcher_config)
 
         if result.success?
-          items = result.entries.map do |entry|
-            comment_url = entry.comment_url || (entry.is_discussion_url ? entry.url : nil)
-            Item.new(entry.title, entry.url, entry.published_at, nil, comment_url, entry.commentary_url)
-          end
+          items = entries_to_items(result.entries)
 
           if items.empty?
             debug_log("Feed returned no items: #{feed.title} (#{feed.url})")
@@ -377,6 +374,13 @@ class FeedFetcher
     return unless cache_fresh?(last_fetched, 5) && cached.items.size >= item_limit
 
     build_cached_feed_data(cached, previous_data)
+  end
+
+  private def entries_to_items(entries : Array(Fetcher::Entry)) : Array(Item)
+    entries.map do |entry|
+      comment_url = entry.comment_url || (entry.is_discussion_url ? entry.url : nil)
+      Item.new(entry.title, entry.url, entry.published_at, nil, comment_url, entry.commentary_url)
+    end
   end
 
   private def get_stale_cached_feed(feed : Feed, item_limit : Int32, previous_data : FeedData?) : FeedData?
