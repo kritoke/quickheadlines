@@ -1,7 +1,7 @@
 require "time"
 require "mutex"
 
-module Quickheadlines
+module QuickHeadlines
   class RateLimiter
     @@instances = {} of String => RateLimiter
     @@cleanup_lock = Mutex.new

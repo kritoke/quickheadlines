@@ -26,7 +26,7 @@ class FeedCache
   @mutex : Mutex
   @db : DB::Database
   @db_path : String
-  @feed_repository : Quickheadlines::Repositories::FeedRepository?
+  @feed_repository : QuickHeadlines::Repositories::FeedRepository?
 
   def initialize(config : Config?, db : DB::Database? = nil)
     @mutex = Mutex.new
@@ -52,8 +52,8 @@ class FeedCache
     log_db_size(@db_path, "on startup")
   end
 
-  private def feed_repository : Quickheadlines::Repositories::FeedRepository
-    @feed_repository ||= Quickheadlines::Repositories::FeedRepository.new(@db)
+  private def feed_repository : QuickHeadlines::Repositories::FeedRepository
+    @feed_repository ||= QuickHeadlines::Repositories::FeedRepository.new(@db)
   end
 
   getter :db_path

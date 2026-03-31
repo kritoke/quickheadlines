@@ -1,14 +1,14 @@
 require "db"
 
-module Quickheadlines::Repositories
+module QuickHeadlines::Repositories
   class StoryRepository
     @db : DB::Database
 
     def initialize(@db : DB::Database)
     end
 
-    def find_all(limit : Int32 = 100, offset : Int32 = 0) : Array(Quickheadlines::Entities::Story)
-      stories = [] of Quickheadlines::Entities::Story
+    def find_all(limit : Int32 = 100, offset : Int32 = 0) : Array(QuickHeadlines::Entities::Story)
+      stories = [] of QuickHeadlines::Entities::Story
 
       @db.query(<<-SQL, limit, offset) do |rows|
         SELECT i.id, i.title, i.link, i.pub_date, f.title as feed_title, f.url as feed_url, f.site_link as feed_link, f.favicon, f.header_color
@@ -35,7 +35,7 @@ module Quickheadlines::Repositories
       stories
     end
 
-    def find_by_id(id : Int64) : Quickheadlines::Entities::Story?
+    def find_by_id(id : Int64) : QuickHeadlines::Entities::Story?
       @db.query_one?(<<-SQL, id) do |row|
         SELECT i.id, i.title, i.link, i.pub_date, f.title as feed_title, f.url as feed_url, f.site_link as feed_link, f.favicon, f.header_color
          FROM items i
@@ -56,8 +56,8 @@ module Quickheadlines::Repositories
       end
     end
 
-    def find_by_feed(feed_id : Int64, limit : Int32 = 20, offset : Int32 = 0) : Array(Quickheadlines::Entities::Story)
-      stories = [] of Quickheadlines::Entities::Story
+    def find_by_feed(feed_id : Int64, limit : Int32 = 20, offset : Int32 = 0) : Array(QuickHeadlines::Entities::Story)
+      stories = [] of QuickHeadlines::Entities::Story
 
       @db.query(<<-SQL, feed_id, limit, offset) do |rows|
         SELECT i.id, i.title, i.link, i.pub_date, f.title as feed_title, f.url as feed_url, f.site_link as feed_link, f.favicon, f.header_color
@@ -85,7 +85,7 @@ module Quickheadlines::Repositories
       stories
     end
 
-    def save(story : Quickheadlines::Entities::Story) : Quickheadlines::Entities::Story
+    def save(story : QuickHeadlines::Entities::Story) : QuickHeadlines::Entities::Story
       feed = find_feed_by_url(story.feed_url)
       return story unless feed
 
@@ -98,7 +98,7 @@ module Quickheadlines::Repositories
       )
 
       if existing.nil?
-        pub_date_str = story.pub_date.try(&.to_s("%Y-%m-%d %H:%M:%S"))
+        pub_date_str = story.pub_date.try(&.to_s(Constants::DB_TIME_FORMAT))
 
         @db.exec(
           "INSERT INTO items (feed_id, title, link, pub_date) VALUES (?, ?, ?, ?)",
@@ -183,7 +183,7 @@ module Quickheadlines::Repositories
           is_representative = rows.read(Int32) == 1
           cluster_size = rows.read(Int32)
 
-          pub_date = pub_date_str.try { |str| Time.parse(str, "%Y-%m-%d %H:%M:%S", Time::Location::UTC) }
+          pub_date = pub_date_str.try { |str| Time.parse(str, Constants::DB_TIME_FORMAT, Time::Location::UTC) }
 
           items << TimelineItem.new(
             id: id,
@@ -248,7 +248,7 @@ module Quickheadlines::Repositories
       allowed_feed_urls
     end
 
-    private def find_feed_by_url(url : String) : Quickheadlines::Entities::Feed?
+    private def find_feed_by_url(url : String) : QuickHeadlines::Entities::Feed?
       @db.query_one?(
         "SELECT id, url, title, site_link, header_color, header_text_color, favicon, favicon_data FROM feeds WHERE url = ?",
         url
@@ -262,7 +262,7 @@ module Quickheadlines::Repositories
         favicon = row.read(String?)
         favicon_data = row.read(String?)
 
-        Quickheadlines::Entities::Feed.new(
+        QuickHeadlines::Entities::Feed.new(
           id: id.to_s,
           title: title,
           url: url,
@@ -275,9 +275,9 @@ module Quickheadlines::Repositories
       end
     end
 
-    private def build_story(id : Int64, title : String, link : String, pub_date_str : String?, feed_title : String, feed_url : String, feed_link : String?, favicon : String?, header_color : String?) : Quickheadlines::Entities::Story
-      pub_date = pub_date_str.try { |str| Time.parse(str, "%Y-%m-%d %H:%M:%S", Time::Location::UTC) }
-      Quickheadlines::Entities::Story.new(
+    private def build_story(id : Int64, title : String, link : String, pub_date_str : String?, feed_title : String, feed_url : String, feed_link : String?, favicon : String?, header_color : String?) : QuickHeadlines::Entities::Story
+      pub_date = pub_date_str.try { |str| Time.parse(str, Constants::DB_TIME_FORMAT, Time::Location::UTC) }
+      QuickHeadlines::Entities::Story.new(
         id: id.to_s,
         title: title,
         link: link,

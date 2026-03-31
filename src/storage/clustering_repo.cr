@@ -63,7 +63,7 @@ module ClusteringRepository
             item_id,
             band_index,
             band_hash.to_s(16),
-            Time.utc.to_s("%Y-%m-%d %H:%M:%S")
+            Time.utc.to_s(Constants::DB_TIME_FORMAT)
           )
         end
         @db.exec("COMMIT")
@@ -261,7 +261,7 @@ module ClusteringRepository
 
   def get_recent_items_for_clustering(hours_back : Int32 = 24, max_items : Int32 = 1000) : Array({id: Int64, title: String, link: String, pub_date: Time?, feed_url: String, feed_title: String, favicon: String?, header_color: String?})
     @mutex.synchronize do
-      cutoff = (Time.utc - hours_back.hours).to_s("%Y-%m-%d %H:%M:%S")
+      cutoff = (Time.utc - hours_back.hours).to_s(Constants::DB_TIME_FORMAT)
 
       items = [] of {id: Int64, title: String, link: String, pub_date: Time?, feed_url: String, feed_title: String, favicon: String?, header_color: String?}
 
@@ -269,7 +269,8 @@ module ClusteringRepository
         SELECT i.id, i.title, i.link, i.pub_date, f.url as feed_url, f.title as feed_title, f.favicon, f.header_color
         FROM items i
         JOIN feeds f ON i.feed_id = f.id
-        WHERE i.pub_date >= ? AND i.pub_date <= datetime('now', '+1 day')
+        WHERE i.cluster_id IS NOT NULL
+        AND i.pub_date >= ?
         ORDER BY i.pub_date DESC
         LIMIT ?
         SQL
@@ -285,7 +286,7 @@ module ClusteringRepository
           favicon = rows.read(String?)
           header_color = rows.read(String?)
 
-          pub_date = pub_date_str.try { |date_str| Time.parse(date_str, "%Y-%m-%d %H:%M:%S", Time::Location::UTC) }
+          pub_date = pub_date_str.try { |date_str| Time.parse(date_str, Constants::DB_TIME_FORMAT, Time::Location::UTC) }
 
           items << {
             id:           id,
@@ -357,7 +358,7 @@ module ClusteringRepository
           favicon = rows.read(String?)
           header_color = rows.read(String?)
 
-          pub_date = pub_date_str.try { |date_str| Time.parse(date_str, "%Y-%m-%d %H:%M:%S", Time::Location::UTC) }
+          pub_date = pub_date_str.try { |date_str| Time.parse(date_str, Constants::DB_TIME_FORMAT, Time::Location::UTC) }
 
           items << {
             id:           id,

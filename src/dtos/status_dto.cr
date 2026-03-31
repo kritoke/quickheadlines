@@ -1,7 +1,7 @@
 require "athena"
 
 @[ASRA::Name(strategy: :camelcase)]
-class Quickheadlines::DTOs::StatusResponse
+class QuickHeadlines::DTOs::StatusResponse
   include ASR::Serializable
 
   property? clustering : Bool

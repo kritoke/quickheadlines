@@ -1,7 +1,7 @@
 require "athena"
 
 @[ASRA::Name(strategy: :camelcase)]
-class Quickheadlines::DTOs::FeedDTO
+class QuickHeadlines::DTOs::FeedDTO
   include ASR::Serializable
 
   property id : String
@@ -32,7 +32,7 @@ class Quickheadlines::DTOs::FeedDTO
   )
   end
 
-  def self.from_entity(feed : Quickheadlines::Entities::Feed) : Quickheadlines::DTOs::FeedDTO
+  def self.from_entity(feed : QuickHeadlines::Entities::Feed) : QuickHeadlines::DTOs::FeedDTO
     new(
       id: feed.id,
       title: feed.title,

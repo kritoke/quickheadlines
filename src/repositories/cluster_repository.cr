@@ -1,14 +1,14 @@
 require "db"
 
-module Quickheadlines::Repositories
+module QuickHeadlines::Repositories
   class ClusterRepository
     @db : DB::Database
 
     def initialize(@db : DB::Database)
     end
 
-    def find_all : Array(Quickheadlines::Entities::Cluster)
-      clusters = [] of Quickheadlines::Entities::Cluster
+    def find_all : Array(QuickHeadlines::Entities::Cluster)
+      clusters = [] of QuickHeadlines::Entities::Cluster
 
       query = <<-SQL
         SELECT
@@ -48,7 +48,7 @@ module Quickheadlines::Repositories
           favicon = rows.read(String?)
           header_color = rows.read(String?)
 
-          item_pub_date = item_pub_date_str.try { |str| Time.parse(str, "%Y-%m-%d %H:%M:%S", Time::Location::UTC) }
+          item_pub_date = item_pub_date_str.try { |str| Time.parse(str, Constants::DB_TIME_FORMAT, Time::Location::UTC) }
 
           cluster_items[cluster_id] ||= [] of {id: Int64, title: String, link: String, pub_date: Time?, feed_url: String, feed_title: String, favicon: String?, header_color: String?}
           cluster_items[cluster_id] << {
@@ -69,7 +69,7 @@ module Quickheadlines::Repositories
 
         rep_data = items.first
 
-        representative = Quickheadlines::Entities::Story.new(
+        representative = QuickHeadlines::Entities::Story.new(
           id: rep_data[:id].to_s,
           title: rep_data[:title],
           link: rep_data[:link],
@@ -83,7 +83,7 @@ module Quickheadlines::Repositories
         )
 
         others = items[1..].map do |item|
-          Quickheadlines::Entities::Story.new(
+          QuickHeadlines::Entities::Story.new(
             id: item[:id].to_s,
             title: item[:title],
             link: item[:link],
@@ -97,7 +97,7 @@ module Quickheadlines::Repositories
           )
         end
 
-        clusters << Quickheadlines::Entities::Cluster.new(
+        clusters << QuickHeadlines::Entities::Cluster.new(
           id: items.first[:id].to_s,
           representative: representative,
           others: others,
@@ -108,8 +108,8 @@ module Quickheadlines::Repositories
       clusters
     end
 
-    def find_items(cluster_id : Int64) : Array(Quickheadlines::Entities::Story)
-      stories = [] of Quickheadlines::Entities::Story
+    def find_items(cluster_id : Int64) : Array(QuickHeadlines::Entities::Story)
+      stories = [] of QuickHeadlines::Entities::Story
 
       @db.query(<<-SQL, cluster_id) do |rows|
         SELECT i.id, i.title, i.link, i.pub_date, f.title as feed_title, f.url as feed_url, f.site_link as feed_link, f.favicon, f.header_color
@@ -129,9 +129,9 @@ module Quickheadlines::Repositories
           favicon = rows.read(String?)
           header_color = rows.read(String?)
 
-          pub_date = pub_date_str.try { |str| Time.parse(str, "%Y-%m-%d %H:%M:%S", Time::Location::UTC) }
+          pub_date = pub_date_str.try { |str| Time.parse(str, Constants::DB_TIME_FORMAT, Time::Location::UTC) }
 
-          stories << Quickheadlines::Entities::Story.new(
+          stories << QuickHeadlines::Entities::Story.new(
             id: id.to_s,
             title: title,
             link: link,

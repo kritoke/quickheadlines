@@ -1,8 +1,8 @@
 require "athena"
 
-class Quickheadlines::Events::StoryFetchedEvent
-  getter stories : Array(Quickheadlines::Entities::Story)
+class QuickHeadlines::Events::StoryFetchedEvent
+  getter stories : Array(QuickHeadlines::Entities::Story)
 
-  def initialize(@stories : Array(Quickheadlines::Entities::Story))
+  def initialize(@stories : Array(QuickHeadlines::Entities::Story))
   end
 end

@@ -1,9 +1,9 @@
 require "athena"
 
-class Quickheadlines::Services::HeatMapService
-  def initialize(@heat_map_repository : Quickheadlines::Repositories::HeatMapRepository); end
+class QuickHeadlines::Services::HeatMapService
+  def initialize(@heat_map_repository : QuickHeadlines::Repositories::HeatMapRepository); end
 
-  def calculate_and_persist_heat(stories : Array(Quickheadlines::Entities::Story)) : Nil
+  def calculate_and_persist_heat(stories : Array(QuickHeadlines::Entities::Story)) : Nil
     # TODO: Implement heat map calculation
     # Heat = (Weight_Source * Recent_Clustering_Frequency) / Time_Delta
   end

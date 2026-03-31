@@ -1,7 +1,7 @@
 require "athena"
 
 @[ASRA::Name(strategy: :camelcase)]
-class Quickheadlines::DTOs::RateLimitStatsResponse
+class QuickHeadlines::DTOs::RateLimitStatsResponse
   include ASR::Serializable
 
   property total_entries : Int32

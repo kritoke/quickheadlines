@@ -195,7 +195,7 @@ class DatabaseService
         is_representative = rows.read(Int32) == 1
         cluster_size = rows.read(Int32)
 
-        pub_date = pub_date_str.try { |str| Time.parse(str, "%Y-%m-%d %H:%M:%S", Time::Location::UTC) }
+        pub_date = pub_date_str.try { |str| Time.parse(str, Constants::DB_TIME_FORMAT, Time::Location::UTC) }
 
         items << {
           id:                  id,

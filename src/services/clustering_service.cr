@@ -4,15 +4,15 @@ require "lexis-minhash"
 require "../repositories/cluster_repository"
 require "./clustering_engine"
 
-class Quickheadlines::Services::ClusteringService
+class QuickHeadlines::Services::ClusteringService
   @db : DB::Database
-  @cluster_repository : Quickheadlines::Repositories::ClusterRepository?
+  @cluster_repository : QuickHeadlines::Repositories::ClusterRepository?
 
-  def initialize(@db : DB::Database, @cluster_repository : Quickheadlines::Repositories::ClusterRepository? = nil)
+  def initialize(@db : DB::Database, @cluster_repository : QuickHeadlines::Repositories::ClusterRepository? = nil)
   end
 
-  private def cluster_repository : Quickheadlines::Repositories::ClusterRepository
-    @cluster_repository ||= Quickheadlines::Repositories::ClusterRepository.new(@db)
+  private def cluster_repository : QuickHeadlines::Repositories::ClusterRepository
+    @cluster_repository ||= QuickHeadlines::Repositories::ClusterRepository.new(@db)
   end
 
   private def find_best_cluster_match(candidates : Array(Int64), item_id : Int64, title_set : Set(String), cache : FeedCache, item_feed_id : Int64?) : Tuple(Int64?, Float64, String, Int64?)
@@ -87,7 +87,7 @@ class Quickheadlines::Services::ClusteringService
     assign_item_to_cluster(item_id, best_match, best_similarity, best_title, threshold, title, cache)
   end
 
-  def get_all_clusters_from_db : Array(Quickheadlines::Entities::Cluster)
+  def get_all_clusters_from_db : Array(QuickHeadlines::Entities::Cluster)
     cluster_repository.find_all
   end
 
@@ -108,7 +108,7 @@ class Quickheadlines::Services::ClusteringService
         link = rows.read(String)
         pub_date_str = rows.read(String?)
         feed_id = rows.read(Int64)
-        pub_date = pub_date_str.try { |str| Time.parse(str, "%Y-%m-%d %H:%M:%S", Time::Location::UTC) }
+        pub_date = pub_date_str.try { |str| Time.parse(str, Constants::DB_TIME_FORMAT, Time::Location::UTC) }
         items << {id: id, title: title, link: link, pub_date: pub_date, feed_id: feed_id}
       end
     end
@@ -170,7 +170,7 @@ class Quickheadlines::Services::ClusteringService
   end
 end
 
-def clustering_service : Quickheadlines::Services::ClusteringService
+def clustering_service : QuickHeadlines::Services::ClusteringService
   db_service = DatabaseService.instance
-  Quickheadlines::Services::ClusteringService.new(db_service.db)
+  QuickHeadlines::Services::ClusteringService.new(db_service.db)
 end

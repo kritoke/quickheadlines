@@ -1,6 +1,6 @@
 require "athena"
 
-module Quickheadlines::Entities
+module QuickHeadlines::Entities
   record Story,
     id : String,
     title : String,

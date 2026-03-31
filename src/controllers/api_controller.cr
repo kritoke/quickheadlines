@@ -12,11 +12,11 @@ require "../fetcher/refresh_loop"
 require "../websocket"
 require "../rate_limiter"
 
-class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
+class QuickHeadlines::Controllers::ApiController < Athena::Framework::Controller
   @db_service : DatabaseService
-  @story_service : Quickheadlines::Services::StoryService?
-  @feed_service : Quickheadlines::Services::FeedService?
-  @clustering_service : Quickheadlines::Services::ClusteringService?
+  @story_service : QuickHeadlines::Services::StoryService?
+  @feed_service : QuickHeadlines::Services::FeedService?
+  @clustering_service : QuickHeadlines::Services::ClusteringService?
 
   # Allowed domains for image proxy (SSRF protection)
   ALLOWED_DOMAINS = {
@@ -126,29 +126,29 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
     validate_int(value, default, min, max)
   end
 
-  private def story_service : Quickheadlines::Services::StoryService
-    @story_service ||= Quickheadlines::Services::StoryService
+  private def story_service : QuickHeadlines::Services::StoryService
+    @story_service ||= QuickHeadlines::Services::StoryService
   end
 
-  private def feed_service : Quickheadlines::Services::FeedService
-    @feed_service ||= Quickheadlines::Services::FeedService
+  private def feed_service : QuickHeadlines::Services::FeedService
+    @feed_service ||= QuickHeadlines::Services::FeedService
   end
 
-  private def clustering_service : Quickheadlines::Services::ClusteringService
-    @clustering_service ||= Quickheadlines::Services::ClusteringService.new(
+  private def clustering_service : QuickHeadlines::Services::ClusteringService
+    @clustering_service ||= QuickHeadlines::Services::ClusteringService.new(
       @db_service.db,
-      Quickheadlines::Repositories::ClusterRepository.new(@db_service.db)
+      QuickHeadlines::Repositories::ClusterRepository.new(@db_service.db)
     )
   end
 
   # GET /api/clusters - Get all clustered stories
   @[ARTA::Get(path: "/api/clusters")]
-  def clusters(request : ATH::Request) : Quickheadlines::DTOs::ClustersResponse
+  def clusters(request : ATH::Request) : QuickHeadlines::DTOs::ClustersResponse
     clusters = clustering_service.get_all_clusters_from_db
 
-    cluster_responses = clusters.map { |cluster| Quickheadlines::DTOs::ClusterResponse.from_entity(cluster) }
+    cluster_responses = clusters.map { |cluster| QuickHeadlines::DTOs::ClusterResponse.from_entity(cluster) }
 
-    Quickheadlines::DTOs::ClustersResponse.new(
+    QuickHeadlines::DTOs::ClustersResponse.new(
       clusters: cluster_responses,
       total_count: cluster_responses.size
     )
@@ -381,8 +381,8 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
       end
     end
 
-    story_repo = Quickheadlines::Repositories::StoryRepository.new(@db_service.db)
-    result = Quickheadlines::Services::StoryService.get_timeline(story_repo, limit, offset, days, allowed_feed_urls)
+    story_repo = QuickHeadlines::Repositories::StoryRepository.new(@db_service.db)
+    result = QuickHeadlines::Services::StoryService.get_timeline(story_repo, limit, offset, days, allowed_feed_urls)
 
     # If timeline has very few items and we're not already clustering, trigger a background refresh
     # This ensures the timeline populates quickly after server startup
@@ -418,13 +418,13 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
 
   # GET /api/config - Get configuration settings
   @[ARTA::Get(path: "/api/config")]
-  def config : ATH::View(Quickheadlines::DTOs::ConfigResponse)
+  def config : ATH::View(QuickHeadlines::DTOs::ConfigResponse)
     config = StateStore.config
     refresh_minutes = config.try(&.refresh_minutes) || 10
     item_limit = config.try(&.item_limit) || 20
     debug = config.try(&.debug?) || false
 
-    view(Quickheadlines::DTOs::ConfigResponse.new(
+    view(QuickHeadlines::DTOs::ConfigResponse.new(
       refresh_minutes: refresh_minutes,
       item_limit: item_limit,
       debug: debug
@@ -812,8 +812,8 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
             tab.feeds.each { |feed| config_urls << feed.url }
           end
 
-          cluster_repo = Quickheadlines::Repositories::ClusterRepository.new(db)
-          feed_repo = Quickheadlines::Repositories::FeedRepository.new(db)
+          cluster_repo = QuickHeadlines::Repositories::ClusterRepository.new(db)
+          feed_repo = QuickHeadlines::Repositories::FeedRepository.new(db)
           existing_feeds = feed_repo.find_all
           db_urls = existing_feeds.map(&.url).to_set
 
@@ -844,11 +844,11 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
 
   # GET /api/status - Get current system status
   @[ARTA::Get(path: "/api/status")]
-  def status : Quickheadlines::DTOs::StatusResponse
+  def status : QuickHeadlines::DTOs::StatusResponse
     ws_stats = SocketManager.instance.stats
     broadcaster_stats = EventBroadcaster.stats
 
-    Quickheadlines::DTOs::StatusResponse.new(
+    QuickHeadlines::DTOs::StatusResponse.new(
       clustering: StateStore.clustering?,
       refreshing: StateStore.refreshing?,
       active_jobs: 0,

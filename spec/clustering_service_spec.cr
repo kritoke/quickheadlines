@@ -2,61 +2,61 @@ require "./spec_helper"
 require "lexis-minhash"
 require "../src/services/clustering_engine"
 
-describe Quickheadlines::Services::ClusteringEngine do
+describe QuickHeadlines::Services::ClusteringEngine do
   describe "#normalize_headline" do
     it "removes stop words" do
-      Quickheadlines::Services::ClusteringEngine.normalize_headline("The Bitcoin price says experts are worried")
+      QuickHeadlines::Services::ClusteringEngine.normalize_headline("The Bitcoin price says experts are worried")
         .should eq("bitcoin price experts worried")
     end
 
     it "handles empty string" do
-      Quickheadlines::Services::ClusteringEngine.normalize_headline("").should eq("")
+      QuickHeadlines::Services::ClusteringEngine.normalize_headline("").should eq("")
     end
 
     it "converts to lowercase" do
-      Quickheadlines::Services::ClusteringEngine.normalize_headline("BITCOIN PRICE SURGE").should eq("bitcoin price surge")
+      QuickHeadlines::Services::ClusteringEngine.normalize_headline("BITCOIN PRICE SURGE").should eq("bitcoin price surge")
     end
   end
 
   describe "#word_count" do
     it "counts words after normalization" do
-      Quickheadlines::Services::ClusteringEngine.word_count("The Bitcoin price is surging").should eq(3)
+      QuickHeadlines::Services::ClusteringEngine.word_count("The Bitcoin price is surging").should eq(3)
     end
 
     it "returns 0 for empty string" do
-      Quickheadlines::Services::ClusteringEngine.word_count("").should eq(0)
+      QuickHeadlines::Services::ClusteringEngine.word_count("").should eq(0)
     end
 
     it "counts only non-stop words" do
-      Quickheadlines::Services::ClusteringEngine.word_count("The and for of Bitcoin").should eq(1)
+      QuickHeadlines::Services::ClusteringEngine.word_count("The and for of Bitcoin").should eq(1)
     end
   end
 
   describe "#overlap_coefficient" do
     it "returns 1.0 for identical sets" do
-      set1 = Quickheadlines::Services::ClusteringEngine.word_set("bitcoin price surge")
-      set2 = Quickheadlines::Services::ClusteringEngine.word_set("bitcoin price surge")
-      Quickheadlines::Services::ClusteringEngine.overlap_coefficient(set1, set2).should eq(1.0)
+      set1 = QuickHeadlines::Services::ClusteringEngine.word_set("bitcoin price surge")
+      set2 = QuickHeadlines::Services::ClusteringEngine.word_set("bitcoin price surge")
+      QuickHeadlines::Services::ClusteringEngine.overlap_coefficient(set1, set2).should eq(1.0)
     end
 
     it "returns 0.0 for disjoint sets" do
-      set1 = Quickheadlines::Services::ClusteringEngine.word_set("bitcoin ethereum")
-      set2 = Quickheadlines::Services::ClusteringEngine.word_set("apple orange")
-      Quickheadlines::Services::ClusteringEngine.overlap_coefficient(set1, set2).should eq(0.0)
+      set1 = QuickHeadlines::Services::ClusteringEngine.word_set("bitcoin ethereum")
+      set2 = QuickHeadlines::Services::ClusteringEngine.word_set("apple orange")
+      QuickHeadlines::Services::ClusteringEngine.overlap_coefficient(set1, set2).should eq(0.0)
     end
   end
 
   describe "#can_cluster?" do
     it "returns true for titles with enough words" do
-      Quickheadlines::Services::ClusteringEngine.can_cluster?("Bitcoin price surge continues today").should be_true
+      QuickHeadlines::Services::ClusteringEngine.can_cluster?("Bitcoin price surge continues today").should be_true
     end
 
     it "returns false for short titles" do
-      Quickheadlines::Services::ClusteringEngine.can_cluster?("Hi").should be_false
+      QuickHeadlines::Services::ClusteringEngine.can_cluster?("Hi").should be_false
     end
 
     it "returns false for empty titles" do
-      Quickheadlines::Services::ClusteringEngine.can_cluster?("").should be_false
+      QuickHeadlines::Services::ClusteringEngine.can_cluster?("").should be_false
     end
   end
 end

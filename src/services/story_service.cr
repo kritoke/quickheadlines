@@ -4,10 +4,10 @@ require "../dtos/story_dto"
 require "../dtos/cluster_dto"
 require "../api"
 
-module Quickheadlines::Services
+module QuickHeadlines::Services
   module StoryService
     def self.get_timeline(
-      story_repo : Quickheadlines::Repositories::StoryRepository,
+      story_repo : QuickHeadlines::Repositories::StoryRepository,
       limit : Int32,
       offset : Int32,
       days : Int32?,
@@ -42,11 +42,11 @@ module Quickheadlines::Services
       )
     end
 
-    def self.get_clusters(cluster_repo : Quickheadlines::Repositories::ClusterRepository) : ClustersResult
+    def self.get_clusters(cluster_repo : QuickHeadlines::Repositories::ClusterRepository) : ClustersResult
       clusters = cluster_repo.find_all
 
       cluster_responses = clusters.map do |cluster|
-        Quickheadlines::DTOs::ClusterResponse.from_entity(cluster)
+        QuickHeadlines::DTOs::ClusterResponse.from_entity(cluster)
       end
 
       ClustersResult.new(
@@ -55,20 +55,20 @@ module Quickheadlines::Services
       )
     end
 
-    def self.get_cluster_items(cluster_repo : Quickheadlines::Repositories::ClusterRepository, cluster_id : String) : ClusterItemsResult
+    def self.get_cluster_items(cluster_repo : QuickHeadlines::Repositories::ClusterRepository, cluster_id : String) : ClusterItemsResult
       id = cluster_id.to_i64?
 
       if id.nil?
         return ClusterItemsResult.new(
           cluster_id: cluster_id,
-          items: [] of Quickheadlines::DTOs::StoryResponse
+          items: [] of QuickHeadlines::DTOs::StoryResponse
         )
       end
 
       items = cluster_repo.find_items(id)
 
       story_responses = items.map do |story|
-        Quickheadlines::DTOs::StoryResponse.from_entity(story)
+        QuickHeadlines::DTOs::StoryResponse.from_entity(story)
       end
 
       ClusterItemsResult.new(
@@ -88,7 +88,7 @@ module Quickheadlines::Services
   end
 
   struct ClustersResult
-    property clusters : Array(Quickheadlines::DTOs::ClusterResponse)
+    property clusters : Array(QuickHeadlines::DTOs::ClusterResponse)
     property total_count : Int32
 
     def initialize(@clusters, @total_count)
@@ -97,7 +97,7 @@ module Quickheadlines::Services
 
   struct ClusterItemsResult
     property cluster_id : String
-    property items : Array(Quickheadlines::DTOs::StoryResponse)
+    property items : Array(QuickHeadlines::DTOs::StoryResponse)
 
     def initialize(@cluster_id, @items)
     end

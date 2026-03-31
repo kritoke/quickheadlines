@@ -1,4 +1,4 @@
-module Quickheadlines::Services
+module QuickHeadlines::Services
   abstract struct FeedState
   end
 

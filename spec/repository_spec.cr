@@ -13,20 +13,20 @@ def unique_url
 end
 
 describe "Repositories" do
-  describe Quickheadlines::Repositories::FeedRepository do
+  describe QuickHeadlines::Repositories::FeedRepository do
     describe "#find_by_url" do
       it "returns nil for non-existent feed" do
         cache = FeedCache.new(nil)
-        repo = Quickheadlines::Repositories::FeedRepository.new(cache.db)
+        repo = QuickHeadlines::Repositories::FeedRepository.new(cache.db)
         repo.find_by_url("https://nonexistent-#{rand(99999)}.example.com/feed.xml").should be_nil
       end
 
       it "returns feed when it exists" do
         cache = FeedCache.new(nil)
-        repo = Quickheadlines::Repositories::FeedRepository.new(cache.db)
+        repo = QuickHeadlines::Repositories::FeedRepository.new(cache.db)
         test_url = unique_url
 
-        feed = Quickheadlines::Entities::Feed.new(
+        feed = QuickHeadlines::Entities::Feed.new(
           id: "1",
           title: "Test Feed",
           url: test_url,
@@ -37,18 +37,18 @@ describe "Repositories" do
 
         found = repo.find_by_url(test_url)
         found.should_not be_nil
-        found.as(Quickheadlines::Entities::Feed).title.should eq("Test Feed")
-        found.as(Quickheadlines::Entities::Feed).header_color.should eq("#ff0000")
+        found.as(QuickHeadlines::Entities::Feed).title.should eq("Test Feed")
+        found.as(QuickHeadlines::Entities::Feed).header_color.should eq("#ff0000")
       end
     end
 
     describe "#save" do
       it "inserts new feed" do
         cache = FeedCache.new(nil)
-        repo = Quickheadlines::Repositories::FeedRepository.new(cache.db)
+        repo = QuickHeadlines::Repositories::FeedRepository.new(cache.db)
         test_url = unique_url
 
-        feed = Quickheadlines::Entities::Feed.new(
+        feed = QuickHeadlines::Entities::Feed.new(
           id: "1",
           title: "New Feed",
           url: test_url,
@@ -59,14 +59,14 @@ describe "Repositories" do
 
         found = repo.find_by_url(test_url)
         found.should_not be_nil
-        found.as(Quickheadlines::Entities::Feed).title.should eq("New Feed")
+        found.as(QuickHeadlines::Entities::Feed).title.should eq("New Feed")
       end
     end
 
     describe "#count_items" do
       it "returns correct count after upserting items" do
         cache = FeedCache.new(nil)
-        repo = Quickheadlines::Repositories::FeedRepository.new(cache.db)
+        repo = QuickHeadlines::Repositories::FeedRepository.new(cache.db)
         test_url = unique_url
 
         feed_data = FeedData.new(
@@ -89,7 +89,7 @@ describe "Repositories" do
     describe "#find_with_items" do
       it "returns feed with items" do
         cache = FeedCache.new(nil)
-        repo = Quickheadlines::Repositories::FeedRepository.new(cache.db)
+        repo = QuickHeadlines::Repositories::FeedRepository.new(cache.db)
         test_url = unique_url
 
         feed_data = FeedData.new(
@@ -115,7 +115,7 @@ describe "Repositories" do
     describe "#delete_by_url" do
       it "removes feed and its items" do
         cache = FeedCache.new(nil)
-        repo = Quickheadlines::Repositories::FeedRepository.new(cache.db)
+        repo = QuickHeadlines::Repositories::FeedRepository.new(cache.db)
         test_url = unique_url
 
         feed_data = FeedData.new(
@@ -141,10 +141,10 @@ describe "Repositories" do
     describe "#find_by_pattern" do
       it "finds feed by exact URL" do
         cache = FeedCache.new(nil)
-        repo = Quickheadlines::Repositories::FeedRepository.new(cache.db)
+        repo = QuickHeadlines::Repositories::FeedRepository.new(cache.db)
         test_url = "https://pattern-test-#{rand(99999)}.example.com/feed.xml"
 
-        feed = Quickheadlines::Entities::Feed.new(
+        feed = QuickHeadlines::Entities::Feed.new(
           id: "1",
           title: "Test Feed",
           url: test_url,
@@ -154,23 +154,23 @@ describe "Repositories" do
 
         found = repo.find_by_url(test_url)
         found.should_not be_nil
-        found.as(Quickheadlines::Entities::Feed).title.should eq("Test Feed")
+        found.as(QuickHeadlines::Entities::Feed).title.should eq("Test Feed")
       end
     end
   end
 
-  describe Quickheadlines::Repositories::StoryRepository do
+  describe QuickHeadlines::Repositories::StoryRepository do
     describe "#deduplicate" do
       it "returns false for non-existent title" do
         cache = FeedCache.new(nil)
-        repo = Quickheadlines::Repositories::StoryRepository.new(cache.db)
+        repo = QuickHeadlines::Repositories::StoryRepository.new(cache.db)
         repo.deduplicate(1, "Non-existent Title-#{rand(99999)}").should be_false
       end
 
       it "returns true when title exists" do
         cache = FeedCache.new(nil)
-        repo = Quickheadlines::Repositories::FeedRepository.new(cache.db)
-        story_repo = Quickheadlines::Repositories::StoryRepository.new(cache.db)
+        repo = QuickHeadlines::Repositories::FeedRepository.new(cache.db)
+        story_repo = QuickHeadlines::Repositories::StoryRepository.new(cache.db)
         test_url = unique_url
 
         feed_data = FeedData.new(

@@ -1,6 +1,6 @@
 require "athena"
 
-class Quickheadlines::Repositories::HeatMapRepository
+class QuickHeadlines::Repositories::HeatMapRepository
   def save_heat(story_id : String, heat : Float64) : Nil
     # TODO: Implement save heat
   end

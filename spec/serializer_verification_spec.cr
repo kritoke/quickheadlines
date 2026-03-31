@@ -7,7 +7,7 @@ require "../src/dtos/cluster_dto"
 describe "Athena Serializer Verification" do
   describe "StoryResponse" do
     it "serializes with camelCase keys" do
-      dto = Quickheadlines::DTOs::StoryResponse.new(
+      dto = QuickHeadlines::DTOs::StoryResponse.new(
         id: "test-id",
         title: "Test Story",
         link: "https://example.com",
@@ -49,7 +49,7 @@ describe "Athena Serializer Verification" do
 
   describe "FeedDTO" do
     it "serializes with camelCase keys" do
-      dto = Quickheadlines::DTOs::FeedDTO.new(
+      dto = QuickHeadlines::DTOs::FeedDTO.new(
         id: "feed-id",
         title: "Test Feed",
         url: "https://feed.example.com",
@@ -82,7 +82,7 @@ describe "Athena Serializer Verification" do
 
   describe "ClusterResponse" do
     it "serializes with camelCase keys" do
-      story_response = Quickheadlines::DTOs::StoryResponse.new(
+      story_response = QuickHeadlines::DTOs::StoryResponse.new(
         id: "story-id",
         title: "Test Story",
         link: "https://example.com",
@@ -91,10 +91,10 @@ describe "Athena Serializer Verification" do
         feed_link: "https://feed.example.com/link"
       )
 
-      dto = Quickheadlines::DTOs::ClusterResponse.new(
+      dto = QuickHeadlines::DTOs::ClusterResponse.new(
         id: "cluster-id",
         representative: story_response,
-        others: [] of Quickheadlines::DTOs::StoryResponse,
+        others: [] of QuickHeadlines::DTOs::StoryResponse,
         cluster_size: 1
       )
 

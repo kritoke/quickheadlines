@@ -1,6 +1,6 @@
 require "athena"
 
-module Quickheadlines::Entities
+module QuickHeadlines::Entities
   record Feed,
     id : String,
     title : String,

@@ -1,7 +1,7 @@
 require "athena"
 
 @[ASRA::Name(strategy: :camelcase)]
-class Quickheadlines::DTOs::ConfigResponse
+class QuickHeadlines::DTOs::ConfigResponse
   include ASR::Serializable
 
   property refresh_minutes : Int32

@@ -3,15 +3,15 @@ require "../models"
 require "../result"
 require "../errors"
 
-module Quickheadlines::Repositories
+module QuickHeadlines::Repositories
   class FeedRepository
     @db : DB::Database
 
     def initialize(@db : DB::Database)
     end
 
-    def find_all : Array(Quickheadlines::Entities::Feed)
-      feeds = [] of Quickheadlines::Entities::Feed
+    def find_all : Array(QuickHeadlines::Entities::Feed)
+      feeds = [] of QuickHeadlines::Entities::Feed
 
       @db.query("SELECT id, url, title, site_link, header_color, header_text_color, favicon, favicon_data FROM feeds ORDER BY title") do |rows|
         rows.each do
@@ -24,7 +24,7 @@ module Quickheadlines::Repositories
           favicon = rows.read(String?)
           favicon_data = rows.read(String?)
 
-          feeds << Quickheadlines::Entities::Feed.new(
+          feeds << QuickHeadlines::Entities::Feed.new(
             id: id.to_s,
             title: title,
             url: url,
@@ -58,18 +58,18 @@ module Quickheadlines::Repositories
     def find_last_fetched_time(url : String) : Time?
       result = @db.query_one?("SELECT last_fetched FROM feeds WHERE url = ?", url, as: String?)
       return unless result
-      Time.parse(result, "%Y-%m-%d %H:%M:%S", Time::Location::UTC)
+Time.parse(result, Constants::DB_TIME_FORMAT, Time::Location::UTC)
     end
 
     def find_last_fetched_time_result(url : String) : TimeResult
       result = @db.query_one?("SELECT last_fetched FROM feeds WHERE url = ?", url, as: String?)
       return TimeResult.failure(RepositoryError::NotFound) unless result
-      TimeResult.success(Time.parse(result, "%Y-%m-%d %H:%M:%S", Time::Location::UTC))
+      TimeResult.success(Time.parse(result, Constants::DB_TIME_FORMAT, Time::Location::UTC))
     rescue
       TimeResult.failure(RepositoryError::DatabaseError)
     end
 
-    def find_by_url(url : String) : Quickheadlines::Entities::Feed?
+    def find_by_url(url : String) : QuickHeadlines::Entities::Feed?
       @db.query_one?(
         "SELECT id, url, title, site_link, header_color, header_text_color, favicon, favicon_data FROM feeds WHERE url = ?",
         url
@@ -83,7 +83,7 @@ module Quickheadlines::Repositories
         favicon = row.read(String?)
         favicon_data = row.read(String?)
 
-        Quickheadlines::Entities::Feed.new(
+        QuickHeadlines::Entities::Feed.new(
           id: id.to_s,
           title: title,
           url: url,
@@ -96,15 +96,15 @@ module Quickheadlines::Repositories
       end
     end
 
-    def find_by_url_result(url : String) : Result(Quickheadlines::Entities::Feed?, RepositoryError)
+    def find_by_url_result(url : String) : Result(QuickHeadlines::Entities::Feed?, RepositoryError)
       result = find_by_url(url)
-      return Result(Quickheadlines::Entities::Feed?, RepositoryError).failure(RepositoryError::NotFound) unless result
-      Result(Quickheadlines::Entities::Feed?, RepositoryError).success(result)
+      return Result(QuickHeadlines::Entities::Feed?, RepositoryError).failure(RepositoryError::NotFound) unless result
+      Result(QuickHeadlines::Entities::Feed?, RepositoryError).success(result)
     rescue
-      Result(Quickheadlines::Entities::Feed?, RepositoryError).failure(RepositoryError::DatabaseError)
+      Result(QuickHeadlines::Entities::Feed?, RepositoryError).failure(RepositoryError::DatabaseError)
     end
 
-    def find_by_pattern(pattern : String) : Quickheadlines::Entities::Feed?
+    def find_by_pattern(pattern : String) : QuickHeadlines::Entities::Feed?
       normalized = pattern.strip.rstrip('/')
         .gsub(/\/rss(\.xml)?$/i, "")
         .gsub(/\/feed(\.xml)?$/i, "")
@@ -112,15 +112,15 @@ module Quickheadlines::Repositories
       find_by_url(normalized) || find_by_url("#{normalized}/") || find_by_url("#{normalized}/rss")
     end
 
-    def find_by_pattern_result(pattern : String) : Result(Quickheadlines::Entities::Feed?, RepositoryError)
+    def find_by_pattern_result(pattern : String) : Result(QuickHeadlines::Entities::Feed?, RepositoryError)
       result = find_by_pattern(pattern)
-      return Result(Quickheadlines::Entities::Feed?, RepositoryError).failure(RepositoryError::NotFound) unless result
-      Result(Quickheadlines::Entities::Feed?, RepositoryError).success(result)
+      return Result(QuickHeadlines::Entities::Feed?, RepositoryError).failure(RepositoryError::NotFound) unless result
+      Result(QuickHeadlines::Entities::Feed?, RepositoryError).success(result)
     rescue
-      Result(Quickheadlines::Entities::Feed?, RepositoryError).failure(RepositoryError::DatabaseError)
+      Result(QuickHeadlines::Entities::Feed?, RepositoryError).failure(RepositoryError::DatabaseError)
     end
 
-    def save(feed : Quickheadlines::Entities::Feed) : Quickheadlines::Entities::Feed
+    def save(feed : QuickHeadlines::Entities::Feed) : QuickHeadlines::Entities::Feed
       existing = find_by_url(feed.url)
 
       if existing
@@ -144,7 +144,7 @@ module Quickheadlines::Repositories
           feed.header_text_color,
           feed.favicon,
           feed.favicon_data,
-          Time.utc.to_s("%Y-%m-%d %H:%M:%S")
+          Time.utc.to_s(Constants::DB_TIME_FORMAT)
         )
       end
 
@@ -154,7 +154,7 @@ module Quickheadlines::Repositories
     def update_last_fetched(url : String, time : Time = Time.utc) : Nil
       @db.exec(
         "UPDATE feeds SET last_fetched = ? WHERE url = ?",
-        time.to_s("%Y-%m-%d %H:%M:%S"),
+        time.to_s(Constants::DB_TIME_FORMAT),
         url
       )
     end
@@ -235,7 +235,7 @@ module Quickheadlines::Repositories
         feed_data.last_modified,
         feed_data.favicon,
         feed_data.favicon_data,
-        Time.utc.to_s("%Y-%m-%d %H:%M:%S"),
+        Time.utc.to_s(Constants::DB_TIME_FORMAT),
         feed_id
       )
       feed_id
@@ -254,7 +254,7 @@ module Quickheadlines::Repositories
         feed_data.last_modified,
         feed_data.favicon,
         feed_data.favicon_data,
-        Time.utc.to_s("%Y-%m-%d %H:%M:%S")
+        Time.utc.to_s(Constants::DB_TIME_FORMAT)
       )
       @db.scalar("SELECT last_insert_rowid()").as(Int64)
     end
@@ -265,7 +265,7 @@ module Quickheadlines::Repositories
       items.each_with_index do |item, index|
         next if existing_titles.includes?(item.title)
 
-        pub_date_str = item.pub_date.try(&.to_s("%Y-%m-%d %H:%M:%S"))
+        pub_date_str = item.pub_date.try(&.to_s(Constants::DB_TIME_FORMAT))
 
         @db.exec(
           "INSERT OR IGNORE INTO items (feed_id, title, link, pub_date, version, position, comment_url, commentary_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
@@ -327,7 +327,7 @@ module Quickheadlines::Repositories
           comment_url = rows.read(String?)
           commentary_url = rows.read(String?)
 
-          pub_date = pub_date_str.try { |date_str| Time.parse(date_str, "%Y-%m-%d %H:%M:%S", Time::Location::UTC) }
+          pub_date = pub_date_str.try { |date_str| Time.parse(date_str, Constants::DB_TIME_FORMAT, Time::Location::UTC) }
           items << Item.new(title, link, pub_date, version, comment_url, commentary_url)
         end
       end
@@ -388,7 +388,7 @@ module Quickheadlines::Repositories
           comment_url = rows.read(String?)
           commentary_url = rows.read(String?)
 
-          pub_date = pub_date_str.try { |date_str| Time.parse(date_str, "%Y-%m-%d %H:%M:%S", Time::Location::UTC) }
+          pub_date = pub_date_str.try { |date_str| Time.parse(date_str, Constants::DB_TIME_FORMAT, Time::Location::UTC) }
           items << Item.new(title, link, pub_date, version, comment_url, commentary_url)
         end
       end

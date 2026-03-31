@@ -1,6 +1,6 @@
 require "athena"
 
-module Quickheadlines::Entities
+module QuickHeadlines::Entities
   struct Cluster
     getter id : String
     getter representative : Story

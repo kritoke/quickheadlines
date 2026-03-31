@@ -2,14 +2,14 @@ require "../repositories/feed_repository"
 require "../result"
 require "../errors"
 
-module Quickheadlines::Services
+module QuickHeadlines::Services
   class FeedService
-    @feed_repository : Quickheadlines::Repositories::FeedRepository
+    @feed_repository : QuickHeadlines::Repositories::FeedRepository
 
-    def initialize(@feed_repository : Quickheadlines::Repositories::FeedRepository)
+    def initialize(@feed_repository : QuickHeadlines::Repositories::FeedRepository)
     end
 
-    def all_feeds : Array(Quickheadlines::Entities::Feed)
+    def all_feeds : Array(QuickHeadlines::Entities::Feed)
       @feed_repository.find_all
     end
 

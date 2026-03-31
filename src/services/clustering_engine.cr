@@ -1,6 +1,6 @@
 require "lexis-minhash"
 
-module Quickheadlines::Services
+module QuickHeadlines::Services
   record ClusteringItem,
     id : Int64,
     title : String,

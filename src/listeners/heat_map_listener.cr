@@ -1,9 +1,9 @@
 require "athena"
 
-class Quickheadlines::Listeners::HeatMapListener
-  def initialize(@heat_map_service : Quickheadlines::Services::HeatMapService); end
+class QuickHeadlines::Listeners::HeatMapListener
+  def initialize(@heat_map_service : QuickHeadlines::Services::HeatMapService); end
 
-  def on_story_fetched(event : Quickheadlines::Events::StoryFetchedEvent) : Nil
+  def on_story_fetched(event : QuickHeadlines::Events::StoryFetchedEvent) : Nil
     stories = event.stories
 
     # Apply your 'Hotness' algorithm:
