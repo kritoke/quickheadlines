@@ -233,9 +233,6 @@ module StateStore
   end
 end
 
-# Global feed cache (singleton accessor)
-# DEPRECATED: Use FeedFetcher with injected FeedCache instead.
-# This will be removed in a future version when full DI is implemented.
 class FeedCache
   @@instance : FeedCache?
 
@@ -247,11 +244,3 @@ class FeedCache
     @@instance = cache
   end
 end
-
-# DEPRECATED: Use FeedFetcher.instance or inject FeedCache for testing.
-# This will be removed in a future version when full DI is implemented.
-FEED_CACHE = if ENV["SKIP_FEED_CACHE_INIT"] == "1"
-               nil
-             else
-               FeedCache.instance
-             end
