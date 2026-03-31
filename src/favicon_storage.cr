@@ -107,7 +107,7 @@ module FaviconStorage
     return false if data.size < 4
     xml_markers = ["<?xml", "<html", "<!DOCTYPE"]
     str_start = String.new(data[0..Math.min(data.size - 1, 100)])
-    return false if xml_markers.any? { |m| str_start.starts_with?(m) }
+    return false if xml_markers.any? { |marker| str_start.starts_with?(marker) }
     true
   end
 

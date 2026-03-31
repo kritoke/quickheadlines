@@ -158,7 +158,7 @@ module Utils
   def self.validate_proxy_host(url : String) : Bool
     uri = URI.parse(url)
     return false unless uri.scheme.in?("http", "https")
-    return false unless uri.host.is_a?(String) && !uri.host.to_s.empty?
+    return false if !uri.host.is_a?(String) || uri.host.to_s.empty?
 
     host = uri.host.as(String).downcase
     !private_host?(host)

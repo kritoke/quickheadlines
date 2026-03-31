@@ -12,7 +12,7 @@ module QuickHeadlines::Repositories
     def initialize(db_or_service : DatabaseService | DB::Database)
       @db = case db_or_service
             when DatabaseService then db_or_service.db
-            else db_or_service
+            else                      db_or_service
             end
     end
 
@@ -68,7 +68,7 @@ module QuickHeadlines::Repositories
     def find_last_fetched_time(url : String) : Time?
       result = db.query_one?("SELECT last_fetched FROM feeds WHERE url = ?", url, as: String?)
       return unless result
-Time.parse(result, Constants::DB_TIME_FORMAT, Time::Location::UTC)
+      Time.parse(result, Constants::DB_TIME_FORMAT, Time::Location::UTC)
     end
 
     def find_last_fetched_time_result(url : String) : TimeResult

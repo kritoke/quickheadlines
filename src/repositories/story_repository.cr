@@ -9,7 +9,7 @@ module QuickHeadlines::Repositories
     def initialize(db_or_service : DatabaseService | DB::Database)
       @db = case db_or_service
             when DatabaseService then db_or_service.db
-            else db_or_service
+            else                      db_or_service
             end
     end
 
