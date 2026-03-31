@@ -53,9 +53,9 @@ class AppBootstrap
 
   def verify_feeds_loaded
     STDERR.puts "[#{Time.local}] Verifying feeds loaded..."
-    STDERR.puts "[#{Time.local}] STATE.feeds.size=#{STATE.feeds.size}"
-    STATE.tabs.each do |tab|
-      STDERR.puts "[#{Time.local}] STATE.tabs[#{tab.name}].feeds.size=#{tab.feeds.size}"
+    STDERR.puts "[#{Time.local}] StateStore.feeds.size=#{StateStore.feeds.size}"
+    StateStore.tabs.each do |tab|
+      STDERR.puts "[#{Time.local}] StateStore.tabs[#{tab.name}].feeds.size=#{tab.feeds.size}"
     end
   end
 
@@ -83,8 +83,8 @@ class AppBootstrap
     spawn do
       loop do
         sleep @clustering_interval
-        next if STATE.clustering?
-        threshold = STATE.config.try(&.clustering).try(&.threshold) || 0.35
+        next if StateStore.clustering?
+        threshold = StateStore.config.try(&.clustering).try(&.threshold) || 0.35
         clustering_service.recluster_with_lsh(@config.db_fetch_limit, threshold)
       end
     end

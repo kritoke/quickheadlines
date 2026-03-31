@@ -98,7 +98,7 @@ def refresh_all(config : Config)
   end
 
   # Broadcast update to WebSocket clients
-  EventBroadcaster.notify_feed_update(STATE.updated_at.to_unix_ms)
+  EventBroadcaster.notify_feed_update(StateStore.updated_at.to_unix_ms)
 
   if config.debug?
     STDERR.puts "[#{Time.local}] refresh_all: STATE updated - feeds=#{new_feeds.size}, tabs=#{new_tabs.size}"
@@ -111,7 +111,7 @@ def refresh_all(config : Config)
   GC.collect
 
   if config.debug?
-    STDERR.puts "[#{Time.local}] refresh_all: complete - STATE.feeds=#{new_feeds.size}, STATE.tabs=#{new_tabs.size}"
+    STDERR.puts "[#{Time.local}] refresh_all: complete - StateStore.feeds=#{new_feeds.size}, StateStore.tabs=#{new_tabs.size}"
   end
 end
 

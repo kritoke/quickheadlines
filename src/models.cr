@@ -79,125 +79,6 @@ record Tab,
   feeds : Array(FeedData) = [] of FeedData,
   software_releases : Array(FeedData) = [] of FeedData
 
-# AppState provides both instance and class-level access to application state.
-# Instance access via STATE global, class access via AppState.method.
-# All methods delegate to StateStore for thread-safe state management.
-class AppState
-  # Instance methods (used via STATE global)
-  def feeds
-    StateStore.feeds
-  end
-
-  def tabs
-    StateStore.tabs
-  end
-
-  def software_releases
-    StateStore.software_releases
-  end
-
-  def updated_at
-    StateStore.updated_at
-  end
-
-  def updated_at=(value : Time)
-    StateStore.update(&.copy_with(updated_at: value))
-  end
-
-  def config
-    StateStore.config
-  end
-
-  def config_title
-    StateStore.config_title
-  end
-
-  def clustering?
-    StateStore.clustering?
-  end
-
-  def clustering=(value : Bool)
-    StateStore.update(&.copy_with(clustering: value))
-  end
-
-  def refreshing?
-    StateStore.refreshing?
-  end
-
-  # Class methods (used via AppState.method)
-  def self.feeds
-    StateStore.feeds
-  end
-
-  def self.tabs
-    StateStore.tabs
-  end
-
-  def self.software_releases
-    StateStore.software_releases
-  end
-
-  def self.updated_at
-    StateStore.updated_at
-  end
-
-  def self.config
-    StateStore.config
-  end
-
-  def self.config_title
-    StateStore.config_title
-  end
-
-  def self.config_title=(value : String)
-    StateStore.update(&.copy_with(config_title: value))
-  end
-
-  def self.config=(value : Config?)
-    StateStore.update(&.copy_with(config: value))
-  end
-
-  def self.feeds=(value : Array(FeedData))
-    StateStore.update(&.copy_with(feeds: value))
-  end
-
-  def self.tabs=(value : Array(Tab))
-    StateStore.update(&.copy_with(tabs: value))
-  end
-
-  def self.software_releases=(value : Array(FeedData))
-    StateStore.update(&.copy_with(software_releases: value))
-  end
-
-  def self.updated_at=(value : Time)
-    StateStore.update(&.copy_with(updated_at: value))
-  end
-
-  def self.clustering?
-    StateStore.clustering?
-  end
-
-  def self.clustering=(value : Bool)
-    StateStore.update(&.copy_with(clustering: value))
-  end
-
-  def self.refreshing?
-    StateStore.refreshing?
-  end
-
-  def self.refreshing=(value : Bool)
-    StateStore.update(&.copy_with(refreshing: value))
-  end
-
-  def self.feeds_for_tab(tab_name : String)
-    StateStore.feeds_for_tab_impl(tab_name)
-  end
-
-  def self.all_timeline_items
-    StateStore.all_timeline_items_impl
-  end
-end
-
 # Immutable state record for functional updates
 record AppStateSnapshot,
   feeds : Array(FeedData),
@@ -234,7 +115,6 @@ module StateStore
     end
   end
 
-  # Convenience methods for backward compatibility with existing code
   def self.feeds
     get.feeds
   end
@@ -263,8 +143,20 @@ module StateStore
     get.clustering
   end
 
+  def self.clustering=(value : Bool)
+    update(&.copy_with(clustering: value))
+  end
+
   def self.refreshing?
     get.refreshing
+  end
+
+  def self.refreshing=(value : Bool)
+    update(&.copy_with(refreshing: value))
+  end
+
+  def self.config_title=(value : String)
+    update(&.copy_with(config_title: value))
   end
 
   def self.clear : Nil
@@ -281,10 +173,7 @@ module StateStore
       )
     end
   end
-end
 
-# Extend StateStore with implementation methods
-module StateStore
   def self.feeds_for_tab_impl(tab_name : String) : Array(FeedData)
     tabs.find { |tab| tab.name.downcase == tab_name.downcase }.try(&.feeds) || [] of FeedData
   end
@@ -343,10 +232,6 @@ module StateStore
     items
   end
 end
-
-# DEPRECATED: Use AppState class methods directly instead of this global instance.
-# This will be removed in a future version when full DI is implemented.
-STATE = AppState.new
 
 # Global feed cache (singleton accessor)
 # DEPRECATED: Use FeedFetcher with injected FeedCache instead.

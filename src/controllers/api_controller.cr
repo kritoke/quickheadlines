@@ -270,7 +270,7 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
       feeds: feeds_response,
       software_releases: releases_response,
       clustering: is_clustering,
-      updated_at: STATE.updated_at.to_unix_ms
+      updated_at: StateStore.updated_at.to_unix_ms
     )
   end
 
@@ -286,7 +286,7 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
     end
 
     # Search top-level feeds and all feeds within tabs
-    config = STATE.config
+    config = StateStore.config
     if config.nil?
       raise Athena::Framework::Exception::ServiceUnavailable.new("Configuration not loaded")
     end
@@ -312,7 +312,7 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
 
       # Fetch more data if needed
       if current_count < needed_count
-        db_fetch_limit = STATE.config.try(&.db_fetch_limit) || 500
+        db_fetch_limit = StateStore.config.try(&.db_fetch_limit) || 500
         fetch_feed(feed_config, needed_count + 50, db_fetch_limit, nil)
       end
 
@@ -354,8 +354,8 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
   # GET /api/timeline - Get timeline items
   @[ARTA::Get(path: "/api/timeline")]
   def timeline(request : ATH::Request) : TimelinePageResponse
-    default_limit = STATE.config.try(&.db_fetch_limit) || 500
-    default_days = (STATE.config.try(&.cache_retention_hours) || 168) / 24
+    default_limit = StateStore.config.try(&.db_fetch_limit) || 500
+    default_days = (StateStore.config.try(&.cache_retention_hours) || 168) / 24
     limit = validate_limit(request.query_params["limit"]?, default_limit, max: 1000)
     offset = validate_offset(request.query_params["offset"]?)
     days = validate_days(request.query_params["days"]?, default_days.to_i32)
@@ -386,10 +386,10 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
 
     # If timeline has very few items and we're not already clustering, trigger a background refresh
     # This ensures the timeline populates quickly after server startup
-    if result.total_count < 100 && !STATE.clustering? && offset == 0
+    if result.total_count < 100 && !StateStore.clustering? && offset == 0
       spawn do
         begin
-          config = STATE.config
+          config = StateStore.config
           if config
             refresh_all(config)
           end
@@ -403,7 +403,7 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
       items: result.items,
       has_more: result.has_more?,
       total_count: result.total_count,
-      clustering: STATE.clustering?
+      clustering: StateStore.clustering?
     )
   end
 
@@ -411,15 +411,15 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
   @[ARTA::Get(path: "/api/version")]
   def version : ATH::View(VersionResponse)
     view(VersionResponse.new(
-      updated_at: STATE.updated_at.to_unix_ms,
-      clustering: STATE.clustering?
+      updated_at: StateStore.updated_at.to_unix_ms,
+      clustering: StateStore.clustering?
     ))
   end
 
   # GET /api/config - Get configuration settings
   @[ARTA::Get(path: "/api/config")]
   def config : ATH::View(Quickheadlines::DTOs::ConfigResponse)
-    config = STATE.config
+    config = StateStore.config
     refresh_minutes = config.try(&.refresh_minutes) || 10
     item_limit = config.try(&.item_limit) || 20
     debug = config.try(&.debug?) || false
@@ -439,7 +439,7 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
 
     # Fallback: if STATE is empty, read from config
     if tabs_snapshot.empty?
-      config = STATE.config
+      config = StateStore.config
       if config
         tabs_snapshot = config.tabs
       end
@@ -455,7 +455,7 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
   # GET /version - Get version as plain text (legacy endpoint)
   @[ARTA::Get(path: "/version")]
   def version_text : String
-    STATE.updated_at.to_unix_ms.to_s
+    StateStore.updated_at.to_unix_ms.to_s
   end
 
   private def parse_header_color_params(body : JSON::Any) : Tuple(String?, String?, String?)
@@ -491,7 +491,7 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
       return ATH::Response.new("Missing feed_url, color, or text_color", 400)
     end
 
-    config = STATE.config
+    config = StateStore.config
     return ATH::Response.new("Configuration not loaded", 500) if config.nil?
 
     if has_manual_color_override?(config, feed_url)
@@ -721,10 +721,10 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
     spawn do
       begin
         service = clustering_service
-        cluster_limit = STATE.config.try(&.clustering).try(&.max_items) || STATE.config.try(&.db_fetch_limit) || 5000
-        threshold = STATE.config.try(&.clustering).try(&.threshold) || 0.35
+        cluster_limit = StateStore.config.try(&.clustering).try(&.max_items) || StateStore.config.try(&.db_fetch_limit) || 5000
+        threshold = StateStore.config.try(&.clustering).try(&.threshold) || 0.35
 
-        if STATE.config.try(&.debug?)
+        if StateStore.config.try(&.debug?)
           STDERR.puts "[#{Time.local}] Running clustering..."
         end
         service.recluster_with_lsh(cluster_limit, threshold)
@@ -807,8 +807,8 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
           STDERR.puts "[#{Time.local}] Cache cleared: #{feed_count} feeds, #{item_count} items deleted"
         when "cleanup-orphaned"
           config_urls = Set(String).new
-          STATE.feeds.each { |feed| config_urls << feed.url }
-          STATE.tabs.each do |tab|
+          StateStore.feeds.each { |feed| config_urls << feed.url }
+          StateStore.tabs.each do |tab|
             tab.feeds.each { |feed| config_urls << feed.url }
           end
 
@@ -849,8 +849,8 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
     broadcaster_stats = EventBroadcaster.stats
 
     Quickheadlines::DTOs::StatusResponse.new(
-      clustering: STATE.clustering?,
-      refreshing: STATE.refreshing?,
+      clustering: StateStore.clustering?,
+      refreshing: StateStore.refreshing?,
       active_jobs: 0,
       websocket_connections: ws_stats["connections"].to_i32,
       websocket_messages_sent: ws_stats["messages_sent"].to_i64,
@@ -874,7 +874,7 @@ class Quickheadlines::Controllers::ApiController < Athena::Framework::Controller
 
   # Fallback method to load feeds directly from cache when STATE is empty
   private def load_feeds_from_cache_fallback(cache : FeedCache)
-    config = STATE.config
+    config = StateStore.config
     return {[] of FeedData, [] of NamedTuple(name: String, feeds: Array(FeedData), software_releases: Array(FeedData))} unless config
 
     cached_feeds = [] of FeedData

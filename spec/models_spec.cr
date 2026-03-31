@@ -150,21 +150,21 @@ describe "Models" do
     end
   end
 
-  describe AppState do
+  describe StateStore do
     it "initializes with defaults" do
       StateStore.clear
-      state = AppState.new
+      state = StateStore.get
       state.feeds.should be_empty
       state.software_releases.should be_empty
       state.tabs.should be_empty
       state.config_title.should eq("Quick Headlines")
       state.config.should be_nil
-      state.clustering?.should be_false
-      state.refreshing?.should be_false
+      state.clustering.should be_false
+      state.refreshing.should be_false
     end
 
     it "finds feeds for tab" do
-      state = AppState.new
+      StateStore.clear
       tab = Tab.new("Tech")
       feed = FeedData.new(
         title: "Test Feed",
@@ -175,20 +175,20 @@ describe "Models" do
         items: [] of Item
       )
       tab.feeds << feed
-      state.tabs << tab
+      StateStore.update(&.copy_with(tabs: [tab]))
 
-      feeds = AppState.feeds_for_tab("Tech")
+      feeds = StateStore.feeds_for_tab_impl("Tech")
       feeds.size.should eq(1)
       feeds.first.title.should eq("Test Feed")
     end
 
     it "returns empty array for non-existent tab" do
-      feeds = AppState.feeds_for_tab("NonExistent")
+      feeds = StateStore.feeds_for_tab_impl("NonExistent")
       feeds.should be_empty
     end
 
     it "collects all timeline items" do
-      state = AppState.new
+      StateStore.clear
 
       feed1 = FeedData.new(
         title: "Feed 1",
@@ -201,9 +201,7 @@ describe "Models" do
           Item.new("Item 2", "https://feed1.com/2", Time.utc(2024, 1, 1)),
         ]
       )
-      state.feeds << feed1
 
-      tab = Tab.new("Tech")
       feed2 = FeedData.new(
         title: "Feed 2",
         url: "https://feed2.com/feed.xml",
@@ -214,12 +212,13 @@ describe "Models" do
           Item.new("Item 3", "https://feed2.com/3", Time.utc(2024, 1, 3)),
         ]
       )
+      tab = Tab.new("Tech")
       tab.feeds << feed2
-      state.tabs << tab
 
-      items = AppState.all_timeline_items
+      StateStore.update(&.copy_with(feeds: [feed1], tabs: [tab]))
+
+      items = StateStore.all_timeline_items_impl
       items.size.should eq(3)
-      # Should be sorted by date descending (newest first)
       items[0].item.title.should eq("Item 3")
       items[1].item.title.should eq("Item 1")
       items[2].item.title.should eq("Item 2")

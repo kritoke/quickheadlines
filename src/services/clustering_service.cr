@@ -93,7 +93,7 @@ class Quickheadlines::Services::ClusteringService
 
   def recluster_all(limit : Int32 = 5000, threshold : Float64 = 0.35) : Int32
     # Prevent concurrent clustering runs
-    if STATE.clustering?
+    if StateStore.clustering?
       STDERR.puts "[#{Time.local}] Clustering already in progress, skipping recluster_all"
       return 0
     end
@@ -116,7 +116,7 @@ class Quickheadlines::Services::ClusteringService
     STDERR.puts "[#{Time.local}] Found #{items.size} items to re-cluster (threshold: #{threshold})"
 
     processed = 0
-    STATE.clustering = true
+    StateStore.clustering = true
     begin
       items.each do |item|
         next if item[:title].empty?
@@ -128,7 +128,7 @@ class Quickheadlines::Services::ClusteringService
       end
       STDERR.puts "[#{Time.local}] Re-clustering complete: #{processed} items processed"
     ensure
-      STATE.clustering = false
+      StateStore.clustering = false
     end
 
     processed
@@ -136,7 +136,7 @@ class Quickheadlines::Services::ClusteringService
 
   def recluster_with_lsh(limit : Int32 = 5000, threshold : Float64 = 0.35, bands : Int32 = 20) : Int32
     # Prevent concurrent clustering runs
-    if STATE.clustering?
+    if StateStore.clustering?
       STDERR.puts "[#{Time.local}] Clustering already in progress, skipping recluster_with_lsh"
       return 0
     end
@@ -156,14 +156,14 @@ class Quickheadlines::Services::ClusteringService
 
     STDERR.puts "[#{Time.local}] Found #{items.size} items to re-cluster with LSH (threshold: #{threshold}, bands: #{bands})"
 
-    STATE.clustering = true
+    StateStore.clustering = true
     begin
       rep_map = ClusteringEngine.cluster_items(items, threshold, bands)
       cache.assign_clusters_bulk(rep_map)
       processed = items.count { |i| ClusteringEngine.can_cluster?(i.title) }
       STDERR.puts "[#{Time.local}] Re-clustering with LSH complete: #{processed} items clustered into #{rep_map.size} groups"
     ensure
-      STATE.clustering = false
+      StateStore.clustering = false
     end
 
     processed

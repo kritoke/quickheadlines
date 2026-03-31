@@ -42,11 +42,9 @@ class FeedFetcher
 
     if is_timeout
       HealthMonitor.log_warning("fetch_feed(#{feed.url}) timeout: #{error_msg}")
-      HealthMonitor.update_feed_health(feed.url, FeedHealthStatus::Timeout)
       {nil, handle_timeout_error(feed, retries)}
     else
       HealthMonitor.log_error("fetch_feed(#{feed.url})", ex)
-      HealthMonitor.update_feed_health(feed.url, FeedHealthStatus::Unreachable)
       if stale_cache = get_stale_cached_feed(feed, effective_item_limit, previous_data)
         {stale_cache, retries}
       else
@@ -165,7 +163,6 @@ class FeedFetcher
         end
       rescue IO::TimeoutError
         HealthMonitor.log_warning("fetch_feed(#{feed.url}) timeout after 60s")
-        HealthMonitor.update_feed_health(feed.url, FeedHealthStatus::Timeout)
         retries = handle_timeout_error(feed, retries)
       rescue ex
         result, retries = handle_fetch_exception(ex, feed, effective_item_limit, previous_data, retries)
@@ -232,64 +229,6 @@ class FeedFetcher
   end
 
   # Private helper methods
-
-  private def build_fetch_headers(feed : Feed, current_url : String, previous_data : FeedData?) : HTTP::Headers
-    headers = HTTP::Headers{
-      "User-Agent"      => "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-      "Accept"          => "application/rss+xml, application/atom+xml, application/xml;q=0.9, text/xml;q=0.8, */*;q=0.7",
-      "Accept-Language" => "en-US,en;q=0.9",
-      "Connection"      => "keep-alive",
-    }
-
-    if previous_data && current_url == feed.url
-      previous_data.etag.try { |v| headers["If-None-Match"] = v }
-      previous_data.last_modified.try { |v| headers["If-Modified-Since"] = v }
-    end
-
-    headers
-  end
-
-  private def handle_success_response(feed : Feed, response : HTTP::Client::Response, display_limit : Int32, db_fetch_limit : Int32, previous_data : FeedData?) : FeedData
-    parsed = parse_feed(response.body_io, db_fetch_limit)
-    items = parsed[:items]
-    site_link = parsed[:site_link] || feed.url
-
-    favicon, favicon_data = VugAdapter.get_favicon(site_link, parsed[:favicon], previous_data.try(&.favicon), previous_data.try(&.favicon_data))
-
-    if favicon.nil? && favicon_data.nil?
-      favicon = VugAdapter.google_favicon_url(site_link.presence || feed.url)
-    end
-
-    local_favicon_path = favicon_data || (favicon && favicon.starts_with?("/favicons/") ? favicon : nil)
-    header_color, header_text_color, header_theme_json = extract_header_colors(feed, local_favicon_path)
-
-    etag = response.headers["ETag"]?
-    last_modified = response.headers["Last-Modified"]?
-
-    if items.empty?
-      debug_log("Feed returned no items: #{feed.title} (#{feed.url})")
-      return build_error_feed_data(feed, "No items found (or unsupported format)")
-    end
-
-    final_header_color, final_header_text = extract_legacy_header_from_theme(header_color, header_text_color, header_theme_json)
-
-    fd = FeedData.new(
-      feed.title,
-      feed.url,
-      site_link,
-      final_header_color,
-      final_header_text,
-      items,
-      etag,
-      last_modified,
-      favicon,
-      favicon_data
-    )
-
-    fd = fd.with_header_theme_colors(header_theme_json) if header_theme_json
-
-    fd
-  end
 
   private def extract_theme_text_value(parsed_text : JSON::Any, current_text : String?) : String?
     return current_text unless current_text.nil? || current_text == ""
@@ -423,51 +362,12 @@ class FeedFetcher
     Math.min(60, 2 ** retries)
   end
 
-  private def handle_server_error(feed : Feed, retries : Int32, status_code : Int32) : Int32
-    new_retries = retries + 1
-    backoff_seconds = calculate_backoff(feed, new_retries)
-    HealthMonitor.log_warning("fetch_feed(#{feed.url}) server error #{status_code}, retry #{new_retries}/3 in #{backoff_seconds}s")
-    sleep(backoff_seconds.seconds)
-    new_retries
-  end
-
   private def handle_timeout_error(feed : Feed, retries : Int32) : Int32
     new_retries = retries + 1
     backoff_seconds = calculate_backoff(feed, new_retries)
     HealthMonitor.log_warning("fetch_feed(#{feed.url}) timeout, retry #{new_retries}/3 in #{backoff_seconds}s")
     sleep(backoff_seconds.seconds)
     new_retries
-  end
-
-  private def handle_feed_response(feed : Feed, response : HTTP::Client::Response, current_url : String, redirects : Int32, display_limit : Int32, db_fetch_limit : Int32, previous_data : FeedData?) : {FeedData?, Int32, Bool, String}
-    if response.status.redirection? && (location = response.headers["Location"]?)
-      new_url = URI.parse(current_url).resolve(location).to_s
-
-      # Validate redirect URL to prevent SSRF attacks
-      unless validate_redirect_url(new_url)
-        HealthMonitor.log_warning("fetch_feed(#{feed.url}) blocked redirect to private/internal address: #{new_url}")
-        return {nil, redirects, false, current_url}
-      end
-
-      return {nil, redirects + 1, false, new_url}
-    end
-
-    if response.status_code == 304 && previous_data
-      return {previous_data, redirects, true, current_url}
-    end
-
-    if response.status.success?
-      result = handle_success_response(feed, response, display_limit, db_fetch_limit, previous_data)
-      @cache.add(result)
-      return {result, redirects, true, current_url}
-    end
-
-    if response.status.server_error?
-      return {nil, redirects, false, current_url}
-    end
-
-    error_result = build_error_feed_data(feed, "Error fetching feed (status #{response.status_code})")
-    {error_result, redirects, true, current_url}
   end
 
   private def get_cached_feed(feed : Feed, item_limit : Int32, previous_data : FeedData?) : FeedData?
@@ -510,131 +410,19 @@ end
 # Global functions for backward compatibility - delegate to singleton
 
 def fetch_feed(feed : Feed, display_item_limit : Int32, db_fetch_limit : Int32, previous_data : FeedData? = nil) : FeedData
-  if feed.url.includes?("reddit.com/r/")
-    return fetch_reddit_feed(feed, display_item_limit)
-  end
-
   FeedFetcher.instance.fetch(feed, display_item_limit, db_fetch_limit, previous_data)
-end
-
-private def get_reddit_cached_data(feed : Feed, limit : Int32) : FeedData?
-  cache_url = feed.url
-  normalized = normalize_url(feed.url)
-
-  cached = FeedCache.instance.get(cache_url) || FeedCache.instance.get(normalized)
-  return unless cached
-
-  last_fetched = FeedCache.instance.get_fetched_time(cache_url) || FeedCache.instance.get_fetched_time(normalized)
-  return unless last_fetched
-
-  cache_age = (Time.utc - last_fetched).total_minutes
-  return unless cache_age < 5 && cached.items.size >= limit
-
-  # Cache is fresh, trigger background fetch and return cached
-  spawn fetch_reddit_background(feed, limit)
-  cached
-end
-
-private def build_reddit_feed_data(feed : Feed, result, items : Array(Item)) : FeedData
-  feed_data = FeedData.new(
-    feed.title,
-    feed.url,
-    result.site_link || feed.url,
-    feed.header_color,
-    feed.header_text_color,
-    items,
-    result.etag,
-    result.last_modified,
-    result.favicon,
-    nil
-  )
-
-  # Store in cache using normalized URL for consistency
-  cached_data = FeedData.new(
-    feed.title,
-    normalize_url(feed.url),
-    result.site_link || feed.url,
-    feed.header_color,
-    feed.header_text_color,
-    items,
-    result.etag,
-    result.last_modified,
-    result.favicon,
-    nil
-  )
-  FeedCache.instance.add(cached_data)
-
-  feed_data
-end
-
-private def handle_reddit_error(feed : Feed, error : String?) : FeedData
-  cached = FeedCache.instance.get(feed.url) || FeedCache.instance.get(normalize_url(feed.url))
-  cached || FeedFetcher.instance.build_error_feed_data(feed, error || "Unknown error")
-end
-
-private def fetch_reddit_feed(feed : Feed, limit : Int32) : FeedData
-  # First try to return cached data if available and fresh
-  if cached_data = get_reddit_cached_data(feed, limit)
-    return cached_data
-  end
-
-  # No fresh cache, fetch new data
-  # Use pull_reddit directly to avoid header conflicts
-  result = Fetcher.pull_reddit(feed.url, HTTP::Headers.new, limit, fetcher_config)
-
-  if error = result.error_message
-    return handle_reddit_error(feed, error)
-  end
-
-  items = result.entries.map do |entry|
-    comment_url = entry.comment_url || (entry.is_discussion_url ? entry.url : nil)
-    Item.new(entry.title, entry.url, entry.published_at, nil, comment_url, entry.commentary_url)
-  end
-
-  build_reddit_feed_data(feed, result, items)
-rescue ex
-  handle_reddit_error(feed, "Error: #{ex.message}")
-end
-
-private def fetch_reddit_background(feed : Feed, limit : Int32)
-  result = Fetcher.pull_reddit(feed.url, HTTP::Headers.new, limit, fetcher_config)
-  return unless result.success?
-  return if result.entries.empty?
-
-  items = result.entries.map do |entry|
-    comment_url = entry.comment_url || (entry.is_discussion_url ? entry.url : nil)
-    Item.new(entry.title, entry.url, entry.published_at, nil, comment_url, entry.commentary_url)
-  end
-
-  feed_data = FeedData.new(
-    feed.title,
-    normalize_url(feed.url),
-    result.site_link || feed.url,
-    feed.header_color,
-    feed.header_text_color,
-    items,
-    result.etag,
-    result.last_modified,
-    result.favicon,
-    nil
-  )
-
-  FeedCache.instance.add(feed_data)
-end
-
-private def normalize_url(url : String) : String
-  UrlNormalizer.normalize(url)
-end
-
-# Validate redirect URL to prevent SSRF attacks
-private def validate_redirect_url(url : String) : Bool
-  Utils.validate_proxy_host(url)
 end
 
 private def fetcher_config : Fetcher::RequestConfig
   config = StateStore.config
   debug_enabled = config.try(&.debug?) || false
-  Fetcher::RequestConfig.new(debug_streaming: debug_enabled)
+  Fetcher::RequestConfig.new(
+    debug_streaming: debug_enabled,
+    max_retries: Constants::MAX_RETRIES,
+    max_redirects: Constants::MAX_REDIRECTS,
+    connect_timeout: Constants::HTTP_CONNECT_TIMEOUT.seconds,
+    read_timeout: Constants::HTTP_READ_TIMEOUT.seconds,
+  )
 end
 
 def error_feed_data(feed : Feed, message : String) : FeedData

@@ -6,7 +6,7 @@ require "./constants"
 
 # Debug mode helper - only logs if debug is enabled
 def debug_log(message : String) : Nil
-  if config = STATE.config
+  if config = StateStore.config
     if config.debug?
       STDOUT.puts "[DEBUG] #{message}"
     end
