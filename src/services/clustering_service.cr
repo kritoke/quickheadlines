@@ -8,7 +8,11 @@ class QuickHeadlines::Services::ClusteringService
   @db : DB::Database
   @cluster_repository : QuickHeadlines::Repositories::ClusterRepository?
 
-  def initialize(@db : DB::Database, @cluster_repository : QuickHeadlines::Repositories::ClusterRepository? = nil)
+  def initialize(db_or_service : DatabaseService | DB::Database, @cluster_repository : QuickHeadlines::Repositories::ClusterRepository? = nil)
+    @db = case db_or_service
+          when DatabaseService then db_or_service.db
+          else db_or_service
+          end
   end
 
   private def cluster_repository : QuickHeadlines::Repositories::ClusterRepository
@@ -172,5 +176,5 @@ end
 
 def clustering_service : QuickHeadlines::Services::ClusteringService
   db_service = DatabaseService.instance
-  QuickHeadlines::Services::ClusteringService.new(db_service.db)
+  QuickHeadlines::Services::ClusteringService.new(db_service)
 end

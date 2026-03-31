@@ -136,8 +136,8 @@ class QuickHeadlines::Controllers::ApiController < Athena::Framework::Controller
 
   private def clustering_service : QuickHeadlines::Services::ClusteringService
     @clustering_service ||= QuickHeadlines::Services::ClusteringService.new(
-      @db_service.db,
-      QuickHeadlines::Repositories::ClusterRepository.new(@db_service.db)
+      @db_service,
+      QuickHeadlines::Repositories::ClusterRepository.new(@db_service)
     )
   end
 
@@ -381,7 +381,7 @@ class QuickHeadlines::Controllers::ApiController < Athena::Framework::Controller
       end
     end
 
-    story_repo = QuickHeadlines::Repositories::StoryRepository.new(@db_service.db)
+    story_repo = QuickHeadlines::Repositories::StoryRepository.new(@db_service)
     result = QuickHeadlines::Services::StoryService.get_timeline(story_repo, limit, offset, days, allowed_feed_urls)
 
     # If timeline has very few items and we're not already clustering, trigger a background refresh
@@ -812,8 +812,8 @@ class QuickHeadlines::Controllers::ApiController < Athena::Framework::Controller
             tab.feeds.each { |feed| config_urls << feed.url }
           end
 
-          cluster_repo = QuickHeadlines::Repositories::ClusterRepository.new(db)
-          feed_repo = QuickHeadlines::Repositories::FeedRepository.new(db)
+          cluster_repo = QuickHeadlines::Repositories::ClusterRepository.new(@db_service)
+          feed_repo = QuickHeadlines::Repositories::FeedRepository.new(@db_service)
           existing_feeds = feed_repo.find_all
           db_urls = existing_feeds.map(&.url).to_set
 

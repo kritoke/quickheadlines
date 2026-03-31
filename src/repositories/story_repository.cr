@@ -1,16 +1,26 @@
 require "db"
+require "../services/database_service"
 
 module QuickHeadlines::Repositories
+  @[ADI::Register]
   class StoryRepository
     @db : DB::Database
 
-    def initialize(@db : DB::Database)
+    def initialize(db_or_service : DatabaseService | DB::Database)
+      @db = case db_or_service
+            when DatabaseService then db_or_service.db
+            else db_or_service
+            end
+    end
+
+    private def db : DB::Database
+      @db
     end
 
     def find_all(limit : Int32 = 100, offset : Int32 = 0) : Array(QuickHeadlines::Entities::Story)
       stories = [] of QuickHeadlines::Entities::Story
 
-      @db.query(<<-SQL, limit, offset) do |rows|
+      db.query(<<-SQL, limit, offset) do |rows|
         SELECT i.id, i.title, i.link, i.pub_date, f.title as feed_title, f.url as feed_url, f.site_link as feed_link, f.favicon, f.header_color
          FROM items i
          JOIN feeds f ON i.feed_id = f.id
@@ -36,7 +46,7 @@ module QuickHeadlines::Repositories
     end
 
     def find_by_id(id : Int64) : QuickHeadlines::Entities::Story?
-      @db.query_one?(<<-SQL, id) do |row|
+      db.query_one?(<<-SQL, id) do |row|
         SELECT i.id, i.title, i.link, i.pub_date, f.title as feed_title, f.url as feed_url, f.site_link as feed_link, f.favicon, f.header_color
          FROM items i
          JOIN feeds f ON i.feed_id = f.id
@@ -59,7 +69,7 @@ module QuickHeadlines::Repositories
     def find_by_feed(feed_id : Int64, limit : Int32 = 20, offset : Int32 = 0) : Array(QuickHeadlines::Entities::Story)
       stories = [] of QuickHeadlines::Entities::Story
 
-      @db.query(<<-SQL, feed_id, limit, offset) do |rows|
+      db.query(<<-SQL, feed_id, limit, offset) do |rows|
         SELECT i.id, i.title, i.link, i.pub_date, f.title as feed_title, f.url as feed_url, f.site_link as feed_link, f.favicon, f.header_color
          FROM items i
          JOIN feeds f ON i.feed_id = f.id
@@ -91,7 +101,7 @@ module QuickHeadlines::Repositories
 
       feed_id = feed.id.to_i64
 
-      existing = @db.query_one?(
+      existing = db.query_one?(
         "SELECT id FROM items WHERE feed_id = ? AND link = ?",
         feed_id, story.link,
         as: Int64?
@@ -100,7 +110,7 @@ module QuickHeadlines::Repositories
       if existing.nil?
         pub_date_str = story.pub_date.try(&.to_s(Constants::DB_TIME_FORMAT))
 
-        @db.exec(
+        db.exec(
           "INSERT INTO items (feed_id, title, link, pub_date) VALUES (?, ?, ?, ?)",
           feed_id,
           story.title,
@@ -167,7 +177,7 @@ module QuickHeadlines::Repositories
         query_args = [limit, offset]
       end
 
-      @db.query(query, args: query_args) do |rows|
+      db.query(query, args: query_args) do |rows|
         rows.each do
           id = rows.read(Int64)
           title = rows.read(String)
@@ -225,11 +235,11 @@ module QuickHeadlines::Repositories
         query_args = [] of String
       end
 
-      @db.query_one(query, args: query_args, as: Int64).to_i
+      db.query_one(query, args: query_args, as: Int64).to_i
     end
 
     def deduplicate(feed_id : Int64, title : String) : Bool
-      result = @db.query_one?(
+      result = db.query_one?(
         "SELECT COUNT(*) FROM items WHERE feed_id = ? AND title = ?",
         feed_id, title,
         as: Int64
@@ -249,7 +259,7 @@ module QuickHeadlines::Repositories
     end
 
     private def find_feed_by_url(url : String) : QuickHeadlines::Entities::Feed?
-      @db.query_one?(
+      db.query_one?(
         "SELECT id, url, title, site_link, header_color, header_text_color, favicon, favicon_data FROM feeds WHERE url = ?",
         url
       ) do |row|

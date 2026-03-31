@@ -24,28 +24,32 @@ class FeedCache
   include CleanupRepository
 
   @mutex : Mutex
+  @db_service : DatabaseService?
   @db : DB::Database
   @db_path : String
   @feed_repository : QuickHeadlines::Repositories::FeedRepository?
 
-  def initialize(config : Config?, db : DB::Database? = nil)
+  def initialize(config : Config?, @db_service : DatabaseService? = nil)
     @mutex = Mutex.new
     cache_dir = get_cache_dir(config)
     ensure_cache_dir(cache_dir)
 
-    db_path = get_cache_db_path(config).as(String)
-    @db_path = db_path
+    @db_path = get_cache_db_path(config).as(String)
 
-    # Use provided db, otherwise try to use DatabaseService, otherwise create new connection
-    if db
-      @db = db
-    else
-      @db = begin
-        DatabaseService.instance.db
+    unless @db_service
+      @db_service = begin
+        DatabaseService.instance
       rescue
-        DB.open("sqlite3://#{@db_path}")
+        nil
       end
     end
+
+    if @db_service
+      @db = @db_service.not_nil!.db
+    else
+      @db = DB.open("sqlite3://#{@db_path}")
+    end
+
     create_schema(@db, @db_path)
     STDERR.puts "[#{Time.local}] Database initialized: #{@db_path}"
 
@@ -53,10 +57,14 @@ class FeedCache
   end
 
   private def feed_repository : QuickHeadlines::Repositories::FeedRepository
-    @feed_repository ||= QuickHeadlines::Repositories::FeedRepository.new(@db)
+    @feed_repository ||= QuickHeadlines::Repositories::FeedRepository.new(@db_service || @db)
   end
 
   getter :db_path
+
+  def db_service : DatabaseService?
+    @db_service
+  end
 
   def add(feed_data : FeedData)
     feed_repository.upsert_with_items(feed_data)

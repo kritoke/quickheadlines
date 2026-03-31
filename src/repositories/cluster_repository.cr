@@ -1,10 +1,20 @@
 require "db"
+require "../services/database_service"
 
 module QuickHeadlines::Repositories
+  @[ADI::Register]
   class ClusterRepository
     @db : DB::Database
 
-    def initialize(@db : DB::Database)
+    def initialize(db_or_service : DatabaseService | DB::Database)
+      @db = case db_or_service
+            when DatabaseService then db_or_service.db
+            else db_or_service
+            end
+    end
+
+    private def db : DB::Database
+      @db
     end
 
     def find_all : Array(QuickHeadlines::Entities::Cluster)
@@ -35,7 +45,7 @@ module QuickHeadlines::Repositories
 
       cluster_items = Hash(Int64, Array({id: Int64, title: String, link: String, pub_date: Time?, feed_url: String, feed_title: String, favicon: String?, header_color: String?})).new
 
-      @db.query(query) do |rows|
+      db.query(query) do |rows|
         rows.each do
           cluster_id = rows.read(Int64)
           _representative_id = rows.read(Int64)
@@ -111,7 +121,7 @@ module QuickHeadlines::Repositories
     def find_items(cluster_id : Int64) : Array(QuickHeadlines::Entities::Story)
       stories = [] of QuickHeadlines::Entities::Story
 
-      @db.query(<<-SQL, cluster_id) do |rows|
+      db.query(<<-SQL, cluster_id) do |rows|
         SELECT i.id, i.title, i.link, i.pub_date, f.title as feed_title, f.url as feed_url, f.site_link as feed_link, f.favicon, f.header_color
          FROM items i
          JOIN feeds f ON i.feed_id = f.id
@@ -150,7 +160,7 @@ module QuickHeadlines::Repositories
     end
 
     def assign_cluster(item_id : Int64, cluster_id : Int64?) : Nil
-      @db.exec(
+      db.exec(
         "UPDATE items SET cluster_id = ? WHERE id = ?",
         cluster_id,
         item_id
@@ -158,8 +168,8 @@ module QuickHeadlines::Repositories
     end
 
     def clear_all_metadata : Nil
-      @db.exec("UPDATE items SET cluster_id = NULL")
-      @db.exec("DELETE FROM lsh_bands")
+      db.exec("UPDATE items SET cluster_id = NULL")
+      db.exec("DELETE FROM lsh_bands")
     end
   end
 end
