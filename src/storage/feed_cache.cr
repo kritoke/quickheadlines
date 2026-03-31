@@ -226,7 +226,3 @@ def save_feed_cache(cache : FeedCache, retention_hours : Int32 = Constants::CACH
 
   FaviconSyncService.new(cache.db).sync_favicon_paths
 end
-
-def cache_fresh?(last_fetched : Time, max_age_minutes : Int32 = 10) : Bool
-  (Time.utc - last_fetched).total_minutes < max_age_minutes
-end

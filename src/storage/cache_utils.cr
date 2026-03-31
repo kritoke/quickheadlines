@@ -5,6 +5,12 @@ require "time"
 require "../config"
 require "../constants"
 
+module QuickHeadlines::CacheUtils
+  def self.cache_fresh?(last_fetched : Time, max_age_minutes : Int32 = 10) : Bool
+    (Time.utc - last_fetched).total_minutes < max_age_minutes
+  end
+end
+
 # Cache retention settings - imported from Constants module
 # CACHE_RETENTION_HOURS = Constants::CACHE_RETENTION_HOURS  (168 hours = 7 days)
 # CACHE_RETENTION_DAYS = Constants::CACHE_RETENTION_DAYS    (7 days)

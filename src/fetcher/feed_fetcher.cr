@@ -373,7 +373,7 @@ class FeedFetcher
     return unless cached = @cache.get(feed.url)
     return unless last_fetched = @cache.get_fetched_time(feed.url)
 
-    return unless cache_fresh?(last_fetched, 5) && cached.items.size >= item_limit
+    return unless QuickHeadlines::CacheUtils.cache_fresh?(last_fetched, 5) && cached.items.size >= item_limit
 
     build_cached_feed_data(cached, previous_data)
   end
