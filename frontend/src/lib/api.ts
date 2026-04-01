@@ -86,12 +86,17 @@ async function doFetchFeeds(tab: string, signal?: AbortSignal): Promise<FeedsPag
 			? (signal.aborted ? signal : timeoutController.signal)
 			: timeoutController.signal;
 		
+		console.log('[API] Fetching:', url);
 		const response = await fetch(url, { signal: fetchSignal });
+		console.log('[API] Response status:', response.status);
 		if (!response.ok) {
 			throw new Error(`Failed to fetch feeds: ${response.statusText}`);
 		}
-		return response.json();
+		const data = await response.json();
+		console.log('[API] Parsed response, feeds count:', data.feeds?.length);
+		return data;
 	} catch (error) {
+		console.error('[API] Fetch error:', error);
 		if (error instanceof Error && error.name === 'AbortError') {
 			throw error;
 		}

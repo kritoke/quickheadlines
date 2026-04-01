@@ -140,19 +140,26 @@ export function resetFeedStore(): void {
 }
 
 export async function loadFeeds(tab: string, force: boolean = false): Promise<void> {
+	console.log('[FeedStore] loadFeeds called:', { tab, force, currentStatus: feedState.status });
 	Object.assign(feedState, setActiveTab(feedState, tab));
 	
 	if (!force && feedState.tabCache[tab]?.loaded) {
+		console.log('[FeedStore] Using cached data for tab:', tab);
 		feedState.feeds = feedState.tabCache[tab].feeds;
 		return;
 	}
 
+	console.log('[FeedStore] Setting loading state for tab:', tab);
 	Object.assign(feedState, setLoading(feedState, tab));
 	
 	try {
+		console.log('[FeedStore] Fetching feeds for tab:', tab);
 		const response = await fetchFeeds(tab);
+		console.log('[FeedStore] Got response:', { tab, feedsCount: response.feeds?.length, status: response });
 		Object.assign(feedState, setFeedsData(feedState, response, tab));
+		console.log('[FeedStore] Updated feedState, new status:', feedState.status);
 	} catch (e) {
+		console.error('[FeedStore] Error loading feeds:', e);
 		Object.assign(feedState, setError(feedState, e instanceof Error ? e.message : 'Failed to load feeds'));
 	}
 }
@@ -161,29 +168,26 @@ export async function loadMoreFeedItems(feed: FeedResponse): Promise<void> {
 	const feedUrl = feed.url;
 	const currentOffset = feed.items.length;
 	
-	// Set loading state
-	const feedIdx = feedState.feeds.findIndex(f => f.url === feedUrl);
-	if (feedIdx !== -1) {
-		feedState.loadingFeeds = { ...feedState.loadingFeeds, [feedUrl]: true };
-	}
+	Object.assign(feedState, setFeedLoading(feedState, feedUrl, true));
 	
 	try {
 		const response = await fetchMoreFeedItems(feedUrl, 10, currentOffset);
 		
-		// Find the feed and update items directly
-		const idx = feedState.feeds.findIndex(f => f.url === feedUrl);
-		if (idx !== -1) {
-			const existingFeed = feedState.feeds[idx];
-			feedState.feeds[idx] = {
-				...existingFeed,
-				items: [...existingFeed.items, ...response.items],
-				total_item_count: response.total_item_count ?? existingFeed.total_item_count
-			};
-		}
+		const updatedFeeds = feedState.feeds.map(f => {
+			if (f.url == feedUrl) {
+				return {
+					...f,
+					items: [...f.items, ...response.items],
+					total_item_count: response.total_item_count ?? f.total_item_count
+				};
+			}
+			return f;
+		});
+		Object.assign(feedState, { feeds: updatedFeeds });
 	} catch (e) {
 		Object.assign(feedState, setError(feedState, e instanceof Error ? e.message : 'Failed to load more items'));
 	} finally {
-		feedState.loadingFeeds = { ...feedState.loadingFeeds, [feedUrl]: false };
+		Object.assign(feedState, setFeedLoading(feedState, feedUrl, false));
 	}
 }
 
