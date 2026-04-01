@@ -140,32 +140,19 @@ module ColorExtractor
     return unless parsed
 
     h = parsed.as_h rescue nil
-    bg_val = (h.try &.["bg"]?) || (h.try &.["background"]?)
+    return unless h
+
+    bg_val = (h["bg"]?) || (h["background"]?)
     bg = bg_val ? bg_val.to_s : nil
-
-    text_val = h.try &.["text"]?
-    text_hash = {} of String => String
-
-    if text_val && text_val.is_a?(Hash)
-      text_val.as_h.each do |k, v|
-        key = k.to_s
-        text_hash[key] = v.to_s
-        if key == "primary"
-          text_hash["light"] = v.to_s
-          text_hash["dark"] = v.to_s
-        elsif !text_hash.has_key?("light") && !text_hash.has_key?("dark")
-          text_hash["light"] = v.to_s if key == "light"
-          text_hash["dark"] = v.to_s if key == "dark"
-        end
-      end
-    end
-
     return if bg.nil? || bg.empty?
 
     bg_rgb = parse_color_to_rgb(bg)
     return unless bg_rgb
 
     bg_rgb_obj = PrismatIQ::RGB.new(bg_rgb[0], bg_rgb[1], bg_rgb[2])
+
+    text_val = h["text"]?
+    text_hash = parse_text_to_hash(text_val)
 
     needs_correction = false
     corrected_text = text_hash.dup
@@ -194,15 +181,30 @@ module ColorExtractor
 
     source = needs_correction ? "auto-corrected" : "auto"
 
-    result = {
+    {
       "bg"   => bg,
       "text" => {
         "light" => corrected_text["light"],
         "dark"  => corrected_text["dark"],
       },
       "source" => source,
-    }
-    result.to_json
+    }.to_json
+  end
+
+  private def self.parse_text_to_hash(text_val : JSON::Any?) : Hash(String, String)
+    return {} of String => String unless text_val && text_val.is_a?(Hash)
+
+    hash = {} of String => String
+    text_val.as_h.each do |k, v|
+      key = k.to_s
+      value = v.to_s
+      hash[key] = value
+      if key == "primary"
+        hash["light"] = value
+        hash["dark"] = value
+      end
+    end
+    hash
   end
 
   private def self.parse_color_to_rgb(str : String?) : Array(Int32)?
@@ -290,13 +292,7 @@ module ColorExtractor
     accessibility.contrast_ratio(fg_obj, bg_obj)
   end
 
-  def self.find_dark_text_for_bg_public(bg : Array(Int32)) : String
-    rgb_obj = PrismatIQ::RGB.new(bg[0], bg[1], bg[2])
-    fg = theme_detector.suggest_foreground(rgb_obj)
-    fg.to_hex
-  end
-
-  def self.find_light_text_for_bg_public(bg : Array(Int32)) : String
+  def self.suggest_foreground_for_bg(bg : Array(Int32)) : String
     rgb_obj = PrismatIQ::RGB.new(bg[0], bg[1], bg[2])
     fg = theme_detector.suggest_foreground(rgb_obj)
     fg.to_hex

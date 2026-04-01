@@ -15,6 +15,18 @@ require "./vug_adapter"
 # Use FeedFetcher.instance for singleton access or inject FeedCache for testing.
 @[ADI::Register]
 class FeedFetcher
+  private record FetchAbortDecision,
+    should_abort : Bool,
+    reason : String? do
+    def abort? : Bool
+      should_abort
+    end
+  end
+
+  private record FetchErrorResult,
+    data : FeedData?,
+    retries : Int32
+
   @cache : FeedCache
 
   def initialize(@cache : FeedCache)
@@ -38,27 +50,27 @@ class FeedFetcher
       first_item.link == feed.url
   end
 
-  private def handle_fetch_exception(ex : Exception, feed : Feed, effective_item_limit : Int32, previous_data : FeedData?, retries : Int32) : Tuple(FeedData?, Int32)
+  private def handle_fetch_exception(ex : Exception, feed : Feed, effective_item_limit : Int32, previous_data : FeedData?, retries : Int32) : FetchErrorResult
     error_msg = ex.message
     is_timeout = error_msg.is_a?(String) && error_msg.downcase.includes?("timeout")
 
     if is_timeout
       HealthMonitor.log_warning("fetch_feed(#{feed.url}) timeout: #{error_msg}")
-      {nil, handle_timeout_error(feed, retries)}
+      FetchErrorResult.new(nil, handle_timeout_error(feed, retries))
     else
       HealthMonitor.log_error("fetch_feed(#{feed.url})", ex)
       if stale_cache = get_stale_cached_feed(feed, effective_item_limit, previous_data)
-        {stale_cache, retries}
+        FetchErrorResult.new(stale_cache, retries)
       else
-        {build_error_feed_data(feed, "Error: #{ex.class} - #{error_msg}"), retries}
+        FetchErrorResult.new(build_error_feed_data(feed, "Error: #{ex.class} - #{error_msg}"), retries)
       end
     end
   end
 
-  private def handle_abort_condition(feed : Feed, effective_item_limit : Int32, previous_data : FeedData?, abort_msg : Tuple(Bool, String?)) : FeedData?
-    return unless abort_msg[0]
+  private def handle_abort_condition(feed : Feed, effective_item_limit : Int32, previous_data : FeedData?, decision : FetchAbortDecision) : FeedData?
+    return unless decision.abort?
 
-    message = abort_msg[1] || "Error: Unknown fetch error"
+    message = decision.reason || "Error: Unknown fetch error"
     HealthMonitor.log_warning("fetch_feed(#{feed.url}) #{message}")
     if stale_cache = get_stale_cached_feed(feed, effective_item_limit, previous_data)
       stale_cache
@@ -91,9 +103,9 @@ class FeedFetcher
     loop do
       timeout_seconds = Constants::FETCH_TIMEOUT_SECONDS
       elapsed_seconds = (Time.monotonic - start_time).total_seconds
-      abort_msg = should_abort_fetch?(feed, elapsed_seconds, retries, redirects, timeout_seconds)
+      abort_decision = should_abort_fetch?(feed, elapsed_seconds, retries, redirects, timeout_seconds)
 
-      if abort_result = handle_abort_condition(feed, effective_item_limit, previous_data, abort_msg)
+      if abort_result = handle_abort_condition(feed, effective_item_limit, previous_data, abort_decision)
         return abort_result
       end
 
@@ -164,8 +176,11 @@ class FeedFetcher
         HealthMonitor.log_warning("fetch_feed(#{feed.url}) timeout after 60s")
         retries = handle_timeout_error(feed, retries)
       rescue ex
-        result, retries = handle_fetch_exception(ex, feed, effective_item_limit, previous_data, retries)
-        return result if result
+        error_result = handle_fetch_exception(ex, feed, effective_item_limit, previous_data, retries)
+        retries = error_result.retries
+        if data = error_result.data
+          return data
+        end
       end
     end
   end
@@ -341,24 +356,24 @@ class FeedFetcher
     {feed.header_color, feed.header_text_color, nil}
   end
 
-  private def should_abort_fetch?(feed : Feed, elapsed_seconds : Float, retries : Int32, redirects : Int32, timeout_seconds : Int32) : {Bool, String?}
+  private def should_abort_fetch?(feed : Feed, elapsed_seconds : Float, retries : Int32, redirects : Int32, timeout_seconds : Int32) : FetchAbortDecision
     if elapsed_seconds > timeout_seconds
-      return {true, "Error: Fetch timeout after #{timeout_seconds}s (retries: #{retries})"}
+      return FetchAbortDecision.new(true, "Error: Fetch timeout after #{timeout_seconds}s (retries: #{retries})")
     end
 
     if redirects > Constants::MAX_REDIRECTS
-      return {true, "Error: Too many redirects (#{redirects})"}
+      return FetchAbortDecision.new(true, "Error: Too many redirects (#{redirects})")
     end
 
     if retries >= Constants::MAX_RETRIES
-      return {true, "Error: Failed after #{retries} retries"}
+      return FetchAbortDecision.new(true, "Error: Failed after #{retries} retries")
     end
 
-    {false, nil}
+    FetchAbortDecision.new(false, nil)
   end
 
   private def calculate_backoff(feed : Feed, retries : Int32) : Int32
-    Math.min(60, 2 ** retries)
+    Math.min(Constants::MAX_BACKOFF_SECONDS, 2 ** retries)
   end
 
   private def handle_timeout_error(feed : Feed, retries : Int32) : Int32
@@ -373,7 +388,7 @@ class FeedFetcher
     return unless cached = @cache.get(feed.url)
     return unless last_fetched = @cache.get_fetched_time(feed.url)
 
-    return unless QuickHeadlines::CacheUtils.cache_fresh?(last_fetched, 5) && cached.items.size >= item_limit
+    return unless QuickHeadlines::CacheUtils.cache_fresh?(last_fetched, Constants::CACHE_FRESHNESS_MINUTES) && cached.items.size >= item_limit
 
     build_cached_feed_data(cached, previous_data)
   end
@@ -445,11 +460,18 @@ private def fetcher_config : Fetcher::RequestConfig
   config = StateStore.config
   debug_enabled = config.try(&.debug?) || false
   Fetcher::RequestConfig.new(
-    debug_streaming: debug_enabled,
-    max_retries: Constants::MAX_RETRIES,
+    timeout: Fetcher::TimeoutConfig.new(
+      connect: Constants::HTTP_CONNECT_TIMEOUT.seconds,
+      read: Constants::HTTP_READ_TIMEOUT.seconds
+    ),
+    retry: Fetcher::RetryConfig.new(
+      max_retries: Constants::MAX_RETRIES
+    ),
     max_redirects: Constants::MAX_REDIRECTS,
-    connect_timeout: Constants::HTTP_CONNECT_TIMEOUT.seconds,
-    read_timeout: Constants::HTTP_READ_TIMEOUT.seconds,
+    streaming: Fetcher::StreamingConfig.new(
+      enabled: debug_enabled,
+      debug: debug_enabled
+    )
   )
 end
 

@@ -61,16 +61,16 @@ describe "ColorExtractor CrImage integration" do
       ratio.should be < 22.0
     end
 
-    it "finds readable dark text for light background" do
+    it "finds readable foreground for light background" do
       rgb = [250, 250, 250]
-      t = ColorExtractor.find_dark_text_for_bg_public(rgb)
+      t = ColorExtractor.suggest_foreground_for_bg(rgb)
       t.should be_a(String)
       t.should start_with("#")
     end
 
-    it "finds readable light text for dark background" do
+    it "finds readable foreground for dark background" do
       rgb = [10, 10, 10]
-      t = ColorExtractor.find_light_text_for_bg_public(rgb)
+      t = ColorExtractor.suggest_foreground_for_bg(rgb)
       t.should be_a(String)
       t.should start_with("#")
     end

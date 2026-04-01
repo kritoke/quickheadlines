@@ -1,4 +1,5 @@
 require "./api_base_controller"
+require "../constants"
 require "../fetcher/refresh_loop"
 
 class QuickHeadlines::Controllers::FeedsController < QuickHeadlines::Controllers::ApiBaseController
@@ -97,7 +98,7 @@ class QuickHeadlines::Controllers::FeedsController < QuickHeadlines::Controllers
 
       if current_count < needed_count
         db_fetch_limit = StateStore.config.try(&.db_fetch_limit) || 500
-        fetch_feed(feed_config, needed_count + 50, db_fetch_limit, nil)
+        fetch_feed(feed_config, needed_count + Constants::FETCH_BUFFER_ITEMS, db_fetch_limit, nil)
       end
 
       if data = cache.get(url)

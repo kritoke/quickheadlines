@@ -57,7 +57,7 @@ class FaviconSyncService
 
         found_local = false
         possible_extensions.each do |ext|
-          filename = "#{hash[0...16]}.#{ext}"
+          filename = "#{hash[0...FaviconStorage::HASH_PREFIX_LENGTH]}.#{ext}"
           filepath = File.join(FaviconStorage.favicon_dir, filename)
           if File.exists?(filepath)
             local_path = "/favicons/#{filename}"

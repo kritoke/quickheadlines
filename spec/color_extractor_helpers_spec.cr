@@ -26,9 +26,9 @@ describe "ColorExtractor helpers" do
     avg[2].should be <= 255
   end
 
-  it "finds readable dark text for a light background" do
+  it "finds readable foreground for a light background" do
     rgb = [250, 250, 250]
-    t = ColorExtractor.find_dark_text_for_bg_public(rgb)
+    t = ColorExtractor.suggest_foreground_for_bg(rgb)
     t.should be_a(String)
     t.should start_with("#")
   end

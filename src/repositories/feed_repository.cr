@@ -20,30 +20,90 @@ module QuickHeadlines::Repositories
       @db
     end
 
+    private def read_feed_entity(rows : DB::ResultSet) : QuickHeadlines::Entities::Feed
+      id = rows.read(Int64)
+      url = rows.read(String)
+      title = rows.read(String)
+      site_link = rows.read(String?)
+      header_color = rows.read(String?)
+      header_text_color = rows.read(String?)
+      favicon = rows.read(String?)
+      favicon_data = rows.read(String?)
+
+      QuickHeadlines::Entities::Feed.new(
+        id: id.to_s,
+        title: title,
+        url: url,
+        site_link: site_link || "",
+        header_color: header_color,
+        header_text_color: header_text_color,
+        favicon: favicon,
+        favicon_data: favicon_data
+      )
+    end
+
+    private record FeedRowData,
+      title : String,
+      url : String,
+      site_link : String,
+      header_color : String?,
+      header_text_color : String?,
+      header_theme_colors : String?,
+      etag : String?,
+      last_modified : String?,
+      favicon : String?,
+      favicon_data : String? do
+      def to_feed_data(items : Array(Item)) : FeedData
+        FeedData.new(
+          title,
+          url,
+          site_link,
+          header_color,
+          header_text_color,
+          items,
+          etag,
+          last_modified,
+          favicon,
+          favicon_data,
+          nil,
+          header_theme_colors
+        )
+      end
+    end
+
+    private def read_feed_row(rows : DB::ResultSet) : FeedRowData
+      FeedRowData.new(
+        rows.read(String),
+        rows.read(String),
+        rows.read(String),
+        rows.read(String?),
+        rows.read(String?),
+        rows.read(String?),
+        rows.read(String?),
+        rows.read(String?),
+        rows.read(String?),
+        rows.read(String?)
+      )
+    end
+
+    private def read_item(rows : DB::ResultSet) : Item
+      title = rows.read(String)
+      link = rows.read(String)
+      pub_date_str = rows.read(String?)
+      version = rows.read(String?)
+      comment_url = rows.read(String?)
+      commentary_url = rows.read(String?)
+
+      pub_date = pub_date_str.try { |date_str| Time.parse(date_str, Constants::DB_TIME_FORMAT, Time::Location::UTC) }
+      Item.new(title, link, pub_date, version, comment_url, commentary_url)
+    end
+
     def find_all : Array(QuickHeadlines::Entities::Feed)
       feeds = [] of QuickHeadlines::Entities::Feed
 
       db.query("SELECT id, url, title, site_link, header_color, header_text_color, favicon, favicon_data FROM feeds ORDER BY title") do |rows|
         rows.each do
-          id = rows.read(Int64)
-          url = rows.read(String)
-          title = rows.read(String)
-          site_link = rows.read(String?)
-          header_color = rows.read(String?)
-          header_text_color = rows.read(String?)
-          favicon = rows.read(String?)
-          favicon_data = rows.read(String?)
-
-          feeds << QuickHeadlines::Entities::Feed.new(
-            id: id.to_s,
-            title: title,
-            url: url,
-            site_link: site_link || "",
-            header_color: header_color,
-            header_text_color: header_text_color,
-            favicon: favicon,
-            favicon_data: favicon_data
-          )
+          feeds << read_feed_entity(rows)
         end
       end
 
@@ -84,25 +144,7 @@ module QuickHeadlines::Repositories
         "SELECT id, url, title, site_link, header_color, header_text_color, favicon, favicon_data FROM feeds WHERE url = ?",
         url
       ) do |row|
-        id = row.read(Int64)
-        url = row.read(String)
-        title = row.read(String)
-        site_link = row.read(String?)
-        header_color = row.read(String?)
-        header_text_color = row.read(String?)
-        favicon = row.read(String?)
-        favicon_data = row.read(String?)
-
-        QuickHeadlines::Entities::Feed.new(
-          id: id.to_s,
-          title: title,
-          url: url,
-          site_link: site_link || "",
-          header_color: header_color,
-          header_text_color: header_text_color,
-          favicon: favicon,
-          favicon_data: favicon_data
-        )
+        read_feed_entity(row)
       end
     end
 
@@ -324,18 +366,7 @@ module QuickHeadlines::Repositories
         "SELECT title, url, site_link, header_color, header_text_color, header_theme_colors, etag, last_modified, favicon, favicon_data FROM feeds WHERE url = ?",
         url
       ) do |row|
-        {
-          title:               row.read(String),
-          url:                 row.read(String),
-          site_link:           row.read(String),
-          header_color:        row.read(String?),
-          header_text_color:   row.read(String?),
-          header_theme_colors: row.read(String?),
-          etag:                row.read(String?),
-          last_modified:       row.read(String?),
-          favicon:             row.read(String?),
-          favicon_data:        row.read(String?),
-        }
+        read_feed_row(row)
       end
       return unless feed_result
 
@@ -346,32 +377,11 @@ module QuickHeadlines::Repositories
       items = [] of Item
       db.query("SELECT title, link, pub_date, version, comment_url, commentary_url FROM items WHERE feed_id = ? AND (pub_date IS NULL OR pub_date <= datetime('now', '+1 day')) ORDER BY pub_date DESC", feed_id) do |rows|
         rows.each do
-          title = rows.read(String)
-          link = rows.read(String)
-          pub_date_str = rows.read(String?)
-          version = rows.read(String?)
-          comment_url = rows.read(String?)
-          commentary_url = rows.read(String?)
-
-          pub_date = pub_date_str.try { |date_str| Time.parse(date_str, Constants::DB_TIME_FORMAT, Time::Location::UTC) }
-          items << Item.new(title, link, pub_date, version, comment_url, commentary_url)
+          items << read_item(rows)
         end
       end
 
-      FeedData.new(
-        feed_result[:title],
-        feed_result[:url],
-        feed_result[:site_link],
-        feed_result[:header_color],
-        feed_result[:header_text_color],
-        items,
-        feed_result[:etag],
-        feed_result[:last_modified],
-        feed_result[:favicon],
-        feed_result[:favicon_data],
-        nil,
-        feed_result[:header_theme_colors]
-      )
+      feed_result.to_feed_data(items)
     end
 
     def find_with_items_result(url : String) : FeedDataResult
@@ -387,18 +397,7 @@ module QuickHeadlines::Repositories
         "SELECT title, url, site_link, header_color, header_text_color, header_theme_colors, etag, last_modified, favicon, favicon_data FROM feeds WHERE url = ?",
         url
       ) do |row|
-        {
-          title:               row.read(String),
-          url:                 row.read(String),
-          site_link:           row.read(String),
-          header_color:        row.read(String?),
-          header_text_color:   row.read(String?),
-          header_theme_colors: row.read(String?),
-          etag:                row.read(String?),
-          last_modified:       row.read(String?),
-          favicon:             row.read(String?),
-          favicon_data:        row.read(String?),
-        }
+        read_feed_row(row)
       end
       return unless feed_result
 
@@ -407,31 +406,12 @@ module QuickHeadlines::Repositories
 
       db.query(query, url, limit, offset) do |rows|
         rows.each do
-          title = rows.read(String)
-          link = rows.read(String)
-          pub_date_str = rows.read(String?)
-          version = rows.read(String?)
-          comment_url = rows.read(String?)
-          commentary_url = rows.read(String?)
-
-          pub_date = pub_date_str.try { |date_str| Time.parse(date_str, Constants::DB_TIME_FORMAT, Time::Location::UTC) }
-          items << Item.new(title, link, pub_date, version, comment_url, commentary_url)
+          items << read_item(rows)
         end
       end
 
-      fd = FeedData.new(
-        feed_result[:title],
-        feed_result[:url],
-        feed_result[:site_link],
-        feed_result[:header_color],
-        feed_result[:header_text_color],
-        items,
-        feed_result[:etag],
-        feed_result[:last_modified],
-        feed_result[:favicon],
-        feed_result[:favicon_data]
-      )
-      fd.header_theme_colors = feed_result[:header_theme_colors] if feed_result[:header_theme_colors]
+      fd = feed_result.to_feed_data(items)
+      fd.header_theme_colors = feed_result.header_theme_colors if feed_result.header_theme_colors
       fd
     end
 

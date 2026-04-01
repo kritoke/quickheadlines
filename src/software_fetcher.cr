@@ -6,7 +6,12 @@ CODE_ICON = "internal:code_icon"
 private def fetcher_config : Fetcher::RequestConfig
   config = StateStore.config
   debug_enabled = config.try(&.debug?) || false
-  Fetcher::RequestConfig.new(debug_streaming: debug_enabled)
+  Fetcher::RequestConfig.new(
+    streaming: Fetcher::StreamingConfig.new(
+      enabled: debug_enabled,
+      debug: debug_enabled
+    )
+  )
 end
 
 def fetch_sw_with_config(sw_config : SoftwareConfig, item_limit : Int32) : FeedData?

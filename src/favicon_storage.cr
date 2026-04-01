@@ -13,6 +13,7 @@ require "http/client"
 module FaviconStorage
   MAX_SIZE            = 100 * 1024
   POSSIBLE_EXTENSIONS = {"png", "jpg", "jpeg", "ico", "svg", "webp"}
+  HASH_PREFIX_LENGTH  = 16
 
   @@mutex = Mutex.new(:unchecked)
   @@favicon_dir : String? = nil
@@ -86,7 +87,7 @@ module FaviconStorage
     end
     hash = OpenSSL::Digest.new("SHA256").update(hash_input).final.hexstring
     ext = extension_from_content_type(content_type)
-    filename = "#{hash[0...16]}.#{ext}"
+    filename = "#{hash[0...HASH_PREFIX_LENGTH]}.#{ext}"
     filepath = File.join(favicon_dir, filename)
 
     @@mutex.synchronize do
@@ -156,8 +157,8 @@ module FaviconStorage
 
     @@mutex.synchronize do
       POSSIBLE_EXTENSIONS.each do |ext|
-        filepath = File.join(dir, "#{hash[0...16]}.#{ext}")
-        return "/favicons/#{hash[0...16]}.#{ext}" if File.exists?(filepath)
+        filepath = File.join(dir, "#{hash[0...HASH_PREFIX_LENGTH]}.#{ext}")
+        return "/favicons/#{hash[0...HASH_PREFIX_LENGTH]}.#{ext}" if File.exists?(filepath)
       end
     end
 
@@ -177,7 +178,7 @@ module FaviconStorage
       image_data = Base64.decode(base64_data)
       hash = OpenSSL::Digest.new("SHA256").update(url).final.hexstring
       ext = extension_from_content_type(content_type)
-      filename = "#{hash[0...16]}.#{ext}"
+      filename = "#{hash[0...HASH_PREFIX_LENGTH]}.#{ext}"
       filepath = File.join(favicon_dir, filename)
 
       @@mutex.synchronize do
@@ -209,7 +210,7 @@ module FaviconStorage
 
     @@mutex.synchronize do
       POSSIBLE_EXTENSIONS.each do |ext|
-        filepath = File.join(dir, "#{hash[0...16]}.#{ext}")
+        filepath = File.join(dir, "#{hash[0...HASH_PREFIX_LENGTH]}.#{ext}")
         return true if File.exists?(filepath)
       end
     end

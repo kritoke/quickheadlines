@@ -1,6 +1,7 @@
 require "http"
 require "mutex"
 require "channel"
+require "../constants"
 
 class SocketManager
   @@instance : SocketManager?
@@ -108,8 +109,15 @@ class SocketManager
     @connections_mutex.synchronize do
       @connections.delete(connection)
     end
+    decrement_ip_count(connection.ip)
+    @activity_mutex.synchronize do
+      @last_activity.delete(connection.websocket)
+    end
+    STDERR.puts "[SocketManager] Client disconnected from #{connection.ip}. Total: #{connection_count}"
+  end
+
+  private def decrement_ip_count(ip : String) : Nil
     @ip_mutex.synchronize do
-      ip = connection.ip
       if count = @ip_counts[ip]?
         new_count = count - 1
         if new_count <= 0
@@ -119,10 +127,6 @@ class SocketManager
         end
       end
     end
-    @activity_mutex.synchronize do
-      @last_activity.delete(connection.websocket)
-    end
-    STDERR.puts "[SocketManager] Client disconnected from #{connection.ip}. Total: #{connection_count}"
   end
 
   def unregister(ws : HTTP::WebSocket, ip : String) : Nil
@@ -151,7 +155,7 @@ class SocketManager
         select
         when conn.outgoing.send(message)
           # Don't increment here - it will be counted in writer_fiber when actually sent
-        when timeout(100.milliseconds)
+        when timeout(Constants::BROADCAST_TIMEOUT_MS.milliseconds)
           @messages_dropped.add(1)
           STDERR.puts "[SocketManager] Dropped message for slow client: #{conn.ip}"
         end
@@ -224,17 +228,7 @@ class SocketManager
         removed += 1
       end
 
-      @ip_mutex.synchronize do
-        ip = conn.ip
-        if count = @ip_counts[ip]?
-          new_count = count - 1
-          if new_count <= 0
-            @ip_counts.delete(ip)
-          else
-            @ip_counts[ip] = new_count
-          end
-        end
-      end
+      decrement_ip_count(conn.ip)
 
       @activity_mutex.synchronize do
         @last_activity.delete(conn.websocket)

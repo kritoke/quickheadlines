@@ -2,14 +2,9 @@ require "./api_base_controller"
 require "../fetcher/refresh_loop"
 
 class QuickHeadlines::Controllers::AdminController < QuickHeadlines::Controllers::ApiBaseController
-  @[ARTA::Post(path: "/api/cluster")]
-  def cluster(request : ATH::Request) : ATH::Response
-    unless check_admin_auth(request)
-      return unauthorized_response
-    end
-
+  private def with_rate_limit(key_prefix : String, request : ATH::Request) : ATH::Response?
     ip = client_ip(request)
-    limiter = RateLimiter.get_or_create("cluster:#{ip}", 1, 60)
+    limiter = RateLimiter.get_or_create("#{key_prefix}:#{ip}", 1, 60)
 
     unless limiter.allowed?(ip)
       retry_after = limiter.retry_after(ip)
@@ -21,6 +16,18 @@ class QuickHeadlines::Controllers::AdminController < QuickHeadlines::Controllers
           "Retry-After"  => retry_after.to_s,
         }
       )
+    end
+    nil
+  end
+
+  @[ARTA::Post(path: "/api/cluster")]
+  def cluster(request : ATH::Request) : ATH::Response
+    unless check_admin_auth(request)
+      return unauthorized_response
+    end
+
+    if response = with_rate_limit("cluster", request)
+      return response
     end
 
     spawn do
@@ -48,19 +55,8 @@ class QuickHeadlines::Controllers::AdminController < QuickHeadlines::Controllers
       return unauthorized_response
     end
 
-    ip = client_ip(request)
-    limiter = RateLimiter.get_or_create("admin:#{ip}", 1, 60)
-
-    unless limiter.allowed?(ip)
-      retry_after = limiter.retry_after(ip)
-      return ATH::Response.new(
-        "Rate limit exceeded. Try again later.",
-        429,
-        HTTP::Headers{
-          "content-type" => "text/plain",
-          "Retry-After"  => retry_after.to_s,
-        }
-      )
+    if response = with_rate_limit("admin", request)
+      return response
     end
 
     body_io = request.body

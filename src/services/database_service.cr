@@ -2,6 +2,7 @@ require "db"
 require "sqlite3"
 require "../config"
 require "../storage/schema"
+require "../storage/cache_utils"
 
 # Forward declaration - will be defined in application.cr
 module QuickHeadlines
@@ -47,41 +48,17 @@ class DatabaseService
 
   # Helper method to get cache directory
   private def get_cache_dir(config : Config?) : String
-    # 1. Check environment variable
-    if env = ENV["QUICKHEADLINES_CACHE_DIR"]?
-      return env
-    end
-
-    # 2. Check config file setting
-    if config && (cache = config.cache_dir)
-      return cache
-    end
-
-    # 3. Use XDG cache directory
-    if xdg = ENV["XDG_CACHE_HOME"]?
-      return File.join(xdg, "quickheadlines")
-    end
-
-    # 4. Fallback to platform-specific home cache
-    if home = ENV["HOME"]?
-      return File.join(home, ".cache", "quickheadlines")
-    end
-
-    # 5. Last resort: current directory
-    "cache"
+    ::get_cache_dir(config)
   end
 
   # Helper method to get database file path
   private def get_cache_db_path(config : Config?) : String
-    File.join(get_cache_dir(config), "feed_cache.db")
+    ::get_cache_db_path(config)
   end
 
   # Helper method to ensure cache directory exists
   private def ensure_cache_dir(cache_dir : String)
-    unless Dir.exists?(cache_dir)
-      Dir.mkdir_p(cache_dir)
-      STDERR.puts "[#{Time.local}] Created cache directory: #{cache_dir}"
-    end
+    ::ensure_cache_dir(cache_dir)
   end
 
   # Create database schema
