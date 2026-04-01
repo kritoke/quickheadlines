@@ -45,11 +45,18 @@ class AppBootstrap
 
   def start_background_tasks
     start_janitor
+    run_initial_feed_refresh
     start_feed_refresh
     start_clustering_scheduler
     start_cleanup_scheduler
     start_ws_janitor
     run_initial_clustering
+  end
+
+  private def run_initial_feed_refresh
+    STDERR.puts "[#{Time.local}] Running initial feed fetch (blocking)..."
+    refresh_all(@config, @feed_cache, @db_service)
+    STDERR.puts "[#{Time.local}] Initial feed fetch complete"
   end
 
   def verify_feeds_loaded
