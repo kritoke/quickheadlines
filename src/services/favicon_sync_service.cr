@@ -117,12 +117,15 @@ class FaviconSyncService
     google_backfills.each do |feed_id, url, google_url|
       STDERR.puts "[Cache] Processing Google favicon backfill for #{url}: #{google_url}"
       url_to_fetch = google_url
-      if google_url.includes?("domain=#")
+      if google_url.includes?("domain=#") || google_url.includes?("domain=")
         parsed = URI.parse(url)
         host = parsed.host
-        if host && host.includes?(".")
+        if host && host.includes?(".") && !host.includes?(",")
           url_to_fetch = "https://www.google.com/s2/favicons?domain=#{host}&sz=256"
-          STDERR.puts "[Cache] Fixed broken domain=# in Google URL: #{url_to_fetch}"
+          STDERR.puts "[Cache] Fixed broken domain in Google URL: #{url_to_fetch}"
+        elsif host.nil? || host.includes?(",")
+          STDERR.puts "[Cache] Skipping malformed Google favicon URL: #{google_url}"
+          next
         end
       end
       local_path = FaviconStorage.fetch_and_save(url_to_fetch)

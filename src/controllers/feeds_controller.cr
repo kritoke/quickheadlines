@@ -41,9 +41,9 @@ class QuickHeadlines::Controllers::FeedsController < QuickHeadlines::Controllers
 
                        all_feeds_with_tabs.map { |entry| Api.feed_to_response(entry[:feed], entry[:tab_name], cache.item_count(entry[:feed].url), item_limit) }
                      else
-                       tab_feeds = tabs_snapshot.find { |t| t.name.downcase == active_tab.downcase }
+                       tab_feeds = tabs_snapshot.find { |tab| tab.name.downcase == active_tab.downcase }
                        if tab_feeds
-                         tab_feeds.feeds.select { |f| !f.failed? }.map { |f| Api.feed_to_response(f, active_tab, cache.item_count(f.url), item_limit) }
+                         tab_feeds.feeds.select { |feed| !feed.failed? }.map { |feed| Api.feed_to_response(feed, active_tab, cache.item_count(feed.url), item_limit) }
                        else
                          [] of FeedResponse
                        end

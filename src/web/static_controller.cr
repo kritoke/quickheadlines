@@ -12,7 +12,7 @@ class StaticController < Athena::Framework::Controller
       csp = "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; " \
             "img-src 'self' data: https:; script-src 'self' 'unsafe-inline'; " \
             "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " \
-            "connect-src 'self' ws: wss:; font-src 'self' data: https://fonts.gstatic.com; frame-src 'none'"
+            "connect-src 'self' ws: wss:; font-src 'self' data: https://fonts.googleapis.com https://fonts.gstatic.com; frame-src 'none'"
       response.headers["Content-Security-Policy"] = csp
     end
   end

@@ -85,7 +85,7 @@ class QuickHeadlines::Controllers::ApiBaseController < Athena::Framework::Contro
   private def validate_proxy_url(url : String) : Bool
     uri = URI.parse(url)
     return false unless uri.scheme.in?("http", "https")
-    return false unless uri.host.is_a?(String) && !uri.host.to_s.empty?
+    return false if !uri.host.is_a?(String) || uri.host.to_s.empty?
 
     host = uri.host.as(String)
     !Utils.private_host?(host)

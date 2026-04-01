@@ -18,11 +18,11 @@ class QuickHeadlines::Controllers::TimelineController < QuickHeadlines::Controll
       found_tab = tabs_snapshot.find { |_t| _t.name.downcase == tab.downcase }
 
       if found_tab.nil? || found_tab.feeds.empty?
-        feeds_snapshot, _ = load_feeds_from_cache_fallback(@feed_cache)
-        found_tab = state.tabs.find { |t| t.name.downcase == tab.downcase }
+        feeds_snapshot, cached_tabs = load_feeds_from_cache_fallback(@feed_cache)
+        found_tab = cached_tabs.find { |cached_tab| cached_tab[:name].downcase == tab.downcase }
         if found_tab
-          allowed_feed_urls = found_tab.feeds.map(&.url)
-        elsif feeds_snapshot.any? { |f| f.url == tab }
+          allowed_feed_urls = found_tab[:feeds].map(&.url)
+        elsif feeds_snapshot.any? { |feed| feed.url == tab }
           allowed_feed_urls = [tab]
         end
       else

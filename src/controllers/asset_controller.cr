@@ -16,12 +16,12 @@ class QuickHeadlines::Controllers::AssetController < QuickHeadlines::Controllers
       if File.exists?(favicon_path)
         content = File.read(favicon_path)
         mime_type = case favicon_path
-                    when /\.png$/ then "image/png"
-                    when /\.ico$/ then "image/x-icon"
-                    when /\.svg$/ then "image/svg+xml"
-                    when /\.gif$/ then "image/gif"
+                    when /\.png$/            then "image/png"
+                    when /\.ico$/            then "image/x-icon"
+                    when /\.svg$/            then "image/svg+xml"
+                    when /\.gif$/            then "image/gif"
                     when /\.jpg$/, /\.jpeg$/ then "image/jpeg"
-                    else "application/octet-stream"
+                    else                          "application/octet-stream"
                     end
         return ATH::Response.new(content, 200, HTTP::Headers{"content-type" => mime_type})
       end

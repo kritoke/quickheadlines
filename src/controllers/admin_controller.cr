@@ -163,4 +163,17 @@ class QuickHeadlines::Controllers::AdminController < QuickHeadlines::Controllers
       broadcaster_dropped: broadcaster_stats["dropped"].to_i64
     )
   end
+
+  @[ARTA::Get(path: "/api/version")]
+  def version : ATH::View(VersionResponse)
+    view(VersionResponse.new(
+      updated_at: StateStore.updated_at.to_unix_ms,
+      clustering: StateStore.clustering?
+    ))
+  end
+
+  @[ARTA::Get(path: "/version")]
+  def version_text : String
+    StateStore.updated_at.to_unix_ms.to_s
+  end
 end
