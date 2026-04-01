@@ -99,8 +99,12 @@ class QuickHeadlines::Controllers::ApiBaseController < Athena::Framework::Contro
     parsed = value.to_i32?
     return default unless parsed
 
-    parsed = min.not_nil! if min && parsed < min
-    parsed = max.not_nil! if max && parsed > max
+    if min && parsed < min
+      parsed = min
+    end
+    if max && parsed > max
+      parsed = max
+    end
     parsed
   end
 

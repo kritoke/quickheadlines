@@ -13,6 +13,7 @@ module QuickHeadlines
 
     def initialize(@max_requests : Int32 = 60, @window_seconds : Int32 = 60)
       @requests = Hash(String, Array(Int64)).new
+      @mutex = Mutex.new
     end
 
     def self.get_or_create(key : String, max_requests : Int32 = 1, window_seconds : Int32 = 60) : RateLimiter
@@ -48,16 +49,18 @@ module QuickHeadlines
       now = Time.utc.to_unix
       cutoff = now - @window_seconds
 
-      times = @requests[identifier]? || [] of Int64
-      times = times.select { |_t| _t > cutoff }
+      @mutex.synchronize do
+        times = @requests[identifier]? || [] of Int64
+        times = times.select { |_t| _t > cutoff }
 
-      if times.size >= @max_requests
-        return false
+        if times.size >= @max_requests
+          return false
+        end
+
+        times << now
+        @requests[identifier] = times
+        true
       end
-
-      times << now
-      @requests[identifier] = times
-      true
     end
 
     def retry_after(identifier : String) : Int32

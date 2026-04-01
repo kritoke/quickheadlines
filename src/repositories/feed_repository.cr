@@ -270,13 +270,26 @@ module QuickHeadlines::Repositories
     end
 
     private def insert_items(feed_id : Int64, items : Array(Item)) : Nil
+      return if items.empty?
+
       existing_titles = db.query_all("SELECT title FROM items WHERE feed_id = ?", feed_id, as: String).to_set
 
+      new_items = [] of {item: Item, index: Int32}
+      existing_items = [] of {item: Item, index: Int32}
+
       items.each_with_index do |item, index|
-        next if existing_titles.includes?(item.title)
+        if existing_titles.includes?(item.title)
+          existing_items << {item: item, index: index}
+        else
+          new_items << {item: item, index: index}
+          existing_titles << item.title
+        end
+      end
 
+      new_items.each do |entry|
+        item = entry[:item]
+        index = entry[:index]
         pub_date_str = item.pub_date.try(&.to_s(Constants::DB_TIME_FORMAT))
-
         db.exec(
           "INSERT OR IGNORE INTO items (feed_id, title, link, pub_date, version, position, comment_url, commentary_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
           feed_id,
@@ -288,9 +301,12 @@ module QuickHeadlines::Repositories
           item.comment_url,
           item.commentary_url
         )
+      end
 
-        existing_titles << item.title
-
+      existing_items.each do |entry|
+        item = entry[:item]
+        index = entry[:index]
+        pub_date_str = item.pub_date.try(&.to_s(Constants::DB_TIME_FORMAT))
         db.exec(
           "UPDATE items SET pub_date = ?, position = ?, comment_url = ?, commentary_url = ? WHERE feed_id = ? AND link = ?",
           pub_date_str,

@@ -110,8 +110,7 @@ module QuickHeadlines::Repositories
         clusters << QuickHeadlines::Entities::Cluster.new(
           id: items.first[:id].to_s,
           representative: representative,
-          others: others,
-          size: items.size
+          others: others
         )
       end
 

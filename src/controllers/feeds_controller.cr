@@ -133,4 +133,78 @@ class QuickHeadlines::Controllers::FeedsController < QuickHeadlines::Controllers
       raise Athena::Framework::Exception::NotFound.new("Feed not found")
     end
   end
+
+  @[ARTA::Get(path: "/api/config")]
+  def config : ATH::View(QuickHeadlines::DTOs::ConfigResponse)
+    config = StateStore.config
+    refresh_minutes = config.try(&.refresh_minutes) || 10
+    item_limit = config.try(&.item_limit) || 20
+    debug = config.try(&.debug?) || false
+
+    view(QuickHeadlines::DTOs::ConfigResponse.new(
+      refresh_minutes: refresh_minutes,
+      item_limit: item_limit,
+      debug: debug
+    ))
+  end
+
+  @[ARTA::Get(path: "/api/tabs")]
+  def tabs : ATH::View(TabsResponse)
+    state = StateStore.get
+    tabs_snapshot = state.tabs
+
+    if tabs_snapshot.empty?
+      config = StateStore.config
+      if config
+        tabs_snapshot = config.tabs
+      end
+    end
+
+    tabs_response = tabs_snapshot.map do |tab|
+      TabResponse.new(name: tab.name)
+    end
+
+    view(TabsResponse.new(tabs: tabs_response))
+  end
+
+  @[ARTA::Post(path: "/api/header_color")]
+  def save_header_color(request : ATH::Request) : ATH::Response
+    body_io = request.body
+    return ATH::Response.new("Missing request body", 400) if body_io.nil?
+
+    body = JSON.parse(body_io.gets_to_end)
+    feed_url = body["feed_url"]?.try(&.as_s?)
+    color = body["color"]?.try(&.as_s?)
+    text_color = body["text_color"]?.try(&.as_s?)
+
+    if feed_url.nil? || color.nil? || text_color.nil? ||
+       feed_url.strip.empty? || color.empty? || text_color.empty?
+      return ATH::Response.new("Missing feed_url, color, or text_color", 400)
+    end
+
+    config = StateStore.config
+    return ATH::Response.new("Configuration not loaded", 500) if config.nil?
+
+    if has_manual_color_override?(config, feed_url)
+      return ATH::Response.new("Skipped: manual config exists", 200)
+    end
+
+    normalized_url = feed_url.strip.rstrip('/').gsub(/\/rss(\.xml)?$/i, "")
+    cache = @feed_cache
+    db_url = cache.find_feed_url_by_pattern(normalized_url) || feed_url
+
+    cache.update_header_colors(db_url, color, text_color)
+    ATH::Response.new("OK", 200)
+  rescue ex
+    STDERR.puts "[FeedsController] Header color save error: #{ex.message}"
+    ATH::Response.new("Internal server error", 500)
+  end
+
+  private def has_manual_color_override?(config, feed_url) : Bool
+    config.tabs.any? do |tab|
+      tab.feeds.any? do |feed|
+        feed.url == feed_url && !feed.header_color.nil?
+      end
+    end
+  end
 end
