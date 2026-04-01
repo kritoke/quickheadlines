@@ -27,7 +27,13 @@ require "./repositories/story_repository"
 require "./repositories/feed_repository"
 require "./repositories/heat_map_repository"
 
-require "./controllers/api_controller"
+require "./controllers/api_base_controller"
+require "./controllers/cluster_controller"
+require "./controllers/feeds_controller"
+require "./controllers/timeline_controller"
+require "./controllers/asset_controller"
+require "./controllers/proxy_controller"
+require "./controllers/admin_controller"
 
 # Svelte frontend with baked assets
 require "./web/assets"
