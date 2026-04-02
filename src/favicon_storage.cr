@@ -71,7 +71,7 @@ module FaviconStorage
       new_path = File.join(favicon_dir, filename)
       unless File.exists?(new_path)
         FileUtils.mv(old_path, new_path)
-        STDERR.puts "[#{Time.local}] Migrated favicon: #{filename}"
+        Log.for("quickheadlines.storage").info { "Migrated favicon: #{filename}" }
       end
     end
   end
@@ -95,7 +95,7 @@ module FaviconStorage
         begin
           File.write(filepath, image_data)
         rescue ex
-          STDERR.puts "Error saving favicon: #{ex.message}"
+          Log.for("quickheadlines.storage").error(exception: ex) { "Error saving favicon" }
           return
         end
       end
@@ -137,7 +137,7 @@ module FaviconStorage
         end
       end
       unless response.status.success?
-        STDERR.puts "[FaviconStorage] HTTP #{response.status.code} for #{url}"
+        Log.for("quickheadlines.storage").warn { "HTTP #{response.status.code} for #{url}" }
         return
       end
 
@@ -146,7 +146,7 @@ module FaviconStorage
 
       save_favicon(url, body.to_slice, content_type)
     rescue ex
-      STDERR.puts "[FaviconStorage] Failed to fetch #{url}: #{ex.message}"
+      Log.for("quickheadlines.storage").error(exception: ex) { "Failed to fetch #{url}" }
       nil
     end
   end
@@ -189,7 +189,7 @@ module FaviconStorage
 
       "/favicons/#{filename}"
     rescue ex
-      STDERR.puts "Error converting data URI: #{ex.message}"
+      Log.for("quickheadlines.storage").error(exception: ex) { "Error converting data URI" }
       nil
     end
   end

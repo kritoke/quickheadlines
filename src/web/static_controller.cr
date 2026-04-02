@@ -57,7 +57,7 @@ class StaticController < Athena::Framework::Controller
   rescue BakedFileSystem::NoSuchFileError
     ATH::Response.new("Not Found", 404, HTTP::Headers{"Content-Type" => "text/plain"})
   rescue ex
-    STDERR.puts "[ERROR] Static file error for #{path}: #{ex.message}\n#{ex.backtrace.join("\n")}"
+    Log.for("quickheadlines.http").error(exception: ex) { "Static file error for #{path}" }
     ATH::Response.new("Internal server error", 500, HTTP::Headers{"Content-Type" => "text/plain"})
   end
 
@@ -101,7 +101,7 @@ class StaticController < Athena::Framework::Controller
   rescue BakedFileSystem::NoSuchFileError
     ATH::Response.new("Not Found", 404, HTTP::Headers{"Content-Type" => "text/plain"})
   rescue ex
-    STDERR.puts "[ERROR] Favicon error: #{ex.message}\n#{ex.backtrace.join("\n")}"
+    Log.for("quickheadlines.http").error(exception: ex) { "Favicon error" }
     ATH::Response.new("Internal server error", 500, HTTP::Headers{"Content-Type" => "text/plain"})
   end
 

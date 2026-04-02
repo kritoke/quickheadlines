@@ -120,6 +120,57 @@ module QuickHeadlines::Repositories
       urls
     end
 
+    def find_all_feeds_with_items : Hash(String, FeedData)
+      feed_rows = [] of {id: Int64, title: String, url: String, site_link: String?, header_color: String?, header_text_color: String?, header_theme_colors: String?, etag: String?, last_modified: String?, favicon: String?, favicon_data: String?}
+      feed_id_map = {} of Int64 => FeedRowData
+
+      db.query("SELECT id, title, url, site_link, header_color, header_text_color, header_theme_colors, etag, last_modified, favicon, favicon_data FROM feeds ORDER BY title") do |rows|
+        rows.each do
+          id = rows.read(Int64)
+          title = rows.read(String)
+          url = rows.read(String)
+          site_link = rows.read(String?)
+          header_color = rows.read(String?)
+          header_text_color = rows.read(String?)
+          header_theme_colors = rows.read(String?)
+          etag = rows.read(String?)
+          last_modified = rows.read(String?)
+          favicon = rows.read(String?)
+          favicon_data = rows.read(String?)
+          fd = FeedRowData.new(title, url, site_link || "", header_color, header_text_color, header_theme_colors, etag, last_modified, favicon, favicon_data)
+          feed_id_map[id] = fd
+          feed_rows << {id: id, title: title, url: url, site_link: site_link, header_color: header_color, header_text_color: header_text_color, header_theme_colors: header_theme_colors, etag: etag, last_modified: last_modified, favicon: favicon, favicon_data: favicon_data}
+        end
+      end
+
+      return {} of String => FeedData if feed_id_map.empty?
+
+      items_by_feed = Hash(Int64, Array(Item)).new { |h, k| h[k] = [] of Item }
+      db.query("SELECT feed_id, title, link, pub_date, version, comment_url, commentary_url FROM items WHERE (pub_date IS NULL OR pub_date <= datetime('now', '+1 day')) ORDER BY pub_date DESC") do |rows|
+        rows.each do
+          feed_id = rows.read(Int64)
+          next unless feed_id_map.has_key?(feed_id)
+          title = rows.read(String)
+          link = rows.read(String)
+          pub_date_str = rows.read(String?)
+          version = rows.read(String?)
+          comment_url = rows.read(String?)
+          commentary_url = rows.read(String?)
+          pub_date = pub_date_str.try { |date_str| Time.parse(date_str, Constants::DB_TIME_FORMAT, Time::Location::UTC) }
+          items_by_feed[feed_id] << Item.new(title, link, pub_date, version, comment_url, commentary_url)
+        end
+      end
+
+      result = {} of String => FeedData
+      feed_rows.each do |fr|
+        fd = feed_id_map[fr.id]
+        items = items_by_feed[fr.id]?
+        items ||= [] of Item
+        result[fr.url] = fd.to_feed_data(items)
+      end
+      result
+    end
+
     def count_all : Int32
       result = db.query_one?("SELECT COUNT(*) FROM feeds", as: Int64)
       result ? result.to_i : 0
@@ -249,9 +300,9 @@ module QuickHeadlines::Repositories
         feed_id = upsert_feed(feed_data)
         insert_items(feed_id, feed_data.items)
         db.exec("COMMIT")
-        STDERR.puts "[FeedRepository] Upserted feed: #{feed_data.title} (#{feed_data.url}) with #{feed_data.items.size} items"
+        Log.for("quickheadlines.feed").info { "Upserted feed: #{feed_data.title} (#{feed_data.url}) with #{feed_data.items.size} items" }
       rescue ex
-        STDERR.puts "[FeedRepository ERROR] Failed to upsert feed #{feed_data.title}: #{ex.message}"
+        Log.for("quickheadlines.feed").error(exception: ex) { "Failed to upsert feed #{feed_data.title}" }
         db.exec("ROLLBACK")
         raise ex
       end

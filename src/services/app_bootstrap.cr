@@ -28,9 +28,9 @@ class AppBootstrap
     begin
       @feed_cache.normalize_pub_dates
     rescue ex
-      STDERR.puts "[#{Time.local}] Warning: normalize_pub_dates failed on startup: #{ex.message}"
+      Log.for("quickheadlines.app").warn(exception: ex) { "normalize_pub_dates failed on startup" }
     end
-    STDERR.puts "[#{Time.local}] Loaded #{@feed_cache.size} feeds from cache"
+    Log.for("quickheadlines.app").info { "Loaded #{@feed_cache.size} feeds from cache" }
 
     FaviconStorage.init
     VugAdapter.clear_cache
@@ -53,10 +53,10 @@ class AppBootstrap
   end
 
   def verify_feeds_loaded
-    STDERR.puts "[#{Time.local}] Verifying feeds loaded..."
-    STDERR.puts "[#{Time.local}] StateStore.feeds.size=#{StateStore.feeds.size}"
+    Log.for("quickheadlines.app").info { "Verifying feeds loaded..." }
+    Log.for("quickheadlines.app").debug { "StateStore.feeds.size=#{StateStore.feeds.size}" }
     StateStore.tabs.each do |tab|
-      STDERR.puts "[#{Time.local}] StateStore.tabs[#{tab.name}].feeds.size=#{tab.feeds.size}"
+      Log.for("quickheadlines.app").debug { "StateStore.tabs[#{tab.name}].feeds.size=#{tab.feeds.size}" }
     end
   end
 
@@ -66,9 +66,9 @@ class AppBootstrap
         sleep @janitor_interval
         begin
           removed = SocketManager.instance.cleanup_dead_connections
-          STDERR.puts "[#{Time.local}] Janitor: #{removed} dead connections cleaned up, #{SocketManager.instance.connection_count} active"
+          Log.for("quickheadlines.app").debug { "Janitor: #{removed} dead connections cleaned up, #{SocketManager.instance.connection_count} active" }
         rescue ex
-          STDERR.puts "[#{Time.local}] Janitor error: #{ex.message}"
+          Log.for("quickheadlines.app").error(exception: ex) { "Janitor error" }
         end
       end
     end
@@ -97,11 +97,11 @@ class AppBootstrap
       spawn do
         sleep 30.seconds
         begin
-          STDERR.puts "[#{Time.local}] Running initial clustering on startup..."
+          Log.for("quickheadlines.app").info { "Running initial clustering on startup..." }
           threshold = @config.clustering.try(&.threshold) || 0.35
           clustering_service(@db_service).recluster_with_lsh(@feed_cache, @config.db_fetch_limit, threshold)
         rescue ex
-          STDERR.puts "[#{Time.local}] Initial clustering failed: #{ex.message}"
+          Log.for("quickheadlines.app").error(exception: ex) { "Initial clustering failed" }
         end
       end
     end
@@ -114,9 +114,9 @@ class AppBootstrap
         begin
           @feed_cache.cleanup_old_articles(Constants::CACHE_RETENTION_DAYS)
           @feed_cache.cleanup_old_entries(@config.cache_retention_hours || Constants::CACHE_RETENTION_HOURS)
-          STDERR.puts "[#{Time.local}] Scheduled cleanup completed"
+          Log.for("quickheadlines.app").debug { "Scheduled cleanup completed" }
         rescue ex
-          STDERR.puts "[#{Time.local}] Scheduled cleanup failed: #{ex.message}"
+          Log.for("quickheadlines.app").error(exception: ex) { "Scheduled cleanup failed" }
         end
       end
     end
@@ -129,11 +129,11 @@ class AppBootstrap
         begin
           removed = SocketManager.instance.cleanup_dead_connections
           stats = SocketManager.instance.stats
-          STDERR.puts "[WebSocket] Janitor: #{stats["connections"]} active, #{removed} removed, " \
+          Log.for("quickheadlines.websocket").debug { "Janitor: #{stats["connections"]} active, #{removed} removed, " \
                       "#{stats["messages_sent"]} sent, #{stats["messages_dropped"]} dropped, " \
-                      "#{stats["send_errors"]} errors"
+                      "#{stats["send_errors"]} errors" }
         rescue ex
-          STDERR.puts "[WebSocket] Janitor failed: #{ex.message}"
+          Log.for("quickheadlines.websocket").error(exception: ex) { "Janitor failed" }
         end
       end
     end

@@ -46,7 +46,7 @@ private def fetch_repo_release(repo_entry : String, item_limit : Int32) : Array(
   result = Fetcher.pull_software(url, HTTP::Headers.new, item_limit, fetcher_config)
 
   if error = result.error_message
-    STDERR.puts "Error fetching software releases for #{repo_entry}: #{error}"
+    Log.for("quickheadlines.feed").warn { "Error fetching software releases for #{repo_entry}: #{error}" }
     return
   end
 
@@ -63,7 +63,7 @@ private def fetch_repo_release(repo_entry : String, item_limit : Int32) : Array(
     )
   end
 rescue ex
-  STDERR.puts "Error fetching software releases for #{repo_entry}: #{ex.message}"
+  Log.for("quickheadlines.feed").error(exception: ex) { "Error fetching software releases for #{repo_entry}" }
   nil
 end
 
@@ -80,7 +80,7 @@ private def repo_entry_to_url(repo_entry : String) : String?
   when "cb"
     "https://codeberg.org/#{repo_path}/releases"
   else
-    STDERR.puts "Unknown provider '#{provider}' for repo #{repo_path}"
+    Log.for("quickheadlines.feed").warn { "Unknown provider '#{provider}' for repo #{repo_path}" }
     nil
   end
 end

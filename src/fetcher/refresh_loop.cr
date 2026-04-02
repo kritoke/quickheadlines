@@ -39,7 +39,7 @@ private def fetch_feeds_concurrently(all_configs : Hash(String, Feed), existing_
     if data && !data.items.empty?
       fetched_map[data.url] = data
     elsif config.debug?
-      STDERR.puts "[#{Time.local}] refresh_all: failed to fetch #{data ? data.url : "unknown"}"
+      Log.for("quickheadlines.feed").warn { "refresh_all: failed to fetch #{data ? data.url : "unknown"}" }
     end
   end
   fetched_map
@@ -71,19 +71,19 @@ def refresh_all(config : Config, cache : FeedCache, db_service : DatabaseService
   all_configs = collect_all_feed_configs(config)
 
   if config.debug?
-    STDERR.puts "[#{Time.local}] refresh_all: starting - #{all_configs.size} feeds to fetch"
+    Log.for("quickheadlines.feed").debug { "refresh_all: starting - #{all_configs.size} feeds to fetch" }
   end
 
   existing_data = (StateStore.feeds + StateStore.tabs.flat_map(&.feeds)).index_by(&.url)
   if config.debug?
-    STDERR.puts "[#{Time.local}] refresh_all: existing_data.size=#{existing_data.size}"
+    Log.for("quickheadlines.feed").debug { "refresh_all: existing_data.size=#{existing_data.size}" }
   end
 
   fetched_map = fetch_feeds_concurrently(all_configs, existing_data, config)
 
   if config.debug?
-    STDERR.puts "[#{Time.local}] refresh_all: fetched #{fetched_map.size}/#{all_configs.size} feeds successfully"
-    STDERR.puts "[#{Time.local}] refresh_all: building new state (feeds=#{fetched_map.size}, tabs=#{config.tabs.size})"
+    Log.for("quickheadlines.feed").debug { "refresh_all: fetched #{fetched_map.size}/#{all_configs.size} feeds successfully" }
+    Log.for("quickheadlines.feed").debug { "refresh_all: building new state (feeds=#{fetched_map.size}, tabs=#{config.tabs.size})" }
   end
 
   # Build new state immutably
@@ -105,7 +105,7 @@ def refresh_all(config : Config, cache : FeedCache, db_service : DatabaseService
   EventBroadcaster.notify_feed_update(StateStore.updated_at.to_unix_ms)
 
   if config.debug?
-    STDERR.puts "[#{Time.local}] refresh_all: STATE updated - feeds=#{new_feeds.size}, tabs=#{new_tabs.size}"
+    Log.for("quickheadlines.feed").debug { "refresh_all: STATE updated - feeds=#{new_feeds.size}, tabs=#{new_tabs.size}" }
   end
 
   # Ensure feeds are persisted to database before clustering runs
@@ -115,7 +115,7 @@ def refresh_all(config : Config, cache : FeedCache, db_service : DatabaseService
   GC.collect
 
   if config.debug?
-    STDERR.puts "[#{Time.local}] refresh_all: complete - StateStore.feeds=#{new_feeds.size}, StateStore.tabs=#{new_tabs.size}"
+    Log.for("quickheadlines.feed").debug { "refresh_all: complete - StateStore.feeds=#{new_feeds.size}, StateStore.tabs=#{new_tabs.size}" }
   end
 end
 
@@ -134,7 +134,7 @@ def async_clustering(feeds : Array(FeedData), cache : FeedCache, db_service : Da
         begin
           process_feed_item_clustering(feed_data, cache, db_service)
         rescue ex
-          STDERR.puts "[#{Time.local}] async_clustering: error processing #{feed_data.url}: #{ex.message}"
+          Log.for("quickheadlines.clustering").error(exception: ex) { "async_clustering: error processing #{feed_data.url}" }
         ensure
           clustering_channel.receive
           if CLUSTERING_JOBS.sub(1) <= 1
@@ -182,11 +182,11 @@ def start_refresh_loop(config_path : String, cache : FeedCache, db_service : Dat
         if first_run
           first_run = false
           if active_config.debug?
-            STDERR.puts "[#{Time.local}] Running initial refresh to fetch feeds"
+            Log.for("quickheadlines.feed").debug { "Running initial refresh to fetch feeds" }
           end
           refresh_all(active_config, cache, db_service)
           if active_config.debug?
-            puts "[#{Time.local}] Initial refresh complete"
+            Log.for("quickheadlines.feed").debug { "Initial refresh complete" }
           end
         else
           current_mtime = File.info(config_path).modification_time
@@ -197,18 +197,18 @@ def start_refresh_loop(config_path : String, cache : FeedCache, db_service : Dat
             last_mtime = current_mtime
 
             if active_config.debug?
-              puts "[#{Time.local}] Config change detected. Reloaded feeds.yml"
+              Log.for("quickheadlines.feed").debug { "Config change detected. Reloaded feeds.yml" }
             end
             refresh_all(active_config, cache, db_service)
             if active_config.debug?
-              puts "[#{Time.local}] Refreshed after config change"
+              Log.for("quickheadlines.feed").debug { "Refreshed after config change" }
             end
             sleep (active_config.refresh_minutes * 60).seconds
             next
           else
             refresh_all(active_config, cache, db_service)
             if active_config.debug?
-              puts "[#{Time.local}] Refreshed feeds and ran GC"
+              Log.for("quickheadlines.feed").debug { "Refreshed feeds and ran GC" }
             end
           end
         end

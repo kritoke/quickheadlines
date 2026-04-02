@@ -21,4 +21,16 @@ module Constants
   CACHE_FRESHNESS_MINUTES = 5
   FETCH_BUFFER_ITEMS      = 50
   BROADCAST_TIMEOUT_MS    = 100
+
+  MAX_REQUEST_BODY_SIZE = 1_048_576
+
+  ALLOWED_PROXY_DOMAINS = {
+    "i.imgur.com",
+    "pbs.twimg.com",
+    "avatars.githubusercontent.com",
+    "lh3.googleusercontent.com",
+    "i.pravatar.cc",
+    "images.unsplash.com",
+    "fastly.picsum.photos",
+  }
 end

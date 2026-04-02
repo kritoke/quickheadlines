@@ -11,7 +11,7 @@ class QuickHeadlines::Controllers::ProxyController < QuickHeadlines::Controllers
     end
 
     unless validate_proxy_url(url)
-      return ATH::Response.new("Invalid or disallowed proxy URL", 403, HTTP::Headers{"content-type" => "text/plain"})
+      return ATH::Response.new("Disallowed proxy domain", 403, HTTP::Headers{"content-type" => "text/plain"})
     end
 
     if max_bytes > Constants::MAX_PROXY_IMAGE_BYTES
@@ -42,7 +42,7 @@ class QuickHeadlines::Controllers::ProxyController < QuickHeadlines::Controllers
       response = client.get(uri.request_target)
 
       if response.status_code >= 400
-        return ATH::Response.new("Upstream error: #{response.status_code}", 502, HTTP::Headers{"content-type" => "text/plain"})
+        return ATH::Response.new("Bad Gateway", 502, HTTP::Headers{"content-type" => "text/plain"})
       end
 
       content_type = response.headers["content-type"]? || "application/octet-stream"
@@ -52,20 +52,39 @@ class QuickHeadlines::Controllers::ProxyController < QuickHeadlines::Controllers
         return ATH::Response.new("Not an image", 415, HTTP::Headers{"content-type" => "text/plain"})
       end
 
+      if (cl_header = response.headers["Content-Length"]?) && (cl = cl_header.to_i64?)
+        if cl > max_bytes
+          return ATH::Response.new("Image too large", 413, HTTP::Headers{"content-type" => "text/plain"})
+        end
+      end
+
       body = response.body
       if body.bytesize > max_bytes
-        return ATH::Response.new("Image too large (#{body.bytesize} > #{max_bytes})", 413, HTTP::Headers{"content-type" => "text/plain"})
+        return ATH::Response.new("Image too large", 413, HTTP::Headers{"content-type" => "text/plain"})
       end
 
       ATH::Response.new(body, 200, HTTP::Headers{"content-type" => content_type})
+    rescue ex : IO::TimeoutError | Socket::Error
+      return ATH::Response.new("Bad Gateway", 502, HTTP::Headers{"content-type" => "text/plain"})
     rescue ex
-      ATH::Response.new("Proxy error: #{ex.message}", 502, HTTP::Headers{"content-type" => "text/plain"})
+      return ATH::Response.new("Bad Gateway", 502, HTTP::Headers{"content-type" => "text/plain"})
     end
   end
 
   @[ARTA::Get(path: "/favicons/{hash}.{ext}")]
   def favicon_file(request : ATH::Request, hash : String, ext : String) : ATH::Response
-    favicon_path = FaviconStorage.favicon_dir + "/#{hash}.#{ext}"
+    unless hash.matches?(/\A[a-f0-9]{64}\z/)
+      return ATH::Response.new("Invalid favicon hash", 400, HTTP::Headers{"content-type" => "text/plain"})
+    end
+
+    unless ext.in?("png", "ico", "svg", "gif", "jpg", "jpeg")
+      return ATH::Response.new("Invalid favicon extension", 400, HTTP::Headers{"content-type" => "text/plain"})
+    end
+
+    favicon_path = File.join(FaviconStorage.favicon_dir, "#{hash}.#{ext}")
+    unless favicon_path.starts_with?(FaviconStorage.favicon_dir)
+      return ATH::Response.new("Invalid favicon path", 400, HTTP::Headers{"content-type" => "text/plain"})
+    end
 
     if File.exists?(favicon_path)
       content = File.read(favicon_path)

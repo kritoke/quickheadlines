@@ -90,51 +90,51 @@ class FaviconSyncService
       @mutex.synchronize do
         if clear_external_favicon
           @db.exec("UPDATE feeds SET favicon_data = NULL WHERE id = ?", feed_id)
-          STDERR.puts "[Cache] Cleared external URL from favicon_data for #{url}"
+          Log.for("quickheadlines.cache").info { "Cleared external URL from favicon_data for #{url}" }
         end
 
         if sync_favicon_data
           @db.exec("UPDATE feeds SET favicon_data = ? WHERE id = ?", sync_favicon_data, feed_id)
-          STDERR.puts "[Cache] Synced favicon_data for #{url}: #{sync_favicon_data}"
+          Log.for("quickheadlines.cache").debug { "Synced favicon_data for #{url}: #{sync_favicon_data}" }
         end
 
         if update_favicon && update_favicon_data
           @db.exec("UPDATE feeds SET favicon = ?, favicon_data = ? WHERE id = ?", update_favicon, update_favicon_data, feed_id)
-          STDERR.puts "[Cache] Synced favicon for #{url}: #{favicon}"
+          Log.for("quickheadlines.cache").debug { "Synced favicon for #{url}: #{favicon}" }
         end
 
         if clear_favicon
           @db.exec("UPDATE feeds SET favicon = NULL, favicon_data = NULL WHERE id = ?", feed_id)
-          STDERR.puts "[Cache] Cleared missing favicon for #{url}"
+          Log.for("quickheadlines.cache").debug { "Cleared missing favicon for #{url}" }
         end
       end
     end
 
-    STDERR.puts "[Cache] Backfill summary: local=#{local_backfills.size}, google=#{google_backfills.size}, missing=#{missing_backfills.size}"
+    Log.for("quickheadlines.cache").info { "Backfill summary: local=#{local_backfills.size}, google=#{google_backfills.size}, missing=#{missing_backfills.size}" }
 
     local_backfills.each { |args| backfill_header_colors(*args) }
 
     google_backfills.each do |feed_id, url, google_url|
-      STDERR.puts "[Cache] Processing Google favicon backfill for #{url}: #{google_url}"
+      Log.for("quickheadlines.cache").debug { "Processing Google favicon backfill for #{url}: #{google_url}" }
       url_to_fetch = google_url
       if google_url.includes?("domain=#") || google_url.includes?("domain=")
         parsed = URI.parse(url)
         host = parsed.host
         if host && host.includes?(".") && !host.includes?(",")
           url_to_fetch = "https://www.google.com/s2/favicons?domain=#{host}&sz=256"
-          STDERR.puts "[Cache] Fixed broken domain in Google URL: #{url_to_fetch}"
+          Log.for("quickheadlines.cache").debug { "Fixed broken domain in Google URL: #{url_to_fetch}" }
         elsif host.nil? || host.includes?(",")
-          STDERR.puts "[Cache] Skipping malformed Google favicon URL: #{google_url}"
+          Log.for("quickheadlines.cache").debug { "Skipping malformed Google favicon URL: #{google_url}" }
           next
         end
       end
       local_path = FaviconStorage.fetch_and_save(url_to_fetch)
-      STDERR.puts "[Cache] fetch_and_save returned: #{local_path.inspect}"
+      Log.for("quickheadlines.cache").debug { "fetch_and_save returned: #{local_path.inspect}" }
       if local_path
         @mutex.synchronize do
           @db.exec("UPDATE feeds SET favicon = ?, favicon_data = ? WHERE id = ?", local_path, local_path, feed_id)
         end
-        STDERR.puts "[Cache] Downloaded Google favicon for #{url}: #{local_path}"
+        Log.for("quickheadlines.cache").debug { "Downloaded Google favicon for #{url}: #{local_path}" }
         backfill_header_colors(feed_id, url, local_path)
       end
     end
@@ -150,12 +150,12 @@ class FaviconSyncService
             @mutex.synchronize do
               @db.exec("UPDATE feeds SET favicon = ?, favicon_data = ? WHERE id = ?", local_path, local_path, feed_id)
             end
-            STDERR.puts "[Cache] Backfilled missing favicon for #{url}: #{local_path}"
+            Log.for("quickheadlines.cache").debug { "Backfilled missing favicon for #{url}: #{local_path}" }
             backfill_header_colors(feed_id, url, local_path)
           end
         end
       rescue ex
-        STDERR.puts "[Cache] Backfill missing favicon failed for #{url}: #{ex.message}"
+        Log.for("quickheadlines.cache").error(exception: ex) { "Backfill missing favicon failed for #{url}" }
       end
     end
   end
@@ -184,8 +184,8 @@ class FaviconSyncService
 
     @db.exec("UPDATE feeds SET header_color = ?, header_text_color = ?, header_theme_colors = ? WHERE id = ?",
       bg, legacy_text, theme_json, feed_id)
-    STDERR.puts "[Cache] Backfilled header colors for #{feed_url}: bg=#{bg}, text=#{legacy_text}"
+    Log.for("quickheadlines.cache").debug { "Backfilled header colors for #{feed_url}: bg=#{bg}, text=#{legacy_text}" }
   rescue ex
-    STDERR.puts "[Cache] Backfill header colors failed for #{feed_url}: #{ex.message}"
+    Log.for("quickheadlines.cache").error(exception: ex) { "Backfill header colors failed for #{feed_url}" }
   end
 end

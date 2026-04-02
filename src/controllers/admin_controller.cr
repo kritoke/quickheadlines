@@ -37,12 +37,11 @@ class QuickHeadlines::Controllers::AdminController < QuickHeadlines::Controllers
         threshold = StateStore.config.try(&.clustering).try(&.threshold) || 0.35
 
         if StateStore.config.try(&.debug?)
-          STDERR.puts "[#{Time.local}] Running clustering..."
+          Log.for("quickheadlines.clustering").debug { "Running clustering..." }
         end
         service.recluster_with_lsh(@feed_cache, cluster_limit, threshold)
       rescue ex
-        STDERR.puts "[#{Time.local}] Clustering error: #{ex.message}"
-        STDERR.puts ex.backtrace.join("\n")
+        Log.for("quickheadlines.clustering").error(exception: ex) { "Clustering error" }
       end
     end
 
@@ -63,13 +62,15 @@ class QuickHeadlines::Controllers::AdminController < QuickHeadlines::Controllers
     action = nil
 
     if body_io
-      body_content = body_io.gets_to_end
-      if !body_content.empty?
-        begin
+      begin
+        body_content = read_body_safe(body_io)
+        if !body_content.empty?
           body_json = JSON.parse(body_content)
           action = body_json["action"]?.try(&.as_s?)
-        rescue
         end
+      rescue ex : IO::EOFError
+        return ATH::Response.new("Request body too large", 413, HTTP::Headers{"content-type" => "application/json"})
+      rescue
       end
     end
 
@@ -104,7 +105,7 @@ class QuickHeadlines::Controllers::AdminController < QuickHeadlines::Controllers
           cache.clear_clustering_metadata
           cache.clear_all
 
-          STDERR.puts "[#{Time.local}] Cache cleared: #{feed_count} feeds, #{item_count} items deleted"
+          Log.for("quickheadlines.app").info { "Cache cleared: #{feed_count} feeds, #{item_count} items deleted" }
         when "cleanup-orphaned"
           config_urls = Set(String).new
           StateStore.feeds.each { |feed| config_urls << feed.url }
@@ -120,7 +121,7 @@ class QuickHeadlines::Controllers::AdminController < QuickHeadlines::Controllers
           orphaned = db_urls - config_urls
 
           if orphaned.empty?
-            STDERR.puts "[#{Time.local}] No orphaned feeds to clean up"
+            Log.for("quickheadlines.app").info { "No orphaned feeds to clean up" }
           else
             deleted_items = 0
             orphaned.each do |url|
@@ -130,12 +131,11 @@ class QuickHeadlines::Controllers::AdminController < QuickHeadlines::Controllers
             end
 
             cluster_repo.clear_all_metadata
-            STDERR.puts "[#{Time.local}] Cleaned up #{orphaned.size} orphaned feeds (#{deleted_items} items deleted)"
+            Log.for("quickheadlines.app").info { "Cleaned up #{orphaned.size} orphaned feeds (#{deleted_items} items deleted)" }
           end
         end
       rescue ex
-        STDERR.puts "[#{Time.local}] Admin action error: #{ex.message}"
-        STDERR.puts ex.backtrace.join("\n") if ex.backtrace
+        Log.for("quickheadlines.app").error(exception: ex) { "Admin action error" }
       end
     end
 
@@ -143,29 +143,41 @@ class QuickHeadlines::Controllers::AdminController < QuickHeadlines::Controllers
   end
 
   @[ARTA::Get(path: "/api/status")]
-  def status : QuickHeadlines::DTOs::StatusResponse
+  def status(request : ATH::Request) : ATH::Response
+    unless check_admin_auth(request)
+      return unauthorized_response
+    end
+
     ws_stats = @socket_manager.stats
     broadcaster_stats = EventBroadcaster.stats
 
-    QuickHeadlines::DTOs::StatusResponse.new(
-      clustering: StateStore.clustering?,
-      refreshing: StateStore.refreshing?,
-      active_jobs: 0,
-      websocket_connections: ws_stats["connections"].to_i32,
-      websocket_messages_sent: broadcaster_stats["sent"].to_i64,
-      websocket_messages_dropped: broadcaster_stats["dropped"].to_i64,
-      websocket_send_errors: ws_stats["send_errors"].to_i64,
-      broadcaster_processed: broadcaster_stats["processed"].to_i64,
-      broadcaster_dropped: broadcaster_stats["dropped"].to_i64
-    )
+    body = {
+      "clustering" => StateStore.clustering?,
+      "refreshing" => StateStore.refreshing?,
+      "active_jobs" => 0,
+      "websocket_connections" => ws_stats["connections"].to_i32,
+      "websocket_messages_sent" => broadcaster_stats["sent"].to_i64,
+      "websocket_messages_dropped" => broadcaster_stats["dropped"].to_i64,
+      "websocket_send_errors" => ws_stats["send_errors"].to_i64,
+      "broadcaster_processed" => broadcaster_stats["processed"].to_i64,
+      "broadcaster_dropped" => broadcaster_stats["dropped"].to_i64,
+    }.to_json
+
+    ATH::Response.new(body, 200, HTTP::Headers{"content-type" => "application/json"})
   end
 
   @[ARTA::Get(path: "/api/version")]
-  def version : ATH::View(VersionResponse)
-    view(VersionResponse.new(
-      updated_at: StateStore.updated_at.to_unix_ms,
-      clustering: StateStore.clustering?
-    ))
+  def version(request : ATH::Request) : ATH::Response
+    unless check_admin_auth(request)
+      return unauthorized_response
+    end
+
+    body = {
+      "updated_at" => StateStore.updated_at.to_unix_ms,
+      "clustering" => StateStore.clustering?,
+    }.to_json
+
+    ATH::Response.new(body, 200, HTTP::Headers{"content-type" => "application/json"})
   end
 
   @[ARTA::Get(path: "/version")]

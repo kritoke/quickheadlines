@@ -23,7 +23,7 @@ end
 
 def fetch_config_from_github(repo_path : String, branch : String = "main") : String?
   unless repo_path =~ /\A[a-zA-Z0-9_-]+\/[a-zA-Z0-9_-]+\z/
-    STDERR.puts "[WARN] Invalid repo_path format (must be owner/repo): #{repo_path}"
+    Log.for("quickheadlines.config").warn { "Invalid repo_path format (must be owner/repo): #{repo_path}" }
     return
   end
 
@@ -37,7 +37,7 @@ def fetch_config_from_github(repo_path : String, branch : String = "main") : Str
       return fetch_config_from_github(repo_path, "master")
     end
   rescue ex
-    STDERR.puts "Error fetching config from GitHub: #{ex.message}"
+    Log.for("quickheadlines.config").error(exception: ex) { "Error fetching config from GitHub" }
   end
 
   nil
@@ -50,20 +50,20 @@ def download_config_from_github(target_path : String) : Bool
         Config.from_yaml(yaml_content)
 
         File.write(target_path, yaml_content)
-        STDERR.puts "[#{Time.local}] Auto-downloaded feeds.yml from GitHub (#{repo_path})"
+        Log.for("quickheadlines.config").info { "Auto-downloaded feeds.yml from GitHub (#{repo_path})" }
         return true
       rescue ex : YAML::ParseException
-        STDERR.puts "Error: Invalid YAML in downloaded feeds.yml: #{ex.message}"
+        Log.for("quickheadlines.config").error(exception: ex) { "Invalid YAML in downloaded feeds.yml" }
       rescue ex : File::Error
-        STDERR.puts "Error: Cannot write feeds.yml to #{target_path}: #{ex.message}"
+        Log.for("quickheadlines.config").error(exception: ex) { "Cannot write feeds.yml to #{target_path}" }
       rescue ex
-        STDERR.puts "Error: Failed to save feeds.yml: #{ex.message}"
+        Log.for("quickheadlines.config").error(exception: ex) { "Failed to save feeds.yml" }
       end
     else
-      STDERR.puts "Error: Could not fetch feeds.yml from GitHub (file may not exist in repository)"
+      Log.for("quickheadlines.config").warn { "Could not fetch feeds.yml from GitHub (file may not exist in repository)" }
     end
   else
-    STDERR.puts "Error: Could not detect GitHub repository (not in a git repo or no origin remote)"
+    Log.for("quickheadlines.config").warn { "Could not detect GitHub repository (not in a git repo or no origin remote)" }
   end
 
   false

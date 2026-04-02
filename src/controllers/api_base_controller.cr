@@ -18,16 +18,6 @@ class QuickHeadlines::Controllers::ApiBaseController < Athena::Framework::Contro
   @feed_service : QuickHeadlines::Services::FeedService?
   @clustering_service : QuickHeadlines::Services::ClusteringService?
 
-  ALLOWED_DOMAINS = {
-    "i.imgur.com",
-    "pbs.twimg.com",
-    "avatars.githubusercontent.com",
-    "lh3.googleusercontent.com",
-    "i.pravatar.cc",
-    "images.unsplash.com",
-    "fastly.picsum.photos",
-  }
-
   def self.new : self
     db = DatabaseService.instance
     cache = FeedCache.instance
@@ -40,7 +30,7 @@ class QuickHeadlines::Controllers::ApiBaseController < Athena::Framework::Contro
 
   private def check_admin_auth(request : ATH::Request) : Bool
     secret = ENV["ADMIN_SECRET"]?
-    return true if secret.nil? || secret.empty?
+    return false if secret.nil? || secret.empty?
 
     auth_header = request.headers["Authorization"]?
     return false unless auth_header
@@ -84,11 +74,15 @@ class QuickHeadlines::Controllers::ApiBaseController < Athena::Framework::Contro
 
   private def validate_proxy_url(url : String) : Bool
     uri = URI.parse(url)
-    return false unless uri.scheme.in?("http", "https")
-    return false if !uri.host.is_a?(String) || uri.host.to_s.empty?
+    return false unless uri.scheme == "https"
+    return false unless uri.host.is_a?(String) && !uri.host.to_s.empty?
 
-    host = uri.host.as(String)
-    !Utils.private_host?(host)
+    host = uri.host.as(String).downcase
+    return false unless Constants::ALLOWED_PROXY_DOMAINS.includes?(host)
+    return false if uri.user || uri.password
+    return false if uri.port && uri.port != 443
+
+    true
   rescue
     false
   end

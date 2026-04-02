@@ -167,6 +167,20 @@ module Utils
   end
 end
 
+def read_body_safe(io : IO, max_size : Int32 = Constants::MAX_REQUEST_BODY_SIZE) : String
+  buffer = Bytes.new(max_size)
+  index = 0
+  while index < max_size
+    bytes_read = io.read(buffer[index..])
+    break if bytes_read == 0
+    index += bytes_read
+  end
+  if index >= max_size && io.read_byte
+    raise IO::EOFError.new("Request body exceeds #{max_size} bytes")
+  end
+  String.new(buffer[0, index])
+end
+
 module UrlNormalizer
   def self.normalize(url : String) : String
     normalized = url.strip

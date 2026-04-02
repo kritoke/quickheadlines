@@ -28,7 +28,7 @@ class DatabaseService
     @db = DB.open("sqlite3://#{@db_path}")
     create_schema(@db, @db_path)
 
-    STDERR.puts "[#{Time.local}] DatabaseService initialized: #{@db_path}"
+    Log.for("quickheadlines.storage").info { "DatabaseService initialized: #{@db_path}" }
   end
 
   # Singleton access for backward compatibility
@@ -63,146 +63,19 @@ class DatabaseService
 
   # Create database schema
   private def create_schema(db : DB::Database, db_path : String)
-    # Enable WAL mode for improved concurrent access
     db.exec("PRAGMA journal_mode = WAL")
-
-    # Set synchronous to NORMAL for better performance
     db.exec("PRAGMA synchronous = NORMAL")
-
-    # Set cache size (64MB)
     db.exec("PRAGMA cache_size = -64000")
 
-    # Feeds table
     db.exec(Schema::FEEDS_TABLE)
-
-    # Add columns if needed (migration)
-    add_column_if_missing(db, "feeds", "favicon_data", "TEXT")
-    add_column_if_missing(db, "feeds", "header_text_color", "TEXT")
-    add_column_if_missing(db, "feeds", "header_theme_colors", "TEXT")
-
-    # Items table
     db.exec(Schema::ITEMS_TABLE)
-
-    # Add columns if needed (migration)
-    add_column_if_missing(db, "items", "minhash_signature", "BLOB")
-    add_column_if_missing(db, "items", "cluster_id", "INTEGER REFERENCES items(id)")
-
-    # LSH bands table - migrate from INTEGER to TEXT if needed
-    migrate_lsh_bands_if_needed(db)
-
-    # LSH bands table
     db.exec(Schema::LSH_BANDS_TABLE)
-
-    # Indexes for performance
     db.exec(Schema::INDEXES)
-  end
 
-  private def add_column_if_missing(db : DB::Database, table : String, column : String, type : String)
-    db.exec("ALTER TABLE #{table} ADD COLUMN #{column} #{type}")
-  rescue
-    # Column already exists
-  end
-
-  private def migrate_lsh_bands_if_needed(db : DB::Database)
-    old_schema = db.query_one?("SELECT band_hash FROM lsh_bands LIMIT 1", as: {Int64?})
-    if old_schema
-      db.exec("DROP TABLE lsh_bands")
-      STDERR.puts "[Cache] Migrated lsh_bands table from INTEGER to TEXT column type"
-    end
-  rescue
-    # Table doesn't exist or other error - will be created below
+    run_migrations(db)
   end
 
   def close
     @db.close
-  end
-
-  # Get timeline items from the last N days with cluster information
-  def get_timeline_items(limit : Int32, offset : Int32, days_back : Int32?) : Array({id: Int64, title: String, link: String, pub_date: Time?, feed_title: String, feed_url: String, feed_link: String, favicon: String?, header_color: String?, header_text_color: String?, header_theme_colors: String?, cluster_id: Int64?, is_representative: Bool, cluster_size: Int32})
-    items = [] of {id: Int64, title: String, link: String, pub_date: Time?, feed_title: String, feed_url: String, feed_link: String, favicon: String?, header_color: String?, header_text_color: String?, header_theme_colors: String?, cluster_id: Int64?, is_representative: Bool, cluster_size: Int32}
-
-    cutoff_clause = days_back ? "AND i.pub_date >= ?" : ""
-
-    # Only show cluster representatives to avoid duplicates in timeline
-    where_clause = <<-SQL
-      FROM items i
-      JOIN feeds f ON i.feed_id = f.id
-      AND (i.pub_date IS NULL OR i.pub_date <= datetime('now', '+1 day'))
-      AND (i.cluster_id IS NULL OR i.id = (SELECT MIN(id) FROM items WHERE cluster_id = i.cluster_id))
-      #{cutoff_clause}
-      ORDER BY COALESCE(i.pub_date, '1970-01-01 00:00:00') DESC, i.id DESC
-      LIMIT ? OFFSET ?
-      SQL
-
-    query = <<-SQL
-      SELECT
-        i.id,
-        i.title,
-        i.link,
-        i.pub_date,
-        f.title as feed_title,
-        f.url as feed_url,
-        f.site_link as feed_link,
-        f.favicon,
-        f.header_color,
-        f.header_text_color,
-        f.header_theme_colors,
-        i.cluster_id,
-        CASE WHEN i.cluster_id IS NULL OR i.id = (SELECT MIN(id) FROM items WHERE cluster_id = i.cluster_id AND cluster_id IS NOT NULL) THEN 1 ELSE 0 END as is_representative,
-        (SELECT COUNT(*) FROM items WHERE cluster_id = i.cluster_id AND cluster_id IS NOT NULL) as cluster_size
-      #{where_clause}
-      SQL
-
-    query_args = days_back ? [Time.local - days_back.days, limit, offset] : [limit, offset]
-
-    @db.query(query, args: query_args) do |rows|
-      rows.each do
-        id = rows.read(Int64)
-        title = rows.read(String)
-        link = rows.read(String)
-        pub_date_str = rows.read(String?)
-        feed_title = rows.read(String)
-        feed_url = rows.read(String)
-        feed_link = rows.read(String)
-        favicon = rows.read(String?)
-        header_color = rows.read(String?)
-        header_text_color = rows.read(String?)
-        header_theme_colors = rows.read(String?)
-        cluster_id = rows.read(Int64?)
-        is_representative = rows.read(Int32) == 1
-        cluster_size = rows.read(Int32)
-
-        pub_date = pub_date_str.try { |str| Time.parse(str, Constants::DB_TIME_FORMAT, Time::Location::UTC) }
-
-        items << {
-          id:                  id,
-          title:               title,
-          link:                link,
-          pub_date:            pub_date,
-          feed_title:          feed_title,
-          feed_url:            feed_url,
-          feed_link:           feed_link,
-          favicon:             favicon,
-          header_color:        header_color,
-          header_text_color:   header_text_color,
-          header_theme_colors: header_theme_colors,
-          cluster_id:          cluster_id,
-          is_representative:   is_representative,
-          cluster_size:        cluster_size,
-        }
-      end
-    end
-
-    items
-  end
-
-  # Count total timeline items in date range (nil days_back = no limit)
-  def count_timeline_items(days_back : Int32?) : Int32
-    if days_back
-      cutoff_date = Time.local - days_back.days
-      @db.query_one("SELECT COUNT(*) FROM items WHERE pub_date >= ?", cutoff_date, as: Int32)
-    else
-      @db.query_one("SELECT COUNT(*) FROM items", as: Int32)
-    end
   end
 end

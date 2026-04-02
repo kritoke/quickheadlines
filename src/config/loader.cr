@@ -103,7 +103,7 @@ private def validate_yaml_structure(content : String) : Nil
     end
 
     if line.rstrip != line
-      STDERR.puts "[WARN] Line #{line_num}: Trailing whitespace detected"
+      Log.for("quickheadlines.config").warn { "Line #{line_num}: Trailing whitespace detected" }
     end
 
     if line =~ /^(\s+)/
@@ -117,7 +117,7 @@ private def validate_yaml_structure(content : String) : Nil
   non_empty_lines = lines.reject(&.strip.empty?)
   if lines.size > non_empty_lines.size
     trailing_blanks = lines.size - non_empty_lines.size
-    STDERR.puts "[WARN] Found #{trailing_blanks} trailing blank line(s) at end of file"
+    Log.for("quickheadlines.config").warn { "Found #{trailing_blanks} trailing blank line(s) at end of file" }
   end
 end
 

@@ -19,7 +19,7 @@ class EventBroadcaster
         end
       end
     end
-    STDERR.puts "[EventBroadcaster] Started"
+    Log.for("quickheadlines.websocket").info { "EventBroadcaster started" }
   end
 
   def self.notify_feed_update(timestamp : Int64) : Nil
@@ -30,13 +30,13 @@ class EventBroadcaster
         PROCESSED_EVENTS.add(1)
       when timeout(10.milliseconds)
         DROPPED_EVENTS.add(1)
-        STDERR.puts "[EventBroadcaster] Channel full, dropping event (buffer size: 100)"
+        Log.for("quickheadlines.websocket").warn { "Channel full, dropping event (buffer size: 100)" }
       end
     rescue Channel::ClosedError
-      STDERR.puts "[EventBroadcaster] Channel closed, cannot send update"
+      Log.for("quickheadlines.websocket").error { "Channel closed, cannot send update" }
     rescue ex
       DROPPED_EVENTS.add(1)
-      STDERR.puts "[EventBroadcaster] Channel error, event dropped: #{ex.class}"
+      Log.for("quickheadlines.websocket").error(exception: ex) { "Channel error, event dropped: #{ex.class}" }
     end
   end
 

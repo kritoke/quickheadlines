@@ -288,11 +288,7 @@ module Api
 
     limit = display_item_limit || 20
 
-    sorted_items = feed.items.sort_by do |item|
-      item.pub_date.try(&.to_unix) || Int64::MIN
-    end.reverse!
-
-    displayed_items = sorted_items.first(limit)
+    displayed_items = feed.items.first(limit)
 
     items_response = displayed_items.map do |item|
       ItemResponse.new(

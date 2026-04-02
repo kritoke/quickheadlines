@@ -15,7 +15,7 @@ module HeaderColorsRepository
 
       if existing.nil?
         all_urls = @db.query_all("SELECT url FROM feeds LIMIT 10", as: String)
-        STDERR.puts "[#{Time.local}] Warning: Feed '#{feed_url}' not found in database. Sample DB URLs: #{all_urls.join(", ")}"
+        Log.for("quickheadlines.storage").warn { "Feed '#{feed_url}' not found in database. Sample DB URLs: #{all_urls.join(", ")}" }
         return
       end
 
@@ -40,10 +40,10 @@ module HeaderColorsRepository
           query = "UPDATE feeds SET " + updates.join(", ") + " WHERE url = ?"
           values << feed_url
           @db.exec(query, args: values)
-          STDERR.puts "[#{Time.local}] Saved extracted header colors for #{feed_url}: bg=#{bg_color}, text=#{text_color}"
+          Log.for("quickheadlines.storage").debug { "Saved extracted header colors for #{feed_url}: bg=#{bg_color}, text=#{text_color}" }
         end
       else
-        STDERR.puts "[#{Time.local}] Skipped header colors for #{feed_url}: already set"
+        Log.for("quickheadlines.storage").debug { "Skipped header colors for #{feed_url}: already set" }
       end
     end
   end
@@ -68,16 +68,16 @@ module HeaderColorsRepository
       end
 
       unless existing
-        STDERR.puts "[#{Time.local}] Warning: Cannot save header_theme_colors - feed not found: #{feed_url}"
+        Log.for("quickheadlines.storage").warn { "Cannot save header_theme_colors - feed not found: #{feed_url}" }
         return
       end
 
       feed_id = existing
       begin
         @db.exec("UPDATE feeds SET header_theme_colors = ? WHERE id = ?", theme_json, feed_id)
-        STDERR.puts "[#{Time.local}] Saved header_theme_colors for #{feed_url}"
+        Log.for("quickheadlines.storage").debug { "Saved header_theme_colors for #{feed_url}" }
       rescue ex
-        STDERR.puts "[#{Time.local}] Error saving header_theme_colors for #{feed_url}: #{ex.message}"
+        Log.for("quickheadlines.storage").error(exception: ex) { "Error saving header_theme_colors for #{feed_url}" }
       end
     end
   end

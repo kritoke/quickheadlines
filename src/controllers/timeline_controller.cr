@@ -47,7 +47,7 @@ class QuickHeadlines::Controllers::TimelineController < QuickHeadlines::Controll
             refresh_all(config)
           end
         rescue ex
-          STDERR.puts "[Timeline] Background refresh error: #{ex.message}"
+          Log.for("quickheadlines.feed").error(exception: ex) { "Background refresh error" }
         end
       end
     end

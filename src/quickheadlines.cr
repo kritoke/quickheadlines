@@ -1,6 +1,16 @@
 require "./application"
 require "./websocket"
 
+require "log"
+
+Log.setup do |builder|
+  builder.bind "*", Log::Severity::Info, Log::IOBackend.new
+end
+
+module QuickHeadlines
+  Log = ::Log.for("quickheadlines")
+end
+
 class ClientIPHandler
   include HTTP::Handler
 
@@ -18,7 +28,7 @@ end
 begin
   config = QuickHeadlines::Application.initial_config
   if config.nil?
-    STDERR.puts "[ERROR] Configuration not loaded - check feeds.yml"
+    Log.for("quickheadlines.app").fatal { "[ERROR] Configuration not loaded - check feeds.yml" }
     exit 1
   end
   port = config.server_port
@@ -48,10 +58,10 @@ begin
     end
   end
   handlers << ws_handler
-  STDERR.puts "[WebSocket] Enabled - clients can connect to ws://host/api/ws"
+  Log.for("quickheadlines.websocket").info { "Enabled - clients can connect to ws://host/api/ws" }
 
   ATH.run(host: "0.0.0.0", port: port, prepend_handlers: handlers)
 rescue ex
-  STDERR.puts "[ERROR] Failed to start server: #{ex.message}"
+  Log.for("quickheadlines.app").fatal(exception: ex) { "Failed to start server" }
   exit 1
 end

@@ -4,44 +4,6 @@ record Item, title : String, link : String, pub_date : Time?, version : String? 
 # Add header_theme_colors to TimelineItem so timeline responses can include theme-aware JSON
 record TimelineItem, item : Item, feed_title : String, feed_url : String, feed_link : String, favicon : String?, favicon_data : String?, header_color : String?, header_text_color : String?, header_theme_colors : String?
 
-# Extended TimelineItem with cluster information for story grouping
-record ClusteredTimelineItem,
-  item : Item,
-  feed_title : String,
-  feed_url : String,
-  feed_link : String,
-  favicon : String?,
-  favicon_data : String?,
-  header_color : String?,
-  header_text_color : String?,
-  header_theme_colors : String?,
-  cluster_id : Int64?,
-  is_representative : Bool,
-  cluster_size : Int32?
-
-# Helper to create ClusteredTimelineItem from TimelineItem
-def to_clustered(item : TimelineItem, cluster_id : Int64?, is_representative : Bool, cluster_size : Int32?) : ClusteredTimelineItem
-  ClusteredTimelineItem.new(
-    item.item,
-    item.feed_title,
-    item.feed_url,
-    item.feed_link,
-    item.favicon,
-    item.favicon_data,
-    item.header_color,
-    item.header_text_color,
-    item.header_theme_colors,
-    cluster_id,
-    is_representative,
-    cluster_size
-  )
-end
-
-# Story grouping result
-record StoryGroup,
-  representative : ClusteredTimelineItem,
-  others : Array(ClusteredTimelineItem)
-
 record FeedData,
   title : String, url : String, site_link : String,
   header_color : String?, header_text_color : String?,
@@ -103,6 +65,8 @@ module StateStore
     refreshing: false
   )
   @@mutex = Mutex.new
+  @@clustering_mutex = Mutex.new
+  @@clustering_start_time : Time?
 
   def self.get : AppStateSnapshot
     @@mutex.synchronize { @@current }
@@ -145,6 +109,24 @@ module StateStore
 
   def self.clustering=(value : Bool)
     update(&.copy_with(clustering: value))
+    unless value
+      @@clustering_start_time = nil
+    end
+  end
+
+  def self.start_clustering_if_idle : Bool
+    @@clustering_mutex.synchronize do
+      if @@current.clustering
+        return false
+      end
+      @@current = @@current.copy_with(clustering: true)
+      @@clustering_start_time = Time.utc
+      true
+    end
+  end
+
+  def self.clustering_start_time : Time?
+    @@clustering_start_time
   end
 
   def self.refreshing?
@@ -172,64 +154,6 @@ module StateStore
         refreshing: false
       )
     end
-  end
-
-  def self.feeds_for_tab_impl(tab_name : String) : Array(FeedData)
-    tabs.find { |tab| tab.name.downcase == tab_name.downcase }.try(&.feeds) || [] of FeedData
-  end
-
-  def self.all_timeline_items_impl : Array(TimelineItem)
-    items = [] of TimelineItem
-
-    feeds.each do |feed|
-      feed.items.each do |item|
-        items << TimelineItem.new(
-          item,
-          feed.title,
-          feed.url,
-          feed.site_link,
-          feed.favicon,
-          feed.favicon_data,
-          feed.header_color,
-          feed.header_text_color,
-          feed.header_theme_colors
-        )
-      end
-    end
-
-    tabs.each do |tab|
-      tab.feeds.each do |feed|
-        feed.items.each do |item|
-          items << TimelineItem.new(
-            item,
-            feed.title,
-            feed.url,
-            feed.site_link,
-            feed.favicon,
-            feed.favicon_data,
-            feed.header_color,
-            feed.header_text_color,
-            feed.header_theme_colors
-          )
-        end
-      end
-    end
-
-    items.sort! do |left, right|
-      date_left = left.item.pub_date
-      date_right = right.item.pub_date
-      if date_left && date_right
-        date_right <=> date_left
-      elsif date_left
-        -1
-      elsif date_right
-        1
-      else
-        0
-      end
-    end
-
-    items
   end
 end
 

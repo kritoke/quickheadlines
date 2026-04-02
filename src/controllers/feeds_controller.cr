@@ -173,7 +173,7 @@ class QuickHeadlines::Controllers::FeedsController < QuickHeadlines::Controllers
     body_io = request.body
     return ATH::Response.new("Missing request body", 400) if body_io.nil?
 
-    body = JSON.parse(body_io.gets_to_end)
+    body = JSON.parse(read_body_safe(body_io))
     feed_url = body["feed_url"]?.try(&.as_s?)
     color = body["color"]?.try(&.as_s?)
     text_color = body["text_color"]?.try(&.as_s?)
@@ -196,8 +196,10 @@ class QuickHeadlines::Controllers::FeedsController < QuickHeadlines::Controllers
 
     cache.update_header_colors(db_url, color, text_color)
     ATH::Response.new("OK", 200)
+  rescue ex : IO::EOFError
+    ATH::Response.new("Request body too large", 413, HTTP::Headers{"content-type" => "text/plain"})
   rescue ex
-    STDERR.puts "[FeedsController] Header color save error: #{ex.message}"
+    Log.for("quickheadlines.http").error(exception: ex) { "Header color save error" }
     ATH::Response.new("Internal server error", 500)
   end
 

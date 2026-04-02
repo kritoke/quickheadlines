@@ -14,7 +14,7 @@ def parse_feed(io : IO, limit : Int32) : {site_link: String?, items: Array(Item)
 
   # If feed is too large, log and return empty
   if bytes_copied >= MAX_FEED_SIZE
-    STDERR.puts "[WARN] Feed too large (>5MB), skipping parsing"
+    Log.for("quickheadlines.feed").warn { "Feed too large (>5MB), skipping parsing" }
     return {site_link: "#", items: [] of Item, favicon: nil}
   end
 
@@ -26,7 +26,7 @@ def parse_feed(io : IO, limit : Int32) : {site_link: String?, items: Array(Item)
 
     # Validate XML structure
     unless xml.root
-      STDERR.puts "[WARN] Feed has no root element, skipping"
+      Log.for("quickheadlines.feed").warn { "Feed has no root element, skipping" }
       return {site_link: "#", items: [] of Item, favicon: nil}
     end
 
@@ -36,11 +36,10 @@ def parse_feed(io : IO, limit : Int32) : {site_link: String?, items: Array(Item)
     return atom unless atom[:items].empty?
     {site_link: "#", items: [] of Item, favicon: nil}
   rescue ex : XML::Error
-    STDERR.puts "[ERROR] XML parsing error: #{ex.message}"
+    Log.for("quickheadlines.feed").error(exception: ex) { "XML parsing error" }
     {site_link: "#", items: [] of Item, favicon: nil}
   rescue ex : Exception
-    STDERR.puts "[ERROR] Unexpected error parsing feed: #{ex.class} - #{ex.message}"
-    STDERR.puts ex.backtrace.join("\n") if ex.backtrace
+    Log.for("quickheadlines.feed").error(exception: ex) { "Unexpected error parsing feed: #{ex.class}" }
     {site_link: "#", items: [] of Item, favicon: nil}
   end
 end

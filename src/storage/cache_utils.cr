@@ -96,12 +96,12 @@ def log_db_size(db_path : String, context : String = "")
   size_str = format_bytes(size)
   context_msg = context.empty? ? "" : " (#{context})"
 
-  STDERR.puts "[#{Time.local}] Database size: #{size_str}#{context_msg}"
+  Log.for("quickheadlines.storage").info { "Database size: #{size_str}#{context_msg}" }
 
   if size > Constants::DB_SIZE_HARD_LIMIT
-    STDERR.puts "[Cache WARNING] Database exceeds hard limit (#{format_bytes(Constants::DB_SIZE_HARD_LIMIT)})"
+    Log.for("quickheadlines.storage").warn { "Database exceeds hard limit (#{format_bytes(Constants::DB_SIZE_HARD_LIMIT)})" }
   elsif size > Constants::DB_SIZE_WARNING_THRESHOLD
-    STDERR.puts "[Cache WARNING] Database exceeds warning threshold (#{format_bytes(Constants::DB_SIZE_WARNING_THRESHOLD)})"
+    Log.for("quickheadlines.storage").warn { "Database exceeds warning threshold (#{format_bytes(Constants::DB_SIZE_WARNING_THRESHOLD)})" }
   end
 end
 
@@ -109,17 +109,17 @@ def ensure_cache_dir(cache_dir : String)
   unless Dir.exists?(cache_dir)
     begin
       Dir.mkdir_p(cache_dir)
-      STDERR.puts "[#{Time.local}] Created cache directory: #{cache_dir}"
+      Log.for("quickheadlines.storage").info { "Created cache directory: #{cache_dir}" }
     rescue ex : Exception
-      STDERR.puts "Error: Cannot create cache directory '#{cache_dir}': #{ex.message}"
+      Log.for("quickheadlines.storage").error(exception: ex) { "Cannot create cache directory '#{cache_dir}'" }
       exit 1
     rescue
-      STDERR.puts "Error: Cannot create cache directory '#{cache_dir}': Permission denied"
-      STDERR.puts ""
-      STDERR.puts "Solutions:"
-      STDERR.puts "  1. Set QUICKHEADLINES_CACHE_DIR to a writable location"
-      STDERR.puts "  2. Add 'cache_dir: /path/to/cache' to your feeds.yml"
-      STDERR.puts "  3. Run in a directory where you have write permissions"
+      Log.for("quickheadlines.storage").fatal { "Cannot create cache directory '#{cache_dir}': Permission denied" }
+      Log.for("quickheadlines.storage").fatal { "" }
+      Log.for("quickheadlines.storage").fatal { "Solutions:" }
+      Log.for("quickheadlines.storage").fatal { "  1. Set QUICKHEADLINES_CACHE_DIR to a writable location" }
+      Log.for("quickheadlines.storage").fatal { "  2. Add 'cache_dir: /path/to/cache' to your feeds.yml" }
+      Log.for("quickheadlines.storage").fatal { "  3. Run in a directory where you have write permissions" }
       exit 1
     end
   end

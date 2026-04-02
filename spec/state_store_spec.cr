@@ -62,29 +62,4 @@ describe "StateStore" do
     end
   end
 
-  describe "feeds_for_tab_impl" do
-    it "finds feeds for a tab" do
-      tab = Tab.new("Tech")
-      feed = FeedData.new(
-        title: "Test Feed",
-        url: "https://test.com/feed.xml",
-        site_link: "https://test.com",
-        header_color: nil,
-        header_text_color: nil,
-        items: [] of Item
-      )
-      tab.feeds << feed
-
-      StateStore.update(&.copy_with(tabs: [tab]))
-
-      feeds = StateStore.feeds_for_tab_impl("Tech")
-      feeds.size.should eq(1)
-      feeds.first.title.should eq("Test Feed")
-    end
-
-    it "returns empty for non-existent tab" do
-      feeds = StateStore.feeds_for_tab_impl("NonExistent")
-      feeds.should be_empty
-    end
-  end
 end

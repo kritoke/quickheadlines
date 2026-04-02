@@ -56,11 +56,11 @@ class QuickHeadlines::Services::ClusteringService
       cluster_items = cache.get_cluster_items(best_match)
       cluster_id = cluster_items.any? { |id| id != best_match } ? cluster_items.first : best_match
       cache.assign_cluster(item_id, cluster_id)
-      STDERR.puts "[Clustering] Clustered '#{title[0...50]}...' with '#{best_title[0...50]}...'" if ENV["DEBUG_CLUSTERING"]?
+      Log.for("quickheadlines.clustering").debug { "Clustered '#{title[0...50]}...' with '#{best_title[0...50]}...'" } if ENV["DEBUG_CLUSTERING"]?
       cluster_id
     else
       cache.assign_cluster(item_id, item_id)
-      STDERR.puts "[Clustering] Created new cluster for '#{title[0...50]}...'" if ENV["DEBUG_CLUSTERING"]?
+      Log.for("quickheadlines.clustering").debug { "Created new cluster for '#{title[0...50]}...'" } if ENV["DEBUG_CLUSTERING"]?
       item_id
     end
   end
@@ -86,7 +86,7 @@ class QuickHeadlines::Services::ClusteringService
 
     best_match, best_similarity, best_title, _feed_id = find_best_cluster_match(candidates, item_id, title_set, cache, item_feed_id)
 
-    STDERR.puts "[Clustering] Best match similarity: #{best_similarity.round(2)} (threshold: #{threshold})" if ENV["DEBUG_CLUSTERING"]?
+    Log.for("quickheadlines.clustering").debug { "Best match similarity: #{best_similarity.round(2)} (threshold: #{threshold})" } if ENV["DEBUG_CLUSTERING"]?
 
     assign_item_to_cluster(item_id, best_match, best_similarity, best_title, threshold, title, cache)
   end
@@ -96,9 +96,8 @@ class QuickHeadlines::Services::ClusteringService
   end
 
   def recluster_all(limit : Int32 = 5000, threshold : Float64 = 0.35) : Int32
-    # Prevent concurrent clustering runs
-    if StateStore.clustering?
-      STDERR.puts "[#{Time.local}] Clustering already in progress, skipping recluster_all"
+    unless StateStore.start_clustering_if_idle
+      Log.for("quickheadlines.clustering").info { "Clustering already in progress, skipping recluster_all" }
       return 0
     end
 
@@ -117,20 +116,19 @@ class QuickHeadlines::Services::ClusteringService
       end
     end
 
-    STDERR.puts "[#{Time.local}] Found #{items.size} items to re-cluster (threshold: #{threshold})"
+    Log.for("quickheadlines.clustering").info { "Found #{items.size} items to re-cluster (threshold: #{threshold})" }
 
     processed = 0
-    StateStore.clustering = true
     begin
       items.each do |item|
         next if item[:title].empty?
         compute_cluster_for_item(item[:id], item[:title], FeedCache.instance, item[:feed_id], threshold)
         processed += 1
         if processed % 50 == 0
-          STDERR.puts "[#{Time.local}] Processed #{processed} items..."
+          Log.for("quickheadlines.clustering").debug { "Processed #{processed} items..." }
         end
       end
-      STDERR.puts "[#{Time.local}] Re-clustering complete: #{processed} items processed"
+      Log.for("quickheadlines.clustering").info { "Re-clustering complete: #{processed} items processed" }
     ensure
       StateStore.clustering = false
     end
@@ -143,9 +141,8 @@ class QuickHeadlines::Services::ClusteringService
   end
 
   def recluster_with_lsh(cache : FeedCache, limit : Int32 = 5000, threshold : Float64 = 0.35, bands : Int32 = 20) : Int32
-    # Prevent concurrent clustering runs
-    if StateStore.clustering?
-      STDERR.puts "[#{Time.local}] Clustering already in progress, skipping recluster_with_lsh"
+    unless StateStore.start_clustering_if_idle
+      Log.for("quickheadlines.clustering").info { "Clustering already in progress, skipping recluster_with_lsh" }
       return 0
     end
 
@@ -160,14 +157,13 @@ class QuickHeadlines::Services::ClusteringService
       end
     end
 
-    STDERR.puts "[#{Time.local}] Found #{items.size} items to re-cluster with LSH (threshold: #{threshold}, bands: #{bands})"
+    Log.for("quickheadlines.clustering").info { "Found #{items.size} items to re-cluster with LSH (threshold: #{threshold}, bands: #{bands})" }
 
-    StateStore.clustering = true
     begin
       rep_map = ClusteringEngine.cluster_items(items, threshold, bands)
       cache.assign_clusters_bulk(rep_map)
       processed = items.count { |i| ClusteringEngine.can_cluster?(i.title) }
-      STDERR.puts "[#{Time.local}] Re-clustering with LSH complete: #{processed} items clustered into #{rep_map.size} groups"
+      Log.for("quickheadlines.clustering").info { "Re-clustering with LSH complete: #{processed} items clustered into #{rep_map.size} groups" }
     ensure
       StateStore.clustering = false
     end

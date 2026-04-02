@@ -51,7 +51,7 @@ class FeedCache
     end
 
     create_schema(@db, @db_path)
-    STDERR.puts "[#{Time.local}] Database initialized: #{@db_path}"
+    Log.for("quickheadlines.storage").info { "Database initialized: #{@db_path}" }
 
     log_db_size(@db_path, "on startup")
   end
@@ -103,15 +103,7 @@ class FeedCache
   end
 
   def entries : Hash(String, FeedData)
-    @mutex.synchronize do
-      urls = {} of String => FeedData
-      feed_repository.find_all_urls.each do |url|
-        if feed = feed_repository.find_with_items(url)
-          urls[url] = feed
-        end
-      end
-      urls
-    end
+    feed_repository.find_all_feeds_with_items
   end
 
   def ensure_indexes
@@ -128,7 +120,7 @@ class FeedCache
       @db.exec("CREATE INDEX IF NOT EXISTS idx_items_feed_timeline ON items(feed_id, pub_date DESC, id DESC)")
     end
   rescue ex
-    STDERR.puts "[#{Time.local}] Warning: ensure_indexes failed: #{ex.message}"
+    Log.for("quickheadlines.storage").warn { "ensure_indexes failed: #{ex.message}" }
   end
 
   def clear_all
@@ -136,7 +128,7 @@ class FeedCache
       @db.exec("DELETE FROM items")
       @db.exec("DELETE FROM feeds")
       @db.exec("DELETE FROM lsh_bands")
-      STDERR.puts "[#{Time.local}] Cleared all cached data"
+      Log.for("quickheadlines.storage").info { "Cleared all cached data" }
     end
   end
 
@@ -164,11 +156,11 @@ def load_feed_cache(config : Config?, db_service : DatabaseService?) : FeedCache
 
     case health_status
     when DbHealthStatus::Corrupted
-      STDERR.puts "[ERROR] Database corruption detected, attempting repair..."
+      Log.for("quickheadlines.storage").error { "Database corruption detected, attempting repair..." }
       repair_result = repair_database(config)
 
       if repair_result.status == DbHealthStatus::Repaired
-        STDERR.puts "[#{Time.local}] Database was previously repaired"
+        Log.for("quickheadlines.storage").info { "Database was previously repaired" }
       end
     end
   end
@@ -212,7 +204,7 @@ def save_feed_cache(cache : FeedCache, retention_hours : Int32 = Constants::CACH
     begin
       cache.vacuum
     rescue ex
-      STDERR.puts "[#{Time.local}] Warning: vacuum failed: #{ex.message}"
+      Log.for("quickheadlines.storage").warn { "vacuum failed: #{ex.message}" }
     end
   end
 

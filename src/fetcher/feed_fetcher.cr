@@ -205,11 +205,11 @@ class FeedFetcher
     end
 
     if cached_feeds.empty? && cached_tabs.all?(&.feeds.empty?)
-      STDERR.puts "[#{Time.local}] load_feeds_from_cache: no cached data found"
+      Log.for("quickheadlines.feed").debug { "load_feeds_from_cache: no cached data found" }
       return false
     end
 
-    STDERR.puts "[#{Time.local}] load_feeds_from_cache: loaded #{cached_feeds.size} feeds and #{cached_tabs.size} tabs from cache"
+    Log.for("quickheadlines.feed").debug { "load_feeds_from_cache: loaded #{cached_feeds.size} feeds and #{cached_tabs.size} tabs from cache" }
     true
   end
 
@@ -217,7 +217,7 @@ class FeedFetcher
   def build_error_feed_data(feed : Feed, message : String) : FeedData
     site_link = feed.url
 
-    STDERR.puts "[#{Time.local}] [FEED ERROR] #{feed.title} (#{feed.url}) - #{message}"
+    Log.for("quickheadlines.feed").warn { "[FEED ERROR] #{feed.title} (#{feed.url}) - #{message}" }
 
     favicon, favicon_data = VugAdapter.get_favicon(site_link, nil, nil, nil)
 

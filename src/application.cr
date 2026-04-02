@@ -55,13 +55,13 @@ end
 begin
   config_result = load_config_with_validation(QuickHeadlines::CONFIG_PATH)
   unless config_result.success
-    STDERR.puts "\n[ERROR] Failed to load configuration from feeds.yml:"
-    STDERR.puts "  #{config_result.error_message}"
+    Log.for("quickheadlines.app").fatal { "\nFailed to load configuration from feeds.yml:" }
+    Log.for("quickheadlines.app").fatal { "  #{config_result.error_message}" }
     if line = config_result.error_line
-      STDERR.puts "  Line: #{line}, Column: #{config_result.error_column || "unknown"}"
+      Log.for("quickheadlines.app").fatal { "  Line: #{line}, Column: #{config_result.error_column || "unknown"}" }
     end
     if suggestion = config_result.suggestion
-      STDERR.puts "  Suggestion: #{suggestion}"
+      Log.for("quickheadlines.app").fatal { "  Suggestion: #{suggestion}" }
     end
     exit 1
   end
@@ -71,8 +71,8 @@ begin
   begin
     validate_feed_urls!(config)
   rescue ex : ConfigValidationError
-    STDERR.puts "\n[ERROR] Feed URL validation failed:"
-    STDERR.puts ex.message
+    Log.for("quickheadlines.app").fatal { "\nFeed URL validation failed:" }
+    Log.for("quickheadlines.app").fatal { ex.message.to_s }
     exit 1
   end
 
@@ -83,7 +83,6 @@ begin
   bootstrap.start_background_tasks
   bootstrap.verify_feeds_loaded
 rescue ex : Exception
-  STDERR.puts "[ERROR] Failed to initialize application: #{ex.message}"
-  STDERR.puts ex.backtrace.join("\n")
+  Log.for("quickheadlines.app").fatal(exception: ex) { "Failed to initialize application" }
   exit 1
 end

@@ -15,7 +15,7 @@ module CleanupRepository
         result = @db.exec("DELETE FROM feeds WHERE last_fetched < ?", cutoff)
       end
       deleted_count = result.rows_affected
-      STDERR.puts "[#{Time.local}] Cleaned up #{deleted_count} old feeds (older than #{retention_hours}h)" if deleted_count > 0
+      Log.for("quickheadlines.storage").debug { "Cleaned up #{deleted_count} old feeds (older than #{retention_hours}h)" } if deleted_count > 0
 
       log_db_size(@db_path, "after cleanup")
     end
@@ -29,14 +29,14 @@ module CleanupRepository
       deleted_count = result.rows_affected
 
       if deleted_count > 0
-        STDERR.puts "[#{Time.local}] Cleaned up #{deleted_count} old articles (older than #{retention_days} days)"
+        Log.for("quickheadlines.storage").debug { "Cleaned up #{deleted_count} old articles (older than #{retention_days} days)" }
       end
 
       result = @db.exec("DELETE FROM items WHERE feed_id NOT IN (SELECT id FROM feeds)")
       orphaned_count = result.rows_affected
 
       if orphaned_count > 0
-        STDERR.puts "[#{Time.local}] Cleaned up #{orphaned_count} orphaned items"
+        Log.for("quickheadlines.storage").debug { "Cleaned up #{orphaned_count} orphaned items" }
       end
     end
   end
@@ -48,25 +48,25 @@ module CleanupRepository
       current_size_mb = File.size(@db_path).to_f64 / (1024 * 1024)
 
       if current_size_mb > max_size_mb
-        STDERR.puts "[#{Time.local}] Database size (#{current_size_mb.round(2)}MB) exceeds limit (#{max_size_mb}MB), running aggressive cleanup..."
+        Log.for("quickheadlines.storage").warn { "Database size (#{current_size_mb.round(2)}MB) exceeds limit (#{max_size_mb}MB), running aggressive cleanup..." }
 
         cutoff = (Time.utc - 3.days).to_s(Constants::DB_TIME_FORMAT)
         result = @db.exec("DELETE FROM items WHERE pub_date < ? AND cluster_id IS NULL", cutoff)
         deleted_count = result.rows_affected
-        STDERR.puts "[#{Time.local}] Aggressive cleanup deleted #{deleted_count} old articles"
+        Log.for("quickheadlines.storage").info { "Aggressive cleanup deleted #{deleted_count} old articles" }
 
         if File.size(@db_path).to_f64 / (1024 * 1024) > max_size_mb
           cutoff = (Time.utc - 1.day).to_s(Constants::DB_TIME_FORMAT)
           result = @db.exec("DELETE FROM items WHERE pub_date < ? AND cluster_id IS NULL", cutoff)
           deleted_count = result.rows_affected
-          STDERR.puts "[#{Time.local}] Very aggressive cleanup deleted #{deleted_count} recent-old articles"
+          Log.for("quickheadlines.storage").info { "Very aggressive cleanup deleted #{deleted_count} recent-old articles" }
         end
 
         begin
           vacuum
-          STDERR.puts "[#{Time.local}] Vacuumed database after size cleanup"
+          Log.for("quickheadlines.storage").info { "Vacuumed database after size cleanup" }
         rescue ex
-          STDERR.puts "[#{Time.local}] Vacuum failed: #{ex.message}"
+          Log.for("quickheadlines.storage").error(exception: ex) { "Vacuum failed" }
         end
       end
     end
@@ -75,11 +75,11 @@ module CleanupRepository
   def vacuum
     @mutex.synchronize do
       begin
-        STDERR.puts "[#{Time.local}] Running VACUUM on database"
+        Log.for("quickheadlines.storage").debug { "Running VACUUM on database" }
         @db.exec("VACUUM")
-        STDERR.puts "[#{Time.local}] VACUUM completed"
+        Log.for("quickheadlines.storage").debug { "VACUUM completed" }
       rescue ex
-        STDERR.puts "[#{Time.local}] VACUUM failed: #{ex.message}"
+        Log.for("quickheadlines.storage").error(exception: ex) { "VACUUM failed" }
       end
     end
   end
@@ -108,7 +108,7 @@ module CleanupRepository
 
   def normalize_pub_dates
     @mutex.synchronize do
-      STDERR.puts "[#{Time.local}] Normalizing pub_date values..."
+      Log.for("quickheadlines.storage").debug { "Normalizing pub_date values..." }
 
       rows = [] of {Int64, String?}
       @db.query("SELECT id, pub_date FROM items WHERE pub_date IS NOT NULL") do |result_set|
@@ -134,9 +134,9 @@ module CleanupRepository
         end
       end
 
-      STDERR.puts "[#{Time.local}] Normalized #{updated} pub_date rows"
+      Log.for("quickheadlines.storage").debug { "Normalized #{updated} pub_date rows" }
     end
   rescue ex
-    STDERR.puts "[#{Time.local}] Error normalizing pub_date: #{ex.message}"
+    Log.for("quickheadlines.storage").error(exception: ex) { "Error normalizing pub_date" }
   end
 end

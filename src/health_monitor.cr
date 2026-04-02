@@ -2,19 +2,18 @@ require "time"
 
 module HealthMonitor
   def self.log_error(context : String, exception : Exception)
-    STDERR.puts "[#{Time.local}] ERROR in #{context}: #{exception.class} - #{exception.message}"
-    STDERR.puts exception.backtrace.first(10).join("\n")
+    Log.for("quickheadlines.health").error(exception: exception) { "ERROR in #{context}: #{exception.class}" }
   end
 
   def self.log_error(context : String, error_message : String)
-    STDERR.puts "[#{Time.local}] ERROR in #{context}: #{error_message}"
+    Log.for("quickheadlines.health").error { "ERROR in #{context}: #{error_message}" }
   end
 
   def self.log_warning(message : String)
-    STDERR.puts "[#{Time.local}] WARNING: #{message}"
+    Log.for("quickheadlines.health").warn { "WARNING: #{message}" }
   end
 
   def self.log_info(message : String)
-    STDERR.puts "[#{Time.local}] INFO: #{message}"
+    Log.for("quickheadlines.health").info { "INFO: #{message}" }
   end
 end

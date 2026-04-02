@@ -45,14 +45,14 @@ class SocketManager
   def register(ws : HTTP::WebSocket, ip : String) : Bool
     @connections_mutex.synchronize do
       if @connections.size >= MAX_CONNECTIONS
-        STDERR.puts "[SocketManager] Connection rejected: max #{MAX_CONNECTIONS} connections reached"
+        Log.for("quickheadlines.websocket").warn { "Connection rejected: max #{MAX_CONNECTIONS} connections reached" }
         return false
       end
 
       @ip_mutex.synchronize do
         count = @ip_counts[ip]?
         if count && count >= MAX_CONNECTIONS_PER_IP
-          STDERR.puts "[SocketManager] Connection rejected: max #{MAX_CONNECTIONS_PER_IP} connections per IP (#{ip})"
+          Log.for("quickheadlines.websocket").warn { "Connection rejected: max #{MAX_CONNECTIONS_PER_IP} connections per IP (#{ip})" }
           return false
         end
         @ip_counts[ip] = (count || 0) + 1
@@ -69,7 +69,7 @@ class SocketManager
       @connections << connection
     end
 
-    STDERR.puts "[SocketManager] Client connected from #{ip}. Total: #{connection_count}"
+    Log.for("quickheadlines.websocket").info { "Client connected from #{ip}. Total: #{connection_count}" }
     true
   end
 
@@ -88,11 +88,11 @@ class SocketManager
         break
       rescue IO::TimeoutError
         @send_errors.add(1)
-        STDERR.puts "[SocketManager] Send timeout for #{connection.ip}"
+        Log.for("quickheadlines.websocket").warn { "Send timeout for #{connection.ip}" }
         break
       rescue ex
         @send_errors.add(1)
-        STDERR.puts "[SocketManager] Send error (#{ex.class}): #{ex.message}"
+        Log.for("quickheadlines.websocket").error(exception: ex) { "Send error (#{ex.class})" }
         break
       end
     end
@@ -113,7 +113,7 @@ class SocketManager
     @activity_mutex.synchronize do
       @last_activity.delete(connection.websocket)
     end
-    STDERR.puts "[SocketManager] Client disconnected from #{connection.ip}. Total: #{connection_count}"
+    Log.for("quickheadlines.websocket").info { "Client disconnected from #{connection.ip}. Total: #{connection_count}" }
   end
 
   private def decrement_ip_count(ip : String) : Nil
@@ -157,13 +157,13 @@ class SocketManager
           # Don't increment here - it will be counted in writer_fiber when actually sent
         when timeout(Constants::BROADCAST_TIMEOUT_MS.milliseconds)
           @messages_dropped.add(1)
-          STDERR.puts "[SocketManager] Dropped message for slow client: #{conn.ip}"
+          Log.for("quickheadlines.websocket").debug { "Dropped message for slow client: #{conn.ip}" }
         end
       rescue Channel::ClosedError
         @messages_dropped.add(1)
       rescue ex
         @send_errors.add(1)
-        STDERR.puts "[SocketManager] Broadcast error (#{ex.class}): #{ex.message}"
+        Log.for("quickheadlines.websocket").error(exception: ex) { "Broadcast error (#{ex.class})" }
       end
     end
   end
@@ -204,7 +204,7 @@ class SocketManager
           # Check if connection is stale (no activity for STALE_CONNECTION_AGE seconds)
           last_active = @activity_mutex.synchronize { @last_activity[conn.websocket]? }
           if last_active && (now - last_active).total_seconds > STALE_CONNECTION_AGE
-            STDERR.puts "[SocketManager] Stale connection detected: #{conn.ip} (inactive for #{((now - last_active).total_seconds).round(0)}s)"
+            Log.for("quickheadlines.websocket").debug { "Stale connection detected: #{conn.ip} (inactive for #{((now - last_active).total_seconds).round(0)}s)" }
             dead << conn
           end
         rescue
@@ -235,7 +235,7 @@ class SocketManager
       end
     end
 
-    STDERR.puts "[SocketManager] Janitor removed #{removed} dead connections"
+    Log.for("quickheadlines.websocket").info { "Janitor removed #{removed} dead connections" }
     removed
   end
 
