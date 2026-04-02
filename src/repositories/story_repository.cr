@@ -122,8 +122,8 @@ module QuickHeadlines::Repositories
       story
     end
 
-    def find_timeline_items(limit : Int32, offset : Int32, days_back : Int32?, allowed_feed_urls : Array(String) = [] of String) : Array(TimelineItem)
-      items = [] of TimelineItem
+    def find_timeline_items(limit : Int32, offset : Int32, days_back : Int32?, allowed_feed_urls : Array(String) = [] of String) : Array(QuickHeadlines::Domain::TimelineEntry)
+      items = [] of QuickHeadlines::Domain::TimelineEntry
 
       cutoff_clause = days_back ? "AND i.pub_date >= ?" : ""
       feed_filter_clause = build_feed_filter_clause(allowed_feed_urls)
@@ -195,7 +195,7 @@ module QuickHeadlines::Repositories
 
           pub_date = pub_date_str.try { |str| Time.parse(str, Constants::DB_TIME_FORMAT, Time::Location::UTC) }
 
-          items << TimelineItem.new(
+          items << QuickHeadlines::Domain::TimelineEntry.new(
             id: id,
             title: title,
             link: link,
@@ -302,40 +302,4 @@ module QuickHeadlines::Repositories
     end
   end
 
-  struct TimelineItem
-    property id : Int64
-    property title : String
-    property link : String
-    property pub_date : Time?
-    property feed_title : String
-    property feed_url : String
-    property feed_link : String
-    property favicon : String?
-    property header_color : String?
-    property header_text_color : String?
-    property cluster_id : Int64?
-    getter? representative : Bool
-    property cluster_size : Int32
-
-    def initialize(
-      @id,
-      @title,
-      @link,
-      @pub_date,
-      @feed_title,
-      @feed_url,
-      @feed_link,
-      @favicon,
-      @header_color,
-      @header_text_color,
-      @cluster_id,
-      @representative,
-      @cluster_size,
-    )
-    end
-
-    def representative? : Bool
-      @representative
-    end
-  end
 end

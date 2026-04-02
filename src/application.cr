@@ -18,6 +18,8 @@ require "./entities/story"
 require "./entities/cluster"
 require "./entities/feed"
 
+require "./domain/items"
+
 require "./services/clustering_service"
 require "./services/heat_map_service"
 require "./services/database_service"

@@ -30,7 +30,7 @@ module QuickHeadlines::Services
           header_color: item.header_color,
           header_text_color: item.header_text_color,
           cluster_id: item.cluster_id.try(&.to_s),
-          is_representative: item.representative?,
+          is_representative: item.representative,
           cluster_size: item.cluster_size
         )
       end
