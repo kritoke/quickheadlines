@@ -37,7 +37,7 @@ def get_cache_dir(config : Config?) : String
       Dir.mkdir_p(test_dir)
       File.delete(test_dir)
       return "/var/cache/quickheadlines"
-    rescue
+    rescue ex : File::Error
       # Not writable, fall through to other options
     end
   end
@@ -110,11 +110,8 @@ def ensure_cache_dir(cache_dir : String)
     begin
       Dir.mkdir_p(cache_dir)
       Log.for("quickheadlines.storage").info { "Created cache directory: #{cache_dir}" }
-    rescue ex : Exception
-      Log.for("quickheadlines.storage").error(exception: ex) { "Cannot create cache directory '#{cache_dir}'" }
-      exit 1
-    rescue
-      Log.for("quickheadlines.storage").fatal { "Cannot create cache directory '#{cache_dir}': Permission denied" }
+    rescue ex : File::Error
+      Log.for("quickheadlines.storage").fatal(exception: ex) { "Cannot create cache directory '#{cache_dir}': #{ex.message}" }
       Log.for("quickheadlines.storage").fatal { "" }
       Log.for("quickheadlines.storage").fatal { "Solutions:" }
       Log.for("quickheadlines.storage").fatal { "  1. Set QUICKHEADLINES_CACHE_DIR to a writable location" }

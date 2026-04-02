@@ -41,7 +41,7 @@ class QuickHeadlines::Controllers::ApiBaseController < Athena::Framework::Contro
 
     token = auth_header[7..-1]
     timing_safe_compare(secret, token)
-  rescue
+  rescue ex : Exception
     false
   end
 
@@ -83,7 +83,7 @@ class QuickHeadlines::Controllers::ApiBaseController < Athena::Framework::Contro
     return false if uri.port && uri.port != 443
 
     true
-  rescue
+  rescue ex : URI::Error
     false
   end
 

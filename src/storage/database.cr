@@ -153,7 +153,7 @@ def check_db_health(db_path : String) : DbHealthStatus
       if fk_result && !fk_result.empty?
         Log.for("quickheadlines.storage").warn { "Database has #{fk_result.size} foreign key violations" }
       end
-    rescue
+    rescue ex : DB::Error
     end
 
     feed_count = database.query_one("SELECT COUNT(*) FROM feeds", as: {Int64})
@@ -209,8 +209,8 @@ def repair_database(config : Config?, backup_path : String? = nil) : DbRepairRes
     begin
       File.rename(actual_backup_path, db_path) if File.exists?(actual_backup_path)
       Log.for("quickheadlines.storage").info { "Restored backup database" }
-    rescue
-      Log.for("quickheadlines.storage").error { "Failed to restore backup database" }
+    rescue ex : File::Error
+      Log.for("quickheadlines.storage").error(exception: ex) { "Failed to restore backup database" }
     end
     DbRepairResult.new(
       status: DbHealthStatus::Corrupted,

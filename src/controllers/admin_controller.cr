@@ -70,7 +70,7 @@ class QuickHeadlines::Controllers::AdminController < QuickHeadlines::Controllers
         end
       rescue ex : IO::EOFError
         return ATH::Response.new("Request body too large", 413, HTTP::Headers{"content-type" => "application/json"})
-      rescue
+      rescue ex : JSON::ParseException
       end
     end
 

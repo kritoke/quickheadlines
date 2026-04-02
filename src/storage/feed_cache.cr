@@ -39,7 +39,7 @@ class FeedCache
     unless @db_service
       @db_service = begin
         DatabaseService.instance
-      rescue
+      rescue ex : Exception
         nil
       end
     end

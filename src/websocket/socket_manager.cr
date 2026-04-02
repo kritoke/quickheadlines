@@ -99,7 +99,7 @@ class SocketManager
 
     begin
       connection.websocket.close
-    rescue
+    rescue ex : IO::Error
     end
     @closed_total.add(1)
     unregister_connection(connection)
@@ -136,7 +136,7 @@ class SocketManager
       idx = @connections.index { |conn| conn.websocket == ws }
       if idx
         connection_to_remove = @connections[idx]
-        connection_to_remove.outgoing.close rescue nil
+        connection_to_remove.outgoing.close rescue ex : Channel::ClosedError | IO::Error
         @connections.delete_at(idx)
       end
     end
@@ -161,7 +161,7 @@ class SocketManager
         end
       rescue Channel::ClosedError
         @messages_dropped.add(1)
-      rescue ex
+      rescue ex : IO::TimeoutError | IO::Error
         @send_errors.add(1)
         Log.for("quickheadlines.websocket").error(exception: ex) { "Broadcast error (#{ex.class})" }
       end
@@ -207,7 +207,7 @@ class SocketManager
             Log.for("quickheadlines.websocket").debug { "Stale connection detected: #{conn.ip} (inactive for #{((now - last_active).total_seconds).round(0)}s)" }
             dead << conn
           end
-        rescue
+        rescue ex : IO::Error
           dead << conn
         end
       end
@@ -220,7 +220,7 @@ class SocketManager
       begin
         conn.outgoing.close
         conn.websocket.close
-      rescue
+      rescue ex : Channel::ClosedError | IO::Error
       end
 
       @connections_mutex.synchronize do

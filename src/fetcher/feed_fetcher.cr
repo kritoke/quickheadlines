@@ -298,7 +298,7 @@ class FeedFetcher
         tmp.each do |k, v|
           parsed_text[k.to_s] = v.to_s
         end
-      rescue
+      rescue ex : JSON::ParseException | TypeCastError
         parsed_text = {"light" => text_val.to_s, "dark" => text_val.to_s}
       end
     end
@@ -314,7 +314,7 @@ class FeedFetcher
     elsif raw_bg.is_a?(JSON::Any)
       begin
         raw_bg.as_s
-      rescue
+      rescue ex : TypeCastError
         raw_bg.to_s
       end
     else

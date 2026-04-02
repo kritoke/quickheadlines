@@ -35,7 +35,7 @@ module FaviconStorage
         Dir.mkdir_p(test_dir)
         File.delete(test_dir)
         return "/var/cache/quickheadlines/favicons"
-      rescue
+      rescue ex : File::Error
       end
     end
 
@@ -82,7 +82,7 @@ module FaviconStorage
 
     hash_input = begin
       url[0..255]
-    rescue
+    rescue ex : IndexError
       url
     end
     hash = OpenSSL::Digest.new("SHA256").update(hash_input).final.hexstring

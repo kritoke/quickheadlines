@@ -86,7 +86,7 @@ module CleanupRepository
 
   private def try_parse_date_format(str : String, format : String) : Time?
     Time.parse(str, format, Time::Location::UTC)
-  rescue
+  rescue ex : Time::Format::Error
     nil
   end
 
