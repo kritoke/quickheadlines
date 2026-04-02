@@ -78,7 +78,7 @@ class QuickHeadlines::Controllers::ApiBaseController < Athena::Framework::Contro
     return false unless uri.host.is_a?(String) && !uri.host.to_s.empty?
 
     host = uri.host.as(String).downcase
-    return false unless Constants::ALLOWED_PROXY_DOMAINS.includes?(host)
+    return false unless QuickHeadlines::Constants::ALLOWED_PROXY_DOMAINS.includes?(host)
     return false if uri.user || uri.password
     return false if uri.port && uri.port != 443
 

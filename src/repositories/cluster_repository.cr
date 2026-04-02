@@ -58,7 +58,7 @@ module QuickHeadlines::Repositories
           favicon = rows.read(String?)
           header_color = rows.read(String?)
 
-          item_pub_date = item_pub_date_str.try { |str| Time.parse(str, Constants::DB_TIME_FORMAT, Time::Location::UTC) }
+          item_pub_date = item_pub_date_str.try { |str| Time.parse(str, QuickHeadlines::Constants::DB_TIME_FORMAT, Time::Location::UTC) }
 
           cluster_items[cluster_id] ||= [] of {id: Int64, title: String, link: String, pub_date: Time?, feed_url: String, feed_title: String, favicon: String?, header_color: String?}
           cluster_items[cluster_id] << {
@@ -138,7 +138,7 @@ module QuickHeadlines::Repositories
           favicon = rows.read(String?)
           header_color = rows.read(String?)
 
-          pub_date = pub_date_str.try { |str| Time.parse(str, Constants::DB_TIME_FORMAT, Time::Location::UTC) }
+          pub_date = pub_date_str.try { |str| Time.parse(str, QuickHeadlines::Constants::DB_TIME_FORMAT, Time::Location::UTC) }
 
           stories << QuickHeadlines::Entities::Story.new(
             id: id.to_s,

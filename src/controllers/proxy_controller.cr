@@ -14,8 +14,8 @@ class QuickHeadlines::Controllers::ProxyController < QuickHeadlines::Controllers
       return ATH::Response.new("Disallowed proxy domain", 403, HTTP::Headers{"content-type" => "text/plain"})
     end
 
-    if max_bytes > Constants::MAX_PROXY_IMAGE_BYTES
-      max_bytes = Constants::MAX_PROXY_IMAGE_BYTES
+    if max_bytes > QuickHeadlines::Constants::MAX_PROXY_IMAGE_BYTES
+      max_bytes = QuickHeadlines::Constants::MAX_PROXY_IMAGE_BYTES
     end
 
     ip = client_ip(request)

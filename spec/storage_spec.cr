@@ -41,16 +41,16 @@ describe "Storage" do
 
   describe "Constants" do
     it "has correct default cache retention" do
-      Constants::CACHE_RETENTION_HOURS.should eq(168)
+      QuickHeadlines::Constants::CACHE_RETENTION_HOURS.should eq(168)
     end
 
     it "has correct database size limits" do
-      Constants::DB_SIZE_WARNING_THRESHOLD.should eq(50 * 1024 * 1024)
-      Constants::DB_SIZE_HARD_LIMIT.should eq(100 * 1024 * 1024)
+      QuickHeadlines::Constants::DB_SIZE_WARNING_THRESHOLD.should eq(50 * 1024 * 1024)
+      QuickHeadlines::Constants::DB_SIZE_HARD_LIMIT.should eq(100 * 1024 * 1024)
     end
 
     it "has correct cache retention days" do
-      Constants::CACHE_RETENTION_DAYS.should eq(7)
+      QuickHeadlines::Constants::CACHE_RETENTION_DAYS.should eq(7)
     end
   end
 

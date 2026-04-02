@@ -155,7 +155,7 @@ class SocketManager
         select
         when conn.outgoing.send(message)
           # Don't increment here - it will be counted in writer_fiber when actually sent
-        when timeout(Constants::BROADCAST_TIMEOUT_MS.milliseconds)
+        when timeout(QuickHeadlines::Constants::BROADCAST_TIMEOUT_MS.milliseconds)
           @messages_dropped.add(1)
           Log.for("quickheadlines.websocket").debug { "Dropped message for slow client: #{conn.ip}" }
         end

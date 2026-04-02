@@ -108,7 +108,7 @@ module QuickHeadlines::Repositories
       )
 
       if existing.nil?
-        pub_date_str = story.pub_date.try(&.to_s(Constants::DB_TIME_FORMAT))
+        pub_date_str = story.pub_date.try(&.to_s(QuickHeadlines::Constants::DB_TIME_FORMAT))
 
         db.exec(
           "INSERT INTO items (feed_id, title, link, pub_date) VALUES (?, ?, ?, ?)",
@@ -193,7 +193,7 @@ module QuickHeadlines::Repositories
           is_representative = rows.read(Int32) == 1
           cluster_size = rows.read(Int32)
 
-          pub_date = pub_date_str.try { |str| Time.parse(str, Constants::DB_TIME_FORMAT, Time::Location::UTC) }
+          pub_date = pub_date_str.try { |str| Time.parse(str, QuickHeadlines::Constants::DB_TIME_FORMAT, Time::Location::UTC) }
 
           items << QuickHeadlines::Domain::TimelineEntry.new(
             id: id,
@@ -286,7 +286,7 @@ module QuickHeadlines::Repositories
     end
 
     private def build_story(id : Int64, title : String, link : String, pub_date_str : String?, feed_title : String, feed_url : String, feed_link : String?, favicon : String?, header_color : String?) : QuickHeadlines::Entities::Story
-      pub_date = pub_date_str.try { |str| Time.parse(str, Constants::DB_TIME_FORMAT, Time::Location::UTC) }
+      pub_date = pub_date_str.try { |str| Time.parse(str, QuickHeadlines::Constants::DB_TIME_FORMAT, Time::Location::UTC) }
       QuickHeadlines::Entities::Story.new(
         id: id.to_s,
         title: title,

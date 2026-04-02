@@ -59,7 +59,7 @@ module ClusteringRepository
             item_id,
             band_index,
             band_hash.to_s(16),
-            Time.utc.to_s(Constants::DB_TIME_FORMAT)
+            Time.utc.to_s(QuickHeadlines::Constants::DB_TIME_FORMAT)
           )
         end
         @db.exec("COMMIT")
@@ -236,7 +236,7 @@ module ClusteringRepository
   end
 
   def get_recent_items_for_clustering(hours_back : Int32 = 24, max_items : Int32 = 1000) : Array({id: Int64, title: String, link: String, pub_date: Time?, feed_url: String, feed_title: String, favicon: String?, header_color: String?})
-    cutoff = (Time.utc - hours_back.hours).to_s(Constants::DB_TIME_FORMAT)
+    cutoff = (Time.utc - hours_back.hours).to_s(QuickHeadlines::Constants::DB_TIME_FORMAT)
 
     items = [] of {id: Int64, title: String, link: String, pub_date: Time?, feed_url: String, feed_title: String, favicon: String?, header_color: String?}
 
@@ -261,7 +261,7 @@ module ClusteringRepository
         favicon = rows.read(String?)
         header_color = rows.read(String?)
 
-        pub_date = pub_date_str.try { |date_str| Time.parse(date_str, Constants::DB_TIME_FORMAT, Time::Location::UTC) }
+        pub_date = pub_date_str.try { |date_str| Time.parse(date_str, QuickHeadlines::Constants::DB_TIME_FORMAT, Time::Location::UTC) }
 
         items << {
           id:           id,
@@ -329,7 +329,7 @@ module ClusteringRepository
         favicon = rows.read(String?)
         header_color = rows.read(String?)
 
-        pub_date = pub_date_str.try { |date_str| Time.parse(date_str, Constants::DB_TIME_FORMAT, Time::Location::UTC) }
+        pub_date = pub_date_str.try { |date_str| Time.parse(date_str, QuickHeadlines::Constants::DB_TIME_FORMAT, Time::Location::UTC) }
 
         items << {
           id:           id,

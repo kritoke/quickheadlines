@@ -1,11 +1,11 @@
 require "../constants"
 
 module CleanupRepository
-  def cleanup_old_entries(retention_hours : Int32 = Constants::CACHE_RETENTION_HOURS, config_urls : Array(String)? = nil)
+  def cleanup_old_entries(retention_hours : Int32 = QuickHeadlines::Constants::CACHE_RETENTION_HOURS, config_urls : Array(String)? = nil)
     @mutex.synchronize do
       log_db_size(@db_path, "before cleanup")
 
-      cutoff = (Time.utc - retention_hours.hours).to_s(Constants::DB_TIME_FORMAT)
+      cutoff = (Time.utc - retention_hours.hours).to_s(QuickHeadlines::Constants::DB_TIME_FORMAT)
 
       if config_urls && !config_urls.empty?
         placeholders = Array.new(config_urls.size, "?").join(",")
@@ -21,9 +21,9 @@ module CleanupRepository
     end
   end
 
-  def cleanup_old_articles(retention_days : Int32 = Constants::CACHE_RETENTION_DAYS)
+  def cleanup_old_articles(retention_days : Int32 = QuickHeadlines::Constants::CACHE_RETENTION_DAYS)
     @mutex.synchronize do
-      cutoff = (Time.utc - retention_days.days).to_s(Constants::DB_TIME_FORMAT)
+      cutoff = (Time.utc - retention_days.days).to_s(QuickHeadlines::Constants::DB_TIME_FORMAT)
 
       result = @db.exec("DELETE FROM items WHERE pub_date < ? AND cluster_id IS NULL", cutoff)
       deleted_count = result.rows_affected
@@ -50,13 +50,13 @@ module CleanupRepository
       if current_size_mb > max_size_mb
         Log.for("quickheadlines.storage").warn { "Database size (#{current_size_mb.round(2)}MB) exceeds limit (#{max_size_mb}MB), running aggressive cleanup..." }
 
-        cutoff = (Time.utc - 3.days).to_s(Constants::DB_TIME_FORMAT)
+        cutoff = (Time.utc - 3.days).to_s(QuickHeadlines::Constants::DB_TIME_FORMAT)
         result = @db.exec("DELETE FROM items WHERE pub_date < ? AND cluster_id IS NULL", cutoff)
         deleted_count = result.rows_affected
         Log.for("quickheadlines.storage").info { "Aggressive cleanup deleted #{deleted_count} old articles" }
 
         if File.size(@db_path).to_f64 / (1024 * 1024) > max_size_mb
-          cutoff = (Time.utc - 1.day).to_s(Constants::DB_TIME_FORMAT)
+          cutoff = (Time.utc - 1.day).to_s(QuickHeadlines::Constants::DB_TIME_FORMAT)
           result = @db.exec("DELETE FROM items WHERE pub_date < ? AND cluster_id IS NULL", cutoff)
           deleted_count = result.rows_affected
           Log.for("quickheadlines.storage").info { "Very aggressive cleanup deleted #{deleted_count} recent-old articles" }
@@ -92,7 +92,7 @@ module CleanupRepository
 
   private def parse_date_with_formats(str : String) : Time?
     formats = [
-      Constants::DB_TIME_FORMAT,
+      QuickHeadlines::Constants::DB_TIME_FORMAT,
       "%Y-%m-%dT%H:%M:%S%z",
       "%Y-%m-%dT%H:%M:%SZ",
       "%a, %d %b %Y %H:%M:%S %z",
@@ -126,7 +126,7 @@ module CleanupRepository
         next if str =~ /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/
 
         if parsed = parse_date_with_formats(str)
-          formatted = parsed.to_s(Constants::DB_TIME_FORMAT)
+          formatted = parsed.to_s(QuickHeadlines::Constants::DB_TIME_FORMAT)
           if formatted != str
             @db.exec("UPDATE items SET pub_date = ? WHERE id = ?", formatted, id)
             updated += 1

@@ -94,7 +94,7 @@ module QuickHeadlines::Repositories
       comment_url = rows.read(String?)
       commentary_url = rows.read(String?)
 
-      pub_date = pub_date_str.try { |date_str| Time.parse(date_str, Constants::DB_TIME_FORMAT, Time::Location::UTC) }
+      pub_date = pub_date_str.try { |date_str| Time.parse(date_str, QuickHeadlines::Constants::DB_TIME_FORMAT, Time::Location::UTC) }
       Item.new(title, link, pub_date, version, comment_url, commentary_url)
     end
 
@@ -156,7 +156,7 @@ module QuickHeadlines::Repositories
           version = rows.read(String?)
           comment_url = rows.read(String?)
           commentary_url = rows.read(String?)
-          pub_date = pub_date_str.try { |date_str| Time.parse(date_str, Constants::DB_TIME_FORMAT, Time::Location::UTC) }
+          pub_date = pub_date_str.try { |date_str| Time.parse(date_str, QuickHeadlines::Constants::DB_TIME_FORMAT, Time::Location::UTC) }
           items_by_feed[feed_id] << Item.new(title, link, pub_date, version, comment_url, commentary_url)
         end
       end
@@ -179,13 +179,13 @@ module QuickHeadlines::Repositories
     def find_last_fetched_time(url : String) : Time?
       result = db.query_one?("SELECT last_fetched FROM feeds WHERE url = ?", url, as: String?)
       return unless result
-      Time.parse(result, Constants::DB_TIME_FORMAT, Time::Location::UTC)
+      Time.parse(result, QuickHeadlines::Constants::DB_TIME_FORMAT, Time::Location::UTC)
     end
 
     def find_last_fetched_time_result(url : String) : TimeResult
       result = db.query_one?("SELECT last_fetched FROM feeds WHERE url = ?", url, as: String?)
       return TimeResult.failure(RepositoryError::NotFound) unless result
-      TimeResult.success(Time.parse(result, Constants::DB_TIME_FORMAT, Time::Location::UTC))
+      TimeResult.success(Time.parse(result, QuickHeadlines::Constants::DB_TIME_FORMAT, Time::Location::UTC))
     rescue ex : DB::Error | Time::Format::Error
       TimeResult.failure(RepositoryError::DatabaseError)
     end
@@ -247,7 +247,7 @@ module QuickHeadlines::Repositories
           feed.header_text_color,
           feed.favicon,
           feed.favicon_data,
-          Time.utc.to_s(Constants::DB_TIME_FORMAT)
+          Time.utc.to_s(QuickHeadlines::Constants::DB_TIME_FORMAT)
         )
       end
 
@@ -257,7 +257,7 @@ module QuickHeadlines::Repositories
     def update_last_fetched(url : String, time : Time = Time.utc) : Nil
       db.exec(
         "UPDATE feeds SET last_fetched = ? WHERE url = ?",
-        time.to_s(Constants::DB_TIME_FORMAT),
+        time.to_s(QuickHeadlines::Constants::DB_TIME_FORMAT),
         url
       )
     end
@@ -338,7 +338,7 @@ module QuickHeadlines::Repositories
         feed_data.last_modified,
         feed_data.favicon,
         feed_data.favicon_data,
-        Time.utc.to_s(Constants::DB_TIME_FORMAT),
+        Time.utc.to_s(QuickHeadlines::Constants::DB_TIME_FORMAT),
         feed_id
       )
       feed_id
@@ -357,7 +357,7 @@ module QuickHeadlines::Repositories
         feed_data.last_modified,
         feed_data.favicon,
         feed_data.favicon_data,
-        Time.utc.to_s(Constants::DB_TIME_FORMAT)
+        Time.utc.to_s(QuickHeadlines::Constants::DB_TIME_FORMAT)
       )
       db.scalar("SELECT last_insert_rowid()").as(Int64)
     end
@@ -382,7 +382,7 @@ module QuickHeadlines::Repositories
       new_items.each do |entry|
         item = entry[:item]
         index = entry[:index]
-        pub_date_str = item.pub_date.try(&.to_s(Constants::DB_TIME_FORMAT))
+        pub_date_str = item.pub_date.try(&.to_s(QuickHeadlines::Constants::DB_TIME_FORMAT))
         db.exec(
           "INSERT OR IGNORE INTO items (feed_id, title, link, pub_date, version, position, comment_url, commentary_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
           feed_id,
@@ -399,7 +399,7 @@ module QuickHeadlines::Repositories
       existing_items.each do |entry|
         item = entry[:item]
         index = entry[:index]
-        pub_date_str = item.pub_date.try(&.to_s(Constants::DB_TIME_FORMAT))
+        pub_date_str = item.pub_date.try(&.to_s(QuickHeadlines::Constants::DB_TIME_FORMAT))
         db.exec(
           "UPDATE items SET pub_date = ?, position = ?, comment_url = ?, commentary_url = ? WHERE feed_id = ? AND link = ?",
           pub_date_str,

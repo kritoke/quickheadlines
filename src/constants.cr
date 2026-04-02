@@ -1,4 +1,4 @@
-module Constants
+module QuickHeadlines::Constants
   CONCURRENCY               =   8
   CACHE_RETENTION_HOURS     = 168
   CACHE_RETENTION_DAYS      =   7

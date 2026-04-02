@@ -101,7 +101,7 @@ class FeedFetcher
     start_time = Time.monotonic
 
     loop do
-      timeout_seconds = Constants::FETCH_TIMEOUT_SECONDS
+      timeout_seconds = QuickHeadlines::Constants::FETCH_TIMEOUT_SECONDS
       elapsed_seconds = (Time.monotonic - start_time).total_seconds
       abort_decision = should_abort_fetch?(feed, elapsed_seconds, retries, redirects, timeout_seconds)
 
@@ -361,11 +361,11 @@ class FeedFetcher
       return FetchAbortDecision.new(true, "Error: Fetch timeout after #{timeout_seconds}s (retries: #{retries})")
     end
 
-    if redirects > Constants::MAX_REDIRECTS
+    if redirects > QuickHeadlines::Constants::MAX_REDIRECTS
       return FetchAbortDecision.new(true, "Error: Too many redirects (#{redirects})")
     end
 
-    if retries >= Constants::MAX_RETRIES
+    if retries >= QuickHeadlines::Constants::MAX_RETRIES
       return FetchAbortDecision.new(true, "Error: Failed after #{retries} retries")
     end
 
@@ -373,7 +373,7 @@ class FeedFetcher
   end
 
   private def calculate_backoff(feed : Feed, retries : Int32) : Int32
-    Math.min(Constants::MAX_BACKOFF_SECONDS, 2 ** retries)
+    Math.min(QuickHeadlines::Constants::MAX_BACKOFF_SECONDS, 2 ** retries)
   end
 
   private def handle_timeout_error(feed : Feed, retries : Int32) : Int32
@@ -388,7 +388,7 @@ class FeedFetcher
     return unless cached = @cache.get(feed.url)
     return unless last_fetched = @cache.get_fetched_time(feed.url)
 
-    return unless QuickHeadlines::CacheUtils.cache_fresh?(last_fetched, Constants::CACHE_FRESHNESS_MINUTES) && cached.items.size >= item_limit
+    return unless QuickHeadlines::CacheUtils.cache_fresh?(last_fetched, QuickHeadlines::Constants::CACHE_FRESHNESS_MINUTES) && cached.items.size >= item_limit
 
     build_cached_feed_data(cached, previous_data)
   end
@@ -461,13 +461,13 @@ private def fetcher_config : Fetcher::RequestConfig
   debug_enabled = config.try(&.debug?) || false
   Fetcher::RequestConfig.new(
     timeout: Fetcher::TimeoutConfig.new(
-      connect: Constants::HTTP_CONNECT_TIMEOUT.seconds,
-      read: Constants::HTTP_READ_TIMEOUT.seconds
+      connect: QuickHeadlines::Constants::HTTP_CONNECT_TIMEOUT.seconds,
+      read: QuickHeadlines::Constants::HTTP_READ_TIMEOUT.seconds
     ),
     retry: Fetcher::RetryConfig.new(
-      max_retries: Constants::MAX_RETRIES
+      max_retries: QuickHeadlines::Constants::MAX_RETRIES
     ),
-    max_redirects: Constants::MAX_REDIRECTS,
+    max_redirects: QuickHeadlines::Constants::MAX_REDIRECTS,
     streaming: Fetcher::StreamingConfig.new(
       enabled: debug_enabled,
       debug: debug_enabled

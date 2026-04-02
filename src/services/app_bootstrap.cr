@@ -112,8 +112,8 @@ class AppBootstrap
       loop do
         sleep @cleanup_interval
         begin
-          @feed_cache.cleanup_old_articles(Constants::CACHE_RETENTION_DAYS)
-          @feed_cache.cleanup_old_entries(@config.cache_retention_hours || Constants::CACHE_RETENTION_HOURS)
+          @feed_cache.cleanup_old_articles(QuickHeadlines::Constants::CACHE_RETENTION_DAYS)
+          @feed_cache.cleanup_old_entries(@config.cache_retention_hours || QuickHeadlines::Constants::CACHE_RETENTION_HOURS)
           Log.for("quickheadlines.app").debug { "Scheduled cleanup completed" }
         rescue ex
           Log.for("quickheadlines.app").error(exception: ex) { "Scheduled cleanup failed" }

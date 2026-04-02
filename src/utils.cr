@@ -33,15 +33,15 @@ def create_client(url : String) : HTTP::Client
   client.compress = true
 
   # Apply default timeouts
-  client.read_timeout = Constants::HTTP_READ_TIMEOUT.seconds
-  client.connect_timeout = Constants::HTTP_CONNECT_TIMEOUT.seconds
+  client.read_timeout = QuickHeadlines::Constants::HTTP_READ_TIMEOUT.seconds
+  client.connect_timeout = QuickHeadlines::Constants::HTTP_CONNECT_TIMEOUT.seconds
 
   client
 end
 
 # Limit concurrent fetches (helps smooth peak allocations)
 # Adjust capacity to your environment (5–10 is a good start).
-SEM = Channel(Nil).new(Constants::CONCURRENCY).tap { |channel| Constants::CONCURRENCY.times { channel.send(nil) } }
+SEM = Channel(Nil).new(QuickHeadlines::Constants::CONCURRENCY).tap { |channel| QuickHeadlines::Constants::CONCURRENCY.times { channel.send(nil) } }
 
 def parse_time(str : String?) : Time?
   return unless str
@@ -167,7 +167,7 @@ module Utils
   end
 end
 
-def read_body_safe(io : IO, max_size : Int32 = Constants::MAX_REQUEST_BODY_SIZE) : String
+def read_body_safe(io : IO, max_size : Int32 = QuickHeadlines::Constants::MAX_REQUEST_BODY_SIZE) : String
   buffer = Bytes.new(max_size)
   index = 0
   while index < max_size
