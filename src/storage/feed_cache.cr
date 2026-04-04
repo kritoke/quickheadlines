@@ -12,22 +12,21 @@ require "../services/database_service"
 require "../services/favicon_sync_service"
 require "./cache_utils"
 require "./database"
-require "./clustering_repo"
-require "./header_colors"
-require "./cleanup"
+require "./clustering_store"
+require "./header_color_store"
+require "./cleanup_store"
 require "../repositories/feed_repository"
 
 @[ADI::Register]
 class FeedCache
-  include ClusteringRepository
-  include HeaderColorsRepository
-  include CleanupRepository
-
   @mutex : Mutex
   @db_service : DatabaseService?
   @db : DB::Database
   @db_path : String
   @feed_repository : QuickHeadlines::Repositories::FeedRepository?
+  @clustering_store : QuickHeadlines::Storage::ClusteringStore
+  @header_color_store : QuickHeadlines::Storage::HeaderColorStore
+  @cleanup_store : QuickHeadlines::Storage::CleanupStore
 
   def initialize(config : Config?, @db_service : DatabaseService? = nil)
     @mutex = Mutex.new
@@ -50,6 +49,10 @@ class FeedCache
       @db = DB.open("sqlite3://#{@db_path}")
     end
 
+    @clustering_store = QuickHeadlines::Storage::ClusteringStore.new(@db, @mutex)
+    @header_color_store = QuickHeadlines::Storage::HeaderColorStore.new(@db, @mutex)
+    @cleanup_store = QuickHeadlines::Storage::CleanupStore.new(@db, @mutex, @db_path)
+
     create_schema(@db, @db_path)
     Log.for("quickheadlines.storage").info { "Database initialized: #{@db_path}" }
 
@@ -58,6 +61,128 @@ class FeedCache
 
   private def feed_repository : QuickHeadlines::Repositories::FeedRepository
     @feed_repository ||= QuickHeadlines::Repositories::FeedRepository.new(@db_service || @db)
+  end
+
+  getter :clustering_store, :header_color_store, :cleanup_store
+
+  def get_item_signature(item_id : Int64) : Array(UInt32)?
+    @clustering_store.get_item_signature(item_id)
+  end
+
+  def get_item_feed_id(item_id : Int64) : Int64?
+    @clustering_store.get_item_feed_id(item_id)
+  end
+
+  def get_item_title(item_id : Int64) : String?
+    @clustering_store.get_item_title(item_id)
+  end
+
+  def get_cluster_items(cluster_id : Int64) : Array(Int64)
+    @clustering_store.get_cluster_items(cluster_id)
+  end
+
+  def assign_cluster(item_id : Int64, cluster_id : Int64?)
+    @clustering_store.assign_cluster(item_id, cluster_id)
+  end
+
+  def store_lsh_bands(item_id : Int64, band_hashes : Array(UInt64))
+    @clustering_store.store_lsh_bands(item_id, band_hashes)
+  end
+
+  def find_lsh_candidates(signature : Array(UInt32)) : Array(Int64)
+    @clustering_store.find_lsh_candidates(signature)
+  end
+
+  def assign_clusters_bulk(clusters : Hash(Int64, Array(Int64)))
+    @clustering_store.assign_clusters_bulk(clusters)
+  end
+
+  def clear_clustering_metadata
+    @clustering_store.clear_clustering_metadata
+  end
+
+  def get_feed_id(feed_url : String) : Int64?
+    @clustering_store.get_feed_id(feed_url)
+  end
+
+  def get_item_id(feed_url : String, item_link : String) : Int64?
+    @clustering_store.get_item_id(feed_url, item_link)
+  end
+
+  def get_item_ids_batch(items : Array(QuickHeadlines::Storage::ClusteringStore::ItemKey)) : Hash(String, Int64)
+    @clustering_store.get_item_ids_batch(items)
+  end
+
+  def get_cluster_info_batch(item_ids : Array(Int64)) : Hash(Int64, QuickHeadlines::Storage::ClusteringStore::ClusterInfo)
+    @clustering_store.get_cluster_info_batch(item_ids)
+  end
+
+  def get_recent_items_for_clustering(hours_back : Int32 = 24, max_items : Int32 = 1000) : Array({id: Int64, title: String, link: String, pub_date: Time?, feed_url: String, feed_title: String, favicon: String?, header_color: String?})
+    @clustering_store.get_recent_items_for_clustering(hours_back, max_items)
+  end
+
+  def all_clusters : Array({id: Int64, representative_id: Int64, item_count: Int32})
+    @clustering_store.all_clusters
+  end
+
+  def get_cluster_items_full(cluster_id : Int64) : Array({id: Int64, title: String, link: String, pub_date: Time?, feed_url: String, feed_title: String, favicon: String?, header_color: String?})
+    @clustering_store.get_cluster_items_full(cluster_id)
+  end
+
+  def store_item_signature(item_id : Int64, signature : Array(UInt32))
+    @clustering_store.store_item_signature(item_id, signature)
+  end
+
+  def cluster_representative?(item_id : Int64) : Bool
+    @clustering_store.cluster_representative?(item_id)
+  end
+
+  def find_all_items_excluding(item_id : Int64, limit : Int32 = 500) : Array(Int64)
+    @clustering_store.find_all_items_excluding(item_id, limit)
+  end
+
+  def find_by_keywords(keywords : Array(String), exclude_id : Int64, limit : Int32 = 100) : Array(Int64)
+    @clustering_store.find_by_keywords(keywords, exclude_id, limit)
+  end
+
+  def update_header_colors(feed_url : String, bg_color : String, text_color : String)
+    @header_color_store.update_header_colors(feed_url, bg_color, text_color)
+  end
+
+  def get_header_colors(feed_url : String) : {bg_color: String?, text_color: String?}
+    @header_color_store.get_header_colors(feed_url)
+  end
+
+  def update_feed_theme_colors(feed_url : String, theme_json : String)
+    @header_color_store.update_feed_theme_colors(feed_url, theme_json)
+  end
+
+  def get_feed_theme_colors(feed_url : String) : String?
+    @header_color_store.get_feed_theme_colors(feed_url)
+  end
+
+  def find_feed_url_by_pattern(url_pattern : String) : String?
+    @header_color_store.find_feed_url_by_pattern(url_pattern)
+  end
+
+  def cleanup_old_entries(retention_hours : Int32 = QuickHeadlines::Constants::CACHE_RETENTION_HOURS, config_urls : Array(String)? = nil)
+    @cleanup_store.cleanup_old_entries(retention_hours, config_urls)
+  end
+
+  def cleanup_old_articles(retention_days : Int32 = QuickHeadlines::Constants::CACHE_RETENTION_DAYS)
+    @cleanup_store.cleanup_old_articles(retention_days)
+  end
+
+  def check_size_limit(max_size_mb : Int32 = 100)
+    @cleanup_store.check_size_limit(max_size_mb)
+  end
+
+  def vacuum
+    @cleanup_store.vacuum
+  end
+
+  def normalize_pub_dates
+    @cleanup_store.normalize_pub_dates
   end
 
   getter :db_path
