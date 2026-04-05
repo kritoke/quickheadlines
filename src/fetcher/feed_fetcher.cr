@@ -125,12 +125,13 @@ class FeedFetcher
           favicon, favicon_data = VugAdapter.get_favicon(site_link, result.favicon, previous_data.try(&.favicon), previous_data.try(&.favicon_data))
 
           if favicon.nil? && favicon_data.nil?
-            google_url = VugAdapter.google_favicon_url(site_link.presence || feed.url)
-            if saved = FaviconStorage.fetch_and_save(google_url)
-              favicon = saved
-              favicon_data = saved
-            else
-              favicon = google_url
+            domain_for_favicon = site_link.presence || feed.url
+            if domain_for_favicon && !domain_for_favicon.starts_with?("#") && !domain_for_favicon.includes?("#")
+              google_url = VugAdapter.google_favicon_url(domain_for_favicon)
+              if saved = FaviconStorage.fetch_and_save(google_url)
+                favicon = saved
+                favicon_data = saved
+              end
             end
           end
 

@@ -173,6 +173,10 @@ class FeedCache
     @cleanup_store.cleanup_old_articles(retention_days)
   end
 
+  def remove_stale_feeds(config_urls : Array(String))
+    @cleanup_store.remove_stale_feeds(config_urls)
+  end
+
   def check_size_limit(max_size_mb : Int32 = 100)
     @cleanup_store.check_size_limit(max_size_mb)
   end

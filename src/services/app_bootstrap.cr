@@ -37,6 +37,8 @@ class AppBootstrap
 
     load_feeds_from_cache(@config)
 
+    cleanup_stale_feeds
+
     EventBroadcaster.start
   end
 
@@ -143,5 +145,15 @@ class AppBootstrap
         end
       end
     end
+  end
+
+  private def cleanup_stale_feeds
+    config_urls = @config.feeds.map(&.url)
+    @config.tabs.each do |tab|
+      tab.feeds.each { |feed| config_urls << feed.url }
+    end
+    @feed_cache.remove_stale_feeds(config_urls)
+  rescue ex
+    Log.for("quickheadlines.app").warn(exception: ex) { "cleanup_stale_feeds failed on startup" }
   end
 end

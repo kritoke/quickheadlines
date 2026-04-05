@@ -25,6 +25,22 @@ module QuickHeadlines::Storage
       end
     end
 
+    def remove_stale_feeds(config_urls : Array(String))
+      @mutex.synchronize do
+        if config_urls.empty?
+          Log.for("quickheadlines.storage").warn { "No config URLs provided, skipping stale feed cleanup" }
+          return
+        end
+
+        placeholders = Array.new(config_urls.size, "?").join(",")
+        result = @db.exec("DELETE FROM feeds WHERE url NOT IN (#{placeholders})", args: config_urls)
+        deleted_count = result.rows_affected
+        if deleted_count > 0
+          Log.for("quickheadlines.storage").info { "Removed #{deleted_count} stale feeds not in config" }
+        end
+      end
+    end
+
     def cleanup_old_articles(retention_days : Int32 = QuickHeadlines::Constants::CACHE_RETENTION_DAYS)
       @mutex.synchronize do
         cutoff = (Time.utc - retention_days.days).to_s(QuickHeadlines::Constants::DB_TIME_FORMAT)

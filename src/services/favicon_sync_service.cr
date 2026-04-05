@@ -83,7 +83,7 @@ class FaviconSyncService
         google_backfills << {feed_id, url, favicon}
       end
 
-      if header_theme_colors.nil? && favicon.nil? && site_link && !site_link.empty?
+      if (header_theme_colors.nil? || header_theme_colors == "FAILED") && favicon.nil? && site_link && !site_link.empty?
         missing_backfills << {feed_id, url, site_link}
       end
 
@@ -117,14 +117,15 @@ class FaviconSyncService
     google_backfills.each do |feed_id, url, google_url|
       Log.for("quickheadlines.cache").debug { "Processing Google favicon backfill for #{url}: #{google_url}" }
       url_to_fetch = google_url
-      if google_url.includes?("domain=#") || google_url.includes?("domain=")
+      if google_url.includes?("domain=#") || google_url.includes?("domain=%23") || google_url.includes?("domain=")
         parsed = URI.parse(url)
         host = parsed.host
-        if host && host.includes?(".") && !host.includes?(",")
+        if host && host.includes?(".") && !host.includes?(",") && !host.includes?("#") && !host.includes?("%23")
           url_to_fetch = "https://www.google.com/s2/favicons?domain=#{host}&sz=256"
           Log.for("quickheadlines.cache").debug { "Fixed broken domain in Google URL: #{url_to_fetch}" }
-        elsif host.nil? || host.includes?(",")
+        else
           Log.for("quickheadlines.cache").debug { "Skipping malformed Google favicon URL: #{google_url}" }
+          mark_favicon_failed(feed_id)
           next
         end
       end
@@ -136,6 +137,8 @@ class FaviconSyncService
         end
         Log.for("quickheadlines.cache").debug { "Downloaded Google favicon for #{url}: #{local_path}" }
         backfill_header_colors(feed_id, url, local_path)
+      else
+        mark_favicon_failed(feed_id)
       end
     end
 
@@ -152,12 +155,22 @@ class FaviconSyncService
             end
             Log.for("quickheadlines.cache").debug { "Backfilled missing favicon for #{url}: #{local_path}" }
             backfill_header_colors(feed_id, url, local_path)
+          else
+            mark_favicon_failed(feed_id)
           end
         end
       rescue ex
         Log.for("quickheadlines.cache").error(exception: ex) { "Backfill missing favicon failed for #{url}" }
+        mark_favicon_failed(feed_id)
       end
     end
+  end
+
+  private def mark_favicon_failed(feed_id : Int64) : Nil
+    @mutex.synchronize do
+      @db.exec("UPDATE feeds SET header_theme_colors = ? WHERE id = ?", "FAILED", feed_id)
+    end
+    Log.for("quickheadlines.cache").debug { "Marked favicon as failed for feed_id=#{feed_id}" }
   end
 
   private def backfill_header_colors(feed_id : Int64, feed_url : String, favicon_path : String) : Nil

@@ -88,8 +88,11 @@ def refresh_all(config : Config, cache : FeedCache, db_service : DatabaseService
 
   # Build new state immutably
   new_feeds = config.feeds.map { |feed| fetched_map[feed.url]? || error_feed_data(feed, "Failed to fetch") }
-  new_software_releases = build_software_releases(config.software_releases, config.item_limit)
   new_tabs = config.tabs.map { |tab_config| build_tab_feeds(tab_config, fetched_map, config.item_limit) }
+  new_software_releases = build_software_releases(config.software_releases, config.item_limit)
+  if new_software_releases.empty?
+    new_software_releases = new_tabs.find(&.software_releases.any?).try(&.software_releases) || [] of FeedData
+  end
 
   # Atomic state update - no mutations
   StateStore.update do |state|
