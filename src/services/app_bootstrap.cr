@@ -84,6 +84,12 @@ class AppBootstrap
     spawn do
       loop do
         sleep @clustering_interval
+        if start_time = StateStore.clustering_start_time
+          if Time.utc - start_time > 4.hours
+            Log.for("quickheadlines.app").warn { "Clustering stuck for >4 hours, resetting state" }
+            StateStore.clustering = false
+          end
+        end
         next if StateStore.clustering?
         threshold = StateStore.config.try(&.clustering).try(&.threshold) || 0.35
         clustering_service(@db_service).recluster_with_lsh(@feed_cache, @config.db_fetch_limit, threshold)
