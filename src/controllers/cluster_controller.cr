@@ -29,16 +29,16 @@ class QuickHeadlines::Controllers::ClusterController < QuickHeadlines::Controlle
 
     items = db_items.map do |item|
       StoryResponse.new(
-        id: item[:id].to_s,
-        title: item[:title],
-        link: item[:link],
-        pub_date: item[:pub_date].try(&.to_unix_ms),
-        feed_title: item[:feed_title],
-        feed_url: item[:feed_url],
+        id: item.id.to_s,
+        title: item.title,
+        link: item.link,
+        pub_date: item.pub_date.try(&.to_unix_ms),
+        feed_title: item.feed_title,
+        feed_url: item.feed_url,
         feed_link: "",
-        favicon: item[:favicon],
-        favicon_data: item[:favicon],
-        header_color: item[:header_color]
+        favicon: item.favicon,
+        favicon_data: item.favicon,
+        header_color: item.header_color
       )
     end
 

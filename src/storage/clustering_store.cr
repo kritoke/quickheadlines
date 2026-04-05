@@ -238,10 +238,10 @@ module QuickHeadlines::Storage
       )
     end
 
-    def get_recent_items_for_clustering(hours_back : Int32 = 24, max_items : Int32 = 1000) : Array({id: Int64, title: String, link: String, pub_date: Time?, feed_url: String, feed_title: String, favicon: String?, header_color: String?})
+    def get_recent_items_for_clustering(hours_back : Int32 = 24, max_items : Int32 = 1000) : Array(ClusteringItemRow)
       cutoff = (Time.utc - hours_back.hours).to_s(QuickHeadlines::Constants::DB_TIME_FORMAT)
 
-      items = [] of {id: Int64, title: String, link: String, pub_date: Time?, feed_url: String, feed_title: String, favicon: String?, header_color: String?}
+      items = [] of ClusteringItemRow
 
       query = <<-SQL
         SELECT i.id, i.title, i.link, i.pub_date, f.url as feed_url, f.title as feed_title, f.favicon, f.header_color
@@ -266,7 +266,7 @@ module QuickHeadlines::Storage
 
           pub_date = pub_date_str.try { |date_str| Time.parse(date_str, QuickHeadlines::Constants::DB_TIME_FORMAT, Time::Location::UTC) }
 
-          items << {
+          items << ClusteringItemRow.new(
             id:           id,
             title:        title,
             link:         link,
@@ -275,7 +275,7 @@ module QuickHeadlines::Storage
             feed_title:   feed_title,
             favicon:      favicon,
             header_color: header_color,
-          }
+          )
         end
       end
 
@@ -310,8 +310,8 @@ module QuickHeadlines::Storage
       clusters
     end
 
-    def get_cluster_items_full(cluster_id : Int64) : Array({id: Int64, title: String, link: String, pub_date: Time?, feed_url: String, feed_title: String, favicon: String?, header_color: String?})
-      items = [] of {id: Int64, title: String, link: String, pub_date: Time?, feed_url: String, feed_title: String, favicon: String?, header_color: String?}
+    def get_cluster_items_full(cluster_id : Int64) : Array(ClusteringItemRow)
+      items = [] of ClusteringItemRow
 
       query = <<-SQL
         SELECT i.id, i.title, i.link, i.pub_date, f.url as feed_url, f.title as feed_title, f.favicon, f.header_color
@@ -334,7 +334,7 @@ module QuickHeadlines::Storage
 
           pub_date = pub_date_str.try { |date_str| Time.parse(date_str, QuickHeadlines::Constants::DB_TIME_FORMAT, Time::Location::UTC) }
 
-          items << {
+          items << ClusteringItemRow.new(
             id:           id,
             title:        title,
             link:         link,
@@ -343,7 +343,7 @@ module QuickHeadlines::Storage
             feed_title:   feed_title,
             favicon:      favicon,
             header_color: header_color,
-          }
+          )
         end
       end
 

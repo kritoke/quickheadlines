@@ -1,6 +1,16 @@
 require "mutex"
 
 record Item, title : String, link : String, pub_date : Time?, version : String? = nil, comment_url : String? = nil, commentary_url : String? = nil
+
+record ClusteringItemRow,
+  id : Int64,
+  title : String,
+  link : String,
+  pub_date : Time?,
+  feed_url : String,
+  feed_title : String,
+  favicon : String?,
+  header_color : String?
 # Add header_theme_colors to TimelineItem so timeline responses can include theme-aware JSON
 record TimelineItem, item : Item, feed_title : String, feed_url : String, feed_link : String, favicon : String?, favicon_data : String?, header_color : String?, header_text_color : String?, header_theme_colors : String?
 

@@ -117,7 +117,7 @@ class FeedCache
     @clustering_store.get_cluster_info_batch(item_ids)
   end
 
-  def get_recent_items_for_clustering(hours_back : Int32 = 24, max_items : Int32 = 1000) : Array({id: Int64, title: String, link: String, pub_date: Time?, feed_url: String, feed_title: String, favicon: String?, header_color: String?})
+  def get_recent_items_for_clustering(hours_back : Int32 = 24, max_items : Int32 = 1000) : Array(ClusteringItemRow)
     @clustering_store.get_recent_items_for_clustering(hours_back, max_items)
   end
 
@@ -125,7 +125,7 @@ class FeedCache
     @clustering_store.all_clusters
   end
 
-  def get_cluster_items_full(cluster_id : Int64) : Array({id: Int64, title: String, link: String, pub_date: Time?, feed_url: String, feed_title: String, favicon: String?, header_color: String?})
+  def get_cluster_items_full(cluster_id : Int64) : Array(ClusteringItemRow)
     @clustering_store.get_cluster_items_full(cluster_id)
   end
 
