@@ -73,7 +73,7 @@ class QuickHeadlines::Controllers::ProxyController < QuickHeadlines::Controllers
 
   @[ARTA::Get(path: "/favicons/{hash}.{ext}")]
   def favicon_file(request : ATH::Request, hash : String, ext : String) : ATH::Response
-    unless hash.matches?(/\A[a-f0-9]{64}\z/)
+    unless hash.matches?(/\A[a-f0-9]{16}\z/)
       return ATH::Response.new("Invalid favicon hash", 400, HTTP::Headers{"content-type" => "text/plain"})
     end
 
