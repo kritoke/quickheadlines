@@ -74,7 +74,7 @@ shards:
 
   fetcher:
     git: https://github.com/kritoke/fetcher.cr.git
-    version: 0.9.0
+    version: 0.9.2
 
   fnv:
     git: https://github.com/naqvis/crystal-fnv.git
@@ -110,7 +110,7 @@ shards:
 
   vug:
     git: https://github.com/kritoke/vug.cr.git
-    version: 0.3.0
+    version: 0.3.1
 
   xpath2:
     git: https://github.com/naqvis/crystal-xpath2.git
