@@ -35,7 +35,7 @@ module FaviconStorage
         Dir.mkdir_p(test_dir)
         File.delete(test_dir)
         return "/var/cache/quickheadlines/favicons"
-      rescue ex : File::Error
+      rescue File::Error
       end
     end
 
@@ -82,7 +82,7 @@ module FaviconStorage
 
     hash_input = begin
       url[0..255]
-    rescue ex : IndexError
+    rescue IndexError
       url
     end
     hash = OpenSSL::Digest.new("SHA256").update(hash_input).final.hexstring
@@ -117,7 +117,9 @@ module FaviconStorage
 
     begin
       uri = URI.parse(url)
-      client = HTTP::Client.new(uri.host.not_nil!, port: uri.port, tls: uri.scheme == "https")
+      host = uri.host
+      return unless host
+      client = HTTP::Client.new(host, port: uri.port, tls: uri.scheme == "https")
       client.read_timeout = 10.seconds
       client.connect_timeout = 5.seconds
 
@@ -130,10 +132,13 @@ module FaviconStorage
         redirect_url = response.headers["Location"]?
         if redirect_url
           redirected_uri = uri.resolve(redirect_url)
-          redirect_client = HTTP::Client.new(redirected_uri.host.not_nil!, port: redirected_uri.port, tls: redirected_uri.scheme == "https")
-          redirect_client.read_timeout = 10.seconds
-          redirect_client.connect_timeout = 5.seconds
-          response = redirect_client.get(redirected_uri.request_target, headers: headers)
+          redirect_host = redirected_uri.host
+          if redirect_host
+            redirect_client = HTTP::Client.new(redirect_host, port: redirected_uri.port, tls: redirected_uri.scheme == "https")
+            redirect_client.read_timeout = 10.seconds
+            redirect_client.connect_timeout = 5.seconds
+            response = redirect_client.get(redirected_uri.request_target, headers: headers)
+          end
         end
       end
       unless response.status.success?

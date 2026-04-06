@@ -13,7 +13,6 @@ class QuickHeadlines::Controllers::FeedsController < QuickHeadlines::Controllers
     state = StateStore.get
     feeds_snapshot = state.feeds
     tabs_snapshot = state.tabs
-    software_releases_snapshot = state.software_releases
     is_clustering = state.clustering
 
     total_feeds = feeds_snapshot.size + tabs_snapshot.sum(&.feeds.size)
@@ -53,7 +52,7 @@ class QuickHeadlines::Controllers::FeedsController < QuickHeadlines::Controllers
                                    [] of FeedResponse
                                  else
                                    tab_with_sr = tabs_snapshot.find { |tab| tab.name.downcase == active_tab.downcase }
-                                   if tab_with_sr && tab_with_sr.software_releases.any?
+                                   if tab_with_sr && tab_with_sr.software_releases.present?
                                      tab_with_sr.software_releases.map do |feed|
                                        Api.feed_to_response(feed, active_tab, cache.item_count(feed.url), item_limit)
                                      end

@@ -64,10 +64,10 @@ class QuickHeadlines::Controllers::ProxyController < QuickHeadlines::Controllers
       end
 
       ATH::Response.new(body, 200, HTTP::Headers{"content-type" => content_type})
-    rescue ex : IO::TimeoutError | Socket::Error
-      return ATH::Response.new("Bad Gateway", 502, HTTP::Headers{"content-type" => "text/plain"})
-    rescue ex
-      return ATH::Response.new("Bad Gateway", 502, HTTP::Headers{"content-type" => "text/plain"})
+    rescue IO::TimeoutError | Socket::Error
+      ATH::Response.new("Bad Gateway", 502, HTTP::Headers{"content-type" => "text/plain"})
+    rescue
+      ATH::Response.new("Bad Gateway", 502, HTTP::Headers{"content-type" => "text/plain"})
     end
   end
 

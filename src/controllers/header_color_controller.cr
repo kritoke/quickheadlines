@@ -29,7 +29,7 @@ class QuickHeadlines::Controllers::HeaderColorController < QuickHeadlines::Contr
 
     cache.update_header_colors(db_url, color, text_color)
     ATH::Response.new("OK", 200)
-  rescue ex : IO::EOFError
+  rescue IO::EOFError
     ATH::Response.new("Request body too large", 413, HTTP::Headers{"content-type" => "text/plain"})
   rescue ex
     Log.for("quickheadlines.http").error(exception: ex) { "Header color save error" }

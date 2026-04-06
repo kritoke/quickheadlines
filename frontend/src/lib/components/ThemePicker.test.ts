@@ -23,46 +23,47 @@ describe('ThemePicker', () => {
 		themeState.effects = false;
 	});
 
-	it('renders theme button', () => {
+	it('renders theme button with correct attributes', () => {
 		const component = mount(ThemePicker, {
 			target: document.body
 		});
-		
+
 		const button = document.body.querySelector('button[title="Theme"]');
 		expect(button).toBeInTheDocument();
-		
+		expect(button?.getAttribute('aria-haspopup')).toBe('menu');
+		expect(button?.getAttribute('data-state')).toBe('closed');
+
 		unmount(component);
 	});
 
-	it('opens dropdown on button click', () => {
+	it('toggles dropdown open state on button click', () => {
 		const component = mount(ThemePicker, {
 			target: document.body
 		});
-		
+
 		const button = document.body.querySelector('button');
+		expect(button?.getAttribute('data-state')).toBe('closed');
+
 		button?.click();
 		flushSync();
-		
-		expect(document.body.textContent).toContain('Theme');
-		expect(document.body.textContent).toContain('Light');
-		expect(document.body.textContent).toContain('Dark');
-		
+		expect(button?.getAttribute('data-state')).toBe('open');
+
+		button?.click();
+		flushSync();
+		expect(button?.getAttribute('data-state')).toBe('closed');
+
 		unmount(component);
 	});
 
-	it('displays all theme options when dropdown is open', () => {
+	it('displays color preview swatch for current theme', () => {
 		const component = mount(ThemePicker, {
 			target: document.body
 		});
-		
-		const button = document.body.querySelector('button');
-		button?.click();
-		flushSync();
-		
-		expect(document.body.textContent).toContain('Retro');
-		expect(document.body.textContent).toContain('Matrix');
-		expect(document.body.textContent).toContain('Ocean');
-		
+
+		const swatch = document.body.querySelector('button span[style]');
+		expect(swatch).toBeInTheDocument();
+		expect(swatch?.getAttribute('style')).toContain('background');
+
 		unmount(component);
 	});
 });

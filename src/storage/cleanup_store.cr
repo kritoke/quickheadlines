@@ -106,7 +106,7 @@ module QuickHeadlines::Storage
 
     private def try_parse_date_format(str : String, format : String) : Time?
       Time.parse(str, format, Time::Location::UTC)
-    rescue ex : Time::Format::Error
+    rescue Time::Format::Error
       nil
     end
 

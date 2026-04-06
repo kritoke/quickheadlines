@@ -15,7 +15,7 @@ def detect_github_repo : String?
         return "#{owner}/#{repo}"
       end
     end
-  rescue ex : Process::Error | Exception
+  rescue Exception
   end
 
   nil

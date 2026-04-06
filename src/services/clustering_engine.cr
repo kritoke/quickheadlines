@@ -31,7 +31,7 @@ module QuickHeadlines::Services
         host = uri.host || ""
         return "" if host.empty?
         host.downcase
-      rescue ex : URI::Error
+      rescue URI::Error
         ""
       end
     end

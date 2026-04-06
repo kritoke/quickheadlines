@@ -137,9 +137,11 @@ class AppBootstrap
         begin
           removed = SocketManager.instance.cleanup_dead_connections
           stats = SocketManager.instance.stats
-          Log.for("quickheadlines.websocket").debug { "Janitor: #{stats["connections"]} active, #{removed} removed, " \
-                      "#{stats["messages_sent"]} sent, #{stats["messages_dropped"]} dropped, " \
-                      "#{stats["send_errors"]} errors" }
+          Log.for("quickheadlines.websocket").debug do
+            "Janitor: #{stats["connections"]} active, #{removed} removed, " \
+            "#{stats["messages_sent"]} sent, #{stats["messages_dropped"]} dropped, " \
+            "#{stats["send_errors"]} errors"
+          end
         rescue ex
           Log.for("quickheadlines.websocket").error(exception: ex) { "Janitor failed" }
         end

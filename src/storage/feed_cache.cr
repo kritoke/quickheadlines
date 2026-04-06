@@ -38,13 +38,14 @@ class FeedCache
     unless @db_service
       @db_service = begin
         DatabaseService.instance
-      rescue ex : Exception
+      rescue
         nil
       end
     end
 
-    if @db_service
-      @db = @db_service.not_nil!.db
+    if db_svc = @db_service
+      @db = db_svc.db
+      @db_service = db_svc
     else
       @db = DB.open("sqlite3://#{@db_path}")
     end
@@ -215,24 +216,12 @@ class FeedCache
     feed_repository.find_last_fetched_time_result(url)
   end
 
-  def get_slice(url : String, limit : Int32, offset : Int32) : FeedData?
-    feed_repository.find_with_items_slice(url, limit, offset)
-  end
-
-  def get_slice_result(url : String, limit : Int32, offset : Int32) : FeedDataResult
-    feed_repository.find_with_items_slice_result(url, limit, offset)
-  end
-
   def item_count(url : String) : Int32
     feed_repository.count_items(url)
   end
 
   def size : Int32
     feed_repository.count_all
-  end
-
-  def entries : Hash(String, FeedData)
-    feed_repository.find_all_feeds_with_items
   end
 
   def ensure_indexes
@@ -263,12 +252,6 @@ class FeedCache
 
   def db : DB::Database
     @db
-  end
-
-  def close
-    @mutex.synchronize do
-      @db.close
-    end
   end
 end
 

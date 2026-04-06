@@ -145,7 +145,7 @@ module QuickHeadlines::Repositories
 
       return {} of String => FeedData if feed_id_map.empty?
 
-      items_by_feed = Hash(Int64, Array(Item)).new { |h, k| h[k] = [] of Item }
+      items_by_feed = Hash(Int64, Array(Item)).new { |hash, key| hash[key] = [] of Item }
       db.query("SELECT feed_id, title, link, pub_date, version, comment_url, commentary_url FROM items WHERE (pub_date IS NULL OR pub_date <= datetime('now', '+1 day')) ORDER BY pub_date DESC") do |rows|
         rows.each do
           feed_id = rows.read(Int64)
@@ -162,11 +162,11 @@ module QuickHeadlines::Repositories
       end
 
       result = {} of String => FeedData
-      feed_rows.each do |fr|
-        fd = feed_id_map[fr.id]
-        items = items_by_feed[fr.id]?
+      feed_rows.each do |feed_row|
+        fd = feed_id_map[feed_row.id]
+        items = items_by_feed[feed_row.id]?
         items ||= [] of Item
-        result[fr.url] = fd.to_feed_data(items)
+        result[feed_row.url] = fd.to_feed_data(items)
       end
       result
     end
@@ -186,7 +186,7 @@ module QuickHeadlines::Repositories
       result = db.query_one?("SELECT last_fetched FROM feeds WHERE url = ?", url, as: String?)
       return TimeResult.failure(RepositoryError::NotFound) unless result
       TimeResult.success(Time.parse(result, QuickHeadlines::Constants::DB_TIME_FORMAT, Time::Location::UTC))
-    rescue ex : DB::Error | Time::Format::Error
+    rescue DB::Error | Time::Format::Error
       TimeResult.failure(RepositoryError::DatabaseError)
     end
 
@@ -203,7 +203,7 @@ module QuickHeadlines::Repositories
       result = find_by_url(url)
       return Result(QuickHeadlines::Entities::Feed?, RepositoryError).failure(RepositoryError::NotFound) unless result
       Result(QuickHeadlines::Entities::Feed?, RepositoryError).success(result)
-    rescue ex : DB::Error
+    rescue DB::Error
       Result(QuickHeadlines::Entities::Feed?, RepositoryError).failure(RepositoryError::DatabaseError)
     end
 
@@ -219,7 +219,7 @@ module QuickHeadlines::Repositories
       result = find_by_pattern(pattern)
       return Result(QuickHeadlines::Entities::Feed?, RepositoryError).failure(RepositoryError::NotFound) unless result
       Result(QuickHeadlines::Entities::Feed?, RepositoryError).success(result)
-    rescue ex : DB::Error
+    rescue DB::Error
       Result(QuickHeadlines::Entities::Feed?, RepositoryError).failure(RepositoryError::DatabaseError)
     end
 
@@ -439,7 +439,7 @@ module QuickHeadlines::Repositories
       result = find_with_items(url)
       return FeedDataResult.failure(RepositoryError::NotFound) unless result
       FeedDataResult.success(result)
-    rescue ex : DB::Error
+    rescue DB::Error
       FeedDataResult.failure(RepositoryError::DatabaseError)
     end
 
@@ -470,7 +470,7 @@ module QuickHeadlines::Repositories
       result = find_with_items_slice(url, limit, offset)
       return FeedDataResult.failure(RepositoryError::NotFound) unless result
       FeedDataResult.success(result)
-    rescue ex : DB::Error
+    rescue DB::Error
       FeedDataResult.failure(RepositoryError::DatabaseError)
     end
   end

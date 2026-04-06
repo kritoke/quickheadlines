@@ -41,7 +41,7 @@ class QuickHeadlines::Controllers::ApiBaseController < Athena::Framework::Contro
 
     token = auth_header[7..-1]
     timing_safe_compare(secret, token)
-  rescue ex : Exception
+  rescue Exception
     false
   end
 
@@ -75,7 +75,7 @@ class QuickHeadlines::Controllers::ApiBaseController < Athena::Framework::Contro
   private def validate_proxy_url(url : String) : Bool
     uri = URI.parse(url)
     return false unless uri.scheme == "https"
-    return false unless uri.host.is_a?(String) && !uri.host.to_s.empty?
+    return false if !uri.host.is_a?(String) || uri.host.to_s.empty?
 
     host = uri.host.as(String).downcase
     return false unless QuickHeadlines::Constants::ALLOWED_PROXY_DOMAINS.includes?(host)
@@ -83,7 +83,7 @@ class QuickHeadlines::Controllers::ApiBaseController < Athena::Framework::Contro
     return false if uri.port && uri.port != 443
 
     true
-  rescue ex : URI::Error
+  rescue URI::Error
     false
   end
 

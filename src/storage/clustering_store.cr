@@ -267,13 +267,13 @@ module QuickHeadlines::Storage
           pub_date = pub_date_str.try { |date_str| Time.parse(date_str, QuickHeadlines::Constants::DB_TIME_FORMAT, Time::Location::UTC) }
 
           items << ClusteringItemRow.new(
-            id:           id,
-            title:        title,
-            link:         link,
-            pub_date:     pub_date,
-            feed_url:     feed_url,
-            feed_title:   feed_title,
-            favicon:      favicon,
+            id: id,
+            title: title,
+            link: link,
+            pub_date: pub_date,
+            feed_url: feed_url,
+            feed_title: feed_title,
+            favicon: favicon,
             header_color: header_color,
           )
         end
@@ -335,13 +335,13 @@ module QuickHeadlines::Storage
           pub_date = pub_date_str.try { |date_str| Time.parse(date_str, QuickHeadlines::Constants::DB_TIME_FORMAT, Time::Location::UTC) }
 
           items << ClusteringItemRow.new(
-            id:           id,
-            title:        title,
-            link:         link,
-            pub_date:     pub_date,
-            feed_url:     feed_url,
-            feed_title:   feed_title,
-            favicon:      favicon,
+            id: id,
+            title: title,
+            link: link,
+            pub_date: pub_date,
+            feed_url: feed_url,
+            feed_title: feed_title,
+            favicon: favicon,
             header_color: header_color,
           )
         end

@@ -23,7 +23,7 @@ private def valid_url?(feed : Feed) : Bool
       Log.for("quickheadlines.config").warn { "Invalid feed URL (missing host): #{url}" }
       return false
     end
-  rescue ex : URI::Error
+  rescue URI::Error
     Log.for("quickheadlines.config").warn { "Invalid feed URL (parse error): #{url}" }
     return false
   end

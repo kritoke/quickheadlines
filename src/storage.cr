@@ -1,6 +1,5 @@
 require "./storage/cache_utils"
 require "./storage/database"
 require "./storage/clustering_repo"
-require "./storage/header_colors"
 require "./storage/cleanup"
 require "./storage/feed_cache"

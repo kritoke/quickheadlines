@@ -81,7 +81,7 @@ module ColorExtractor
                             normalized[k.to_s] = v.to_s
                           end
                           normalized
-                        rescue ex : JSON::ParseException | TypeCastError
+                        rescue JSON::ParseException | TypeCastError
                           {"light" => text_val.to_s, "dark" => text_val.to_s}
                         end
                       else
@@ -119,7 +119,7 @@ module ColorExtractor
                           normalized[k.to_s] = v.to_s
                         end
                         normalized
-                      rescue ex : TypeCastError
+                      rescue TypeCastError
                         text_val.to_s
                       end
                     elsif text_val.is_a?(Hash)
@@ -230,7 +230,7 @@ module ColorExtractor
         g = s[2..3].to_i(16)
         b = s[4..5].to_i(16)
         return [r, g, b]
-      rescue ex : ArgumentError | IndexError
+      rescue ArgumentError | IndexError
         return
       end
     end
@@ -241,7 +241,7 @@ module ColorExtractor
         g = s[2..3].to_i(16)
         b = s[4..5].to_i(16)
         return [r, g, b]
-      rescue ex : ArgumentError | IndexError
+      rescue ArgumentError | IndexError
         return
       end
     end

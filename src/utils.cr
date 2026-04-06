@@ -51,12 +51,12 @@ def parse_time(str : String?) : Time?
     Time::Format::RFC_3339,
     Time::Format::ISO_8601_DATE_TIME,
     Time::Format::ISO_8601_DATE,
-    ].each do |format|
-      begin
-        return format.parse(str)
-      rescue ex : Time::Format::Error
-      end
+  ].each do |format|
+    begin
+      return format.parse(str)
+    rescue Time::Format::Error
     end
+  end
   nil
 end
 
@@ -103,7 +103,7 @@ module Utils
       return false unless uri.scheme.in?("http", "https")
       return false if !uri.host.is_a?(String) || uri.host.to_s.empty?
       true
-    rescue ex : URI::Error
+    rescue URI::Error
       false
     end
   end
@@ -162,7 +162,7 @@ module Utils
 
     host = uri.host.as(String).downcase
     !private_host?(host)
-  rescue ex : URI::Error
+  rescue URI::Error
     false
   end
 end

@@ -153,7 +153,7 @@ def check_db_health(db_path : String) : DbHealthStatus
       if fk_result && !fk_result.empty?
         Log.for("quickheadlines.storage").warn { "Database has #{fk_result.size} foreign key violations" }
       end
-    rescue ex : DB::Error
+    rescue DB::Error
     end
 
     feed_count = database.query_one("SELECT COUNT(*) FROM feeds", as: {Int64})

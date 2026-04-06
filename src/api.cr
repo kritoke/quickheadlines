@@ -282,7 +282,7 @@ module Api
     begin
       theme_json = cache.get_feed_theme_colors(feed.url)
       header_theme_colors_json = theme_json if theme_json && !theme_json.empty?
-    rescue ex : DB::Error | JSON::ParseException
+    rescue DB::Error | JSON::ParseException
       header_theme_colors_json = nil
     end
 

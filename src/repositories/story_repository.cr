@@ -301,5 +301,4 @@ module QuickHeadlines::Repositories
       )
     end
   end
-
 end

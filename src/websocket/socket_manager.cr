@@ -99,7 +99,7 @@ class SocketManager
 
     begin
       connection.websocket.close
-    rescue ex : IO::Error
+    rescue IO::Error
     end
     @closed_total.add(1)
     unregister_connection(connection)
@@ -136,7 +136,10 @@ class SocketManager
       idx = @connections.index { |conn| conn.websocket == ws }
       if idx
         connection_to_remove = @connections[idx]
-        connection_to_remove.outgoing.close rescue ex : Channel::ClosedError | IO::Error
+        begin
+          connection_to_remove.outgoing.close
+        rescue Channel::ClosedError
+        end
         @connections.delete_at(idx)
       end
     end
@@ -207,7 +210,7 @@ class SocketManager
             Log.for("quickheadlines.websocket").debug { "Stale connection detected: #{conn.ip} (inactive for #{((now - last_active).total_seconds).round(0)}s)" }
             dead << conn
           end
-        rescue ex : IO::Error
+        rescue IO::Error
           dead << conn
         end
       end
@@ -220,7 +223,7 @@ class SocketManager
       begin
         conn.outgoing.close
         conn.websocket.close
-      rescue ex : Channel::ClosedError | IO::Error
+      rescue Channel::ClosedError | IO::Error
       end
 
       @connections_mutex.synchronize do

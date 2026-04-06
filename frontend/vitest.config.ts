@@ -5,7 +5,7 @@ import { resolve } from 'path';
 export default defineConfig({
 	plugins: [sveltekit({		ssr: false	})],
 	test: {
-		environment: 'jsdom',
+		environment: 'happy-dom',
 		globals: true,
 		include: ['src/**/*.{test,spec}.{js,ts}'],
 		setupFiles: ['./src/lib/test/setup.ts']

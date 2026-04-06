@@ -37,7 +37,7 @@ def get_cache_dir(config : Config?) : String
       Dir.mkdir_p(test_dir)
       File.delete(test_dir)
       return "/var/cache/quickheadlines"
-    rescue ex : File::Error
+    rescue File::Error
       # Not writable, fall through to other options
     end
   end

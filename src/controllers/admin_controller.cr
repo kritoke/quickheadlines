@@ -68,9 +68,9 @@ class QuickHeadlines::Controllers::AdminController < QuickHeadlines::Controllers
           body_json = JSON.parse(body_content)
           action = body_json["action"]?.try(&.as_s?)
         end
-      rescue ex : IO::EOFError
+      rescue IO::EOFError
         return ATH::Response.new("Request body too large", 413, HTTP::Headers{"content-type" => "application/json"})
-      rescue ex : JSON::ParseException
+      rescue JSON::ParseException
       end
     end
 
@@ -152,15 +152,15 @@ class QuickHeadlines::Controllers::AdminController < QuickHeadlines::Controllers
     broadcaster_stats = EventBroadcaster.stats
 
     body = {
-      "clustering" => StateStore.clustering?,
-      "refreshing" => StateStore.refreshing?,
-      "active_jobs" => 0,
-      "websocket_connections" => ws_stats["connections"].to_i32,
-      "websocket_messages_sent" => broadcaster_stats["sent"].to_i64,
+      "clustering"                 => StateStore.clustering?,
+      "refreshing"                 => StateStore.refreshing?,
+      "active_jobs"                => 0,
+      "websocket_connections"      => ws_stats["connections"].to_i32,
+      "websocket_messages_sent"    => broadcaster_stats["sent"].to_i64,
       "websocket_messages_dropped" => broadcaster_stats["dropped"].to_i64,
-      "websocket_send_errors" => ws_stats["send_errors"].to_i64,
-      "broadcaster_processed" => broadcaster_stats["processed"].to_i64,
-      "broadcaster_dropped" => broadcaster_stats["dropped"].to_i64,
+      "websocket_send_errors"      => ws_stats["send_errors"].to_i64,
+      "broadcaster_processed"      => broadcaster_stats["processed"].to_i64,
+      "broadcaster_dropped"        => broadcaster_stats["dropped"].to_i64,
     }.to_json
 
     ATH::Response.new(body, 200, HTTP::Headers{"content-type" => "application/json"})
