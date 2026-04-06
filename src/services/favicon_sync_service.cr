@@ -174,7 +174,7 @@ class FaviconSyncService
   end
 
   private def backfill_header_colors(feed_id : Int64, feed_url : String, favicon_path : String) : Nil
-    extracted = ColorExtractor.theme_aware_extract_from_favicon(favicon_path, feed_url, nil)
+    extracted = ColorExtractor.extract_theme_colors(favicon_path, feed_url, nil)
     return unless extracted
 
     bg = extracted["bg"]?.try(&.to_s)

@@ -59,7 +59,7 @@ end
 
 # Initialize application state
 begin
-  config_result = load_config_with_validation(QuickHeadlines::CONFIG_PATH)
+  config_result = load_validated_config(QuickHeadlines::CONFIG_PATH)
   unless config_result.success
     Log.for("quickheadlines.app").fatal { "\nFailed to load configuration from feeds.yml:" }
     Log.for("quickheadlines.app").fatal { "  #{config_result.error_message}" }

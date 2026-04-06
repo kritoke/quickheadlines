@@ -126,10 +126,10 @@ module QuickHeadlines::Repositories
       items = [] of QuickHeadlines::Domain::TimelineEntry
 
       cutoff_clause = days_back ? "AND i.pub_date >= ?" : ""
-      feed_filter_clause = build_feed_filter_clause(allowed_feed_urls)
+      feed_filter_clause = build_feed_filter(allowed_feed_urls)
 
       cutoff_value = days_back ? Time.local - days_back.days : nil
-      feed_filter_values = build_feed_filter_values(allowed_feed_urls)
+      feed_filter_values = feed_filter_values(allowed_feed_urls)
 
       # Use CTE to pre-compute cluster representatives and sizes (eliminates per-row subqueries)
       query = <<-SQL
@@ -218,10 +218,10 @@ module QuickHeadlines::Repositories
 
     def count_timeline_items(days_back : Int32?, allowed_feed_urls : Array(String) = [] of String) : Int32
       cutoff_clause = days_back ? "AND i.pub_date >= ?" : ""
-      feed_filter_clause = build_feed_filter_clause(allowed_feed_urls)
+      feed_filter_clause = build_feed_filter(allowed_feed_urls)
 
       cutoff_value = days_back ? Time.local - days_back.days : nil
-      feed_filter_values = build_feed_filter_values(allowed_feed_urls)
+      feed_filter_values = feed_filter_values(allowed_feed_urls)
 
       query = "SELECT COUNT(*) FROM items i JOIN feeds f ON i.feed_id = f.id WHERE 1=1 #{cutoff_clause} #{feed_filter_clause}"
 
@@ -247,14 +247,14 @@ module QuickHeadlines::Repositories
       (result || 0) > 0
     end
 
-    private def build_feed_filter_clause(allowed_feed_urls : Array(String)) : String
+    private def build_feed_filter(allowed_feed_urls : Array(String)) : String
       return "" if allowed_feed_urls.empty?
 
       placeholders = (1..allowed_feed_urls.size).map { |_| "?" }.join(", ")
       "AND f.url IN (#{placeholders})"
     end
 
-    private def build_feed_filter_values(allowed_feed_urls : Array(String)) : Array(String)
+    private def feed_filter_values(allowed_feed_urls : Array(String)) : Array(String)
       allowed_feed_urls
     end
 

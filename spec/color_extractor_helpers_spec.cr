@@ -2,7 +2,7 @@ require "./spec_helper"
 
 describe "ColorExtractor helpers" do
   it "converts rgb array to hex" do
-    ColorExtractor.rgb_to_hex_public([255, 0, 0]).should eq("#ff0000")
+    ColorExtractor.rgb_to_hex([255, 0, 0]).should eq("#ff0000")
   end
 
   it "samples pixels from a small canvas buffer" do
@@ -35,7 +35,7 @@ describe "ColorExtractor helpers" do
 
   it "upgrades auto theme when both roles meet contrast" do
     theme = {"bg" => "#ffffff", "text" => {"light" => "#000000", "dark" => "#000000"}, "source" => "auto"}.to_json
-    res = ColorExtractor.auto_upgrade_to_auto_corrected(theme)
+    res = ColorExtractor.upgrade_theme_json(theme)
     res.should_not be_nil
     parsed = JSON.parse(res.as(String))
     parsed["source"].should eq("auto-corrected")
@@ -43,6 +43,6 @@ describe "ColorExtractor helpers" do
 
   it "does not upgrade when source is not auto" do
     theme = {"bg" => "#ffffff", "text" => {"light" => "#000000", "dark" => "#000000"}, "source" => "manual"}.to_json
-    ColorExtractor.auto_upgrade_to_auto_corrected(theme).should be_nil
+    ColorExtractor.upgrade_theme_json(theme).should be_nil
   end
 end

@@ -162,6 +162,5 @@ describe "Models" do
       state.clustering.should be_false
       state.refreshing.should be_false
     end
-
   end
 end

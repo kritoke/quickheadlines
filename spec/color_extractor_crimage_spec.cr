@@ -3,25 +3,25 @@ require "./spec_helper"
 describe "ColorExtractor CrImage integration" do
   describe ".theme_aware_extract_from_favicon" do
     it "returns nil for non-existent files" do
-      result = ColorExtractor.theme_aware_extract_from_favicon("/nonexistent.png", "http://example.com", nil)
+      result = ColorExtractor.extract_theme_colors("/nonexistent.png", "http://example.com", nil)
       result.should be_nil
     end
 
     it "returns nil when manual override is set" do
-      result = ColorExtractor.theme_aware_extract_from_favicon("/any.png", "http://example.com", "#ff0000")
+      result = ColorExtractor.extract_theme_colors("/any.png", "http://example.com", "#ff0000")
       result.should be_nil
     end
   end
 
   describe ".auto_correct_theme_json" do
     it "returns nil when theme_json is nil" do
-      result = ColorExtractor.auto_correct_theme_json(nil, nil, nil)
+      result = ColorExtractor.correct_theme_json(nil, nil, nil)
       result.should be_nil
     end
 
     it "returns corrected theme when text has low contrast" do
       theme = {"bg" => "#808080", "text" => {"primary" => "#808080"}}.to_json
-      result = ColorExtractor.auto_correct_theme_json(theme, nil, nil)
+      result = ColorExtractor.correct_theme_json(theme, nil, nil)
       result.should_not be_nil
       parsed = JSON.parse(result.as(String))
       ["auto", "auto-corrected"].includes?(parsed["source"].to_s).should be_true
@@ -29,22 +29,22 @@ describe "ColorExtractor CrImage integration" do
 
     it "keeps theme when text meets contrast" do
       theme = {"bg" => "#ffffff", "text" => {"light" => "#000000"}}.to_json
-      result = ColorExtractor.auto_correct_theme_json(theme, nil, nil)
+      result = ColorExtractor.correct_theme_json(theme, nil, nil)
       result.should_not be_nil
       parsed = JSON.parse(result.as(String))
       parsed["source"].should eq("auto")
     end
   end
 
-  describe ".auto_upgrade_to_auto_corrected" do
+  describe ".upgrade_theme_json" do
     it "returns nil for nil input" do
-      result = ColorExtractor.auto_upgrade_to_auto_corrected(nil)
+      result = ColorExtractor.upgrade_theme_json(nil)
       result.should be_nil
     end
 
     it "returns nil when source is not auto" do
       theme = {"bg" => "#ffffff", "text" => {"light" => "#000000"}, "source" => "manual"}.to_json
-      result = ColorExtractor.auto_upgrade_to_auto_corrected(theme)
+      result = ColorExtractor.upgrade_theme_json(theme)
       result.should be_nil
     end
   end

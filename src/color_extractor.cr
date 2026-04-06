@@ -38,11 +38,11 @@ module ColorExtractor
     @@theme_detector ||= PrismatIQ::ThemeDetector.new
   end
 
-  def self.theme_aware_extract_from_favicon(favicon_path : String, feed_url : String, config_header_color : String?) : Hash(String, String | Hash(String, String))?
+  def self.extract_theme_colors(favicon_path : String, feed_url : String, config_header_color : String?) : Hash(String, String | Hash(String, String))?
     has_manual_override = !config_header_color.nil? && config_header_color != ""
     return if has_manual_override
 
-    cached = get_cached_theme_aware(favicon_path)
+    cached = cached_theme_colors(favicon_path)
     return cached if cached
 
     full_path = File.join(FaviconStorage.favicon_dir, File.basename(favicon_path))
@@ -59,11 +59,11 @@ module ColorExtractor
       },
     }
 
-    cache_result_theme_aware(favicon_path, extracted)
+    cache_result_theme(favicon_path, extracted)
     extracted
   end
 
-  private def self.get_cached_theme_aware(path : String) : Hash(String, String | Hash(String, String))?
+  private def self.cached_theme_colors(path : String) : Hash(String, String | Hash(String, String))?
     @@cache_mutex.synchronize do
       if entry = @@extraction_cache[path]?
         if (Time.local - entry.timestamp).to_i < CACHE_EXPIRY_SECONDS
@@ -97,7 +97,7 @@ module ColorExtractor
     nil
   end
 
-  private def self.cache_result_theme_aware(path : String, result : Hash(String, String | Hash(String, String)))
+  private def self.cache_result_theme(path : String, result : Hash(String, String | Hash(String, String)))
     @@cache_mutex.synchronize do
       evictions_needed = @@extraction_cache.size >= MAX_CACHE_SIZE ? 1 : 0
 
@@ -133,16 +133,13 @@ module ColorExtractor
     end
   end
 
-  def self.auto_correct_theme_json(theme_json : String?, legacy_bg : String?, legacy_text : String?) : String?
+  def self.correct_theme_json(theme_json : String?, legacy_bg : String?, legacy_text : String?) : String?
     return unless theme_json || legacy_bg
 
-    parsed = JSON.parse(theme_json || "{}") rescue nil
+    parsed = (JSON.parse(theme_json || "{}")).as_h? rescue nil
     return unless parsed
 
-    h = parsed.as_h rescue nil
-    return unless h
-
-    bg_val = (h["bg"]?) || (h["background"]?)
+    bg_val = (parsed["bg"]?) || (parsed["background"]?)
     bg = bg_val ? bg_val.to_s : nil
     return if bg.nil? || bg.empty?
 
@@ -151,7 +148,7 @@ module ColorExtractor
 
     bg_rgb_obj = PrismatIQ::RGB.new(bg_rgb[0], bg_rgb[1], bg_rgb[2])
 
-    text_val = h["text"]?
+    text_val = parsed["text"]?
     text_hash = parse_text_to_hash(text_val)
 
     needs_correction = false
@@ -249,7 +246,7 @@ module ColorExtractor
     nil
   end
 
-  def self.auto_upgrade_to_auto_corrected(theme_json : String?) : String?
+  def self.upgrade_theme_json(theme_json : String?) : String?
     return unless theme_json
 
     parsed = JSON.parse(theme_json) rescue nil
@@ -298,7 +295,7 @@ module ColorExtractor
     fg.to_hex
   end
 
-  def self.rgb_to_hex_public(rgb : Array(Int32)) : String
+  def self.rgb_to_hex(rgb : Array(Int32)) : String
     rgb_obj = PrismatIQ::RGB.new(rgb[0], rgb[1], rgb[2])
     rgb_obj.to_hex
   end

@@ -10,11 +10,14 @@ require "../storage"
 require "../health_monitor"
 require "../color_extractor"
 require "./vug_adapter"
+require "./theme_helper"
 
 # FeedFetcher encapsulates all feed fetching logic with proper dependency injection.
 # Use FeedFetcher.instance for singleton access or inject FeedCache for testing.
 @[ADI::Register]
 class FeedFetcher
+  include Fetcher::ThemeHelper
+
   private record FetchAbortDecision,
     should_abort : Bool,
     reason : String? do
@@ -62,7 +65,7 @@ class FeedFetcher
       if stale_cache = get_stale_cached_feed(feed, effective_item_limit, previous_data)
         FetchErrorResult.new(stale_cache, retries)
       else
-        FetchErrorResult.new(build_error_feed_data(feed, "Error: #{ex.class} - #{error_msg}"), retries)
+        FetchErrorResult.new(build_error_feed(feed, "Error: #{ex.class} - #{error_msg}"), retries)
       end
     end
   end
@@ -75,7 +78,7 @@ class FeedFetcher
     if stale_cache = get_stale_cached_feed(feed, effective_item_limit, previous_data)
       stale_cache
     else
-      build_error_feed_data(feed, message)
+      build_error_feed(feed, message)
     end
   end
 
@@ -117,7 +120,7 @@ class FeedFetcher
 
           if items.empty?
             debug_log("Feed returned no items: #{feed.title} (#{feed.url})")
-            return build_error_feed_data(feed, "No items found (or unsupported format)")
+            return build_error_feed(feed, "No items found (or unsupported format)")
           end
 
           site_link = result.site_link || feed.url
@@ -137,7 +140,7 @@ class FeedFetcher
 
           local_favicon_path = favicon_data || (favicon && favicon.starts_with?("/favicons/") ? favicon : nil)
           header_color, header_text_color, header_theme_json = extract_header_colors(feed, local_favicon_path)
-          final_header_color, final_text_color = extract_legacy_header_from_theme(header_color, header_text_color, header_theme_json)
+          final_header_color, final_text_color = parse_legacy_theme(header_color, header_text_color, header_theme_json)
 
           preserved_header_color = final_header_color || previous_data.try(&.header_color)
           preserved_text_color = final_text_color || previous_data.try(&.header_text_color)
@@ -156,7 +159,7 @@ class FeedFetcher
             favicon_data
           )
 
-          fd = fd.with_header_theme_colors(preserved_theme) if preserved_theme
+          fd = fd.with_theme_colors(preserved_theme) if preserved_theme
 
           @cache.add(fd)
 
@@ -170,7 +173,7 @@ class FeedFetcher
           if stale_cache = get_stale_cached_feed(feed, effective_item_limit, previous_data)
             return stale_cache
           else
-            return build_error_feed_data(feed, "Error: #{error_msg}")
+            return build_error_feed(feed, "Error: #{error_msg}")
           end
         end
       rescue IO::TimeoutError
@@ -215,7 +218,7 @@ class FeedFetcher
   end
 
   # Build error feed data for failed fetches
-  def build_error_feed_data(feed : Feed, message : String) : FeedData
+  def build_error_feed(feed : Feed, message : String) : FeedData
     site_link = feed.url
 
     Log.for("quickheadlines.feed").warn { "[FEED ERROR] #{feed.title} (#{feed.url}) - #{message}" }
@@ -244,118 +247,6 @@ class FeedFetcher
   end
 
   # Private helper methods
-
-  private def extract_theme_text_value(parsed_text : JSON::Any, current_text : String?) : String?
-    return current_text unless current_text.nil? || current_text == ""
-
-    begin
-      new_text = (parsed_text.is_a?(Hash) && parsed_text["light"]? ? parsed_text["light"] : parsed_text["dark"]?)
-      new_text.to_s if new_text
-    rescue ex
-      HealthMonitor.log_error("extract_theme_text_value", ex)
-      nil
-    end
-  end
-
-  private def extract_legacy_header_from_theme(header_color : String?, header_text_color : String?, header_theme_json : String?) : {String?, String?}
-    return {header_color, header_text_color} unless header_theme_json
-
-    final_header_color = header_color
-    final_header_text = header_text_color
-
-    begin
-      parsed = JSON.parse(header_theme_json).as_h
-
-      if (parsed_text = parsed["text"]?) && (new_text = extract_theme_text_value(parsed_text, final_header_text))
-        final_header_text = new_text
-      end
-
-      if (parsed_bg = parsed["bg"]?) && (final_header_color.nil? || final_header_color == "")
-        final_header_color = parsed_bg.to_s
-      end
-    rescue ex
-      HealthMonitor.log_error("extract_legacy_header_from_theme(parse)", ex)
-    end
-
-    {final_header_color, final_header_text}
-  end
-
-  private def parse_theme_text_value(text_val) : Hash(String, String)?
-    return unless text_val
-
-    has_text = (text_val.is_a?(Hash) && !text_val.empty?) || (text_val.is_a?(String) && !text_val.empty?)
-    return unless has_text
-
-    parsed_text = nil.as(Hash(String, String)?)
-    if text_val.is_a?(Hash)
-      parsed_text = {} of String => String
-      text_val.each do |k, v|
-        parsed_text[k.to_s] = v.to_s
-      end
-    else
-      begin
-        tmp = JSON.parse(text_val.to_s).as_h
-        parsed_text = {} of String => String
-        tmp.each do |k, v|
-          parsed_text[k.to_s] = v.to_s
-        end
-      rescue JSON::ParseException | TypeCastError
-        parsed_text = {"light" => text_val.to_s, "dark" => text_val.to_s}
-      end
-    end
-    parsed_text
-  end
-
-  private def normalize_bg_value(extracted : Hash?) : String?
-    return unless extracted && extracted.has_key?("bg")
-
-    raw_bg = extracted["bg"]
-    if raw_bg.is_a?(String)
-      raw_bg
-    elsif raw_bg.is_a?(JSON::Any)
-      begin
-        raw_bg.as_s
-      rescue TypeCastError
-        raw_bg.to_s
-      end
-    else
-      raw_bg.to_s
-    end
-  end
-
-  private def extract_header_colors(feed : Feed, favicon_path : String?) : {String?, String?, String?}
-    if favicon_path && favicon_path.starts_with?("/favicons/")
-      begin
-        extracted = ColorExtractor.theme_aware_extract_from_favicon(favicon_path, feed.url, feed.header_color)
-
-        if extracted && extracted.is_a?(Hash) && extracted.has_key?("text")
-          text_val = extracted["text"]
-
-          parsed_text = parse_theme_text_value(text_val)
-
-          if parsed_text
-            theme_payload = {
-              "bg"     => (extracted.has_key?("bg") ? extracted["bg"] : nil),
-              "text"   => parsed_text || {"light" => nil, "dark" => nil},
-              "source" => "auto",
-            }
-
-            header_theme_json = theme_payload.to_json
-
-            legacy_text = parsed_text["light"]? || parsed_text["dark"]?
-
-            bg_val = normalize_bg_value(extracted)
-
-            return {bg_val, legacy_text, header_theme_json}
-          end
-        end
-      rescue ex
-        HealthMonitor.log_error("extract_header_colors(theme-aware)", ex)
-      end
-    end
-
-    {feed.header_color, feed.header_text_color, nil}
-  end
 
   private def should_abort_fetch?(feed : Feed, elapsed_seconds : Float, retries : Int32, redirects : Int32, timeout_seconds : Int32) : FetchAbortDecision
     if elapsed_seconds > timeout_seconds
@@ -391,7 +282,7 @@ class FeedFetcher
 
     return unless QuickHeadlines::CacheUtils.cache_fresh?(last_fetched, QuickHeadlines::Constants::CACHE_FRESHNESS_MINUTES) && cached.items.size >= item_limit
 
-    build_cached_feed_data(cached, previous_data)
+    build_cached_feed(cached, previous_data)
   end
 
   private def entries_to_items(entries : Array(Fetcher::Entry)) : Array(Item)
@@ -405,10 +296,10 @@ class FeedFetcher
     cached = @cache.get(feed.url)
     return unless cached
 
-    build_cached_feed_data(cached, previous_data)
+    build_cached_feed(cached, previous_data)
   end
 
-  private def build_cached_feed_data(cached : FeedData, previous_data : FeedData?) : FeedData?
+  private def build_cached_feed(cached : FeedData, previous_data : FeedData?) : FeedData?
     if previous_data && (prev_favicon_data = previous_data.favicon_data)
       favicon_path = FaviconStorage.favicon_dir + prev_favicon_data
       if File.exists?(favicon_path)
@@ -477,7 +368,7 @@ private def fetcher_config : Fetcher::RequestConfig
 end
 
 def error_feed_data(feed : Feed, message : String) : FeedData
-  FeedFetcher.instance.build_error_feed_data(feed, message)
+  FeedFetcher.instance.build_error_feed(feed, message)
 end
 
 def load_feeds_from_cache(config : Config) : Bool

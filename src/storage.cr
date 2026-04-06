@@ -1,5 +1,3 @@
 require "./storage/cache_utils"
 require "./storage/database"
-require "./storage/clustering_repo"
-require "./storage/cleanup"
 require "./storage/feed_cache"

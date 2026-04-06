@@ -289,13 +289,7 @@ def load_feed_cache(config : Config?, db_service : DatabaseService?) : FeedCache
 
   retention_hours = config.try(&.cache_retention_hours) || QuickHeadlines::Constants::CACHE_RETENTION_HOURS
 
-  config_urls = config.try do |conf|
-    urls = conf.feeds.map(&.url)
-    conf.tabs.each do |tab|
-      urls.concat(tab.feeds.map(&.url))
-    end
-    urls
-  end
+  config_urls = config.try(&.all_feed_urls)
 
   cache.cleanup_old_entries(retention_hours, config_urls)
 

@@ -21,7 +21,7 @@ def detect_github_repo : String?
   nil
 end
 
-def fetch_config_from_github(repo_path : String, branch : String = "main") : String?
+def fetch_github_config(repo_path : String, branch : String = "main") : String?
   unless repo_path =~ /\A[a-zA-Z0-9_-]+\/[a-zA-Z0-9_-]+\z/
     Log.for("quickheadlines.config").warn { "Invalid repo_path format (must be owner/repo): #{repo_path}" }
     return
@@ -34,7 +34,7 @@ def fetch_config_from_github(repo_path : String, branch : String = "main") : Str
     if response.status_code == 200
       return response.body
     elsif response.status_code == 404 && branch == "main"
-      return fetch_config_from_github(repo_path, "master")
+      return fetch_github_config(repo_path, "master")
     end
   rescue ex
     Log.for("quickheadlines.config").error(exception: ex) { "Error fetching config from GitHub" }
@@ -43,9 +43,9 @@ def fetch_config_from_github(repo_path : String, branch : String = "main") : Str
   nil
 end
 
-def download_config_from_github(target_path : String) : Bool
+def download_github_config(target_path : String) : Bool
   if repo_path = detect_github_repo
-    if yaml_content = fetch_config_from_github(repo_path)
+    if yaml_content = fetch_github_config(repo_path)
       begin
         Config.from_yaml(yaml_content)
 

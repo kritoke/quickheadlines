@@ -13,12 +13,12 @@ module QuickHeadlines::Services
       @feed_repository.find_all
     end
 
-    def get_feed_with_items(url : String, limit : Int32 = 20) : FeedWithItems?
-      result = get_feed_with_items_result(url, limit)
+    def feed_with_items(url : String, limit : Int32 = 20) : FeedWithItems?
+      result = feed_with_items_result(url, limit)
       result.success? ? result.value : nil
     end
 
-    def get_feed_with_items_result(url : String, limit : Int32 = 20) : FeedWithItemsResult
+    def feed_with_items_result(url : String, limit : Int32 = 20) : FeedWithItemsResult
       feed_result = @feed_repository.find_by_url_result(url)
 
       return feed_result.map_error { |e| e } unless feed_result.success?

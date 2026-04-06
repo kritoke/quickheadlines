@@ -19,26 +19,26 @@ rescue
   false
 end
 
-private def add_column_if_not_exists(db : DB::Database, table : String, column : String, type : String) : Nil
+private def ensure_column(db : DB::Database, table : String, column : String, type : String) : Nil
   return if column_exists?(db, table, column)
   db.exec("ALTER TABLE #{table} ADD COLUMN #{column} #{type}")
 end
 
 MIGRATIONS = [
   DatabaseMigration.new(version: 1, name: "add_favicon_data_column") do |db|
-    add_column_if_not_exists(db, "feeds", "favicon_data", "TEXT")
+    ensure_column(db, "feeds", "favicon_data", "TEXT")
   end,
   DatabaseMigration.new(version: 2, name: "add_header_text_color_column") do |db|
-    add_column_if_not_exists(db, "feeds", "header_text_color", "TEXT")
+    ensure_column(db, "feeds", "header_text_color", "TEXT")
   end,
   DatabaseMigration.new(version: 3, name: "add_header_theme_colors_column") do |db|
-    add_column_if_not_exists(db, "feeds", "header_theme_colors", "TEXT")
+    ensure_column(db, "feeds", "header_theme_colors", "TEXT")
   end,
   DatabaseMigration.new(version: 4, name: "add_minhash_signature_column") do |db|
-    add_column_if_not_exists(db, "items", "minhash_signature", "BLOB")
+    ensure_column(db, "items", "minhash_signature", "BLOB")
   end,
   DatabaseMigration.new(version: 5, name: "add_cluster_id_column") do |db|
-    add_column_if_not_exists(db, "items", "cluster_id", "INTEGER REFERENCES items(id)")
+    ensure_column(db, "items", "cluster_id", "INTEGER REFERENCES items(id)")
   end,
   DatabaseMigration.new(version: 6, name: "migrate_lsh_bands_to_text") do |db|
     raw_value = db.query_one?("SELECT band_hash FROM lsh_bands LIMIT 1", as: {String?})
@@ -47,8 +47,8 @@ MIGRATIONS = [
     end
   end,
   DatabaseMigration.new(version: 7, name: "add_comment_url_and_commentary_url_columns") do |db|
-    add_column_if_not_exists(db, "items", "comment_url", "TEXT")
-    add_column_if_not_exists(db, "items", "commentary_url", "TEXT")
+    ensure_column(db, "items", "comment_url", "TEXT")
+    ensure_column(db, "items", "commentary_url", "TEXT")
   end,
 ]
 

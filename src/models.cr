@@ -33,7 +33,7 @@ record FeedData,
   end
 
   # Immutable setter - returns new instance
-  def with_header_theme_colors(val : String?) : FeedData
+  def with_theme_colors(val : String?) : FeedData
     copy_with(header_theme_colors: val)
   end
 

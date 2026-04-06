@@ -12,7 +12,7 @@ require "./feed_fetcher"
 
 CLUSTERING_JOBS = Atomic(Int32).new(0)
 
-private def collect_all_feed_configs(config : Config) : Hash(String, Feed)
+private def collect_feed_configs(config : Config) : Hash(String, Feed)
   all_configs = {} of String => Feed
   config.feeds.each { |feed| all_configs[feed.url] = feed }
   config.tabs.each { |tab| tab.feeds.each { |feed| all_configs[feed.url] = feed } }
@@ -68,7 +68,7 @@ def refresh_all(config : Config, cache : FeedCache, db_service : DatabaseService
   StateStore.update(&.copy_with(refreshing: true))
   StateStore.update(&.copy_with(config_title: config.page_title, config: config))
 
-  all_configs = collect_all_feed_configs(config)
+  all_configs = collect_feed_configs(config)
 
   if config.debug?
     Log.for("quickheadlines.feed").debug { "refresh_all: starting - #{all_configs.size} feeds to fetch" }

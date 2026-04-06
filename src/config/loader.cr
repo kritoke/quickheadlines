@@ -30,7 +30,7 @@ def parse_config_arg(args : Array(String)) : String?
   nil
 end
 
-def load_config_with_validation(path : String) : ConfigLoadResult
+def load_validated_config(path : String) : ConfigLoadResult
   content = File.read(path)
 
   if content.starts_with?("\uFEFF")

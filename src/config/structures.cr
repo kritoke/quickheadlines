@@ -54,6 +54,14 @@ struct Config
   property software_releases : SoftwareConfig?
   property tabs : Array(TabConfig) = [] of TabConfig
   property clustering : ClusteringConfig? = nil
+
+  def all_feed_urls : Array(String)
+    urls = feeds.map(&.url)
+    tabs.each do |tab|
+      urls.concat(tab.feeds.map(&.url))
+    end
+    urls
+  end
 end
 
 struct ClusteringConfig

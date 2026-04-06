@@ -120,19 +120,19 @@ end
 
 private def collect_invalid_feeds(config : Config, invalid_feeds : Array({String, String, String})) : Nil
   config.feeds.each do |feed|
-    reason = feed_url_invalid_reason(feed.url)
+    reason = invalid_url_reason(feed.url)
     invalid_feeds << {feed.title, feed.url, reason} if reason
   end
 
   config.tabs.each do |tab|
     tab.feeds.each do |feed|
-      reason = feed_url_invalid_reason(feed.url)
+      reason = invalid_url_reason(feed.url)
       invalid_feeds << {feed.title, feed.url, reason} if reason
     end
   end
 end
 
-private def feed_url_invalid_reason(url : String) : String?
+private def invalid_url_reason(url : String) : String?
   return "URL is empty" if url.nil? || url.strip.empty?
 
   begin

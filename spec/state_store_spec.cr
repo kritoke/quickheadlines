@@ -61,5 +61,4 @@ describe "StateStore" do
       final_state.clustering.should be_true
     end
   end
-
 end

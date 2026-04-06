@@ -92,7 +92,7 @@ def extract_and_save_theme(feed_data : FeedData, favicon_path : String, processe
   end
 
   # Run the theme-aware extractor
-  extracted = ColorExtractor.theme_aware_extract_from_favicon(favicon_path, feed_data.url, feed_data.header_color)
+  extracted = ColorExtractor.extract_theme_colors(favicon_path, feed_data.url, feed_data.header_color)
   if extracted && extracted.is_a?(Hash)
     # Normalize to JSON payload shape { bg: "rgb(...)", text: { light: "#..", dark: "#.." }, source: "backfill" }
     bg = extracted["bg"] ? extracted["bg"].to_s : nil
