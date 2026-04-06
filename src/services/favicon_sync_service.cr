@@ -83,7 +83,7 @@ class FaviconSyncService
         google_backfills << {feed_id, url, favicon}
       end
 
-      if (header_theme_colors.nil? || header_theme_colors == "FAILED") && favicon.nil? && site_link && !site_link.empty?
+      if header_theme_colors.nil? && favicon.nil? && site_link && !site_link.empty?
         missing_backfills << {feed_id, url, site_link}
       end
 

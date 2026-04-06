@@ -35,9 +35,9 @@ class AppBootstrap
     FaviconStorage.init
     VugAdapter.clear_cache
 
-    load_feeds_from_cache(@config)
-
     cleanup_stale_feeds
+
+    load_feeds_from_cache(@config)
 
     EventBroadcaster.start
   end

@@ -142,7 +142,7 @@ module FaviconStorage
         end
       end
       unless response.status.success?
-        Log.for("quickheadlines.storage").warn { "HTTP #{response.status.code} for #{url}" }
+        Log.for("quickheadlines.storage").debug { "HTTP #{response.status.code} for #{url}" }
         return
       end
 
