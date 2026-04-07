@@ -27,7 +27,7 @@ class EventBroadcaster
     begin
       select
       when UPDATE_CHANNEL.send(event)
-        PROCESSED_EVENTS.add(1)
+        # Event queued for broadcast
       when timeout(10.milliseconds)
         DROPPED_EVENTS.add(1)
         Log.for("quickheadlines.websocket").warn { "Channel full, dropping event (buffer size: 100)" }

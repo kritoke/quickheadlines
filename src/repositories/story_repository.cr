@@ -193,7 +193,13 @@ module QuickHeadlines::Repositories
           is_representative = rows.read(Int32) == 1
           cluster_size = rows.read(Int32)
 
-          pub_date = pub_date_str.try { |str| Time.parse(str, QuickHeadlines::Constants::DB_TIME_FORMAT, Time::Location::UTC) }
+          pub_date = pub_date_str.try { |str|
+            begin
+              Time.parse(str, QuickHeadlines::Constants::DB_TIME_FORMAT, Time::Location::UTC)
+            rescue Time::Format::Error
+              nil
+            end
+          }
 
           items << QuickHeadlines::Domain::TimelineEntry.new(
             id: id,
@@ -223,7 +229,25 @@ module QuickHeadlines::Repositories
       cutoff_value = days_back ? Time.local - days_back.days : nil
       feed_filter_values = feed_filter_values(allowed_feed_urls)
 
-      query = "SELECT COUNT(*) FROM items i JOIN feeds f ON i.feed_id = f.id WHERE 1=1 #{cutoff_clause} #{feed_filter_clause}"
+      query = <<-SQL
+        WITH cluster_info AS (
+          SELECT
+            cluster_id,
+            MIN(id) as representative_id,
+            COUNT(*) as cluster_size
+          FROM items
+          WHERE cluster_id IS NOT NULL
+          GROUP BY cluster_id
+        )
+        SELECT COUNT(*)
+        FROM items i
+        JOIN feeds f ON i.feed_id = f.id
+        LEFT JOIN cluster_info ci ON i.cluster_id = ci.cluster_id
+        WHERE (i.pub_date IS NULL OR i.pub_date <= datetime('now', '+1 day'))
+        AND (i.cluster_id IS NULL OR i.id = ci.representative_id)
+        #{cutoff_clause}
+        #{feed_filter_clause}
+      SQL
 
       if cutoff_value && !feed_filter_values.empty?
         query_args = [cutoff_value, *feed_filter_values]
@@ -286,7 +310,13 @@ module QuickHeadlines::Repositories
     end
 
     private def build_story(id : Int64, title : String, link : String, pub_date_str : String?, feed_title : String, feed_url : String, feed_link : String?, favicon : String?, header_color : String?) : QuickHeadlines::Entities::Story
-      pub_date = pub_date_str.try { |str| Time.parse(str, QuickHeadlines::Constants::DB_TIME_FORMAT, Time::Location::UTC) }
+      pub_date = pub_date_str.try { |str|
+        begin
+          Time.parse(str, QuickHeadlines::Constants::DB_TIME_FORMAT, Time::Location::UTC)
+        rescue Time::Format::Error
+          nil
+        end
+      }
       QuickHeadlines::Entities::Story.new(
         id: id.to_s,
         title: title,

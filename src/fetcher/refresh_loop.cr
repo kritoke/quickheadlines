@@ -11,6 +11,7 @@ require "../websocket"
 require "./feed_fetcher"
 
 CLUSTERING_JOBS = Atomic(Int32).new(0)
+MAX_PARALLEL_CLUSTERING = 20
 
 private def collect_feed_configs(config : Config) : Hash(String, Feed)
   all_configs = {} of String => Feed
@@ -122,7 +123,8 @@ end
 def async_clustering(feeds : Array(FeedData), cache : FeedCache, db_service : DatabaseService)
   return if feeds.empty?
 
-  clustering_channel = Channel(Nil).new(10)
+  clustering_channel = Channel(Nil).new(MAX_PARALLEL_CLUSTERING)
+  MAX_PARALLEL_CLUSTERING.times { clustering_channel.send(nil) }
 
   StateStore.update(&.copy_with(clustering: true))
   CLUSTERING_JOBS.set(feeds.size)
@@ -130,16 +132,16 @@ def async_clustering(feeds : Array(FeedData), cache : FeedCache, db_service : Da
   spawn do
     feeds.each do |feed_data|
       spawn do
-        clustering_channel.send(nil)
+        clustering_channel.receive
         begin
           process_feed_item_clustering(feed_data, cache, db_service)
         rescue ex
           Log.for("quickheadlines.clustering").error(exception: ex) { "async_clustering: error processing #{feed_data.url}" }
         ensure
-          clustering_channel.receive
           if CLUSTERING_JOBS.sub(1) <= 1
             StateStore.update(&.copy_with(clustering: false))
           end
+          clustering_channel.send(nil)
         end
       end
     end

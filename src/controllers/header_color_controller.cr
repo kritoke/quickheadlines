@@ -3,6 +3,10 @@ require "./api_base_controller"
 class QuickHeadlines::Controllers::HeaderColorController < QuickHeadlines::Controllers::ApiBaseController
   @[ARTA::Post(path: "/api/header_color")]
   def save_header_color(request : ATH::Request) : ATH::Response
+    unless check_admin_auth(request)
+      return unauthorized_response
+    end
+
     body_io = request.body
     return ATH::Response.new("Missing request body", 400) if body_io.nil?
 

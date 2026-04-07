@@ -3,6 +3,7 @@ require "mutex"
 
 module QuickHeadlines
   class RateLimiter
+    INSTANCE_TTL_SECONDS = 3600
     @@instances = {} of String => RateLimiter
     @@cleanup_lock = Mutex.new
     @@last_cleanup = Time.utc
@@ -10,26 +11,32 @@ module QuickHeadlines
     property max_requests : Int32
     property window_seconds : Int32
     property requests : Hash(String, Array(Int64))
+    property last_accessed : Int64
 
     def initialize(@max_requests : Int32 = 60, @window_seconds : Int32 = 60)
       @requests = Hash(String, Array(Int64)).new
       @mutex = Mutex.new
+      @last_accessed = Time.utc.to_unix
     end
 
     def self.get_or_create(key : String, max_requests : Int32 = 1, window_seconds : Int32 = 60) : RateLimiter
+      cleanup_stale_instances
       unless @@instances[key]?
         @@instances[key] = RateLimiter.new(max_requests, window_seconds)
       end
-      @@instances[key]
+      instance = @@instances[key]
+      instance.last_accessed = Time.utc.to_unix
+      instance
     end
 
-    def self.cleanup_stale_entries
+    def self.cleanup_stale_instances
       @@cleanup_lock.synchronize do
         now = Time.utc
         return if (now - @@last_cleanup).total_seconds < 60
 
-        @@instances.each do |_, limiter|
-          limiter.cleanup
+        cutoff = now.to_unix - INSTANCE_TTL_SECONDS
+        @@instances.reject! do |_, limiter|
+          limiter.last_accessed < cutoff
         end
         @@last_cleanup = now
       end
@@ -44,7 +51,7 @@ module QuickHeadlines
     end
 
     def allowed?(identifier : String) : Bool
-      self.class.cleanup_stale_entries
+      self.class.cleanup_stale_instances
 
       now = Time.utc.to_unix
       cutoff = now - @window_seconds

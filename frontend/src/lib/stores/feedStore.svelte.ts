@@ -140,26 +140,19 @@ export function resetFeedStore(): void {
 }
 
 export async function loadFeeds(tab: string, force: boolean = false): Promise<void> {
-	console.log('[FeedStore] loadFeeds called:', { tab, force, currentStatus: feedState.status });
 	Object.assign(feedState, setActiveTab(feedState, tab));
 	
 	if (!force && feedState.tabCache[tab]?.loaded) {
-		console.log('[FeedStore] Using cached data for tab:', tab);
 		feedState.feeds = feedState.tabCache[tab].feeds;
 		return;
 	}
 
-	console.log('[FeedStore] Setting loading state for tab:', tab);
 	Object.assign(feedState, setLoading(feedState, tab));
 	
 	try {
-		console.log('[FeedStore] Fetching feeds for tab:', tab);
 		const response = await fetchFeeds(tab);
-		console.log('[FeedStore] Got response:', { tab, feedsCount: response.feeds?.length, status: response });
 		Object.assign(feedState, setFeedsData(feedState, response, tab));
-		console.log('[FeedStore] Updated feedState, new status:', feedState.status);
 	} catch (e) {
-		console.error('[FeedStore] Error loading feeds:', e);
 		Object.assign(feedState, setError(feedState, e instanceof Error ? e.message : 'Failed to load feeds'));
 	}
 }

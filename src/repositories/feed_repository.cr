@@ -94,7 +94,13 @@ module QuickHeadlines::Repositories
       comment_url = rows.read(String?)
       commentary_url = rows.read(String?)
 
-      pub_date = pub_date_str.try { |date_str| Time.parse(date_str, QuickHeadlines::Constants::DB_TIME_FORMAT, Time::Location::UTC) }
+      pub_date = pub_date_str.try { |date_str|
+        begin
+          Time.parse(date_str, QuickHeadlines::Constants::DB_TIME_FORMAT, Time::Location::UTC)
+        rescue Time::Format::Error
+          nil
+        end
+      }
       Item.new(title, link, pub_date, version, comment_url, commentary_url)
     end
 
@@ -156,7 +162,13 @@ module QuickHeadlines::Repositories
           version = rows.read(String?)
           comment_url = rows.read(String?)
           commentary_url = rows.read(String?)
-          pub_date = pub_date_str.try { |date_str| Time.parse(date_str, QuickHeadlines::Constants::DB_TIME_FORMAT, Time::Location::UTC) }
+          pub_date = pub_date_str.try { |date_str|
+            begin
+              Time.parse(date_str, QuickHeadlines::Constants::DB_TIME_FORMAT, Time::Location::UTC)
+            rescue Time::Format::Error
+              nil
+            end
+          }
           items_by_feed[feed_id] << Item.new(title, link, pub_date, version, comment_url, commentary_url)
         end
       end
@@ -179,15 +191,21 @@ module QuickHeadlines::Repositories
     def find_last_fetched_time(url : String) : Time?
       result = db.query_one?("SELECT last_fetched FROM feeds WHERE url = ?", url, as: String?)
       return unless result
-      Time.parse(result, QuickHeadlines::Constants::DB_TIME_FORMAT, Time::Location::UTC)
+      begin
+        Time.parse(result, QuickHeadlines::Constants::DB_TIME_FORMAT, Time::Location::UTC)
+      rescue Time::Format::Error
+        nil
+      end
     end
 
     def find_last_fetched_time_result(url : String) : TimeResult
       result = db.query_one?("SELECT last_fetched FROM feeds WHERE url = ?", url, as: String?)
       return TimeResult.failure(RepositoryError::NotFound) unless result
-      TimeResult.success(Time.parse(result, QuickHeadlines::Constants::DB_TIME_FORMAT, Time::Location::UTC))
-    rescue DB::Error | Time::Format::Error
-      TimeResult.failure(RepositoryError::DatabaseError)
+      begin
+        TimeResult.success(Time.parse(result, QuickHeadlines::Constants::DB_TIME_FORMAT, Time::Location::UTC))
+      rescue Time::Format::Error
+        TimeResult.failure(RepositoryError::DatabaseError)
+      end
     end
 
     def find_by_url(url : String) : QuickHeadlines::Entities::Feed?

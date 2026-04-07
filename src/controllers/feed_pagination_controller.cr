@@ -12,6 +12,14 @@ class QuickHeadlines::Controllers::FeedPaginationController < QuickHeadlines::Co
       raise Athena::Framework::Exception::BadRequest.new("Missing 'url' parameter")
     end
 
+    ip = client_ip(request)
+    limiter = RateLimiter.get_or_create("feed_more:#{ip}", 30, 60)
+
+    unless limiter.allowed?(ip)
+      retry_after = limiter.retry_after(ip)
+      raise Athena::Framework::Exception::TooManyRequests.new("Rate limit exceeded")
+    end
+
     config = StateStore.config
     if config.nil?
       raise Athena::Framework::Exception::ServiceUnavailable.new("Configuration not loaded")

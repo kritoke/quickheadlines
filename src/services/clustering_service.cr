@@ -111,7 +111,13 @@ class QuickHeadlines::Services::ClusteringService
         link = rows.read(String)
         pub_date_str = rows.read(String?)
         feed_id = rows.read(Int64)
-        pub_date = pub_date_str.try { |str| Time.parse(str, QuickHeadlines::Constants::DB_TIME_FORMAT, Time::Location::UTC) }
+        pub_date = pub_date_str.try { |str|
+          begin
+            Time.parse(str, QuickHeadlines::Constants::DB_TIME_FORMAT, Time::Location::UTC)
+          rescue Time::Format::Error
+            nil
+          end
+        }
         items << {id: id, title: title, link: link, pub_date: pub_date, feed_id: feed_id}
       end
     end

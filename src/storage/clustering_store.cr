@@ -28,13 +28,18 @@ module QuickHeadlines::Storage
       placeholders = keywords.map { |_| "title LIKE ?" }.join(" OR ")
       sql = "SELECT DISTINCT id FROM items WHERE id != ? AND (#{placeholders}) ORDER BY id DESC LIMIT ?"
 
-      args = [exclude_id] + keywords.map { |k| "%#{k}%" } + [limit]
+      escaped_keywords = keywords.map { |k| "%#{escape_like_pattern(k)}%" }
+      args = [exclude_id] + escaped_keywords + [limit]
       @db.query(sql, args: args) do |rows|
         rows.each do
           items << rows.read(Int64)
         end
       end
       items
+    end
+
+    private def escape_like_pattern(pattern : String) : String
+      pattern.gsub("\\") { "\\\\" }.gsub("%") { "\\%" }.gsub("_") { "\\_" }
     end
 
     def assign_cluster(item_id : Int64, cluster_id : Int64?)
@@ -163,15 +168,29 @@ module QuickHeadlines::Storage
       result = {} of String => Int64
       return result if items.empty?
 
-      items.each do |item|
-        id = @db.query_one?(
-          "SELECT items.id FROM items JOIN feeds ON items.feed_id = feeds.id WHERE feeds.url = ? AND items.link = ?",
-          item.feed_url,
-          item.link,
-          as: {Int64}
-        )
-        if id
-          result["#{item.feed_url}|#{item.link}"] = id
+      feed_urls = items.map(&.feed_url).uniq
+      feed_url_to_id = {} of String => Int64
+      feed_urls.each do |url|
+        if feed_id = get_feed_id(url)
+          feed_url_to_id[url] = feed_id
+        end
+      end
+
+      grouped = items.group_by { |item| feed_url_to_id[item.feed_url]? }
+      grouped.each do |feed_id, grouped_items|
+        next unless feed_id
+        links = grouped_items.map(&.link)
+        placeholders = links.map { |_| "?" }.join(",")
+        query = "SELECT link, id FROM items WHERE feed_id = ? AND link IN (#{placeholders})"
+        @db.query(query, [feed_id] + links) do |rows|
+          rows.each do
+            link = rows.read(String)
+            id = rows.read(Int64)
+            item_key = grouped_items.find { |g| g.link == link }
+            if item_key
+              result["#{item_key.feed_url}|#{link}"] = id
+            end
+          end
         end
       end
       result
@@ -226,7 +245,7 @@ module QuickHeadlines::Storage
       @db.query_one?(
         "SELECT feed_id FROM items WHERE id = ?",
         item_id,
-        as: Int64
+        as: Int64?
       )
     end
 
@@ -264,7 +283,13 @@ module QuickHeadlines::Storage
           favicon = rows.read(String?)
           header_color = rows.read(String?)
 
-          pub_date = pub_date_str.try { |date_str| Time.parse(date_str, QuickHeadlines::Constants::DB_TIME_FORMAT, Time::Location::UTC) }
+          pub_date = pub_date_str.try { |date_str|
+            begin
+              Time.parse(date_str, QuickHeadlines::Constants::DB_TIME_FORMAT, Time::Location::UTC)
+            rescue Time::Format::Error
+              nil
+            end
+          }
 
           items << ClusteringItemRow.new(
             id: id,
@@ -332,7 +357,13 @@ module QuickHeadlines::Storage
           favicon = rows.read(String?)
           header_color = rows.read(String?)
 
-          pub_date = pub_date_str.try { |date_str| Time.parse(date_str, QuickHeadlines::Constants::DB_TIME_FORMAT, Time::Location::UTC) }
+          pub_date = pub_date_str.try { |date_str|
+            begin
+              Time.parse(date_str, QuickHeadlines::Constants::DB_TIME_FORMAT, Time::Location::UTC)
+            rescue Time::Format::Error
+              nil
+            end
+          }
 
           items << ClusteringItemRow.new(
             id: id,

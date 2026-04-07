@@ -118,9 +118,11 @@ module StateStore
   end
 
   def self.clustering=(value : Bool)
-    update(&.copy_with(clustering: value))
-    unless value
-      @@clustering_start_time = nil
+    @@clustering_mutex.synchronize do
+      @@current = @@current.copy_with(clustering: value)
+      unless value
+        @@clustering_start_time = nil
+      end
     end
   end
 

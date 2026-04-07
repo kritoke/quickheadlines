@@ -49,12 +49,13 @@ class SocketManager
         return false
       end
 
+      count = @ip_counts[ip]?
+      if count && count >= MAX_CONNECTIONS_PER_IP
+        Log.for("quickheadlines.websocket").warn { "Connection rejected: max #{MAX_CONNECTIONS_PER_IP} connections per IP (#{ip})" }
+        return false
+      end
+
       @ip_mutex.synchronize do
-        count = @ip_counts[ip]?
-        if count && count >= MAX_CONNECTIONS_PER_IP
-          Log.for("quickheadlines.websocket").warn { "Connection rejected: max #{MAX_CONNECTIONS_PER_IP} connections per IP (#{ip})" }
-          return false
-        end
         @ip_counts[ip] = (count || 0) + 1
       end
 
@@ -67,10 +68,9 @@ class SocketManager
 
       spawn writer_fiber(connection)
       @connections << connection
+      Log.for("quickheadlines.websocket").info { "Client connected from #{ip}. Total: #{@connections.size}" }
+      true
     end
-
-    Log.for("quickheadlines.websocket").info { "Client connected from #{ip}. Total: #{connection_count}" }
-    true
   end
 
   private def writer_fiber(connection : Connection) : Nil
@@ -230,8 +230,6 @@ class SocketManager
         @connections.delete(conn)
         removed += 1
       end
-
-      decrement_ip_count(conn.ip)
 
       @activity_mutex.synchronize do
         @last_activity.delete(conn.websocket)

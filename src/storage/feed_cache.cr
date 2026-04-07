@@ -303,23 +303,32 @@ def load_feed_cache(config : Config?, db_service : DatabaseService?) : FeedCache
   cache
 end
 
+module QuickHeadlines::Storage
+  @@last_cache_cleanup = Time.utc
+
+  def self.last_cache_cleanup=(value : Time)
+    @@last_cache_cleanup = value
+  end
+
+  def self.last_cache_cleanup
+    @@last_cache_cleanup
+  end
+end
+
 def save_feed_cache(cache : FeedCache, retention_hours : Int32 = QuickHeadlines::Constants::CACHE_RETENTION_HOURS, max_cache_size_mb : Int32 = 100)
   cache.check_size_limit(max_cache_size_mb)
 
-  if rand(100) < 5
+  now = Time.utc
+  if now - QuickHeadlines::Storage.last_cache_cleanup >= 1.hour
     begin
       cache.vacuum
     rescue ex
       Log.for("quickheadlines.storage").warn { "vacuum failed: #{ex.message}" }
     end
-  end
 
-  if rand(100) < 10
     cache.cleanup_old_entries(retention_hours)
-  end
-
-  if rand(100) < 10
     cache.cleanup_old_articles(QuickHeadlines::Constants::CACHE_RETENTION_DAYS)
+    QuickHeadlines::Storage.last_cache_cleanup = now
   end
 
   FaviconSyncService.new(cache.db).sync_favicon_paths
