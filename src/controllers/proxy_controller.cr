@@ -4,7 +4,7 @@ class QuickHeadlines::Controllers::ProxyController < QuickHeadlines::Controllers
   @[ARTA::Get(path: "/api/proxy-image")]
   def proxy_image(request : ATH::Request) : ATH::Response
     url = request.query_params["url"]?
-    max_bytes = (request.query_params["max"]? || "2097152").to_i64
+    max_bytes = (request.query_params["max"]?.try(&.to_i64?) || 2097152_i64)
 
     if url.nil? || url.strip.empty?
       return ATH::Response.new("Missing 'url' parameter", 400, HTTP::Headers{"content-type" => "text/plain"})

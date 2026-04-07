@@ -130,12 +130,10 @@ class QuickHeadlines::Controllers::AdminController < QuickHeadlines::Controllers
           if orphaned.empty?
             Log.for("quickheadlines.app").info { "No orphaned feeds to clean up" }
           else
-            deleted_items = 0
-            orphaned.each do |url|
-              item_count = feed_repo.count_items(url)
-              deleted_items += item_count
-              feed_repo.delete_by_url(url)
-            end
+            placeholders = orphaned.map { |_| "?" }.join(",")
+            deleted_items = db.exec("DELETE FROM items WHERE feed_id IN (SELECT id FROM feeds WHERE url IN (#{placeholders}))", args: orphaned.map { |u| u }).rows_affected
+
+            db.exec("DELETE FROM feeds WHERE url IN (#{placeholders})", args: orphaned)
 
             cluster_repo.clear_all_metadata
             Log.for("quickheadlines.app").info { "Cleaned up #{orphaned.size} orphaned feeds (#{deleted_items} items deleted)" }

@@ -41,6 +41,7 @@ module QuickHeadlines::Repositories
         JOIN items i ON i.cluster_id = c.id
         JOIN feeds f ON i.feed_id = f.id
         ORDER BY c.id, i.id ASC
+        LIMIT 1000
         SQL
 
       cluster_items = Hash(Int64, Array({id: Int64, title: String, link: String, pub_date: Time?, feed_url: String, feed_title: String, favicon: String?, header_color: String?})).new

@@ -397,31 +397,41 @@ module QuickHeadlines::Repositories
         end
       end
 
-      new_items.each do |entry|
-        item = entry[:item]
-        index = entry[:index]
-        pub_date_str = item.pub_date.try(&.to_s(QuickHeadlines::Constants::DB_TIME_FORMAT))
-        db.exec(
-          "INSERT OR IGNORE INTO items (feed_id, title, link, pub_date, version, position, comment_url, commentary_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-          feed_id,
-          item.title,
-          item.link,
-          pub_date_str,
-          item.version,
-          index,
-          item.comment_url,
-          item.commentary_url
-        )
+      if new_items.any?
+        batch_insert(new_items, feed_id)
       end
+
+      if existing_items.any?
+        batch_update(existing_items, feed_id)
+      end
+    end
+
+    private def batch_insert(new_items : Array({item: Item, index: Int32}), feed_id : Int64) : Nil
+      return if new_items.empty?
+
+      new_items.each_slice(50) do |batch|
+        values_clause = batch.map do
+          "(?, ?, ?, ?, ?, ?, ?, ?)"
+        end.join(", ")
+        args = batch.flat_map do |entry|
+          item = entry[:item]
+          pub_date_str = item.pub_date.try(&.to_s(QuickHeadlines::Constants::DB_TIME_FORMAT))
+          [feed_id, item.title, item.link, pub_date_str, item.version, entry[:index], item.comment_url, item.commentary_url]
+        end
+        db.exec("INSERT OR IGNORE INTO items (feed_id, title, link, pub_date, version, position, comment_url, commentary_url) VALUES #{values_clause}", args: args)
+      end
+    end
+
+    private def batch_update(existing_items : Array({item: Item, index: Int32}), feed_id : Int64) : Nil
+      return if existing_items.empty?
 
       existing_items.each do |entry|
         item = entry[:item]
-        index = entry[:index]
         pub_date_str = item.pub_date.try(&.to_s(QuickHeadlines::Constants::DB_TIME_FORMAT))
         db.exec(
           "UPDATE items SET pub_date = ?, position = ?, comment_url = ?, commentary_url = ? WHERE feed_id = ? AND link = ?",
           pub_date_str,
-          index,
+          entry[:index],
           item.comment_url,
           item.commentary_url,
           feed_id,

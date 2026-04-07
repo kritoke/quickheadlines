@@ -203,6 +203,6 @@ module UrlNormalizer
       normalized = normalized[0...f_idx]
     end
 
-    normalized.ends_with?('/') ? normalized : "#{normalized}/"
+    normalized
   end
 end

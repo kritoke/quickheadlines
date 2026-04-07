@@ -70,7 +70,7 @@ struct HeartbeatEvent
   property type : String
 
   def initialize
-    @timestamp = Time.local.to_unix_ms
+    @timestamp = Time.utc.to_unix_ms
     @type = "heartbeat"
   end
 
