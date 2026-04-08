@@ -17,7 +17,7 @@ const timeoutIds = new Set<number>();
 function generateUUID(): string {
 	// Check if crypto.randomUUID is available (modern browsers)
 	if (typeof crypto !== 'undefined' && crypto.randomUUID) {
-		return crypto.randomUUID();
+		try { return crypto.randomUUID(); } catch { /* fallback below */ }
 	}
 	
 	// Fallback for older browsers/IOS Safari

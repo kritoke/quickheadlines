@@ -36,7 +36,7 @@
 	.border-beam-wrapper {
 		mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
 		mask-composite: exclude;
-		-webkit-mask-composite: exclude;
+		-webkit-mask-composite: xor;
 		-moz-mask-composite: exclude;
 		padding: 2px;
 		isolation: isolate;
