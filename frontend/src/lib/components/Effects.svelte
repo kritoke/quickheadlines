@@ -2,6 +2,7 @@
 	import { spring } from 'svelte/motion';
 	import { themeState, getCursorColors, getThemeAccentColors } from '$lib/stores/theme.svelte';
 	import { zIndex } from '$lib/design/tokens';
+	import { onMount } from 'svelte';
 
 	let coords = spring({ x: -100, y: -100 }, { stiffness: 0.1, damping: 0.25 });
 	let trail = spring({ x: -100, y: -100 }, { stiffness: 0.05, damping: 0.3 });
@@ -42,11 +43,6 @@
 		setTimeout(() => trail.set({ x: touch.clientX, y: touch.clientY }), 50);
 	}
 
-	function handleClick(e: MouseEvent) {
-		if (!showEffects) return;
-		spawnParticles(e.clientX, e.clientY);
-	}
-
 	function spawnParticles(x: number, y: number) {
 		const particleCount = 8;
 		const angleStep = (2 * Math.PI) / particleCount;
@@ -75,13 +71,24 @@
 			particles = particles.filter(p => !newParticles.find(np => np.id === p.id));
 		}, 400);
 	}
-</script>
 
-<svelte:window 
-	onmousemove={handleMouseMove} 
-	ontouchmove={handleTouchMove}
-	onclick={handleClick}
-/>
+	function onPointerDown(e: PointerEvent) {
+		if (!showEffects) return;
+		spawnParticles(e.clientX, e.clientY);
+	}
+
+	onMount(() => {
+		window.addEventListener('mousemove', handleMouseMove);
+		window.addEventListener('touchmove', handleTouchMove, { passive: true });
+		window.addEventListener('pointerdown', onPointerDown);
+
+		return () => {
+			window.removeEventListener('mousemove', handleMouseMove);
+			window.removeEventListener('touchmove', handleTouchMove);
+			window.removeEventListener('pointerdown', onPointerDown);
+		};
+	});
+</script>
 
 {#if showEffects}
 	<div
