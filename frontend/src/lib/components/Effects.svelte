@@ -77,15 +77,30 @@
 		spawnParticles(e.clientX, e.clientY);
 	}
 
+	function onTouchEnd(e: TouchEvent) {
+		if (!showEffects || e.changedTouches.length === 0) return;
+		const touch = e.changedTouches[0];
+		spawnParticles(touch.clientX, touch.clientY);
+	}
+
+	function onClick(e: MouseEvent) {
+		if (!showEffects) return;
+		spawnParticles(e.clientX, e.clientY);
+	}
+
 	onMount(() => {
 		window.addEventListener('mousemove', handleMouseMove);
 		window.addEventListener('touchmove', handleTouchMove, { passive: true });
 		window.addEventListener('pointerdown', onPointerDown);
+		window.addEventListener('touchend', onTouchEnd, { passive: true });
+		window.addEventListener('click', onClick);
 
 		return () => {
 			window.removeEventListener('mousemove', handleMouseMove);
 			window.removeEventListener('touchmove', handleTouchMove);
 			window.removeEventListener('pointerdown', onPointerDown);
+			window.removeEventListener('touchend', onTouchEnd);
+			window.removeEventListener('click', onClick);
 		};
 	});
 </script>
