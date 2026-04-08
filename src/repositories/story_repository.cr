@@ -193,13 +193,13 @@ module QuickHeadlines::Repositories
           is_representative = rows.read(Int32) == 1
           cluster_size = rows.read(Int32)
 
-          pub_date = pub_date_str.try { |str|
+          pub_date = pub_date_str.try do |str|
             begin
               Time.parse(str, QuickHeadlines::Constants::DB_TIME_FORMAT, Time::Location::UTC)
             rescue Time::Format::Error
               nil
             end
-          }
+          end
 
           items << QuickHeadlines::Domain::TimelineEntry.new(
             id: id,
@@ -247,7 +247,7 @@ module QuickHeadlines::Repositories
         AND (i.cluster_id IS NULL OR i.id = ci.representative_id)
         #{cutoff_clause}
         #{feed_filter_clause}
-      SQL
+        SQL
 
       if cutoff_value && !feed_filter_values.empty?
         query_args = [cutoff_value, *feed_filter_values]
@@ -310,13 +310,13 @@ module QuickHeadlines::Repositories
     end
 
     private def build_story(id : Int64, title : String, link : String, pub_date_str : String?, feed_title : String, feed_url : String, feed_link : String?, favicon : String?, header_color : String?) : QuickHeadlines::Entities::Story
-      pub_date = pub_date_str.try { |str|
+      pub_date = pub_date_str.try do |str|
         begin
           Time.parse(str, QuickHeadlines::Constants::DB_TIME_FORMAT, Time::Location::UTC)
         rescue Time::Format::Error
           nil
         end
-      }
+      end
       QuickHeadlines::Entities::Story.new(
         id: id.to_s,
         title: title,

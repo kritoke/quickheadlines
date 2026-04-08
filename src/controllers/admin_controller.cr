@@ -131,7 +131,7 @@ class QuickHeadlines::Controllers::AdminController < QuickHeadlines::Controllers
             Log.for("quickheadlines.app").info { "No orphaned feeds to clean up" }
           else
             placeholders = orphaned.map { |_| "?" }.join(",")
-            deleted_items = db.exec("DELETE FROM items WHERE feed_id IN (SELECT id FROM feeds WHERE url IN (#{placeholders}))", args: orphaned.map { |u| u }).rows_affected
+            deleted_items = db.exec("DELETE FROM items WHERE feed_id IN (SELECT id FROM feeds WHERE url IN (#{placeholders}))", args: orphaned.map { |url| url }).rows_affected
 
             db.exec("DELETE FROM feeds WHERE url IN (#{placeholders})", args: orphaned)
 

@@ -3,9 +3,11 @@ require "mutex"
 
 module QuickHeadlines
   class RateLimiter
-    INSTANCE_TTL_SECONDS = 3600
+    INSTANCE_TTL_SECONDS     = 3600
+    CLEANUP_INTERVAL_SECONDS =   60
     @@instances = {} of String => RateLimiter
     @@cleanup_lock = Mutex.new
+    @@cleanup_fiber : Fiber?
     @@last_cleanup = Time.utc
 
     property max_requests : Int32
@@ -19,8 +21,24 @@ module QuickHeadlines
       @last_accessed = Time.utc.to_unix
     end
 
+    def self.start_cleanup_fiber
+      @@cleanup_lock.synchronize do
+        return if @@cleanup_fiber
+        @@cleanup_fiber = spawn do
+          loop do
+            sleep CLEANUP_INTERVAL_SECONDS.seconds
+            begin
+              cleanup_stale_instances
+            rescue ex
+              Log.for("quickheadlines.ratelimiter").error(exception: ex) { "Cleanup error" }
+            end
+          end
+        end
+      end
+    end
+
     def self.get_or_create(key : String, max_requests : Int32 = 1, window_seconds : Int32 = 60) : RateLimiter
-      cleanup_stale_instances
+      start_cleanup_fiber
       unless @@instances[key]?
         @@instances[key] = RateLimiter.new(max_requests, window_seconds)
       end
@@ -32,7 +50,7 @@ module QuickHeadlines
     def self.cleanup_stale_instances
       @@cleanup_lock.synchronize do
         now = Time.utc
-        return if (now - @@last_cleanup).total_seconds < 60
+        return if (now - @@last_cleanup).total_seconds < CLEANUP_INTERVAL_SECONDS
 
         cutoff = now.to_unix - INSTANCE_TTL_SECONDS
         @@instances.reject! do |_, limiter|
@@ -51,8 +69,6 @@ module QuickHeadlines
     end
 
     def allowed?(identifier : String) : Bool
-      self.class.cleanup_stale_instances
-
       now = Time.utc.to_unix
       cutoff = now - @window_seconds
 

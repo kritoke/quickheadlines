@@ -94,13 +94,13 @@ module QuickHeadlines::Repositories
       comment_url = rows.read(String?)
       commentary_url = rows.read(String?)
 
-      pub_date = pub_date_str.try { |date_str|
+      pub_date = pub_date_str.try do |date_str|
         begin
           Time.parse(date_str, QuickHeadlines::Constants::DB_TIME_FORMAT, Time::Location::UTC)
         rescue Time::Format::Error
           nil
         end
-      }
+      end
       Item.new(title, link, pub_date, version, comment_url, commentary_url)
     end
 
@@ -162,13 +162,13 @@ module QuickHeadlines::Repositories
           version = rows.read(String?)
           comment_url = rows.read(String?)
           commentary_url = rows.read(String?)
-          pub_date = pub_date_str.try { |date_str|
+          pub_date = pub_date_str.try do |date_str|
             begin
               Time.parse(date_str, QuickHeadlines::Constants::DB_TIME_FORMAT, Time::Location::UTC)
             rescue Time::Format::Error
               nil
             end
-          }
+          end
           items_by_feed[feed_id] << Item.new(title, link, pub_date, version, comment_url, commentary_url)
         end
       end
@@ -312,17 +312,10 @@ module QuickHeadlines::Repositories
     end
 
     def upsert_with_items(feed_data : FeedData) : Nil
-      db.exec("BEGIN TRANSACTION")
-
-      begin
+      db.transaction do
         feed_id = upsert_feed(feed_data)
         insert_items(feed_id, feed_data.items)
-        db.exec("COMMIT")
         Log.for("quickheadlines.feed").info { "Upserted feed: #{feed_data.title} (#{feed_data.url}) with #{feed_data.items.size} items" }
-      rescue ex
-        Log.for("quickheadlines.feed").error(exception: ex) { "Failed to upsert feed #{feed_data.title}" }
-        db.exec("ROLLBACK")
-        raise ex
       end
     end
 
@@ -397,11 +390,11 @@ module QuickHeadlines::Repositories
         end
       end
 
-      if new_items.any?
+      if new_items.present?
         batch_insert(new_items, feed_id)
       end
 
-      if existing_items.any?
+      if existing_items.present?
         batch_update(existing_items, feed_id)
       end
     end

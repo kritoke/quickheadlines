@@ -37,13 +37,14 @@ class FeedFetcher
 
   # Singleton accessor for backward compatibility
   @@instance : FeedFetcher?
+  @@instance_mutex = Mutex.new
 
   def self.instance : FeedFetcher
-    @@instance ||= FeedFetcher.new(FeedCache.instance)
+    @@instance_mutex.synchronize { @@instance ||= FeedFetcher.new(FeedCache.instance) }
   end
 
   def self.instance=(fetcher : FeedFetcher)
-    @@instance = fetcher
+    @@instance_mutex.synchronize { @@instance = fetcher }
   end
 
   private def should_fallback_to_stale_cache?(result : FeedData, feed : Feed) : Bool

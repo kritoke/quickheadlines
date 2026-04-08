@@ -92,7 +92,8 @@ class QuickHeadlines::Services::ClusteringService
   end
 
   def get_all_clusters_from_db : Array(QuickHeadlines::Entities::Cluster)
-    cluster_repository.find_all
+    fetch_limit = StateStore.config.try(&.clustering).try(&.max_fetch_items) || 1000
+    cluster_repository.find_all(fetch_limit)
   end
 
   def recluster_all(limit : Int32 = 5000, threshold : Float64 = 0.35) : Int32
@@ -111,13 +112,13 @@ class QuickHeadlines::Services::ClusteringService
         link = rows.read(String)
         pub_date_str = rows.read(String?)
         feed_id = rows.read(Int64)
-        pub_date = pub_date_str.try { |str|
+        pub_date = pub_date_str.try do |str|
           begin
             Time.parse(str, QuickHeadlines::Constants::DB_TIME_FORMAT, Time::Location::UTC)
           rescue Time::Format::Error
             nil
           end
-        }
+        end
         items << {id: id, title: title, link: link, pub_date: pub_date, feed_id: feed_id}
       end
     end

@@ -55,21 +55,38 @@ class SocketManager
         return false
       end
 
-      @ip_mutex.synchronize do
-        @ip_counts[ip] = (count || 0) + 1
+      registration_state = {ip_counted: false, connection_registered: false}
+
+      begin
+        @ip_mutex.synchronize do
+          @ip_counts[ip] = (count || 0) + 1
+        end
+        registration_state = registration_state.merge({ip_counted: true})
+
+        outgoing = Channel(String).new(CONNECTION_QUEUE_SIZE)
+        connection = Connection.new(websocket: ws, ip: ip, outgoing: outgoing, created_at: Time.local)
+
+        @activity_mutex.synchronize do
+          @last_activity[ws] = Time.local
+        end
+
+        spawn writer_fiber(connection)
+        @connections << connection
+        registration_state = registration_state.merge({connection_registered: true})
+        Log.for("quickheadlines.websocket").info { "Client connected from #{ip}. Total: #{@connections.size}" }
+        true
+      rescue ex
+        if registration_state[:ip_counted] && !registration_state[:connection_registered]
+          @ip_mutex.synchronize do
+            if c = @ip_counts[ip]?
+              @ip_counts[ip] = c - 1
+              @ip_counts.delete(ip) if @ip_counts[ip] == 0
+            end
+          end
+        end
+        Log.for("quickheadlines.websocket").error(exception: ex) { "Registration failed: #{ex.message}" }
+        false
       end
-
-      outgoing = Channel(String).new(CONNECTION_QUEUE_SIZE)
-      connection = Connection.new(websocket: ws, ip: ip, outgoing: outgoing, created_at: Time.local)
-
-      @activity_mutex.synchronize do
-        @last_activity[ws] = Time.local
-      end
-
-      spawn writer_fiber(connection)
-      @connections << connection
-      Log.for("quickheadlines.websocket").info { "Client connected from #{ip}. Total: #{@connections.size}" }
-      true
     end
   end
 

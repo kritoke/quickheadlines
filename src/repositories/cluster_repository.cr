@@ -17,7 +17,7 @@ module QuickHeadlines::Repositories
       @db
     end
 
-    def find_all : Array(QuickHeadlines::Entities::Cluster)
+    def find_all(limit : Int32 = 1000) : Array(QuickHeadlines::Entities::Cluster)
       clusters = [] of QuickHeadlines::Entities::Cluster
 
       query = <<-SQL
@@ -41,12 +41,12 @@ module QuickHeadlines::Repositories
         JOIN items i ON i.cluster_id = c.id
         JOIN feeds f ON i.feed_id = f.id
         ORDER BY c.id, i.id ASC
-        LIMIT 1000
+        LIMIT ?
         SQL
 
       cluster_items = Hash(Int64, Array({id: Int64, title: String, link: String, pub_date: Time?, feed_url: String, feed_title: String, favicon: String?, header_color: String?})).new
 
-      db.query(query) do |rows|
+      db.query(query, limit) do |rows|
         rows.each do
           cluster_id = rows.read(Int64)
           _representative_id = rows.read(Int64)
@@ -59,13 +59,13 @@ module QuickHeadlines::Repositories
           favicon = rows.read(String?)
           header_color = rows.read(String?)
 
-          item_pub_date = item_pub_date_str.try { |str|
+          item_pub_date = item_pub_date_str.try do |str|
             begin
               Time.parse(str, QuickHeadlines::Constants::DB_TIME_FORMAT, Time::Location::UTC)
             rescue Time::Format::Error
               nil
             end
-          }
+          end
 
           cluster_items[cluster_id] ||= [] of {id: Int64, title: String, link: String, pub_date: Time?, feed_url: String, feed_title: String, favicon: String?, header_color: String?}
           cluster_items[cluster_id] << {
@@ -145,13 +145,13 @@ module QuickHeadlines::Repositories
           favicon = rows.read(String?)
           header_color = rows.read(String?)
 
-          pub_date = pub_date_str.try { |str|
+          pub_date = pub_date_str.try do |str|
             begin
               Time.parse(str, QuickHeadlines::Constants::DB_TIME_FORMAT, Time::Location::UTC)
             rescue Time::Format::Error
               nil
             end
-          }
+          end
 
           stories << QuickHeadlines::Entities::Story.new(
             id: id.to_s,

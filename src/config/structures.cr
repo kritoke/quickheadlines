@@ -84,6 +84,7 @@ struct ClusteringConfig
   end
 
   property max_items : Int32? = nil
+  property max_fetch_items : Int32 = 1000
   property threshold : Float64 = 0.35
 end
 

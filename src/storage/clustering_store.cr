@@ -168,7 +168,7 @@ module QuickHeadlines::Storage
       result = {} of String => Int64
       return result if items.empty?
 
-      feed_urls = items.map(&.feed_url).uniq
+      feed_urls = items.map(&.feed_url).uniq!
       feed_url_to_id = {} of String => Int64
       feed_urls.each do |url|
         if feed_id = get_feed_id(url)
@@ -186,7 +186,7 @@ module QuickHeadlines::Storage
           rows.each do
             link = rows.read(String)
             id = rows.read(Int64)
-            item_key = grouped_items.find { |g| g.link == link }
+            item_key = grouped_items.find { |item| item.link == link }
             if item_key
               result["#{item_key.feed_url}|#{link}"] = id
             end
@@ -283,13 +283,13 @@ module QuickHeadlines::Storage
           favicon = rows.read(String?)
           header_color = rows.read(String?)
 
-          pub_date = pub_date_str.try { |date_str|
+          pub_date = pub_date_str.try do |date_str|
             begin
               Time.parse(date_str, QuickHeadlines::Constants::DB_TIME_FORMAT, Time::Location::UTC)
             rescue Time::Format::Error
               nil
             end
-          }
+          end
 
           items << ClusteringItemRow.new(
             id: id,
@@ -357,13 +357,13 @@ module QuickHeadlines::Storage
           favicon = rows.read(String?)
           header_color = rows.read(String?)
 
-          pub_date = pub_date_str.try { |date_str|
+          pub_date = pub_date_str.try do |date_str|
             begin
               Time.parse(date_str, QuickHeadlines::Constants::DB_TIME_FORMAT, Time::Location::UTC)
             rescue Time::Format::Error
               nil
             end
-          }
+          end
 
           items << ClusteringItemRow.new(
             id: id,

@@ -10,8 +10,10 @@ require "../software_fetcher"
 require "../websocket"
 require "./feed_fetcher"
 
-CLUSTERING_JOBS = Atomic(Int32).new(0)
+CLUSTERING_JOBS         = Atomic(Int32).new(0)
 MAX_PARALLEL_CLUSTERING = 20
+REFRESH_MUTEX           = Mutex.new
+REFRESH_IN_PROGRESS     = Atomic(Bool).new(false)
 
 private def collect_feed_configs(config : Config) : Hash(String, Feed)
   all_configs = {} of String => Feed
@@ -181,50 +183,61 @@ def start_refresh_loop(config_path : String, cache : FeedCache, db_service : Dat
       refresh_start_time = Time.monotonic
 
       begin
-        if first_run
-          first_run = false
-          if active_config.debug?
-            Log.for("quickheadlines.feed").debug { "Running initial refresh to fetch feeds" }
-          end
-          refresh_all(active_config, cache, db_service)
-          if active_config.debug?
-            Log.for("quickheadlines.feed").debug { "Initial refresh complete" }
-          end
-        else
-          current_mtime = File.info(config_path).modification_time
+        if REFRESH_IN_PROGRESS.swap(true)
+          Log.for("quickheadlines.feed").warn { "Refresh already in progress, skipping this cycle" }
+          sleep (active_config.refresh_minutes * 60).seconds
+          next
+        end
 
-          if current_mtime > last_mtime
-            new_config = load_config(config_path)
-            active_config = new_config
-            last_mtime = current_mtime
-
+        begin
+          if first_run
+            first_run = false
             if active_config.debug?
-              Log.for("quickheadlines.feed").debug { "Config change detected. Reloaded feeds.yml" }
+              Log.for("quickheadlines.feed").debug { "Running initial refresh to fetch feeds" }
             end
             refresh_all(active_config, cache, db_service)
             if active_config.debug?
-              Log.for("quickheadlines.feed").debug { "Refreshed after config change" }
+              Log.for("quickheadlines.feed").debug { "Initial refresh complete" }
             end
-            sleep (active_config.refresh_minutes * 60).seconds
-            next
           else
-            refresh_all(active_config, cache, db_service)
-            if active_config.debug?
-              Log.for("quickheadlines.feed").debug { "Refreshed feeds and ran GC" }
+            current_mtime = File.info(config_path).modification_time
+
+            if current_mtime > last_mtime
+              new_config = load_config(config_path)
+              active_config = new_config
+              last_mtime = current_mtime
+
+              if active_config.debug?
+                Log.for("quickheadlines.feed").debug { "Config change detected. Reloaded feeds.yml" }
+              end
+              refresh_all(active_config, cache, db_service)
+              if active_config.debug?
+                Log.for("quickheadlines.feed").debug { "Refreshed after config change" }
+              end
+              sleep (active_config.refresh_minutes * QuickHeadlines::Constants::SECONDS_PER_MINUTE).seconds
+              next
+            else
+              refresh_all(active_config, cache, db_service)
+              if active_config.debug?
+                Log.for("quickheadlines.feed").debug { "Refreshed feeds and ran GC" }
+              end
             end
           end
+
+          save_feed_cache(cache, active_config.cache_retention_hours, active_config.max_cache_size_mb)
+
+          refresh_duration = (Time.monotonic - refresh_start_time).total_seconds
+          if refresh_duration > (active_config.refresh_minutes * QuickHeadlines::Constants::SECONDS_PER_MINUTE) * 2
+            HealthMonitor.log_warning("Refresh took #{refresh_duration.round(2)}s (expected #{active_config.refresh_minutes * QuickHeadlines::Constants::SECONDS_PER_MINUTE}s) - possible hang detected")
+          end
+
+          sleep (active_config.refresh_minutes * QuickHeadlines::Constants::SECONDS_PER_MINUTE).seconds
+        ensure
+          REFRESH_IN_PROGRESS.set(false)
         end
-
-        save_feed_cache(cache, active_config.cache_retention_hours, active_config.max_cache_size_mb)
-
-        refresh_duration = (Time.monotonic - refresh_start_time).total_seconds
-        if refresh_duration > (active_config.refresh_minutes * 60) * 2
-          HealthMonitor.log_warning("Refresh took #{refresh_duration.round(2)}s (expected #{active_config.refresh_minutes * 60}s) - possible hang detected")
-        end
-
-        sleep (active_config.refresh_minutes * 60).seconds
       rescue ex
         HealthMonitor.log_error("refresh_loop", ex)
+        REFRESH_IN_PROGRESS.set(false)
         sleep 1.minute
       end
     end

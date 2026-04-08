@@ -47,7 +47,6 @@ class QuickHeadlines::Controllers::ApiBaseController < Athena::Framework::Contro
 
   private def timing_safe_compare(a : String, b : String) : Bool
     return false unless a.bytesize == b.bytesize
-
     result = 0
     a_bytes = a.bytes
     b_bytes = b.bytes
