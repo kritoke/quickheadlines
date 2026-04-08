@@ -38,6 +38,18 @@ begin
   handlers << ClientIPHandler.new
 
   ws_handler = HTTP::WebSocketHandler.new do |ws, ctx|
+    origin = ctx.request.headers["Origin"]?
+    host = ctx.request.headers["Host"]?
+
+    if origin && host
+      origin_host = origin.sub(/^https?:\/\//, "").rstrip("/")
+      unless origin_host == host
+        Log.for("quickheadlines.websocket").warn { "Rejected WebSocket from invalid Origin: #{origin} (expected: #{host})" }
+        ws.close
+        next
+      end
+    end
+
     ip = case addr = ctx.request.remote_address
          when Socket::IPAddress then addr.address
          else

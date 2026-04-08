@@ -242,15 +242,8 @@ class SocketManager
         conn.websocket.close
       rescue Channel::ClosedError | IO::Error
       end
-
-      @connections_mutex.synchronize do
-        @connections.delete(conn)
-        removed += 1
-      end
-
-      @activity_mutex.synchronize do
-        @last_activity.delete(conn.websocket)
-      end
+      unregister_connection(conn)
+      removed += 1
     end
 
     Log.for("quickheadlines.websocket").info { "Janitor removed #{removed} dead connections" }

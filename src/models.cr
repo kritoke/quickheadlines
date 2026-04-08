@@ -68,14 +68,13 @@ module StateStore
     feeds: [] of FeedData,
     software_releases: [] of FeedData,
     tabs: [] of Tab,
-    updated_at: Time.local,
+    updated_at: Time.utc,
     config_title: "Quick Headlines",
     config: nil,
     clustering: false,
     refreshing: false
   )
   @@mutex = Mutex.new
-  @@clustering_mutex = Mutex.new
   @@clustering_start_time : Time?
 
   def self.get : AppStateSnapshot
@@ -118,7 +117,7 @@ module StateStore
   end
 
   def self.clustering=(value : Bool)
-    @@clustering_mutex.synchronize do
+    @@mutex.synchronize do
       @@current = @@current.copy_with(clustering: value)
       unless value
         @@clustering_start_time = nil
@@ -127,7 +126,7 @@ module StateStore
   end
 
   def self.start_clustering_if_idle : Bool
-    @@clustering_mutex.synchronize do
+    @@mutex.synchronize do
       if @@current.clustering
         return false
       end
@@ -159,7 +158,7 @@ module StateStore
         feeds: [] of FeedData,
         software_releases: [] of FeedData,
         tabs: [] of Tab,
-        updated_at: Time.local,
+        updated_at: Time.utc,
         config_title: "Quick Headlines",
         config: nil,
         clustering: false,

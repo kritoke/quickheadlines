@@ -64,7 +64,7 @@
 		await loadFeeds(feedState.activeTab, true);
 	}
 	
-	$effect(() => {
+		$effect(() => {
 		logger.log('[Page] $effect running, mounted:', feedState.status);
 		const initialized = feedState.status !== 'idle' || feedState.feeds.length > 0;
 		
@@ -91,6 +91,7 @@
 
 			return () => {
 				if (tabChangeTimeout) clearTimeout(tabChangeTimeout);
+				websocketConnection.removeEventListener(handleWebSocketMessage);
 			};
 		}
 	});

@@ -46,7 +46,6 @@ class AppBootstrap
   end
 
   def start_background_tasks
-    start_janitor
     start_feed_refresh
     start_clustering_scheduler
     start_cleanup_scheduler
@@ -59,20 +58,6 @@ class AppBootstrap
     Log.for("quickheadlines.app").debug { "StateStore.feeds.size=#{StateStore.feeds.size}" }
     StateStore.tabs.each do |tab|
       Log.for("quickheadlines.app").debug { "StateStore.tabs[#{tab.name}].feeds.size=#{tab.feeds.size}" }
-    end
-  end
-
-  private def start_janitor
-    spawn do
-      loop do
-        sleep @janitor_interval
-        begin
-          removed = SocketManager.instance.cleanup_dead_connections
-          Log.for("quickheadlines.app").debug { "Janitor: #{removed} dead connections cleaned up, #{SocketManager.instance.connection_count} active" }
-        rescue ex
-          Log.for("quickheadlines.app").error(exception: ex) { "Janitor error" }
-        end
-      end
     end
   end
 

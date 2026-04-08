@@ -10,7 +10,6 @@ require "../software_fetcher"
 require "../websocket"
 require "./feed_fetcher"
 
-CLUSTERING_JOBS         = Atomic(Int32).new(0)
 MAX_PARALLEL_CLUSTERING = 20
 REFRESH_MUTEX           = Mutex.new
 REFRESH_IN_PROGRESS     = Atomic(Bool).new(false)
@@ -100,7 +99,7 @@ def refresh_all(config : Config, cache : FeedCache, db_service : DatabaseService
       feeds: new_feeds,
       software_releases: new_software_releases,
       tabs: new_tabs,
-      updated_at: Time.local
+      updated_at: Time.utc
     )
   end
 
@@ -125,28 +124,32 @@ end
 def async_clustering(feeds : Array(FeedData), cache : FeedCache, db_service : DatabaseService)
   return if feeds.empty?
 
-  clustering_channel = Channel(Nil).new(MAX_PARALLEL_CLUSTERING)
-  MAX_PARALLEL_CLUSTERING.times { clustering_channel.send(nil) }
+  semaphore = Channel(Nil).new(MAX_PARALLEL_CLUSTERING)
+  MAX_PARALLEL_CLUSTERING.times { semaphore.send(nil) }
+
+  completion_channel = Channel(Nil).new(feeds.size)
 
   StateStore.update(&.copy_with(clustering: true))
-  CLUSTERING_JOBS.set(feeds.size)
 
   spawn do
     feeds.each do |feed_data|
       spawn do
-        clustering_channel.receive
+        semaphore.receive
         begin
           process_feed_item_clustering(feed_data, cache, db_service)
         rescue ex
           Log.for("quickheadlines.clustering").error(exception: ex) { "async_clustering: error processing #{feed_data.url}" }
         ensure
-          if CLUSTERING_JOBS.sub(1) <= 1
-            StateStore.update(&.copy_with(clustering: false))
-          end
-          clustering_channel.send(nil)
+          semaphore.send(nil)
+          completion_channel.send(nil)
         end
       end
     end
+  end
+
+  spawn do
+    feeds.size.times { completion_channel.receive }
+    StateStore.update(&.copy_with(clustering: false))
   end
 end
 

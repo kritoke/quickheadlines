@@ -128,7 +128,7 @@ module QuickHeadlines::Repositories
       cutoff_clause = days_back ? "AND i.pub_date >= ?" : ""
       feed_filter_clause = build_feed_filter(allowed_feed_urls)
 
-      cutoff_value = days_back ? Time.local - days_back.days : nil
+      cutoff_value = days_back ? Time.utc - days_back.days : nil
       feed_filter_values = feed_filter_values(allowed_feed_urls)
 
       # Use CTE to pre-compute cluster representatives and sizes (eliminates per-row subqueries)
@@ -226,7 +226,7 @@ module QuickHeadlines::Repositories
       cutoff_clause = days_back ? "AND i.pub_date >= ?" : ""
       feed_filter_clause = build_feed_filter(allowed_feed_urls)
 
-      cutoff_value = days_back ? Time.local - days_back.days : nil
+      cutoff_value = days_back ? Time.utc - days_back.days : nil
       feed_filter_values = feed_filter_values(allowed_feed_urls)
 
       query = <<-SQL

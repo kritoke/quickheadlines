@@ -205,7 +205,7 @@ class FeedFetcher
       state.copy_with(
         feeds: cached_feeds,
         tabs: cached_tabs,
-        updated_at: Time.local
+        updated_at: Time.utc
       )
     end
 

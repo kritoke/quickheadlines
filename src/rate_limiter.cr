@@ -39,12 +39,14 @@ module QuickHeadlines
 
     def self.get_or_create(key : String, max_requests : Int32 = 1, window_seconds : Int32 = 60) : RateLimiter
       start_cleanup_fiber
-      unless @@instances[key]?
-        @@instances[key] = RateLimiter.new(max_requests, window_seconds)
+      @@cleanup_lock.synchronize do
+        unless @@instances[key]?
+          @@instances[key] = RateLimiter.new(max_requests, window_seconds)
+        end
+        instance = @@instances[key]
+        instance.last_accessed = Time.utc.to_unix
+        instance
       end
-      instance = @@instances[key]
-      instance.last_accessed = Time.utc.to_unix
-      instance
     end
 
     def self.cleanup_stale_instances
