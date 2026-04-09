@@ -154,7 +154,7 @@ export async function loadTimeline(append: boolean = false, tab?: string): Promi
 	}
 	
 	try {
-		const response = await fetchTimeline(100, append ? timelineState.offset : 0, 14, targetTab === 'all' ? undefined : targetTab);
+		const response = await fetchTimeline(500, append ? timelineState.offset : 0, 30, targetTab === 'all' ? undefined : targetTab);
 		Object.assign(timelineState, setTimelineData(timelineState, response.items, response.has_more, append));
 		Object.assign(timelineState, setTabName(timelineState, targetTab));
 	} catch (e) {
