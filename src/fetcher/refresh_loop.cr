@@ -183,7 +183,7 @@ def start_refresh_loop(config_path : String, cache : FeedCache, db_service : Dat
 
   spawn do
     loop do
-      refresh_start_time = Time.monotonic
+      refresh_start_time = Time.utc
 
       begin
         if REFRESH_IN_PROGRESS.swap(true)
@@ -229,7 +229,7 @@ def start_refresh_loop(config_path : String, cache : FeedCache, db_service : Dat
 
           save_feed_cache(cache, active_config.cache_retention_hours, active_config.max_cache_size_mb)
 
-          refresh_duration = (Time.monotonic - refresh_start_time).total_seconds
+          refresh_duration = (Time.utc - refresh_start_time).total_seconds
           if refresh_duration > (active_config.refresh_minutes * QuickHeadlines::Constants::SECONDS_PER_MINUTE) * 2
             HealthMonitor.log_warning("Refresh took #{refresh_duration.round(2)}s (expected #{active_config.refresh_minutes * QuickHeadlines::Constants::SECONDS_PER_MINUTE}s) - possible hang detected")
           end

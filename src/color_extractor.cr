@@ -11,15 +11,14 @@ module ColorExtractor
     property bg : String
     property text : String | Hash(String, String)
     property timestamp : Time
-    property access_order : Int32
+    property access_order : Int64
 
-    def initialize(@bg : String, @text : String | Hash(String, String), @timestamp : Time, @access_order : Int32)
+    def initialize(@bg : String, @text : String | Hash(String, String), @timestamp : Time, @access_order : Int64)
     end
   end
 
   @@extraction_cache = Hash(String, CacheEntry).new
   @@cache_order = Deque(String).new
-  @@cache_counter = 0
   @@cache_mutex = Mutex.new
 
   @@theme_extractor : PrismatIQ::ThemeExtractor?
@@ -67,8 +66,7 @@ module ColorExtractor
     @@cache_mutex.synchronize do
       if entry = @@extraction_cache[path]?
         if (Time.local - entry.timestamp).to_i < CACHE_EXPIRY_SECONDS
-          entry.access_order = @@cache_counter
-          @@cache_counter += 1
+          entry.access_order = Time.utc.to_unix_ms
           text_val = entry.text
 
           text_hash = if text_val.is_a?(Hash)
@@ -128,8 +126,7 @@ module ColorExtractor
                       text_val.to_s
                     end
 
-      @@cache_counter += 1
-      @@extraction_cache[path] = CacheEntry.new(bg_val, stored_text, Time.local, @@cache_counter)
+      @@extraction_cache[path] = CacheEntry.new(bg_val, stored_text, Time.local, Time.utc.to_unix_ms)
     end
   end
 

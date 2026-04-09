@@ -227,6 +227,8 @@ class SocketManager
             Log.for("quickheadlines.websocket").debug { "Stale connection detected: #{conn.ip} (inactive for #{((now - last_active).total_seconds).round(0)}s)" }
             dead << conn
           end
+        rescue IO::EOFError
+          # Normal connection closure, not a dead connection
         rescue IO::Error
           dead << conn
         end

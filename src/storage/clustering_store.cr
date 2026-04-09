@@ -8,6 +8,8 @@ module QuickHeadlines::Storage
     record ItemKey, feed_url : String, link : String
     record ClusterInfo, item_id : Int64, cluster_id : Int64?, cluster_size : Int32, is_representative : Bool
 
+    MAX_LSH_CANDIDATES = 500
+
     def initialize(@db : DB::Database, @mutex : Mutex)
     end
 
@@ -39,7 +41,13 @@ module QuickHeadlines::Storage
     end
 
     private def escape_like_pattern(pattern : String) : String
-      pattern.gsub("\\") { "\\\\" }.gsub("%") { "\\%" }.gsub("_") { "\\_" }
+      pattern.gsub("\\") { "\\\\" }
+        .gsub("%") { "\\%" }
+        .gsub("_") { "\\_" }
+        .gsub("[") { "\\[" }
+        .gsub("]") { "\\]" }
+        .gsub("^") { "\\^" }
+        .gsub("-") { "\\-" }
     end
 
     def assign_cluster(item_id : Int64, cluster_id : Int64?)
@@ -90,6 +98,9 @@ module QuickHeadlines::Storage
           rows.each do
             item_id = rows.read(Int64)
             candidates << item_id
+            if candidates.size >= MAX_LSH_CANDIDATES
+              return candidates.to_a
+            end
           end
         end
       end
@@ -120,6 +131,7 @@ module QuickHeadlines::Storage
         rescue ex
           @db.exec("ROLLBACK")
           Log.for("quickheadlines.storage").error(exception: ex) { "Failed to assign clusters" }
+          raise ex
         end
       end
     end
