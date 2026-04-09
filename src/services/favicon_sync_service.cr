@@ -167,9 +167,6 @@ class FaviconSyncService
   end
 
   private def mark_favicon_failed(feed_id : Int64) : Nil
-    @mutex.synchronize do
-      @db.exec("UPDATE feeds SET header_theme_colors = ? WHERE id = ?", "FAILED", feed_id)
-    end
     Log.for("quickheadlines.cache").debug { "Marked favicon as failed for feed_id=#{feed_id}" }
   end
 

@@ -311,7 +311,11 @@ module Api
       favicon_data: feed.favicon_data,
       header_color: header_color,
       header_text_color: header_text_color,
-      header_theme_colors: header_theme_colors_json ? JSON.parse(header_theme_colors_json) : nil,
+      header_theme_colors: begin
+        header_theme_colors_json ? JSON.parse(header_theme_colors_json) : nil
+      rescue JSON::ParseException
+        nil
+      end,
       items: items_response,
       total_item_count: total_count || feed.items.size.to_i32
     )
