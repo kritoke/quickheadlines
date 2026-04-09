@@ -29,6 +29,7 @@
 
 	let particles = $state<Particle[]>([]);
 	let nextParticleId = 0;
+	let lastTouchCoords = { x: 0, y: 0 };
 
 	function handleMouseMove(e: MouseEvent) {
 		if (!showEffects) return;
@@ -41,6 +42,12 @@
 		const touch = e.touches[0];
 		coords.set({ x: touch.clientX, y: touch.clientY });
 		setTimeout(() => trail.set({ x: touch.clientX, y: touch.clientY }), 50);
+	}
+
+	function handleTouchStart(e: TouchEvent) {
+		if (!showEffects || e.touches.length === 0) return;
+		const touch = e.touches[0];
+		lastTouchCoords = { x: touch.clientX, y: touch.clientY };
 	}
 
 	function spawnParticles(x: number, y: number) {
@@ -78,9 +85,14 @@
 	}
 
 	function onTouchEnd(e: TouchEvent) {
-		if (!showEffects || e.changedTouches.length === 0) return;
-		const touch = e.changedTouches[0];
-		spawnParticles(touch.clientX, touch.clientY);
+		if (!showEffects) return;
+		if (e.changedTouches.length > 0) {
+			const touch = e.changedTouches[0];
+			spawnParticles(touch.clientX, touch.clientY);
+		} else if (lastTouchCoords.x > 0 || lastTouchCoords.y > 0) {
+			spawnParticles(lastTouchCoords.x, lastTouchCoords.y);
+			lastTouchCoords = { x: 0, y: 0 };
+		}
 	}
 
 	function onClick(e: MouseEvent) {
@@ -91,13 +103,15 @@
 	onMount(() => {
 		window.addEventListener('mousemove', handleMouseMove);
 		window.addEventListener('touchmove', handleTouchMove, { passive: true });
+		window.addEventListener('touchstart', handleTouchStart, { passive: true });
 		window.addEventListener('pointerdown', onPointerDown);
-		window.addEventListener('touchend', onTouchEnd, { passive: true });
+		window.addEventListener('touchend', onTouchEnd);
 		window.addEventListener('click', onClick);
 
 		return () => {
 			window.removeEventListener('mousemove', handleMouseMove);
 			window.removeEventListener('touchmove', handleTouchMove);
+			window.removeEventListener('touchstart', handleTouchStart);
 			window.removeEventListener('pointerdown', onPointerDown);
 			window.removeEventListener('touchend', onTouchEnd);
 			window.removeEventListener('click', onClick);
