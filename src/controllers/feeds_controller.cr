@@ -5,7 +5,7 @@ class QuickHeadlines::Controllers::FeedsController < QuickHeadlines::Controllers
   @[ARTA::Get(path: "/api/feeds")]
   def feeds(request : ATH::Request) : FeedsPageResponse
     ip = client_ip(request)
-    limiter = RateLimiter.get_or_create("api_feeds:#{ip}", 60, 60)
+    limiter = RateLimiter.get_or_create("api_feeds:#{ip}", 180, 60)
     unless limiter.allowed?(ip)
       raise ATH::Exception::HTTPException.new(429, "Rate limit exceeded", nil, HTTP::Headers{"Retry-After" => limiter.retry_after(ip).to_s})
     end
