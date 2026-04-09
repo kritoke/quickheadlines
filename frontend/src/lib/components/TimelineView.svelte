@@ -5,6 +5,7 @@
 	import { themeState, customThemeIds, isDarkTheme } from '$lib/stores/theme.svelte';
 	import { layoutState } from '$lib/stores/layout.svelte';
 	import { getFaviconSrc, getHeaderStyle } from '$lib/utils/feedItem';
+	import { sanitizeUrl } from '$lib/utils/validation';
 
 
 	interface Props {
@@ -163,7 +164,7 @@
 						
 						<!-- Item Content -->
 						<a
-							href={item.link}
+							href={sanitizeUrl(item.link)}
 							target="_blank"
 							rel="noopener noreferrer"
 							class="block px-3 py-2 hover:theme-bg-secondary transition-colors gap-2"

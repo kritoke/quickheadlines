@@ -2,6 +2,7 @@ require "openssl"
 require "file_utils"
 require "base64"
 require "http/client"
+require "./utils"
 
 # FaviconStorage manages saving and serving favicons as static files
 # instead of embedding them as base64 data URIs in HTML.
@@ -119,6 +120,10 @@ module FaviconStorage
       uri = URI.parse(url)
       host = uri.host
       return unless host
+      if Utils.private_host?(host)
+        Log.for("quickheadlines.storage").debug { "SSRF blocked: private host #{host} in #{url}" }
+        return
+      end
       client = HTTP::Client.new(host, port: uri.port, tls: uri.scheme == "https")
       client.read_timeout = 10.seconds
       client.connect_timeout = 5.seconds
@@ -134,6 +139,10 @@ module FaviconStorage
           redirected_uri = uri.resolve(redirect_url)
           redirect_host = redirected_uri.host
           if redirect_host
+            if Utils.private_host?(redirect_host)
+              Log.for("quickheadlines.storage").debug { "SSRF blocked: private redirect host #{redirect_host} in #{url}" }
+              return
+            end
             redirect_client = HTTP::Client.new(redirect_host, port: redirected_uri.port, tls: redirected_uri.scheme == "https")
             redirect_client.read_timeout = 10.seconds
             redirect_client.connect_timeout = 5.seconds

@@ -1,4 +1,6 @@
 // Memoized favicon cache to prevent repeated calculations
+import { sanitizeCssColor } from './validation';
+
 const faviconCache = new Map<string, string>();
 const MAX_CACHE_SIZE = 1000; // Limit cache size to prevent memory issues
 
@@ -55,11 +57,11 @@ export function getHeaderStyle(item: {
 	if (item.header_theme_colors) {
 		const colors = isDark ? item.header_theme_colors.dark : item.header_theme_colors.light;
 		if (colors) {
-			return `background-color: ${colors.bg}; color: ${colors.text};`;
+			return `background-color: ${sanitizeCssColor(colors.bg, '#64748b')}; color: ${sanitizeCssColor(colors.text, '#ffffff')};`;
 		}
 	}
 	
-	const bgColor = item.header_color || '#64748b';
-	const textColor = item.header_text_color || '#ffffff';
+	const bgColor = sanitizeCssColor(item.header_color || '#64748b', '#64748b');
+	const textColor = sanitizeCssColor(item.header_text_color || '#ffffff', '#ffffff');
 	return `background-color: ${bgColor}; color: ${textColor};`;
 }

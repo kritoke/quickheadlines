@@ -2,6 +2,7 @@
 	import type { StoryResponse } from '$lib/types';
 	import { formatTimestamp } from '$lib/api';
 	import { getFaviconSrc } from '$lib/utils/feedItem';
+	import { sanitizeUrl } from '$lib/utils/validation';
 	import { spacing } from '$lib/design/tokens';
 
 	interface Props {
@@ -27,7 +28,7 @@
 			{#each items as item, i (`cluster-item-${item.id}-${i}`)}
 				<li>
 					<a
-						href={item.link}
+						href={sanitizeUrl(item.link)}
 						target="_blank"
 						rel="noopener noreferrer"
 						class="flex items-start gap-2 px-3 {spacing.default} hover:opacity-80 transition-opacity"

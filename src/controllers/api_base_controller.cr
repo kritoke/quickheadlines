@@ -46,12 +46,14 @@ class QuickHeadlines::Controllers::ApiBaseController < Athena::Framework::Contro
   end
 
   private def timing_safe_compare(a : String, b : String) : Bool
-    return false unless a.bytesize == b.bytesize
-    result = 0
     a_bytes = a.bytes
     b_bytes = b.bytes
-    a_bytes.each_with_index do |byte, i|
-      result |= byte ^ b_bytes[i]
+    max_len = {a_bytes.size, b_bytes.size}.max
+    result = 0
+    max_len.times do |i|
+      a_byte = i < a_bytes.size ? a_bytes[i] : 0
+      b_byte = i < b_bytes.size ? b_bytes[i] : 0
+      result |= a_byte ^ b_byte
     end
     result == 0
   end
@@ -63,8 +65,8 @@ class QuickHeadlines::Controllers::ApiBaseController < Athena::Framework::Contro
   private def client_ip(request : ATH::Request) : String
     if ENV["TRUSTED_PROXY"]?
       if xff = request.headers["X-Forwarded-For"]?
-        if last_ip = xff.split(",").last?.try(&.strip)
-          return last_ip
+        if first_ip = xff.split(",").first?.try(&.strip)
+          return first_ip
         end
       end
     end

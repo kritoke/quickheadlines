@@ -48,7 +48,6 @@
 	let timelineEffects: ReturnType<typeof createTimelineEffects> | null = null;
 	let initialized = $state(false);
 	let sentinelElement: HTMLDivElement | undefined = $state();
-	let visibilityHandler: (() => void) | null = null;
 	
 	let filteredItems = $derived(getFilteredItems(searchState.query));
 	
@@ -87,9 +86,15 @@
 			loadTabs();
 			timelineEffects = createTimelineEffects();
 			timelineEffects.start();
-			document.addEventListener('visibilitychange', () => {});
 			initialized = true;
 		})();
+		
+		return () => {
+			if (timelineEffects) {
+				timelineEffects.stop();
+				timelineEffects = null;
+			}
+		};
 	});
     
 	$effect(() => {

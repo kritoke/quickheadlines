@@ -6,13 +6,12 @@ MAX_FEED_SIZE = 5 * 1024 * 1024 # 5MB
 
 def parse_feed(io : IO, limit : Int32) : {site_link: String?, items: Array(Item), favicon: String?}
   # Buffer raw bytes to allow libxml2 to detect encoding from the XML declaration.
-  # NOENT substitutes entities (like &Yuml;) during parsing.
   buffer = IO::Memory.new
 
   # Limit feed size to prevent memory exhaustion
   bytes_copied = IO.copy(io, buffer, limit: MAX_FEED_SIZE)
 
-  # If feed is too large, log and return empty
+  # If feed too large, log and return empty
   if bytes_copied >= MAX_FEED_SIZE
     Log.for("quickheadlines.feed").warn { "Feed too large (>5MB), skipping parsing" }
     return {site_link: "#", items: [] of Item, favicon: nil}
@@ -20,9 +19,10 @@ def parse_feed(io : IO, limit : Int32) : {site_link: String?, items: Array(Item)
 
   buffer.rewind
 
-  # Parse with timeout protection and error handling
+  # Parse with error recovery for malformed XML. HTML entity unescaping
+  # for titles is handled manually via HTML.unescape() in parse_rss_item.
   begin
-    xml = XML.parse(buffer, options: XML::ParserOptions::RECOVER | XML::ParserOptions::NOENT)
+    xml = XML.parse(buffer, options: XML::ParserOptions::RECOVER)
 
     # Validate XML structure
     unless xml.root

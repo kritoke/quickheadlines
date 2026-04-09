@@ -7,7 +7,6 @@
 	import { fetchFeeds, fetchMoreFeedItems, fetchConfig } from '$lib/api';
 	import type { FeedResponse, FeedsPageResponse } from '$lib/types';
 	import { themeState, toggleEffects } from '$lib/stores/theme.svelte';
-	import { websocketConnection } from '$lib/websocket';
 	import { NavigationService } from '$lib/services/navigationService';
 	import { createFeedEffects } from '$lib/stores/effects.svelte';
 	import { logger, initDebug, setDebugEnabled } from '$lib/utils/debug';
@@ -77,21 +76,12 @@
 			loadFeedConfig();
 			initDebug();
 			
-			websocketConnection.connect();
-			const handleWebSocketMessage = (message: any) => {
-				if (message.type === 'feed_update') {
-					logger.log('[FeedPage] Feed update received, reloading...');
-					const params = new URLSearchParams(window.location.search);
-					const currentTab = params.get('tab') || 'all';
-					loadFeeds(currentTab, true);
-				} else if (message.type === 'clustering_status') {
-				}
-			};
-			websocketConnection.addEventListener(handleWebSocketMessage);
+			const feedEffects = createFeedEffects();
+			feedEffects.start();
 
 			return () => {
 				if (tabChangeTimeout) clearTimeout(tabChangeTimeout);
-				websocketConnection.removeEventListener(handleWebSocketMessage);
+				feedEffects.stop();
 			};
 		}
 	});
