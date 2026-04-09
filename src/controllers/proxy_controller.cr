@@ -77,7 +77,7 @@ class QuickHeadlines::Controllers::ProxyController < QuickHeadlines::Controllers
       return ATH::Response.new("Invalid favicon hash", 400, HTTP::Headers{"content-type" => "text/plain"})
     end
 
-    unless ext.in?("png", "ico", "svg", "gif", "jpg", "jpeg")
+    unless ext.in?("png", "ico", "svg", "gif", "jpg", "jpeg", "webp")
       return ATH::Response.new("Invalid favicon extension", 400, HTTP::Headers{"content-type" => "text/plain"})
     end
 
@@ -95,6 +95,7 @@ class QuickHeadlines::Controllers::ProxyController < QuickHeadlines::Controllers
                   when "gif"  then "image/gif"
                   when "jpg"  then "image/jpeg"
                   when "jpeg" then "image/jpeg"
+                  when "webp" then "image/webp"
                   else             "application/octet-stream"
                   end
       ATH::Response.new(content, 200, HTTP::Headers{"content-type" => mime_type})
