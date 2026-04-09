@@ -20,5 +20,7 @@ module QuickHeadlines::Domain
     header_text_color : String?,
     cluster_id : Int64?,
     representative : Bool,
-    cluster_size : Int32
+    cluster_size : Int32,
+    comment_url : String? = nil,
+    commentary_url : String? = nil
 end

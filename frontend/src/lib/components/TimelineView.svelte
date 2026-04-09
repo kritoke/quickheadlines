@@ -122,7 +122,6 @@
 					{@const globalIndex = groupStartIndex + i}
 					<div 
 						class="timeline-item theme-bg-primary rounded-lg shadow-sm theme-border overflow-hidden transition-all duration-200 relative hover-glow"
-						class:col-span-full={expandedClusterId === item.cluster_id && item.cluster_id && columns > 1}
 					>
 						<!-- Item Header with Feed Info -->
 						<div
@@ -163,19 +162,47 @@
 						</div>
 						
 						<!-- Item Content -->
-						<a
-							href={sanitizeUrl(item.link)}
-							target="_blank"
-							rel="noopener noreferrer"
-							class="block px-3 py-2 hover:theme-bg-secondary transition-colors gap-2"
-						>
+						<div class="block px-3 py-2 hover:theme-bg-secondary transition-colors gap-2">
 							<h3 class="text-base font-medium theme-text-primary line-clamp-2">
-								{item.title}
+								<a
+									href={sanitizeUrl(item.link)}
+									target="_blank"
+									rel="noopener noreferrer"
+									class="hover:underline"
+								>{item.title}</a>
 							</h3>
-							<p class="text-sm theme-text-secondary mt-2">
-								{formatTimestamp(item.pub_date)}
-							</p>
-						</a>
+							<div class="flex items-center gap-2 mt-1">
+								<p class="text-sm theme-text-secondary">
+									{formatTimestamp(item.pub_date)}
+								</p>
+								{#if item.comment_url}
+									<a
+										href={sanitizeUrl(item.comment_url)}
+										target="_blank"
+										rel="noopener noreferrer"
+										title="Comments"
+										class="p-0.5 hover:opacity-80 transition-opacity"
+									>
+										<svg class="w-4 h-4 theme-text-secondary" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+											<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+										</svg>
+									</a>
+								{/if}
+								{#if item.commentary_url && item.commentary_url !== item.comment_url}
+									<a
+										href={sanitizeUrl(item.commentary_url)}
+										target="_blank"
+										rel="noopener noreferrer"
+										title="Discussion"
+										class="p-0.5 hover:opacity-80 transition-opacity"
+									>
+										<svg class="w-4 h-4 theme-text-secondary" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+											<path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path>
+										</svg>
+									</a>
+								{/if}
+							</div>
+						</div>
 
 						<!-- Cluster Expansion -->
 						{#if expandedClusterId === item.cluster_id && item.cluster_id}

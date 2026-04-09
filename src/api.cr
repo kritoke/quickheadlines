@@ -130,6 +130,12 @@ class TimelineItemResponse
   @[JSON::Field(emit_null: true)]
   property cluster_size : Int32?
 
+  @[JSON::Field(emit_null: true)]
+  property comment_url : String?
+
+  @[JSON::Field(emit_null: true)]
+  property commentary_url : String?
+
   def initialize(
     @id : String,
     @title : String,
@@ -146,6 +152,8 @@ class TimelineItemResponse
     @cluster_id : String? = nil,
     @is_representative : Bool = false,
     @cluster_size : Int32? = nil,
+    @comment_url : String? = nil,
+    @commentary_url : String? = nil,
   )
   end
 end

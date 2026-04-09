@@ -155,7 +155,9 @@ module QuickHeadlines::Repositories
           f.header_text_color,
           i.cluster_id,
           CASE WHEN i.cluster_id IS NULL OR i.id = ci.representative_id THEN 1 ELSE 0 END as is_representative,
-          COALESCE(ci.cluster_size, 0) as cluster_size
+          COALESCE(ci.cluster_size, 0) as cluster_size,
+          i.comment_url,
+          i.commentary_url
         FROM items i
         JOIN feeds f ON i.feed_id = f.id
         LEFT JOIN cluster_info ci ON i.cluster_id = ci.cluster_id
@@ -192,6 +194,8 @@ module QuickHeadlines::Repositories
           cluster_id = rows.read(Int64?)
           is_representative = rows.read(Int32) == 1
           cluster_size = rows.read(Int32)
+          comment_url = rows.read(String?)
+          commentary_url = rows.read(String?)
 
           pub_date = pub_date_str.try do |str|
             begin
@@ -214,7 +218,9 @@ module QuickHeadlines::Repositories
             header_text_color: header_text_color,
             cluster_id: cluster_id,
             representative: is_representative,
-            cluster_size: cluster_size
+            cluster_size: cluster_size,
+            comment_url: comment_url,
+            commentary_url: commentary_url
           )
         end
       end
