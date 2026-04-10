@@ -122,6 +122,7 @@
 					{@const globalIndex = groupStartIndex + i}
 					<div 
 						class="timeline-item theme-bg-primary rounded-lg shadow-sm theme-border overflow-hidden transition-all duration-200 relative hover-glow"
+						style="touch-action: manipulation; -webkit-tap-highlight-color: transparent;"
 					>
 						<!-- Item Header with Feed Info -->
 						<div
