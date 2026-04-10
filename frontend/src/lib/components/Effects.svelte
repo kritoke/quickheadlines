@@ -102,7 +102,7 @@
 
 	onMount(() => {
 		window.addEventListener('mousemove', handleMouseMove);
-		window.addEventListener('touchmove', handleTouchMove, { passive: true });
+		window.addEventListener('touchmove', handleTouchMove);
 		window.addEventListener('touchstart', handleTouchStart, { passive: true });
 		window.addEventListener('pointerdown', onPointerDown);
 		window.addEventListener('touchend', onTouchEnd);
