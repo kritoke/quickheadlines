@@ -144,7 +144,8 @@
 								<button
 									type="button"
 									onclick={() => toggleCluster(item)}
-									class="ml-auto theme-accent-bg/20 hover:theme-accent-bg/30 px-2 py-1 rounded text-xs transition-colors cursor-pointer flex items-center gap-1"
+									class="ml-auto theme-accent-bg/20 hover:theme-accent-bg/30 active:theme-accent-bg/40 px-2 py-1 rounded text-xs transition-colors cursor-pointer flex items-center gap-1"
+									style="touch-action: manipulation; -webkit-tap-highlight-color: transparent;"
 									aria-label="Show {item.cluster_size} similar stories"
 								>
 									{item.cluster_size} sources
