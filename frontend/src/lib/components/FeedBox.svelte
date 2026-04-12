@@ -1,10 +1,10 @@
 <script lang="ts">
-	import type { FeedResponse, ItemResponse } from '$lib/types';
+	import type { FeedResponse } from '$lib/types';
 	import { formatTimestamp } from '$lib/api';
 	import { themeState, isDarkTheme } from '$lib/stores/theme.svelte';
 	import { breakpointState } from '$lib/utils/breakpoint.svelte';
 	import { getFaviconSrc } from '$lib/utils/feedItem';
-	import { toastStore } from '$lib/stores/toast.svelte';
+	import { feedState } from '$lib/stores/feedStore.svelte';
 	import Card from './ui/Card.svelte';
 	import { sanitizeUrl, sanitizeCssColor } from '$lib/utils/validation';
 
@@ -70,6 +70,8 @@
 	}
 
 	let cardColors = $derived(getCardColors());
+
+	let feedLoading = $derived(feedState.status === 'loading' || feedState.status === 'refreshing');
 </script>
 
 <Card 
@@ -151,18 +153,28 @@
 						</div>
 					{/if}
 				</li>
+			{:else}
+				<li class="py-6 text-center">
+					{#if feedLoading}
+						<div class="flex items-center justify-center gap-2">
+							<div class="w-3 h-3 border-2 theme-accent-border border-t-transparent rounded-full animate-spin"></div>
+							<span class="text-sm theme-text-secondary">Loading...</span>
+						</div>
+					{:else}
+						<span class="text-sm theme-text-secondary">No items</span>
+					{/if}
+				</li>
 			{/each}
 		</ul>
 	</div>
 
-	{#if feed.items.length > 5 && feed.total_item_count > feed.items.length}
-		<div class="px-3 py-2 border-t border-slate-200 dark:border-slate-700/50">
+	<div class="px-3 py-2 border-t border-slate-200 dark:border-slate-700/50">
+		{#if feed.items.length > 5 && feed.total_item_count > feed.items.length}
 			<button
 				type="button"
 				data-name="load-more"
 				disabled={loading}
 				onclick={() => {
-					toastStore.info(`Clicked load more for ${feed.title}`, 'Debug');
 					onLoadMore?.();
 				}}
 				class="w-full py-2 text-sm font-medium theme-text-secondary hover:theme-text-primary transition-colors disabled:opacity-50"
@@ -179,6 +191,12 @@
 					Load {feed.total_item_count - feed.items.length} more items
 				{/if}
 			</button>
-		</div>
-	{/if}
+		{:else if feed.items.length > 0 && feed.items.length >= feed.total_item_count}
+			<div class="py-2 text-center">
+				<span class="text-sm theme-text-secondary">No more items</span>
+			</div>
+		{:else}
+			<div class="py-2"></div>
+		{/if}
+	</div>
 </Card>

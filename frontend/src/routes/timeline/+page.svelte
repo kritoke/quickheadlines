@@ -56,24 +56,24 @@
 	let error = $derived(isError(timelineState) ? getError(timelineState) : null);
 	
 	$effect(() => {
-		if (!timelineState.hasMore) return;
-		
+		const el = sentinelElement;
+		const hasMore = timelineState.hasMore;
+		if (!el || !hasMore) return;
+
 		const observer = new IntersectionObserver(
 			(entries) => {
+				if (!timelineState.hasMore) return;
 				entries.forEach(entry => {
-					if (entry.isIntersecting && !timelineState.loadingMore && timelineState.hasMore) {
-						toastStore.info('Sentinel triggered, calling doLoadMore', 'Debug');
+					if (entry.isIntersecting && !timelineState.loadingMore) {
 						doLoadMore();
 					}
 				});
 			},
 			{ rootMargin: '500px' }
 		);
-		
-		if (sentinelElement) {
-			observer.observe(sentinelElement);
-		}
-		
+
+		observer.observe(el);
+
 		return () => observer.disconnect();
 	});
 	
@@ -237,9 +237,7 @@
 				</div>
 			{/if}
 			
-			{#if timelineState.hasMore}
-				<div bind:this={sentinelElement} class="h-1"></div>
-			{/if}
+			<div bind:this={sentinelElement} class="h-1" class:h-0={!timelineState.hasMore} class:invisible={!timelineState.hasMore}></div>
 		{/if}
 	</main>
 </div>
