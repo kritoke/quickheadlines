@@ -149,11 +149,36 @@ module ColorExtractor
     return unless bg_rgb
 
     bg_rgb_obj = rgb_from_array(bg_rgb)
-
     text_val = parsed["text"]?
     text_hash = parse_text_to_hash(text_val)
+    corrected_text, needs_correction = fix_text_colors(text_hash, bg_rgb_obj)
 
+    source = needs_correction ? "auto-corrected" : "auto"
+
+    {
+      "bg"   => bg,
+      "text" => {
+        "light" => corrected_text["light"],
+        "dark"  => corrected_text["dark"],
+      },
+      "source" => source,
+    }.to_json
+  end
+
+  private def self.fix_text_colors(text_hash : Hash(String, String), bg_rgb_obj : PrismatIQ::RGB) : Tuple(Hash(String, String), Bool)
     corrected_text = text_hash.dup
+    needs_correction = check_text_accessibility(text_hash, bg_rgb_obj)
+
+    if !text_hash.has_key?("light") || !text_hash.has_key?("dark") || needs_correction
+      palette = theme_detector.suggest_text_palette(bg_rgb_obj)
+      corrected_text["light"] = palette.primary.to_hex unless corrected_text.has_key?("light")
+      corrected_text["dark"] = palette.primary.to_hex unless corrected_text.has_key?("dark")
+    end
+
+    {corrected_text, needs_correction}
+  end
+
+  private def self.check_text_accessibility(text_hash : Hash(String, String), bg_rgb_obj : PrismatIQ::RGB) : Bool
     needs_correction = false
 
     if text_hash.has_key?("light")
@@ -172,22 +197,7 @@ module ColorExtractor
       end
     end
 
-    if !text_hash.has_key?("light") || !text_hash.has_key?("dark") || needs_correction
-      palette = theme_detector.suggest_text_palette(bg_rgb_obj)
-      corrected_text["light"] = palette.primary.to_hex unless corrected_text.has_key?("light")
-      corrected_text["dark"] = palette.primary.to_hex unless corrected_text.has_key?("dark")
-    end
-
-    source = needs_correction ? "auto-corrected" : "auto"
-
-    {
-      "bg"   => bg,
-      "text" => {
-        "light" => corrected_text["light"],
-        "dark"  => corrected_text["dark"],
-      },
-      "source" => source,
-    }.to_json
+    needs_correction
   end
 
   private def self.rgb_from_array(rgb : Array(Int32)) : PrismatIQ::RGB
@@ -215,50 +225,46 @@ module ColorExtractor
     s = str.to_s.strip
 
     if s.starts_with?("rgb(")
-      s = s.sub("rgb(", "").sub(")", "").gsub(" ", "")
-      parts = s.split(",")
-      return unless parts.size == 3
-      r = parts[0].to_i32?
-      g = parts[1].to_i32?
-      b = parts[2].to_i32?
-      return unless r && g && b
-      return [r, g, b]
+      return parse_rgb_notation(s)
     end
 
     if s.starts_with?("#")
-      s = s[1..-1] if s.size == 7
-      return unless s.size == 6
-      begin
-        r = s[0..1].to_i(16)
-        g = s[2..3].to_i(16)
-        b = s[4..5].to_i(16)
-        return [r, g, b]
-      rescue ArgumentError | IndexError
-        return
-      end
+      return parse_hex_color(s)
     end
 
     if s =~ /^[0-9a-fA-F]{6}$/
-      begin
-        r = s[0..1].to_i(16)
-        g = s[2..3].to_i(16)
-        b = s[4..5].to_i(16)
-        return [r, g, b]
-      rescue ArgumentError | IndexError
-        return
-      end
+      return parse_hex_color("##{s}")
     end
 
+    nil
+  end
+
+  private def self.parse_rgb_notation(s : String) : Array(Int32)?
+    s = s.sub("rgb(", "").sub(")", "").gsub(" ", "")
+    parts = s.split(",")
+    return unless parts.size == 3
+    r = parts[0].to_i32?
+    g = parts[1].to_i32?
+    b = parts[2].to_i32?
+    return unless r && g && b
+    [r, g, b]
+  end
+
+  private def self.parse_hex_color(s : String) : Array(Int32)?
+    s = s[1..-1] if s.size == 7
+    return unless s.size == 6
+    r = s[0..1].to_i(16)
+    g = s[2..3].to_i(16)
+    b = s[4..5].to_i(16)
+    [r, g, b]
+  rescue ArgumentError | IndexError
     nil
   end
 
   def self.upgrade_theme_json(theme_json : String?) : String?
     return unless theme_json
 
-    parsed = JSON.parse(theme_json) rescue nil
-    return unless parsed.is_a?(JSON::Any)
-
-    h = parsed.as_h rescue nil
+    h = parse_theme_json(theme_json)
     return unless h
 
     src = h["source"]? ? h["source"].to_s : nil
@@ -267,21 +273,28 @@ module ColorExtractor
     bg_val = h["bg"]? || h["background"]?
     return unless bg_val
 
-    fixed = theme_extractor.fix_theme(theme_json, nil, nil)
-    return unless fixed
-
-    parsed_fixed = JSON.parse(fixed) rescue nil
-    return unless parsed_fixed
-
-    h_fixed = parsed_fixed.as_h rescue nil
+    h_fixed = fix_and_parse_theme(theme_json)
     return unless h_fixed
 
-    final = {
+    {
       "bg"     => h_fixed["background"]? || h_fixed["bg"],
       "text"   => h_fixed["text"],
       "source" => "auto-corrected",
-    }
-    final.to_json
+    }.to_json
+  end
+
+  private def self.parse_theme_json(theme_json : String) : Hash(String, JSON::Any)?
+    parsed = JSON.parse(theme_json) rescue nil
+    return unless parsed.is_a?(JSON::Any)
+    parsed.as_h rescue nil
+  end
+
+  private def self.fix_and_parse_theme(theme_json : String) : Hash(String, JSON::Any)?
+    fixed = theme_extractor.fix_theme(theme_json, nil, nil)
+    return unless fixed
+    parsed_fixed = JSON.parse(fixed) rescue nil
+    return unless parsed_fixed
+    parsed_fixed.as_h rescue nil
   end
 
   def self.luminance(rgb : Array(Int32)) : Float64
