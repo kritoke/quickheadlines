@@ -117,65 +117,9 @@ class FeedFetcher
         result = Fetcher.pull(current_url, HTTP::Headers.new, db_fetch_limit, fetcher_config)
 
         if result.success?
-          items = entries_to_items(result.entries)
-
-          if items.empty?
-            debug_log("Feed returned no items: #{feed.title} (#{feed.url})")
-            return build_error_feed(feed, "No items found (or unsupported format)")
-          end
-
-          site_link = result.site_link || feed.url
-
-          favicon, favicon_data = VugAdapter.get_favicon(site_link, result.favicon, previous_data.try(&.favicon), previous_data.try(&.favicon_data))
-
-          if favicon.nil? && favicon_data.nil?
-            domain_for_favicon = site_link.presence || feed.url
-            if domain_for_favicon && !domain_for_favicon.starts_with?("#") && !domain_for_favicon.includes?("#")
-              google_url = VugAdapter.google_favicon_url(domain_for_favicon)
-              if saved = FaviconStorage.fetch_and_save(google_url)
-                favicon = saved
-                favicon_data = saved
-              end
-            end
-          end
-
-          local_favicon_path = favicon_data || (favicon && favicon.starts_with?("/favicons/") ? favicon : nil)
-          header_color, header_text_color, header_theme_json = extract_header_colors(feed, local_favicon_path)
-          final_header_color, final_text_color = parse_legacy_theme(header_color, header_text_color, header_theme_json)
-
-          preserved_header_color = final_header_color || previous_data.try(&.header_color)
-          preserved_text_color = final_text_color || previous_data.try(&.header_text_color)
-          preserved_theme = header_theme_json || previous_data.try(&.header_theme_colors)
-
-          feed_data = FeedData.new(
-            feed.title,
-            feed.url,
-            site_link,
-            preserved_header_color,
-            preserved_text_color,
-            items,
-            result.etag,
-            result.last_modified,
-            favicon,
-            favicon_data
-          )
-
-          feed_data = feed_data.with_theme_colors(preserved_theme) if preserved_theme
-
-          @cache.add(feed_data)
-
-          if final_result = process_response_result(feed_data, feed, effective_item_limit, previous_data)
-            return final_result
-          end
-          return feed_data
+          return handle_success(result, feed, effective_item_limit, previous_data)
         else
-          error_msg = result.error_message || "Unknown error"
-          HealthMonitor.log_warning("fetch_feed(#{feed.url}) error: #{error_msg}")
-          if stale_cache = get_stale_cached_feed(feed, effective_item_limit, previous_data)
-            return stale_cache
-          else
-            return build_error_feed(feed, "Error: #{error_msg}")
-          end
+          return handle_error(result, feed, effective_item_limit, previous_data)
         end
       rescue IO::TimeoutError
         HealthMonitor.log_warning("fetch_feed(#{feed.url}) timeout after 60s")
@@ -188,6 +132,74 @@ class FeedFetcher
         end
       end
     end
+  end
+
+  private def handle_success(result, feed : Feed, effective_item_limit : Int32, previous_data : FeedData?) : FeedData
+    items = entries_to_items(result.entries)
+
+    if items.empty?
+      debug_log("Feed returned no items: #{feed.title} (#{feed.url})")
+      return build_error_feed(feed, "No items found (or unsupported format)")
+    end
+
+    site_link = result.site_link || feed.url
+    favicon, favicon_data = resolve_favicons(site_link, feed, result.favicon, previous_data)
+
+    local_favicon_path = favicon_data || (favicon && favicon.starts_with?("/favicons/") ? favicon : nil)
+    header_color, header_text_color, header_theme_json = extract_header_colors(feed, local_favicon_path)
+    final_header_color, final_text_color = parse_legacy_theme(header_color, header_text_color, header_theme_json)
+
+    preserved_header_color = final_header_color || previous_data.try(&.header_color)
+    preserved_text_color = final_text_color || previous_data.try(&.header_text_color)
+    preserved_theme = header_theme_json || previous_data.try(&.header_theme_colors)
+
+    feed_data = FeedData.new(
+      feed.title,
+      feed.url,
+      site_link,
+      preserved_header_color,
+      preserved_text_color,
+      items,
+      result.etag,
+      result.last_modified,
+      favicon,
+      favicon_data
+    )
+
+    feed_data = feed_data.with_theme_colors(preserved_theme) if preserved_theme
+
+    @cache.add(feed_data)
+
+    if final_result = process_response_result(feed_data, feed, effective_item_limit, previous_data)
+      return final_result
+    end
+    feed_data
+  end
+
+  private def resolve_favicons(site_link : String, feed : Feed, result_favicon, previous_data : FeedData?) : Tuple(String?, String?)
+    favicon, favicon_data = VugAdapter.get_favicon(site_link, result_favicon, previous_data.try(&.favicon), previous_data.try(&.favicon_data))
+
+    if favicon.nil? && favicon_data.nil?
+      domain = site_link.presence || feed.url
+      if domain && !domain.starts_with?("#") && !domain.includes?("#")
+        google_url = VugAdapter.google_favicon_url(domain)
+        if saved = FaviconStorage.fetch_and_save(google_url)
+          favicon = saved
+          favicon_data = saved
+        end
+      end
+    end
+
+    {favicon, favicon_data}
+  end
+
+  private def handle_error(result, feed : Feed, effective_item_limit : Int32, previous_data : FeedData?) : FeedData
+    error_msg = result.error_message || "Unknown error"
+    HealthMonitor.log_warning("fetch_feed(#{feed.url}) error: #{error_msg}")
+    if stale_cache = get_stale_cached_feed(feed, effective_item_limit, previous_data)
+      return stale_cache
+    end
+    build_error_feed(feed, "Error: #{error_msg}")
   end
 
   # Load feeds from cache into state store
