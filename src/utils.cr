@@ -132,27 +132,26 @@ module Utils
     return true if host == "::1" || host == "[::1]"
     return true if host.starts_with?("[::")
     return true if host.starts_with?("fe80::") || host.starts_with?("[fe80::")
-    return true if host.starts_with?("127.")
-    return true if host.starts_with?("192.168.")
-    return true if host.starts_with?("10.")
+
+    private_prefixes = ["127.", "192.168.", "10.", "169.254."]
+    return true if private_prefixes.any? { |prefix| host.starts_with?(prefix) }
 
     if host.starts_with?("100.")
-      parts = host.split('.')
-      if parts.size >= 2 && (second = parts[1].to_i?(strict: true)) && second >= 64 && second <= 127
-        return true
-      end
+      return private_cidr_range?(host, 64, 127)
     end
 
     if host.starts_with?("172.")
-      parts = host.split('.')
-      if parts.size >= 2 && (second = parts[1].to_i?(strict: true)) && second >= 16 && second <= 31
-        return true
-      end
+      return private_cidr_range?(host, 16, 31)
     end
 
-    return true if host.starts_with?("169.254.")
-
     false
+  end
+
+  private def self.private_cidr_range?(host : String, min : Int32, max : Int32) : Bool
+    parts = host.split('.')
+    return false unless parts.size >= 2
+    second = parts[1].to_i?(strict: true)
+    !second.nil? && second >= min && second <= max
   end
 
   def self.validate_proxy_host(url : String) : Bool
