@@ -17,24 +17,7 @@ class QuickHeadlines::Controllers::TimelineController < QuickHeadlines::Controll
     days = validate_days(request.query_params["days"]?, default_days.to_i32)
     tab = request.query_params["tab"]?
 
-    allowed_feed_urls = [] of String
-    if tab && tab.downcase != "all"
-      state = StateStore.get
-      tabs_snapshot = state.tabs
-      found_tab = tabs_snapshot.find { |_t| _t.name.downcase == tab.downcase }
-
-      if found_tab.nil? || found_tab.feeds.empty?
-        feeds_snapshot, cached_tabs = load_feeds_from_cache_fallback(@feed_cache)
-        found_tab = cached_tabs.find { |cached_tab| cached_tab[:name].downcase == tab.downcase }
-        if found_tab
-          allowed_feed_urls = found_tab[:feeds].map(&.url)
-        elsif feeds_snapshot.any? { |feed| feed.url == tab }
-          allowed_feed_urls = [tab]
-        end
-      else
-        allowed_feed_urls = found_tab.feeds.map(&.url)
-      end
-    end
+    allowed_feed_urls = resolve_feed_urls(tab)
 
     story_repo = QuickHeadlines::Repositories::StoryRepository.new(@db_service)
     result = QuickHeadlines::Services::StoryService.get_timeline(
@@ -64,5 +47,25 @@ class QuickHeadlines::Controllers::TimelineController < QuickHeadlines::Controll
       total_count: result.total_count,
       clustering: StateStore.clustering?
     )
+  end
+
+  private def resolve_feed_urls(tab : String?) : Array(String)
+    return [] of String unless tab && tab.downcase != "all"
+
+    state = StateStore.get
+    found_tab = state.tabs.find { |_t| _t.name.downcase == tab.downcase }
+
+    if found_tab.nil? || found_tab.feeds.empty?
+      feeds_snapshot, cached_tabs = load_feeds_from_cache_fallback(@feed_cache)
+      found_tab = cached_tabs.find { |cached_tab| cached_tab[:name].downcase == tab.downcase }
+      if found_tab
+        return found_tab[:feeds].map(&.url)
+      elsif feeds_snapshot.any? { |feed| feed.url == tab }
+        return [tab]
+      end
+      return [] of String
+    end
+
+    found_tab.feeds.map(&.url)
   end
 end

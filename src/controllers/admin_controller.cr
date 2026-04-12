@@ -59,20 +59,7 @@ class QuickHeadlines::Controllers::AdminController < QuickHeadlines::Controllers
     end
 
     body_io = request.body
-    action = nil
-
-    if body_io
-      begin
-        body_content = read_body_safe(body_io)
-        if !body_content.empty?
-          body_json = JSON.parse(body_content)
-          action = body_json["action"]?.try(&.as_s?)
-        end
-      rescue IO::EOFError
-        return ATH::Response.new("Request body too large", 413, HTTP::Headers{"content-type" => "application/json"})
-      rescue JSON::ParseException
-      end
-    end
+    action = parse_admin_action(body_io)
 
     unless action
       return ATH::Response.new(
@@ -145,6 +132,19 @@ class QuickHeadlines::Controllers::AdminController < QuickHeadlines::Controllers
     end
 
     ATH::Response.new("Admin action started in background", 202, HTTP::Headers{"content-type" => "text/plain"})
+  end
+
+  private def parse_admin_action(body_io : IO?) : String?
+    return unless body_io
+
+    body_content = read_body_safe(body_io)
+    return if body_content.empty?
+
+    JSON.parse(body_content)["action"]?.try(&.as_s?)
+  rescue IO::EOFError
+    nil
+  rescue JSON::ParseException
+    nil
   end
 
   @[ARTA::Get(path: "/api/status")]

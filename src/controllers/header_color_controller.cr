@@ -11,12 +11,9 @@ class QuickHeadlines::Controllers::HeaderColorController < QuickHeadlines::Contr
     return ATH::Response.new("Missing request body", 400) if body_io.nil?
 
     body = JSON.parse(read_body_safe(body_io))
-    feed_url = body["feed_url"]?.try(&.as_s?)
-    color = body["color"]?.try(&.as_s?)
-    text_color = body["text_color"]?.try(&.as_s?)
+    feed_url, color, text_color = parse_color_params(body)
 
-    if feed_url.nil? || color.nil? || text_color.nil? ||
-       feed_url.strip.empty? || color.empty? || text_color.empty?
+    unless feed_url && color && text_color
       return ATH::Response.new("Missing feed_url, color, or text_color", 400)
     end
 
@@ -38,6 +35,18 @@ class QuickHeadlines::Controllers::HeaderColorController < QuickHeadlines::Contr
   rescue ex
     Log.for("quickheadlines.http").error(exception: ex) { "Header color save error" }
     ATH::Response.new("Internal server error", 500)
+  end
+
+  private def parse_color_params(body : JSON::Any) : Tuple(String?, String?, String?)
+    feed_url = body["feed_url"]?.try(&.as_s?)
+    color = body["color"]?.try(&.as_s?)
+    text_color = body["text_color"]?.try(&.as_s?)
+
+    if feed_url && color && text_color &&
+       !feed_url.strip.empty? && !color.empty? && !text_color.empty?
+      return {feed_url, color, text_color}
+    end
+    {nil, nil, nil}
   end
 
   private def has_manual_color_override?(config, feed_url) : Bool

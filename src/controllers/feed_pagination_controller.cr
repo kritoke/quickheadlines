@@ -16,7 +16,6 @@ class QuickHeadlines::Controllers::FeedPaginationController < QuickHeadlines::Co
     limiter = RateLimiter.get_or_create("feed_more:#{ip}", 30, 60)
 
     unless limiter.allowed?(ip)
-      retry_after = limiter.retry_after(ip)
       raise Athena::Framework::Exception::TooManyRequests.new("Rate limit exceeded")
     end
 
