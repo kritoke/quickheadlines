@@ -1,8 +1,10 @@
 require "athena"
+require "json"
 
 @[ASRA::Name(strategy: :camelcase)]
 class QuickHeadlines::DTOs::StoryResponse
   include ASR::Serializable
+  include JSON::Serializable
 
   property id : String
 

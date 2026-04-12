@@ -136,7 +136,7 @@ def check_db_health(db_path : String) : DbHealthStatus
     return DbHealthStatus::NeedsRepopulation
   end
 
-  if File.size(db_path) < 100
+  if File.size(db_path) < QuickHeadlines::Constants::MIN_DB_SIZE_BYTES
     Log.for("quickheadlines.storage").warn { "Database file is too small (#{File.size(db_path)} bytes), may be empty" }
     return DbHealthStatus::NeedsRepopulation
   end

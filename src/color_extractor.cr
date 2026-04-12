@@ -68,24 +68,7 @@ module ColorExtractor
         if (Time.local - entry.timestamp).to_i < CACHE_EXPIRY_SECONDS
           entry.access_order = Time.utc.to_unix_ms
           text_val = entry.text
-
-          text_hash = if text_val.is_a?(Hash)
-                        text_val.as(Hash(String, String))
-                      elsif text_val.is_a?(String)
-                        begin
-                          tmp = JSON.parse(text_val.to_s).as_h
-                          normalized = {} of String => String
-                          tmp.each do |k, v|
-                            normalized[k.to_s] = v.to_s
-                          end
-                          normalized
-                        rescue JSON::ParseException | TypeCastError
-                          {"light" => text_val.to_s, "dark" => text_val.to_s}
-                        end
-                      else
-                        {"light" => "", "dark" => ""}
-                      end
-
+          text_hash = normalize_text_value(text_val)
           return {"bg" => entry.bg, "text" => text_hash}
         else
           @@extraction_cache.delete(path)
@@ -108,25 +91,47 @@ module ColorExtractor
 
       bg_val = result["bg"] ? result["bg"].to_s : ""
       text_val = result["text"]
-
-      stored_text = if text_val.is_a?(JSON::Any)
-                      begin
-                        h = text_val.as_h
-                        normalized = {} of String => String
-                        h.each do |k, v|
-                          normalized[k.to_s] = v.to_s
-                        end
-                        normalized
-                      rescue TypeCastError
-                        text_val.to_s
-                      end
-                    elsif text_val.is_a?(Hash)
-                      text_val.as(Hash(String, String))
-                    else
-                      text_val.to_s
-                    end
+      stored_text = normalize_text_value_for_storage(text_val)
 
       @@extraction_cache[path] = CacheEntry.new(bg_val, stored_text, Time.local, Time.utc.to_unix_ms)
+    end
+  end
+
+  private def self.normalize_text_value(text_val : String | Hash(String, String)) : Hash(String, String)
+    if text_val.is_a?(Hash)
+      text_val.as(Hash(String, String))
+    elsif text_val.is_a?(String)
+      begin
+        tmp = JSON.parse(text_val.to_s).as_h
+        normalized = {} of String => String
+        tmp.each do |k, v|
+          normalized[k.to_s] = v.to_s
+        end
+        normalized
+      rescue JSON::ParseException | TypeCastError
+        {"light" => text_val.to_s, "dark" => text_val.to_s}
+      end
+    else
+      {"light" => "", "dark" => ""}
+    end
+  end
+
+  private def self.normalize_text_value_for_storage(text_val : String | Hash(String, String) | JSON::Any) : String | Hash(String, String)
+    if text_val.is_a?(JSON::Any)
+      begin
+        h = text_val.as_h
+        normalized = {} of String => String
+        h.each do |k, v|
+          normalized[k.to_s] = v.to_s
+        end
+        normalized
+      rescue TypeCastError
+        text_val.to_s
+      end
+    elsif text_val.is_a?(Hash)
+      text_val.as(Hash(String, String))
+    else
+      text_val.to_s
     end
   end
 
@@ -143,18 +148,18 @@ module ColorExtractor
     bg_rgb = parse_color_to_rgb(bg)
     return unless bg_rgb
 
-    bg_rgb_obj = PrismatIQ::RGB.new(bg_rgb[0], bg_rgb[1], bg_rgb[2])
+    bg_rgb_obj = rgb_from_array(bg_rgb)
 
     text_val = parsed["text"]?
     text_hash = parse_text_to_hash(text_val)
 
-    needs_correction = false
     corrected_text = text_hash.dup
+    needs_correction = false
 
     if text_hash.has_key?("light")
       light_rgb = parse_color_to_rgb(text_hash["light"])
       if light_rgb
-        light_obj = PrismatIQ::RGB.new(light_rgb[0], light_rgb[1], light_rgb[2])
+        light_obj = rgb_from_array(light_rgb)
         needs_correction = true unless accessibility.wcag_aa_compliant?(light_obj, bg_rgb_obj)
       end
     end
@@ -162,7 +167,7 @@ module ColorExtractor
     if text_hash.has_key?("dark")
       dark_rgb = parse_color_to_rgb(text_hash["dark"])
       if dark_rgb
-        dark_obj = PrismatIQ::RGB.new(dark_rgb[0], dark_rgb[1], dark_rgb[2])
+        dark_obj = rgb_from_array(dark_rgb)
         needs_correction = true unless accessibility.wcag_aa_compliant?(dark_obj, bg_rgb_obj)
       end
     end
@@ -183,6 +188,10 @@ module ColorExtractor
       },
       "source" => source,
     }.to_json
+  end
+
+  private def self.rgb_from_array(rgb : Array(Int32)) : PrismatIQ::RGB
+    PrismatIQ::RGB.new(rgb[0], rgb[1], rgb[2])
   end
 
   private def self.parse_text_to_hash(text_val : JSON::Any?) : Hash(String, String)

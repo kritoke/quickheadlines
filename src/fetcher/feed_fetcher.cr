@@ -47,7 +47,7 @@ class FeedFetcher
     @@instance_mutex.synchronize { @@instance = fetcher }
   end
 
-  private def should_fallback_to_stale_cache?(result : FeedData, feed : Feed) : Bool
+  private def stale_cache_fallback?(result : FeedData, feed : Feed) : Bool
     result.items.size >= 1 &&
       (first_item = result.items.first) &&
       first_item.title.starts_with?("Error:") &&
@@ -84,7 +84,7 @@ class FeedFetcher
   end
 
   private def process_response_result(result_data : FeedData, feed : Feed, effective_item_limit : Int32, previous_data : FeedData?) : FeedData?
-    if should_fallback_to_stale_cache?(result_data, feed)
+    if stale_cache_fallback?(result_data, feed)
       get_stale_cached_feed(feed, effective_item_limit, previous_data) || result_data
     else
       result_data
@@ -147,7 +147,7 @@ class FeedFetcher
           preserved_text_color = final_text_color || previous_data.try(&.header_text_color)
           preserved_theme = header_theme_json || previous_data.try(&.header_theme_colors)
 
-          fd = FeedData.new(
+          feed_data = FeedData.new(
             feed.title,
             feed.url,
             site_link,
@@ -160,14 +160,14 @@ class FeedFetcher
             favicon_data
           )
 
-          fd = fd.with_theme_colors(preserved_theme) if preserved_theme
+          feed_data = feed_data.with_theme_colors(preserved_theme) if preserved_theme
 
-          @cache.add(fd)
+          @cache.add(feed_data)
 
-          if final_result = process_response_result(fd, feed, effective_item_limit, previous_data)
+          if final_result = process_response_result(feed_data, feed, effective_item_limit, previous_data)
             return final_result
           end
-          return fd
+          return feed_data
         else
           error_msg = result.error_message || "Unknown error"
           HealthMonitor.log_warning("fetch_feed(#{feed.url}) error: #{error_msg}")

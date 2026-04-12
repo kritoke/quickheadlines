@@ -1,4 +1,5 @@
 require "./api_base_controller"
+require "../dtos/story_dto"
 
 class QuickHeadlines::Controllers::ClusterController < QuickHeadlines::Controllers::ApiBaseController
   @[ARTA::Get(path: "/api/clusters")]
@@ -20,7 +21,7 @@ class QuickHeadlines::Controllers::ClusterController < QuickHeadlines::Controlle
     if cluster_id.nil?
       return ClusterItemsResponse.new(
         cluster_id: id,
-        items: [] of StoryResponse
+        items: [] of QuickHeadlines::DTOs::StoryResponse
       )
     end
 
@@ -28,7 +29,7 @@ class QuickHeadlines::Controllers::ClusterController < QuickHeadlines::Controlle
     db_items = cache.get_cluster_items_full(cluster_id)
 
     items = db_items.map do |item|
-      StoryResponse.new(
+      QuickHeadlines::DTOs::StoryResponse.new(
         id: item.id.to_s,
         title: item.title,
         link: item.link,

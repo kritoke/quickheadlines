@@ -123,8 +123,8 @@ class FeedCache
     @clustering_store.get_cluster_info_batch(item_ids)
   end
 
-  def get_recent_items_for_clustering(hours_back : Int32 = 24, max_items : Int32 = 1000) : Array(ClusteringItemRow)
-    @clustering_store.get_recent_items_for_clustering(hours_back, max_items)
+  def recent_clustering_items(hours_back : Int32 = 24, max_items : Int32 = 1000) : Array(ClusteringItemRow)
+    @clustering_store.recent_clustering_items(hours_back, max_items)
   end
 
   def all_clusters : Array({id: Int64, representative_id: Int64, item_count: Int32})
@@ -143,8 +143,8 @@ class FeedCache
     @clustering_store.cluster_representative?(item_id)
   end
 
-  def find_all_items_excluding(item_id : Int64, limit : Int32 = 500) : Array(Int64)
-    @clustering_store.find_all_items_excluding(item_id, limit)
+  def other_item_ids(item_id : Int64, limit : Int32 = 500) : Array(Int64)
+    @clustering_store.other_item_ids(item_id, limit)
   end
 
   def find_by_keywords(keywords : Array(String), exclude_id : Int64, limit : Int32 = 100) : Array(Int64)
@@ -159,16 +159,16 @@ class FeedCache
     @header_color_store.get_header_colors(feed_url)
   end
 
-  def update_feed_theme_colors(feed_url : String, theme_json : String)
-    @header_color_store.update_feed_theme_colors(feed_url, theme_json)
+  def save_theme(feed_url : String, theme_json : String)
+    @header_color_store.save_theme(feed_url, theme_json)
   end
 
-  def get_feed_theme_colors(feed_url : String) : String?
-    @header_color_store.get_feed_theme_colors(feed_url)
+  def load_theme(feed_url : String) : String?
+    @header_color_store.load_theme(feed_url)
   end
 
-  def find_feed_url_by_pattern(url_pattern : String) : String?
-    @header_color_store.find_feed_url_by_pattern(url_pattern)
+  def find_url_by_pattern(url_pattern : String) : String?
+    @header_color_store.find_url_by_pattern(url_pattern)
   end
 
   def cleanup_old_entries(retention_hours : Int32 = QuickHeadlines::Constants::CACHE_RETENTION_HOURS, config_urls : Array(String)? = nil)

@@ -19,7 +19,7 @@ class QuickHeadlines::Services::ClusteringService
     @cluster_repository ||= QuickHeadlines::Repositories::ClusterRepository.new(@db)
   end
 
-  private def find_best_cluster_match(candidates : Array(Int64), item_id : Int64, title_set : Set(String), cache : FeedCache, item_feed_id : Int64?) : Tuple(Int64?, Float64, String, Int64?)
+  private def best_cluster_match(candidates : Array(Int64), item_id : Int64, title_set : Set(String), cache : FeedCache, item_feed_id : Int64?) : Tuple(Int64?, Float64, String, Int64?)
     best_match = nil
     best_similarity = 0.0_f64
     best_title = ""
@@ -51,7 +51,7 @@ class QuickHeadlines::Services::ClusteringService
     {best_match, best_similarity, best_title, best_feed_id}
   end
 
-  private def assign_item_to_cluster(item_id : Int64, best_match : Int64?, best_similarity : Float64, best_title : String, threshold : Float64, title : String, cache : FeedCache) : Int64
+  private def assign_cluster_item(item_id : Int64, best_match : Int64?, best_similarity : Float64, best_title : String, threshold : Float64, title : String, cache : FeedCache) : Int64
     if best_match && best_similarity >= threshold
       cluster_items = cache.get_cluster_items(best_match)
       cluster_id = cluster_items.any? { |id| id != best_match } ? cluster_items.first : best_match
@@ -65,7 +65,7 @@ class QuickHeadlines::Services::ClusteringService
     end
   end
 
-  def compute_cluster_for_item(item_id : Int64, title : String, cache : FeedCache, item_feed_id : Int64? = nil, threshold : Float64 = 0.35) : Int64?
+  def compute_item_cluster(item_id : Int64, title : String, cache : FeedCache, item_feed_id : Int64? = nil, threshold : Float64 = 0.35) : Int64?
     return unless ClusteringEngine.can_cluster?(title)
 
     title_set = ClusteringEngine.word_set(title)
@@ -84,11 +84,11 @@ class QuickHeadlines::Services::ClusteringService
       return item_id
     end
 
-    best_match, best_similarity, best_title, _feed_id = find_best_cluster_match(candidates, item_id, title_set, cache, item_feed_id)
+    best_match, best_similarity, best_title, _feed_id = best_cluster_match(candidates, item_id, title_set, cache, item_feed_id)
 
     Log.for("quickheadlines.clustering").debug { "Best match similarity: #{best_similarity.round(2)} (threshold: #{threshold})" } if ENV["DEBUG_CLUSTERING"]?
 
-    assign_item_to_cluster(item_id, best_match, best_similarity, best_title, threshold, title, cache)
+    assign_cluster_item(item_id, best_match, best_similarity, best_title, threshold, title, cache)
   end
 
   def get_all_clusters_from_db : Array(QuickHeadlines::Entities::Cluster)
@@ -129,7 +129,7 @@ class QuickHeadlines::Services::ClusteringService
     begin
       items.each do |item|
         next if item[:title].empty?
-        compute_cluster_for_item(item[:id], item[:title], FeedCache.instance, item[:feed_id], threshold)
+        compute_item_cluster(item[:id], item[:title], FeedCache.instance, item[:feed_id], threshold)
         processed += 1
         if processed % 50 == 0
           Log.for("quickheadlines.clustering").debug { "Processed #{processed} items..." }

@@ -154,7 +154,7 @@ export async function fetchMoreFeedItems(
 	offset: number = 0
 ): Promise<FeedResponse> {
 	const url = `${API_BASE}/feed_more?url=${encodeURIComponent(feedUrl)}&limit=${limit}&offset=${offset}`;
-	return apiFetch<FeedResponse>(url, { errorContext: 'Fetch More Items' });
+	return apiFetch<FeedResponse>(url, { timeout: 30000, errorContext: 'Fetch More Items' });
 }
 
 export async function saveHeaderColor(

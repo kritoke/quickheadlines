@@ -1,22 +1,10 @@
 require "db"
 require "../services/database_service"
+require "./repository_base"
 
 module QuickHeadlines::Repositories
   @[ADI::Register]
-  class ClusterRepository
-    @db : DB::Database
-
-    def initialize(db_or_service : DatabaseService | DB::Database)
-      @db = case db_or_service
-            when DatabaseService then db_or_service.db
-            else                      db_or_service
-            end
-    end
-
-    private def db : DB::Database
-      @db
-    end
-
+  class ClusterRepository < RepositoryBase
     def find_all(limit : Int32 = 1000) : Array(QuickHeadlines::Entities::Cluster)
       clusters = [] of QuickHeadlines::Entities::Cluster
 
@@ -59,13 +47,7 @@ module QuickHeadlines::Repositories
           favicon = rows.read(String?)
           header_color = rows.read(String?)
 
-          item_pub_date = item_pub_date_str.try do |str|
-            begin
-              Time.parse(str, QuickHeadlines::Constants::DB_TIME_FORMAT, Time::Location::UTC)
-            rescue Time::Format::Error
-              nil
-            end
-          end
+          item_pub_date = parse_db_time(item_pub_date_str)
 
           cluster_items[cluster_id] ||= [] of {id: Int64, title: String, link: String, pub_date: Time?, feed_url: String, feed_title: String, favicon: String?, header_color: String?}
           cluster_items[cluster_id] << {
@@ -145,13 +127,7 @@ module QuickHeadlines::Repositories
           favicon = rows.read(String?)
           header_color = rows.read(String?)
 
-          pub_date = pub_date_str.try do |str|
-            begin
-              Time.parse(str, QuickHeadlines::Constants::DB_TIME_FORMAT, Time::Location::UTC)
-            rescue Time::Format::Error
-              nil
-            end
-          end
+          pub_date = parse_db_time(pub_date_str)
 
           stories << QuickHeadlines::Entities::Story.new(
             id: id.to_s,

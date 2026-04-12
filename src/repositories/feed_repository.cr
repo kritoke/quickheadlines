@@ -3,23 +3,11 @@ require "../models"
 require "../result"
 require "../errors"
 require "../services/database_service"
+require "./repository_base"
 
 module QuickHeadlines::Repositories
   @[ADI::Register]
-  class FeedRepository
-    @db : DB::Database
-
-    def initialize(db_or_service : DatabaseService | DB::Database)
-      @db = case db_or_service
-            when DatabaseService then db_or_service.db
-            else                      db_or_service
-            end
-    end
-
-    private def db : DB::Database
-      @db
-    end
-
+  class FeedRepository < RepositoryBase
     private def read_feed_entity(rows : DB::ResultSet) : QuickHeadlines::Entities::Feed
       id = rows.read(Int64)
       url = rows.read(String)
@@ -94,13 +82,7 @@ module QuickHeadlines::Repositories
       comment_url = rows.read(String?)
       commentary_url = rows.read(String?)
 
-      pub_date = pub_date_str.try do |date_str|
-        begin
-          Time.parse(date_str, QuickHeadlines::Constants::DB_TIME_FORMAT, Time::Location::UTC)
-        rescue Time::Format::Error
-          nil
-        end
-      end
+      pub_date = parse_db_time(pub_date_str)
       Item.new(title, link, pub_date, version, comment_url, commentary_url)
     end
 
@@ -162,13 +144,7 @@ module QuickHeadlines::Repositories
           version = rows.read(String?)
           comment_url = rows.read(String?)
           commentary_url = rows.read(String?)
-          pub_date = pub_date_str.try do |date_str|
-            begin
-              Time.parse(date_str, QuickHeadlines::Constants::DB_TIME_FORMAT, Time::Location::UTC)
-            rescue Time::Format::Error
-              nil
-            end
-          end
+          pub_date = parse_db_time(pub_date_str)
           items_by_feed[feed_id] << Item.new(title, link, pub_date, version, comment_url, commentary_url)
         end
       end
@@ -190,22 +166,15 @@ module QuickHeadlines::Repositories
 
     def find_last_fetched_time(url : String) : Time?
       result = db.query_one?("SELECT last_fetched FROM feeds WHERE url = ?", url, as: String?)
-      return unless result
-      begin
-        Time.parse(result, QuickHeadlines::Constants::DB_TIME_FORMAT, Time::Location::UTC)
-      rescue Time::Format::Error
-        nil
-      end
+      parse_db_time(result)
     end
 
     def find_last_fetched_time_result(url : String) : TimeResult
       result = db.query_one?("SELECT last_fetched FROM feeds WHERE url = ?", url, as: String?)
       return TimeResult.failure(RepositoryError::NotFound) unless result
-      begin
-        TimeResult.success(Time.parse(result, QuickHeadlines::Constants::DB_TIME_FORMAT, Time::Location::UTC))
-      rescue Time::Format::Error
-        TimeResult.failure(RepositoryError::DatabaseError)
-      end
+      parsed = parse_db_time(result)
+      return TimeResult.failure(RepositoryError::DatabaseError) unless parsed
+      TimeResult.success(parsed)
     end
 
     def find_by_url(url : String) : QuickHeadlines::Entities::Feed?

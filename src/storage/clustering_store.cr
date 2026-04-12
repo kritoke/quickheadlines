@@ -13,7 +13,7 @@ module QuickHeadlines::Storage
     def initialize(@db : DB::Database, @mutex : Mutex)
     end
 
-    def find_all_items_excluding(item_id : Int64, limit : Int32 = 500) : Array(Int64)
+    def other_item_ids(item_id : Int64, limit : Int32 = 500) : Array(Int64)
       items = [] of Int64
       @db.query("SELECT id FROM items WHERE id != ? ORDER BY id DESC LIMIT ?", item_id, limit) do |rows|
         rows.each do
@@ -269,7 +269,7 @@ module QuickHeadlines::Storage
       )
     end
 
-    def get_recent_items_for_clustering(hours_back : Int32 = 24, max_items : Int32 = 1000) : Array(ClusteringItemRow)
+    def recent_clustering_items(hours_back : Int32 = 24, max_items : Int32 = 1000) : Array(ClusteringItemRow)
       cutoff = (Time.utc - hours_back.hours).to_s(QuickHeadlines::Constants::DB_TIME_FORMAT)
 
       items = [] of ClusteringItemRow

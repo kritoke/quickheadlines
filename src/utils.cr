@@ -41,7 +41,7 @@ end
 
 # Limit concurrent fetches (helps smooth peak allocations)
 # Adjust capacity to your environment (5–10 is a good start).
-SEM = Channel(Nil).new(QuickHeadlines::Constants::CONCURRENCY).tap { |channel| QuickHeadlines::Constants::CONCURRENCY.times { channel.send(nil) } }
+CONCURRENCY_SEMAPHORE = Channel(Nil).new(QuickHeadlines::Constants::CONCURRENCY).tap { |channel| QuickHeadlines::Constants::CONCURRENCY.times { channel.send(nil) } }
 
 def parse_time(str : String?) : Time?
   return unless str

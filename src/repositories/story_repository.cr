@@ -1,22 +1,10 @@
 require "db"
 require "../services/database_service"
+require "./repository_base"
 
 module QuickHeadlines::Repositories
   @[ADI::Register]
-  class StoryRepository
-    @db : DB::Database
-
-    def initialize(db_or_service : DatabaseService | DB::Database)
-      @db = case db_or_service
-            when DatabaseService then db_or_service.db
-            else                      db_or_service
-            end
-    end
-
-    private def db : DB::Database
-      @db
-    end
-
+  class StoryRepository < RepositoryBase
     def find_all(limit : Int32 = 100, offset : Int32 = 0) : Array(QuickHeadlines::Entities::Story)
       stories = [] of QuickHeadlines::Entities::Story
 
@@ -197,13 +185,7 @@ module QuickHeadlines::Repositories
           comment_url = rows.read(String?)
           commentary_url = rows.read(String?)
 
-          pub_date = pub_date_str.try do |str|
-            begin
-              Time.parse(str, QuickHeadlines::Constants::DB_TIME_FORMAT, Time::Location::UTC)
-            rescue Time::Format::Error
-              nil
-            end
-          end
+          pub_date = parse_db_time(pub_date_str)
 
           items << QuickHeadlines::Domain::TimelineEntry.new(
             id: id,
@@ -316,13 +298,7 @@ module QuickHeadlines::Repositories
     end
 
     private def build_story(id : Int64, title : String, link : String, pub_date_str : String?, feed_title : String, feed_url : String, feed_link : String?, favicon : String?, header_color : String?) : QuickHeadlines::Entities::Story
-      pub_date = pub_date_str.try do |str|
-        begin
-          Time.parse(str, QuickHeadlines::Constants::DB_TIME_FORMAT, Time::Location::UTC)
-        rescue Time::Format::Error
-          nil
-        end
-      end
+      pub_date = parse_db_time(pub_date_str)
       QuickHeadlines::Entities::Story.new(
         id: id.to_s,
         title: title,

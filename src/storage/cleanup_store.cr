@@ -70,13 +70,13 @@ module QuickHeadlines::Storage
         if current_size_mb > max_size_mb
           Log.for("quickheadlines.storage").warn { "Database size (#{current_size_mb.round(2)}MB) exceeds limit (#{max_size_mb}MB), running aggressive cleanup..." }
 
-          cutoff = (Time.utc - 3.days).to_s(QuickHeadlines::Constants::DB_TIME_FORMAT)
+          cutoff = (Time.utc - QuickHeadlines::Constants::AGGRESSIVE_CLEANUP_DAYS.days).to_s(QuickHeadlines::Constants::DB_TIME_FORMAT)
           result = @db.exec("DELETE FROM items WHERE pub_date < ? AND cluster_id IS NULL", cutoff)
           deleted_count = result.rows_affected
           Log.for("quickheadlines.storage").info { "Aggressive cleanup deleted #{deleted_count} old articles" }
 
           if File.size(@db_path).to_f64 / (1024 * 1024) > max_size_mb
-            cutoff = (Time.utc - 1.day).to_s(QuickHeadlines::Constants::DB_TIME_FORMAT)
+            cutoff = (Time.utc - QuickHeadlines::Constants::VERY_AGGRESSIVE_CLEANUP_DAYS.days).to_s(QuickHeadlines::Constants::DB_TIME_FORMAT)
             result = @db.exec("DELETE FROM items WHERE pub_date < ? AND cluster_id IS NULL", cutoff)
             deleted_count = result.rows_affected
             Log.for("quickheadlines.storage").info { "Very aggressive cleanup deleted #{deleted_count} recent-old articles" }

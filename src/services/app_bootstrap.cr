@@ -86,7 +86,7 @@ class AppBootstrap
 
   private def run_initial_clustering
     run_on_startup = @config.clustering.try(&.run_on_startup?)
-    if run_on_startup.nil? || run_on_startup
+    if run_on_startup != false
       spawn do
         sleep 30.seconds
         begin

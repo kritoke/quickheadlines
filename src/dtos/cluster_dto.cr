@@ -16,9 +16,9 @@ class QuickHeadlines::DTOs::ClusterResponse
     @id : String,
     @representative : QuickHeadlines::DTOs::StoryResponse,
     @others : Array(QuickHeadlines::DTOs::StoryResponse) = [] of QuickHeadlines::DTOs::StoryResponse,
-    @cluster_size : Int32 = 1,
+    @cluster_size : Int32 = 0,
   )
-    @cluster_size = 1 + others.size
+    @cluster_size = @cluster_size > 0 ? @cluster_size : 1 + others.size
   end
 
   def self.from_entity(cluster : QuickHeadlines::Entities::Cluster) : QuickHeadlines::DTOs::ClusterResponse

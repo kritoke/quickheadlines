@@ -2,6 +2,8 @@ require "spec"
 require "../src/api"
 require "../src/storage"
 require "../src/models"
+require "../src/dtos/story_dto"
+require "../src/dtos/cluster_dto"
 
 describe "API Response Types" do
   describe TabResponse do
@@ -151,9 +153,9 @@ describe "API Response Types" do
     end
   end
 
-  describe StoryResponse do
+  describe QuickHeadlines::DTOs::StoryResponse do
     it "creates with required fields" do
-      response = StoryResponse.new(
+      response = QuickHeadlines::DTOs::StoryResponse.new(
         id: "123",
         title: "Test Story",
         link: "https://example.com/story"
@@ -164,18 +166,18 @@ describe "API Response Types" do
     end
   end
 
-  describe ClusterResponse do
+  describe QuickHeadlines::DTOs::ClusterResponse do
     it "calculates cluster size from others" do
-      story = StoryResponse.new(
+      story = QuickHeadlines::DTOs::StoryResponse.new(
         id: "1",
         title: "Test Story",
         link: "https://example.com/story"
       )
       others = [
-        StoryResponse.new(id: "2", title: "Story 2", link: "https://example.com/2"),
-        StoryResponse.new(id: "3", title: "Story 3", link: "https://example.com/3"),
+        QuickHeadlines::DTOs::StoryResponse.new(id: "2", title: "Story 2", link: "https://example.com/2"),
+        QuickHeadlines::DTOs::StoryResponse.new(id: "3", title: "Story 3", link: "https://example.com/3"),
       ]
-      response = ClusterResponse.new(
+      response = QuickHeadlines::DTOs::ClusterResponse.new(
         id: "cluster-1",
         representative: story,
         others: others
@@ -184,15 +186,15 @@ describe "API Response Types" do
     end
 
     it "allows explicit cluster size" do
-      story = StoryResponse.new(
+      story = QuickHeadlines::DTOs::StoryResponse.new(
         id: "1",
         title: "Test Story",
         link: "https://example.com/story"
       )
-      response = ClusterResponse.new(
+      response = QuickHeadlines::DTOs::ClusterResponse.new(
         id: "cluster-1",
         representative: story,
-        others: [] of StoryResponse,
+        others: [] of QuickHeadlines::DTOs::StoryResponse,
         cluster_size: 10
       )
       response.cluster_size.should eq(10)
@@ -203,7 +205,7 @@ describe "API Response Types" do
     it "creates with required fields" do
       response = ClusterItemsResponse.new(
         cluster_id: "123",
-        items: [] of StoryResponse
+        items: [] of QuickHeadlines::DTOs::StoryResponse
       )
       response.cluster_id.should eq("123")
       response.items.should be_empty

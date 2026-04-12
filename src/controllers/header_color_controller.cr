@@ -29,7 +29,7 @@ class QuickHeadlines::Controllers::HeaderColorController < QuickHeadlines::Contr
 
     normalized_url = feed_url.strip.rstrip('/').gsub(/\/rss(\.xml)?$/i, "")
     cache = @feed_cache
-    db_url = cache.find_feed_url_by_pattern(normalized_url) || feed_url
+    db_url = cache.find_url_by_pattern(normalized_url) || feed_url
 
     cache.update_header_colors(db_url, color, text_color)
     ATH::Response.new("OK", 200)

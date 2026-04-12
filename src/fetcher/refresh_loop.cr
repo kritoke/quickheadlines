@@ -25,12 +25,12 @@ private def fetch_feeds_concurrently(all_configs : Hash(String, Feed), existing_
   channel = Channel(FeedData).new
   all_configs.each_value do |feed|
     spawn do
-      SEM.receive
+      CONCURRENCY_SEMAPHORE.receive
       begin
         prev = existing_data[feed.url]?
         channel.send(fetch_feed(feed, config.item_limit, config.db_fetch_limit, prev))
       ensure
-        SEM.send(nil)
+        CONCURRENCY_SEMAPHORE.send(nil)
       end
     end
   end
@@ -38,7 +38,7 @@ private def fetch_feeds_concurrently(all_configs : Hash(String, Feed), existing_
   fetched_map = {} of String => FeedData
   all_configs.size.times do
     data = channel.receive
-    if data && !data.items.empty?
+    if data
       fetched_map[data.url] = data
     elsif config.debug?
       Log.for("quickheadlines.feed").warn { "refresh_all: failed to fetch #{data ? data.url : "unknown"}" }
@@ -47,10 +47,10 @@ private def fetch_feeds_concurrently(all_configs : Hash(String, Feed), existing_
   fetched_map
 end
 
-private def build_software_releases(sw_config : SoftwareConfig?, item_limit : Int32) : Array(FeedData)
-  return [] of FeedData unless sw_config
-  if sw_box = fetch_sw_with_config(sw_config, item_limit)
-    [sw_box]
+private def build_software_releases(software_config : SoftwareConfig?, item_limit : Int32) : Array(FeedData)
+  return [] of FeedData unless software_config
+  if software_feed = fetch_sw_with_config(software_config, item_limit)
+    [software_feed]
   else
     [] of FeedData
   end
@@ -136,7 +136,7 @@ def async_clustering(feeds : Array(FeedData), cache : FeedCache, db_service : Da
       spawn do
         semaphore.receive
         begin
-          process_feed_item_clustering(feed_data, cache, db_service)
+          process_clustering(feed_data, cache, db_service)
         rescue ex
           Log.for("quickheadlines.clustering").error(exception: ex) { "async_clustering: error processing #{feed_data.url}" }
         ensure
@@ -153,12 +153,12 @@ def async_clustering(feeds : Array(FeedData), cache : FeedCache, db_service : Da
   end
 end
 
-def compute_cluster_for_item(item_id : Int64, title : String, cache : FeedCache, db_service : DatabaseService, item_feed_id : Int64? = nil) : Int64?
+def compute_item_cluster(item_id : Int64, title : String, cache : FeedCache, db_service : DatabaseService, item_feed_id : Int64? = nil) : Int64?
   service = clustering_service(db_service)
-  service.compute_cluster_for_item(item_id, title, cache, item_feed_id)
+  service.compute_item_cluster(item_id, title, cache, item_feed_id)
 end
 
-def process_feed_item_clustering(feed_data : FeedData, cache : FeedCache, db_service : DatabaseService) : Nil
+def process_clustering(feed_data : FeedData, cache : FeedCache, db_service : DatabaseService) : Nil
   return if feed_data.items.empty?
 
   feed_id = cache.get_feed_id(feed_data.url)
@@ -169,7 +169,7 @@ def process_feed_item_clustering(feed_data : FeedData, cache : FeedCache, db_ser
 
     next unless item_id
 
-    compute_cluster_for_item(item_id, item.title, cache, db_service, feed_id)
+    compute_item_cluster(item_id, item.title, cache, db_service, feed_id)
   end
 end
 
