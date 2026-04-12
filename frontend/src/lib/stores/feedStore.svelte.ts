@@ -3,6 +3,7 @@ import { deepClone } from '$lib/utils/clone';
 import { isIdle, isLoading, isRefreshing, isError, getError } from '$lib/utils/storeTypes';
 import type { LoadStatus } from '$lib/utils/storeTypes';
 import type { FeedResponse, FeedsPageResponse } from '$lib/types';
+import { toastStore } from './toast.svelte';
 
 export type { LoadStatus };
 
@@ -161,13 +162,17 @@ export async function loadMoreFeedItems(feed: FeedResponse): Promise<void> {
 	const feedUrl = feed.url;
 	const currentOffset = feed.items.length;
 	
+	toastStore.info(`Load more: ${feed.title}, currentOffset=${currentOffset}, total=${feed.total_item_count}, showing=${feed.items.length}`, 'Feeds');
 	Object.assign(feedState, setFeedLoading(feedState, feedUrl, true));
 	
 	try {
 		const response = await fetchMoreFeedItems(feedUrl, 10, currentOffset);
+		toastStore.info(`API response: items=${response.items.length}, total=${response.total_item_count}`, 'Debug');
+		
+		const feedInState = feedState.feeds.find(f => f.url === feedUrl);
 		
 		const updatedFeeds = feedState.feeds.map(f => {
-			if (f.url == feedUrl) {
+			if (f.url === feedUrl) {
 				return {
 					...f,
 					items: [...f.items, ...response.items],
@@ -176,8 +181,11 @@ export async function loadMoreFeedItems(feed: FeedResponse): Promise<void> {
 			}
 			return f;
 		});
+		
 		Object.assign(feedState, { feeds: updatedFeeds });
+		toastStore.success(`Loaded ${response.items.length} more items from ${feed.title}`, 'Feeds');
 	} catch (e) {
+		toastStore.error(`Failed to load more items from ${feed.title}`, 'Feeds');
 		Object.assign(feedState, setError(feedState, e instanceof Error ? e.message : 'Failed to load more items'));
 	} finally {
 		Object.assign(feedState, setFeedLoading(feedState, feedUrl, false));

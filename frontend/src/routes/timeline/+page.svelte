@@ -25,6 +25,7 @@
 		getError
 	} from '$lib/stores/timelineStore.svelte';
 	import { searchState, setSearchQuery, toggleSearch, closeSearch } from '$lib/stores/search.svelte';
+	import { toastStore } from '$lib/stores/toast.svelte';
 
 	let LazyTimelineView: any = null;
 	const loadTimelineView = async () => {
@@ -55,12 +56,13 @@
 	let error = $derived(isError(timelineState) ? getError(timelineState) : null);
 	
 	$effect(() => {
-		if (!sentinelElement || !timelineState.hasMore) return;
+		if (!timelineState.hasMore) return;
 		
 		const observer = new IntersectionObserver(
 			(entries) => {
 				entries.forEach(entry => {
 					if (entry.isIntersecting && !timelineState.loadingMore && timelineState.hasMore) {
+						toastStore.info('Sentinel triggered, calling doLoadMore', 'Debug');
 						doLoadMore();
 					}
 				});
@@ -68,7 +70,9 @@
 			{ rootMargin: '500px' }
 		);
 		
-		observer.observe(sentinelElement);
+		if (sentinelElement) {
+			observer.observe(sentinelElement);
+		}
 		
 		return () => observer.disconnect();
 	});

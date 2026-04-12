@@ -70,7 +70,7 @@ class QuickHeadlines::Controllers::ApiBaseController < Athena::Framework::Contro
         end
       end
     end
-    request.headers["X-Client-IP"]?.try(&.strip) || request.headers["Host"]? || "unknown"
+    request.headers["X-Client-IP"]?.try(&.strip) || "local"
   end
 
   private def validate_proxy_url(url : String) : Bool

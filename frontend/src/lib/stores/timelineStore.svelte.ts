@@ -4,6 +4,7 @@ import { isIdle, isLoading, isRefreshing, isError, getError } from '$lib/utils/s
 import type { LoadStatus } from '$lib/utils/storeTypes';
 import type { TimelineItemResponse } from '$lib/types';
 import { SvelteSet } from 'svelte/reactivity';
+import { toastStore } from './toast.svelte';
 
 export type { LoadStatus };
 
@@ -132,6 +133,8 @@ export function resetTimelineStore(): void {
 export async function loadTimeline(append: boolean = false, tab?: string): Promise<void> {
 	const targetTab = tab ?? timelineState.tabName;
 	
+	console.log('[TimelineStore] loadTimeline called', { append, targetTab, offset: timelineState.offset, hasMore: timelineState.hasMore, loadingMore: timelineState.loadingMore });
+	
 	if (!append) {
 		if (isRefreshing(timelineState) || isLoading(timelineState)) return;
 		
@@ -155,9 +158,20 @@ export async function loadTimeline(append: boolean = false, tab?: string): Promi
 	
 	try {
 		const response = await fetchTimeline(500, append ? timelineState.offset : 0, 30, targetTab === 'all' ? undefined : targetTab);
+		console.log('[TimelineStore] fetchTimeline response:', { 
+			itemsReceived: response.items.length, 
+			hasMore: response.has_more,
+			totalCount: response.total_count,
+			currentOffset: append ? timelineState.offset : 0
+		});
 		Object.assign(timelineState, setTimelineData(timelineState, response.items, response.has_more, append));
-		Object.assign(timelineState, setTabName(timelineState, targetTab));
+		console.log('[TimelineStore] State updated, new hasMore:', timelineState.hasMore, 'new offset:', timelineState.offset);
+		if (append) {
+			toastStore.success(`Loaded ${response.items.length} more items`, 'Timeline');
+		}
 	} catch (e) {
+		console.error('[TimelineStore] Error:', e);
+		toastStore.error('Failed to load timeline', 'Timeline');
 		Object.assign(timelineState, setError(timelineState, e instanceof Error ? e.message : 'Failed to load timeline'));
 	}
 }
@@ -184,6 +198,12 @@ export function getFilteredItems(query: string): TimelineItemResponse[] {
 }
 
 export async function handleLoadMore(): Promise<void> {
+	console.log('[TimelineStore] handleLoadMore called', { 
+		loadingMore: timelineState.loadingMore, 
+		hasMore: timelineState.hasMore,
+		currentOffset: timelineState.offset 
+	});
+	toastStore.info(`Loading more items... (offset: ${timelineState.offset})`, 'Timeline');
 	if (!timelineState.loadingMore && timelineState.hasMore) {
 		await loadTimeline(true);
 	}

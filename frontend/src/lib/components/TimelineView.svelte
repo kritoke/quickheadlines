@@ -6,6 +6,7 @@
 	import { layoutState } from '$lib/stores/layout.svelte';
 	import { getFaviconSrc, getHeaderStyle } from '$lib/utils/feedItem';
 	import { sanitizeUrl } from '$lib/utils/validation';
+	import { toastStore } from '$lib/stores/toast.svelte';
 
 
 	interface Props {
@@ -223,7 +224,10 @@
 		<div class="load-more text-center py-4">
 			<button
 				type="button"
-				onclick={onLoadMore}
+				onclick={() => {
+					toastStore.info('Timeline load more clicked', 'Debug');
+					onLoadMore?.();
+				}}
 				class="px-4 py-2 text-sm rounded-lg transition-colors theme-bg-secondary theme-text-primary theme-border"
 			>
 				Load More
