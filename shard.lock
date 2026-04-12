@@ -98,7 +98,7 @@ shards:
 
   prismatiq:
     git: https://github.com/kritoke/prismatiq.git
-    version: 0.5.6.1
+    version: 0.6.0
 
   sanitize:
     git: https://github.com/straight-shoota/sanitize.git
@@ -110,7 +110,7 @@ shards:
 
   vug:
     git: https://github.com/kritoke/vug.cr.git
-    version: 0.3.1
+    version: 0.4.0
 
   xpath2:
     git: https://github.com/naqvis/crystal-xpath2.git
