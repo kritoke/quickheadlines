@@ -159,9 +159,6 @@ export async function loadTimeline(append: boolean = false, tab?: string): Promi
 	try {
 		const response = await fetchTimeline(500, append ? timelineState.offset : 0, 30, targetTab === 'all' ? undefined : targetTab);
 		Object.assign(timelineState, setTimelineData(timelineState, response.items, response.has_more, append));
-		if (append) {
-			toastStore.success(`Loaded ${response.items.length} more items`, 'Timeline');
-		}
 	} catch (e) {
 
 		toastStore.error('Failed to load timeline', 'Timeline');

@@ -181,7 +181,6 @@ export async function loadMoreFeedItems(feed: FeedResponse): Promise<void> {
 		});
 		
 		Object.assign(feedState, { feeds: updatedFeeds });
-		toastStore.success(`Loaded ${response.items.length} more items from ${feed.title}`, 'Feeds');
 	} catch (e) {
 		toastStore.error(`Failed to load more items from ${feed.title}`, 'Feeds');
 		Object.assign(feedState, setError(feedState, e instanceof Error ? e.message : 'Failed to load more items'));
