@@ -93,7 +93,7 @@ def create_schema(db : DB::Database, db_path : String)
   db.exec("PRAGMA cache_size = -64000")
   db.exec("PRAGMA foreign_keys = ON")
   db.exec("PRAGMA mmap_size = 0")
-  db.exec("PRAGMA wal_autocheckpoint = 100")
+  db.exec("PRAGMA wal_autocheckpoint = 20")
 
   db.exec(Schema::FEEDS_TABLE)
   db.exec(Schema::ITEMS_TABLE)

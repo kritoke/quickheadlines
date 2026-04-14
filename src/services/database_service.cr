@@ -27,7 +27,7 @@ class DatabaseService
     ensure_cache_dir(cache_dir)
 
     @db_path = get_cache_db_path(config).as(String)
-    @db = DB.open("sqlite3://#{@db_path}?busy_timeout=5000&max_pool_size=5")
+    @db = DB.open("sqlite3://#{@db_path}?busy_timeout=5000")
     create_schema(@db, @db_path)
 
     Log.for("quickheadlines.storage").info { "DatabaseService initialized: #{@db_path}" }
@@ -70,7 +70,7 @@ class DatabaseService
     db.exec("PRAGMA cache_size = -64000")
     db.exec("PRAGMA foreign_keys = ON")
     db.exec("PRAGMA mmap_size = 0")
-    db.exec("PRAGMA wal_autocheckpoint = 100")
+    db.exec("PRAGMA wal_autocheckpoint = 20")
 
     db.exec(Schema::FEEDS_TABLE)
     db.exec(Schema::ITEMS_TABLE)

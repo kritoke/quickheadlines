@@ -97,7 +97,27 @@ module QuickHeadlines::Storage
     end
 
     def vacuum
-      @mutex.synchronize { run_vacuum }
+      @mutex.synchronize do
+        run_wal_checkpoint
+        run_vacuum
+      end
+    end
+
+    private def run_wal_checkpoint
+      wal_size = wal_file_size
+      if wal_size > 0
+        Log.for("quickheadlines.storage").debug { "Running WAL checkpoint (WAL size: #{(wal_size / 1024.0).round(1)}KB)" }
+        @db.exec("PRAGMA wal_checkpoint(TRUNCATE)")
+        new_wal_size = wal_file_size
+        Log.for("quickheadlines.storage").debug { "WAL checkpoint done (new WAL size: #{(new_wal_size / 1024.0).round(1)}KB)" }
+      end
+    end
+
+    private def wal_file_size : Int64
+      wal_path = "#{@db_path}-wal"
+      File.exists?(wal_path) ? File.size(wal_path) : 0_i64
+    rescue
+      0_i64
     end
 
     private def run_vacuum
