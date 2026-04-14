@@ -1,5 +1,6 @@
 require "athena"
 require "./assets"
+require "../favicon_storage"
 
 class StaticController < Athena::Framework::Controller
   private def apply_security_headers(response : ATH::Response, mime : String) : Nil
@@ -129,5 +130,31 @@ class StaticController < Athena::Framework::Controller
   @[ARTA::Get(path: "/_app/{filename}", requirements: {"filename" => /[^\/]+/})]
   def app_root_assets(filename : String) : ATH::Response
     serve_asset("_app/#{filename}")
+  end
+
+  @[ARTA::Get(path: "/favicons/{filename}")]
+  def favicon_assets(filename : String) : ATH::Response
+    favicon_path = File.join(FaviconStorage.favicon_dir, filename)
+    if File.exists?(favicon_path)
+      content = File.read(favicon_path)
+      mime = case filename
+             when /\.png$/            then "image/png"
+             when /\.ico$/            then "image/x-icon"
+             when /\.svg$/            then "image/svg+xml"
+             when /\.gif$/            then "image/gif"
+             when /\.jpg$/, /\.jpeg$/ then "image/jpeg"
+             when /\.webp$/           then "image/webp"
+             else                          "application/octet-stream"
+             end
+      response = ATH::Response.new(content)
+      response.headers["Content-Type"] = mime
+      response.headers["Cache-Control"] = "public, max-age=86400"
+      apply_security_headers(response, mime)
+      return response
+    end
+    ATH::Response.new("Not Found", 404, HTTP::Headers{"Content-Type" => "text/plain"})
+  rescue ex
+    Log.for("quickheadlines.http").error(exception: ex) { "Favicon error for #{filename}" }
+    ATH::Response.new("Internal server error", 500, HTTP::Headers{"Content-Type" => "text/plain"})
   end
 end
