@@ -113,13 +113,11 @@ module QuickHeadlines::Repositories
     def find_timeline_items(limit : Int32, offset : Int32, days_back : Int32?, allowed_feed_urls : Array(String) = [] of String) : Array(QuickHeadlines::Domain::TimelineEntry)
       items = [] of QuickHeadlines::Domain::TimelineEntry
 
-      cutoff_clause = days_back ? "AND i.pub_date >= ?" : ""
       feed_filter_clause = build_feed_filter(allowed_feed_urls)
-
-      cutoff_value = days_back ? Time.utc - days_back.days : nil
       feed_filter_values = feed_filter_values(allowed_feed_urls)
 
-      # Use CTE to pre-compute cluster representatives and sizes (eliminates per-row subqueries)
+      cutoff_value = days_back ? Time.utc - days_back.days : nil
+
       query = <<-SQL
         WITH cluster_info AS (
           SELECT
@@ -128,6 +126,7 @@ module QuickHeadlines::Repositories
             COUNT(*) as cluster_size
           FROM items
           WHERE cluster_id IS NOT NULL
+          AND pub_date >= ?
           GROUP BY cluster_id
         )
         SELECT
@@ -151,21 +150,13 @@ module QuickHeadlines::Repositories
         LEFT JOIN cluster_info ci ON i.cluster_id = ci.cluster_id
         WHERE (i.pub_date IS NULL OR i.pub_date <= datetime('now', '+1 day'))
         AND (i.cluster_id IS NULL OR i.id = ci.representative_id)
-        #{cutoff_clause}
+        AND i.pub_date >= ?
         #{feed_filter_clause}
         ORDER BY COALESCE(i.pub_date, '1970-01-01 00:00:00') DESC, i.id DESC
         LIMIT ? OFFSET ?
         SQL
 
-      if cutoff_value && !feed_filter_values.empty?
-        query_args = [cutoff_value, *feed_filter_values, limit, offset]
-      elsif cutoff_value
-        query_args = [cutoff_value, limit, offset]
-      elsif !feed_filter_values.empty?
-        query_args = [*feed_filter_values, limit, offset]
-      else
-        query_args = [limit, offset]
-      end
+      query_args = [cutoff_value, cutoff_value, *feed_filter_values, limit, offset]
 
       db.query(query, args: query_args) do |rows|
         rows.each do
@@ -211,10 +202,8 @@ module QuickHeadlines::Repositories
     end
 
     def count_timeline_items(days_back : Int32?, allowed_feed_urls : Array(String) = [] of String) : Int32
-      cutoff_clause = days_back ? "AND i.pub_date >= ?" : ""
-      feed_filter_clause = build_feed_filter(allowed_feed_urls)
-
       cutoff_value = days_back ? Time.utc - days_back.days : nil
+      feed_filter_clause = build_feed_filter(allowed_feed_urls)
       feed_filter_values = feed_filter_values(allowed_feed_urls)
 
       query = <<-SQL
@@ -225,6 +214,7 @@ module QuickHeadlines::Repositories
             COUNT(*) as cluster_size
           FROM items
           WHERE cluster_id IS NOT NULL
+          AND pub_date >= ?
           GROUP BY cluster_id
         )
         SELECT COUNT(*)
@@ -233,19 +223,11 @@ module QuickHeadlines::Repositories
         LEFT JOIN cluster_info ci ON i.cluster_id = ci.cluster_id
         WHERE (i.pub_date IS NULL OR i.pub_date <= datetime('now', '+1 day'))
         AND (i.cluster_id IS NULL OR i.id = ci.representative_id)
-        #{cutoff_clause}
+        AND i.pub_date >= ?
         #{feed_filter_clause}
         SQL
 
-      if cutoff_value && !feed_filter_values.empty?
-        query_args = [cutoff_value, *feed_filter_values]
-      elsif cutoff_value
-        query_args = [cutoff_value]
-      elsif !feed_filter_values.empty?
-        query_args = feed_filter_values
-      else
-        query_args = [] of String
-      end
+      query_args = [cutoff_value, cutoff_value, *feed_filter_values]
 
       db.query_one(query, args: query_args, as: Int64).to_i
     end

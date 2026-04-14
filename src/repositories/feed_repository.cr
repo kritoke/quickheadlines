@@ -40,7 +40,8 @@ module QuickHeadlines::Repositories
       etag : String?,
       last_modified : String?,
       favicon : String?,
-      favicon_data : String? do
+      favicon_data : String?,
+      id : Int64? do
       def to_feed_data(items : Array(Item)) : FeedData
         FeedData.new(
           title,
@@ -251,11 +252,12 @@ module QuickHeadlines::Repositories
 
     def update_header_colors(url : String, bg : String?, text : String?) : Nil
       if bg || text
-        existing_bg = db.query_one?("SELECT header_color FROM feeds WHERE url = ?", url, as: String?)
-        existing_text = db.query_one?("SELECT header_text_color FROM feeds WHERE url = ?", url, as: String?)
+        existing = db.query_one?("SELECT header_color, header_text_color FROM feeds WHERE url = ?", url) do |row|
+          {bg: row.read(String?), text: row.read(String?)}
+        end
 
-        bg_to_save = bg || existing_bg
-        text_to_save = text || existing_text
+        bg_to_save = bg || existing.try(&.[:bg])
+        text_to_save = text || existing.try(&.[:text])
 
         db.exec(
           "UPDATE feeds SET header_color = ?, header_text_color = ? WHERE url = ?",
@@ -267,8 +269,10 @@ module QuickHeadlines::Repositories
     end
 
     def delete_by_url(url : String) : Nil
-      db.exec("DELETE FROM items WHERE feed_id IN (SELECT id FROM feeds WHERE url = ?)", url)
-      db.exec("DELETE FROM feeds WHERE url = ?", url)
+      @db.transaction do
+        @db.exec("DELETE FROM items WHERE feed_id IN (SELECT id FROM feeds WHERE url = ?)", url)
+        @db.exec("DELETE FROM feeds WHERE url = ?", url)
+      end
     end
 
     def count_items(url : String) : Int32
@@ -299,13 +303,17 @@ module QuickHeadlines::Repositories
     end
 
     private def update_feed(feed_id : Int64, feed_data : FeedData) : Int64
-      existing_color = db.query_one?("SELECT header_color FROM feeds WHERE id = ?", feed_id, as: {String?})
-      existing_text_color = db.query_one?("SELECT header_text_color FROM feeds WHERE id = ?", feed_id, as: {String?})
-      existing_theme = db.query_one?("SELECT header_theme_colors FROM feeds WHERE id = ?", feed_id, as: {String?})
+      existing = db.query_one?("SELECT header_color, header_text_color, header_theme_colors FROM feeds WHERE id = ?", feed_id) do |row|
+        {
+          color:      row.read(String?),
+          text_color: row.read(String?),
+          theme:      row.read(String?),
+        }
+      end
 
-      header_color_to_save = feed_data.header_color.nil? ? existing_color : feed_data.header_color
-      header_text_color_to_save = feed_data.header_text_color.nil? ? existing_text_color : feed_data.header_text_color
-      header_theme_to_save = feed_data.header_theme_colors.nil? ? existing_theme : feed_data.header_theme_colors
+      header_color_to_save = feed_data.header_color.nil? ? existing.try(&.[:color]) : feed_data.header_color
+      header_text_color_to_save = feed_data.header_text_color.nil? ? existing.try(&.[:text_color]) : feed_data.header_text_color
+      header_theme_to_save = feed_data.header_theme_colors.nil? ? existing.try(&.[:theme]) : feed_data.header_theme_colors
 
       db.exec(
         "UPDATE feeds SET title = ?, site_link = ?, header_color = ?, header_text_color = ?, header_theme_colors = ?, etag = ?, last_modified = ?, favicon = ?, favicon_data = ?, last_fetched = ? WHERE id = ?",
@@ -363,25 +371,38 @@ module QuickHeadlines::Repositories
 
     def find_with_items(url : String) : FeedData?
       feed_result = db.query_one?(
-        "SELECT title, url, site_link, header_color, header_text_color, header_theme_colors, etag, last_modified, favicon, favicon_data FROM feeds WHERE url = ?",
+        "SELECT id, title, url, site_link, header_color, header_text_color, header_theme_colors, etag, last_modified, favicon, favicon_data FROM feeds WHERE url = ?",
         url
       ) do |row|
-        read_feed_row(row)
+        feed_id = row.read(Int64)
+        read_feed_row_with_id(row, feed_id)
       end
       return unless feed_result
 
-      feed_id_result = db.query_one?("SELECT id FROM feeds WHERE url = ?", url, as: Int64)
-      return unless feed_id_result
-      feed_id = feed_id_result
-
       items = [] of Item
-      db.query("SELECT title, link, pub_date, version, comment_url, commentary_url FROM items WHERE feed_id = ? AND (pub_date IS NULL OR pub_date <= datetime('now', '+1 day')) ORDER BY pub_date DESC", feed_id) do |rows|
+      db.query("SELECT title, link, pub_date, version, comment_url, commentary_url FROM items WHERE feed_id = ? AND (pub_date IS NULL OR pub_date <= datetime('now', '+1 day')) ORDER BY pub_date DESC", feed_result.id) do |rows|
         rows.each do
           items << read_item(rows)
         end
       end
 
       feed_result.to_feed_data(items)
+    end
+
+    private def read_feed_row_with_id(rows : DB::ResultSet, feed_id : Int64) : FeedRowData
+      FeedRowData.new(
+        rows.read(String),
+        rows.read(String),
+        rows.read(String),
+        rows.read(String?),
+        rows.read(String?),
+        rows.read(String?),
+        rows.read(String?),
+        rows.read(String?),
+        rows.read(String?),
+        rows.read(String?),
+        feed_id
+      )
     end
 
     def find_with_items_result(url : String) : FeedDataResult

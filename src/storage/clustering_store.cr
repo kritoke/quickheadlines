@@ -69,8 +69,8 @@ module QuickHeadlines::Storage
 
     def store_lsh_bands(item_id : Int64, band_hashes : Array(UInt64))
       @mutex.synchronize do
+        @db.exec("BEGIN TRANSACTION")
         begin
-          @db.exec("BEGIN TRANSACTION")
           @db.exec("DELETE FROM lsh_bands WHERE item_id = ?", item_id)
           band_hashes.each_with_index do |band_hash, band_index|
             @db.exec(
@@ -85,6 +85,7 @@ module QuickHeadlines::Storage
         rescue ex
           @db.exec("ROLLBACK")
           Log.for("quickheadlines.storage").error(exception: ex) { "Failed to store LSH bands for item #{item_id}" }
+          raise ex
         end
       end
     end
@@ -110,8 +111,10 @@ module QuickHeadlines::Storage
 
     def clear_clustering_metadata
       @mutex.synchronize do
-        @db.exec("UPDATE items SET cluster_id = NULL")
-        @db.exec("DELETE FROM lsh_bands")
+        @db.transaction do
+          @db.exec("UPDATE items SET cluster_id = NULL")
+          @db.exec("DELETE FROM lsh_bands")
+        end
         Log.for("quickheadlines.storage").info { "Cleared clustering metadata" }
       end
     end
@@ -182,9 +185,15 @@ module QuickHeadlines::Storage
 
       feed_urls = items.map(&.feed_url).uniq!
       feed_url_to_id = {} of String => Int64
-      feed_urls.each do |url|
-        if feed_id = get_feed_id(url)
-          feed_url_to_id[url] = feed_id
+
+      if !feed_urls.empty?
+        placeholders = feed_urls.map { |_| "?" }.join(",")
+        @db.query("SELECT url, id FROM feeds WHERE url IN (#{placeholders})", args: feed_urls) do |rows|
+          rows.each do
+            url = rows.read(String)
+            id = rows.read(Int64)
+            feed_url_to_id[url] = id
+          end
         end
       end
 
@@ -323,16 +332,11 @@ module QuickHeadlines::Storage
       clusters = [] of {id: Int64, representative_id: Int64, item_count: Int32}
 
       query = <<-SQL
-        SELECT c.id, MIN(c.representative_id) as representative_id, COUNT(*) as item_count
-        FROM (
-          SELECT cluster_id as id, MIN(id) as representative_id
-          FROM items
-          WHERE cluster_id IS NOT NULL
-          GROUP BY cluster_id
-        ) c
-        JOIN items i ON i.cluster_id = c.id
-        GROUP BY c.id
-        ORDER BY MIN(i.pub_date) DESC
+        SELECT cluster_id, MIN(id) as representative_id, COUNT(*) as item_count
+        FROM items
+        WHERE cluster_id IS NOT NULL
+        GROUP BY cluster_id
+        ORDER BY MIN(pub_date) DESC
         SQL
 
       @db.query(query) do |rows|

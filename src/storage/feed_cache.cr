@@ -248,9 +248,11 @@ class FeedCache
 
   def clear_all
     @mutex.synchronize do
-      @db.exec("DELETE FROM items")
-      @db.exec("DELETE FROM feeds")
-      @db.exec("DELETE FROM lsh_bands")
+      @db.transaction do
+        @db.exec("DELETE FROM items")
+        @db.exec("DELETE FROM feeds")
+        @db.exec("DELETE FROM lsh_bands")
+      end
       Log.for("quickheadlines.storage").info { "Cleared all cached data" }
     end
   end

@@ -119,7 +119,7 @@ def create_schema(db : DB::Database, db_path : String)
 end
 
 def check_db_integrity(db_path : String) : Bool
-  DB.open("sqlite3://#{db_path}") do |database|
+  DB.open("sqlite3://#{db_path}?busy_timeout=5000") do |database|
     result = database.query_one("PRAGMA integrity_check", as: {String})
     if result == "ok"
       Log.for("quickheadlines.storage").debug { "Database integrity check passed" }
@@ -144,7 +144,7 @@ def check_db_health(db_path : String) : DbHealthStatus
     return DbHealthStatus::NeedsRepopulation
   end
 
-  DB.open("sqlite3://#{db_path}") do |database|
+  DB.open("sqlite3://#{db_path}?busy_timeout=5000") do |database|
     integrity_result = database.query_one("PRAGMA integrity_check", as: {String})
     if integrity_result != "ok"
       Log.for("quickheadlines.storage").error { "Database integrity check failed: #{integrity_result}" }

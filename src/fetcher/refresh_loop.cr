@@ -189,8 +189,13 @@ def process_clustering(feed_data : FeedData, cache : FeedCache, db_service : Dat
   feed_id = cache.get_feed_id(feed_data.url)
   return unless feed_id
 
+  item_keys = feed_data.items.map do |item|
+    QuickHeadlines::Storage::ClusteringStore::ItemKey.new(feed_data.url, item.link)
+  end
+  id_map = cache.get_item_ids_batch(item_keys)
+
   feed_data.items.each do |item|
-    item_id = cache.get_item_id(feed_data.url, item.link)
+    item_id = id_map["#{feed_data.url}|#{item.link}"]?
 
     next unless item_id
 

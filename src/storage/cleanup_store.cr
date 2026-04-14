@@ -45,21 +45,23 @@ module QuickHeadlines::Storage
       @mutex.synchronize do
         cutoff = (Time.utc - retention_days.days).to_s(QuickHeadlines::Constants::DB_TIME_FORMAT)
 
-        result = @db.exec("DELETE FROM items WHERE pub_date < ? AND cluster_id IS NULL", cutoff)
-        deleted_count = result.rows_affected
+        @db.transaction do
+          result = @db.exec("DELETE FROM items WHERE pub_date < ? AND cluster_id IS NULL", cutoff)
+          deleted_count = result.rows_affected
 
-        if deleted_count > 0
-          Log.for("quickheadlines.storage").debug { "Cleaned up #{deleted_count} old articles (older than #{retention_days} days)" }
+          if deleted_count > 0
+            Log.for("quickheadlines.storage").debug { "Cleaned up #{deleted_count} old articles (older than #{retention_days} days)" }
+          end
+
+          result = @db.exec("DELETE FROM items WHERE feed_id NOT IN (SELECT id FROM feeds)")
+          orphaned_count = result.rows_affected
+
+          if orphaned_count > 0
+            Log.for("quickheadlines.storage").debug { "Cleaned up #{orphaned_count} orphaned items" }
+          end
+
+          delete_orphaned_lsh_bands
         end
-
-        result = @db.exec("DELETE FROM items WHERE feed_id NOT IN (SELECT id FROM feeds)")
-        orphaned_count = result.rows_affected
-
-        if orphaned_count > 0
-          Log.for("quickheadlines.storage").debug { "Cleaned up #{orphaned_count} orphaned items" }
-        end
-
-        delete_orphaned_lsh_bands
       end
     end
 
