@@ -58,6 +58,8 @@ module QuickHeadlines::Storage
         if orphaned_count > 0
           Log.for("quickheadlines.storage").debug { "Cleaned up #{orphaned_count} orphaned items" }
         end
+
+        delete_orphaned_lsh_bands
       end
     end
 
@@ -82,8 +84,10 @@ module QuickHeadlines::Storage
             Log.for("quickheadlines.storage").info { "Very aggressive cleanup deleted #{deleted_count} recent-old articles" }
           end
 
+          delete_orphaned_lsh_bands
+
           begin
-            vacuum
+            run_vacuum
             Log.for("quickheadlines.storage").info { "Vacuumed database after size cleanup" }
           rescue ex
             Log.for("quickheadlines.storage").error(exception: ex) { "Vacuum failed" }
@@ -93,15 +97,25 @@ module QuickHeadlines::Storage
     end
 
     def vacuum
-      @mutex.synchronize do
-        begin
-          Log.for("quickheadlines.storage").debug { "Running VACUUM on database" }
-          @db.exec("VACUUM")
-          Log.for("quickheadlines.storage").debug { "VACUUM completed" }
-        rescue ex
-          Log.for("quickheadlines.storage").error(exception: ex) { "VACUUM failed" }
-        end
+      @mutex.synchronize { run_vacuum }
+    end
+
+    private def run_vacuum
+      Log.for("quickheadlines.storage").debug { "Running VACUUM on database" }
+      @db.exec("VACUUM")
+      Log.for("quickheadlines.storage").debug { "VACUUM completed" }
+    end
+
+    private def delete_orphaned_lsh_bands
+      result = @db.exec("DELETE FROM lsh_bands WHERE item_id NOT IN (SELECT id FROM items)")
+      deleted_count = result.rows_affected
+      if deleted_count > 0
+        Log.for("quickheadlines.storage").debug { "Cleaned up #{deleted_count} orphaned LSH band entries" }
       end
+    end
+
+    def cleanup_orphaned_lsh_bands
+      @mutex.synchronize { delete_orphaned_lsh_bands }
     end
 
     private def try_parse_date_format(str : String, format : String) : Time?

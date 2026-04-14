@@ -10,9 +10,10 @@ require "../software_fetcher"
 require "../websocket"
 require "./feed_fetcher"
 
-MAX_PARALLEL_CLUSTERING = 20
-REFRESH_MUTEX           = Mutex.new
-REFRESH_IN_PROGRESS     = Atomic(Bool).new(false)
+MAX_PARALLEL_CLUSTERING    =  20
+CLUSTERING_TIMEOUT_SECONDS = 300
+REFRESH_MUTEX              = Mutex.new
+REFRESH_IN_PROGRESS        = Atomic(Bool).new(false)
 
 private def collect_feed_configs(config : Config) : Hash(String, Feed)
   all_configs = {} of String => Feed
@@ -21,14 +22,19 @@ private def collect_feed_configs(config : Config) : Hash(String, Feed)
   all_configs
 end
 
+FEED_FETCH_TIMEOUT_SECONDS = 300
+
 private def fetch_feeds_concurrently(all_configs : Hash(String, Feed), existing_data : Hash(String, FeedData), config : Config) : Hash(String, FeedData)
-  channel = Channel(FeedData).new
+  channel = Channel(FeedData?).new
   all_configs.each_value do |feed|
     spawn do
       CONCURRENCY_SEMAPHORE.receive
       begin
         prev = existing_data[feed.url]?
         channel.send(fetch_feed(feed, config.item_limit, config.db_fetch_limit, prev))
+      rescue ex
+        Log.for("quickheadlines.feed").error(exception: ex) { "fetch_feeds_concurrently: error fetching #{feed.url}" }
+        channel.send(nil)
       ensure
         CONCURRENCY_SEMAPHORE.send(nil)
       end
@@ -36,12 +42,20 @@ private def fetch_feeds_concurrently(all_configs : Hash(String, Feed), existing_
   end
 
   fetched_map = {} of String => FeedData
+  completed = 0
+  timeout_span = FEED_FETCH_TIMEOUT_SECONDS.seconds
   all_configs.size.times do
-    data = channel.receive
-    if data
-      fetched_map[data.url] = data
-    elsif config.debug?
-      Log.for("quickheadlines.feed").warn { "refresh_all: failed to fetch #{data ? data.url : "unknown"}" }
+    select
+    when data = channel.receive?
+      if data
+        fetched_map[data.url] = data
+      elsif config.debug?
+        Log.for("quickheadlines.feed").warn { "refresh_all: failed to fetch feed" }
+      end
+      completed += 1
+    when timeout(timeout_span)
+      Log.for("quickheadlines.feed").warn { "fetch_feeds_concurrently: timed out after #{completed}/#{all_configs.size} feeds" }
+      break
     end
   end
   fetched_map
@@ -123,6 +137,7 @@ end
 
 def async_clustering(feeds : Array(FeedData), cache : FeedCache, db_service : DatabaseService)
   return if feeds.empty?
+  return if StateStore.clustering?
 
   semaphore = Channel(Nil).new(MAX_PARALLEL_CLUSTERING)
   MAX_PARALLEL_CLUSTERING.times { semaphore.send(nil) }
@@ -148,7 +163,17 @@ def async_clustering(feeds : Array(FeedData), cache : FeedCache, db_service : Da
   end
 
   spawn do
-    feeds.size.times { completion_channel.receive }
+    completed = 0
+    timeout_span = CLUSTERING_TIMEOUT_SECONDS.seconds
+    feeds.size.times do
+      select
+      when completion_channel.receive?
+        completed += 1
+      when timeout(timeout_span)
+        Log.for("quickheadlines.clustering").warn { "async_clustering timed out after #{completed}/#{feeds.size} completions" }
+        break
+      end
+    end
     StateStore.update(&.copy_with(clustering: false))
   end
 end

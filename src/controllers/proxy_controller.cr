@@ -42,34 +42,39 @@ class QuickHeadlines::Controllers::ProxyController < QuickHeadlines::Controllers
     uri = URI.parse(url)
     client = HTTP::Client.new(uri)
     client.read_timeout = 10.seconds
+    client.write_timeout = 10.seconds
     client.connect_timeout = 5.seconds
 
-    response = client.get(uri.request_target)
+    begin
+      response = client.get(uri.request_target)
 
-    if response.status_code >= 400
-      return ATH::Response.new("Bad Gateway", 502, HTTP::Headers{"content-type" => "text/plain"})
+      if response.status_code >= 400
+        return ATH::Response.new("Bad Gateway", 502, HTTP::Headers{"content-type" => "text/plain"})
+      end
+
+      content_type = (response.headers["content-type"]? || "application/octet-stream").split(";").first
+
+      unless content_type.starts_with?("image/")
+        return ATH::Response.new("Not an image", 415, HTTP::Headers{"content-type" => "text/plain"})
+      end
+
+      if (cl_header = response.headers["Content-Length"]?) && (cl = cl_header.to_i64?) && cl > max_bytes
+        return ATH::Response.new("Image too large", 413, HTTP::Headers{"content-type" => "text/plain"})
+      end
+
+      body = response.body
+      if body.bytesize > max_bytes
+        return ATH::Response.new("Image too large", 413, HTTP::Headers{"content-type" => "text/plain"})
+      end
+
+      ATH::Response.new(body, 200, HTTP::Headers{"content-type" => content_type})
+    rescue IO::TimeoutError | Socket::Error
+      ATH::Response.new("Bad Gateway", 502, HTTP::Headers{"content-type" => "text/plain"})
+    rescue
+      ATH::Response.new("Bad Gateway", 502, HTTP::Headers{"content-type" => "text/plain"})
+    ensure
+      client.close
     end
-
-    content_type = (response.headers["content-type"]? || "application/octet-stream").split(";").first
-
-    unless content_type.starts_with?("image/")
-      return ATH::Response.new("Not an image", 415, HTTP::Headers{"content-type" => "text/plain"})
-    end
-
-    if (cl_header = response.headers["Content-Length"]?) && (cl = cl_header.to_i64?) && cl > max_bytes
-      return ATH::Response.new("Image too large", 413, HTTP::Headers{"content-type" => "text/plain"})
-    end
-
-    body = response.body
-    if body.bytesize > max_bytes
-      return ATH::Response.new("Image too large", 413, HTTP::Headers{"content-type" => "text/plain"})
-    end
-
-    ATH::Response.new(body, 200, HTTP::Headers{"content-type" => content_type})
-  rescue IO::TimeoutError | Socket::Error
-    ATH::Response.new("Bad Gateway", 502, HTTP::Headers{"content-type" => "text/plain"})
-  rescue
-    ATH::Response.new("Bad Gateway", 502, HTTP::Headers{"content-type" => "text/plain"})
   end
 
   @[ARTA::Get(path: "/favicons/{hash}.{ext}")]

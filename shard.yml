@@ -22,7 +22,7 @@ dependencies:
     github: naqvis/crimage
   prismatiq:
     github: kritoke/prismatiq
-    version: "~> 0.6.0"
+    version: "~> 0.6.2"
   baked_file_system:
     github: schovi/baked_file_system
     version: ~> 0.13.0

@@ -40,6 +40,15 @@ class AppBootstrap
     load_feeds_from_cache(@config)
 
     EventBroadcaster.start
+
+    register_shutdown_handler
+  end
+
+  private def register_shutdown_handler
+    at_exit do
+      Log.for("quickheadlines.app").info { "Shutting down gracefully..." }
+      @db_service.close rescue nil
+    end
   end
 
   def initialize_services
@@ -105,6 +114,8 @@ class AppBootstrap
       loop do
         sleep @cleanup_interval
         begin
+          VugAdapter.clear_cache
+          Log.for("quickheadlines.app").debug { "Cleared Vug cache" }
           @feed_cache.cleanup_old_articles(QuickHeadlines::Constants::CACHE_RETENTION_DAYS)
           @feed_cache.cleanup_old_entries(@config.cache_retention_hours || QuickHeadlines::Constants::CACHE_RETENTION_HOURS)
           Log.for("quickheadlines.app").debug { "Scheduled cleanup completed" }

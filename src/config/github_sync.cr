@@ -30,7 +30,10 @@ def fetch_github_config(repo_path : String, branch : String = "main") : String?
   url = "https://raw.githubusercontent.com/#{repo_path}/#{branch}/feeds.yml"
 
   begin
-    response = HTTP::Client.get(url)
+    response = HTTP::Client.get(url,
+      headers: HTTP::Headers{"User-Agent" => "Mozilla/5.0 (compatible; QuickHeadlines/1.0)"},
+      connect_timeout: 5.seconds,
+      read_timeout: 10.seconds)
     if response.status_code == 200
       return response.body
     elsif response.status_code == 404 && branch == "main"

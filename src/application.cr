@@ -86,8 +86,7 @@ begin
 
   bootstrap = AppBootstrap.new(config)
   bootstrap.initialize_services
-  bootstrap.start_background_tasks
-  bootstrap.verify_feeds_loaded
+  QuickHeadlines::Application.bootstrap = bootstrap
 rescue ex : Exception
   Log.for("quickheadlines.app").fatal(exception: ex) { "Failed to initialize application" }
   exit 1

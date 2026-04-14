@@ -116,18 +116,22 @@ module FaviconStorage
   def self.fetch_and_save(url : String) : String?
     return unless url.starts_with?("http")
 
-    begin
-      uri = URI.parse(url)
-      host = uri.host
-      return unless host
-      if Utils.private_host?(host)
-        Log.for("quickheadlines.storage").debug { "SSRF blocked: private host #{host} in #{url}" }
-        return
-      end
-      client = HTTP::Client.new(host, port: uri.port, tls: uri.scheme == "https")
-      client.read_timeout = 10.seconds
-      client.connect_timeout = 5.seconds
+    uri = URI.parse(url)
+    host = uri.host
+    return unless host
+    if Utils.private_host?(host)
+      Log.for("quickheadlines.storage").debug { "SSRF blocked: private host #{host} in #{url}" }
+      return
+    end
 
+    client = HTTP::Client.new(host, port: uri.port, tls: uri.scheme == "https")
+    client.read_timeout = 10.seconds
+    client.write_timeout = 10.seconds
+    client.connect_timeout = 5.seconds
+
+    redirect_client : HTTP::Client? = nil
+
+    begin
       headers = HTTP::Headers{
         "User-Agent" => "Mozilla/5.0 (compatible; QuickHeadlines/1.0)",
       }
@@ -145,6 +149,7 @@ module FaviconStorage
             end
             redirect_client = HTTP::Client.new(redirect_host, port: redirected_uri.port, tls: redirected_uri.scheme == "https")
             redirect_client.read_timeout = 10.seconds
+            redirect_client.write_timeout = 10.seconds
             redirect_client.connect_timeout = 5.seconds
             response = redirect_client.get(redirected_uri.request_target, headers: headers)
           end
@@ -162,6 +167,9 @@ module FaviconStorage
     rescue ex
       Log.for("quickheadlines.storage").error(exception: ex) { "Failed to fetch #{url}" }
       nil
+    ensure
+      redirect_client.try(&.close)
+      client.close
     end
   end
 
