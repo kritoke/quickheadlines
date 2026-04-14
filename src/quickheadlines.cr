@@ -64,7 +64,12 @@ def start_server_async(port : Int32)
     handlers << ws_handler
     Log.for("quickheadlines.websocket").info { "Enabled - clients can connect to ws://host/api/ws" }
 
-    ATH.run(host: "0.0.0.0", port: port, prepend_handlers: handlers)
+    begin
+      ATH.run(host: "0.0.0.0", port: port, prepend_handlers: handlers)
+    rescue ex
+      Log.for("quickheadlines.app").fatal(exception: ex) { "Server startup failed" }
+      exit 1
+    end
   end
 end
 

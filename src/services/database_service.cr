@@ -3,6 +3,7 @@ require "sqlite3"
 require "../config"
 require "../storage/schema"
 require "../storage/cache_utils"
+require "./app_bootstrap"
 
 # Forward declaration - will be defined in application.cr
 module QuickHeadlines
