@@ -94,17 +94,7 @@ class QuickHeadlines::Controllers::ProxyController < QuickHeadlines::Controllers
 
     if File.exists?(favicon_path)
       content = File.read(favicon_path)
-      mime_type = case ext
-                  when "png"  then "image/png"
-                  when "ico"  then "image/x-icon"
-                  when "svg"  then "image/svg+xml"
-                  when "gif"  then "image/gif"
-                  when "jpg"  then "image/jpeg"
-                  when "jpeg" then "image/jpeg"
-                  when "webp" then "image/webp"
-                  else             "application/octet-stream"
-                  end
-      ATH::Response.new(content, 200, HTTP::Headers{"content-type" => mime_type})
+      ATH::Response.new(content, 200, HTTP::Headers{"content-type" => mime_type_from_ext(ext)})
     else
       ATH::Response.new("Favicon not found", 404, HTTP::Headers{"content-type" => "text/plain"})
     end

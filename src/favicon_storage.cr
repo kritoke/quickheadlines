@@ -3,6 +3,7 @@ require "file_utils"
 require "base64"
 require "http/client"
 require "./utils"
+require "./storage/cache_utils"
 
 # FaviconStorage manages saving and serving favicons as static files
 # instead of embedding them as base64 data URIs in HTML.
@@ -26,32 +27,7 @@ module FaviconStorage
   end
 
   def self.compute_favicon_dir : String
-    if env = ENV["QUICKHEADLINES_CACHE_DIR"]?
-      return File.join(env, "favicons")
-    end
-
-    if Dir.exists?("/var/cache")
-      begin
-        test_dir = "/var/cache/quickheadlines_test_#{Process.pid}"
-        Dir.mkdir_p(test_dir)
-        File.delete(test_dir)
-        return "/var/cache/quickheadlines/favicons"
-      rescue File::Error
-      end
-    end
-
-    if xdg = ENV["XDG_CACHE_HOME"]?
-      return File.join(xdg, "quickheadlines", "favicons")
-    end
-
-    if home = ENV["HOME"]?
-      if home.includes?("/Users/") && Dir.exists?(File.join(home, "Library", "Caches"))
-        return File.join(home, "Library", "Caches", "quickheadlines", "favicons")
-      end
-      return File.join(home, ".cache", "quickheadlines", "favicons")
-    end
-
-    File.join(Dir.current, "cache", "favicons")
+    File.join(get_cache_dir(nil), "favicons")
   end
 
   def self.init : Nil

@@ -15,12 +15,7 @@ class ClientIPHandler
   include HTTP::Handler
 
   def call(context : HTTP::Server::Context)
-    ip = case addr = context.request.remote_address
-         when Socket::IPAddress then addr.address
-         else
-           Utils.parse_ip_address(context.request.remote_address.to_s) || context.request.remote_address.to_s
-         end
-    context.request.headers["X-Client-IP"] = ip
+    context.request.headers["X-Client-IP"] = extract_client_ip(context.request)
     call_next(context)
   end
 end
@@ -54,11 +49,7 @@ begin
       end
     end
 
-    ip = case addr = ctx.request.remote_address
-         when Socket::IPAddress then addr.address
-         else
-           Utils.parse_ip_address(ctx.request.remote_address.to_s) || ctx.request.remote_address.to_s
-         end
+    ip = extract_client_ip(ctx.request)
 
     unless SocketManager.instance.register(ws, ip)
       ws.close

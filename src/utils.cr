@@ -110,3 +110,37 @@ module UrlNormalizer
     normalized
   end
 end
+
+def mime_type_from_path(path : String) : String
+  case path
+  when /\.png$/            then "image/png"
+  when /\.ico$/            then "image/x-icon"
+  when /\.svg$/            then "image/svg+xml"
+  when /\.gif$/            then "image/gif"
+  when /\.jpg$/, /\.jpeg$/ then "image/jpeg"
+  when /\.webp$/           then "image/webp"
+  else                          "application/octet-stream"
+  end
+end
+
+def mime_type_from_ext(ext : String) : String
+  case ext
+  when "png"  then "image/png"
+  when "ico"  then "image/x-icon"
+  when "svg"  then "image/svg+xml"
+  when "gif"  then "image/gif"
+  when "jpg"  then "image/jpeg"
+  when "jpeg" then "image/jpeg"
+  when "webp" then "image/webp"
+  else             "application/octet-stream"
+  end
+end
+
+def extract_client_ip(request : HTTP::Request) : String
+  addr = request.remote_address
+  case addr
+  when Socket::IPAddress then addr.address
+  else
+    Utils.parse_ip_address(addr.to_s) || addr.to_s
+  end
+end

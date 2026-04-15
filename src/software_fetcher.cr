@@ -1,18 +1,8 @@
 require "fetcher"
 require "./models"
+require "./fetcher/feed_fetcher"
 
 CODE_ICON = "internal:code_icon"
-
-private def fetcher_config : Fetcher::RequestConfig
-  config = StateStore.config
-  debug_enabled = config.try(&.debug?) || false
-  Fetcher::RequestConfig.new(
-    streaming: Fetcher::StreamingConfig.new(
-      enabled: debug_enabled,
-      debug: debug_enabled
-    )
-  )
-end
 
 def fetch_sw_with_config(sw_config : SoftwareConfig, item_limit : Int32) : FeedData?
   latest_by_repo = Hash(String, Item).new

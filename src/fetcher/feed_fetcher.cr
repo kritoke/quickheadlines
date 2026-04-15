@@ -361,7 +361,7 @@ def fetch_feed(feed : Feed, display_item_limit : Int32, db_fetch_limit : Int32, 
   FeedFetcher.instance.fetch(feed, display_item_limit, db_fetch_limit, previous_data)
 end
 
-private def fetcher_config : Fetcher::RequestConfig
+def fetcher_config : Fetcher::RequestConfig
   config = StateStore.config
   debug_enabled = config.try(&.debug?) || false
   Fetcher::RequestConfig.new(

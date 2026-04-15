@@ -137,15 +137,7 @@ class StaticController < Athena::Framework::Controller
     favicon_path = File.join(FaviconStorage.favicon_dir, filename)
     if File.exists?(favicon_path)
       content = File.read(favicon_path)
-      mime = case filename
-             when /\.png$/            then "image/png"
-             when /\.ico$/            then "image/x-icon"
-             when /\.svg$/            then "image/svg+xml"
-             when /\.gif$/            then "image/gif"
-             when /\.jpg$/, /\.jpeg$/ then "image/jpeg"
-             when /\.webp$/           then "image/webp"
-             else                          "application/octet-stream"
-             end
+      mime = mime_type_from_path(filename)
       response = ATH::Response.new(content)
       response.headers["Content-Type"] = mime
       response.headers["Cache-Control"] = "public, max-age=86400"
