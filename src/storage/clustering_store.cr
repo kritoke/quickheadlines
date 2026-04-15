@@ -135,7 +135,10 @@ module QuickHeadlines::Storage
         links = grouped_items.map(&.link)
         placeholders = links.map { |_| "?" }.join(",")
         query = "SELECT link, id FROM items WHERE feed_id = ? AND link IN (#{placeholders})"
-        @db.query(query, [feed_id] + links) do |rows|
+        args = [] of DB::Any
+        args << feed_id
+        links.each { |link| args << link }
+        @db.query(query, args: args) do |rows|
           rows.each do
             link = rows.read(String)
             id = rows.read(Int64)
