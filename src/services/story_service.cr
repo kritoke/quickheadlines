@@ -1,5 +1,5 @@
 require "../repositories/story_repository"
-require "../api"
+require "../dtos/api_responses"
 
 module QuickHeadlines::Services
   module StoryService

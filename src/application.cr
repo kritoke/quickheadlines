@@ -9,7 +9,6 @@ require "./fetcher"
 require "./storage"
 require "./favicon_storage"
 require "./health_monitor"
-require "./api"
 require "./websocket"
 
 # Load entities, services, controllers, repositories, etc.
@@ -23,6 +22,7 @@ require "./services/clustering_service"
 require "./services/heat_map_service"
 require "./services/database_service"
 require "./services/app_bootstrap"
+require "./services/feed_service"
 
 require "./repositories/story_repository"
 require "./repositories/feed_repository"

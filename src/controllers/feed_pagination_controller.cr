@@ -47,30 +47,13 @@ class QuickHeadlines::Controllers::FeedPaginationController < QuickHeadlines::Co
       end
 
       if data = cache.get(url)
-        trimmed_items = data.items[offset...Math.min(offset + limit, data.items.size)]
-
-        items_response = trimmed_items.map do |item|
-          ItemResponse.new(
-            title: item.title,
-            link: item.link,
-            version: item.version,
-            pub_date: item.pub_date.try(&.to_unix_ms),
-            comment_url: item.comment_url,
-            commentary_url: item.commentary_url
-          )
-        end
-
-        FeedResponse.new(
-          tab: tab_name,
-          url: data.url,
-          title: data.title,
-          site_link: data.site_link,
-          display_link: data.display_link,
-          favicon: data.favicon,
-          favicon_data: data.favicon_data,
-          header_color: data.header_color,
-          items: items_response,
-          total_item_count: cache.item_count(url)
+        QuickHeadlines::Services::FeedService.build_feed_more_response(
+          data,
+          tab_name,
+          offset,
+          limit,
+          cache,
+          cache.item_count(url),
         )
       else
         raise Athena::Framework::Exception::ServiceUnavailable.new("Failed to retrieve feed data")

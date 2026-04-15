@@ -1,9 +1,10 @@
 require "spec"
-require "../src/api"
 require "../src/storage"
 require "../src/models"
+require "../src/dtos/api_responses"
 require "../src/dtos/story_dto"
 require "../src/dtos/cluster_dto"
+require "../src/services/feed_service"
 
 describe "API Response Types" do
   describe TabResponse do
@@ -202,8 +203,8 @@ describe "API Response Types" do
   end
 end
 
-describe "API Module" do
-  describe ".feed_to_response" do
+describe "FeedService" do
+  describe ".build_feed_response" do
     it "converts FeedData to FeedResponse" do
       cache = FeedCache.new(nil)
       FeedCache.instance = cache
@@ -220,7 +221,7 @@ describe "API Module" do
         ]
       )
 
-      response = Api.feed_to_response(feed_data, "tech", 2, 10)
+      response = QuickHeadlines::Services::FeedService.build_feed_response(feed_data, cache, tab_name: "tech", total_count: 2, display_item_limit: 10)
 
       response.title.should eq("Test Feed")
       response.url.should eq(feed_data.url)

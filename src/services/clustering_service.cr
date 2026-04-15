@@ -2,6 +2,8 @@ require "athena"
 require "json"
 require "lexis-minhash"
 require "../repositories/cluster_repository"
+require "../dtos/cluster_dto"
+require "../dtos/api_responses"
 require "./clustering_engine"
 
 class QuickHeadlines::Services::ClusteringService
@@ -94,6 +96,48 @@ class QuickHeadlines::Services::ClusteringService
   def get_all_clusters_from_db : Array(QuickHeadlines::Entities::Cluster)
     fetch_limit = StateStore.config.try(&.clustering).try(&.max_fetch_items) || 1000
     cluster_repository.find_all(fetch_limit)
+  end
+
+  def get_cluster_responses : QuickHeadlines::DTOs::ClustersResponse
+    clusters = get_all_clusters_from_db
+    cluster_responses = clusters.map { |cluster| QuickHeadlines::DTOs::ClusterResponse.from_entity(cluster) }
+    QuickHeadlines::DTOs::ClustersResponse.new(
+      clusters: cluster_responses,
+      total_count: cluster_responses.size,
+    )
+  end
+
+  def get_cluster_items_response(cluster_id : String, feed_cache : FeedCache) : ClusterItemsResponse
+    parsed_id = cluster_id.to_i64?
+
+    if parsed_id.nil?
+      return ClusterItemsResponse.new(
+        cluster_id: cluster_id,
+        items: [] of QuickHeadlines::DTOs::StoryResponse,
+      )
+    end
+
+    db_items = feed_cache.get_cluster_items_full(parsed_id)
+
+    items = db_items.map do |item|
+      QuickHeadlines::DTOs::StoryResponse.new(
+        id: item.id.to_s,
+        title: item.title,
+        link: item.link,
+        pub_date: item.pub_date.try(&.to_unix_ms),
+        feed_title: item.feed_title,
+        feed_url: item.feed_url,
+        feed_link: "",
+        favicon: item.favicon,
+        favicon_data: item.favicon,
+        header_color: item.header_color,
+      )
+    end
+
+    ClusterItemsResponse.new(
+      cluster_id: cluster_id,
+      items: items,
+    )
   end
 
   def recluster_with_lsh(cache : FeedCache, limit : Int32 = 5000, threshold : Float64 = 0.35, bands : Int32 = 20) : Int32
