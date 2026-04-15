@@ -26,18 +26,22 @@ function createEffectHandles(): EffectHandles {
 // Shared WebSocket event handler for feed updates
 let lastUpdate = Date.now();
 let saveScrollY = 0;
+let feedUpdateDebounce: ReturnType<typeof setTimeout> | null = null;
+const FEED_UPDATE_DEBOUNCE_MS = 2000;
 
 function handleFeedUpdate(timestamp: number) {
 	if (timestamp > lastUpdate) {
-		logger.log('[Effects] Feed update received, reloading...');
+		logger.log('[Effects] Feed update received, scheduling reload...');
 		lastUpdate = timestamp;
 		saveScrollY = window.scrollY;
-		
-		// Reload both stores for consistency
-		loadFeeds(feedState.activeTab, true);
-		loadTimeline();
-		
-		window.scrollTo(0, saveScrollY);
+
+		if (feedUpdateDebounce) clearTimeout(feedUpdateDebounce);
+		feedUpdateDebounce = setTimeout(() => {
+			feedUpdateDebounce = null;
+			loadFeeds(feedState.activeTab, true);
+			loadTimeline();
+			window.scrollTo(0, saveScrollY);
+		}, FEED_UPDATE_DEBOUNCE_MS);
 	}
 }
 
