@@ -16,10 +16,6 @@ struct Feed
   property header_text_color : String?
 
   property item_limit : Int32? = nil
-
-  property subreddit : String? = nil
-  property sort : String = "hot"
-  getter? over18 : Bool? = nil
 end
 
 struct SoftwareConfig
@@ -109,10 +105,3 @@ record DbRepairResult,
   repair_time : Time,
   feeds_to_restore : Int32,
   items_to_restore : Int32
-
-record FeedRestoreConfig,
-  timeframe_hours : Int32 = 168,
-  force_full_refresh : Bool = false,
-  restore_on_startup : Bool = true
-
-record ConfigState, config : Config, mtime : Time

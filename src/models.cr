@@ -11,8 +11,6 @@ record ClusteringItemRow,
   feed_title : String,
   favicon : String?,
   header_color : String?
-# Add header_theme_colors to TimelineItem so timeline responses can include theme-aware JSON
-record TimelineItem, item : Item, feed_title : String, feed_url : String, feed_link : String, favicon : String?, favicon_data : String?, header_color : String?, header_text_color : String?, header_theme_colors : String?
 
 record FeedData,
   title : String, url : String, site_link : String,

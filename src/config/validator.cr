@@ -45,28 +45,6 @@ private def valid_item_limit?(feed : Feed) : Bool
   true
 end
 
-private def valid_subreddit_config?(feed : Feed) : Bool
-  subreddit = feed.subreddit
-  return true unless subreddit
-
-  if subreddit.strip.empty?
-    Log.for("quickheadlines.config").warn { "Empty subreddit name for '#{feed.title}'" }
-    return false
-  end
-
-  if subreddit =~ /[^a-zA-Z0-9_-]/
-    Log.for("quickheadlines.config").warn { "Invalid subreddit name '#{subreddit}' for '#{feed.title}' (can only contain alphanumeric, underscore, hyphen)" }
-    return false
-  end
-
-  valid_sorts = ["hot", "new", "top", "rising", "controversial"]
-  unless valid_sorts.includes?(feed.sort)
-    Log.for("quickheadlines.config").warn { "Invalid sort '#{feed.sort}' for '#{feed.title}' (must be: hot, new, top, rising, controversial)" }
-  end
-
-  true
-end
-
 def validate_config_feeds(config : Config) : Array(Feed)
   valid_feeds = [] of Feed
 

@@ -3,48 +3,6 @@ require "../src/utils"
 require "../src/config"
 
 describe "Utils" do
-  describe "validate_feed_url" do
-    it "returns true for valid https URL" do
-      Utils.validate_feed_url("https://example.com/feed.xml").should be_true
-    end
-
-    it "returns true for valid http URL" do
-      Utils.validate_feed_url("http://example.com/feed.xml").should be_true
-    end
-
-    it "returns false for empty URL" do
-      Utils.validate_feed_url("").should be_false
-    end
-
-    it "returns false for whitespace-only URL" do
-      Utils.validate_feed_url("   ").should be_false
-    end
-
-    it "returns false for ftp URL" do
-      Utils.validate_feed_url("ftp://example.com/feed.xml").should be_false
-    end
-
-    it "returns false for file URL" do
-      Utils.validate_feed_url("file:///path/to/file").should be_false
-    end
-
-    it "returns false for URL without scheme" do
-      Utils.validate_feed_url("example.com/feed.xml").should be_false
-    end
-
-    it "returns false for malformed URL" do
-      Utils.validate_feed_url("not a valid url").should be_false
-    end
-
-    it "returns true for URL with trailing whitespace" do
-      Utils.validate_feed_url("https://example.com/feed.xml  ").should be_true
-    end
-
-    it "returns false for URL with no host" do
-      Utils.validate_feed_url("https://").should be_false
-    end
-  end
-
   describe "parse_ip_address" do
     it "returns IP for IPv4 address with port" do
       Utils.parse_ip_address("192.168.1.1:8080").should eq("192.168.1.1")

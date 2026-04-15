@@ -1,12 +1,4 @@
 module QuickHeadlines::Domain
-  record FeedItem,
-    title : String,
-    link : String,
-    pub_date : Time?,
-    version : String? = nil,
-    comment_url : String? = nil,
-    commentary_url : String? = nil
-
   record TimelineEntry,
     id : Int64,
     title : String,

@@ -5,7 +5,6 @@ require "./config"
 require "./constants"
 require "./models"
 require "./utils"
-require "./parser"
 require "./fetcher"
 require "./storage"
 require "./favicon_storage"
@@ -49,9 +48,7 @@ require "./events/story_fetched_event"
 require "./listeners/heat_map_listener"
 
 require "./dtos/story_dto"
-require "./dtos/status_dto"
 require "./dtos/cluster_dto"
-require "./dtos/feed_dto"
 
 module QuickHeadlines
   CONFIG_PATH = "feeds.yml"

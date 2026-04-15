@@ -6,7 +6,6 @@ require "time"
 require "../config"
 require "../constants"
 require "../models"
-require "../result"
 require "../errors"
 require "../services/database_service"
 require "../services/favicon_sync_service"
@@ -111,24 +110,8 @@ class FeedCache
     @clustering_store.get_feed_id(feed_url)
   end
 
-  def get_item_id(feed_url : String, item_link : String) : Int64?
-    @clustering_store.get_item_id(feed_url, item_link)
-  end
-
   def get_item_ids_batch(items : Array(QuickHeadlines::Storage::ClusteringStore::ItemKey)) : Hash(String, Int64)
     @clustering_store.get_item_ids_batch(items)
-  end
-
-  def get_cluster_info_batch(item_ids : Array(Int64)) : Hash(Int64, QuickHeadlines::Storage::ClusteringStore::ClusterInfo)
-    @clustering_store.get_cluster_info_batch(item_ids)
-  end
-
-  def recent_clustering_items(hours_back : Int32 = 24, max_items : Int32 = 1000) : Array(ClusteringItemRow)
-    @clustering_store.recent_clustering_items(hours_back, max_items)
-  end
-
-  def all_clusters : Array({id: Int64, representative_id: Int64, item_count: Int32})
-    @clustering_store.all_clusters
   end
 
   def get_cluster_items_full(cluster_id : Int64) : Array(ClusteringItemRow)
@@ -139,28 +122,12 @@ class FeedCache
     @clustering_store.store_item_signature(item_id, signature)
   end
 
-  def cluster_representative?(item_id : Int64) : Bool
-    @clustering_store.cluster_representative?(item_id)
-  end
-
-  def other_item_ids(item_id : Int64, limit : Int32 = 500) : Array(Int64)
-    @clustering_store.other_item_ids(item_id, limit)
-  end
-
-  def find_by_keywords(keywords : Array(String), exclude_id : Int64, limit : Int32 = 100) : Array(Int64)
-    @clustering_store.find_by_keywords(keywords, exclude_id, limit)
-  end
-
   def update_header_colors(feed_url : String, bg_color : String, text_color : String)
     @header_color_store.update_header_colors(feed_url, bg_color, text_color)
   end
 
   def get_header_colors(feed_url : String) : {bg_color: String?, text_color: String?}
     @header_color_store.get_header_colors(feed_url)
-  end
-
-  def save_theme(feed_url : String, theme_json : String)
-    @header_color_store.save_theme(feed_url, theme_json)
   end
 
   def load_theme(feed_url : String) : String?
@@ -207,10 +174,6 @@ class FeedCache
 
   def get(url : String) : FeedData?
     feed_repository.find_with_items(url)
-  end
-
-  def get_result(url : String) : FeedDataResult
-    feed_repository.find_with_items_result(url)
   end
 
   def get_fetched_time(url : String) : Time?

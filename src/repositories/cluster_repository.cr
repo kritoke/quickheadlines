@@ -106,55 +106,6 @@ module QuickHeadlines::Repositories
       clusters
     end
 
-    def find_items(cluster_id : Int64) : Array(QuickHeadlines::Entities::Story)
-      stories = [] of QuickHeadlines::Entities::Story
-
-      db.query(<<-SQL, cluster_id) do |rows|
-        SELECT i.id, i.title, i.link, i.pub_date, f.title as feed_title, f.url as feed_url, f.site_link as feed_link, f.favicon, f.header_color
-         FROM items i
-         JOIN feeds f ON i.feed_id = f.id
-         WHERE i.cluster_id = ?
-         ORDER BY i.id ASC
-        SQL
-        rows.each do
-          id = rows.read(Int64)
-          title = rows.read(String)
-          link = rows.read(String)
-          pub_date_str = rows.read(String?)
-          feed_title = rows.read(String)
-          feed_url = rows.read(String)
-          feed_link = rows.read(String?)
-          favicon = rows.read(String?)
-          header_color = rows.read(String?)
-
-          pub_date = parse_db_time(pub_date_str)
-
-          stories << QuickHeadlines::Entities::Story.new(
-            id: id.to_s,
-            title: title,
-            link: link,
-            pub_date: pub_date,
-            feed_title: feed_title,
-            feed_url: feed_url,
-            feed_link: feed_link || "",
-            favicon: favicon,
-            favicon_data: favicon,
-            header_color: header_color
-          )
-        end
-      end
-
-      stories
-    end
-
-    def assign_cluster(item_id : Int64, cluster_id : Int64?) : Nil
-      db.exec(
-        "UPDATE items SET cluster_id = ? WHERE id = ?",
-        cluster_id,
-        item_id
-      )
-    end
-
     def clear_all_metadata : Nil
       db.exec("UPDATE items SET cluster_id = NULL")
       db.exec("DELETE FROM lsh_bands")

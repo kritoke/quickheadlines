@@ -2,7 +2,6 @@ require "athena"
 require "../constants"
 require "../dtos/config_dto"
 require "../web/assets"
-require "../services/feed_service"
 require "../services/story_service"
 require "../services/clustering_service"
 require "../repositories/feed_repository"
@@ -15,7 +14,6 @@ class QuickHeadlines::Controllers::ApiBaseController < Athena::Framework::Contro
   @db_service : DatabaseService
   @feed_cache : FeedCache
   @socket_manager : SocketManager
-  @feed_service : QuickHeadlines::Services::FeedService?
   @clustering_service : QuickHeadlines::Services::ClusteringService?
 
   def self.new : self
@@ -113,10 +111,6 @@ class QuickHeadlines::Controllers::ApiBaseController < Athena::Framework::Contro
 
   private def validate_days(value : String?, default : Int32, min : Int32 = 1, max : Int32 = 365) : Int32
     validate_int(value, default, min, max)
-  end
-
-  private def feed_service : QuickHeadlines::Services::FeedService
-    @feed_service ||= QuickHeadlines::Services::FeedService.new(@db_service)
   end
 
   private def clustering_service : QuickHeadlines::Services::ClusteringService

@@ -177,25 +177,6 @@ class TimelinePageResponse
   end
 end
 
-class VersionResponse
-  include JSON::Serializable
-
-  property? clustering : Bool
-  property updated_at : Int64
-
-  def initialize(@updated_at : Int64, @clustering : Bool = false)
-  end
-end
-
-class ApiErrorResponse
-  include JSON::Serializable
-
-  property message : String
-
-  def initialize(@message : String)
-  end
-end
-
 class ClusterItemsResponse
   include JSON::Serializable
 

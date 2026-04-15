@@ -118,22 +118,6 @@ def create_schema(db : DB::Database, db_path : String)
   db.exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_items_unique_feed_link ON items(feed_id, link)")
 end
 
-def check_db_integrity(db_path : String) : Bool
-  DB.open("sqlite3://#{db_path}?busy_timeout=5000") do |database|
-    result = database.query_one("PRAGMA integrity_check", as: {String})
-    if result == "ok"
-      Log.for("quickheadlines.storage").debug { "Database integrity check passed" }
-      true
-    else
-      Log.for("quickheadlines.storage").error { "Database integrity check failed: #{result}" }
-      false
-    end
-  end
-rescue ex : Exception
-  Log.for("quickheadlines.storage").error(exception: ex) { "Database integrity check failed" }
-  false
-end
-
 def check_db_health(db_path : String) : DbHealthStatus
   unless File.exists?(db_path)
     return DbHealthStatus::NeedsRepopulation
@@ -223,26 +207,6 @@ def repair_database(config : Config?, backup_path : String? = nil) : DbRepairRes
       items_to_restore: 0
     )
   end
-end
-
-def repopulate_database(config : Config?, cache : FeedCache?, restore_config : FeedRestoreConfig = FeedRestoreConfig.new) : Bool
-  return false unless config
-
-  Log.for("quickheadlines.storage").debug { "Repopulating database..." }
-
-  timeframe_hours = restore_config.timeframe_hours
-
-  all_feeds = [] of Feed
-  all_feeds.concat(config.feeds)
-  config.tabs.each do |tab|
-    all_feeds.concat(tab.feeds)
-  end
-
-  feeds_to_restore = all_feeds.size
-
-  Log.for("quickheadlines.storage").debug { "Would restore #{feeds_to_restore} feeds from past #{timeframe_hours} hours" }
-
-  feeds_to_restore > 0
 end
 
 def init_db(config : Config?)

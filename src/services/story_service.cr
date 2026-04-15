@@ -1,7 +1,4 @@
 require "../repositories/story_repository"
-require "../repositories/cluster_repository"
-require "../dtos/story_dto"
-require "../dtos/cluster_dto"
 require "../api"
 
 module QuickHeadlines::Services
@@ -43,41 +40,6 @@ module QuickHeadlines::Services
         total_count: total_count
       )
     end
-
-    def self.get_clusters(cluster_repo : QuickHeadlines::Repositories::ClusterRepository) : ClustersResult
-      clusters = cluster_repo.find_all
-
-      cluster_responses = clusters.map do |cluster|
-        QuickHeadlines::DTOs::ClusterResponse.from_entity(cluster)
-      end
-
-      ClustersResult.new(
-        clusters: cluster_responses,
-        total_count: cluster_responses.size
-      )
-    end
-
-    def self.get_cluster_items(cluster_repo : QuickHeadlines::Repositories::ClusterRepository, cluster_id : String) : ClusterItemsResult
-      id = cluster_id.to_i64?
-
-      if id.nil?
-        return ClusterItemsResult.new(
-          cluster_id: cluster_id,
-          items: [] of QuickHeadlines::DTOs::StoryResponse
-        )
-      end
-
-      items = cluster_repo.find_items(id)
-
-      story_responses = items.map do |story|
-        QuickHeadlines::DTOs::StoryResponse.from_entity(story)
-      end
-
-      ClusterItemsResult.new(
-        cluster_id: cluster_id,
-        items: story_responses
-      )
-    end
   end
 
   struct TimelineResult
@@ -86,22 +48,6 @@ module QuickHeadlines::Services
     property total_count : Int32
 
     def initialize(@items, @has_more, @total_count)
-    end
-  end
-
-  struct ClustersResult
-    property clusters : Array(QuickHeadlines::DTOs::ClusterResponse)
-    property total_count : Int32
-
-    def initialize(@clusters, @total_count)
-    end
-  end
-
-  struct ClusterItemsResult
-    property cluster_id : String
-    property items : Array(QuickHeadlines::DTOs::StoryResponse)
-
-    def initialize(@cluster_id, @items)
     end
   end
 end

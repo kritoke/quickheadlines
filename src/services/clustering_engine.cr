@@ -64,15 +64,6 @@ module QuickHeadlines::Services
       normalized.split(/\s+/).to_set
     end
 
-    def self.jaccard_similarity(set1 : Set(String), set2 : Set(String)) : Float64
-      return 0.0 if set1.empty? && set2.empty?
-      return 0.0 if set1.empty? || set2.empty?
-      intersection = set1 & set2
-      union = set1 | set2
-      return 0.0 if union.size == 0
-      intersection.size.to_f64 / union.size.to_f64
-    end
-
     def self.overlap_coefficient(set1 : Set(String), set2 : Set(String)) : Float64
       return 0.0 if set1.empty? || set2.empty?
       intersection = set1 & set2
@@ -189,49 +180,6 @@ module QuickHeadlines::Services
       pairs = find_similar_pairs_lsh(items, threshold, bands)
       item_ids = items.select { |i| can_cluster?(i.title) }.map(&.id)
       build_clusters_from_pairs(pairs, item_ids)
-    end
-
-    def self.find_similar_for_item(
-      item : ClusteringItem,
-      all_items : Array(ClusteringItem),
-      threshold : Float64 = 0.35,
-      bands : Int32 = 20,
-    ) : Array(Tuple(Int64, Float64))
-      return [] of Tuple(Int64, Float64) unless can_cluster?(item.title)
-
-      index = LexisMinhash::LSHIndex.new(bands: bands, expected_docs: all_items.size, store_signatures: true)
-      items_map = {} of Int64 => ClusteringItem
-
-      all_items.each do |other|
-        next unless can_cluster?(other.title)
-        next if other.id == item.id
-
-        sig = compute_minhash_signature(other.title)
-        items_map[other.id] = other
-        index.add_with_signature(other.id.to_i32, sig)
-      end
-
-      item_sig = compute_minhash_signature(item.title)
-      candidate_ids = index.query_by_signature(item_sig)
-
-      results = [] of Tuple(Int64, Float64)
-      item_set = word_set(item.title)
-
-      candidate_ids.each do |candidate_id|
-        candidate = items_map[candidate_id]?
-        next unless candidate
-        next if candidate.feed_id == item.feed_id
-        next if same_base_domain?(item.feed_url, candidate.feed_url)
-
-        candidate_set = word_set(candidate.title)
-        sim = overlap_coefficient(item_set, candidate_set)
-
-        if sim >= threshold
-          results << {candidate_id.to_i64, sim}
-        end
-      end
-
-      results
     end
   end
 end

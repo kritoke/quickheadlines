@@ -96,57 +96,6 @@ class QuickHeadlines::Services::ClusteringService
     cluster_repository.find_all(fetch_limit)
   end
 
-  def recluster_all(limit : Int32 = 5000, threshold : Float64 = 0.35) : Int32
-    unless StateStore.start_clustering_if_idle
-      Log.for("quickheadlines.clustering").info { "Clustering already in progress, skipping recluster_all" }
-      return 0
-    end
-
-    cluster_repository.clear_all_metadata
-
-    items = [] of {id: Int64, title: String, link: String, pub_date: Time?, feed_id: Int64}
-    @db.query("SELECT id, title, link, pub_date, feed_id FROM items WHERE pub_date IS NULL OR pub_date <= datetime('now', '+1 day') ORDER BY pub_date DESC LIMIT ?", limit) do |rows|
-      rows.each do
-        id = rows.read(Int64)
-        title = rows.read(String)
-        link = rows.read(String)
-        pub_date_str = rows.read(String?)
-        feed_id = rows.read(Int64)
-        pub_date = pub_date_str.try do |str|
-          begin
-            Time.parse(str, QuickHeadlines::Constants::DB_TIME_FORMAT, Time::Location::UTC)
-          rescue Time::Format::Error
-            nil
-          end
-        end
-        items << {id: id, title: title, link: link, pub_date: pub_date, feed_id: feed_id}
-      end
-    end
-
-    Log.for("quickheadlines.clustering").info { "Found #{items.size} items to re-cluster (threshold: #{threshold})" }
-
-    processed = 0
-    begin
-      items.each do |item|
-        next if item[:title].empty?
-        compute_item_cluster(item[:id], item[:title], FeedCache.instance, item[:feed_id], threshold)
-        processed += 1
-        if processed % 50 == 0
-          Log.for("quickheadlines.clustering").debug { "Processed #{processed} items..." }
-        end
-      end
-      Log.for("quickheadlines.clustering").info { "Re-clustering complete: #{processed} items processed" }
-    ensure
-      StateStore.clustering = false
-    end
-
-    processed
-  end
-
-  def recluster_with_lsh(limit : Int32 = 5000, threshold : Float64 = 0.35, bands : Int32 = 20)
-    recluster_with_lsh(FeedCache.instance, limit, threshold, bands)
-  end
-
   def recluster_with_lsh(cache : FeedCache, limit : Int32 = 5000, threshold : Float64 = 0.35, bands : Int32 = 20) : Int32
     unless StateStore.start_clustering_if_idle
       Log.for("quickheadlines.clustering").info { "Clustering already in progress, skipping recluster_with_lsh" }
@@ -176,6 +125,10 @@ class QuickHeadlines::Services::ClusteringService
     end
 
     processed
+  end
+
+  def recluster_with_lsh(limit : Int32 = 5000, threshold : Float64 = 0.35, bands : Int32 = 20) : Int32
+    recluster_with_lsh(FeedCache.instance, limit, threshold, bands)
   end
 end
 

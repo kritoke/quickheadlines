@@ -1,9 +1,5 @@
 require "yaml"
 
-def file_mtime(path : String) : Time
-  File.info(path).modification_time
-end
-
 def load_config(path : String) : Config
   config = File.open(path) do |io|
     Config.from_yaml(io)
@@ -12,22 +8,6 @@ def load_config(path : String) : Config
   validate_config_feeds(config)
 
   config
-end
-
-def find_default_config : String?
-  DEFAULT_CONFIG_CANDIDATES.find { |path| File.exists?(path) }
-end
-
-def parse_config_arg(args : Array(String)) : String?
-  if arg = args.find(&.starts_with?("config="))
-    return arg.split("=", 2)[1]
-  end
-
-  if args.size >= 1 && !args[0].includes?("=")
-    return args[0]
-  end
-
-  nil
 end
 
 def load_validated_config(path : String) : ConfigLoadResult

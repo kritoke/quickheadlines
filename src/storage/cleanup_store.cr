@@ -136,10 +136,6 @@ module QuickHeadlines::Storage
       end
     end
 
-    def cleanup_orphaned_lsh_bands
-      @mutex.synchronize { delete_orphaned_lsh_bands }
-    end
-
     private def try_parse_date_format(str : String, format : String) : Time?
       Time.parse(str, format, Time::Location::UTC)
     rescue Time::Format::Error

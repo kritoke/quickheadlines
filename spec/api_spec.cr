@@ -142,17 +142,6 @@ describe "API Response Types" do
     end
   end
 
-  describe VersionResponse do
-    it "creates with required fields" do
-      response = VersionResponse.new(
-        updated_at: 1700000000000_i64,
-        clustering: false
-      )
-      response.updated_at.should eq(1700000000000_i64)
-      response.clustering?.should be_false
-    end
-  end
-
   describe QuickHeadlines::DTOs::StoryResponse do
     it "creates with required fields" do
       response = QuickHeadlines::DTOs::StoryResponse.new(
@@ -209,13 +198,6 @@ describe "API Response Types" do
       )
       response.cluster_id.should eq("123")
       response.items.should be_empty
-    end
-  end
-
-  describe ApiErrorResponse do
-    it "creates with message" do
-      response = ApiErrorResponse.new(message: "Something went wrong")
-      response.message.should eq("Something went wrong")
     end
   end
 end
