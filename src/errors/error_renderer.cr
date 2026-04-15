@@ -29,12 +29,6 @@ module QuickHeadlines
       case exception
       when ATH::Exception::HTTPException
         {exception.status, exception.message, nil}
-      when AppError
-        {exception.status, exception.message, nil}
-      when ValidationError
-        {HTTP::Status::BAD_REQUEST, exception.message, nil}
-      when ServiceError
-        {HTTP::Status::SERVICE_UNAVAILABLE, exception.message, nil}
       else
         {HTTP::Status::INTERNAL_SERVER_ERROR, "An unexpected error occurred", nil}
       end
