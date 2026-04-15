@@ -65,31 +65,6 @@ module QuickHeadlines::Storage
       end
     end
 
-    def save_theme(feed_url : String, theme_json : String)
-      @mutex.synchronize do
-        normalized_url = normalize_feed_url(feed_url)
-
-        existing = @db.query_one?("SELECT id FROM feeds WHERE url = ?", normalized_url, as: {Int64})
-
-        if existing.nil?
-          existing = @db.query_one?("SELECT id FROM feeds WHERE url = ?", feed_url, as: {Int64})
-        end
-
-        unless existing
-          Log.for("quickheadlines.storage").warn { "Cannot save header_theme_colors - feed not found: #{feed_url}" }
-          return
-        end
-
-        feed_id = existing
-        begin
-          @db.exec("UPDATE feeds SET header_theme_colors = ? WHERE id = ?", theme_json, feed_id)
-          Log.for("quickheadlines.storage").debug { "Saved header_theme_colors for #{feed_url}" }
-        rescue ex
-          Log.for("quickheadlines.storage").error(exception: ex) { "Error saving header_theme_colors for #{feed_url}" }
-        end
-      end
-    end
-
     def load_theme(feed_url : String) : String?
       @mutex.synchronize do
         normalized_url = normalize_feed_url(feed_url)

@@ -71,11 +71,6 @@ module QuickHeadlines::Repositories
       Item.new(title, link, pub_date, version, comment_url, commentary_url)
     end
 
-    def count_all : Int32
-      result = db.query_one?("SELECT COUNT(*) FROM feeds", as: Int64)
-      result ? result.to_i : 0
-    end
-
     def find_all : Array(QuickHeadlines::Entities::Feed)
       feeds = [] of QuickHeadlines::Entities::Feed
 

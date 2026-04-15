@@ -164,10 +164,6 @@ class FeedCache
 
   getter :db_path
 
-  def db_service : DatabaseService?
-    @db_service
-  end
-
   def add(feed_data : FeedData)
     feed_repository.upsert_with_items(feed_data)
   end
@@ -178,10 +174,6 @@ class FeedCache
 
   def get_fetched_time(url : String) : Time?
     feed_repository.find_last_fetched_time(url)
-  end
-
-  def get_fetched_time_result(url : String) : TimeResult
-    feed_repository.find_last_fetched_time_result(url)
   end
 
   def item_count(url : String) : Int32
