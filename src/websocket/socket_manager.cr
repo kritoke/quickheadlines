@@ -20,11 +20,6 @@ class SocketManager
   @last_activity : Hash(HTTP::WebSocket, Time)
   @activity_mutex : Mutex
 
-  MAX_CONNECTIONS        = 1000
-  MAX_CONNECTIONS_PER_IP =   10
-  CONNECTION_QUEUE_SIZE  =  100
-  STALE_CONNECTION_AGE   =  120 # seconds
-
   def initialize
     @connections = [] of Connection
     @connections_mutex = Mutex.new
@@ -44,14 +39,14 @@ class SocketManager
 
   def register(ws : HTTP::WebSocket, ip : String) : Bool
     @connections_mutex.synchronize do
-      if @connections.size >= MAX_CONNECTIONS
-        Log.for("quickheadlines.websocket").warn { "Connection rejected: max #{MAX_CONNECTIONS} connections reached" }
+      if @connections.size >= QuickHeadlines::Constants::MAX_CONNECTIONS
+        Log.for("quickheadlines.websocket").warn { "Connection rejected: max #{QuickHeadlines::Constants::MAX_CONNECTIONS} connections reached" }
         return false
       end
 
       count = @ip_counts[ip]?
-      if count && count >= MAX_CONNECTIONS_PER_IP
-        Log.for("quickheadlines.websocket").warn { "Connection rejected: max #{MAX_CONNECTIONS_PER_IP} connections per IP (#{ip})" }
+      if count && count >= QuickHeadlines::Constants::MAX_CONNECTIONS_PER_IP
+        Log.for("quickheadlines.websocket").warn { "Connection rejected: max #{QuickHeadlines::Constants::MAX_CONNECTIONS_PER_IP} connections per IP (#{ip})" }
         return false
       end
 
@@ -63,7 +58,7 @@ class SocketManager
         end
         registration_state = registration_state.merge({ip_counted: true})
 
-        outgoing = Channel(String).new(CONNECTION_QUEUE_SIZE)
+        outgoing = Channel(String).new(QuickHeadlines::Constants::CONNECTION_QUEUE_SIZE)
         connection = Connection.new(websocket: ws, ip: ip, outgoing: outgoing, created_at: Time.local)
 
         @activity_mutex.synchronize do
@@ -117,6 +112,7 @@ class SocketManager
     begin
       connection.websocket.close
     rescue IO::Error
+      Log.for("quickheadlines.websocket").debug { "WebSocket already closed for cleanup" }
     end
     @closed_total.add(1)
     unregister_connection(connection)
@@ -221,9 +217,9 @@ class SocketManager
             next
           end
 
-          # Check if connection is stale (no activity for STALE_CONNECTION_AGE seconds)
+          # Check if connection is stale (no activity for QuickHeadlines::Constants::STALE_CONNECTION_AGE seconds)
           last_active = @activity_mutex.synchronize { @last_activity[conn.websocket]? }
-          if last_active && (now - last_active).total_seconds > STALE_CONNECTION_AGE
+          if last_active && (now - last_active).total_seconds > QuickHeadlines::Constants::STALE_CONNECTION_AGE
             Log.for("quickheadlines.websocket").debug { "Stale connection detected: #{conn.ip} (inactive for #{((now - last_active).total_seconds).round(0)}s)" }
             dead << conn
           end

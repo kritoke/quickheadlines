@@ -53,5 +53,8 @@ module Schema
     CREATE INDEX IF NOT EXISTS idx_items_cluster ON items(cluster_id);
     CREATE INDEX IF NOT EXISTS idx_lsh_band_search ON lsh_bands(band_index, band_hash);
     CREATE UNIQUE INDEX IF NOT EXISTS idx_items_unique_feed_link ON items(feed_id, link);
+    CREATE INDEX IF NOT EXISTS idx_items_timeline ON items(pub_date DESC, id DESC, cluster_id);
+    CREATE INDEX IF NOT EXISTS idx_items_cluster_rep ON items(cluster_id, id);
+    CREATE INDEX IF NOT EXISTS idx_items_feed_timeline ON items(feed_id, pub_date DESC, id DESC);
     SQL
 end

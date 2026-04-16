@@ -11,7 +11,6 @@ module QuickHeadlines::Repositories
       query = <<-SQL
         SELECT
           c.id as cluster_id,
-          c.representative_id,
           i.id as item_id,
           i.title as item_title,
           i.link as item_link,
@@ -37,7 +36,6 @@ module QuickHeadlines::Repositories
       db.query(query, limit) do |rows|
         rows.each do
           cluster_id = rows.read(Int64)
-          _representative_id = rows.read(Int64)
           item_id = rows.read(Int64)
           item_title = rows.read(String)
           item_link = rows.read(String)
@@ -76,9 +74,9 @@ module QuickHeadlines::Repositories
           feed_title: rep_data[:feed_title],
           feed_url: rep_data[:feed_url],
           feed_link: "",
-          favicon: rep_data[:favicon],
-          favicon_data: rep_data[:favicon],
-          header_color: rep_data[:header_color]
+            favicon: rep_data[:favicon],
+            favicon_data: nil,
+            header_color: rep_data[:header_color]
         )
 
         others = items[1..].map do |item|
@@ -91,7 +89,7 @@ module QuickHeadlines::Repositories
             feed_url: item[:feed_url],
             feed_link: "",
             favicon: item[:favicon],
-            favicon_data: item[:favicon],
+            favicon_data: nil,
             header_color: item[:header_color]
           )
         end

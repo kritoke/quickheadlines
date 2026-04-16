@@ -5,7 +5,7 @@ require "./constants"
 def debug_log(message : String) : Nil
   if config = StateStore.config
     if config.debug?
-      STDOUT.puts "[DEBUG] #{message}"
+      Log.for("quickheadlines.debug").debug { message }
     end
   end
 end
@@ -13,6 +13,8 @@ end
 CONCURRENCY_SEMAPHORE = Channel(Nil).new(QuickHeadlines::Constants::CONCURRENCY).tap { |channel| QuickHeadlines::Constants::CONCURRENCY.times { channel.send(nil) } }
 
 module Utils
+  PRIVATE_PREFIXES = ["127.", "192.168.", "10.", "169.254."]
+
   def self.parse_ip_address(address : String) : String?
     return if address.nil? || address.empty?
 
@@ -38,8 +40,7 @@ module Utils
     return true if host.starts_with?("[::")
     return true if host.starts_with?("fe80::") || host.starts_with?("[fe80::")
 
-    private_prefixes = ["127.", "192.168.", "10.", "169.254."]
-    return true if private_prefixes.any? { |prefix| host.starts_with?(prefix) }
+    return true if PRIVATE_PREFIXES.any? { |prefix| host.starts_with?(prefix) }
 
     if host.starts_with?("100.")
       return private_cidr_range?(host, 64, 127)
@@ -113,26 +114,36 @@ end
 
 def mime_type_from_path(path : String) : String
   case path
-  when /\.png$/            then "image/png"
-  when /\.ico$/            then "image/x-icon"
-  when /\.svg$/            then "image/svg+xml"
-  when /\.gif$/            then "image/gif"
-  when /\.jpg$/, /\.jpeg$/ then "image/jpeg"
-  when /\.webp$/           then "image/webp"
-  else                          "application/octet-stream"
+  when /\.html?$/              then "text/html; charset=utf-8"
+  when /\.css$/                then "text/css; charset=utf-8"
+  when /\.js$/                 then "application/javascript; charset=utf-8"
+  when /\.json$/               then "application/json"
+  when /\.woff2?$/             then "font/woff2"
+  when /\.png$/                then "image/png"
+  when /\.ico$/                then "image/x-icon"
+  when /\.svg$/                then "image/svg+xml"
+  when /\.gif$/                then "image/gif"
+  when /\.jpg$/, /\.jpeg$/     then "image/jpeg"
+  when /\.webp$/               then "image/webp"
+  else                              "application/octet-stream"
   end
 end
 
 def mime_type_from_ext(ext : String) : String
   case ext
-  when "png"  then "image/png"
-  when "ico"  then "image/x-icon"
-  when "svg"  then "image/svg+xml"
-  when "gif"  then "image/gif"
-  when "jpg"  then "image/jpeg"
-  when "jpeg" then "image/jpeg"
-  when "webp" then "image/webp"
-  else             "application/octet-stream"
+  when "html", "htm"  then "text/html; charset=utf-8"
+  when "css"         then "text/css; charset=utf-8"
+  when "js"          then "application/javascript; charset=utf-8"
+  when "json"        then "application/json"
+  when "woff", "woff2" then "font/woff2"
+  when "png"         then "image/png"
+  when "ico"         then "image/x-icon"
+  when "svg"         then "image/svg+xml"
+  when "gif"         then "image/gif"
+  when "jpg"         then "image/jpeg"
+  when "jpeg"        then "image/jpeg"
+  when "webp"        then "image/webp"
+  else                   "application/octet-stream"
   end
 end
 

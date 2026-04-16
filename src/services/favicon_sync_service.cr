@@ -87,7 +87,7 @@ class FaviconSyncService
   private def find_local_favicon(favicon : String) : Tuple(Bool, String?)
     hash = OpenSSL::Digest.new("SHA256").update(favicon).final.hexstring
     FaviconStorage::POSSIBLE_EXTENSIONS.each do |ext|
-      filename = "#{hash[0...FaviconStorage::HASH_PREFIX_LENGTH]}.#{ext}"
+      filename = "#{hash[0...QuickHeadlines::Constants::FAVICON_HASH_PREFIX_LENGTH]}.#{ext}"
       filepath = File.join(FaviconStorage.favicon_dir, filename)
       if File.exists?(filepath)
         return {true, "/favicons/#{filename}"}
@@ -142,7 +142,7 @@ class FaviconSyncService
         Log.for("quickheadlines.cache").debug { "Downloaded Google favicon for #{url}: #{local_path}" }
         backfill_header_colors(feed_id, url, local_path)
       else
-        mark_favicon_failed(feed_id)
+        log_favicon_failed(feed_id)
       end
     end
   end
@@ -161,7 +161,7 @@ class FaviconSyncService
     end
 
     Log.for("quickheadlines.cache").debug { "Skipping malformed Google favicon URL: #{google_url}" }
-    mark_favicon_failed(feed_id)
+    log_favicon_failed(feed_id)
     nil
   end
 
@@ -180,18 +180,18 @@ class FaviconSyncService
             Log.for("quickheadlines.cache").debug { "Backfilled missing favicon for #{url}: #{local_path}" }
             backfill_header_colors(feed_id, url, local_path)
           else
-            mark_favicon_failed(feed_id)
+        log_favicon_failed(feed_id)
           end
         end
       rescue ex
         Log.for("quickheadlines.cache").error(exception: ex) { "Backfill missing favicon failed for #{url}" }
-        mark_favicon_failed(feed_id)
+        log_favicon_failed(feed_id)
       end
     end
   end
 
-  private def mark_favicon_failed(feed_id : Int64) : Nil
-    Log.for("quickheadlines.cache").debug { "Marked favicon as failed for feed_id=#{feed_id}" }
+  private def log_favicon_failed(feed_id : Int64) : Nil
+    Log.for("quickheadlines.cache").debug { "Favicon fetch failed for feed_id=#{feed_id}" }
   end
 
   private def backfill_header_colors(feed_id : Int64, feed_url : String, favicon_path : String) : Nil

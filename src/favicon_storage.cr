@@ -13,9 +13,7 @@ require "./storage/cache_utils"
 # OUTSIDE the mutex. Only the atomic file check-and-write is protected.
 # This avoids Boehm GC mutex initialization conflicts on FreeBSD.
 module FaviconStorage
-  MAX_SIZE            = 100 * 1024
   POSSIBLE_EXTENSIONS = {"png", "jpg", "jpeg", "ico", "svg", "webp"}
-  HASH_PREFIX_LENGTH  = 16
 
   @@mutex = Mutex.new(:unchecked)
   @@favicon_dir : String? = nil
@@ -54,7 +52,7 @@ module FaviconStorage
   end
 
   def self.save_favicon(url : String, image_data : Bytes, content_type : String) : String?
-    return if image_data.size > MAX_SIZE
+    return if image_data.size > QuickHeadlines::Constants::FAVICON_MAX_SIZE
     return unless valid_image_data?(image_data)
 
     hash_input = begin
@@ -64,7 +62,7 @@ module FaviconStorage
     end
     hash = OpenSSL::Digest.new("SHA256").update(hash_input).final.hexstring
     ext = extension_from_content_type(content_type)
-    filename = "#{hash[0...HASH_PREFIX_LENGTH]}.#{ext}"
+      filename = "#{hash[0...QuickHeadlines::Constants::FAVICON_HASH_PREFIX_LENGTH]}.#{ext}"
     filepath = File.join(favicon_dir, filename)
 
     @@mutex.synchronize do
@@ -155,8 +153,8 @@ module FaviconStorage
 
     @@mutex.synchronize do
       POSSIBLE_EXTENSIONS.each do |ext|
-        filepath = File.join(dir, "#{hash[0...HASH_PREFIX_LENGTH]}.#{ext}")
-        return "/favicons/#{hash[0...HASH_PREFIX_LENGTH]}.#{ext}" if File.exists?(filepath)
+        filepath = File.join(dir, "#{hash[0...QuickHeadlines::Constants::FAVICON_HASH_PREFIX_LENGTH]}.#{ext}")
+        return "/favicons/#{hash[0...QuickHeadlines::Constants::FAVICON_HASH_PREFIX_LENGTH]}.#{ext}" if File.exists?(filepath)
       end
     end
 
@@ -176,7 +174,7 @@ module FaviconStorage
       image_data = Base64.decode(base64_data)
       hash = OpenSSL::Digest.new("SHA256").update(url).final.hexstring
       ext = extension_from_content_type(content_type)
-      filename = "#{hash[0...HASH_PREFIX_LENGTH]}.#{ext}"
+    filename = "#{hash[0...QuickHeadlines::Constants::FAVICON_HASH_PREFIX_LENGTH]}.#{ext}"
       filepath = File.join(favicon_dir, filename)
 
       @@mutex.synchronize do
@@ -208,7 +206,7 @@ module FaviconStorage
 
     @@mutex.synchronize do
       POSSIBLE_EXTENSIONS.each do |ext|
-        filepath = File.join(dir, "#{hash[0...HASH_PREFIX_LENGTH]}.#{ext}")
+        filepath = File.join(dir, "#{hash[0...QuickHeadlines::Constants::FAVICON_HASH_PREFIX_LENGTH]}.#{ext}")
         return true if File.exists?(filepath)
       end
     end

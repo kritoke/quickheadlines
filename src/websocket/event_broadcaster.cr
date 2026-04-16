@@ -3,7 +3,7 @@ require "json"
 require "./socket_manager"
 
 class EventBroadcaster
-  UPDATE_CHANNEL   = Channel(FeedUpdateEvent).new(100)
+  UPDATE_CHANNEL   = Channel(FeedUpdateEvent).new(QuickHeadlines::Constants::WEBSOCKET_CHANNEL_SIZE)
   DROPPED_EVENTS   = Atomic(Int64).new(0)
   PROCESSED_EVENTS = Atomic(Int64).new(0)
 
@@ -14,7 +14,7 @@ class EventBroadcaster
         when event = UPDATE_CHANNEL.receive?
           SocketManager.instance.broadcast(event.to_json)
           PROCESSED_EVENTS.add(1)
-        when timeout(30.seconds)
+        when timeout(QuickHeadlines::Constants::WEBSOCKET_HEARTBEAT_SECONDS.seconds)
           SocketManager.instance.broadcast(HeartbeatEvent.new.to_json)
         end
       end
@@ -28,7 +28,7 @@ class EventBroadcaster
       select
       when UPDATE_CHANNEL.send(event)
         # Event queued for broadcast
-      when timeout(10.milliseconds)
+        when timeout(QuickHeadlines::Constants::WEBSOCKET_SEND_TIMEOUT_MS.milliseconds)
         DROPPED_EVENTS.add(1)
         Log.for("quickheadlines.websocket").warn { "Channel full, dropping event (buffer size: 100)" }
       end

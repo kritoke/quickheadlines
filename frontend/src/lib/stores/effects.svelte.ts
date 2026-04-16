@@ -23,11 +23,11 @@ function createEffectHandles(): EffectHandles {
 	};
 }
 
-// Shared WebSocket event handler for feed updates
 let lastUpdate = Date.now();
 let saveScrollY = 0;
 let feedUpdateDebounce: ReturnType<typeof setTimeout> | null = null;
 const FEED_UPDATE_DEBOUNCE_MS = 2000;
+const CONFIG_CHECK_INTERVAL_MS = 60000;
 
 function handleFeedUpdate(timestamp: number) {
 	if (timestamp > lastUpdate) {
@@ -45,7 +45,13 @@ function handleFeedUpdate(timestamp: number) {
 	}
 }
 
-// Handle clustering status updates from WebSocket
+function clearDebounce() {
+	if (feedUpdateDebounce) {
+		clearTimeout(feedUpdateDebounce);
+		feedUpdateDebounce = null;
+	}
+}
+
 function handleClusteringStatus(isClustering: boolean) {
 	if (isClustering && !timelineState.isClustering) {
 		timelineState.isClustering = true;
@@ -58,7 +64,6 @@ function handleClusteringStatus(isClustering: boolean) {
 	}
 }
 
-// WebSocket message handler
 function handleWebSocketMessage(message: any) {
 	if (message.type === 'feed_update') {
 		handleFeedUpdate(message.timestamp);
@@ -67,7 +72,6 @@ function handleWebSocketMessage(message: any) {
 	}
 }
 
-// Set up reconnect hook to refresh data after connection is restored
 onReconnect(() => {
 	logger.log('[Effects] Reconnected, refreshing data...');
 	saveScrollY = window.scrollY;
@@ -85,22 +89,27 @@ async function checkConfig() {
 	}
 }
 
+function stopEffects(handles: EffectHandles) {
+	if (handles.refreshInterval) clearInterval(handles.refreshInterval);
+	if (handles.configInterval) clearInterval(handles.configInterval);
+	if (handles.clusteringInterval) clearInterval(handles.clusteringInterval);
+	clearDebounce();
+	websocketConnection.removeEventListener(handleWebSocketMessage);
+}
+
 export function createFeedEffects(_config: EffectConfig = {}) {
 	const handles = createEffectHandles();
 
 	async function start() {
-		// Connect to shared WebSocket
 		websocketConnection.addEventListener(handleWebSocketMessage);
 		websocketConnection.connect();
 
 		const minutes = await checkConfig();
 
-		// Keep refresh interval for periodic data loading
 		handles.refreshInterval = setInterval(() => {
 			loadFeeds(feedState.activeTab, true);
 		}, minutes * 60 * 1000);
 
-		// Keep config interval to update refresh rate
 		handles.configInterval = setInterval(async () => {
 			const newMinutes = await checkConfig();
 			if (handles.refreshInterval) {
@@ -109,38 +118,27 @@ export function createFeedEffects(_config: EffectConfig = {}) {
 					loadFeeds(feedState.activeTab, true);
 				}, newMinutes * 60 * 1000);
 			}
-		}, 60000);
+		}, CONFIG_CHECK_INTERVAL_MS);
 	}
 
-	function stop() {
-		if (handles.refreshInterval) clearInterval(handles.refreshInterval);
-		if (handles.configInterval) clearInterval(handles.configInterval);
-		if (handles.clusteringInterval) clearInterval(handles.clusteringInterval);
-		websocketConnection.removeEventListener(handleWebSocketMessage);
-	}
-
-	return { start, stop, handles };
+	return { start, stop: () => stopEffects(handles), handles };
 }
 
 export function createTimelineEffects(_config: EffectConfig = {}) {
 	const handles = createEffectHandles();
 
 	async function start() {
-		// Connect to shared WebSocket
 		websocketConnection.addEventListener(handleWebSocketMessage);
 		websocketConnection.connect();
 
-		// Initial load
 		loadTimeline();
 
 		const minutes = await checkConfig();
 
-		// Keep refresh interval for periodic data loading
 		handles.refreshInterval = setInterval(() => {
 			loadTimeline();
 		}, minutes * 60 * 1000);
 
-		// Keep config interval
 		handles.configInterval = setInterval(async () => {
 			const newMinutes = await checkConfig();
 			if (handles.refreshInterval) {
@@ -149,17 +147,10 @@ export function createTimelineEffects(_config: EffectConfig = {}) {
 					loadTimeline();
 				}, newMinutes * 60 * 1000);
 			}
-		}, 60000);
+		}, CONFIG_CHECK_INTERVAL_MS);
 	}
 
-	function stop() {
-		if (handles.refreshInterval) clearInterval(handles.refreshInterval);
-		if (handles.configInterval) clearInterval(handles.configInterval);
-		if (handles.clusteringInterval) clearInterval(handles.clusteringInterval);
-		websocketConnection.removeEventListener(handleWebSocketMessage);
-	}
-
-	return { start, stop, handles };
+	return { start, stop: () => stopEffects(handles), handles };
 }
 
 export function createInfiniteScrollObserver(

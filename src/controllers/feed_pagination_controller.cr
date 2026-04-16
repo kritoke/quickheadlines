@@ -12,11 +12,11 @@ class QuickHeadlines::Controllers::FeedPaginationController < QuickHeadlines::Co
       raise Athena::Framework::Exception::BadRequest.new("Missing 'url' parameter")
     end
 
-    ip = client_ip(request)
-    limiter = RateLimiter.get_or_create("feed_more:#{ip}", 30, 60)
-
-    unless limiter.allowed?(ip)
-      raise Athena::Framework::Exception::TooManyRequests.new("Rate limit exceeded")
+    if response = rate_limit_response(request, "feed_more", 30, 60)
+      retry_after = response.headers["Retry-After"]?
+      headers = HTTP::Headers.new
+      headers["Retry-After"] = retry_after if retry_after
+      raise ATH::Exception::HTTPException.new(429, "Rate limit exceeded", nil, headers)
     end
 
     config = StateStore.config
@@ -43,7 +43,7 @@ class QuickHeadlines::Controllers::FeedPaginationController < QuickHeadlines::Co
 
       if current_count < needed_count
         db_fetch_limit = StateStore.config.try(&.db_fetch_limit) || 500
-        fetch_feed(feed_config, needed_count + QuickHeadlines::Constants::FETCH_BUFFER_ITEMS, db_fetch_limit, nil)
+        FeedFetcher.instance.fetch(feed_config, needed_count + QuickHeadlines::Constants::FETCH_BUFFER_ITEMS, db_fetch_limit, nil)
       end
 
       if data = cache.get(url)

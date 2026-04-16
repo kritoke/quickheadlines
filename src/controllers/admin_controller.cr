@@ -2,22 +2,11 @@ require "./api_base_controller"
 require "../fetcher/refresh_loop"
 
 class QuickHeadlines::Controllers::AdminController < QuickHeadlines::Controllers::ApiBaseController
-  private def with_rate_limit(key_prefix : String, request : ATH::Request) : ATH::Response?
-    ip = client_ip(request)
-    limiter = RateLimiter.get_or_create("#{key_prefix}:#{ip}", 1, 60)
+  VALID_ADMIN_ACTIONS = {"clear-cache", "cleanup-orphaned"}
 
-    unless limiter.allowed?(ip)
-      retry_after = limiter.retry_after(ip)
-      return ATH::Response.new(
-        "Rate limit exceeded. Try again later.",
-        429,
-        HTTP::Headers{
-          "content-type" => "text/plain",
-          "Retry-After"  => retry_after.to_s,
-        }
-      )
-    end
-    nil
+  private def with_rate_limit(key : String, request : ATH::Request, max_requests : Int32 = 1, window_seconds : Int32 = 60) : ATH::Response?
+    return nil if check_rate_limit(request, key, max_requests, window_seconds)
+    rate_limit_response(request, key, max_requests, window_seconds)
   end
 
   @[ARTA::Post(path: "/api/cluster")]
@@ -63,15 +52,15 @@ class QuickHeadlines::Controllers::AdminController < QuickHeadlines::Controllers
 
     unless action
       return ATH::Response.new(
-        "{\"error\": \"Missing action field\"}",
+        "{\"code\": 400, \"message\": \"Missing action field\"}",
         400,
         HTTP::Headers{"content-type" => "application/json"}
       )
     end
 
-    unless action.in?("clear-cache", "cleanup-orphaned")
+    unless action.in?(VALID_ADMIN_ACTIONS)
       return ATH::Response.new(
-        "{\"error\": \"Unknown action\"}",
+        "{\"code\": 400, \"message\": \"Unknown action: #{action}\"}",
         400,
         HTTP::Headers{"content-type" => "application/json"}
       )
@@ -79,47 +68,9 @@ class QuickHeadlines::Controllers::AdminController < QuickHeadlines::Controllers
 
     spawn do
       begin
-        cache = @feed_cache
-        db = cache.db
-
         case action
-        when "clear-cache"
-          feed_count = db.query_one("SELECT COUNT(*) FROM feeds", as: Int64)
-          item_count = db.query_one("SELECT COUNT(*) FROM items", as: Int64)
-
-          db.transaction do
-            db.exec("DELETE FROM items")
-            db.exec("DELETE FROM feeds")
-            cache.clear_clustering_metadata
-            cache.clear_all
-          end
-
-          Log.for("quickheadlines.app").info { "Cache cleared: #{feed_count} feeds, #{item_count} items deleted" }
-        when "cleanup-orphaned"
-          config_urls = Set(String).new
-          StateStore.feeds.each { |feed| config_urls << feed.url }
-          StateStore.tabs.each do |tab|
-            tab.feeds.each { |feed| config_urls << feed.url }
-          end
-
-          cluster_repo = QuickHeadlines::Repositories::ClusterRepository.new(@db_service)
-          feed_repo = QuickHeadlines::Repositories::FeedRepository.new(@db_service)
-          existing_feeds = feed_repo.find_all
-          db_urls = existing_feeds.map(&.url).to_set
-
-          orphaned = db_urls - config_urls
-
-          if orphaned.empty?
-            Log.for("quickheadlines.app").info { "No orphaned feeds to clean up" }
-          else
-            placeholders = orphaned.map { |_| "?" }.join(",")
-            deleted_items = db.exec("DELETE FROM items WHERE feed_id IN (SELECT id FROM feeds WHERE url IN (#{placeholders}))", args: orphaned.map { |url| url }).rows_affected
-
-            db.exec("DELETE FROM feeds WHERE url IN (#{placeholders})", args: orphaned)
-
-            cluster_repo.clear_all_metadata
-            Log.for("quickheadlines.app").info { "Cleaned up #{orphaned.size} orphaned feeds (#{deleted_items} items deleted)" }
-          end
+        when "clear-cache"     then handle_clear_cache
+        when "cleanup-orphaned" then handle_cleanup_orphaned
         end
       rescue ex
         Log.for("quickheadlines.app").error(exception: ex) { "Admin action error" }
@@ -127,6 +78,54 @@ class QuickHeadlines::Controllers::AdminController < QuickHeadlines::Controllers
     end
 
     ATH::Response.new("Admin action started in background", 202, HTTP::Headers{"content-type" => "text/plain"})
+  end
+
+  private def handle_clear_cache : Nil
+    cache = @feed_cache
+    db = cache.db
+
+    feed_count = db.query_one("SELECT COUNT(*) FROM feeds", as: Int64)
+    item_count = db.query_one("SELECT COUNT(*) FROM items", as: Int64)
+
+    db.transaction do
+      db.exec("DELETE FROM items")
+      db.exec("DELETE FROM feeds")
+      cache.clear_clustering_metadata
+      cache.clear_all
+    end
+
+    Log.for("quickheadlines.app").info { "Cache cleared: #{feed_count} feeds, #{item_count} items deleted" }
+  end
+
+  private def handle_cleanup_orphaned : Nil
+    cache = @feed_cache
+    db = cache.db
+
+    config_urls = Set(String).new
+    StateStore.feeds.each { |feed| config_urls << feed.url }
+    StateStore.tabs.each do |tab|
+      tab.feeds.each { |feed| config_urls << feed.url }
+    end
+
+    cluster_repo = QuickHeadlines::Repositories::ClusterRepository.new(@db_service)
+    feed_repo = QuickHeadlines::Repositories::FeedRepository.new(@db_service)
+    existing_feeds = feed_repo.find_all
+    db_urls = existing_feeds.map(&.url).to_set
+
+    orphaned = db_urls - config_urls
+
+    if orphaned.empty?
+      Log.for("quickheadlines.app").info { "No orphaned feeds to clean up" }
+      return
+    end
+
+    placeholders = orphaned.map { |_| "?" }.join(",")
+    deleted_items = db.exec("DELETE FROM items WHERE feed_id IN (SELECT id FROM feeds WHERE url IN (#{placeholders}))", args: orphaned.map { |url| url }).rows_affected
+
+    db.exec("DELETE FROM feeds WHERE url IN (#{placeholders})", args: orphaned)
+
+    cluster_repo.clear_all_metadata
+    Log.for("quickheadlines.app").info { "Cleaned up #{orphaned.size} orphaned feeds (#{deleted_items} items deleted)" }
   end
 
   private def parse_admin_action(body_io : IO?) : String?
@@ -180,8 +179,4 @@ class QuickHeadlines::Controllers::AdminController < QuickHeadlines::Controllers
     ATH::Response.new(body, 200, HTTP::Headers{"content-type" => "application/json"})
   end
 
-  @[ARTA::Get(path: "/version")]
-  def version_text : String
-    StateStore.updated_at.to_unix_ms.to_s
-  end
 end

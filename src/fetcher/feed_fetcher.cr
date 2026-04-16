@@ -7,7 +7,6 @@ require "../config"
 require "../constants"
 require "../models"
 require "../storage"
-require "../health_monitor"
 require "../color_extractor"
 require "./vug_adapter"
 require "./theme_helper"
@@ -35,7 +34,7 @@ class FeedFetcher
   def initialize(@cache : FeedCache)
   end
 
-  # Singleton accessor for backward compatibility
+  # Singleton accessor
   @@instance : FeedFetcher?
   @@instance_mutex = Mutex.new
 
@@ -59,10 +58,10 @@ class FeedFetcher
     is_timeout = error_msg.is_a?(String) && error_msg.downcase.includes?("timeout")
 
     if is_timeout
-      HealthMonitor.log_warning("fetch_feed(#{feed.url}) timeout: #{error_msg}")
+      Log.for("quickheadlines.feed").warn { "fetch_feed(#{feed.url}) timeout: #{error_msg}" }
       FetchErrorResult.new(nil, handle_timeout_error(feed, retries))
     else
-      HealthMonitor.log_error("fetch_feed(#{feed.url})", ex)
+      Log.for("quickheadlines.feed").error(exception: ex) { "fetch_feed(#{feed.url})" }
       if stale_cache = get_stale_cached_feed(feed, effective_item_limit, previous_data)
         FetchErrorResult.new(stale_cache, retries)
       else
@@ -75,7 +74,7 @@ class FeedFetcher
     return unless decision.abort?
 
     message = decision.reason || "Error: Unknown fetch error"
-    HealthMonitor.log_warning("fetch_feed(#{feed.url}) #{message}")
+    Log.for("quickheadlines.feed").warn { "fetch_feed(#{feed.url}) #{message}" }
     if stale_cache = get_stale_cached_feed(feed, effective_item_limit, previous_data)
       stale_cache
     else
@@ -114,7 +113,7 @@ class FeedFetcher
       end
 
       begin
-        result = Fetcher.pull(current_url, HTTP::Headers.new, db_fetch_limit, fetcher_config)
+        result = Fetcher.pull(current_url, HTTP::Headers.new, db_fetch_limit, FeedFetcher.fetcher_config)
 
         if result.success?
           return handle_success(result, feed, effective_item_limit, previous_data)
@@ -122,7 +121,7 @@ class FeedFetcher
           return handle_error(result, feed, effective_item_limit, previous_data)
         end
       rescue IO::TimeoutError
-        HealthMonitor.log_warning("fetch_feed(#{feed.url}) timeout after 60s")
+        Log.for("quickheadlines.feed").warn { "fetch_feed(#{feed.url}) timeout after 60s" }
         retries = handle_timeout_error(feed, retries)
       rescue ex
         error_result = handle_fetch_exception(ex, feed, effective_item_limit, previous_data, retries)
@@ -195,7 +194,7 @@ class FeedFetcher
 
   private def handle_error(result, feed : Feed, effective_item_limit : Int32, previous_data : FeedData?) : FeedData
     error_msg = result.error_message || "Unknown error"
-    HealthMonitor.log_warning("fetch_feed(#{feed.url}) error: #{error_msg}")
+    Log.for("quickheadlines.feed").warn { "fetch_feed(#{feed.url}) error: #{error_msg}" }
     if stale_cache = get_stale_cached_feed(feed, effective_item_limit, previous_data)
       return stale_cache
     end
@@ -284,7 +283,7 @@ class FeedFetcher
   private def handle_timeout_error(feed : Feed, retries : Int32) : Int32
     new_retries = retries + 1
     backoff_seconds = calculate_backoff(feed, new_retries)
-    HealthMonitor.log_warning("fetch_feed(#{feed.url}) timeout, retry #{new_retries}/3 in #{backoff_seconds}s")
+    Log.for("quickheadlines.feed").warn { "fetch_feed(#{feed.url}) timeout, retry #{new_retries}/3 in #{backoff_seconds}s" }
     sleep(backoff_seconds.seconds)
     new_retries
   end
@@ -353,37 +352,31 @@ class FeedFetcher
 
     cached
   end
-end
 
-# Global functions for backward compatibility - delegate to singleton
-
-def fetch_feed(feed : Feed, display_item_limit : Int32, db_fetch_limit : Int32, previous_data : FeedData? = nil) : FeedData
-  FeedFetcher.instance.fetch(feed, display_item_limit, db_fetch_limit, previous_data)
-end
-
-def fetcher_config : Fetcher::RequestConfig
-  config = StateStore.config
-  debug_enabled = config.try(&.debug?) || false
-  Fetcher::RequestConfig.new(
-    timeout: Fetcher::TimeoutConfig.new(
-      connect: QuickHeadlines::Constants::HTTP_CONNECT_TIMEOUT.seconds,
-      read: QuickHeadlines::Constants::HTTP_READ_TIMEOUT.seconds
-    ),
-    retry: Fetcher::RetryConfig.new(
-      max_retries: QuickHeadlines::Constants::MAX_RETRIES
-    ),
-    max_redirects: QuickHeadlines::Constants::MAX_REDIRECTS,
-    streaming: Fetcher::StreamingConfig.new(
-      enabled: debug_enabled,
-      debug: debug_enabled
+  def self.fetcher_config : Fetcher::RequestConfig
+    config = StateStore.config
+    debug_enabled = config.try(&.debug?) || false
+    Fetcher::RequestConfig.new(
+      timeout: Fetcher::TimeoutConfig.new(
+        connect: QuickHeadlines::Constants::HTTP_CONNECT_TIMEOUT.seconds,
+        read: QuickHeadlines::Constants::HTTP_READ_TIMEOUT.seconds
+      ),
+      retry: Fetcher::RetryConfig.new(
+        max_retries: QuickHeadlines::Constants::MAX_RETRIES
+      ),
+      max_redirects: QuickHeadlines::Constants::MAX_REDIRECTS,
+      streaming: Fetcher::StreamingConfig.new(
+        enabled: debug_enabled,
+        debug: debug_enabled
+      )
     )
-  )
-end
+  end
 
-def error_feed_data(feed : Feed, message : String) : FeedData
-  FeedFetcher.instance.build_error_feed(feed, message)
-end
+  def self.error_feed_data(feed : Feed, message : String) : FeedData
+    instance.build_error_feed(feed, message)
+  end
 
-def load_feeds_from_cache(config : Config) : Bool
-  FeedFetcher.instance.load_from_cache(config)
+  def self.load_feeds_from_cache(config : Config) : Bool
+    instance.load_from_cache(config)
+  end
 end

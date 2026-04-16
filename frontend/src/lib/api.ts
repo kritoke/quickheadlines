@@ -10,7 +10,12 @@ import { toastStore } from './stores/toast.svelte';
 
 const API_BASE = '/api';
 
-const pendingRequests = new Map<string, Promise<any>>();
+const pendingRequests = new Map<string, Promise<unknown>>();
+
+const FETCH_TIMEOUT_MS = 30000;
+const MS_PER_MINUTE = 60000;
+const MS_PER_HOUR = 3600000;
+const MS_PER_DAY = 86400000;
 
 interface FetchOptions {
 	method?: 'GET' | 'POST' | 'PUT' | 'DELETE';
@@ -71,7 +76,7 @@ async function doFetchFeeds(tab: string, signal?: AbortSignal): Promise<FeedsPag
 	
 	// Create timeout controller
 	const timeoutController = new AbortController();
-	const timeoutId = setTimeout(() => timeoutController.abort(), 30000);
+	const timeoutId = setTimeout(() => timeoutController.abort(), FETCH_TIMEOUT_MS);
 	
 	// Set up abort handling
 	const onAbort = () => {
@@ -154,7 +159,7 @@ export async function fetchMoreFeedItems(
 	offset: number = 0
 ): Promise<FeedResponse> {
 	const url = `${API_BASE}/feed_more?url=${encodeURIComponent(feedUrl)}&limit=${limit}&offset=${offset}`;
-	return apiFetch<FeedResponse>(url, { timeout: 30000, errorContext: 'Fetch More Items' });
+	return apiFetch<FeedResponse>(url, { timeout: FETCH_TIMEOUT_MS, errorContext: 'Fetch More Items' });
 }
 
 export async function saveHeaderColor(
@@ -179,9 +184,9 @@ export function formatTimestamp(ms?: number): string {
 	const date = new Date(ms);
 	const now = new Date();
 	const diffMs = now.getTime() - date.getTime();
-	const diffMins = Math.floor(diffMs / 60000);
-	const diffHours = Math.floor(diffMs / 3600000);
-	const diffDays = Math.floor(diffMs / 86400000);
+	const diffMins = Math.floor(diffMs / MS_PER_MINUTE);
+	const diffHours = Math.floor(diffMs / MS_PER_HOUR);
+	const diffDays = Math.floor(diffMs / MS_PER_DAY);
 
 	if (diffMins < 1) return 'just now';
 	if (diffMins < 60) return `${diffMins}m ago`;

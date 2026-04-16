@@ -1,6 +1,5 @@
 require "vug"
 require "../favicon_storage"
-require "../health_monitor"
 require "../config"
 
 module VugAdapter
@@ -20,10 +19,10 @@ module VugAdapter
         debug_log(msg)
       end,
       on_error: ->(ctx : String, error_msg : String) do
-        HealthMonitor.log_error(ctx, error_msg)
+        Log.for("quickheadlines.feed").error { "ERROR in #{ctx}: #{error_msg}" }
       end,
       on_warning: ->(msg : String) do
-        HealthMonitor.log_warning(msg)
+        Log.for("quickheadlines.feed").warn { "WARNING: #{msg}" }
       end
     )
   end

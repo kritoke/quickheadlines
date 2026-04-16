@@ -5,7 +5,7 @@ class QuickHeadlines::Controllers::ProxyController < QuickHeadlines::Controllers
   def proxy_image(request : ATH::Request) : ATH::Response
     url = request.query_params["url"]?
     raw_max = request.query_params["max"]?
-    max_bytes = raw_max.try(&.to_i64?) || 2097152_i64
+    max_bytes = raw_max.try(&.to_i64?) || QuickHeadlines::Constants::PROXY_DEFAULT_MAX_BYTES.to_i64
 
     if url.nil? || url.strip.empty?
       return ATH::Response.new("Missing 'url' parameter", 400, HTTP::Headers{"content-type" => "text/plain"})
@@ -17,25 +17,11 @@ class QuickHeadlines::Controllers::ProxyController < QuickHeadlines::Controllers
 
     max_bytes = {max_bytes, QuickHeadlines::Constants::MAX_PROXY_IMAGE_BYTES.to_i64}.min
 
-    unless check_rate_limit(request)
-      retry_after = RateLimiter.get_or_create("proxy:#{client_ip(request)}", 30, 60).retry_after(client_ip(request))
-      return ATH::Response.new(
-        "Rate limit exceeded",
-        429,
-        HTTP::Headers{
-          "content-type" => "text/plain",
-          "Retry-After"  => retry_after.to_s,
-        }
-      )
+    if response = rate_limit_response(request, "proxy", 30, 60)
+      return response
     end
 
     proxy_image_fetch(url, max_bytes)
-  end
-
-  private def check_rate_limit(request : ATH::Request) : Bool
-    ip = client_ip(request)
-    limiter = RateLimiter.get_or_create("proxy:#{ip}", 30, 60)
-    limiter.allowed?(ip)
   end
 
   private def proxy_image_fetch(url : String, max_bytes : Int64) : ATH::Response
@@ -58,7 +44,8 @@ class QuickHeadlines::Controllers::ProxyController < QuickHeadlines::Controllers
         return ATH::Response.new("Not an image", 415, HTTP::Headers{"content-type" => "text/plain"})
       end
 
-      if (cl_header = response.headers["Content-Length"]?) && (cl = cl_header.to_i64?) && cl > max_bytes
+      content_length_header = response.headers["Content-Length"]?
+      if content_length_header && (content_length = content_length_header.to_i64?) && content_length > max_bytes
         return ATH::Response.new("Image too large", 413, HTTP::Headers{"content-type" => "text/plain"})
       end
 
@@ -68,9 +55,8 @@ class QuickHeadlines::Controllers::ProxyController < QuickHeadlines::Controllers
       end
 
       ATH::Response.new(body, 200, HTTP::Headers{"content-type" => content_type})
-    rescue IO::TimeoutError | Socket::Error
-      ATH::Response.new("Bad Gateway", 502, HTTP::Headers{"content-type" => "text/plain"})
-    rescue
+    rescue ex
+      Log.for("quickheadlines.http").error(exception: ex) { "Proxy image fetch error for #{url}" }
       ATH::Response.new("Bad Gateway", 502, HTTP::Headers{"content-type" => "text/plain"})
     ensure
       client.close

@@ -12,8 +12,8 @@ export const connectionState = $state<{
 	reconnectAttempts: 0
 });
 
-export function setConnectionState(state: ConnectionState) {
-	connectionState.state = state;
+export function setConnectionState(newState: ConnectionState) {
+	connectionState.state = newState;
 	connectionState.visible = true;
 }
 

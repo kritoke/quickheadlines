@@ -110,7 +110,9 @@ module QuickHeadlines::Services
         TabResponse.new(name: tab.name)
       end
 
-      feeds_response = if active_tab.to_s.downcase == "all"
+      is_all_tab = active_tab.to_s.downcase == "all"
+
+      feeds_response = if is_all_tab
                          all_feeds_with_tabs = [] of {feed: FeedData, tab_name: String}
 
                          feeds_snapshot.each do |feed|
@@ -133,7 +135,7 @@ module QuickHeadlines::Services
                          end
                        end
 
-      software_releases_response = if active_tab.to_s.downcase == "all"
+      software_releases_response = if is_all_tab
                                      [] of FeedResponse
                                    else
                                      tab_with_sr = tabs_snapshot.find { |tab| tab.name.downcase == active_tab.downcase }

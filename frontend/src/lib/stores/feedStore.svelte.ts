@@ -43,8 +43,6 @@ const initialState: FeedStateIdle = {
 
 export const feedState = $state<FeedState>({ ...initialState });
 
-const clone = deepClone;
-
 export function setLoading(state: FeedState, tab: string): FeedStateLoading | FeedStateRefreshing {
 	const base: BaseFeedState = {
 		...state,
@@ -71,7 +69,7 @@ export function setFeedsData(state: FeedState, response: FeedsPageResponse, tab:
 		lastUpdated: response.updated_at || Date.now(),
 		tabCache: {
 			...state.tabCache,
-			[tab]: { feeds: clone(feeds), loaded: true }
+			[tab]: { feeds: deepClone(feeds), loaded: true }
 		}
 	};
 }
@@ -166,8 +164,6 @@ export async function loadMoreFeedItems(feed: FeedResponse): Promise<void> {
 	
 	try {
 		const response = await fetchMoreFeedItems(feedUrl, 10, currentOffset);
-		
-		const feedInState = feedState.feeds.find(f => f.url === feedUrl);
 		
 		const updatedFeeds = feedState.feeds.map(f => {
 			if (f.url === feedUrl) {

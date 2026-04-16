@@ -53,23 +53,23 @@ const ICOSAHEDRON_FACES: number[][] = [
   [11, 8, 6], [10, 9, 7], [11, 10, 8], [3, 1, 9], [11, 3, 10],
 ];
 
-function matrixMultiply(a: number[][], b: number[][]): number[][] {
-  const matrix: number[][] = [[0, 0, 0], [0, 0, 0], [0, 0, 0]];
+function matrixMultiply(matrixA: number[][], matrixB: number[][]): number[][] {
+  const result: number[][] = [[0, 0, 0], [0, 0, 0], [0, 0, 0]];
   for (let i = 0; i < 3; i++) {
     for (let j = 0; j < 3; j++) {
       for (let k = 0; k < 3; k++) {
-        matrix[i][j] += a[i][k] * b[k][j];
+        result[i][j] += matrixA[i][k] * matrixB[k][j];
       }
     }
   }
-  return matrix;
+  return result;
 }
 
-function rotate(point: Point3D, r: number[][]): Point3D {
+function rotate(point: Point3D, rotationMatrix: number[][]): Point3D {
   return {
-    x: point.x * r[0][0] + point.y * r[0][1] + point.z * r[0][2],
-    y: point.x * r[1][0] + point.y * r[1][1] + point.z * r[1][2],
-    z: point.x * r[2][0] + point.y * r[2][1] + point.z * r[2][2],
+    x: point.x * rotationMatrix[0][0] + point.y * rotationMatrix[0][1] + point.z * rotationMatrix[0][2],
+    y: point.x * rotationMatrix[1][0] + point.y * rotationMatrix[1][1] + point.z * rotationMatrix[1][2],
+    z: point.x * rotationMatrix[2][0] + point.y * rotationMatrix[2][1] + point.z * rotationMatrix[2][2],
   };
 }
 
@@ -87,13 +87,13 @@ function computeCentroid(vertices: Point3D[]): Point3D {
   };
 }
 
-function computeNormal(v0: Point3D, v1: Point3D, v2: Point3D, centroid: Point3D): Point3D {
-  const a = { x: v1.x - v0.x, y: v1.y - v0.y, z: v1.z - v0.z };
-  const b = { x: v2.x - v0.x, y: v2.y - v0.y, z: v2.z - v0.z };
+function computeNormal(vertex0: Point3D, vertex1: Point3D, vertex2: Point3D, centroid: Point3D): Point3D {
+  const edgeA = { x: vertex1.x - vertex0.x, y: vertex1.y - vertex0.y, z: vertex1.z - vertex0.z };
+  const edgeB = { x: vertex2.x - vertex0.x, y: vertex2.y - vertex0.y, z: vertex2.z - vertex0.z };
   let normal = {
-    x: a.y * b.z - a.z * b.y,
-    y: a.z * b.x - a.x * b.z,
-    z: a.x * b.y - a.y * b.x,
+    x: edgeA.y * edgeB.z - edgeA.z * edgeB.y,
+    y: edgeA.z * edgeB.x - edgeA.x * edgeB.z,
+    z: edgeA.x * edgeB.y - edgeA.y * edgeB.x,
   };
   const magnitude = Math.sqrt(normal.x * normal.x + normal.y * normal.y + normal.z * normal.z);
   normal = { x: normal.x / magnitude, y: normal.y / magnitude, z: normal.z / magnitude };
@@ -118,7 +118,7 @@ export class CrystalEngine {
   private height: number;
   private vertices: Point3D[] = [];
   private faces: Face[] = [];
-  private r: number[][] = [[1, 0, 0], [0, 1, 0], [0, 0, 1]];
+  private rotationMatrix: number[][] = [[1, 0, 0], [0, 1, 0], [0, 0, 1]];
   private scale: number;
   private distance = 4;
   private yaw = 0.02;
@@ -226,7 +226,7 @@ export class CrystalEngine {
 
   private transformVertices() {
     for (const vertex of this.vertices) {
-      const rotated = rotate(vertex, this.r);
+      const rotated = rotate(vertex, this.rotationMatrix);
       vertex.screenX = this.width / 2 + (this.scale * rotated.x) / (this.distance - rotated.z);
       vertex.screenY = this.height / 2 + (this.scale * rotated.y) / (this.distance - rotated.z);
     }
@@ -234,8 +234,8 @@ export class CrystalEngine {
 
   private transformFaces() {
     for (const face of this.faces) {
-      face.transform.normal = rotate(face.normal, this.r);
-      face.transform.centroid = rotate(face.centroid, this.r);
+      face.transform.normal = rotate(face.normal, this.rotationMatrix);
+      face.transform.centroid = rotate(face.centroid, this.rotationMatrix);
     }
   }
 
@@ -249,20 +249,20 @@ export class CrystalEngine {
   }
 
   private computeLighting(normal: Point3D): string {
-    let r = 0, g = 0, b = 0;
+    let lightR = 0, lightG = 0, lightB = 0;
     for (const light of this.lights) {
       const cos = normal.x * light.x + normal.y * light.y + normal.z * light.z;
-      r = Math.max(0, Math.min(255, Math.round(r + cos * light.r)));
-      g = Math.max(0, Math.min(255, Math.round(g + cos * light.g)));
-      b = Math.max(0, Math.min(255, Math.round(b + cos * light.b)));
+      lightR = Math.max(0, Math.min(255, Math.round(lightR + cos * light.r)));
+      lightG = Math.max(0, Math.min(255, Math.round(lightG + cos * light.g)));
+      lightB = Math.max(0, Math.min(255, Math.round(lightB + cos * light.b)));
     }
 
     const bg = this.isDark ? 30 : 255;
     const fg = this.isDark ? 255 : 30;
 
-    const blendedR = Math.round(r * 0.9 + bg * 0.1);
-    const blendedG = Math.round(g * 0.9 + bg * 0.1);
-    const blendedB = Math.round(b * 0.9 + bg * 0.1);
+    const blendedR = Math.round(lightR * 0.9 + bg * 0.1);
+    const blendedG = Math.round(lightG * 0.9 + bg * 0.1);
+    const blendedB = Math.round(lightB * 0.9 + bg * 0.1);
 
     return `rgb(${blendedR}, ${blendedG}, ${blendedB})`;
   }
@@ -318,14 +318,14 @@ export class CrystalEngine {
     // Then apply rotation
     const rotationMatrix = matrixMultiply(
       [[Math.cos(this.yaw), 0, -Math.sin(this.yaw)], [0, 1, 0], [Math.sin(this.yaw), 0, Math.cos(this.yaw)]],
-      this.r
+      this.rotationMatrix
     );
-    this.r = matrixMultiply(
+    this.rotationMatrix = matrixMultiply(
       [[1, 0, 0], [0, Math.cos(this.pitch), -Math.sin(this.pitch)], [0, Math.sin(this.pitch), Math.cos(this.pitch)]],
       rotationMatrix
     );
 
-    this.render();
+    this.rotationMatrixender();
   }
 
   start() {

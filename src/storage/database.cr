@@ -15,7 +15,8 @@ end
 
 private def column_exists?(db : DB::Database, table : String, column : String) : Bool
   db.query_one?("SELECT 1 FROM pragma_table_info(?) WHERE name = ?", table, column, as: Bool) || false
-rescue
+rescue ex
+  Log.for("quickheadlines.storage").warn { "column_exists? check failed for #{table}.#{column}: #{ex.message}" }
   false
 end
 
@@ -98,6 +99,7 @@ def create_schema(db : DB::Database, db_path : String)
   db.exec(Schema::FEEDS_TABLE)
   db.exec(Schema::ITEMS_TABLE)
   db.exec(Schema::LSH_BANDS_TABLE)
+  db.exec(Schema::INDEXES)
 
   run_migrations(db)
 
@@ -114,8 +116,6 @@ def create_schema(db : DB::Database, db_path : String)
   if cleanup_result.rows_affected > 0
     Log.for("quickheadlines.storage").debug { "Cleaned up #{cleanup_result.rows_affected} duplicate items from database" }
   end
-
-  db.exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_items_unique_feed_link ON items(feed_id, link)")
 end
 
 def check_db_health(db_path : String) : DbHealthStatus
@@ -141,6 +141,7 @@ def check_db_health(db_path : String) : DbHealthStatus
         Log.for("quickheadlines.storage").warn { "Database has #{fk_result.size} foreign key violations" }
       end
     rescue DB::Error
+      Log.for("quickheadlines.storage").debug { "Could not check foreign keys (may indicate older SQLite)" }
     end
 
     feed_count = database.query_one("SELECT COUNT(*) FROM feeds", as: {Int64})

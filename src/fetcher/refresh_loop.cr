@@ -4,14 +4,11 @@ require "atomic"
 require "../config"
 require "../models"
 require "../storage"
-require "../health_monitor"
 require "../services/clustering_service"
 require "../software_fetcher"
 require "../websocket"
 require "./feed_fetcher"
 
-MAX_PARALLEL_CLUSTERING    =  20
-CLUSTERING_TIMEOUT_SECONDS = 300
 REFRESH_MUTEX              = Mutex.new
 REFRESH_IN_PROGRESS        = Atomic(Bool).new(false)
 
@@ -22,7 +19,6 @@ private def collect_feed_configs(config : Config) : Hash(String, Feed)
   all_configs
 end
 
-FEED_FETCH_TIMEOUT_SECONDS = 300
 
 private def fetch_feeds_concurrently(all_configs : Hash(String, Feed), existing_data : Hash(String, FeedData), config : Config) : Hash(String, FeedData)
   channel = Channel(FeedData?).new
@@ -31,7 +27,7 @@ private def fetch_feeds_concurrently(all_configs : Hash(String, Feed), existing_
       CONCURRENCY_SEMAPHORE.receive
       begin
         prev = existing_data[feed.url]?
-        channel.send(fetch_feed(feed, config.item_limit, config.db_fetch_limit, prev))
+        channel.send(FeedFetcher.instance.fetch(feed, config.item_limit, config.db_fetch_limit, prev))
       rescue ex
         Log.for("quickheadlines.feed").error(exception: ex) { "fetch_feeds_concurrently: error fetching #{feed.url}" }
         channel.send(nil)
@@ -43,7 +39,7 @@ private def fetch_feeds_concurrently(all_configs : Hash(String, Feed), existing_
 
   fetched_map = {} of String => FeedData
   completed = 0
-  timeout_span = FEED_FETCH_TIMEOUT_SECONDS.seconds
+  timeout_span = QuickHeadlines::Constants::FEED_FETCH_TIMEOUT_SECONDS.seconds
   all_configs.size.times do
     select
     when data = channel.receive?
@@ -71,7 +67,7 @@ private def build_software_releases(software_config : SoftwareConfig?, item_limi
 end
 
 private def build_tab_feeds(tab_config : TabConfig, fetched_map : Hash(String, FeedData), item_limit : Int32) : Tab
-  tab_feeds = tab_config.feeds.map { |feed| fetched_map[feed.url]? || error_feed_data(feed, "Failed to fetch") }
+  tab_feeds = tab_config.feeds.map { |feed| fetched_map[feed.url]? || FeedFetcher.error_feed_data(feed, "Failed to fetch") }
   tab_releases = build_software_releases(tab_config.software_releases, item_limit)
   Tab.new(tab_config.name, tab_feeds, tab_releases)
 end
@@ -103,7 +99,7 @@ def refresh_all(config : Config, cache : FeedCache, db_service : DatabaseService
   end
 
   # Build new state immutably
-  new_feeds = config.feeds.map { |feed| fetched_map[feed.url]? || error_feed_data(feed, "Failed to fetch") }
+  new_feeds = config.feeds.map { |feed| fetched_map[feed.url]? || FeedFetcher.error_feed_data(feed, "Failed to fetch") }
   new_tabs = config.tabs.map { |tab_config| build_tab_feeds(tab_config, fetched_map, config.item_limit) }
   new_software_releases = build_software_releases(config.software_releases, config.item_limit)
 
@@ -139,8 +135,8 @@ def async_clustering(feeds : Array(FeedData), cache : FeedCache, db_service : Da
   return if feeds.empty?
   return if StateStore.clustering?
 
-  semaphore = Channel(Nil).new(MAX_PARALLEL_CLUSTERING)
-  MAX_PARALLEL_CLUSTERING.times { semaphore.send(nil) }
+  semaphore = Channel(Nil).new(QuickHeadlines::Constants::MAX_PARALLEL_CLUSTERING)
+  QuickHeadlines::Constants::MAX_PARALLEL_CLUSTERING.times { semaphore.send(nil) }
 
   completion_channel = Channel(Nil).new(feeds.size)
 
@@ -164,7 +160,7 @@ def async_clustering(feeds : Array(FeedData), cache : FeedCache, db_service : Da
 
   spawn do
     completed = 0
-    timeout_span = CLUSTERING_TIMEOUT_SECONDS.seconds
+    timeout_span = QuickHeadlines::Constants::CLUSTERING_TIMEOUT_SECONDS.seconds
     feeds.size.times do
       select
       when completion_channel.receive?
@@ -261,7 +257,7 @@ def start_refresh_loop(config_path : String, cache : FeedCache, db_service : Dat
 
           refresh_duration = (Time.utc - refresh_start_time).total_seconds
           if refresh_duration > (active_config.refresh_minutes * QuickHeadlines::Constants::SECONDS_PER_MINUTE) * 2
-            HealthMonitor.log_warning("Refresh took #{refresh_duration.round(2)}s (expected #{active_config.refresh_minutes * QuickHeadlines::Constants::SECONDS_PER_MINUTE}s) - possible hang detected")
+            Log.for("quickheadlines.feed").warn { "Refresh took #{refresh_duration.round(2)}s (expected #{active_config.refresh_minutes * QuickHeadlines::Constants::SECONDS_PER_MINUTE}s) - possible hang detected" }
           end
 
           sleep (active_config.refresh_minutes * QuickHeadlines::Constants::SECONDS_PER_MINUTE).seconds
@@ -269,7 +265,7 @@ def start_refresh_loop(config_path : String, cache : FeedCache, db_service : Dat
           REFRESH_IN_PROGRESS.set(false)
         end
       rescue ex
-        HealthMonitor.log_error("refresh_loop", ex)
+        Log.for("quickheadlines.feed").error(exception: ex) { "refresh_loop" }
         REFRESH_IN_PROGRESS.set(false)
         sleep 1.minute
       end

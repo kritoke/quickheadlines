@@ -8,7 +8,6 @@ require "./utils"
 require "./fetcher"
 require "./storage"
 require "./favicon_storage"
-require "./health_monitor"
 require "./websocket"
 
 # Load entities, services, controllers, repositories, etc.
@@ -19,14 +18,12 @@ require "./entities/feed"
 require "./domain/items"
 
 require "./services/clustering_service"
-require "./services/heat_map_service"
 require "./services/database_service"
 require "./services/app_bootstrap"
 require "./services/feed_service"
 
 require "./repositories/story_repository"
 require "./repositories/feed_repository"
-require "./repositories/heat_map_repository"
 
 require "./controllers/api_base_controller"
 require "./controllers/cluster_controller"
@@ -43,9 +40,6 @@ require "./controllers/admin_controller"
 # Svelte frontend with baked assets
 require "./web/assets"
 require "./web/static_controller"
-
-require "./events/story_fetched_event"
-require "./listeners/heat_map_listener"
 
 require "./dtos/story_dto"
 require "./dtos/cluster_dto"
@@ -82,7 +76,6 @@ begin
   QuickHeadlines::Application.initial_config = config
 
   bootstrap = AppBootstrap.new(config)
-  bootstrap.initialize_services
   QuickHeadlines::Application.bootstrap = bootstrap
 rescue ex : Exception
   Log.for("quickheadlines.app").fatal(exception: ex) { "Failed to initialize application" }

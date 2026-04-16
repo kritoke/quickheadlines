@@ -49,8 +49,6 @@ export const timelineState = $state<TimelineState>({
 	itemIds: new SvelteSet<string>()
 });
 
-const clone = deepClone;
-
 export function setLoading(state: TimelineState, isAppend: boolean): TimelineState {
 	if (isAppend) {
 		return { ...state, loadingMore: true };
@@ -125,7 +123,7 @@ export function setTabName(state: TimelineState, tab: string): TimelineState {
 
 export function resetTimelineStore(): void {
 	Object.assign(timelineState, {
-		...clone(initialBaseState),
+		...deepClone(initialBaseState),
 		itemIds: new SvelteSet<string>()
 	});
 }

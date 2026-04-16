@@ -118,7 +118,8 @@ module QuickHeadlines::Storage
     private def wal_file_size : Int64
       wal_path = "#{@db_path}-wal"
       File.exists?(wal_path) ? File.size(wal_path) : 0_i64
-    rescue
+    rescue ex
+      Log.for("quickheadlines.storage").warn { "Failed to check WAL file size: #{ex.message}" }
       0_i64
     end
 

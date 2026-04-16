@@ -166,14 +166,4 @@ module StateStore
   end
 end
 
-class FeedCache
-  @@instance : FeedCache?
 
-  def self.instance : FeedCache
-    @@instance ||= FeedCache.new(nil)
-  end
-
-  def self.instance=(cache : FeedCache)
-    @@instance = cache
-  end
-end

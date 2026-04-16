@@ -3,8 +3,6 @@ require "mutex"
 
 module QuickHeadlines
   class RateLimiter
-    INSTANCE_TTL_SECONDS     = 3600
-    CLEANUP_INTERVAL_SECONDS =   60
     @@instances = {} of String => RateLimiter
     @@cleanup_lock = Mutex.new
     @@cleanup_fiber : Fiber?
@@ -26,7 +24,7 @@ module QuickHeadlines
         return if @@cleanup_fiber
         @@cleanup_fiber = spawn do
           loop do
-            sleep CLEANUP_INTERVAL_SECONDS.seconds
+            sleep QuickHeadlines::Constants::RATE_LIMITER_CLEANUP_INTERVAL.seconds
             begin
               cleanup_stale_instances
             rescue ex
@@ -52,9 +50,9 @@ module QuickHeadlines
     def self.cleanup_stale_instances
       @@cleanup_lock.synchronize do
         now = Time.utc
-        return if (now - @@last_cleanup).total_seconds < CLEANUP_INTERVAL_SECONDS
+        return if (now - @@last_cleanup).total_seconds < QuickHeadlines::Constants::RATE_LIMITER_CLEANUP_INTERVAL
 
-        cutoff = now.to_unix - INSTANCE_TTL_SECONDS
+        cutoff = now.to_unix - QuickHeadlines::Constants::RATE_LIMITER_INSTANCE_TTL
         @@instances.reject! do |_, limiter|
           limiter.last_accessed < cutoff
         end

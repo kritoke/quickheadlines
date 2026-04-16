@@ -18,7 +18,7 @@
       container = c;
       const handler = () => {
         const top = getScrollTop(c);
-        visible = top < 100 ? false : true;
+        visible = top >= 100;
       };
       // run once to set initial state
       handler();

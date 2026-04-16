@@ -3,8 +3,8 @@
 	import TabSelector from '$lib/components/TabSelector.svelte';
 	import LayoutPicker from '$lib/components/LayoutPicker.svelte';
 	import BitsSearchModal from '$lib/components/BitsSearchModal.svelte';
-	import { fetchFeeds, fetchTimeline, fetchConfig } from '$lib/api';
-	import type { TimelineItemResponse, TabResponse } from '$lib/types';
+	import { fetchFeeds } from '$lib/api';
+	import type { TabResponse } from '$lib/types';
 	import { SvelteSet } from 'svelte/reactivity';
 	import {
 		createTimelineEffects,

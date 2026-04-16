@@ -4,8 +4,7 @@
 	import TabSelector from '$lib/components/TabSelector.svelte';
 	import BitsSearchModal from '$lib/components/BitsSearchModal.svelte';
 	import LayoutPicker from '$lib/components/LayoutPicker.svelte';
-	import { fetchFeeds, fetchMoreFeedItems, fetchConfig } from '$lib/api';
-	import type { FeedResponse, FeedsPageResponse } from '$lib/types';
+	import type { FeedResponse } from '$lib/types';
 	import { themeState, toggleEffects } from '$lib/stores/theme.svelte';
 	import { NavigationService } from '$lib/services/navigationService';
 	import { createFeedEffects } from '$lib/stores/effects.svelte';

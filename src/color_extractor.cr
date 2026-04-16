@@ -4,9 +4,6 @@ require "json"
 module ColorExtractor
   VERSION = "3.0.0"
 
-  MAX_CACHE_SIZE       = 1000
-  CACHE_EXPIRY_SECONDS = 7 * 24 * 60 * 60
-
   struct CacheEntry
     property bg : String
     property text : String | Hash(String, String)
@@ -55,7 +52,7 @@ module ColorExtractor
   private def self.cached_theme_colors(path : String) : Hash(String, String | Hash(String, String))?
     @@cache_mutex.synchronize do
       if entry = @@extraction_cache[path]?
-        if (Time.local - entry.timestamp).to_i < CACHE_EXPIRY_SECONDS
+        if (Time.local - entry.timestamp).to_i < QuickHeadlines::Constants::COLOR_CACHE_EXPIRY_DAYS * 24 * 60 * 60
           entry.access_order = Time.utc.to_unix_ms
           text_val = entry.text
           text_hash = normalize_text_value(text_val)
@@ -70,7 +67,7 @@ module ColorExtractor
 
   private def self.cache_result_theme(path : String, result : Hash(String, String | Hash(String, String)))
     @@cache_mutex.synchronize do
-      evictions_needed = @@extraction_cache.size >= MAX_CACHE_SIZE ? 1 : 0
+      evictions_needed = @@extraction_cache.size >= QuickHeadlines::Constants::COLOR_CACHE_MAX_SIZE ? 1 : 0
 
       if evictions_needed > 0
         lru_key = @@extraction_cache.min_by { |_, v| v.access_order }[0]?
@@ -87,7 +84,7 @@ module ColorExtractor
     end
   end
 
-  private def self.normalize_text_value(text_val : String | Hash(String, String)) : Hash(String, String)
+  def self.normalize_text_value(text_val : String | Hash(String, String)) : Hash(String, String)
     if text_val.is_a?(Hash)
       text_val.as(Hash(String, String))
     elsif text_val.is_a?(String)

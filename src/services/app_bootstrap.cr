@@ -3,7 +3,6 @@ require "../constants"
 require "../storage"
 require "./database_service"
 require "../websocket"
-require "../events/story_fetched_event"
 require "../fetcher/vug_adapter"
 
 class AppBootstrap
@@ -17,10 +16,10 @@ class AppBootstrap
 
   def initialize(
     @config : Config,
-    @janitor_interval = 60.seconds,
-    @clustering_interval = 60.minutes,
-    @cleanup_interval = 6.hours,
-    @ws_janitor_interval = 5.minutes,
+    @janitor_interval = QuickHeadlines::Constants::JANITOR_INTERVAL,
+    @clustering_interval = QuickHeadlines::Constants::CLUSTERING_INTERVAL,
+    @cleanup_interval = QuickHeadlines::Constants::CLEANUP_INTERVAL,
+    @ws_janitor_interval = QuickHeadlines::Constants::WS_JANITOR_INTERVAL,
   )
     @db_service = DatabaseService.new(@config)
 
@@ -37,7 +36,7 @@ class AppBootstrap
 
     cleanup_stale_feeds
 
-    load_feeds_from_cache(@config)
+    FeedFetcher.load_feeds_from_cache(@config)
 
     EventBroadcaster.start
 
@@ -49,9 +48,6 @@ class AppBootstrap
       Log.for("quickheadlines.app").info { "Shutting down gracefully..." }
       @db_service.close rescue nil
     end
-  end
-
-  def initialize_services
   end
 
   def start_background_tasks
@@ -81,7 +77,7 @@ class AppBootstrap
       loop do
         sleep @clustering_interval
         if start_time = StateStore.clustering_start_time
-          if Time.utc - start_time > 4.hours
+          if Time.utc - start_time > QuickHeadlines::Constants::STUCK_CLUSTER_THRESHOLD
             Log.for("quickheadlines.app").warn { "Clustering stuck for >4 hours, resetting state" }
             StateStore.clustering = false
           end
@@ -97,7 +93,7 @@ class AppBootstrap
     run_on_startup = @config.clustering.try(&.run_on_startup?)
     if run_on_startup != false
       spawn do
-        sleep 30.seconds
+        sleep QuickHeadlines::Constants::INITIAL_CLUSTER_DELAY
         begin
           Log.for("quickheadlines.app").info { "Running initial clustering on startup..." }
           threshold = @config.clustering.try(&.threshold) || 0.35

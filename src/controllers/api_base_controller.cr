@@ -62,6 +62,26 @@ class QuickHeadlines::Controllers::ApiBaseController < Athena::Framework::Contro
     ATH::Response.new("Unauthorized", 401, HTTP::Headers{"content-type" => "text/plain"})
   end
 
+  private def check_rate_limit(request : ATH::Request, key : String, max_requests : Int32, window_seconds : Int32) : Bool
+    ip = client_ip(request)
+    limiter = RateLimiter.get_or_create("#{key}:#{ip}", max_requests, window_seconds)
+    limiter.allowed?(ip)
+  end
+
+  private def rate_limit_response(request : ATH::Request, key : String, max_requests : Int32, window_seconds : Int32) : ATH::Response
+    ip = client_ip(request)
+    limiter = RateLimiter.get_or_create("#{key}:#{ip}", max_requests, window_seconds)
+    retry_after = limiter.retry_after(ip)
+    ATH::Response.new(
+      "Rate limit exceeded. Try again later.",
+      429,
+      HTTP::Headers{
+        "content-type" => "text/plain",
+        "Retry-After"  => retry_after.to_s,
+      }
+    )
+  end
+
   private def client_ip(request : ATH::Request) : String
     if ENV["TRUSTED_PROXY"]?
       if xff = request.headers["X-Forwarded-For"]?

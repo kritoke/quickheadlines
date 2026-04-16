@@ -10,7 +10,43 @@
 		if (count === 2) return 'grid-cols-2';
 		return 'grid-cols-3';
 	}
+
+	interface ColumnOptionData {
+		id: ColumnCount;
+		name: string;
+		singleColumnPreview?: boolean;
+	}
+
+	const timelineColumnOptions: ColumnOptionData[] = [
+		{ id: 1, name: '1 Column', singleColumnPreview: true },
+		...columnOptions
+	];
 </script>
+
+{#snippet columnOption(option: ColumnOptionData, isSelected: boolean, onSelect: () => void)}
+	<DropdownMenu.Item
+		onSelect={onSelect}
+		class="flex items-center gap-3 px-2 py-2 rounded-lg cursor-pointer transition-colors hover:theme-bg-secondary {isSelected ? 'theme-bg-secondary' : ''}"
+	>
+		{#if option.singleColumnPreview}
+			<div class="w-10 shrink-0">
+				<div class="h-2 w-6 rounded-sm theme-accent-bg"></div>
+			</div>
+		{:else}
+			<div class="grid {getColumnBlocks(option.id)} gap-1 w-10 shrink-0">
+				{#each Array(option.id) as _, i (i)}
+					<div class="h-2 rounded-sm theme-accent-bg"></div>
+				{/each}
+			</div>
+		{/if}
+		<span class="flex-1 text-sm theme-text-primary">{option.name}</span>
+		{#if isSelected}
+			<svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 shrink-0 theme-accent" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+				<polyline points="20 6 9 17 4 12"/>
+			</svg>
+		{/if}
+	</DropdownMenu.Item>
+{/snippet}
 
 {#if !isMobile}
 <DropdownMenu.Root>
@@ -41,22 +77,7 @@
 		</div>
 		<div class="space-y-1 mb-3">
 			{#each columnOptions as option (option.id)}
-				<DropdownMenu.Item
-					onSelect={() => setFeedColumns(option.id)}
-					class="flex items-center gap-3 px-2 py-2 rounded-lg cursor-pointer transition-colors hover:theme-bg-secondary {layoutState.feedColumns === option.id ? 'theme-bg-secondary' : ''}"
-				>
-					<div class="grid {getColumnBlocks(option.id)} gap-1 w-10 shrink-0">
-						{#each Array(option.id) as _, i (i)}
-							<div class="h-2 rounded-sm theme-accent-bg"></div>
-						{/each}
-					</div>
-					<span class="flex-1 text-sm theme-text-primary">{option.name}</span>
-					{#if layoutState.feedColumns === option.id}
-						<svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 shrink-0 theme-accent" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-							<polyline points="20 6 9 17 4 12"/>
-						</svg>
-					{/if}
-				</DropdownMenu.Item>
+				{@render columnOption(option, layoutState.feedColumns === option.id, () => setFeedColumns(option.id))}
 			{/each}
 		</div>
 
@@ -64,37 +85,8 @@
 			Timeline
 		</div>
 		<div class="space-y-1">
-			<DropdownMenu.Item
-				onSelect={() => setTimelineColumns(1)}
-				class="flex items-center gap-3 px-2 py-2 rounded-lg cursor-pointer transition-colors hover:theme-bg-secondary {layoutState.timelineColumns === 1 ? 'theme-bg-secondary' : ''}"
-			>
-				<div class="w-10 shrink-0">
-					<div class="h-2 w-6 rounded-sm theme-accent-bg"></div>
-				</div>
-				<span class="flex-1 text-sm theme-text-primary">1 Column</span>
-				{#if layoutState.timelineColumns === 1}
-					<svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 shrink-0 theme-accent" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-						<polyline points="20 6 9 17 4 12"/>
-					</svg>
-				{/if}
-			</DropdownMenu.Item>
-			{#each columnOptions as option (option.id)}
-				<DropdownMenu.Item
-					onSelect={() => setTimelineColumns(option.id)}
-					class="flex items-center gap-3 px-2 py-2 rounded-lg cursor-pointer transition-colors hover:theme-bg-secondary {layoutState.timelineColumns === option.id ? 'theme-bg-secondary' : ''}"
-				>
-					<div class="grid {getColumnBlocks(option.id)} gap-1 w-10 shrink-0">
-						{#each Array(option.id) as _, i (i)}
-							<div class="h-2 rounded-sm theme-accent-bg"></div>
-						{/each}
-					</div>
-					<span class="flex-1 text-sm theme-text-primary">{option.name}</span>
-					{#if layoutState.timelineColumns === option.id}
-						<svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 shrink-0 theme-accent" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-							<polyline points="20 6 9 17 4 12"/>
-						</svg>
-					{/if}
-				</DropdownMenu.Item>
+			{#each timelineColumnOptions as option (option.id)}
+				{@render columnOption(option, layoutState.timelineColumns === option.id, () => setTimelineColumns(option.id))}
 			{/each}
 		</div>
 	</DropdownMenu.Content>

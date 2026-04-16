@@ -23,7 +23,7 @@
 	const hasOverflow = $derived(overflowTabs.length > 0);
 
 	function selectTab(tab: string) {
-		onTabChange(tab === 'all' ? 'all' : tab);
+		onTabChange(tab);
 		showMore = false;
 		showMobileSheet = false;
 	}

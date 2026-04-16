@@ -262,8 +262,8 @@ export function getScrollButtonColors(theme: ThemeStyle): { bg: string; text: st
 }
 
 export function getThemeAccentColors(theme: ThemeStyle): { bg: string; bgSecondary: string; text: string; border: string; accent: string; shadow: string } {
-	const t = themes[theme];
-	return { bg: t.bg, bgSecondary: t.bgSecondary, text: t.text, border: t.border, accent: t.accent, shadow: t.shadow };
+	const currentTheme = themes[theme];
+	return { bg: currentTheme.bg, bgSecondary: currentTheme.bgSecondary, text: currentTheme.text, border: currentTheme.border, accent: currentTheme.accent, shadow: currentTheme.shadow };
 }
 
 export function getDotIndicatorColors(theme: ThemeStyle): string {
@@ -284,12 +284,12 @@ const themeTokenCache = new Map<string, ThemeTokens>();
 export function getThemeTokens(theme: ThemeStyle): ThemeTokens {
 	const cacheKey = theme;
 	if (!themeTokenCache.has(cacheKey)) {
-		const t = themes[theme];
+		const currentTheme = themes[theme];
 		themeTokenCache.set(cacheKey, {
-			colors: t,
-			preview: t.preview,
-			cursor: t.cursor,
-			scrollButton: t.scrollButton,
+			colors: currentTheme,
+			preview: currentTheme.preview,
+			cursor: currentTheme.cursor,
+			scrollButton: currentTheme.scrollButton,
 			dotIndicator: t.dotIndicator
 		});
 	}
@@ -340,17 +340,17 @@ export function applyTheme(theme: ThemeStyle) {
 }
 
 function applyCustomThemeColors(theme: ThemeStyle) {
-	const t = themes[theme];
-	document.documentElement.style.setProperty('--theme-bg', t.bg);
-	document.documentElement.style.setProperty('--theme-bg-secondary', t.bgSecondary);
-	document.documentElement.style.setProperty('--theme-text', t.text);
-	document.documentElement.style.setProperty('--theme-text-secondary', t.semantic?.['--color-text-secondary'] ?? t.text);
-	document.documentElement.style.setProperty('--theme-border', t.border);
-	document.documentElement.style.setProperty('--theme-accent', t.accent);
-	document.documentElement.style.setProperty('--theme-shadow', t.shadow);
+	const currentTheme = themes[theme];
+	document.documentElement.style.setProperty('--theme-bg', currentTheme.bg);
+	document.documentElement.style.setProperty('--theme-bg-secondary', currentTheme.bgSecondary);
+	document.documentElement.style.setProperty('--theme-text', currentTheme.text);
+	document.documentElement.style.setProperty('--theme-text-secondary', currentTheme.semantic?.['--color-text-secondary'] ?? currentTheme.text);
+	document.documentElement.style.setProperty('--theme-border', currentTheme.border);
+	document.documentElement.style.setProperty('--theme-accent', currentTheme.accent);
+	document.documentElement.style.setProperty('--theme-shadow', currentTheme.shadow);
 	
-	if (t.semantic) {
-		Object.entries(t.semantic).forEach(([key, value]) => {
+	if (currentTheme.semantic) {
+		Object.entries(currentTheme.semantic).forEach(([key, value]) => {
 			document.documentElement.style.setProperty(key, value);
 		});
 	}

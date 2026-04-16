@@ -1,6 +1,5 @@
 require "db"
 require "../models"
-require "../errors"
 require "../services/database_service"
 require "./repository_base"
 

@@ -6,7 +6,6 @@ require "time"
 require "../config"
 require "../constants"
 require "../models"
-require "../errors"
 require "../services/database_service"
 require "../services/favicon_sync_service"
 require "./cache_utils"
@@ -18,6 +17,17 @@ require "../repositories/feed_repository"
 
 @[ADI::Register]
 class FeedCache
+  @@instance : FeedCache?
+  @@instance_mutex = Mutex.new
+
+  def self.instance : FeedCache
+    @@instance_mutex.synchronize { @@instance ||= FeedCache.new(nil) }
+  end
+
+  def self.instance=(cache : FeedCache)
+    @@instance_mutex.synchronize { @@instance = cache }
+  end
+
   @mutex : Mutex
   @db_service : DatabaseService?
   @db : DB::Database
@@ -37,7 +47,8 @@ class FeedCache
     unless @db_service
       @db_service = begin
         DatabaseService.instance
-      rescue
+      rescue ex
+        Log.for("quickheadlines.cache").warn { "DatabaseService not available, using standalone DB: #{ex.message}" }
         nil
       end
     end
@@ -186,16 +197,7 @@ class FeedCache
 
   def ensure_indexes
     @mutex.synchronize do
-      @db.exec("CREATE INDEX IF NOT EXISTS idx_items_feed_id ON items(feed_id)")
-      @db.exec("CREATE INDEX IF NOT EXISTS idx_items_pub_date ON items(pub_date DESC)")
-      @db.exec("CREATE INDEX IF NOT EXISTS idx_feeds_last_fetched ON feeds(last_fetched DESC)")
-      @db.exec("CREATE INDEX IF NOT EXISTS idx_feeds_url ON feeds(url)")
-      @db.exec("CREATE INDEX IF NOT EXISTS idx_items_cluster ON items(cluster_id)")
-      @db.exec("CREATE INDEX IF NOT EXISTS idx_lsh_band_search ON lsh_bands(band_index, band_hash)")
-      # Composite indexes for timeline query optimization
-      @db.exec("CREATE INDEX IF NOT EXISTS idx_items_timeline ON items(pub_date DESC, id DESC, cluster_id)")
-      @db.exec("CREATE INDEX IF NOT EXISTS idx_items_cluster_rep ON items(cluster_id, id)")
-      @db.exec("CREATE INDEX IF NOT EXISTS idx_items_feed_timeline ON items(feed_id, pub_date DESC, id DESC)")
+      @db.exec(Schema::INDEXES)
     end
   rescue ex
     Log.for("quickheadlines.storage").warn { "ensure_indexes failed: #{ex.message}" }
@@ -258,7 +260,7 @@ def load_feed_cache(config : Config?, db_service : DatabaseService?) : FeedCache
   cache.check_size_limit(QuickHeadlines::Constants::DB_SIZE_HARD_LIMIT)
 
   db_size = get_db_size(cache.db_path)
-  if db_size > 10 * 1024 * 1024
+  if db_size > QuickHeadlines::Constants::DB_VACUUM_THRESHOLD
     cache.vacuum
   end
 

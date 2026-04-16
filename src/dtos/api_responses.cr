@@ -71,9 +71,6 @@ class FeedResponse
   property items : Array(ItemResponse)
   property total_item_count : Int32
 
-  @[JSON::Field(emit_null: true)]
-  property? has_more : Bool?
-
   def initialize(
     @tab : String,
     @url : String,
@@ -87,7 +84,6 @@ class FeedResponse
     @header_theme_colors : JSON::Any? = nil,
     @items : Array(ItemResponse) = [] of ItemResponse,
     @total_item_count : Int32 = 0,
-    @has_more : Bool? = nil,
   )
   end
 end
@@ -141,7 +137,6 @@ class TimelineItemResponse
     @favicon_data : String? = nil,
     @header_color : String? = nil,
     @header_text_color : String? = nil,
-    @header_theme_colors : JSON::Any? = nil,
     @cluster_id : String? = nil,
     @is_representative : Bool = false,
     @cluster_size : Int32? = nil,

@@ -4,10 +4,11 @@ require "../fetcher/refresh_loop"
 class QuickHeadlines::Controllers::TimelineController < QuickHeadlines::Controllers::ApiBaseController
   @[ARTA::Get(path: "/api/timeline")]
   def timeline(request : ATH::Request) : TimelinePageResponse
-    ip = client_ip(request)
-    limiter = RateLimiter.get_or_create("api_timeline:#{ip}", 180, 60)
-    unless limiter.allowed?(ip)
-      raise ATH::Exception::HTTPException.new(429, "Rate limit exceeded", nil, HTTP::Headers{"Retry-After" => limiter.retry_after(ip).to_s})
+    if response = rate_limit_response(request, "api_timeline", 180, 60)
+      retry_after = response.headers["Retry-After"]?
+      headers = HTTP::Headers.new
+      headers["Retry-After"] = retry_after if retry_after
+      raise ATH::Exception::HTTPException.new(429, "Rate limit exceeded", nil, headers)
     end
 
     default_limit = StateStore.config.try(&.db_fetch_limit) || 500

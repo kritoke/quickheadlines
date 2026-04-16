@@ -1,5 +1,4 @@
 require "json"
-require "../health_monitor"
 
 module Fetcher
   module ThemeHelper
@@ -9,7 +8,7 @@ module Fetcher
       new_text = parsed_text.is_a?(Hash) ? (parsed_text["light"]? || parsed_text["dark"]?) : parsed_text
       new_text.to_s if new_text
     rescue ex
-      HealthMonitor.log_error("extract_theme_text", ex)
+      Log.for("quickheadlines.feed").error(exception: ex) { "extract_theme_text" }
       nil
     end
 
@@ -30,7 +29,7 @@ module Fetcher
           final_header_color = parsed_bg.to_s
         end
       rescue ex
-        HealthMonitor.log_error("parse_legacy_theme(parse)", ex)
+        Log.for("quickheadlines.feed").error(exception: ex) { "parse_legacy_theme(parse)" }
       end
 
       {final_header_color, final_header_text}
@@ -42,24 +41,13 @@ module Fetcher
       has_text = (text_val.is_a?(Hash) && !text_val.empty?) || (text_val.is_a?(String) && !text_val.empty?)
       return unless has_text
 
-      parsed_text = nil.as(Hash(String, String)?)
       if text_val.is_a?(Hash)
-        parsed_text = {} of String => String
-        text_val.each do |k, v|
-          parsed_text[k.to_s] = v.to_s
-        end
+        result = {} of String => String
+        text_val.each { |k, v| result[k.to_s] = v.to_s }
+        result
       else
-        begin
-          tmp = JSON.parse(text_val.to_s).as_h
-          parsed_text = {} of String => String
-          tmp.each do |k, v|
-            parsed_text[k.to_s] = v.to_s
-          end
-        rescue JSON::ParseException | TypeCastError
-          parsed_text = {"light" => text_val.to_s, "dark" => text_val.to_s}
-        end
+        ColorExtractor.normalize_text_value(text_val.to_s)
       end
-      parsed_text
     end
 
     private def normalize_bg_value(extracted : Hash?) : String?
@@ -106,7 +94,7 @@ module Fetcher
             end
           end
         rescue ex
-          HealthMonitor.log_error("extract_header_colors(theme-aware)", ex)
+          Log.for("quickheadlines.feed").error(exception: ex) { "extract_header_colors(theme-aware)" }
         end
       end
 

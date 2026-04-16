@@ -5,8 +5,6 @@ def load_config(path : String) : Config
     Config.from_yaml(io)
   end
 
-  validate_config_feeds(config)
-
   config
 end
 
@@ -20,8 +18,6 @@ def load_validated_config(path : String) : ConfigLoadResult
   validate_yaml_structure(content)
 
   config = Config.from_yaml(content)
-
-  validate_config_feeds(config)
 
   ConfigLoadResult.new(
     success: true,

@@ -33,7 +33,7 @@ private def fetch_repo_release(repo_entry : String, item_limit : Int32) : Array(
   url = repo_entry_to_url(repo_entry)
   return unless url
 
-  result = Fetcher.pull_software(url, HTTP::Headers.new, item_limit, fetcher_config)
+  result = Fetcher.pull_software(url, HTTP::Headers.new, item_limit, FeedFetcher.fetcher_config)
 
   if error = result.error_message
     Log.for("quickheadlines.feed").warn { "Error fetching software releases for #{repo_entry}: #{error}" }
