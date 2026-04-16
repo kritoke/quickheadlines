@@ -68,9 +68,10 @@ class QuickHeadlines::Controllers::ApiBaseController < Athena::Framework::Contro
     limiter.allowed?(ip)
   end
 
-  private def rate_limit_response(request : ATH::Request, key : String, max_requests : Int32, window_seconds : Int32) : ATH::Response
+  private def rate_limit_response(request : ATH::Request, key : String, max_requests : Int32, window_seconds : Int32) : ATH::Response?
     ip = client_ip(request)
     limiter = RateLimiter.get_or_create("#{key}:#{ip}", max_requests, window_seconds)
+    return nil if limiter.allowed?(ip)
     retry_after = limiter.retry_after(ip)
     ATH::Response.new(
       "Rate limit exceeded. Try again later.",
