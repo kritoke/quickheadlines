@@ -1,12 +1,5 @@
 require "yaml"
 
-DEFAULT_CONFIG_CANDIDATES = [
-  "feeds.yml",
-  "config/feeds.yml",
-  "feeds.yaml",
-  "config/feeds.yaml",
-]
-
 struct Feed
   include YAML::Serializable
 

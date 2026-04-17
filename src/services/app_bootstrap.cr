@@ -84,7 +84,7 @@ class AppBootstrap
         end
         next if StateStore.clustering?
         threshold = StateStore.config.try(&.clustering).try(&.threshold) || 0.35
-        clustering_service(@db_service).recluster_with_lsh(@feed_cache, @config.db_fetch_limit, threshold)
+        QuickHeadlines::Services::ClusteringService.new(@db_service).recluster_with_lsh(@feed_cache, @config.db_fetch_limit, threshold)
       end
     end
   end
@@ -97,7 +97,7 @@ class AppBootstrap
         begin
           Log.for("quickheadlines.app").info { "Running initial clustering on startup..." }
           threshold = @config.clustering.try(&.threshold) || 0.35
-          clustering_service(@db_service).recluster_with_lsh(@feed_cache, @config.db_fetch_limit, threshold)
+          QuickHeadlines::Services::ClusteringService.new(@db_service).recluster_with_lsh(@feed_cache, @config.db_fetch_limit, threshold)
         rescue ex
           Log.for("quickheadlines.app").error(exception: ex) { "Initial clustering failed" }
         end

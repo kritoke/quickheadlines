@@ -175,8 +175,7 @@ def async_clustering(feeds : Array(FeedData), cache : FeedCache, db_service : Da
 end
 
 def compute_item_cluster(item_id : Int64, title : String, cache : FeedCache, db_service : DatabaseService, item_feed_id : Int64? = nil) : Int64?
-  service = clustering_service(db_service)
-  service.compute_item_cluster(item_id, title, cache, item_feed_id)
+  QuickHeadlines::Services::ClusteringService.new(db_service).compute_item_cluster(item_id, title, cache, item_feed_id)
 end
 
 def process_clustering(feed_data : FeedData, cache : FeedCache, db_service : DatabaseService) : Nil

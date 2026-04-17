@@ -1,30 +1,23 @@
 require "./api_base_controller"
 
 class QuickHeadlines::Controllers::HeaderColorController < QuickHeadlines::Controllers::ApiBaseController
-  private JSON_CT = HTTP::Headers{"content-type" => "application/json"}
-  private TEXT_CT = HTTP::Headers{"content-type" => "text/plain"}
-
   @[ARTA::Post(path: "/api/header_color")]
   def save_header_color(request : ATH::Request) : ATH::Response
-    unless check_admin_auth(request)
-      return unauthorized_response
-    end
+    raise ATH::Exception::HTTPException.new(401, "Unauthorized") unless check_admin_auth(request)
 
     body_io = request.body
-    return ATH::Response.new("{\"error\": \"Missing request body\"}", 400, JSON_CT) if body_io.nil?
+    raise ATH::Exception::BadRequest.new("Missing request body") if body_io.nil?
 
     body = JSON.parse(read_body_safe(body_io))
     feed_url, color, text_color = parse_color_params(body)
 
-    unless feed_url && color && text_color
-      return ATH::Response.new("{\"error\": \"Missing feed_url, color, or text_color\"}", 400, JSON_CT)
-    end
+    raise ATH::Exception::BadRequest.new("Missing feed_url, color, or text_color") unless feed_url && color && text_color
 
     config = StateStore.config
-    return ATH::Response.new("{\"error\": \"Configuration not loaded\"}", 503, JSON_CT) if config.nil?
+    raise ATH::Exception::HTTPException.new(503, "Configuration not loaded") if config.nil?
 
     if has_manual_color_override?(config, feed_url)
-      return ATH::Response.new("{\"error\": \"Skipped: manual config exists\"}", 200, JSON_CT)
+      return ATH::Response.new("{\"status\": \"skipped\"}", 200, HTTP::Headers{"content-type" => "application/json"})
     end
 
     normalized_url = feed_url.strip.rstrip('/').gsub(/\/rss(\.xml)?$/i, "")
@@ -32,12 +25,14 @@ class QuickHeadlines::Controllers::HeaderColorController < QuickHeadlines::Contr
     db_url = cache.find_url_by_pattern(normalized_url) || feed_url
 
     cache.update_header_colors(db_url, color, text_color)
-    ATH::Response.new("{\"status\": \"ok\"}", 200, JSON_CT)
+    ATH::Response.new("{\"status\": \"ok\"}", 200, HTTP::Headers{"content-type" => "application/json"})
+  rescue ex : ATH::Exception::HTTPException
+    raise ex
   rescue IO::EOFError
-    ATH::Response.new("{\"error\": \"Request body too large\"}", 413, JSON_CT)
+    raise ATH::Exception::HTTPException.new(413, "Request body too large")
   rescue ex
     Log.for("quickheadlines.http").error(exception: ex) { "Header color save error" }
-    ATH::Response.new("{\"error\": \"Internal server error\"}", 500, JSON_CT)
+    raise ATH::Exception::HTTPException.new(500, "Internal server error")
   end
 
   private def present?(value : String?) : Bool
@@ -55,7 +50,7 @@ class QuickHeadlines::Controllers::HeaderColorController < QuickHeadlines::Contr
     {nil, nil, nil}
   end
 
-  private def has_manual_color_override?(config, feed_url) : Bool
+  private def has_manual_color_override?(config : Config, feed_url : String) : Bool
     config.tabs.any? do |tab|
       tab.feeds.any? do |feed|
         feed.url == feed_url && !feed.header_color.nil?

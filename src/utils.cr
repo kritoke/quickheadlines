@@ -60,16 +60,6 @@ module Utils
     !second.nil? && second >= min && second <= max
   end
 
-  def self.validate_proxy_host(url : String) : Bool
-    uri = URI.parse(url)
-    return false unless uri.scheme.in?("http", "https")
-    return false if !uri.host.is_a?(String) || uri.host.to_s.empty?
-
-    host = uri.host.as(String).downcase
-    !private_host?(host)
-  rescue URI::Error
-    false
-  end
 end
 
 def read_body_safe(io : IO, max_size : Int32 = QuickHeadlines::Constants::MAX_REQUEST_BODY_SIZE) : String
@@ -113,20 +103,8 @@ module UrlNormalizer
 end
 
 def mime_type_from_path(path : String) : String
-  case path
-  when /\.html?$/              then "text/html; charset=utf-8"
-  when /\.css$/                then "text/css; charset=utf-8"
-  when /\.js$/                 then "application/javascript; charset=utf-8"
-  when /\.json$/               then "application/json"
-  when /\.woff2?$/             then "font/woff2"
-  when /\.png$/                then "image/png"
-  when /\.ico$/                then "image/x-icon"
-  when /\.svg$/                then "image/svg+xml"
-  when /\.gif$/                then "image/gif"
-  when /\.jpg$/, /\.jpeg$/     then "image/jpeg"
-  when /\.webp$/               then "image/webp"
-  else                              "application/octet-stream"
-  end
+  ext = File.extname(path).lchop('.')
+  mime_type_from_ext(ext)
 end
 
 def mime_type_from_ext(ext : String) : String

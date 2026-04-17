@@ -94,36 +94,6 @@ describe "Utils" do
       Utils.private_host?("1.1.1.1").should be_false
     end
   end
-
-  describe "validate_proxy_host" do
-    it "returns true for public https URL" do
-      Utils.validate_proxy_host("https://example.com/image.png").should be_true
-    end
-
-    it "returns true for public http URL" do
-      Utils.validate_proxy_host("http://example.com/image.png").should be_true
-    end
-
-    it "returns false for localhost URL" do
-      Utils.validate_proxy_host("http://localhost/image.png").should be_false
-    end
-
-    it "returns false for private IP URL" do
-      Utils.validate_proxy_host("http://192.168.1.1/image.png").should be_false
-    end
-
-    it "returns false for invalid URL" do
-      Utils.validate_proxy_host("not-a-url").should be_false
-    end
-
-    it "returns false for URL without host" do
-      Utils.validate_proxy_host("https://").should be_false
-    end
-
-    it "returns false for ftp URL" do
-      Utils.validate_proxy_host("ftp://example.com/image.png").should be_false
-    end
-  end
 end
 
 describe "ConfigValidationError" do

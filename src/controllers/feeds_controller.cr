@@ -4,12 +4,7 @@ require "../fetcher/refresh_loop"
 class QuickHeadlines::Controllers::FeedsController < QuickHeadlines::Controllers::ApiBaseController
   @[ARTA::Get(path: "/api/feeds")]
   def feeds(request : ATH::Request) : FeedsPageResponse
-    if response = rate_limit_response(request, "api_feeds", 600, 60)
-      retry_after = response.headers["Retry-After"]?
-      headers = HTTP::Headers.new
-      headers["Retry-After"] = retry_after if retry_after
-      raise ATH::Exception::HTTPException.new(429, "Rate limit exceeded", nil, headers)
-    end
+    check_rate_limit!(request, "api_feeds", 600, 60)
 
     raw_tab = request.query_params["tab"]?
     active_tab = raw_tab.presence || "all"

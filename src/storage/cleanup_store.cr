@@ -1,4 +1,5 @@
 require "../constants"
+require "../repositories/repository_base"
 
 module QuickHeadlines::Storage
   class CleanupStore
@@ -12,7 +13,7 @@ module QuickHeadlines::Storage
         cutoff = (Time.utc - retention_hours.hours).to_s(QuickHeadlines::Constants::DB_TIME_FORMAT)
 
         if config_urls && !config_urls.empty?
-          placeholders = Array.new(config_urls.size, "?").join(",")
+          placeholders = QuickHeadlines::Repositories::RepositoryBase.placeholders(config_urls.size)
           args = [cutoff] + config_urls
           result = @db.exec("DELETE FROM feeds WHERE last_fetched < ? AND url NOT IN (#{placeholders})", args: args)
         else
@@ -32,7 +33,7 @@ module QuickHeadlines::Storage
           return
         end
 
-        placeholders = Array.new(config_urls.size, "?").join(",")
+        placeholders = QuickHeadlines::Repositories::RepositoryBase.placeholders(config_urls.size)
         result = @db.exec("DELETE FROM feeds WHERE url NOT IN (#{placeholders})", args: config_urls)
         deleted_count = result.rows_affected
         if deleted_count > 0

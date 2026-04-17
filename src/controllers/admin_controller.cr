@@ -4,20 +4,11 @@ require "../fetcher/refresh_loop"
 class QuickHeadlines::Controllers::AdminController < QuickHeadlines::Controllers::ApiBaseController
   VALID_ADMIN_ACTIONS = {"clear-cache", "cleanup-orphaned"}
 
-  private def with_rate_limit(key : String, request : ATH::Request, max_requests : Int32 = 1, window_seconds : Int32 = 60) : ATH::Response?
-    return nil if check_rate_limit(request, key, max_requests, window_seconds)
-    rate_limit_response(request, key, max_requests, window_seconds)
-  end
-
   @[ARTA::Post(path: "/api/cluster")]
   def cluster(request : ATH::Request) : ATH::Response
-    unless check_admin_auth(request)
-      return unauthorized_response
-    end
+    raise ATH::Exception::HTTPException.new(401, "Unauthorized") unless check_admin_auth(request)
 
-    if response = with_rate_limit("cluster", request)
-      return response
-    end
+    check_rate_limit!(request, "cluster", 1, 60)
 
     spawn do
       begin
@@ -39,32 +30,15 @@ class QuickHeadlines::Controllers::AdminController < QuickHeadlines::Controllers
 
   @[ARTA::Post(path: "/api/admin")]
   def admin(request : ATH::Request) : ATH::Response
-    unless check_admin_auth(request)
-      return unauthorized_response
-    end
+    raise ATH::Exception::HTTPException.new(401, "Unauthorized") unless check_admin_auth(request)
 
-    if response = with_rate_limit("admin", request)
-      return response
-    end
+    check_rate_limit!(request, "admin", 1, 60)
 
     body_io = request.body
     action = parse_admin_action(body_io)
 
-    unless action
-      return ATH::Response.new(
-        "{\"code\": 400, \"message\": \"Missing action field\"}",
-        400,
-        HTTP::Headers{"content-type" => "application/json"}
-      )
-    end
-
-    unless action.in?(VALID_ADMIN_ACTIONS)
-      return ATH::Response.new(
-        "{\"code\": 400, \"message\": \"Unknown action: #{action}\"}",
-        400,
-        HTTP::Headers{"content-type" => "application/json"}
-      )
-    end
+    raise ATH::Exception::BadRequest.new("Missing action field") unless action
+    raise ATH::Exception::BadRequest.new("Unknown action: #{action}") unless action.in?(VALID_ADMIN_ACTIONS)
 
     spawn do
       begin
@@ -119,7 +93,7 @@ class QuickHeadlines::Controllers::AdminController < QuickHeadlines::Controllers
       return
     end
 
-    placeholders = orphaned.map { |_| "?" }.join(",")
+    placeholders = QuickHeadlines::Repositories::RepositoryBase.placeholders(orphaned.size)
     deleted_items = db.exec("DELETE FROM items WHERE feed_id IN (SELECT id FROM feeds WHERE url IN (#{placeholders}))", args: orphaned.map { |url| url }).rows_affected
 
     db.exec("DELETE FROM feeds WHERE url IN (#{placeholders})", args: orphaned)
@@ -143,9 +117,7 @@ class QuickHeadlines::Controllers::AdminController < QuickHeadlines::Controllers
 
   @[ARTA::Get(path: "/api/status")]
   def status(request : ATH::Request) : ATH::Response
-    unless check_admin_auth(request)
-      return unauthorized_response
-    end
+    raise ATH::Exception::HTTPException.new(401, "Unauthorized") unless check_admin_auth(request)
 
     ws_stats = @socket_manager.stats
     broadcaster_stats = EventBroadcaster.stats
@@ -167,9 +139,7 @@ class QuickHeadlines::Controllers::AdminController < QuickHeadlines::Controllers
 
   @[ARTA::Get(path: "/api/version")]
   def version(request : ATH::Request) : ATH::Response
-    unless check_admin_auth(request)
-      return unauthorized_response
-    end
+    raise ATH::Exception::HTTPException.new(401, "Unauthorized") unless check_admin_auth(request)
 
     body = {
       "updated_at" => StateStore.updated_at.to_unix_ms,

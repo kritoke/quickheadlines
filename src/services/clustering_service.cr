@@ -175,7 +175,3 @@ class QuickHeadlines::Services::ClusteringService
     recluster_with_lsh(FeedCache.instance, limit, threshold, bands)
   end
 end
-
-def clustering_service(db_service : DatabaseService) : QuickHeadlines::Services::ClusteringService
-  QuickHeadlines::Services::ClusteringService.new(db_service)
-end

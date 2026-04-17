@@ -2,6 +2,7 @@ require "db"
 require "mutex"
 require "time"
 require "../services/clustering_service"
+require "../repositories/repository_base"
 
 module QuickHeadlines::Storage
   class ClusteringStore
@@ -87,7 +88,7 @@ module QuickHeadlines::Storage
           @db.exec("BEGIN TRANSACTION")
           clusters.each do |rep_id, members|
             next if members.empty?
-            placeholders = members.map { |_| "?" }.join(",")
+            placeholders = QuickHeadlines::Repositories::RepositoryBase.placeholders(members.size)
             sql = "UPDATE items SET cluster_id = ? WHERE id IN (#{placeholders})"
             args = [rep_id] + members
             @db.exec(sql, args: args)
@@ -119,7 +120,7 @@ module QuickHeadlines::Storage
       feed_url_to_id = {} of String => Int64
 
       if !feed_urls.empty?
-        placeholders = feed_urls.map { |_| "?" }.join(",")
+        placeholders = QuickHeadlines::Repositories::RepositoryBase.placeholders(feed_urls.size)
         @db.query("SELECT url, id FROM feeds WHERE url IN (#{placeholders})", args: feed_urls) do |rows|
           rows.each do
             url = rows.read(String)
@@ -133,7 +134,7 @@ module QuickHeadlines::Storage
       grouped.each do |feed_id, grouped_items|
         next unless feed_id
         links = grouped_items.map(&.link)
-        placeholders = links.map { |_| "?" }.join(",")
+        placeholders = QuickHeadlines::Repositories::RepositoryBase.placeholders(links.size)
         query = "SELECT link, id FROM items WHERE feed_id = ? AND link IN (#{placeholders})"
         args = [] of DB::Any
         args << feed_id
@@ -198,13 +199,7 @@ module QuickHeadlines::Storage
           favicon = rows.read(String?)
           header_color = rows.read(String?)
 
-          pub_date = pub_date_str.try do |date_str|
-            begin
-              Time.parse(date_str, QuickHeadlines::Constants::DB_TIME_FORMAT, Time::Location::UTC)
-            rescue Time::Format::Error
-              nil
-            end
-          end
+          pub_date = QuickHeadlines::Repositories::RepositoryBase.parse_db_time(pub_date_str)
 
           items << ClusteringItemRow.new(
             id: id,

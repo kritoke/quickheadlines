@@ -13,6 +13,10 @@ module QuickHeadlines::Repositories
     end
 
     private def parse_db_time(str : String?) : Time?
+      self.class.parse_db_time(str)
+    end
+
+    def self.parse_db_time(str : String?) : Time?
       str.try { |time_str| Time.parse(time_str, QuickHeadlines::Constants::DB_TIME_FORMAT, Time::Location::UTC) }
     rescue Time::Format::Error
       nil

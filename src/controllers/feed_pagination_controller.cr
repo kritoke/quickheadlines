@@ -9,19 +9,14 @@ class QuickHeadlines::Controllers::FeedPaginationController < QuickHeadlines::Co
     offset = validate_offset(request.query_params["offset"]?)
 
     if url.nil? || url.strip.empty?
-      raise Athena::Framework::Exception::BadRequest.new("Missing 'url' parameter")
+      raise ATH::Exception::BadRequest.new("Missing 'url' parameter")
     end
 
-    if response = rate_limit_response(request, "feed_more", 30, 60)
-      retry_after = response.headers["Retry-After"]?
-      headers = HTTP::Headers.new
-      headers["Retry-After"] = retry_after if retry_after
-      raise ATH::Exception::HTTPException.new(429, "Rate limit exceeded", nil, headers)
-    end
+    check_rate_limit!(request, "feed_more", 30, 60)
 
     config = StateStore.config
     if config.nil?
-      raise Athena::Framework::Exception::ServiceUnavailable.new("Configuration not loaded")
+      raise ATH::Exception::ServiceUnavailable.new("Configuration not loaded")
     end
 
     all_feeds = config.feeds + config.tabs.flat_map(&.feeds)
@@ -56,10 +51,10 @@ class QuickHeadlines::Controllers::FeedPaginationController < QuickHeadlines::Co
           cache.item_count(url),
         )
       else
-        raise Athena::Framework::Exception::ServiceUnavailable.new("Failed to retrieve feed data")
+        raise ATH::Exception::ServiceUnavailable.new("Failed to retrieve feed data")
       end
     else
-      raise Athena::Framework::Exception::NotFound.new("Feed not found")
+      raise ATH::Exception::NotFound.new("Feed not found")
     end
   end
 end

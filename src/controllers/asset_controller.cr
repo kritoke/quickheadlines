@@ -6,9 +6,7 @@ class QuickHeadlines::Controllers::AssetController < QuickHeadlines::Controllers
   def favicon_png(request : ATH::Request) : ATH::Response
     url = request.query_params["url"]?
 
-    if url.nil? || url.strip.empty?
-      return ATH::Response.new("Missing 'url' parameter", 400, HTTP::Headers{"content-type" => "text/plain"})
-    end
+    raise ATH::Exception::BadRequest.new("Missing 'url' parameter") if url.nil? || url.strip.empty?
 
     normalized_url = normalize_url(url)
 
@@ -19,7 +17,7 @@ class QuickHeadlines::Controllers::AssetController < QuickHeadlines::Controllers
       end
     end
 
-    ATH::Response.new("Favicon not found", 404, HTTP::Headers{"content-type" => "text/plain"})
+    raise ATH::Exception::NotFound.new("Favicon not found")
   end
 
   @[ARTA::Get(path: "/api/sun-icon.svg")]

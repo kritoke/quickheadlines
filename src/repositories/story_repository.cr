@@ -130,7 +130,7 @@ module QuickHeadlines::Repositories
     private def build_feed_filter(allowed_feed_urls : Array(String)) : String
       return "" if allowed_feed_urls.empty?
 
-      placeholders = (1..allowed_feed_urls.size).map { |_| "?" }.join(", ")
+      placeholders = self.class.placeholders(allowed_feed_urls.size)
       "AND f.url IN (#{placeholders})"
     end
 

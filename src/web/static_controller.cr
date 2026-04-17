@@ -26,7 +26,7 @@ class StaticController < Athena::Framework::Controller
     mime = mime_type_from_path(path)
 
     response = ATH::Response.new(content)
-    response.headers["Content-Type"] = mime
+    response.headers["content-type"] = mime
 
     if ENV["APP_ENV"]? == "development"
       response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
@@ -42,10 +42,10 @@ class StaticController < Athena::Framework::Controller
 
     response
   rescue BakedFileSystem::NoSuchFileError
-    ATH::Response.new("Not Found", 404, HTTP::Headers{"Content-Type" => "text/plain"})
-  rescue ex
-    Log.for("quickheadlines.http").error(exception: ex) { "Static file error for #{path}" }
-    ATH::Response.new("Internal server error", 500, HTTP::Headers{"Content-Type" => "text/plain"})
+    ATH::Response.new("Not Found", 404, HTTP::Headers{"content-type" => "text/plain"})
+    rescue ex
+      Log.for("quickheadlines.http").error(exception: ex) { "Static file error for #{path}" }
+      ATH::Response.new("Internal server error", 500, HTTP::Headers{"content-type" => "text/plain"})
   end
 
   @[ARTA::Get(path: "/")]

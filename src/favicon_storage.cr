@@ -200,19 +200,6 @@ module FaviconStorage
     end
   end
 
-  def self.exists?(url : String) : Bool
-    hash = OpenSSL::Digest.new("SHA256").update(url).final.hexstring
-    dir = favicon_dir
-
-    @@mutex.synchronize do
-      POSSIBLE_EXTENSIONS.each do |ext|
-        filepath = File.join(dir, "#{hash[0...QuickHeadlines::Constants::FAVICON_HASH_PREFIX_LENGTH]}.#{ext}")
-        return true if File.exists?(filepath)
-      end
-    end
-    false
-  end
-
   private def self.extension_from_content_type(content_type : String) : String
     case content_type.downcase
     when "image/png"                then "png"

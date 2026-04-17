@@ -58,29 +58,13 @@ class QuickHeadlines::Controllers::ApiBaseController < Athena::Framework::Contro
     result == 0
   end
 
-  private def unauthorized_response : ATH::Response
-    ATH::Response.new("Unauthorized", 401, HTTP::Headers{"content-type" => "text/plain"})
-  end
-
-  private def check_rate_limit(request : ATH::Request, key : String, max_requests : Int32, window_seconds : Int32) : Bool
+  private def check_rate_limit!(request : ATH::Request, key : String, max_requests : Int32, window_seconds : Int32) : Nil
     ip = client_ip(request)
     limiter = RateLimiter.get_or_create("#{key}:#{ip}", max_requests, window_seconds)
-    limiter.allowed?(ip)
-  end
-
-  private def rate_limit_response(request : ATH::Request, key : String, max_requests : Int32, window_seconds : Int32) : ATH::Response?
-    ip = client_ip(request)
-    limiter = RateLimiter.get_or_create("#{key}:#{ip}", max_requests, window_seconds)
-    return nil if limiter.allowed?(ip)
+    return if limiter.allowed?(ip)
     retry_after = limiter.retry_after(ip)
-    ATH::Response.new(
-      "Rate limit exceeded. Try again later.",
-      429,
-      HTTP::Headers{
-        "content-type" => "text/plain",
-        "Retry-After"  => retry_after.to_s,
-      }
-    )
+    headers = HTTP::Headers{"Retry-After" => retry_after.to_s}
+    raise ATH::Exception::HTTPException.new(429, "Rate limit exceeded", nil, headers)
   end
 
   private def client_ip(request : ATH::Request) : String

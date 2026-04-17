@@ -1,5 +1,3 @@
-require "athena"
-
 module QuickHeadlines::Entities
   record Feed,
     id : String,

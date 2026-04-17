@@ -57,7 +57,6 @@ module QuickHeadlines::Constants
 
   CACHE_ONE_YEAR  = 31536000
   CACHE_ONE_HOUR  = 3600
-  CACHE_ONE_DAY   = 86400
 
   PROXY_DEFAULT_MAX_BYTES = 2 * 1024 * 1024
 

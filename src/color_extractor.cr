@@ -2,8 +2,6 @@ require "prismatiq"
 require "json"
 
 module ColorExtractor
-  VERSION = "3.0.0"
-
   struct CacheEntry
     property bg : String
     property text : String | Hash(String, String)
