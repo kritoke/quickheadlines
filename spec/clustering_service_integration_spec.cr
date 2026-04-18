@@ -1,12 +1,12 @@
 require "./spec_helper"
 require "../src/entities/cluster"
 require "../src/entities/story"
-require "../src/entities/feed"
+require "../src/services/database_service"
 
 describe QuickHeadlines::Services::ClusteringService do
   describe "#recluster_with_lsh" do
     it "clusters similar items together" do
-      cache = FeedCache.new(nil)
+      cache = create_test_feed_cache
       db = cache.db
 
       db.exec("DELETE FROM items")
@@ -45,7 +45,7 @@ describe QuickHeadlines::Services::ClusteringService do
       )
 
       service = QuickHeadlines::Services::ClusteringService.new(db)
-      processed = service.recluster_with_lsh(limit: 10)
+      processed = service.recluster_with_lsh(cache, limit: 10)
 
       processed.should eq(5)
 
@@ -60,7 +60,7 @@ describe QuickHeadlines::Services::ClusteringService do
     end
 
     it "skips items with insufficient word count" do
-      cache = FeedCache.new(nil)
+      cache = create_test_feed_cache
       db = cache.db
 
       db.exec("DELETE FROM items")
@@ -82,7 +82,7 @@ describe QuickHeadlines::Services::ClusteringService do
       )
 
       service = QuickHeadlines::Services::ClusteringService.new(db)
-      processed = service.recluster_with_lsh(limit: 10)
+      processed = service.recluster_with_lsh(cache, limit: 10)
 
       processed.should eq(1)
     end
@@ -90,7 +90,7 @@ describe QuickHeadlines::Services::ClusteringService do
 
   describe "#recluster_with_lsh clears and reclusters" do
     it "clears existing clustering and reclusters all items" do
-      cache = FeedCache.new(nil)
+      cache = create_test_feed_cache
       db = cache.db
 
       db.exec("DELETE FROM items")
@@ -116,7 +116,7 @@ describe QuickHeadlines::Services::ClusteringService do
       )
 
       service = QuickHeadlines::Services::ClusteringService.new(db)
-      processed = service.recluster_with_lsh(limit: 10)
+      processed = service.recluster_with_lsh(cache, limit: 10)
 
       processed.should eq(2)
 
@@ -127,7 +127,7 @@ describe QuickHeadlines::Services::ClusteringService do
 
   describe "#get_all_clusters_from_db" do
     it "returns cluster information with representative and others" do
-      cache = FeedCache.new(nil)
+      cache = create_test_feed_cache
       db = cache.db
 
       db.exec("DELETE FROM items")

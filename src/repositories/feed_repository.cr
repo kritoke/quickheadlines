@@ -4,30 +4,7 @@ require "../services/database_service"
 require "./repository_base"
 
 module QuickHeadlines::Repositories
-  @[ADI::Register]
   class FeedRepository < RepositoryBase
-    private def read_feed_entity(rows : DB::ResultSet) : QuickHeadlines::Entities::Feed
-      id = rows.read(Int64)
-      url = rows.read(String)
-      title = rows.read(String)
-      site_link = rows.read(String?)
-      header_color = rows.read(String?)
-      header_text_color = rows.read(String?)
-      favicon = rows.read(String?)
-      favicon_data = rows.read(String?)
-
-      QuickHeadlines::Entities::Feed.new(
-        id: id.to_s,
-        title: title,
-        url: url,
-        site_link: site_link || "",
-        header_color: header_color,
-        header_text_color: header_text_color,
-        favicon: favicon,
-        favicon_data: favicon_data
-      )
-    end
-
     private record FeedRowData,
       title : String,
       url : String,
@@ -70,16 +47,14 @@ module QuickHeadlines::Repositories
       Item.new(title, link, pub_date, version, comment_url, commentary_url)
     end
 
-    def find_all : Array(QuickHeadlines::Entities::Feed)
-      feeds = [] of QuickHeadlines::Entities::Feed
-
-      db.query("SELECT id, url, title, site_link, header_color, header_text_color, favicon, favicon_data FROM feeds ORDER BY title") do |rows|
+    def find_all_urls : Set(String)
+      urls = Set(String).new
+      db.query("SELECT url FROM feeds") do |rows|
         rows.each do
-          feeds << read_feed_entity(rows)
+          urls << rows.read(String)
         end
       end
-
-      feeds
+      urls
     end
 
     def find_last_fetched_time(url : String) : Time?

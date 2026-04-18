@@ -1,9 +1,10 @@
 require "spec"
 require "../src/storage"
+require "./spec_helper"
 
 describe "Feed Theme Persistence" do
   it "persists header_theme_colors on insert and update" do
-    cache = FeedCache.new(nil)
+    cache = create_test_feed_cache
 
     theme_json = {"bg" => "rgb(10,20,30)", "text" => {"light" => "#ffffff", "dark" => "#000000"}, "source" => "auto"}.to_json
 

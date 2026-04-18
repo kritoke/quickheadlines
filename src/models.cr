@@ -10,6 +10,7 @@ record ClusteringItemRow,
   feed_url : String,
   feed_title : String,
   favicon : String?,
+  favicon_data : String?,
   header_color : String?
 
 record FeedData,
@@ -33,10 +34,6 @@ record FeedData,
   # Immutable setter - returns new instance
   def with_theme_colors(val : String?) : FeedData
     copy_with(header_theme_colors: val)
-  end
-
-  def with_items(new_items : Array(Item)) : FeedData
-    copy_with(items: new_items)
   end
 
   def failed?

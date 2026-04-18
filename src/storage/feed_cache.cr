@@ -1,8 +1,8 @@
-require "athena"
 require "db"
 require "sqlite3"
 require "mutex"
 require "time"
+require "../module"
 require "../config"
 require "../constants"
 require "../models"
@@ -15,13 +15,12 @@ require "./header_color_store"
 require "./cleanup_store"
 require "../repositories/feed_repository"
 
-@[ADI::Register]
 class FeedCache
   @@instance : FeedCache?
   @@instance_mutex = Mutex.new
 
   def self.instance : FeedCache
-    @@instance_mutex.synchronize { @@instance ||= FeedCache.new(nil) }
+    @@instance_mutex.synchronize { @@instance ||= FeedCache.new(QuickHeadlines.initial_config.not_nil!, DatabaseService.instance) }
   end
 
   def self.instance=(cache : FeedCache)
@@ -29,7 +28,7 @@ class FeedCache
   end
 
   @mutex : Mutex
-  @db_service : DatabaseService?
+  @db_service : DatabaseService
   @db : DB::Database
   @db_path : String
   @feed_repository : QuickHeadlines::Repositories::FeedRepository?
@@ -37,28 +36,13 @@ class FeedCache
   @header_color_store : QuickHeadlines::Storage::HeaderColorStore
   @cleanup_store : QuickHeadlines::Storage::CleanupStore
 
-  def initialize(config : Config?, @db_service : DatabaseService? = nil)
+  def initialize(config : Config, @db_service : DatabaseService)
     @mutex = Mutex.new
     cache_dir = get_cache_dir(config)
     ensure_cache_dir(cache_dir)
 
     @db_path = get_cache_db_path(config).as(String)
-
-    unless @db_service
-      @db_service = begin
-        DatabaseService.instance
-      rescue ex
-        Log.for("quickheadlines.cache").warn { "DatabaseService not available, using standalone DB: #{ex.message}" }
-        nil
-      end
-    end
-
-    if db_svc = @db_service
-      @db = db_svc.db
-      @db_service = db_svc
-    else
-      @db = DB.open("sqlite3://#{@db_path}")
-    end
+    @db = @db_service.db
 
     @clustering_store = QuickHeadlines::Storage::ClusteringStore.new(@db, @mutex)
     @header_color_store = QuickHeadlines::Storage::HeaderColorStore.new(@db, @mutex)
@@ -67,7 +51,6 @@ class FeedCache
     begin
       create_schema(@db, @db_path)
     rescue ex
-      @db.close unless db_svc
       raise ex
     end
     Log.for("quickheadlines.storage").info { "Database initialized: #{@db_path}" }
@@ -76,7 +59,7 @@ class FeedCache
   end
 
   private def feed_repository : QuickHeadlines::Repositories::FeedRepository
-    @feed_repository ||= QuickHeadlines::Repositories::FeedRepository.new(@db_service || @db)
+    @feed_repository ||= QuickHeadlines::Repositories::FeedRepository.new(@db_service)
   end
 
   getter :clustering_store, :header_color_store, :cleanup_store
@@ -219,7 +202,7 @@ class FeedCache
   end
 end
 
-def load_feed_cache(config : Config?, db_service : DatabaseService?) : FeedCache
+def load_feed_cache(config : Config, db_service : DatabaseService) : FeedCache
   cache_dir = get_cache_dir(config)
   ensure_cache_dir(cache_dir)
   db_path : String = get_cache_db_path(config)

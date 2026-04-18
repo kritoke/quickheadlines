@@ -3,10 +3,27 @@ require "../services/database_service"
 require "./repository_base"
 
 module QuickHeadlines::Repositories
-  @[ADI::Register]
   class StoryRepository < RepositoryBase
-    def find_timeline_items(limit : Int32, offset : Int32, days_back : Int32?, allowed_feed_urls : Array(String) = [] of String) : Array(QuickHeadlines::Domain::TimelineEntry)
-      items = [] of QuickHeadlines::Domain::TimelineEntry
+    private record TimelineEntry,
+      id : Int64,
+      title : String,
+      link : String,
+      pub_date : Time?,
+      feed_title : String,
+      feed_url : String,
+      feed_link : String,
+      favicon : String?,
+      favicon_data : String?,
+      header_color : String?,
+      header_text_color : String?,
+      cluster_id : Int64?,
+      representative : Bool,
+      cluster_size : Int32,
+      comment_url : String? = nil,
+      commentary_url : String? = nil
+
+    def find_timeline_items(limit : Int32, offset : Int32, days_back : Int32?, allowed_feed_urls : Array(String) = [] of String) : Array(TimelineEntry)
+      items = [] of TimelineEntry
 
       feed_filter_clause = build_feed_filter(allowed_feed_urls)
       feed_filter_values = feed_filter_values(allowed_feed_urls)
@@ -33,6 +50,7 @@ module QuickHeadlines::Repositories
           f.url as feed_url,
           f.site_link as feed_link,
           f.favicon,
+          f.favicon_data,
           f.header_color,
           f.header_text_color,
           i.cluster_id,
@@ -63,6 +81,7 @@ module QuickHeadlines::Repositories
           feed_url = rows.read(String)
           feed_link = rows.read(String?)
           favicon = rows.read(String?)
+          favicon_data = rows.read(String?)
           header_color = rows.read(String?)
           header_text_color = rows.read(String?)
           cluster_id = rows.read(Int64?)
@@ -73,7 +92,7 @@ module QuickHeadlines::Repositories
 
           pub_date = parse_db_time(pub_date_str)
 
-          items << QuickHeadlines::Domain::TimelineEntry.new(
+          items << TimelineEntry.new(
             id: id,
             title: title,
             link: link,
@@ -82,6 +101,7 @@ module QuickHeadlines::Repositories
             feed_url: feed_url,
             feed_link: feed_link || "",
             favicon: favicon,
+            favicon_data: favicon_data,
             header_color: header_color,
             header_text_color: header_text_color,
             cluster_id: cluster_id,

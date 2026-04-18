@@ -21,14 +21,14 @@ class ClientIPHandler
 end
 
 begin
-  config = QuickHeadlines::Application.initial_config
+  config = QuickHeadlines.initial_config
   if config.nil?
     Log.for("quickheadlines.app").fatal { "[ERROR] Configuration not loaded - check feeds.yml" }
     exit 1
   end
   port = config.server_port
 
-  if bootstrap = QuickHeadlines::Application.bootstrap
+  if bootstrap = QuickHeadlines.bootstrap
     spawn bootstrap.start_background_tasks
     spawn bootstrap.verify_feeds_loaded
   end
@@ -60,8 +60,6 @@ begin
       SocketManager.instance.unregister(ws, ip)
     end
 
-    ws.on_message do |_|
-    end
   end
   handlers << ws_handler
   Log.for("quickheadlines.websocket").info { "Enabled - clients can connect to ws://host/api/ws" }

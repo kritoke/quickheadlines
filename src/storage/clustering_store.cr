@@ -32,8 +32,7 @@ module QuickHeadlines::Storage
 
     def store_lsh_bands(item_id : Int64, band_hashes : Array(UInt64))
       @mutex.synchronize do
-        @db.exec("BEGIN TRANSACTION")
-        begin
+        @db.transaction do
           @db.exec("DELETE FROM lsh_bands WHERE item_id = ?", item_id)
           band_hashes.each_with_index do |band_hash, band_index|
             @db.exec(
@@ -44,11 +43,6 @@ module QuickHeadlines::Storage
               Time.utc.to_s(QuickHeadlines::Constants::DB_TIME_FORMAT)
             )
           end
-          @db.exec("COMMIT")
-        rescue ex
-          @db.exec("ROLLBACK")
-          Log.for("quickheadlines.storage").error(exception: ex) { "Failed to store LSH bands for item #{item_id}" }
-          raise ex
         end
       end
     end
@@ -84,8 +78,7 @@ module QuickHeadlines::Storage
 
     def assign_clusters_bulk(clusters : Hash(Int64, Array(Int64)))
       @mutex.synchronize do
-        begin
-          @db.exec("BEGIN TRANSACTION")
+        @db.transaction do
           clusters.each do |rep_id, members|
             next if members.empty?
             placeholders = QuickHeadlines::Repositories::RepositoryBase.placeholders(members.size)
@@ -93,11 +86,6 @@ module QuickHeadlines::Storage
             args = [rep_id] + members
             @db.exec(sql, args: args)
           end
-          @db.exec("COMMIT")
-        rescue ex
-          @db.exec("ROLLBACK")
-          Log.for("quickheadlines.storage").error(exception: ex) { "Failed to assign clusters" }
-          raise ex
         end
       end
     end
@@ -181,7 +169,7 @@ module QuickHeadlines::Storage
       items = [] of ClusteringItemRow
 
       query = <<-SQL
-        SELECT i.id, i.title, i.link, i.pub_date, f.url as feed_url, f.title as feed_title, f.favicon, f.header_color
+        SELECT i.id, i.title, i.link, i.pub_date, f.url as feed_url, f.title as feed_title, f.favicon, f.favicon_data, f.header_color
         FROM items i
         JOIN feeds f ON i.feed_id = f.id
         WHERE i.cluster_id = ?
@@ -197,6 +185,7 @@ module QuickHeadlines::Storage
           feed_url = rows.read(String)
           feed_title = rows.read(String)
           favicon = rows.read(String?)
+          favicon_data = rows.read(String?)
           header_color = rows.read(String?)
 
           pub_date = QuickHeadlines::Repositories::RepositoryBase.parse_db_time(pub_date_str)
@@ -209,6 +198,7 @@ module QuickHeadlines::Storage
             feed_url: feed_url,
             feed_title: feed_title,
             favicon: favicon,
+            favicon_data: favicon_data,
             header_color: header_color,
           )
         end

@@ -11,12 +11,6 @@ module QuickHeadlines::CacheUtils
   end
 end
 
-# Cache retention settings - imported from Constants module
-# CACHE_RETENTION_HOURS = QuickHeadlines::Constants::CACHE_RETENTION_HOURS  (168 hours = 7 days)
-# CACHE_RETENTION_DAYS = QuickHeadlines::Constants::CACHE_RETENTION_DAYS    (7 days)
-# DB_SIZE_WARNING_THRESHOLD = QuickHeadlines::Constants::DB_SIZE_WARNING_THRESHOLD
-# DB_SIZE_HARD_LIMIT = QuickHeadlines::Constants::DB_SIZE_HARD_LIMIT
-
 def get_cache_dir(config : Config?) : String
   if env = ENV["QUICKHEADLINES_CACHE_DIR"]?
     return env

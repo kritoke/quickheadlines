@@ -1,29 +1,17 @@
-require "athena"
 require "json"
 
-@[ASRA::Name(strategy: :camelcase)]
 class QuickHeadlines::DTOs::StoryResponse
-  include ASR::Serializable
   include JSON::Serializable
 
   property id : String
-
   property title : String
-
   property link : String
-
   property pub_date : Int64?
-
   property feed_title : String
-
   property feed_url : String
-
   property feed_link : String
-
   property favicon : String?
-
   property favicon_data : String?
-
   property header_color : String?
 
   def initialize(

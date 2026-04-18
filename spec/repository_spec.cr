@@ -1,7 +1,6 @@
 require "spec"
 require "../src/storage"
 require "../src/config"
-require "../src/entities/feed"
 require "../src/entities/story"
 require "../src/entities/cluster"
 require "../src/repositories/feed_repository"
@@ -16,7 +15,7 @@ describe "Repositories" do
   describe QuickHeadlines::Repositories::FeedRepository do
     describe "#count_items" do
       it "returns correct count after upserting items" do
-        cache = FeedCache.new(nil)
+        cache = create_test_feed_cache
         repo = QuickHeadlines::Repositories::FeedRepository.new(cache.db)
         test_url = unique_url
 
@@ -39,7 +38,7 @@ describe "Repositories" do
 
     describe "#find_with_items" do
       it "returns feed with items" do
-        cache = FeedCache.new(nil)
+        cache = create_test_feed_cache
         repo = QuickHeadlines::Repositories::FeedRepository.new(cache.db)
         test_url = unique_url
 

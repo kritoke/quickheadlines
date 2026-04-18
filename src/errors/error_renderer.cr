@@ -1,8 +1,6 @@
 require "log"
 
 module QuickHeadlines
-  @[ADI::Register]
-  @[ADI::AsAlias]
   class ErrorRenderer
     include Athena::Framework::ErrorRendererInterface
 

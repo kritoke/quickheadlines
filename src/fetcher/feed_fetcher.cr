@@ -1,4 +1,3 @@
-require "athena"
 require "base64"
 require "time"
 require "json"
@@ -13,7 +12,6 @@ require "./theme_helper"
 
 # FeedFetcher encapsulates all feed fetching logic with proper dependency injection.
 # Use FeedFetcher.instance for singleton access or inject FeedCache for testing.
-@[ADI::Register]
 class FeedFetcher
   include Fetcher::ThemeHelper
 

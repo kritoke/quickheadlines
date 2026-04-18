@@ -9,7 +9,6 @@ require "../software_fetcher"
 require "../websocket"
 require "./feed_fetcher"
 
-REFRESH_MUTEX              = Mutex.new
 REFRESH_IN_PROGRESS        = Atomic(Bool).new(false)
 
 private def collect_feed_configs(config : Config) : Hash(String, Feed)

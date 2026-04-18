@@ -129,7 +129,7 @@ class QuickHeadlines::Services::ClusteringService
         feed_url: item.feed_url,
         feed_link: "",
         favicon: item.favicon,
-        favicon_data: item.favicon,
+        favicon_data: item.favicon_data,
         header_color: item.header_color,
       )
     end

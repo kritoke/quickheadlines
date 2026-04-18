@@ -24,6 +24,7 @@ module QuickHeadlines::Services
           feed_url: item.feed_url,
           feed_link: item.feed_link,
           favicon: item.favicon,
+          favicon_data: item.favicon_data,
           header_color: item.header_color,
           header_text_color: item.header_text_color,
           cluster_id: item.cluster_id.try(&.to_s),

@@ -4,7 +4,7 @@ describe "Header Colors" do
   describe FeedCache do
     describe "update_header_colors" do
       it "saves bg and text colors for feed with existing colors" do
-        cache = FeedCache.new(nil)
+        cache = create_test_feed_cache
 
         # First add a feed with items (required for add to work)
         test_feed = FeedData.new(

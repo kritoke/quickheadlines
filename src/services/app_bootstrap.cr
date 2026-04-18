@@ -14,6 +14,8 @@ class AppBootstrap
   @cleanup_interval : Time::Span
   @ws_janitor_interval : Time::Span
 
+  getter :db_service, :feed_cache
+
   def initialize(
     @config : Config,
     @janitor_interval = QuickHeadlines::Constants::JANITOR_INTERVAL,
@@ -22,6 +24,7 @@ class AppBootstrap
     @ws_janitor_interval = QuickHeadlines::Constants::WS_JANITOR_INTERVAL,
   )
     @db_service = DatabaseService.new(@config)
+    DatabaseService.instance = @db_service
 
     @feed_cache = load_feed_cache(@config, @db_service)
     begin

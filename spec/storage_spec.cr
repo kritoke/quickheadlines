@@ -2,6 +2,7 @@ require "spec"
 require "../src/storage"
 require "../src/config"
 require "../src/constants"
+require "./spec_helper"
 
 describe "Storage" do
   describe "format_bytes" do
@@ -56,14 +57,14 @@ describe "Storage" do
 
   describe "FeedCache#item_count" do
     it "returns zero for non-existent feed URL" do
-      cache = FeedCache.new(nil)
+      cache = create_test_feed_cache
       cache.item_count("https://nonexistent.example.com/feed.xml").should eq(0)
     end
   end
 
   describe "FeedCache#check_size_limit" do
     it "does not raise when database is empty" do
-      cache = FeedCache.new(nil)
+      cache = create_test_feed_cache
       cache.check_size_limit(100).should be_nil
     end
   end

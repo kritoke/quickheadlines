@@ -3,6 +3,8 @@ require "../src/storage"
 require "../src/models"
 require "../src/dtos/api_responses"
 require "../src/dtos/story_dto"
+require "../src/services/database_service"
+require "./spec_helper"
 require "../src/dtos/cluster_dto"
 require "../src/services/feed_service"
 
@@ -206,7 +208,7 @@ end
 describe "FeedService" do
   describe ".build_feed_response" do
     it "converts FeedData to FeedResponse" do
-      cache = FeedCache.new(nil)
+      cache = create_test_feed_cache
       FeedCache.instance = cache
 
       feed_data = FeedData.new(

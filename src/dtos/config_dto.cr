@@ -1,8 +1,5 @@
-require "athena"
-
-@[ASRA::Name(strategy: :camelcase)]
 class QuickHeadlines::DTOs::ConfigResponse
-  include ASR::Serializable
+  include JSON::Serializable
 
   property refresh_minutes : Int32
   property item_limit : Int32

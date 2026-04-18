@@ -1,11 +1,11 @@
 require "spec"
-require "athena"
+require "json"
 require "../src/dtos/story_dto"
 require "../src/dtos/cluster_dto"
 
-describe "Athena Serializer Verification" do
+describe "JSON Serializable DTO Verification" do
   describe "StoryResponse" do
-    it "serializes with camelCase keys" do
+    it "serializes with snake_case keys" do
       dto = QuickHeadlines::DTOs::StoryResponse.new(
         id: "test-id",
         title: "Test Story",
@@ -19,35 +19,31 @@ describe "Athena Serializer Verification" do
         header_color: "#FF0000"
       )
 
-      # Use Athena's serializer with JSON format
-      serializer = ASR::Serializer.new
-      json = serializer.serialize(dto, "json")
+      json = dto.to_json
       parsed = JSON.parse(json)
 
-      # Verify camelCase keys
       parsed.as_h.keys.should contain("id")
       parsed.as_h.keys.should contain("title")
       parsed.as_h.keys.should contain("link")
-      parsed.as_h.keys.should contain("pubDate")
-      parsed.as_h.keys.should contain("feedTitle")
-      parsed.as_h.keys.should contain("feedUrl")
-      parsed.as_h.keys.should contain("feedLink")
+      parsed.as_h.keys.should contain("pub_date")
+      parsed.as_h.keys.should contain("feed_title")
+      parsed.as_h.keys.should contain("feed_url")
+      parsed.as_h.keys.should contain("feed_link")
       parsed.as_h.keys.should contain("favicon")
-      parsed.as_h.keys.should contain("faviconData")
-      parsed.as_h.keys.should contain("headerColor")
+      parsed.as_h.keys.should contain("favicon_data")
+      parsed.as_h.keys.should contain("header_color")
 
-      # Verify NO snake_case keys
-      parsed.as_h.keys.should_not contain("pub_date")
-      parsed.as_h.keys.should_not contain("feed_title")
-      parsed.as_h.keys.should_not contain("feed_url")
-      parsed.as_h.keys.should_not contain("feed_link")
-      parsed.as_h.keys.should_not contain("favicon_data")
-      parsed.as_h.keys.should_not contain("header_color")
+      parsed.as_h.keys.should_not contain("pubDate")
+      parsed.as_h.keys.should_not contain("feedTitle")
+      parsed.as_h.keys.should_not contain("feedUrl")
+      parsed.as_h.keys.should_not contain("feedLink")
+      parsed.as_h.keys.should_not contain("faviconData")
+      parsed.as_h.keys.should_not contain("headerColor")
     end
   end
 
   describe "ClusterResponse" do
-    it "serializes with camelCase keys" do
+    it "serializes with snake_case keys" do
       story_response = QuickHeadlines::DTOs::StoryResponse.new(
         id: "story-id",
         title: "Test Story",
@@ -64,19 +60,15 @@ describe "Athena Serializer Verification" do
         cluster_size: 1
       )
 
-      # Use Athena's serializer with JSON format
-      serializer = ASR::Serializer.new
-      json = serializer.serialize(dto, "json")
+      json = dto.to_json
       parsed = JSON.parse(json)
 
-      # Verify camelCase keys
       parsed.as_h.keys.should contain("id")
       parsed.as_h.keys.should contain("representative")
       parsed.as_h.keys.should contain("others")
-      parsed.as_h.keys.should contain("clusterSize")
+      parsed.as_h.keys.should contain("cluster_size")
 
-      # Verify NO snake_case keys
-      parsed.as_h.keys.should_not contain("cluster_size")
+      parsed.as_h.keys.should_not contain("clusterSize")
     end
   end
 end

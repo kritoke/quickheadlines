@@ -1,15 +1,11 @@
-require "athena"
+require "json"
 
-@[ASRA::Name(strategy: :camelcase)]
 class QuickHeadlines::DTOs::ClusterResponse
-  include ASR::Serializable
+  include JSON::Serializable
 
   property id : String
-
   property representative : QuickHeadlines::DTOs::StoryResponse
-
   property others : Array(QuickHeadlines::DTOs::StoryResponse)
-
   property cluster_size : Int32
 
   def initialize(
@@ -31,12 +27,10 @@ class QuickHeadlines::DTOs::ClusterResponse
   end
 end
 
-@[ASRA::Name(strategy: :camelcase)]
 class QuickHeadlines::DTOs::ClustersResponse
-  include ASR::Serializable
+  include JSON::Serializable
 
   property clusters : Array(QuickHeadlines::DTOs::ClusterResponse)
-
   property total_count : Int32
 
   def initialize(

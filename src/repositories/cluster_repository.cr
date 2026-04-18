@@ -3,7 +3,6 @@ require "../services/database_service"
 require "./repository_base"
 
 module QuickHeadlines::Repositories
-  @[ADI::Register]
   class ClusterRepository < RepositoryBase
     def find_all(limit : Int32 = 1000) : Array(QuickHeadlines::Entities::Cluster)
       clusters = [] of QuickHeadlines::Entities::Cluster
@@ -18,6 +17,7 @@ module QuickHeadlines::Repositories
           f.url as feed_url,
           f.title as feed_title,
           f.favicon,
+          f.favicon_data,
           f.header_color
         FROM (
           SELECT cluster_id as id, MIN(id) as representative_id
@@ -31,7 +31,7 @@ module QuickHeadlines::Repositories
         LIMIT ?
         SQL
 
-      cluster_items = Hash(Int64, Array({id: Int64, title: String, link: String, pub_date: Time?, feed_url: String, feed_title: String, favicon: String?, header_color: String?})).new
+      cluster_items = Hash(Int64, Array({id: Int64, title: String, link: String, pub_date: Time?, feed_url: String, feed_title: String, favicon: String?, favicon_data: String?, header_color: String?})).new
 
       db.query(query, limit) do |rows|
         rows.each do
@@ -43,11 +43,12 @@ module QuickHeadlines::Repositories
           feed_url = rows.read(String)
           feed_title = rows.read(String)
           favicon = rows.read(String?)
+          favicon_data = rows.read(String?)
           header_color = rows.read(String?)
 
           item_pub_date = parse_db_time(item_pub_date_str)
 
-          cluster_items[cluster_id] ||= [] of {id: Int64, title: String, link: String, pub_date: Time?, feed_url: String, feed_title: String, favicon: String?, header_color: String?}
+          cluster_items[cluster_id] ||= [] of {id: Int64, title: String, link: String, pub_date: Time?, feed_url: String, feed_title: String, favicon: String?, favicon_data: String?, header_color: String?}
           cluster_items[cluster_id] << {
             id:           item_id,
             title:        item_title,
@@ -56,6 +57,7 @@ module QuickHeadlines::Repositories
             feed_url:     feed_url,
             feed_title:   feed_title,
             favicon:      favicon,
+            favicon_data: favicon_data,
             header_color: header_color,
           }
         end
@@ -75,7 +77,7 @@ module QuickHeadlines::Repositories
           feed_url: rep_data[:feed_url],
           feed_link: "",
             favicon: rep_data[:favicon],
-            favicon_data: nil,
+            favicon_data: rep_data[:favicon_data],
             header_color: rep_data[:header_color]
         )
 
@@ -89,7 +91,7 @@ module QuickHeadlines::Repositories
             feed_url: item[:feed_url],
             feed_link: "",
             favicon: item[:favicon],
-            favicon_data: nil,
+            favicon_data: item[:favicon_data],
             header_color: item[:header_color]
           )
         end

@@ -1,5 +1,7 @@
 require "athena"
 
+require "./module"
+
 # Load all dependencies
 require "./config"
 require "./constants"
@@ -13,9 +15,6 @@ require "./websocket"
 # Load entities, services, controllers, repositories, etc.
 require "./entities/story"
 require "./entities/cluster"
-require "./entities/feed"
-
-require "./domain/items"
 
 require "./services/clustering_service"
 require "./services/database_service"
@@ -73,10 +72,11 @@ begin
     exit 1
   end
 
-  QuickHeadlines::Application.initial_config = config
+  QuickHeadlines.initial_config = config
 
   bootstrap = AppBootstrap.new(config)
-  QuickHeadlines::Application.bootstrap = bootstrap
+  DatabaseService.instance = bootstrap.db_service
+  QuickHeadlines.bootstrap = bootstrap
 rescue ex : Exception
   Log.for("quickheadlines.app").fatal(exception: ex) { "Failed to initialize application" }
   exit 1
