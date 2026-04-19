@@ -7,18 +7,16 @@ require "../dtos/api_responses"
 require "./clustering_engine"
 
 class QuickHeadlines::Services::ClusteringService
+  @db_service : DatabaseService
   @db : DB::Database
   @cluster_repository : QuickHeadlines::Repositories::ClusterRepository?
 
-  def initialize(db_or_service : DatabaseService | DB::Database, @cluster_repository : QuickHeadlines::Repositories::ClusterRepository? = nil)
-    @db = case db_or_service
-          when DatabaseService then db_or_service.db
-          else                      db_or_service
-          end
+  def initialize(@db_service : DatabaseService, @cluster_repository : QuickHeadlines::Repositories::ClusterRepository? = nil)
+    @db = @db_service.db
   end
 
   private def cluster_repository : QuickHeadlines::Repositories::ClusterRepository
-    @cluster_repository ||= QuickHeadlines::Repositories::ClusterRepository.new(@db)
+    @cluster_repository ||= QuickHeadlines::Repositories::ClusterRepository.new(@db_service)
   end
 
   private def best_cluster_match(candidates : Array(Int64), item_id : Int64, title_set : Set(String), cache : FeedCache, item_feed_id : Int64?) : Tuple(Int64?, Float64, String, Int64?)

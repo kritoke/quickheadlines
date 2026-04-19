@@ -1,6 +1,5 @@
 require "gc"
 require "time"
-require "atomic"
 require "../config"
 require "../models"
 require "../storage"
@@ -8,8 +7,6 @@ require "../services/clustering_service"
 require "../software_fetcher"
 require "../websocket"
 require "./feed_fetcher"
-
-REFRESH_IN_PROGRESS = Atomic(Bool).new(false)
 
 private def collect_feed_configs(config : Config) : Hash(String, Feed)
   all_configs = {} of String => Feed
@@ -133,6 +130,7 @@ def async_clustering(feeds : Array(FeedData), cache : FeedCache, db_service : Da
   return if feeds.empty?
   return if StateStore.clustering?
 
+  clustering_service = QuickHeadlines::Services::ClusteringService.new(db_service)
   semaphore = Channel(Nil).new(QuickHeadlines::Constants::MAX_PARALLEL_CLUSTERING)
   QuickHeadlines::Constants::MAX_PARALLEL_CLUSTERING.times { semaphore.send(nil) }
 
@@ -145,7 +143,7 @@ def async_clustering(feeds : Array(FeedData), cache : FeedCache, db_service : Da
       spawn do
         semaphore.receive
         begin
-          process_clustering(feed_data, cache, db_service)
+          process_clustering(feed_data, cache, clustering_service)
         rescue ex
           Log.for("quickheadlines.clustering").error(exception: ex) { "async_clustering: error processing #{feed_data.url}" }
         ensure
@@ -172,11 +170,7 @@ def async_clustering(feeds : Array(FeedData), cache : FeedCache, db_service : Da
   end
 end
 
-def compute_item_cluster(item_id : Int64, title : String, cache : FeedCache, db_service : DatabaseService, item_feed_id : Int64? = nil) : Int64?
-  QuickHeadlines::Services::ClusteringService.new(db_service).compute_item_cluster(item_id, title, cache, item_feed_id)
-end
-
-def process_clustering(feed_data : FeedData, cache : FeedCache, db_service : DatabaseService) : Nil
+def process_clustering(feed_data : FeedData, cache : FeedCache, clustering_service : QuickHeadlines::Services::ClusteringService) : Nil
   return if feed_data.items.empty?
 
   feed_id = cache.get_feed_id(feed_data.url)
@@ -192,12 +186,17 @@ def process_clustering(feed_data : FeedData, cache : FeedCache, db_service : Dat
 
     next unless item_id
 
-    compute_item_cluster(item_id, item.title, cache, db_service, feed_id)
+    clustering_service.compute_item_cluster(item_id, item.title, cache, feed_id)
   end
 end
 
 def start_refresh_loop(config_path : String, cache : FeedCache, db_service : DatabaseService)
-  active_config = load_config(config_path)
+  load_result = load_validated_config(config_path)
+  unless load_result.success && (initial_config = load_result.config)
+    Log.for("quickheadlines.feed").error { "Failed to load config: #{load_result.error_message}" }
+    return
+  end
+  active_config = initial_config
   last_mtime = File.info(config_path).modification_time
 
   save_feed_cache(cache, active_config.cache_retention_hours, active_config.max_cache_size_mb)
@@ -209,7 +208,7 @@ def start_refresh_loop(config_path : String, cache : FeedCache, db_service : Dat
       refresh_start_time = Time.utc
 
       begin
-        if REFRESH_IN_PROGRESS.swap(true)
+        if StateStore.refreshing?
           Log.for("quickheadlines.feed").warn { "Refresh already in progress, skipping this cycle" }
           sleep (active_config.refresh_minutes * 60).seconds
           next
@@ -229,19 +228,23 @@ def start_refresh_loop(config_path : String, cache : FeedCache, db_service : Dat
             current_mtime = File.info(config_path).modification_time
 
             if current_mtime > last_mtime
-              new_config = load_config(config_path)
-              active_config = new_config
-              last_mtime = current_mtime
+              load_result = load_validated_config(config_path)
+              if load_result.success && (new_config = load_result.config)
+                active_config = new_config
+                last_mtime = current_mtime
 
-              if active_config.debug?
-                Log.for("quickheadlines.feed").debug { "Config change detected. Reloaded feeds.yml" }
+                if active_config.debug?
+                  Log.for("quickheadlines.feed").debug { "Config change detected. Reloaded feeds.yml" }
+                end
+                refresh_all(active_config, cache, db_service)
+                if active_config.debug?
+                  Log.for("quickheadlines.feed").debug { "Refreshed after config change" }
+                end
+                sleep (active_config.refresh_minutes * QuickHeadlines::Constants::SECONDS_PER_MINUTE).seconds
+                next
+              else
+                Log.for("quickheadlines.feed").error { "Config reload failed: #{load_result.error_message}#{load_result.suggestion ? " - #{load_result.suggestion}" : ""}" }
               end
-              refresh_all(active_config, cache, db_service)
-              if active_config.debug?
-                Log.for("quickheadlines.feed").debug { "Refreshed after config change" }
-              end
-              sleep (active_config.refresh_minutes * QuickHeadlines::Constants::SECONDS_PER_MINUTE).seconds
-              next
             else
               refresh_all(active_config, cache, db_service)
               if active_config.debug?
@@ -259,11 +262,11 @@ def start_refresh_loop(config_path : String, cache : FeedCache, db_service : Dat
 
           sleep (active_config.refresh_minutes * QuickHeadlines::Constants::SECONDS_PER_MINUTE).seconds
         ensure
-          REFRESH_IN_PROGRESS.set(false)
+          StateStore.refreshing = false
         end
       rescue ex
         Log.for("quickheadlines.feed").error(exception: ex) { "refresh_loop" }
-        REFRESH_IN_PROGRESS.set(false)
+        StateStore.refreshing = false
         sleep 1.minute
       end
     end

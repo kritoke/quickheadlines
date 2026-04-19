@@ -16,7 +16,7 @@ describe "Repositories" do
     describe "#count_items" do
       it "returns correct count after upserting items" do
         cache = create_test_feed_cache
-        repo = QuickHeadlines::Repositories::FeedRepository.new(cache.db)
+        repo = QuickHeadlines::Repositories::FeedRepository.new(cache.db_service)
         test_url = unique_url
 
         feed_data = FeedData.new(
@@ -39,7 +39,7 @@ describe "Repositories" do
     describe "#find_with_items" do
       it "returns feed with items" do
         cache = create_test_feed_cache
-        repo = QuickHeadlines::Repositories::FeedRepository.new(cache.db)
+        repo = QuickHeadlines::Repositories::FeedRepository.new(cache.db_service)
         test_url = unique_url
 
         feed_data = FeedData.new(

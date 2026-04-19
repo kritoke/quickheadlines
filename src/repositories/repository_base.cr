@@ -5,11 +5,8 @@ module QuickHeadlines::Repositories
   abstract class RepositoryBase
     getter db : DB::Database
 
-    def initialize(db_or_service : DatabaseService | DB::Database)
-      @db = case db_or_service
-            when DatabaseService then db_or_service.db
-            else                      db_or_service
-            end
+    def initialize(db_service : DatabaseService)
+      @db = db_service.db
     end
 
     private def parse_db_time(str : String?) : Time?

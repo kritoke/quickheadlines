@@ -4,6 +4,8 @@ require "../web/assets"
 class QuickHeadlines::Controllers::AssetController < QuickHeadlines::Controllers::ApiBaseController
   @[ARTA::Get(path: "/api/favicon.png")]
   def favicon_png(request : ATH::Request) : ATH::Response
+    check_rate_limit!(request, "api_favicon", 120, 60)
+
     url = request.query_params["url"]?
 
     raise ATH::Exception::BadRequest.new("Missing 'url' parameter") if url.nil? || url.strip.empty?

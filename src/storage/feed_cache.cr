@@ -62,7 +62,7 @@ class FeedCache
     @feed_repository ||= QuickHeadlines::Repositories::FeedRepository.new(@db_service)
   end
 
-  getter :clustering_store, :header_color_store, :cleanup_store
+  getter :clustering_store, :header_color_store, :cleanup_store, :db_service
 
   def get_item_signature(item_id : Int64) : Array(UInt32)?
     @clustering_store.get_item_signature(item_id)

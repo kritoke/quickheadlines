@@ -44,7 +44,7 @@ describe QuickHeadlines::Services::ClusteringService do
         11_i64, 2_i64, "Another unrelated tech story about phones", "https://news.example.com/phones", Time.utc.to_s("%Y-%m-%d %H:%M:%S"), 1, 0
       )
 
-      service = QuickHeadlines::Services::ClusteringService.new(db)
+      service = QuickHeadlines::Services::ClusteringService.new(cache.db_service)
       processed = service.recluster_with_lsh(cache, limit: 10)
 
       processed.should eq(5)
@@ -81,7 +81,7 @@ describe QuickHeadlines::Services::ClusteringService do
         2_i64, 1_i64, "OpenAI releases new AI model today for users", "https://tech.example.com/2", Time.utc.to_s("%Y-%m-%d %H:%M:%S"), 1, 0
       )
 
-      service = QuickHeadlines::Services::ClusteringService.new(db)
+      service = QuickHeadlines::Services::ClusteringService.new(cache.db_service)
       processed = service.recluster_with_lsh(cache, limit: 10)
 
       processed.should eq(1)
@@ -115,7 +115,7 @@ describe QuickHeadlines::Services::ClusteringService do
         2_i64, 2_i64, "OpenAI releases GPT-5 with improved reasoning capabilities now", "https://tech.example.com/2", Time.utc.to_s("%Y-%m-%d %H:%M:%S"), 1, 0, 1_i64
       )
 
-      service = QuickHeadlines::Services::ClusteringService.new(db)
+      service = QuickHeadlines::Services::ClusteringService.new(cache.db_service)
       processed = service.recluster_with_lsh(cache, limit: 10)
 
       processed.should eq(2)
@@ -148,7 +148,7 @@ describe QuickHeadlines::Services::ClusteringService do
         2_i64, 1_i64, "OpenAI announces GPT-5 with improved reasoning", "https://tech.example.com/2", Time.utc.to_s("%Y-%m-%d %H:%M:%S"), 1, 0, 1_i64
       )
 
-      service = QuickHeadlines::Services::ClusteringService.new(db)
+      service = QuickHeadlines::Services::ClusteringService.new(cache.db_service)
       clusters = service.get_all_clusters_from_db
 
       clusters.size.should eq(1)
