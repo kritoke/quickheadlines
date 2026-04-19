@@ -242,17 +242,18 @@ class FeedFetcher
     end
 
     FeedData.new(
-      feed.title,
-      feed.url,
-      site_link,
-      header_color,
-      header_text_color,
-      [Item.new(message, feed.url, nil, nil, nil, nil)],
-      nil,
-      nil,
-      favicon,
-      favicon_data,
-      message
+      title: feed.title,
+      url: feed.url,
+      site_link: site_link,
+      header_color: header_color,
+      header_text_color: header_text_color,
+      items: [Item.new(message, feed.url, nil, nil, nil, nil)],
+      etag: nil,
+      last_modified: nil,
+      favicon: favicon,
+      favicon_data: favicon_data,
+      error_message: message,
+      header_theme_colors: nil,
     )
   end
 
@@ -315,16 +316,17 @@ class FeedFetcher
       if File.exists?(favicon_path)
         favicon = prev_favicon_data.starts_with?("/favicons/") ? prev_favicon_data : cached.favicon
         return FeedData.new(
-          cached.title,
-          cached.url,
-          cached.site_link,
-          cached.header_color,
-          cached.header_text_color,
-          cached.items,
-          cached.etag,
-          cached.last_modified,
-          favicon,
-          prev_favicon_data
+          title: cached.title,
+          url: cached.url,
+          site_link: cached.site_link,
+          header_color: cached.header_color,
+          header_text_color: cached.header_text_color,
+          items: cached.items,
+          etag: cached.etag,
+          last_modified: cached.last_modified,
+          favicon: favicon,
+          favicon_data: prev_favicon_data,
+          header_theme_colors: cached.header_theme_colors,
         )
       end
     end
@@ -334,16 +336,17 @@ class FeedFetcher
       favicon_path = FaviconStorage.favicon_dir + cached_favicon
       unless File.exists?(favicon_path)
         return FeedData.new(
-          cached.title,
-          cached.url,
-          cached.site_link,
-          cached.header_color,
-          cached.header_text_color,
-          cached.items,
-          cached.etag,
-          cached.last_modified,
-          cached.favicon,
-          nil
+          title: cached.title,
+          url: cached.url,
+          site_link: cached.site_link,
+          header_color: cached.header_color,
+          header_text_color: cached.header_text_color,
+          items: cached.items,
+          etag: cached.etag,
+          last_modified: cached.last_modified,
+          favicon: cached.favicon,
+          favicon_data: nil,
+          header_theme_colors: cached.header_theme_colors,
         )
       end
     end
@@ -368,10 +371,6 @@ class FeedFetcher
         debug: debug_enabled
       )
     )
-  end
-
-  def self.error_feed_data(feed : Feed, message : String) : FeedData
-    instance.build_error_feed(feed, message)
   end
 
   def self.load_feeds_from_cache(config : Config) : Bool

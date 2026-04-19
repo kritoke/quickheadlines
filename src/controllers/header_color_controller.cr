@@ -2,7 +2,7 @@ require "./api_base_controller"
 
 class QuickHeadlines::Controllers::HeaderColorController < QuickHeadlines::Controllers::ApiBaseController
   @[ARTA::Post(path: "/api/header_color")]
-  def save_header_color(request : ATH::Request) : ATH::Response
+  def save_header_color(request : ATH::Request) : QuickHeadlines::DTOs::HeaderColorResponse
     raise ATH::Exception::HTTPException.new(401, "Unauthorized") unless check_admin_auth(request)
 
     body_io = request.body
@@ -14,10 +14,10 @@ class QuickHeadlines::Controllers::HeaderColorController < QuickHeadlines::Contr
     raise ATH::Exception::BadRequest.new("Missing feed_url, color, or text_color") unless feed_url && color && text_color
 
     config = StateStore.config
-    raise ATH::Exception::HTTPException.new(503, "Configuration not loaded") if config.nil?
+    raise ATH::Exception::ServiceUnavailable.new("Configuration not loaded") if config.nil?
 
     if has_manual_color_override?(config, feed_url)
-      return ATH::Response.new("{\"status\": \"skipped\"}", 200, HTTP::Headers{"content-type" => "application/json"})
+      return QuickHeadlines::DTOs::HeaderColorResponse.new(status: "skipped")
     end
 
     normalized_url = feed_url.strip.rstrip('/').gsub(/\/rss(\.xml)?$/i, "")
@@ -25,7 +25,7 @@ class QuickHeadlines::Controllers::HeaderColorController < QuickHeadlines::Contr
     db_url = cache.find_url_by_pattern(normalized_url) || feed_url
 
     cache.update_header_colors(db_url, color, text_color)
-    ATH::Response.new("{\"status\": \"ok\"}", 200, HTTP::Headers{"content-type" => "application/json"})
+    QuickHeadlines::DTOs::HeaderColorResponse.new(status: "ok")
   rescue ex : ATH::Exception::HTTPException
     raise ex
   rescue IO::EOFError

@@ -11,7 +11,7 @@ module QuickHeadlines::Services
       tab_name : String = "",
       total_count : Int32? = nil,
       display_item_limit : Int32? = nil,
-    ) : FeedResponse
+    ) : QuickHeadlines::DTOs::FeedResponse
       header_color = feed.header_color
       header_text_color = feed.header_text_color
 
@@ -33,7 +33,7 @@ module QuickHeadlines::Services
       displayed_items = feed.items.first(limit)
 
       items_response = displayed_items.map do |item|
-        ItemResponse.new(
+        QuickHeadlines::DTOs::ItemResponse.new(
           title: item.title,
           link: item.link,
           version: item.version,
@@ -43,7 +43,7 @@ module QuickHeadlines::Services
         )
       end
 
-      FeedResponse.new(
+      QuickHeadlines::DTOs::FeedResponse.new(
         tab: tab_name,
         url: feed.url,
         title: feed.title,
@@ -70,11 +70,11 @@ module QuickHeadlines::Services
       limit : Int32,
       cache : FeedCache,
       item_count : Int32,
-    ) : FeedResponse
+    ) : QuickHeadlines::DTOs::FeedResponse
       trimmed_items = feed.items[offset...Math.min(offset + limit, feed.items.size)]
 
       items_response = trimmed_items.map do |item|
-        ItemResponse.new(
+        QuickHeadlines::DTOs::ItemResponse.new(
           title: item.title,
           link: item.link,
           version: item.version,
@@ -84,7 +84,7 @@ module QuickHeadlines::Services
         )
       end
 
-      FeedResponse.new(
+      QuickHeadlines::DTOs::FeedResponse.new(
         tab: tab_name,
         url: feed.url,
         title: feed.title,
@@ -105,9 +105,9 @@ module QuickHeadlines::Services
       is_clustering : Bool,
       cache : FeedCache,
       item_limit : Int32,
-    ) : FeedsPageResponse
+    ) : QuickHeadlines::DTOs::FeedsPageResponse
       tabs_response = tabs_snapshot.map do |tab|
-        TabResponse.new(name: tab.name)
+        QuickHeadlines::DTOs::TabResponse.new(name: tab.name)
       end
 
       is_all_tab = active_tab.to_s.downcase == "all"
@@ -131,12 +131,12 @@ module QuickHeadlines::Services
                          if tab_feeds
                            tab_feeds.feeds.select { |feed| !feed.failed? }.map { |feed| build_feed_response(feed, cache, tab_name: active_tab, total_count: cache.item_count(feed.url), display_item_limit: item_limit) }
                          else
-                           [] of FeedResponse
+                           [] of QuickHeadlines::DTOs::FeedResponse
                          end
                        end
 
       software_releases_response = if is_all_tab
-                                     [] of FeedResponse
+                                     [] of QuickHeadlines::DTOs::FeedResponse
                                    else
                                      tab_with_sr = tabs_snapshot.find { |tab| tab.name.downcase == active_tab.downcase }
                                      if tab_with_sr && tab_with_sr.software_releases.present?
@@ -144,11 +144,11 @@ module QuickHeadlines::Services
                                          build_feed_response(feed, cache, tab_name: active_tab, total_count: cache.item_count(feed.url), display_item_limit: item_limit)
                                        end
                                      else
-                                       [] of FeedResponse
+                                       [] of QuickHeadlines::DTOs::FeedResponse
                                      end
                                    end
 
-      FeedsPageResponse.new(
+      QuickHeadlines::DTOs::FeedsPageResponse.new(
         tabs: tabs_response,
         active_tab: active_tab.to_s,
         feeds: feeds_response,

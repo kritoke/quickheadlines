@@ -169,7 +169,7 @@ module QuickHeadlines::Storage
       items = [] of ClusteringItemRow
 
       query = <<-SQL
-        SELECT i.id, i.title, i.link, i.pub_date, f.url as feed_url, f.title as feed_title, f.favicon, f.favicon_data, f.header_color
+        SELECT i.id, i.title, i.link, i.pub_date, f.url as feed_url, f.title as feed_title, f.site_link as feed_link, f.favicon, f.favicon_data, f.header_color, f.header_text_color, i.comment_url, i.commentary_url
         FROM items i
         JOIN feeds f ON i.feed_id = f.id
         WHERE i.cluster_id = ?
@@ -184,9 +184,13 @@ module QuickHeadlines::Storage
           pub_date_str = rows.read(String?)
           feed_url = rows.read(String)
           feed_title = rows.read(String)
+          feed_link = rows.read(String)
           favicon = rows.read(String?)
           favicon_data = rows.read(String?)
           header_color = rows.read(String?)
+          header_text_color = rows.read(String?)
+          comment_url = rows.read(String?)
+          commentary_url = rows.read(String?)
 
           pub_date = QuickHeadlines::Repositories::RepositoryBase.parse_db_time(pub_date_str)
 
@@ -197,9 +201,13 @@ module QuickHeadlines::Storage
             pub_date: pub_date,
             feed_url: feed_url,
             feed_title: feed_title,
+            feed_link: feed_link,
             favicon: favicon,
             favicon_data: favicon_data,
             header_color: header_color,
+            header_text_color: header_text_color,
+            comment_url: comment_url,
+            commentary_url: commentary_url,
           )
         end
       end

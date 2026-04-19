@@ -9,16 +9,16 @@ require "../src/dtos/cluster_dto"
 require "../src/services/feed_service"
 
 describe "API Response Types" do
-  describe TabResponse do
+  describe QuickHeadlines::DTOs::TabResponse do
     it "creates with name" do
-      response = TabResponse.new("technology")
+      response = QuickHeadlines::DTOs::TabResponse.new("technology")
       response.name.should eq("technology")
     end
   end
 
-  describe ItemResponse do
+  describe QuickHeadlines::DTOs::ItemResponse do
     it "creates with required fields" do
-      response = ItemResponse.new(
+      response = QuickHeadlines::DTOs::ItemResponse.new(
         title: "Test Title",
         link: "https://example.com/article"
       )
@@ -29,7 +29,7 @@ describe "API Response Types" do
     end
 
     it "creates with all fields" do
-      response = ItemResponse.new(
+      response = QuickHeadlines::DTOs::ItemResponse.new(
         title: "Test Title",
         link: "https://example.com/article",
         version: "1.0.0",
@@ -41,15 +41,15 @@ describe "API Response Types" do
     end
   end
 
-  describe FeedResponse do
+  describe QuickHeadlines::DTOs::FeedResponse do
     it "creates with required fields" do
-      response = FeedResponse.new(
+      response = QuickHeadlines::DTOs::FeedResponse.new(
         tab: "tech",
         url: "https://example.com/feed.xml",
         title: "Example Feed",
         site_link: "https://example.com",
         display_link: "example.com",
-        items: [] of ItemResponse,
+        items: [] of QuickHeadlines::DTOs::ItemResponse,
         total_item_count: 0
       )
       response.tab.should eq("tech")
@@ -59,7 +59,7 @@ describe "API Response Types" do
     end
 
     it "includes optional fields" do
-      response = FeedResponse.new(
+      response = QuickHeadlines::DTOs::FeedResponse.new(
         tab: "tech",
         url: "https://example.com/feed.xml",
         title: "Example Feed",
@@ -69,7 +69,7 @@ describe "API Response Types" do
         favicon_data: "/favicons/icon.png",
         header_color: "#ff0000",
         header_text_color: "#ffffff",
-        items: [] of ItemResponse,
+        items: [] of QuickHeadlines::DTOs::ItemResponse,
         total_item_count: 10
       )
       response.favicon.should eq("/favicons/icon.png")
@@ -79,9 +79,9 @@ describe "API Response Types" do
     end
   end
 
-  describe TimelineItemResponse do
+  describe QuickHeadlines::DTOs::TimelineItemResponse do
     it "creates with required fields" do
-      response = TimelineItemResponse.new(
+      response = QuickHeadlines::DTOs::TimelineItemResponse.new(
         id: "feed::https://example.com/article",
         title: "Test Title",
         link: "https://example.com/article",
@@ -95,7 +95,7 @@ describe "API Response Types" do
     end
 
     it "includes cluster information" do
-      response = TimelineItemResponse.new(
+      response = QuickHeadlines::DTOs::TimelineItemResponse.new(
         id: "feed::https://example.com/article",
         title: "Test Title",
         link: "https://example.com/article",
@@ -112,13 +112,13 @@ describe "API Response Types" do
     end
   end
 
-  describe FeedsPageResponse do
+  describe QuickHeadlines::DTOs::FeedsPageResponse do
     it "creates with required fields" do
-      response = FeedsPageResponse.new(
-        tabs: [TabResponse.new("tech"), TabResponse.new("news")],
+      response = QuickHeadlines::DTOs::FeedsPageResponse.new(
+        tabs: [QuickHeadlines::DTOs::TabResponse.new("tech"), QuickHeadlines::DTOs::TabResponse.new("news")],
         active_tab: "tech",
-        feeds: [] of FeedResponse,
-        software_releases: [] of FeedResponse,
+        feeds: [] of QuickHeadlines::DTOs::FeedResponse,
+        software_releases: [] of QuickHeadlines::DTOs::FeedResponse,
         clustering: false,
         updated_at: 1700000000000_i64
       )
@@ -130,10 +130,10 @@ describe "API Response Types" do
     end
   end
 
-  describe TimelinePageResponse do
+  describe QuickHeadlines::DTOs::TimelinePageResponse do
     it "creates with required fields" do
-      response = TimelinePageResponse.new(
-        items: [] of TimelineItemResponse,
+      response = QuickHeadlines::DTOs::TimelinePageResponse.new(
+        items: [] of QuickHeadlines::DTOs::TimelineItemResponse,
         has_more: false,
         total_count: 0,
         clustering: false
@@ -193,9 +193,9 @@ describe "API Response Types" do
     end
   end
 
-  describe ClusterItemsResponse do
+  describe QuickHeadlines::DTOs::ClusterItemsResponse do
     it "creates with required fields" do
-      response = ClusterItemsResponse.new(
+      response = QuickHeadlines::DTOs::ClusterItemsResponse.new(
         cluster_id: "123",
         items: [] of QuickHeadlines::DTOs::StoryResponse
       )

@@ -9,9 +9,13 @@ record ClusteringItemRow,
   pub_date : Time?,
   feed_url : String,
   feed_title : String,
-  favicon : String?,
-  favicon_data : String?,
-  header_color : String?
+  feed_link : String = "",
+  favicon : String? = nil,
+  favicon_data : String? = nil,
+  header_color : String? = nil,
+  header_text_color : String? = nil,
+  comment_url : String? = nil,
+  commentary_url : String? = nil
 
 record FeedData,
   title : String, url : String, site_link : String,
@@ -19,14 +23,6 @@ record FeedData,
   items : Array(Item), etag : String? = nil, last_modified : String? = nil,
   favicon : String? = nil, favicon_data : String? = nil,
   error_message : String? = nil, header_theme_colors : String? = nil do
-  def display_header_color
-    (header_color.try(&.strip).presence) || "transparent"
-  end
-
-  def display_header_text_color
-    header_text_color.try(&.strip).presence
-  end
-
   def display_link
     site_link.empty? ? url : site_link
   end

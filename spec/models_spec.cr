@@ -37,50 +37,6 @@ describe "Models" do
       feed.site_link.should eq("https://example.com")
     end
 
-    it "handles display_header_color" do
-      feed = FeedData.new(
-        title: "Test",
-        url: "https://example.com/feed.xml",
-        site_link: "",
-        header_color: nil,
-        header_text_color: nil,
-        items: [] of Item
-      )
-      feed.display_header_color.should eq("transparent")
-
-      feed2 = FeedData.new(
-        title: "Test",
-        url: "https://example.com/feed.xml",
-        site_link: "",
-        header_color: "  #ff0000  ",
-        header_text_color: nil,
-        items: [] of Item
-      )
-      feed2.display_header_color.should eq("#ff0000")
-    end
-
-    it "handles display_header_text_color" do
-      feed = FeedData.new(
-        title: "Test",
-        url: "https://example.com/feed.xml",
-        site_link: "",
-        header_color: nil,
-        header_text_color: nil,
-        items: [] of Item
-      )
-      feed.display_header_text_color.should be_nil
-
-      feed2 = FeedData.new(
-        title: "Test",
-        url: "https://example.com/feed.xml",
-        site_link: "",
-        header_color: nil,
-        header_text_color: "  #ffffff  ",
-        items: [] of Item
-      )
-      feed2.display_header_text_color.should eq("#ffffff")
-    end
-
     it "handles display_link" do
       feed = FeedData.new(
         title: "Test",

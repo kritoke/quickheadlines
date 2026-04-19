@@ -3,7 +3,7 @@ require "../fetcher/refresh_loop"
 
 class QuickHeadlines::Controllers::FeedPaginationController < QuickHeadlines::Controllers::ApiBaseController
   @[ARTA::Get(path: "/api/feed_more")]
-  def feed_more(request : ATH::Request) : FeedResponse
+  def feed_more(request : ATH::Request) : QuickHeadlines::DTOs::FeedResponse
     url = request.query_params["url"]?
     limit = validate_limit(request.query_params["limit"]?, 10)
     offset = validate_offset(request.query_params["offset"]?)

@@ -107,11 +107,11 @@ class QuickHeadlines::Services::ClusteringService
     )
   end
 
-  def get_cluster_items_response(cluster_id : String, feed_cache : FeedCache) : ClusterItemsResponse
+  def get_cluster_items_response(cluster_id : String, feed_cache : FeedCache) : QuickHeadlines::DTOs::ClusterItemsResponse
     parsed_id = cluster_id.to_i64?
 
     if parsed_id.nil?
-      return ClusterItemsResponse.new(
+      return QuickHeadlines::DTOs::ClusterItemsResponse.new(
         cluster_id: cluster_id,
         items: [] of QuickHeadlines::DTOs::StoryResponse,
       )
@@ -127,14 +127,17 @@ class QuickHeadlines::Services::ClusteringService
         pub_date: item.pub_date.try(&.to_unix_ms),
         feed_title: item.feed_title,
         feed_url: item.feed_url,
-        feed_link: "",
+        feed_link: item.feed_link,
         favicon: item.favicon,
         favicon_data: item.favicon_data,
         header_color: item.header_color,
+        header_text_color: item.header_text_color,
+        comment_url: item.comment_url,
+        commentary_url: item.commentary_url,
       )
     end
 
-    ClusterItemsResponse.new(
+    QuickHeadlines::DTOs::ClusterItemsResponse.new(
       cluster_id: cluster_id,
       items: items,
     )

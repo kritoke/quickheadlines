@@ -9,5 +9,8 @@ module QuickHeadlines::Entities
     feed_link : String = "",
     favicon : String? = nil,
     favicon_data : String? = nil,
-    header_color : String? = nil
+    header_color : String? = nil,
+    header_text_color : String? = nil,
+    comment_url : String? = nil,
+    commentary_url : String? = nil
 end

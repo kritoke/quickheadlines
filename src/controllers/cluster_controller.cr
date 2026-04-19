@@ -7,7 +7,7 @@ class QuickHeadlines::Controllers::ClusterController < QuickHeadlines::Controlle
   end
 
   @[ARTA::Get(path: "/api/clusters/{id}/items")]
-  def cluster_items(request : ATH::Request, id : String) : ClusterItemsResponse
+  def cluster_items(request : ATH::Request, id : String) : QuickHeadlines::DTOs::ClusterItemsResponse
     clustering_service.get_cluster_items_response(id, @feed_cache)
   end
 end

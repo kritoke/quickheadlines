@@ -2,7 +2,7 @@ require "./api_base_controller"
 
 class QuickHeadlines::Controllers::TabsController < QuickHeadlines::Controllers::ApiBaseController
   @[ARTA::Get(path: "/api/tabs")]
-  def tabs : TabsResponse
+  def tabs : QuickHeadlines::DTOs::TabsResponse
     state = StateStore.get
     tabs_snapshot = state.tabs
 
@@ -14,9 +14,9 @@ class QuickHeadlines::Controllers::TabsController < QuickHeadlines::Controllers:
     end
 
     tabs_response = tabs_snapshot.map do |tab|
-      TabResponse.new(name: tab.name)
+      QuickHeadlines::DTOs::TabResponse.new(name: tab.name)
     end
 
-    TabsResponse.new(tabs: tabs_response)
+    QuickHeadlines::DTOs::TabsResponse.new(tabs: tabs_response)
   end
 end

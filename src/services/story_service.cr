@@ -15,7 +15,7 @@ module QuickHeadlines::Services
       has_more = offset + limit < total_count
 
       timeline_items = items.map do |item|
-        TimelineItemResponse.new(
+        QuickHeadlines::DTOs::TimelineItemResponse.new(
           id: item.id.to_s,
           title: item.title,
           link: item.link,
@@ -44,7 +44,7 @@ module QuickHeadlines::Services
   end
 
   struct TimelineResult
-    property items : Array(TimelineItemResponse)
+    property items : Array(QuickHeadlines::DTOs::TimelineItemResponse)
     getter? has_more : Bool
     property total_count : Int32
 

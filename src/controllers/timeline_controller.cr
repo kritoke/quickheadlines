@@ -3,7 +3,7 @@ require "../fetcher/refresh_loop"
 
 class QuickHeadlines::Controllers::TimelineController < QuickHeadlines::Controllers::ApiBaseController
   @[ARTA::Get(path: "/api/timeline")]
-  def timeline(request : ATH::Request) : TimelinePageResponse
+  def timeline(request : ATH::Request) : QuickHeadlines::DTOs::TimelinePageResponse
     check_rate_limit!(request, "api_timeline", 180, 60)
 
     default_limit = StateStore.config.try(&.db_fetch_limit) || 500
@@ -37,7 +37,7 @@ class QuickHeadlines::Controllers::TimelineController < QuickHeadlines::Controll
       end
     end
 
-    TimelinePageResponse.new(
+    QuickHeadlines::DTOs::TimelinePageResponse.new(
       items: result.items,
       has_more: result.has_more?,
       total_count: result.total_count,

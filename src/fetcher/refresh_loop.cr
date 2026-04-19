@@ -65,7 +65,7 @@ private def build_software_releases(software_config : SoftwareConfig?, item_limi
 end
 
 private def build_tab_feeds(tab_config : TabConfig, fetched_map : Hash(String, FeedData), item_limit : Int32) : Tab
-  tab_feeds = tab_config.feeds.map { |feed| fetched_map[feed.url]? || FeedFetcher.error_feed_data(feed, "Failed to fetch") }
+  tab_feeds = tab_config.feeds.map { |feed| fetched_map[feed.url]? || FeedFetcher.instance.build_error_feed(feed, "Failed to fetch") }
   tab_releases = build_software_releases(tab_config.software_releases, item_limit)
   Tab.new(tab_config.name, tab_feeds, tab_releases)
 end
@@ -97,7 +97,7 @@ def refresh_all(config : Config, cache : FeedCache, db_service : DatabaseService
   end
 
   # Build new state immutably
-  new_feeds = config.feeds.map { |feed| fetched_map[feed.url]? || FeedFetcher.error_feed_data(feed, "Failed to fetch") }
+  new_feeds = config.feeds.map { |feed| fetched_map[feed.url]? || FeedFetcher.instance.build_error_feed(feed, "Failed to fetch") }
   new_tabs = config.tabs.map { |tab_config| build_tab_feeds(tab_config, fetched_map, config.item_limit) }
   new_software_releases = build_software_releases(config.software_releases, config.item_limit)
 

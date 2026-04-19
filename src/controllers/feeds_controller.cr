@@ -3,7 +3,7 @@ require "../fetcher/refresh_loop"
 
 class QuickHeadlines::Controllers::FeedsController < QuickHeadlines::Controllers::ApiBaseController
   @[ARTA::Get(path: "/api/feeds")]
-  def feeds(request : ATH::Request) : FeedsPageResponse
+  def feeds(request : ATH::Request) : QuickHeadlines::DTOs::FeedsPageResponse
     check_rate_limit!(request, "api_feeds", 600, 60)
 
     raw_tab = request.query_params["tab"]?

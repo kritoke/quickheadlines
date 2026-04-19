@@ -6,13 +6,23 @@ class QuickHeadlines::DTOs::StoryResponse
   property id : String
   property title : String
   property link : String
+  @[JSON::Field(emit_null: true)]
   property pub_date : Int64?
   property feed_title : String
   property feed_url : String
   property feed_link : String
+  @[JSON::Field(emit_null: true)]
   property favicon : String?
+  @[JSON::Field(emit_null: true)]
   property favicon_data : String?
+  @[JSON::Field(emit_null: true)]
   property header_color : String?
+  @[JSON::Field(emit_null: true)]
+  property header_text_color : String?
+  @[JSON::Field(emit_null: true)]
+  property comment_url : String?
+  @[JSON::Field(emit_null: true)]
+  property commentary_url : String?
 
   def initialize(
     @id : String,
@@ -25,6 +35,9 @@ class QuickHeadlines::DTOs::StoryResponse
     @favicon : String? = nil,
     @favicon_data : String? = nil,
     @header_color : String? = nil,
+    @header_text_color : String? = nil,
+    @comment_url : String? = nil,
+    @commentary_url : String? = nil,
   )
   end
 
@@ -39,7 +52,10 @@ class QuickHeadlines::DTOs::StoryResponse
       feed_link: story.feed_link,
       favicon: story.favicon,
       favicon_data: story.favicon_data,
-      header_color: story.header_color
+      header_color: story.header_color,
+      header_text_color: story.header_text_color,
+      comment_url: story.comment_url,
+      commentary_url: story.commentary_url,
     )
   end
 end
