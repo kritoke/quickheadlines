@@ -180,7 +180,7 @@ class FaviconSyncService
             Log.for("quickheadlines.cache").debug { "Backfilled missing favicon for #{url}: #{local_path}" }
             backfill_header_colors(feed_id, url, local_path)
           else
-        log_favicon_failed(feed_id)
+            log_favicon_failed(feed_id)
           end
         end
       rescue ex

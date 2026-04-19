@@ -9,7 +9,7 @@ require "../software_fetcher"
 require "../websocket"
 require "./feed_fetcher"
 
-REFRESH_IN_PROGRESS        = Atomic(Bool).new(false)
+REFRESH_IN_PROGRESS = Atomic(Bool).new(false)
 
 private def collect_feed_configs(config : Config) : Hash(String, Feed)
   all_configs = {} of String => Feed
@@ -17,7 +17,6 @@ private def collect_feed_configs(config : Config) : Hash(String, Feed)
   config.tabs.each { |tab| tab.feeds.each { |feed| all_configs[feed.url] = feed } }
   all_configs
 end
-
 
 private def fetch_feeds_concurrently(all_configs : Hash(String, Feed), existing_data : Hash(String, FeedData), config : Config) : Hash(String, FeedData)
   channel = Channel(FeedData?).new

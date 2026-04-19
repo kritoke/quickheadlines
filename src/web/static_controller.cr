@@ -43,9 +43,9 @@ class StaticController < Athena::Framework::Controller
     response
   rescue BakedFileSystem::NoSuchFileError
     ATH::Response.new("Not Found", 404, HTTP::Headers{"content-type" => "text/plain"})
-    rescue ex
-      Log.for("quickheadlines.http").error(exception: ex) { "Static file error for #{path}" }
-      ATH::Response.new("Internal server error", 500, HTTP::Headers{"content-type" => "text/plain"})
+  rescue ex
+    Log.for("quickheadlines.http").error(exception: ex) { "Static file error for #{path}" }
+    ATH::Response.new("Internal server error", 500, HTTP::Headers{"content-type" => "text/plain"})
   end
 
   @[ARTA::Get(path: "/")]
@@ -97,5 +97,4 @@ class StaticController < Athena::Framework::Controller
   def app_root_assets(filename : String) : ATH::Response
     serve_asset("_app/#{filename}")
   end
-
 end

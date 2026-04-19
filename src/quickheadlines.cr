@@ -59,7 +59,6 @@ begin
     ws.on_close do
       SocketManager.instance.unregister(ws, ip)
     end
-
   end
   handlers << ws_handler
   Log.for("quickheadlines.websocket").info { "Enabled - clients can connect to ws://host/api/ws" }

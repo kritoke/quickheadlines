@@ -43,7 +43,7 @@ class QuickHeadlines::Controllers::AdminController < QuickHeadlines::Controllers
     spawn do
       begin
         case action
-        when "clear-cache"     then handle_clear_cache
+        when "clear-cache"      then handle_clear_cache
         when "cleanup-orphaned" then handle_cleanup_orphaned
         end
       rescue ex
@@ -148,5 +148,4 @@ class QuickHeadlines::Controllers::AdminController < QuickHeadlines::Controllers
 
     ATH::Response.new(body, 200, HTTP::Headers{"content-type" => "application/json"})
   end
-
 end

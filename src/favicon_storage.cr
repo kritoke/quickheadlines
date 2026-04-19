@@ -62,7 +62,7 @@ module FaviconStorage
     end
     hash = OpenSSL::Digest.new("SHA256").update(hash_input).final.hexstring
     ext = extension_from_content_type(content_type)
-      filename = "#{hash[0...QuickHeadlines::Constants::FAVICON_HASH_PREFIX_LENGTH]}.#{ext}"
+    filename = "#{hash[0...QuickHeadlines::Constants::FAVICON_HASH_PREFIX_LENGTH]}.#{ext}"
     filepath = File.join(favicon_dir, filename)
 
     @@mutex.synchronize do
@@ -174,7 +174,7 @@ module FaviconStorage
       image_data = Base64.decode(base64_data)
       hash = OpenSSL::Digest.new("SHA256").update(url).final.hexstring
       ext = extension_from_content_type(content_type)
-    filename = "#{hash[0...QuickHeadlines::Constants::FAVICON_HASH_PREFIX_LENGTH]}.#{ext}"
+      filename = "#{hash[0...QuickHeadlines::Constants::FAVICON_HASH_PREFIX_LENGTH]}.#{ext}"
       filepath = File.join(favicon_dir, filename)
 
       @@mutex.synchronize do

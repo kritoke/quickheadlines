@@ -76,9 +76,9 @@ module QuickHeadlines::Repositories
           feed_title: rep_data[:feed_title],
           feed_url: rep_data[:feed_url],
           feed_link: "",
-            favicon: rep_data[:favicon],
-            favicon_data: rep_data[:favicon_data],
-            header_color: rep_data[:header_color]
+          favicon: rep_data[:favicon],
+          favicon_data: rep_data[:favicon_data],
+          header_color: rep_data[:header_color]
         )
 
         others = items[1..].map do |item|

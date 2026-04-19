@@ -162,5 +162,3 @@ module StateStore
     end
   end
 end
-
-

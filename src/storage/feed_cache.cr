@@ -20,7 +20,7 @@ class FeedCache
   @@instance_mutex = Mutex.new
 
   def self.instance : FeedCache
-    @@instance_mutex.synchronize { @@instance ||= FeedCache.new(QuickHeadlines.initial_config.not_nil!, DatabaseService.instance) }
+    @@instance_mutex.synchronize { @@instance ||= FeedCache.new(QuickHeadlines.initial_config.as(Config), DatabaseService.instance) }
   end
 
   def self.instance=(cache : FeedCache)

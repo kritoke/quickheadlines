@@ -13,6 +13,23 @@ end
 CONCURRENCY_SEMAPHORE = Channel(Nil).new(QuickHeadlines::Constants::CONCURRENCY).tap { |channel| QuickHeadlines::Constants::CONCURRENCY.times { channel.send(nil) } }
 
 module Utils
+  MIME_TYPES = {
+    "html"  => "text/html; charset=utf-8",
+    "htm"   => "text/html; charset=utf-8",
+    "css"   => "text/css; charset=utf-8",
+    "js"    => "application/javascript; charset=utf-8",
+    "json"  => "application/json",
+    "woff"  => "font/woff2",
+    "woff2" => "font/woff2",
+    "png"   => "image/png",
+    "ico"   => "image/x-icon",
+    "svg"   => "image/svg+xml",
+    "gif"   => "image/gif",
+    "jpg"   => "image/jpeg",
+    "jpeg"  => "image/jpeg",
+    "webp"  => "image/webp",
+  }
+
   PRIVATE_PREFIXES = ["127.", "192.168.", "10.", "169.254."]
 
   def self.parse_ip_address(address : String) : String?
@@ -59,7 +76,6 @@ module Utils
     second = parts[1].to_i?(strict: true)
     !second.nil? && second >= min && second <= max
   end
-
 end
 
 def read_body_safe(io : IO, max_size : Int32 = QuickHeadlines::Constants::MAX_REQUEST_BODY_SIZE) : String
@@ -108,21 +124,7 @@ def mime_type_from_path(path : String) : String
 end
 
 def mime_type_from_ext(ext : String) : String
-  case ext
-  when "html", "htm"  then "text/html; charset=utf-8"
-  when "css"         then "text/css; charset=utf-8"
-  when "js"          then "application/javascript; charset=utf-8"
-  when "json"        then "application/json"
-  when "woff", "woff2" then "font/woff2"
-  when "png"         then "image/png"
-  when "ico"         then "image/x-icon"
-  when "svg"         then "image/svg+xml"
-  when "gif"         then "image/gif"
-  when "jpg"         then "image/jpeg"
-  when "jpeg"        then "image/jpeg"
-  when "webp"        then "image/webp"
-  else                   "application/octet-stream"
-  end
+  Utils::MIME_TYPES[ext.downcase]? || "application/octet-stream"
 end
 
 def extract_client_ip(request : HTTP::Request) : String
