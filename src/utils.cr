@@ -19,7 +19,7 @@ module Utils
     "css"   => "text/css; charset=utf-8",
     "js"    => "application/javascript; charset=utf-8",
     "json"  => "application/json",
-    "woff"  => "font/woff2",
+    "woff"  => "font/woff",
     "woff2" => "font/woff2",
     "png"   => "image/png",
     "ico"   => "image/x-icon",
@@ -127,11 +127,13 @@ def mime_type_from_ext(ext : String) : String
   Utils::MIME_TYPES[ext.downcase]? || "application/octet-stream"
 end
 
-def extract_client_ip(request : HTTP::Request) : String
-  addr = request.remote_address
-  case addr
-  when Socket::IPAddress then addr.address
-  else
-    Utils.parse_ip_address(addr.to_s) || addr.to_s
+def extract_client_ip(request) : String
+  if ENV["TRUSTED_PROXY"]?
+    if xff = request.headers["X-Forwarded-For"]?
+      if first_ip = xff.split(",").first?.try(&.strip)
+        return first_ip
+      end
+    end
   end
+  request.headers["X-Client-IP"]?.try(&.strip) || "local"
 end

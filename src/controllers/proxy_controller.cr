@@ -20,9 +20,9 @@ class QuickHeadlines::Controllers::ProxyController < QuickHeadlines::Controllers
   private def proxy_image_fetch(url : String, max_bytes : Int64) : ATH::Response
     uri = URI.parse(url)
     client = HTTP::Client.new(uri)
-    client.read_timeout = 10.seconds
-    client.write_timeout = 10.seconds
-    client.connect_timeout = 5.seconds
+    client.read_timeout = QuickHeadlines::Constants::HTTP_READ_TIMEOUT.seconds
+    client.write_timeout = QuickHeadlines::Constants::HTTP_WRITE_TIMEOUT.seconds
+    client.connect_timeout = QuickHeadlines::Constants::HTTP_CONNECT_TIMEOUT.seconds
 
     begin
       response = client.get(uri.request_target)

@@ -104,8 +104,10 @@ class QuickHeadlines::Controllers::AdminController < QuickHeadlines::Controllers
 
     JSON.parse(body_content)["action"]?.try(&.as_s?)
   rescue IO::EOFError
+    Log.for("quickheadlines.app").warn { "Admin action: request body too short" }
     nil
   rescue JSON::ParseException
+    Log.for("quickheadlines.app").warn { "Admin action: invalid JSON in request body" }
     nil
   end
 

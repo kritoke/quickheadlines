@@ -49,7 +49,11 @@ class AppBootstrap
   private def register_shutdown_handler
     at_exit do
       Log.for("quickheadlines.app").info { "Shutting down gracefully..." }
-      @db_service.close rescue nil
+      begin
+        @db_service.close
+      rescue ex : Exception
+        Log.for("quickheadlines.app").warn { "Error closing database: #{ex.message}" }
+      end
     end
   end
 

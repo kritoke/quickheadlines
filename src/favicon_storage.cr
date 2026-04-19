@@ -107,9 +107,9 @@ module FaviconStorage
     end
 
     client = HTTP::Client.new(host, port: uri.port, tls: uri.scheme == "https")
-    client.read_timeout = 10.seconds
-    client.write_timeout = 10.seconds
-    client.connect_timeout = 5.seconds
+    client.read_timeout = QuickHeadlines::Constants::HTTP_READ_TIMEOUT.seconds
+    client.write_timeout = QuickHeadlines::Constants::HTTP_WRITE_TIMEOUT.seconds
+    client.connect_timeout = QuickHeadlines::Constants::HTTP_CONNECT_TIMEOUT.seconds
 
     redirect_client : HTTP::Client? = nil
 
@@ -130,9 +130,9 @@ module FaviconStorage
               return
             end
             redirect_client = HTTP::Client.new(redirect_host, port: redirected_uri.port, tls: redirected_uri.scheme == "https")
-            redirect_client.read_timeout = 10.seconds
-            redirect_client.write_timeout = 10.seconds
-            redirect_client.connect_timeout = 5.seconds
+            redirect_client.read_timeout = QuickHeadlines::Constants::HTTP_READ_TIMEOUT.seconds
+            redirect_client.write_timeout = QuickHeadlines::Constants::HTTP_WRITE_TIMEOUT.seconds
+            redirect_client.connect_timeout = QuickHeadlines::Constants::HTTP_CONNECT_TIMEOUT.seconds
             response = redirect_client.get(redirected_uri.request_target, headers: headers)
           end
         end

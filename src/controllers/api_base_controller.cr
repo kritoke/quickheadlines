@@ -41,7 +41,7 @@ class QuickHeadlines::Controllers::ApiBaseController < Athena::Framework::Contro
 
     token = auth_header[7..-1]
     timing_safe_compare(secret, token)
-  rescue Exception
+  rescue ArgumentError
     false
   end
 
@@ -68,14 +68,7 @@ class QuickHeadlines::Controllers::ApiBaseController < Athena::Framework::Contro
   end
 
   private def client_ip(request : ATH::Request) : String
-    if ENV["TRUSTED_PROXY"]?
-      if xff = request.headers["X-Forwarded-For"]?
-        if first_ip = xff.split(",").first?.try(&.strip)
-          return first_ip
-        end
-      end
-    end
-    request.headers["X-Client-IP"]?.try(&.strip) || "local"
+    extract_client_ip(request)
   end
 
   private def validate_proxy_url(url : String) : Bool
