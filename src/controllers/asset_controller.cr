@@ -8,7 +8,7 @@ class QuickHeadlines::Controllers::AssetController < QuickHeadlines::Controllers
 
     raise ATH::Exception::BadRequest.new("Missing 'url' parameter") if url.nil? || url.strip.empty?
 
-    normalized_url = normalize_url(url)
+    normalized_url = normalize_feed_url(url)
 
     if favicon_path = FaviconStorage.get_or_fetch(normalized_url)
       if File.exists?(favicon_path)

@@ -22,15 +22,8 @@ module QuickHeadlines::Repositories
       comment_url : String? = nil,
       commentary_url : String? = nil
 
-    def find_timeline_items(limit : Int32, offset : Int32, days_back : Int32?, allowed_feed_urls : Array(String) = [] of String) : Array(TimelineEntry)
-      items = [] of TimelineEntry
-
-      feed_filter_clause = build_feed_filter(allowed_feed_urls)
-      feed_filter_values = feed_filter_values(allowed_feed_urls)
-
-      cutoff_value = days_back ? Time.utc - days_back.days : nil
-
-      query = <<-SQL
+    private def cluster_info_cte : String
+      <<-SQL
         WITH cluster_info AS (
           SELECT
             cluster_id,
@@ -41,6 +34,19 @@ module QuickHeadlines::Repositories
           AND pub_date >= ?
           GROUP BY cluster_id
         )
+        SQL
+    end
+
+    def find_timeline_items(limit : Int32, offset : Int32, days_back : Int32?, allowed_feed_urls : Array(String) = [] of String) : Array(TimelineEntry)
+      items = [] of TimelineEntry
+
+      feed_filter_clause = build_feed_filter(allowed_feed_urls)
+      feed_filter_values = feed_filter_values(allowed_feed_urls)
+
+      cutoff_value = days_back ? Time.utc - days_back.days : nil
+
+      query = <<-SQL
+        #{cluster_info_cte}
         SELECT
           i.id,
           i.title,
@@ -122,16 +128,7 @@ module QuickHeadlines::Repositories
       feed_filter_values = feed_filter_values(allowed_feed_urls)
 
       query = <<-SQL
-        WITH cluster_info AS (
-          SELECT
-            cluster_id,
-            MIN(id) as representative_id,
-            COUNT(*) as cluster_size
-          FROM items
-          WHERE cluster_id IS NOT NULL
-          AND pub_date >= ?
-          GROUP BY cluster_id
-        )
+        #{cluster_info_cte}
         SELECT COUNT(*)
         FROM items i
         JOIN feeds f ON i.feed_id = f.id

@@ -1,7 +1,6 @@
 require "db"
 require "sqlite3"
 require "mutex"
-require "openssl"
 require "uri"
 require "../config"
 require "../models"
@@ -85,7 +84,7 @@ class FaviconSyncService
   end
 
   private def find_local_favicon(favicon : String) : Tuple(Bool, String?)
-    hash = OpenSSL::Digest.new("SHA256").update(favicon).final.hexstring
+    hash = FaviconStorage.favicon_hash_for_url_full(favicon)
     FaviconStorage::POSSIBLE_EXTENSIONS.each do |ext|
       filename = "#{hash[0...QuickHeadlines::Constants::FAVICON_HASH_PREFIX_LENGTH]}.#{ext}"
       filepath = File.join(FaviconStorage.favicon_dir, filename)
@@ -210,9 +209,10 @@ class FaviconSyncService
       if text_val.is_a?(Hash)
         text_light = text_val.as(Hash)["light"]?.try(&.to_s)
         text_dark = text_val.as(Hash)["dark"]?.try(&.to_s)
-      elsif text_val.is_a?(String)
-        text_light = text_val.to_s
-        text_dark = text_val.to_s
+      else
+        normalized = ColorExtractor.normalize_text_value(text_val.to_s)
+        text_light = normalized["light"]?
+        text_dark = normalized["dark"]?
       end
 
       legacy_text = text_light || text_dark

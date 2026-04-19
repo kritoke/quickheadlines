@@ -51,16 +51,24 @@ module FaviconStorage
     end
   end
 
-  def self.save_favicon(url : String, image_data : Bytes, content_type : String) : String?
-    return if image_data.size > QuickHeadlines::Constants::FAVICON_MAX_SIZE
-    return unless valid_image_data?(image_data)
-
+  private def self.favicon_hash_for_url(url : String) : String
     hash_input = begin
       url[0..255]
     rescue IndexError
       url
     end
-    hash = OpenSSL::Digest.new("SHA256").update(hash_input).final.hexstring
+    OpenSSL::Digest.new("SHA256").update(hash_input).final.hexstring
+  end
+
+  def self.favicon_hash_for_url_full(url : String) : String
+    OpenSSL::Digest.new("SHA256").update(url).final.hexstring
+  end
+
+  def self.save_favicon(url : String, image_data : Bytes, content_type : String) : String?
+    return if image_data.size > QuickHeadlines::Constants::FAVICON_MAX_SIZE
+    return unless valid_image_data?(image_data)
+
+    hash = favicon_hash_for_url(url)
     ext = extension_from_content_type(content_type)
     filename = "#{hash[0...QuickHeadlines::Constants::FAVICON_HASH_PREFIX_LENGTH]}.#{ext}"
     filepath = File.join(favicon_dir, filename)
@@ -148,7 +156,7 @@ module FaviconStorage
   end
 
   def self.get_or_fetch(url : String) : String?
-    hash = OpenSSL::Digest.new("SHA256").update(url).final.hexstring
+    hash = favicon_hash_for_url_full(url)
     dir = favicon_dir
 
     @@mutex.synchronize do
@@ -172,7 +180,7 @@ module FaviconStorage
 
     begin
       image_data = Base64.decode(base64_data)
-      hash = OpenSSL::Digest.new("SHA256").update(url).final.hexstring
+      hash = favicon_hash_for_url_full(url)
       ext = extension_from_content_type(content_type)
       filename = "#{hash[0...QuickHeadlines::Constants::FAVICON_HASH_PREFIX_LENGTH]}.#{ext}"
       filepath = File.join(favicon_dir, filename)

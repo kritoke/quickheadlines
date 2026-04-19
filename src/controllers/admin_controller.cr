@@ -56,17 +56,11 @@ class QuickHeadlines::Controllers::AdminController < QuickHeadlines::Controllers
 
   private def handle_clear_cache : Nil
     cache = @feed_cache
-    db = cache.db
 
-    feed_count = db.query_one("SELECT COUNT(*) FROM feeds", as: Int64)
-    item_count = db.query_one("SELECT COUNT(*) FROM items", as: Int64)
+    feed_count = cache.db.query_one("SELECT COUNT(*) FROM feeds", as: Int64)
+    item_count = cache.db.query_one("SELECT COUNT(*) FROM items", as: Int64)
 
-    db.transaction do
-      db.exec("DELETE FROM items")
-      db.exec("DELETE FROM feeds")
-      cache.clear_clustering_metadata
-      cache.clear_all
-    end
+    cache.clear_all
 
     Log.for("quickheadlines.app").info { "Cache cleared: #{feed_count} feeds, #{item_count} items deleted" }
   end

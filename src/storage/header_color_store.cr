@@ -9,17 +9,7 @@ module QuickHeadlines::Storage
 
     def update_header_colors(feed_url : String, bg_color : String, text_color : String)
       @mutex.synchronize do
-        normalized_url = normalize_feed_url(feed_url)
-
-        existing = @db.query_one?("SELECT header_color, header_text_color FROM feeds WHERE url = ?", normalized_url) do |row|
-          {header_color: row.read(String?), header_text_color: row.read(String?)}
-        end
-
-        if existing.nil?
-          existing = @db.query_one?("SELECT header_color, header_text_color FROM feeds WHERE url = ?", feed_url) do |row|
-            {header_color: row.read(String?), header_text_color: row.read(String?)}
-          end
-        end
+        existing = find_feed_colors(feed_url)
 
         if existing.nil?
           all_urls = @db.query_all("SELECT url FROM feeds LIMIT 10", as: String)
@@ -93,6 +83,22 @@ module QuickHeadlines::Storage
         end
         result
       end
+    end
+
+    private def find_feed_colors(feed_url : String) : {header_color: String?, header_text_color: String?}?
+      normalized_url = normalize_feed_url(feed_url)
+
+      existing = @db.query_one?("SELECT header_color, header_text_color FROM feeds WHERE url = ?", normalized_url) do |row|
+        {header_color: row.read(String?), header_text_color: row.read(String?)}
+      end
+
+      if existing.nil?
+        existing = @db.query_one?("SELECT header_color, header_text_color FROM feeds WHERE url = ?", feed_url) do |row|
+          {header_color: row.read(String?), header_text_color: row.read(String?)}
+        end
+      end
+
+      existing
     end
   end
 end
