@@ -2,6 +2,7 @@ require "../config"
 require "../constants"
 require "../storage"
 require "./database_service"
+require "./favicon_sync_service"
 require "../websocket"
 require "../fetcher/vug_adapter"
 
@@ -27,11 +28,6 @@ class AppBootstrap
     DatabaseService.instance = @db_service
 
     @feed_cache = load_feed_cache(@config, @db_service)
-    begin
-      @feed_cache.normalize_pub_dates
-    rescue ex
-      Log.for("quickheadlines.app").warn(exception: ex) { "normalize_pub_dates failed on startup" }
-    end
     Log.for("quickheadlines.app").info { "Loaded #{@feed_cache.size} feeds from cache" }
 
     FaviconStorage.init
@@ -58,6 +54,7 @@ class AppBootstrap
   end
 
   def start_background_tasks
+    run_startup_maintenance
     start_feed_refresh
     start_clustering_scheduler
     start_cleanup_scheduler
@@ -70,6 +67,31 @@ class AppBootstrap
     Log.for("quickheadlines.app").debug { "StateStore.feeds.size=#{StateStore.feeds.size}" }
     StateStore.tabs.each do |tab|
       Log.for("quickheadlines.app").debug { "StateStore.tabs[#{tab.name}].feeds.size=#{tab.feeds.size}" }
+    end
+  end
+
+  private def run_startup_maintenance
+    spawn do
+      begin
+        @feed_cache.normalize_pub_dates
+      rescue ex
+        Log.for("quickheadlines.app").warn(exception: ex) { "normalize_pub_dates failed on startup" }
+      end
+
+      db_size = get_db_size(@feed_cache.db_path)
+      if db_size > QuickHeadlines::Constants::DB_VACUUM_THRESHOLD
+        begin
+          @feed_cache.vacuum
+        rescue ex
+          Log.for("quickheadlines.app").warn(exception: ex) { "startup vacuum failed" }
+        end
+      end
+
+      begin
+        FaviconSyncService.new(@feed_cache.db).sync_favicon_paths
+      rescue ex
+        Log.for("quickheadlines.app").warn(exception: ex) { "favicon sync failed on startup" }
+      end
     end
   end
 

@@ -228,8 +228,6 @@ def load_feed_cache(config : Config, db_service : DatabaseService) : FeedCache
 
   cache.ensure_indexes
 
-  FaviconSyncService.new(cache.db).sync_favicon_paths
-
   if health_status == DbHealthStatus::Healthy
     cache.cleanup_old_articles(QuickHeadlines::Constants::CACHE_RETENTION_DAYS)
   end
@@ -241,11 +239,6 @@ def load_feed_cache(config : Config, db_service : DatabaseService) : FeedCache
   cache.cleanup_old_entries(retention_hours, config_urls)
 
   cache.check_size_limit(QuickHeadlines::Constants::DB_SIZE_HARD_LIMIT)
-
-  db_size = get_db_size(cache.db_path)
-  if db_size > QuickHeadlines::Constants::DB_VACUUM_THRESHOLD
-    cache.vacuum
-  end
 
   cache
 end
