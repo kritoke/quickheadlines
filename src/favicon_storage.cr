@@ -89,9 +89,10 @@ module FaviconStorage
 
   def self.valid_image_data?(data : Bytes) : Bool
     return false if data.size < 4
-    xml_markers = ["<?xml", "<html", "<!DOCTYPE"]
-    str_start = String.new(data[0..Math.min(data.size - 1, 100)])
-    return false if xml_markers.any? { |marker| str_start.starts_with?(marker) }
+    str_start = String.new(data[0..Math.min(data.size - 1, 100)]).downcase
+    if str_start.starts_with?("<?xml") || str_start.starts_with?("<html") || str_start.starts_with?("<!doctype")
+      return false unless String.new(data).downcase.includes?("<svg")
+    end
     true
   end
 
