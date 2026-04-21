@@ -53,6 +53,13 @@ class StaticController < Athena::Framework::Controller
     serve_asset("index.html")
   end
 
+  @[ARTA::Get(path: "/health")]
+  def health : ATH::Response
+    response = ATH::Response.new(%({"status": "ok", "time": #{Time.utc.to_unix_ms}}))
+    response.headers["content-type"] = "application/json"
+    response
+  end
+
   @[ARTA::Get(path: "/timeline")]
   def timeline : ATH::Response
     serve_asset("timeline.html")

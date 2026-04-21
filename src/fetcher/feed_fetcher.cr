@@ -174,7 +174,7 @@ class FeedFetcher
   end
 
   private def resolve_favicons(site_link : String, feed : Feed, result_favicon, previous_data : FeedData?) : Tuple(String?, String?)
-    favicon, favicon_data = VugAdapter.get_favicon(site_link, result_favicon, previous_data.try(&.favicon), previous_data.try(&.favicon_data))
+    favicon, favicon_data = safe_get_favicon_with_fallback(site_link, result_favicon, previous_data.try(&.favicon), previous_data.try(&.favicon_data))
 
     if favicon.nil? && favicon_data.nil?
       domain = extract_domain_for_favicon(site_link, feed.url)
@@ -187,6 +187,18 @@ class FeedFetcher
       end
     end
 
+    {favicon, favicon_data}
+  end
+
+  private def safe_get_favicon_with_fallback(site_link : String, parsed_favicon : String?, prev_favicon : String?, prev_favicon_data : String?) : {String?, String?}
+    favicon, favicon_data = nil, nil
+    begin
+      favicon, favicon_data = VugAdapter.get_favicon(site_link, parsed_favicon, prev_favicon, prev_favicon_data)
+    rescue ex : IO::TimeoutError | Socket::Addrinfo::Error | HTTP::Client::OverloadError
+      Log.for("quickheadlines.feed").debug { "VugAdapter.get_favicon failed for #{site_link}: #{ex.class}" }
+    rescue ex
+      Log.for("quickheadlines.feed").warn { "VugAdapter.get_favicon unexpected error for #{site_link}: #{ex.class} - #{ex.message}" }
+    end
     {favicon, favicon_data}
   end
 
@@ -242,7 +254,7 @@ class FeedFetcher
 
     Log.for("quickheadlines.feed").warn { "[FEED ERROR] #{feed.title} (#{feed.url}) - #{message}" }
 
-    favicon, favicon_data = VugAdapter.get_favicon(site_link, nil, nil, nil)
+    favicon, favicon_data = safe_get_favicon(site_link)
 
     header_color, header_text_color = extract_header_colors(feed, favicon_data)
 
@@ -264,6 +276,30 @@ class FeedFetcher
       error_message: message,
       header_theme_colors: nil,
     )
+  end
+
+  private def safe_get_favicon(site_link : String) : {String?, String?}
+    favicon, favicon_data = nil, nil
+    begin
+      favicon, favicon_data = VugAdapter.get_favicon(site_link, nil, nil, nil)
+    rescue ex : IO::TimeoutError | Socket::Addrinfo::Error
+      Log.for("quickheadlines.feed").debug { "Favicon fetch failed for #{site_link}: #{ex.class}" }
+    rescue ex
+      Log.for("quickheadlines.feed").warn { "Favicon fetch unexpected error for #{site_link}: #{ex.class} - #{ex.message}" }
+    end
+    {favicon, favicon_data}
+  end
+
+  private def safe_get_favicon_with_fallback(site_link : String, parsed_favicon : String?, prev_favicon : String?, prev_favicon_data : String?) : {String?, String?}
+    favicon, favicon_data = nil, nil
+    begin
+      favicon, favicon_data = VugAdapter.get_favicon(site_link, parsed_favicon, prev_favicon, prev_favicon_data)
+    rescue ex : IO::TimeoutError | Socket::Addrinfo::Error
+      Log.for("quickheadlines.feed").debug { "VugAdapter.get_favicon failed for #{site_link}: #{ex.class}" }
+    rescue ex
+      Log.for("quickheadlines.feed").warn { "VugAdapter.get_favicon unexpected error for #{site_link}: #{ex.class} - #{ex.message}" }
+    end
+    {favicon, favicon_data}
   end
 
   # Private helper methods
