@@ -191,7 +191,7 @@ class FeedFetcher
   end
 
   private def extract_domain_for_favicon(site_link : String, feed_url : String) : String?
-    if site_link && !site_link.starts_with?("#") && !site_link.includes?("#") && site_link.presence
+    if site_link && !site_link.starts_with?("#") && !site_link.includes?("#") && !site_link.starts_with?("placeholder:") && site_link.presence
       uri = URI.parse(site_link)
       return uri.host if uri.host
     end

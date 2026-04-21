@@ -5,7 +5,7 @@ require "../constants"
 
 class SocketManager
   @@instance : SocketManager?
-  @@mutex = Mutex.new
+  @@mutex = Mutex.new(:unchecked)
 
   record Connection, websocket : HTTP::WebSocket, ip : String, outgoing : Channel(String), created_at : Time
 
@@ -22,15 +22,15 @@ class SocketManager
 
   def initialize
     @connections = [] of Connection
-    @connections_mutex = Mutex.new
+    @connections_mutex = Mutex.new(:unchecked)
     @ip_counts = {} of String => Int32
-    @ip_mutex = Mutex.new
+    @ip_mutex = Mutex.new(:unchecked)
     @messages_sent = Atomic(Int64).new(0)
     @messages_dropped = Atomic(Int64).new(0)
     @send_errors = Atomic(Int64).new(0)
     @closed_total = Atomic(Int64).new(0)
     @last_activity = {} of HTTP::WebSocket => Time
-    @activity_mutex = Mutex.new
+    @activity_mutex = Mutex.new(:unchecked)
   end
 
   def self.instance : SocketManager

@@ -10,9 +10,11 @@ module VugAdapter
       timeout: 30.seconds,
       connect_timeout: 10.seconds,
       on_save: ->(url : String, data : Bytes, content_type : String) do
+        return if url.nil? || url.starts_with?("placeholder:") || url.includes?("#placeholder")
         FaviconStorage.save_favicon(url, data, content_type)
       end,
       on_load: ->(url : String) do
+        return nil if url.nil? || url.starts_with?("placeholder:") || url.includes?("#placeholder")
         FaviconStorage.get_or_fetch(url)
       end,
       on_debug: ->(msg : String) do
@@ -46,21 +48,23 @@ module VugAdapter
   def self.get_favicon(site_url : String, parsed_favicon : String? = nil, previous_favicon : String? = nil, previous_favicon_data : String? = nil) : {String?, String?}
     if previous_favicon_data && previous_favicon_data.starts_with?("/favicons/")
       favicon_path = FaviconStorage.favicon_dir + previous_favicon_data
-      if File.exists?(favicon_path)
+      if File.exists?(favicon_path) && !previous_favicon_data.includes?("placeholder")
         return {previous_favicon_data, previous_favicon_data}
       end
     end
 
-    if parsed_favicon
+    if parsed_favicon && !parsed_favicon.starts_with?("#") && !parsed_favicon.includes?("#") && !parsed_favicon.starts_with?("placeholder:")
       result = fetch(parsed_favicon)
-      if result.local_path
-        return {result.url, result.local_path}
+      if result.local_path && (url = result.url)
+        return {url, result.local_path}
       end
     end
 
-    result = fetch_for_site(site_url)
-    if result.local_path
-      return {result.url, result.local_path}
+    if site_url && !site_url.starts_with?("#") && !site_url.includes?("#") && !site_url.starts_with?("placeholder:")
+      result = fetch_for_site(site_url)
+      if result.local_path && (url = result.url) && !url.starts_with?("placeholder:")
+        return {url, result.local_path}
+      end
     end
 
     {nil, nil}
