@@ -30,12 +30,14 @@ private def fetch_feeds_concurrently(all_configs : Hash(String, Feed), existing_
         CONCURRENCY_SEMAPHORE.send(nil)
       end
     end
+    Fiber.yield
   end
 
   fetched_map = {} of String => FeedData
   completed = 0
   timeout_span = QuickHeadlines::Constants::FEED_FETCH_TIMEOUT_SECONDS.seconds
   all_configs.size.times do
+    Fiber.yield
     select
     when data = channel.receive?
       if data

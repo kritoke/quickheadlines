@@ -10,6 +10,7 @@ require "./utils"
 require "./fetcher"
 require "./storage"
 require "./favicon_storage"
+require "./favicon_cache"
 require "./websocket"
 
 # Load entities, services, controllers, repositories, etc.

@@ -129,6 +129,7 @@ class FaviconSyncService
 
   private def process_google_backfills(backfills : Array({Int64, String, String}))
     backfills.each do |feed_id, url, google_url|
+      Fiber.yield
       url_to_fetch = fix_google_favicon_url(google_url, url, feed_id)
       next unless url_to_fetch
 
@@ -166,6 +167,7 @@ class FaviconSyncService
 
   private def process_missing_backfills(backfills : Array({Int64, String, String}))
     backfills.each do |feed_id, url, site_link|
+      Fiber.yield
       begin
         uri = URI.parse(site_link)
         host = uri.host

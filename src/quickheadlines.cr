@@ -1,7 +1,9 @@
 require "./application"
 require "./websocket"
 
+require "http"
 require "log"
+require "time"
 
 Log.setup do |builder|
   builder.bind "*", Log::Severity::Info, Log::IOBackend.new
@@ -20,6 +22,26 @@ class ClientIPHandler
   end
 end
 
+class RequestTimingHandler
+  include HTTP::Handler
+
+  SLOW_THRESHOLD_MS = 500.0
+
+  def call(context : HTTP::Server::Context)
+    start = Time.monotonic
+    call_next(context)
+    elapsed = Time.monotonic - start
+    ms = elapsed.total_milliseconds
+    path = context.request.path
+    method = context.request.method
+    status = context.response.status_code
+
+    if ms >= SLOW_THRESHOLD_MS
+      Log.for("quickheadlines.timing").warn { "#{method} #{path} -> #{status} (#{ms.round(1)}ms)" }
+    end
+  end
+end
+
 begin
   config = QuickHeadlines.initial_config
   if config.nil?
@@ -29,12 +51,19 @@ begin
   port = config.server_port
 
   if bootstrap = QuickHeadlines.bootstrap
-    spawn bootstrap.start_background_tasks
-    spawn bootstrap.verify_feeds_loaded
+    # Allow skipping heavy startup background tasks for faster interactive dev/diagnosis.
+    # Set environment variable SKIP_STARTUP_TASKS=1 to prevent spawning refresh/clustering
+    if ENV["SKIP_STARTUP_TASKS"]?
+      Log.for("quickheadlines.app").info { "SKIP_STARTUP_TASKS set; not starting background tasks on startup" }
+    else
+      spawn bootstrap.start_background_tasks
+      spawn bootstrap.verify_feeds_loaded
+    end
   end
 
   handlers = [] of HTTP::Handler
   handlers << ClientIPHandler.new
+  handlers << RequestTimingHandler.new
 
   ws_handler = HTTP::WebSocketHandler.new do |ws, ctx|
     origin = ctx.request.headers["Origin"]?
@@ -63,7 +92,7 @@ begin
   handlers << ws_handler
   Log.for("quickheadlines.websocket").info { "Enabled - clients can connect to ws://host/api/ws" }
 
-  ATH.run(host: "0.0.0.0", port: port, prepend_handlers: handlers)
+  ATH.run(host: "0.0.0.0", port: port, reuse_port: true, prepend_handlers: handlers)
 rescue ex
   Log.for("quickheadlines.app").fatal(exception: ex) { "Failed to start server" }
   exit 1

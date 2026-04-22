@@ -245,6 +245,8 @@ tabs:
         url: "https://www.haiku-os.org/blog/feed/"
       - title: "FreeBSD"
         url: "https://www.freebsd.org/news/feed.xml"
+      - title: "FreshPorts"
+        url: "https://www.freshports.org/backend/atom0.3.php"
       - title: "NetBSD"
         url: "https://www.netbsd.org/changes/rss-netbsd.xml"
       - title: "r/FreeBSD"

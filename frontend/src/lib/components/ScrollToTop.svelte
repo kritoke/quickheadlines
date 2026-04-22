@@ -3,6 +3,7 @@
   import { breakpointState } from '$lib/utils/breakpoint.svelte';
   import { zIndex } from '$lib/design/tokens';
   import { logger } from '$lib/utils/debug';
+  import { getScrollContainer, getScrollTop, scrollToPosition as doScrollToPosition } from '$lib/utils/scroll';
   
   let colors = $derived(getScrollButtonColors(themeState.theme));
   let isMobile = $derived(breakpointState.isMobile);
@@ -13,23 +14,16 @@
   $effect(() => {
     if (typeof window === 'undefined') return;
     
-    import('$lib/utils/scroll').then(({ getScrollContainer, getScrollTop }) => {
-      const scrollTarget = getScrollContainer();
-      container = scrollTarget;
-      const handler = () => {
-        const top = getScrollTop(scrollTarget);
-        visible = top >= 100;
-      };
-      handler();
-      const target = scrollTarget === window ? window : scrollTarget;
-      target.addEventListener('scroll', handler);
-      scrollCleanup = () => target.removeEventListener('scroll', handler);
-    }).catch(() => {
-      const handler = () => (visible = (window.scrollY || document.documentElement.scrollTop || document.body.scrollTop || 0) >= 100);
-      handler();
-      window.addEventListener('scroll', handler);
-      scrollCleanup = () => window.removeEventListener('scroll', handler);
-    });
+    const scrollTarget = getScrollContainer();
+    container = scrollTarget;
+    const handler = () => {
+      const top = getScrollTop(scrollTarget);
+      visible = top >= 100;
+    };
+    handler();
+    const target = scrollTarget === window ? window : scrollTarget;
+    target.addEventListener('scroll', handler);
+    scrollCleanup = () => target.removeEventListener('scroll', handler);
     
     return () => {
       scrollCleanup?.();
@@ -40,14 +34,8 @@
   function doScroll(e: Event) {
     e.preventDefault();
     e.stopPropagation();
-    import('$lib/utils/scroll').then(({ scrollToPosition, getScrollContainer }) => {
-      const scrollTarget = container || getScrollContainer();
-      scrollToPosition(0, scrollTarget);
-    }).catch(() => {
-      document.documentElement.scrollTop = 0;
-      document.body.scrollTop = 0;
-      window.scrollTo(0, 0);
-    });
+    const scrollTarget = container || getScrollContainer();
+    doScrollToPosition(0, scrollTarget);
   }
 </script>
 

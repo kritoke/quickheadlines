@@ -7,8 +7,8 @@ module VugAdapter
 
   def self.config : Vug::Config
     Vug::Config.new(
-      timeout: 30.seconds,
-      connect_timeout: 10.seconds,
+      timeout: 10.seconds,
+      connect_timeout: 5.seconds,
       on_save: ->(url : String, data : Bytes, content_type : String) do
         return if url.nil? || url.starts_with?("placeholder:") || url.includes?("#placeholder")
         FaviconStorage.save_favicon(url, data, content_type)

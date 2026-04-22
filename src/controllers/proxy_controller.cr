@@ -1,4 +1,5 @@
 require "./api_base_controller"
+require "../favicon_cache"
 
 class QuickHeadlines::Controllers::ProxyController < QuickHeadlines::Controllers::ApiBaseController
   @[ARTA::Get(path: "/api/proxy-image")]
@@ -70,13 +71,25 @@ class QuickHeadlines::Controllers::ProxyController < QuickHeadlines::Controllers
     favicon_path = File.join(FaviconStorage.favicon_dir, "#{hash}.#{ext}")
     raise ATH::Exception::BadRequest.new("Invalid favicon path") unless favicon_path.starts_with?(FaviconStorage.favicon_dir)
 
-    raise ATH::Exception::NotFound.new("Favicon not found") unless File.exists?(favicon_path)
+    cache_key = "#{hash}.#{ext}"
 
-    content = File.read(favicon_path)
-    ATH::Response.new(content, 200, HTTP::Headers{
-      "content-type"                    => mime_type_from_ext(ext),
-      "cache-control"                  => "public, max-age=604800, immutable",
-      "x-content-type-options"         => "nosniff",
-    })
+    cached = FaviconCache.get(cache_key)
+    if cached
+      ATH::Response.new(cached, 200, HTTP::Headers{
+        "content-type"                    => mime_type_from_ext(ext),
+        "cache-control"                  => "public, max-age=604800, immutable",
+        "x-content-type-options"         => "nosniff",
+      })
+    else
+      raise ATH::Exception::NotFound.new("Favicon not found") unless File.exists?(favicon_path)
+
+      content = File.read(favicon_path)
+      FaviconCache.put(cache_key, content)
+      ATH::Response.new(content, 200, HTTP::Headers{
+        "content-type"                    => mime_type_from_ext(ext),
+        "cache-control"                  => "public, max-age=604800, immutable",
+        "x-content-type-options"         => "nosniff",
+      })
+    end
   end
 end

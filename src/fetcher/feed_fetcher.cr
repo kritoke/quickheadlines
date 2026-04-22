@@ -221,14 +221,15 @@ class FeedFetcher
   end
 
   # Load feeds from cache into state store
-  def load_from_cache(config : Config) : Bool
+  def load_from_cache(config : Config, item_limit : Int32 = config.item_limit) : Bool
     StateStore.update(&.copy_with(config_title: config.page_title, config: config))
 
     cached_feeds = config.feeds.compact_map { |feed_config| @cache.get(feed_config.url) }
 
     cached_tabs = config.tabs.map do |tab_config|
       tab_feeds = tab_config.feeds.compact_map { |feed_config| @cache.get(feed_config.url) }
-      Tab.new(tab_config.name, tab_feeds, [] of FeedData)
+      tab_releases = build_software_releases_internal(tab_config.software_releases, item_limit)
+      Tab.new(tab_config.name, tab_feeds, tab_releases)
     end
 
     StateStore.update do |state|
@@ -246,6 +247,15 @@ class FeedFetcher
 
     Log.for("quickheadlines.feed").debug { "load_feeds_from_cache: loaded #{cached_feeds.size} feeds and #{cached_tabs.size} tabs from cache" }
     true
+  end
+
+  private def build_software_releases_internal(software_config : SoftwareConfig?, item_limit : Int32) : Array(FeedData)
+    return [] of FeedData unless software_config
+    if software_feed = ::fetch_sw_with_config(software_config, item_limit)
+      [software_feed]
+    else
+      [] of FeedData
+    end
   end
 
   # Build error feed data for failed fetches
