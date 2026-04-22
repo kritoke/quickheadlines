@@ -2,9 +2,9 @@ require "log"
 
 module QuickHeadlines
   class ErrorRenderer
-    include Athena::Framework::ErrorRendererInterface
+    include Athena::HTTPKernel::ErrorRendererInterface
 
-    def render(exception : Exception) : ATH::Response
+    def render(exception : Exception) : AHTTP::Response
       status, message, details = classify_exception(exception)
 
       Log.error do
@@ -20,12 +20,12 @@ module QuickHeadlines
         error_response["details"] = details
       end
 
-      ATH::Response.new(error_response.to_json, status, HTTP::Headers{"content-type" => "application/json"})
+      AHTTP::Response.new(error_response.to_json, status, HTTP::Headers{"content-type" => "application/json"})
     end
 
     private def classify_exception(exception : Exception) : {HTTP::Status, String?, String?}
       case exception
-      when ATH::Exception::HTTPException
+      when AHK::Exception::HTTPException
         {exception.status, exception.message, nil}
       else
         {HTTP::Status::INTERNAL_SERVER_ERROR, "An unexpected error occurred", nil}

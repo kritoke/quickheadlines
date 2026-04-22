@@ -11,7 +11,7 @@ targets:
 dependencies:
   athena:
     github: athena-framework/framework
-    version: ~> 0.21.0
+    version: ~> 0.22.0
   sqlite3:
     github: crystal-lang/crystal-sqlite3
     version: ~> 0.22.0

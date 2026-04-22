@@ -2,19 +2,19 @@ version: 2.0
 shards:
   ameba:
     git: https://github.com/crystal-ameba/ameba.git
-    version: 1.7.0-dev+git.commit.d147e6d201b9b629c7fac932b8d40bcd2896f96a
+    version: 1.7.0-dev+git.commit.77bf37bb5d3f7751bb531d2e5e67d66a28474579
 
   athena:
     git: https://github.com/athena-framework/framework.git
-    version: 0.21.1
+    version: 0.22.0
 
   athena-clock:
     git: https://github.com/athena-framework/clock.git
-    version: 0.2.0
+    version: 0.3.0
 
   athena-console:
     git: https://github.com/athena-framework/console.git
-    version: 0.4.2
+    version: 0.4.3
 
   athena-contracts:
     git: https://github.com/athena-framework/contracts.git
@@ -27,6 +27,14 @@ shards:
   athena-event_dispatcher:
     git: https://github.com/athena-framework/event-dispatcher.git
     version: 0.4.1
+
+  athena-http:
+    git: https://github.com/athena-framework/http.git
+    version: 0.1.0
+
+  athena-http_kernel:
+    git: https://github.com/athena-framework/http-kernel.git
+    version: 0.1.0
 
   athena-image_size:
     git: https://github.com/athena-framework/image-size.git
@@ -42,7 +50,7 @@ shards:
 
   athena-routing:
     git: https://github.com/athena-framework/routing.git
-    version: 0.1.12
+    version: 0.2.0
 
   athena-serializer:
     git: https://github.com/athena-framework/serializer.git
@@ -50,7 +58,7 @@ shards:
 
   athena-validator:
     git: https://github.com/athena-framework/validator.git
-    version: 0.4.1
+    version: 0.5.0
 
   baked_file_system:
     git: https://github.com/schovi/baked_file_system.git
@@ -78,7 +86,7 @@ shards:
 
   fetcher:
     git: https://github.com/kritoke/fetcher.cr.git
-    version: 0.9.3
+    version: 0.9.4
 
   html5:
     git: https://github.com/naqvis/crystal-html5.git

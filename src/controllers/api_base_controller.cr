@@ -28,7 +28,7 @@ class QuickHeadlines::Controllers::ApiBaseController < Athena::Framework::Contro
   def initialize(@db_service : DatabaseService, @feed_cache : FeedCache, @socket_manager : SocketManager)
   end
 
-  private def check_admin_auth(request : ATH::Request) : Bool
+  private def check_admin_auth(request : AHTTP::Request) : Bool
     secret = ENV["ADMIN_SECRET"]?
     return false if secret.nil? || secret.empty?
 
@@ -58,16 +58,16 @@ class QuickHeadlines::Controllers::ApiBaseController < Athena::Framework::Contro
     result == 0
   end
 
-  private def check_rate_limit!(request : ATH::Request, key : String, max_requests : Int32, window_seconds : Int32) : Nil
+  private def check_rate_limit!(request : AHTTP::Request, key : String, max_requests : Int32, window_seconds : Int32) : Nil
     ip = client_ip(request)
     limiter = RateLimiter.get_or_create("#{key}:#{ip}", max_requests, window_seconds)
     return if limiter.allowed?(ip)
     retry_after = limiter.retry_after(ip)
     headers = HTTP::Headers{"Retry-After" => retry_after.to_s}
-    raise ATH::Exception::HTTPException.new(429, "Rate limit exceeded", nil, headers)
+    raise AHK::Exception::HTTPException.new(429, "Rate limit exceeded", nil, headers)
   end
 
-  private def client_ip(request : ATH::Request) : String
+  private def client_ip(request : AHTTP::Request) : String
     extract_client_ip(request)
   end
 

@@ -2,7 +2,7 @@ require "./api_base_controller"
 
 class QuickHeadlines::Controllers::ConfigController < QuickHeadlines::Controllers::ApiBaseController
   @[ARTA::Get(path: "/api/config")]
-  def config(request : ATH::Request) : QuickHeadlines::DTOs::ConfigResponse
+  def config(request : AHTTP::Request) : QuickHeadlines::DTOs::ConfigResponse
     check_rate_limit!(request, "api_config", 600, 60)
 
     config = StateStore.config

@@ -4,7 +4,7 @@ require "../favicon_storage"
 require "../utils"
 
 class StaticController < Athena::Framework::Controller
-  private def apply_security_headers(response : ATH::Response, mime : String) : Nil
+  private def apply_security_headers(response : AHTTP::Response, mime : String) : Nil
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["X-Frame-Options"] = "DENY"
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
@@ -20,12 +20,12 @@ class StaticController < Athena::Framework::Controller
     end
   end
 
-  private def serve_asset(path : String) : ATH::Response
+  private def serve_asset(path : String) : AHTTP::Response
     file = FrontendAssets.get(path)
     content = file.gets_to_end
     mime = mime_type_from_path(path)
 
-    response = ATH::Response.new(content)
+    response = AHTTP::Response.new(content)
     response.headers["content-type"] = mime
 
     if ENV["APP_ENV"]? == "development"
@@ -42,66 +42,66 @@ class StaticController < Athena::Framework::Controller
 
     response
   rescue BakedFileSystem::NoSuchFileError
-    ATH::Response.new("Not Found", 404, HTTP::Headers{"content-type" => "text/plain"})
+    AHTTP::Response.new("Not Found", 404, HTTP::Headers{"content-type" => "text/plain"})
   rescue ex
     Log.for("quickheadlines.http").error(exception: ex) { "Static file error for #{path}" }
-    ATH::Response.new("Internal server error", 500, HTTP::Headers{"content-type" => "text/plain"})
+    AHTTP::Response.new("Internal server error", 500, HTTP::Headers{"content-type" => "text/plain"})
   end
 
   @[ARTA::Get(path: "/")]
-  def index : ATH::Response
+  def index : AHTTP::Response
     serve_asset("index.html")
   end
 
   @[ARTA::Get(path: "/health")]
-  def health : ATH::Response
-    response = ATH::Response.new(%({"status": "ok", "time": #{Time.utc.to_unix_ms}}))
+  def health : AHTTP::Response
+    response = AHTTP::Response.new(%({"status": "ok", "time": #{Time.utc.to_unix_ms}}))
     response.headers["content-type"] = "application/json"
     response
   end
 
   @[ARTA::Get(path: "/timeline")]
-  def timeline : ATH::Response
+  def timeline : AHTTP::Response
     serve_asset("timeline.html")
   end
 
   @[ARTA::Get(path: "/timeline/")]
-  def timeline_slash : ATH::Response
+  def timeline_slash : AHTTP::Response
     serve_asset("timeline.html")
   end
 
   @[ARTA::Get(path: "/favicon.svg")]
-  def favicon_svg : ATH::Response
+  def favicon_svg : AHTTP::Response
     serve_asset("favicon.svg")
   end
 
   @[ARTA::Get(path: "/favicon.ico")]
-  def favicon_ico : ATH::Response
+  def favicon_ico : AHTTP::Response
     serve_asset("favicon.svg")
   end
 
   @[ARTA::Get(path: "/logo.svg")]
-  def logo_svg : ATH::Response
+  def logo_svg : AHTTP::Response
     serve_asset("logo.svg")
   end
 
   @[ARTA::Get(path: "/code_icon.svg")]
-  def code_icon_svg : ATH::Response
+  def code_icon_svg : AHTTP::Response
     serve_asset("code_icon.svg")
   end
 
   @[ARTA::Get(path: "/fonts/Inter-Variable.woff2")]
-  def fonts_inter : ATH::Response
+  def fonts_inter : AHTTP::Response
     serve_asset("fonts/Inter-Variable.woff2")
   end
 
   @[ARTA::Get(path: "/_app/immutable/{folder}/{filename}", requirements: {"folder" => /\w+/, "filename" => /.+/})]
-  def app_immutable_assets(folder : String, filename : String) : ATH::Response
+  def app_immutable_assets(folder : String, filename : String) : AHTTP::Response
     serve_asset("_app/immutable/#{folder}/#{filename}")
   end
 
   @[ARTA::Get(path: "/_app/{filename}", requirements: {"filename" => /[^\/]+/})]
-  def app_root_assets(filename : String) : ATH::Response
+  def app_root_assets(filename : String) : AHTTP::Response
     serve_asset("_app/#{filename}")
   end
 end

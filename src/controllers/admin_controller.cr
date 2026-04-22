@@ -5,8 +5,8 @@ class QuickHeadlines::Controllers::AdminController < QuickHeadlines::Controllers
   VALID_ADMIN_ACTIONS = {"clear-cache", "cleanup-orphaned"}
 
   @[ARTA::Post(path: "/api/cluster")]
-  def cluster(request : ATH::Request) : QuickHeadlines::DTOs::AdminActionResponse
-    raise ATH::Exception::HTTPException.new(401, "Unauthorized") unless check_admin_auth(request)
+  def cluster(request : AHTTP::Request) : QuickHeadlines::DTOs::AdminActionResponse
+    raise AHK::Exception::HTTPException.new(401, "Unauthorized") unless check_admin_auth(request)
 
     check_rate_limit!(request, "cluster", 1, 60)
 
@@ -29,16 +29,16 @@ class QuickHeadlines::Controllers::AdminController < QuickHeadlines::Controllers
   end
 
   @[ARTA::Post(path: "/api/admin")]
-  def admin(request : ATH::Request) : QuickHeadlines::DTOs::AdminActionResponse
-    raise ATH::Exception::HTTPException.new(401, "Unauthorized") unless check_admin_auth(request)
+  def admin(request : AHTTP::Request) : QuickHeadlines::DTOs::AdminActionResponse
+    raise AHK::Exception::HTTPException.new(401, "Unauthorized") unless check_admin_auth(request)
 
     check_rate_limit!(request, "admin", 1, 60)
 
     body_io = request.body
     action = parse_admin_action(body_io)
 
-    raise ATH::Exception::BadRequest.new("Missing action field") unless action
-    raise ATH::Exception::BadRequest.new("Unknown action: #{action}") unless action.in?(VALID_ADMIN_ACTIONS)
+    raise AHK::Exception::BadRequest.new("Missing action field") unless action
+    raise AHK::Exception::BadRequest.new("Unknown action: #{action}") unless action.in?(VALID_ADMIN_ACTIONS)
 
     spawn do
       begin
@@ -112,8 +112,8 @@ class QuickHeadlines::Controllers::AdminController < QuickHeadlines::Controllers
   end
 
   @[ARTA::Get(path: "/api/status")]
-  def status(request : ATH::Request) : QuickHeadlines::DTOs::AdminStatusResponse
-    raise ATH::Exception::HTTPException.new(401, "Unauthorized") unless check_admin_auth(request)
+  def status(request : AHTTP::Request) : QuickHeadlines::DTOs::AdminStatusResponse
+    raise AHK::Exception::HTTPException.new(401, "Unauthorized") unless check_admin_auth(request)
 
     ws_stats = @socket_manager.stats
     broadcaster_stats = EventBroadcaster.stats
@@ -132,8 +132,8 @@ class QuickHeadlines::Controllers::AdminController < QuickHeadlines::Controllers
   end
 
   @[ARTA::Get(path: "/api/version")]
-  def version(request : ATH::Request) : QuickHeadlines::DTOs::AdminVersionResponse
-    raise ATH::Exception::HTTPException.new(401, "Unauthorized") unless check_admin_auth(request)
+  def version(request : AHTTP::Request) : QuickHeadlines::DTOs::AdminVersionResponse
+    raise AHK::Exception::HTTPException.new(401, "Unauthorized") unless check_admin_auth(request)
 
     QuickHeadlines::DTOs::AdminVersionResponse.new(
       updated_at: StateStore.updated_at.to_unix_ms,

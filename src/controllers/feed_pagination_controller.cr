@@ -3,20 +3,20 @@ require "../fetcher/refresh_loop"
 
 class QuickHeadlines::Controllers::FeedPaginationController < QuickHeadlines::Controllers::ApiBaseController
   @[ARTA::Get(path: "/api/feed_more")]
-  def feed_more(request : ATH::Request) : QuickHeadlines::DTOs::FeedResponse
+  def feed_more(request : AHTTP::Request) : QuickHeadlines::DTOs::FeedResponse
     url = request.query_params["url"]?
     limit = validate_limit(request.query_params["limit"]?, 10)
     offset = validate_offset(request.query_params["offset"]?)
 
     if url.nil? || url.strip.empty?
-      raise ATH::Exception::BadRequest.new("Missing 'url' parameter")
+      raise AHK::Exception::BadRequest.new("Missing 'url' parameter")
     end
 
     check_rate_limit!(request, "feed_more", 30, 60)
 
     config = StateStore.config
     if config.nil?
-      raise ATH::Exception::ServiceUnavailable.new("Configuration not loaded")
+      raise AHK::Exception::ServiceUnavailable.new("Configuration not loaded")
     end
 
     all_feeds = config.feeds + config.tabs.flat_map(&.feeds)
@@ -51,10 +51,10 @@ class QuickHeadlines::Controllers::FeedPaginationController < QuickHeadlines::Co
           cache.item_count(url),
         )
       else
-        raise ATH::Exception::ServiceUnavailable.new("Failed to retrieve feed data")
+        raise AHK::Exception::ServiceUnavailable.new("Failed to retrieve feed data")
       end
     else
-      raise ATH::Exception::NotFound.new("Feed not found")
+      raise AHK::Exception::NotFound.new("Feed not found")
     end
   end
 end
