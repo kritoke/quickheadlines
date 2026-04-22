@@ -1,7 +1,7 @@
 <script lang="ts">
   import { browser } from '$app/environment';
   import { CrystalEngine } from '$lib/crystal-engine';
-  import { themeState } from '$lib/stores/theme.svelte';
+  import { themeState, isDarkTheme } from '$lib/stores/theme.svelte';
 
   let canvasEl = $state<HTMLCanvasElement | null>(null);
   let engine = $state<CrystalEngine | null>(null);
@@ -18,7 +18,7 @@
         width: 60,
         height: 60,
       });
-      engine.setDarkMode(themeState.theme === 'dark');
+      engine.setDarkMode(isDarkTheme(themeState.theme));
     }
     
     // Cleanup function for when canvasEl changes or component unmounts
@@ -29,7 +29,7 @@
 
   $effect(() => {
     if (engine && browser) {
-      engine.setDarkMode(themeState.theme === 'dark');
+      engine.setDarkMode(isDarkTheme(themeState.theme));
     }
   });
 </script>

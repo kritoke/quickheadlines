@@ -48,17 +48,17 @@
 				const response = await fetchClusterItems(item.cluster_id);
 				clusterItems = {
 					...clusterItems,
-					[item.cluster_id]: response.items.map(s => ({
-						id: s.id,
-						title: s.title,
-						link: s.link,
-						pub_date: s.pub_date,
-						feed_title: s.feed_title,
-						feed_url: s.feed_url,
-						feed_link: s.feed_link,
-						favicon: s.favicon,
-						favicon_data: s.favicon_data,
-						header_color: s.header_color,
+					[item.cluster_id]: response.items.map(story => ({
+						id: story.id,
+						title: story.title,
+						link: story.link,
+						pub_date: story.pub_date,
+						feed_title: story.feed_title,
+						feed_url: story.feed_url,
+						feed_link: story.feed_link,
+						favicon: story.favicon,
+						favicon_data: story.favicon_data,
+						header_color: story.header_color,
 						is_representative: false,
 						cluster_id: item.cluster_id,
 						cluster_size: item.cluster_size
@@ -81,7 +81,7 @@
 		// 1. Not in a cluster (no cluster_id)
 		// 2. The representative of their cluster (is_representative === true)
 		const visibleItems = items.filter(item => 
-			!item.cluster_id || item.is_representative === true
+			!item.cluster_id || item.is_representative
 		);
 		
 		for (const item of visibleItems) {

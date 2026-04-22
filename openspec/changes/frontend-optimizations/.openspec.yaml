@@ -1,0 +1,15 @@
+schema: spec-driven
+created: 2026-03-24
+context: Frontend code review and optimizations
+
+tasks:
+  - Extract theme initialization from app.html to separate TypeScript module
+  - Add URL validation for feed.site_link before DOM insertion
+  - Add CSS color validation for feed.header_color before inline styles
+  - Implement favicon memoization in getFaviconSrc
+  - Improve favicon error handling to prevent infinite loops
+  - Consolidate $effect handlers in +page.svelte
+  - Add WebSocket lifecycle management
+  - Extract magic numbers to constants in FeedBox
+  - Replace inline styles with CSS classes in AppHeader
+  - Add specific error handling for localStorage errors

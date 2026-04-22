@@ -1,13 +1,9 @@
 import { loadFeeds, feedState } from './feedStore.svelte';
 import { loadTimeline, timelineState } from './timelineStore.svelte';
-import { websocketConnection, onReconnect } from '$lib/websocket';
+import { websocketConnection } from '$lib/websocket';
 import { fetchConfig } from '$lib/api';
 import { logger } from '$lib/utils/debug';
-
-export interface EffectConfig {
-	refreshInterval?: number;
-	clusteringCheckInterval?: number;
-}
+import type { WebSocketMessage } from '$lib/websocket';
 
 export interface EffectHandles {
 	refreshInterval: ReturnType<typeof setInterval> | null;
@@ -24,7 +20,7 @@ function createEffectHandles(): EffectHandles {
 }
 
 let lastUpdate = Date.now();
-let saveScrollY = 0;
+let preservedScrollY = 0;
 let feedUpdateDebounce: ReturnType<typeof setTimeout> | null = null;
 const FEED_UPDATE_DEBOUNCE_MS = 2000;
 const CONFIG_CHECK_INTERVAL_MS = 60000;
@@ -33,14 +29,14 @@ function handleFeedUpdate(timestamp: number) {
 	if (timestamp > lastUpdate) {
 		logger.log('[Effects] Feed update received, scheduling reload...');
 		lastUpdate = timestamp;
-		saveScrollY = window.scrollY;
+		preservedScrollY = window.scrollY;
 
 		if (feedUpdateDebounce) clearTimeout(feedUpdateDebounce);
 		feedUpdateDebounce = setTimeout(() => {
 			feedUpdateDebounce = null;
 			loadFeeds(feedState.activeTab, true);
 			loadTimeline();
-			window.scrollTo(0, saveScrollY);
+			window.scrollTo(0, preservedScrollY);
 		}, FEED_UPDATE_DEBOUNCE_MS);
 	}
 }
@@ -57,28 +53,20 @@ function handleClusteringStatus(isClustering: boolean) {
 		timelineState.isClustering = true;
 	} else if (!isClustering && timelineState.isClustering) {
 		timelineState.isClustering = false;
-		saveScrollY = window.scrollY;
+		preservedScrollY = window.scrollY;
 		loadTimeline();
 		loadFeeds(feedState.activeTab, true);
-		window.scrollTo(0, saveScrollY);
+		window.scrollTo(0, preservedScrollY);
 	}
 }
 
-function handleWebSocketMessage(message: any) {
+function handleWebSocketMessage(message: WebSocketMessage) {
 	if (message.type === 'feed_update') {
 		handleFeedUpdate(message.timestamp);
 	} else if (message.type === 'clustering_status') {
-		handleClusteringStatus(message.is_clustering);
+		handleClusteringStatus(message.is_clustering ?? false);
 	}
 }
-
-onReconnect(() => {
-	logger.log('[Effects] Reconnected, refreshing data...');
-	saveScrollY = window.scrollY;
-	loadFeeds(feedState.activeTab, true);
-	loadTimeline();
-	window.scrollTo(0, saveScrollY);
-});
 
 async function checkConfig() {
 	try {
@@ -94,63 +82,50 @@ function stopEffects(handles: EffectHandles) {
 	if (handles.configInterval) clearInterval(handles.configInterval);
 	if (handles.clusteringInterval) clearInterval(handles.clusteringInterval);
 	clearDebounce();
-	websocketConnection.removeEventListener(handleWebSocketMessage);
 }
 
-export function createFeedEffects(_config: EffectConfig = {}) {
+function createRefreshEffect(refreshFn: () => void, onConnect?: () => void): { start: () => void; stop: () => void; handles: EffectHandles } {
 	const handles = createEffectHandles();
+	let started = false;
 
 	async function start() {
+		if (started) return;
+		started = true;
+
 		websocketConnection.addEventListener(handleWebSocketMessage);
 		websocketConnection.connect();
 
+		onConnect?.();
+
 		const minutes = await checkConfig();
 
-		handles.refreshInterval = setInterval(() => {
-			loadFeeds(feedState.activeTab, true);
-		}, minutes * 60 * 1000);
+		handles.refreshInterval = setInterval(refreshFn, minutes * 60 * 1000);
 
 		handles.configInterval = setInterval(async () => {
 			const newMinutes = await checkConfig();
 			if (handles.refreshInterval) {
 				clearInterval(handles.refreshInterval);
-				handles.refreshInterval = setInterval(() => {
-					loadFeeds(feedState.activeTab, true);
-				}, newMinutes * 60 * 1000);
+				handles.refreshInterval = setInterval(refreshFn, newMinutes * 60 * 1000);
 			}
 		}, CONFIG_CHECK_INTERVAL_MS);
 	}
 
-	return { start, stop: () => stopEffects(handles), handles };
+	function stop() {
+		if (!started) return;
+		started = false;
+		stopEffects(handles);
+		websocketConnection.removeEventListener(handleWebSocketMessage);
+	}
+
+	return { start, stop, handles };
 }
 
-export function createTimelineEffects(_config: EffectConfig = {}) {
-	const handles = createEffectHandles();
+export function createFeedEffects(): { start: () => void; stop: () => void; handles: EffectHandles } {
+	return createRefreshEffect(() => loadFeeds(feedState.activeTab, true));
+}
 
-	async function start() {
-		websocketConnection.addEventListener(handleWebSocketMessage);
-		websocketConnection.connect();
-
-		loadTimeline();
-
-		const minutes = await checkConfig();
-
-		handles.refreshInterval = setInterval(() => {
-			loadTimeline();
-		}, minutes * 60 * 1000);
-
-		handles.configInterval = setInterval(async () => {
-			const newMinutes = await checkConfig();
-			if (handles.refreshInterval) {
-				clearInterval(handles.refreshInterval);
-				handles.refreshInterval = setInterval(() => {
-					loadTimeline();
-				}, newMinutes * 60 * 1000);
-			}
-		}, CONFIG_CHECK_INTERVAL_MS);
-	}
-
-	return { start, stop: () => stopEffects(handles), handles };
+export function createTimelineEffects(): { start: () => void; stop: () => void; handles: EffectHandles } {
+	return createRefreshEffect(loadTimeline);
 }
 
 export function createInfiniteScrollObserver(

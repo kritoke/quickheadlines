@@ -290,7 +290,7 @@ export function getThemeTokens(theme: ThemeStyle): ThemeTokens {
 			preview: currentTheme.preview,
 			cursor: currentTheme.cursor,
 			scrollButton: currentTheme.scrollButton,
-			dotIndicator: t.dotIndicator
+			dotIndicator: currentTheme.dotIndicator
 		});
 	}
 	return themeTokenCache.get(cacheKey)!;
@@ -304,8 +304,8 @@ export function initTheme() {
 	if (typeof window === 'undefined') return;
 
 	try {
-		const savedTheme = localStorage.getItem('quickheadlines-theme') as ThemeStyle | null;
-		if (savedTheme && themeStyles.some(t => t.id === savedTheme)) {
+		const savedTheme = localStorage.getItem('quickheadlines-theme');
+		if (savedTheme && themeStyles.some(style => style.id === savedTheme)) {
 			themeState.theme = savedTheme;
 		} else {
 			themeState.theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';

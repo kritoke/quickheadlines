@@ -2,6 +2,8 @@
 	import { fade } from 'svelte/transition';
 	import type { ToastMessage } from '$lib/stores/toast.svelte';
 
+	const HIGHLIGHTED_TYPES = new Set(['error', 'success', 'warning', 'info']);
+
 	interface Props {
 		toast: ToastMessage;
 		onClose: (id: string) => void;
@@ -16,7 +18,7 @@
 
 <div 
 	class="pointer-events-auto relative flex w-full max-w-sm items-center justify-between space-x-4 overflow-hidden rounded-lg border p-6 pr-8 shadow-lg theme-bg-primary theme-border"
-	class:theme-accent={toast.type === 'error' || toast.type === 'success' || toast.type === 'warning' || toast.type === 'info'}
+	class:theme-accent={HIGHLIGHTED_TYPES.has(toast.type)}
 	in:fade={{ duration: 300 }}
 	out:fade={{ duration: 200 }}
 >

@@ -1,4 +1,6 @@
 import { SvelteSet } from 'svelte/reactivity';
+import { getScrollContainer, getScrollTop, scrollToPosition as doScrollToPosition } from '$lib/utils/scroll';
+import type { ScrollTarget } from '$lib/utils/scroll';
 
 type NavigationState = {
 	scrollPositions: Map<string, number>;
@@ -12,37 +14,15 @@ const state = $state<NavigationState>({
 	currentPath: ''
 });
 
-function getFallbackScrollY(): number {
-	return window.scrollY || document.documentElement.scrollTop || document.body.scrollTop || 0;
-}
-
-function withScrollContainer(callback: (container: Window | HTMLElement) => void, fallback: () => void): void {
+export function saveScroll(path: string): void {
 	if (typeof window === 'undefined') return;
 	try {
-		import('$lib/utils/scroll').then(({ getScrollContainer }) => {
-			try {
-				callback(getScrollContainer());
-			} catch {
-				fallback();
-			}
-		}).catch(() => {
-			fallback();
-		});
+		const container = getScrollContainer();
+		const top = container === window ? getScrollTop(window) : container.scrollTop || 0;
+		state.scrollPositions.set(path, top);
 	} catch {
-		fallback();
+		state.scrollPositions.set(path, getScrollTop(window));
 	}
-}
-
-export function saveScroll(path: string): void {
-	withScrollContainer(
-		(container) => {
-			const top = (container === window)
-				? getFallbackScrollY()
-				: ((container as HTMLElement).scrollTop || 0);
-			state.scrollPositions.set(path, top);
-		},
-		() => { state.scrollPositions.set(path, getFallbackScrollY()); }
-	);
 }
 
 export function getScroll(path: string): number | undefined {
@@ -66,43 +46,9 @@ export function getCurrentPath(): string {
 }
 
 export function resetScroll(): void {
-	const resetWindow = () => {
-		window.scrollTo(0, 0);
-		document.documentElement.scrollTop = 0;
-		document.body.scrollTop = 0;
-		const app = document.getElementById('app');
-		if (app) app.scrollTop = 0;
-	};
-
-	withScrollContainer(
-		(container) => {
-			if (container === window) {
-				resetWindow();
-			} else {
-				try { (container as HTMLElement).scrollTo({ top: 0, behavior: 'auto' }); }
-				catch { (container as HTMLElement).scrollTop = 0; }
-			}
-		},
-		resetWindow
-	);
+	doScrollToPosition(0);
 }
 
 export function scrollToPosition(y: number): void {
-	const scrollToY = (targetY: number) => {
-		window.scrollTo({ top: targetY, behavior: 'auto' });
-		document.documentElement.scrollTop = targetY;
-		document.body.scrollTop = targetY;
-	};
-
-	withScrollContainer(
-		(container) => {
-			if (container === window) {
-				scrollToY(y);
-			} else {
-				try { (container as HTMLElement).scrollTo({ top: y, behavior: 'auto' }); }
-				catch { (container as HTMLElement).scrollTop = y; }
-			}
-		},
-		() => scrollToY(y)
-	);
+	doScrollToPosition(y);
 }

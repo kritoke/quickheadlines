@@ -23,7 +23,6 @@ export {
 	createFeedEffects,
 	createTimelineEffects,
 	createInfiniteScrollObserver,
-	type EffectConfig,
 	type EffectHandles
 } from './effects.svelte';
 

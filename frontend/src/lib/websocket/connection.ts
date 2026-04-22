@@ -14,7 +14,7 @@ let sharedConnection: WebSocket | null = null;
 let sharedState: ConnectionState = 'disconnected';
 let reconnectTimeout: ReturnType<typeof setTimeout> | null = null;
 let intentionalClose = false;
-let onReconnectCallback: (() => void) | null = null;
+const reconnectListeners = new Set<() => void>();
 
 // Exponential backoff state
 const INITIAL_DELAY_MS = 1000;
@@ -33,7 +33,9 @@ function flushMessageQueue() {
 	while (messageQueue.length > 0) {
 		const message = messageQueue.shift();
 		if (message) {
-			listeners.forEach(listener => listener(message));
+			listeners.forEach(listener => {
+				try { listener(message); } catch (err) { logger.error('[WebSocket] Listener error:', err); }
+			});
 		}
 	}
 }
@@ -67,8 +69,9 @@ function scheduleReconnect() {
 	}, delay);
 }
 
-export function onReconnect(callback: () => void) {
-	onReconnectCallback = callback;
+export function onReconnect(callback: () => void): () => void {
+	reconnectListeners.add(callback);
+	return () => reconnectListeners.delete(callback);
 }
 
 // Reconnection logic with exponential backoff
@@ -94,9 +97,9 @@ function connectWebSocket() {
 		currentDelayMs = INITIAL_DELAY_MS; // Reset delay on successful connection
 		logger.log('[WebSocket] Connected');
 
-		if (wasReconnect && onReconnectCallback) {
-			logger.log('[WebSocket] Reconnected, calling hook');
-			onReconnectCallback();
+		if (wasReconnect) {
+			logger.log('[WebSocket] Reconnected, calling hooks');
+			reconnectListeners.forEach(listener => listener());
 		}
 
 		// Flush any queued messages
@@ -114,7 +117,9 @@ function connectWebSocket() {
 			}
 
 			// Dispatch to all registered listeners
-			listeners.forEach(listener => listener(data));
+			listeners.forEach(listener => {
+				try { listener(data); } catch (err) { logger.error('[WebSocket] Listener error:', err); }
+			});
 		} catch (e) {
 			logger.error('[WebSocket] Failed to parse message:', e);
 		}

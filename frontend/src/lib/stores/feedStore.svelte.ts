@@ -201,13 +201,13 @@ export async function loadFeedConfig(): Promise<number> {
 export function getFilteredFeeds(query: string): FeedResponse[] {
 	if (!query.trim()) return feedState.feeds;
 	
-	const q = query.toLowerCase();
+	const lowerQuery = query.toLowerCase();
 	return feedState.feeds
 		.map(feed => ({
 			...feed,
 			items: feed.items.filter(item => 
-				item.title.toLowerCase().includes(q) ||
-				feed.title.toLowerCase().includes(q)
+				item.title.toLowerCase().includes(lowerQuery) ||
+				feed.title.toLowerCase().includes(lowerQuery)
 			)
 		}))
 		.filter(feed => feed.items.length > 0);

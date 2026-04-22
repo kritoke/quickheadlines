@@ -37,17 +37,13 @@
 	}
 
 	function handleKeyDown(e: KeyboardEvent, index: number) {
-		if (e.key === 'ArrowRight') {
-			e.preventDefault();
-			const nextIndex = (index + 1) % visibleTabs.length;
-			const buttons = tabListElement?.querySelectorAll('[role="tab"]');
-			(buttons?.[nextIndex] as HTMLElement)?.focus();
-		} else if (e.key === 'ArrowLeft') {
-			e.preventDefault();
-			const prevIndex = (index - 1 + visibleTabs.length) % visibleTabs.length;
-			const buttons = tabListElement?.querySelectorAll('[role="tab"]');
-			(buttons?.[prevIndex] as HTMLElement)?.focus();
-		}
+		if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+		e.preventDefault();
+		
+		const direction = e.key === 'ArrowRight' ? 1 : -1;
+		const nextIndex = (index + direction + visibleTabs.length) % visibleTabs.length;
+		const buttons = tabListElement?.querySelectorAll<HTMLElement>('[role="tab"]');
+		buttons?.[nextIndex]?.focus();
 	}
 
 </script>

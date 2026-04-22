@@ -8,44 +8,41 @@
   let isMobile = $derived(breakpointState.isMobile);
   let visible = $state(true);
   let container: Window | HTMLElement | null = null;
+  let scrollCleanup: (() => void) | null = null;
 
   $effect(() => {
     if (typeof window === 'undefined') return;
-    import('$lib/utils/scroll').then((m) => {
-      const getScrollContainer = m.getScrollContainer;
-      const getScrollTop = m.getScrollTop;
-      const c = getScrollContainer();
-      container = c;
+    
+    import('$lib/utils/scroll').then(({ getScrollContainer, getScrollTop }) => {
+      const scrollTarget = getScrollContainer();
+      container = scrollTarget;
       const handler = () => {
-        const top = getScrollTop(c);
+        const top = getScrollTop(scrollTarget);
         visible = top >= 100;
       };
-      // run once to set initial state
       handler();
-      if ((c as Window) === window) {
-        window.addEventListener('scroll', handler);
-        return () => window.removeEventListener('scroll', handler);
-      } else {
-        (c as HTMLElement).addEventListener('scroll', handler);
-        return () => (c as HTMLElement).removeEventListener('scroll', handler);
-      }
+      const target = scrollTarget === window ? window : scrollTarget;
+      target.addEventListener('scroll', handler);
+      scrollCleanup = () => target.removeEventListener('scroll', handler);
     }).catch(() => {
-      // fallback to window
       const handler = () => (visible = (window.scrollY || document.documentElement.scrollTop || document.body.scrollTop || 0) >= 100);
       handler();
       window.addEventListener('scroll', handler);
-      return () => window.removeEventListener('scroll', handler);
+      scrollCleanup = () => window.removeEventListener('scroll', handler);
     });
+    
+    return () => {
+      scrollCleanup?.();
+      scrollCleanup = null;
+    };
   });
 
   function doScroll(e: Event) {
     e.preventDefault();
     e.stopPropagation();
-    import('$lib/utils/scroll').then((m) => {
-      const scrollToPosition = m.scrollToPosition;
-      const getScrollContainer = m.getScrollContainer;
-      const c = container || getScrollContainer();
-      scrollToPosition(0, c);
+    import('$lib/utils/scroll').then(({ scrollToPosition, getScrollContainer }) => {
+      const scrollTarget = container || getScrollContainer();
+      scrollToPosition(0, scrollTarget);
     }).catch(() => {
       document.documentElement.scrollTop = 0;
       document.body.scrollTop = 0;

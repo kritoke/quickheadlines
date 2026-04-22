@@ -1,0 +1,10 @@
+- [x] 1.1 Implement proper design system with consistent spacing (8-point grid)
+- [x] 1.2 Establish typographic hierarchy with defined scales
+- [x] 1.3 Replace fixed heights with responsive, content-based sizing
+- [x] 1.4 Utilize Bits UI components consistently instead of custom implementations
+- [x] 1.5 Improve visual hierarchy and content prioritization
+- [x] 1.6 Remove inline styles and use CSS variables/classes consistently
+- [x] 1.7 Fix inconsistent spacing and padding values throughout components
+- [x] 1.8 Improve FeedBox component design for better readability and usability
+- [x] 1.9 Enhance AppHeader with better visual hierarchy and spacing
+- [x] 1.10 Ensure proper responsive breakpoints and mobile-first approach

@@ -1,4 +1,4 @@
-const BEAM_THEMES = ['cyberpunk', 'matrix', 'dracula', 'ocean'] as const;
+const BEAM_THEMES = ['cyberpunk', 'matrix', 'dracula', 'ocean', 'vaporwave', 'retro80s'] as const;
 export type BeamTheme = typeof BEAM_THEMES[number];
 
 export const BEAM_COLORS: Record<BeamTheme, { from: string; to: string; via?: string }> = {
@@ -21,9 +21,9 @@ export function isIOS(): boolean {
 }
 
 export function shouldShowBorderBeam(theme: string): boolean {
-	return !isIOS() && BEAM_THEMES.includes(theme as BeamTheme);
+	return !isIOS() && (theme in BEAM_COLORS);
 }
 
 export function getBeamColors(theme: string): { from: string; to: string; via?: string } {
-	return BEAM_COLORS[theme as BeamTheme] || DEFAULT_BEAM_COLORS;
+	return BEAM_COLORS[theme as BeamTheme] ?? DEFAULT_BEAM_COLORS;
 }

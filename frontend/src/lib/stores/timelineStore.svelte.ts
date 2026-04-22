@@ -67,7 +67,7 @@ export function setTimelineData(
 ): TimelineStateIdle {
 	if (isAppend) {
 		const newItems = items.filter(item => !state.itemIds.has(item.id));
-		const newItemIds = new SvelteSet([...state.itemIds, ...newItems.map(i => i.id)]);
+		const newItemIds = new SvelteSet([...state.itemIds, ...newItems.map(item => item.id)]);
 		
 		return {
 			...state,
@@ -83,7 +83,7 @@ export function setTimelineData(
 	return {
 		...state,
 		items,
-		itemIds: new SvelteSet(items.map(i => i.id)),
+		itemIds: new SvelteSet(items.map(item => item.id)),
 		hasMore,
 		offset: items.length,
 		loadingMore: false,
@@ -128,34 +128,38 @@ export function resetTimelineStore(): void {
 	});
 }
 
-export async function loadTimeline(append: boolean = false, tab?: string): Promise<void> {
-	const targetTab = tab ?? timelineState.tabName;
-	
+let timelineRequestId = 0;
 
+export async function loadTimeline(append: boolean = false, tab?: string): Promise<void> {
+	const requestId = ++timelineRequestId;
+	tab ??= timelineState.tabName;
+	
+	
 	
 	if (!append) {
 		if (isRefreshing(timelineState) || isLoading(timelineState)) return;
 		
-		const isTabChange = targetTab !== timelineState.tabName;
+		const isTabChange = tab !== timelineState.tabName;
 		const hasExistingData = timelineState.items.length > 0;
 		
 		if (isTabChange || !hasExistingData) {
 			Object.assign(timelineState, {
 				...initialBaseState,
 				itemIds: new SvelteSet<string>(),
-				tabName: targetTab,
+				tabName: tab,
 				status: 'loading' as const
 			});
 		} else {
 			Object.assign(timelineState, {
 				status: 'refreshing' as const,
-				tabName: targetTab
+				tabName: tab
 			});
 		}
 	}
 	
 	try {
-		const response = await fetchTimeline(500, append ? timelineState.offset : 0, 30, targetTab === 'all' ? undefined : targetTab);
+		const response = await fetchTimeline(500, append ? timelineState.offset : 0, 30, tab === 'all' ? undefined : tab);
+		if (requestId !== timelineRequestId) return;
 		Object.assign(timelineState, setTimelineData(timelineState, response.items, response.has_more, append));
 	} catch (e) {
 
@@ -178,10 +182,10 @@ export async function loadTimelineConfig(): Promise<number> {
 export function getFilteredItems(query: string): TimelineItemResponse[] {
 	if (!query.trim()) return [...timelineState.items];
 	
-	const q = query.toLowerCase();
+	const lowerQuery = query.toLowerCase();
 	return timelineState.items.filter(item => 
-		item.title.toLowerCase().includes(q) ||
-		item.feed_title.toLowerCase().includes(q)
+		item.title.toLowerCase().includes(lowerQuery) ||
+		item.feed_title.toLowerCase().includes(lowerQuery)
 	);
 }
 

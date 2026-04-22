@@ -26,24 +26,10 @@
 	} from '$lib/stores/timelineStore.svelte';
 	import { searchState, setSearchQuery, toggleSearch, closeSearch } from '$lib/stores/search.svelte';
 	import { toastStore } from '$lib/stores/toast.svelte';
+	import { createLazyLoader } from '$lib/utils/lazyComponent';
 
-	let LazyTimelineView: any = null;
-	const loadTimelineView = async () => {
-		if (!LazyTimelineView) {
-			const { default: component } = await import('$lib/components/TimelineView.svelte');
-			LazyTimelineView = component;
-		}
-		return LazyTimelineView;
-	};
-
-	let LazySearchModal: any = null;
-	const loadSearchModal = async () => {
-		if (!LazySearchModal) {
-			const { default: component } = await import('$lib/components/BitsSearchModal.svelte');
-			LazySearchModal = component;
-		}
-		return LazySearchModal;
-	};
+	const loadTimelineView = createLazyLoader(() => import('$lib/components/TimelineView.svelte'));
+	const loadSearchModal = createLazyLoader(() => import('$lib/components/BitsSearchModal.svelte'));
 
 	let tabs = $state<TabResponse[]>([]);
 	let timelineEffects: ReturnType<typeof createTimelineEffects> | null = null;

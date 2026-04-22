@@ -25,47 +25,32 @@
 		favicon_data: feed.favicon_data
 	}));
 
+	function resolveThemeColors(): { bg?: string; text?: string } | null {
+		if (!feed.header_theme_colors) return null;
+		const colors = isDarkTheme(resolvedTheme) ? feed.header_theme_colors.dark : feed.header_theme_colors.light;
+		if (!colors) return null;
+		return { bg: sanitizeCssColor(colors.bg), text: sanitizeCssColor(colors.text) };
+	}
+
 	function getHeaderStyle(): string {
-		const dark = isDarkTheme(resolvedTheme);
+		const themeColors = resolveThemeColors();
+		if (themeColors) {
+			return `background-color: ${sanitizeCssColor(themeColors.bg!, '#64748b')}; color: ${sanitizeCssColor(themeColors.text!, '#ffffff')};`;
+		}
 		const bgColor = sanitizeCssColor(feed.header_color || '#64748b', '#64748b');
 		const textColor = sanitizeCssColor(feed.header_text_color || '#ffffff', '#ffffff');
-		
-		if (feed.header_theme_colors) {
-			const colors = dark ? feed.header_theme_colors.dark : feed.header_theme_colors.light;
-			if (colors) {
-				return `background-color: ${sanitizeCssColor(colors.bg, '#64748b')}; color: ${sanitizeCssColor(colors.text, '#ffffff')};`;
-			}
-		}
-		
 		return `background-color: ${bgColor}; color: ${textColor};`;
 	}
 
 	function getCardColors(): { bg?: string; text?: string } {
-		const dark = isDarkTheme(resolvedTheme);
-		
-		if (feed.header_theme_colors) {
-			const colors = dark ? feed.header_theme_colors.dark : feed.header_theme_colors.light;
-			if (colors) {
-				return {
-					bg: sanitizeCssColor(colors.bg),
-					text: sanitizeCssColor(colors.text)
-				};
-			}
-		}
-		
-		return {};
+		return resolveThemeColors() ?? {};
 	}
 
 	function getFaviconBgStyle(): string {
-		const dark = isDarkTheme(resolvedTheme);
-		
-		if (feed.header_theme_colors) {
-			const colors = dark ? feed.header_theme_colors.dark : feed.header_theme_colors.light;
-			if (colors) {
-				return `background-color: ${sanitizeCssColor(colors.text, '#ffffff')}20; border-color: ${sanitizeCssColor(colors.text, '#ffffff')}40`;
-			}
+		const themeColors = resolveThemeColors();
+		if (themeColors?.text) {
+			return `background-color: ${sanitizeCssColor(themeColors.text, '#ffffff')}20; border-color: ${sanitizeCssColor(themeColors.text, '#ffffff')}40`;
 		}
-		
 		return 'background-color: rgba(255,255,255,0.9); border-color: rgba(255,255,255,0.2)';
 	}
 

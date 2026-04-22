@@ -11,34 +11,15 @@ export interface FaviconItem {
 }
 
 export function getFaviconSrc(item: FaviconItem): string {
-	// Create a cache key based on all relevant properties
 	const cacheKey = `${item.favicon || ''}-${item.favicon_data || ''}-${item.url || ''}`;
 	
 	if (faviconCache.has(cacheKey)) {
 		return faviconCache.get(cacheKey)!;
 	}
+
+	const result = resolveFavicon(item);
 	
-	let result = '/favicon.svg';
-	
-	if (item.favicon_data) {
-		if (item.favicon_data.startsWith('internal:')) {
-			const iconName = item.favicon_data.replace('internal:', '');
-			if (iconName === 'code_icon') result = '/code_icon.svg';
-			else result = '/favicon.svg';
-		} else {
-			result = item.favicon_data;
-		}
-	} else if (item.favicon) {
-		if (item.favicon.startsWith('internal:')) {
-			result = '/favicon.svg';
-		} else {
-			result = item.favicon;
-		}
-	}
-	
-	// Manage cache size
 	if (faviconCache.size >= MAX_CACHE_SIZE) {
-		// Remove oldest entry (first inserted)
 		const firstKey = faviconCache.keys().next().value;
 		if (firstKey !== undefined) {
 			faviconCache.delete(firstKey);
@@ -47,6 +28,16 @@ export function getFaviconSrc(item: FaviconItem): string {
 	
 	faviconCache.set(cacheKey, result);
 	return result;
+}
+
+function resolveFavicon(item: FaviconItem): string {
+	const data = item.favicon_data || item.favicon;
+	if (!data) return '/favicon.svg';
+	if (data.startsWith('internal:')) {
+		const name = data.replace('internal:', '');
+		return name === 'code_icon' ? '/code_icon.svg' : '/favicon.svg';
+	}
+	return data;
 }
 
 export function getHeaderStyle(item: {

@@ -1,5 +1,7 @@
 import type { ConnectionState } from '$lib/websocket';
 
+let hideTimeout: ReturnType<typeof setTimeout> | null = null;
+
 export const connectionState = $state<{
 	state: ConnectionState;
 	visible: boolean;
@@ -15,6 +17,10 @@ export const connectionState = $state<{
 export function setConnectionState(newState: ConnectionState) {
 	connectionState.state = newState;
 	connectionState.visible = true;
+	if (hideTimeout) clearTimeout(hideTimeout);
+	if (newState === 'connected') {
+		hideTimeout = setTimeout(hideConnectionStatus, 2000);
+	}
 }
 
 export function hideConnectionStatus() {

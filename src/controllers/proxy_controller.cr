@@ -47,7 +47,11 @@ class QuickHeadlines::Controllers::ProxyController < QuickHeadlines::Controllers
         raise ATH::Exception::HTTPException.new(413, "Image too large")
       end
 
-      ATH::Response.new(body, 200, HTTP::Headers{"content-type" => content_type})
+      ATH::Response.new(body, 200, HTTP::Headers{
+        "content-type"            => content_type,
+        "cache-control"           => "public, max-age=86400",
+        "x-content-type-options"  => "nosniff",
+      })
     rescue ex : ATH::Exception::HTTPException
       raise ex
     rescue ex
@@ -66,11 +70,13 @@ class QuickHeadlines::Controllers::ProxyController < QuickHeadlines::Controllers
     favicon_path = File.join(FaviconStorage.favicon_dir, "#{hash}.#{ext}")
     raise ATH::Exception::BadRequest.new("Invalid favicon path") unless favicon_path.starts_with?(FaviconStorage.favicon_dir)
 
-    if File.exists?(favicon_path)
-      content = File.read(favicon_path)
-      ATH::Response.new(content, 200, HTTP::Headers{"content-type" => mime_type_from_ext(ext)})
-    else
-      raise ATH::Exception::NotFound.new("Favicon not found")
-    end
+    raise ATH::Exception::NotFound.new("Favicon not found") unless File.exists?(favicon_path)
+
+    content = File.read(favicon_path)
+    ATH::Response.new(content, 200, HTTP::Headers{
+      "content-type"                    => mime_type_from_ext(ext),
+      "cache-control"                  => "public, max-age=604800, immutable",
+      "x-content-type-options"         => "nosniff",
+    })
   end
 end

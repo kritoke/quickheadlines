@@ -13,7 +13,7 @@
 	let scrollRatio = $state(0);
 	let thumbHeight = $state(20);
 	let isVisible = $state(false);
-	let hideTimeout: number;
+	let hideTimeout: ReturnType<typeof setTimeout> | undefined;
 
 	function handleScroll() {
 		if (!scrollContainer) return;

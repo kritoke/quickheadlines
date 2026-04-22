@@ -130,6 +130,7 @@ export class CrystalEngine {
   private animationId: number | null = null;
   private onRender?: () => void;
   private isDark = false;
+  private canvasHandler: ((e: MouseEvent | TouchEvent) => void) | null = null;
 
   constructor(canvas: HTMLCanvasElement, options: CrystalOptions) {
     this.canvas = canvas;
@@ -162,7 +163,7 @@ export class CrystalEngine {
   }
 
   private setupInteraction() {
-    const handler = (e: MouseEvent | TouchEvent) => {
+    this.canvasHandler = (e: MouseEvent | TouchEvent) => {
       const rect = this.canvas.getBoundingClientRect();
       let clientX: number, clientY: number;
 
@@ -216,8 +217,8 @@ export class CrystalEngine {
       window.addEventListener('touchend', upHandler);
     };
 
-    this.canvas.addEventListener('mousedown', handler);
-    this.canvas.addEventListener('touchstart', handler, { passive: true });
+    this.canvas.addEventListener('mousedown', this.canvasHandler);
+    this.canvas.addEventListener('touchstart', this.canvasHandler, { passive: true });
   }
 
   setDarkMode(dark: boolean) {
@@ -325,23 +326,33 @@ export class CrystalEngine {
       rotationMatrix
     );
 
-    this.rotationMatrixender();
+    this.render();
   }
+
+  private animateLoop = () => {
+    this.animate();
+    this.animationId = requestAnimationFrame(this.animateLoop);
+  };
 
   start() {
     if (this.animationId === null) {
-      this.animationId = window.setInterval(() => this.animate(), 20) as unknown as number;
+      this.animationId = requestAnimationFrame(this.animateLoop);
     }
   }
 
   stop() {
     if (this.animationId !== null) {
-      clearInterval(this.animationId);
+      cancelAnimationFrame(this.animationId);
       this.animationId = null;
     }
   }
 
   destroy() {
     this.stop();
+    if (this.canvasHandler) {
+      this.canvas.removeEventListener('mousedown', this.canvasHandler);
+      this.canvas.removeEventListener('touchstart', this.canvasHandler);
+      this.canvasHandler = null;
+    }
   }
 }

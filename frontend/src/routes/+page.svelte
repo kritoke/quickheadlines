@@ -23,15 +23,9 @@
 	} from '$lib/stores/feedStore.svelte';
 	import { layoutState, getFeedGridClass } from '$lib/stores/layout.svelte';
 	import { searchState, setSearchQuery, toggleSearch, closeSearch } from '$lib/stores/search.svelte';
+	import { createLazyLoader } from '$lib/utils/lazyComponent';
 
-	let LazySearchModal: typeof BitsSearchModal | null = null;
-	const loadSearchModal = async () => {
-		if (!LazySearchModal) {
-			const { default: component } = await import('$lib/components/BitsSearchModal.svelte');
-			LazySearchModal = component;
-		}
-		return LazySearchModal;
-	};
+	const loadSearchModal = createLazyLoader(() => import('$lib/components/BitsSearchModal.svelte'));
 
 	let tabChangeTimeout: ReturnType<typeof setTimeout> | null = null;
 
@@ -63,18 +57,16 @@
 	}
 	
 		$effect(() => {
-		logger.log('[Page] $effect running, mounted:', feedState.status);
 		const initialized = feedState.status !== 'idle' || feedState.feeds.length > 0;
-		
+
 		if (!initialized) {
-			logger.log('[Page] Initializing, loading feeds...');
 			const params = new URLSearchParams(window.location.search);
 			const urlTab = params.get('tab') || 'all';
-			
+
 			loadFeeds(urlTab, true);
 			loadFeedConfig();
 			initDebug();
-			
+
 			const feedEffects = createFeedEffects();
 			feedEffects.start();
 
@@ -88,7 +80,7 @@
 	$effect(() => {
 		const urlTab = $page.url?.searchParams.get('tab') ?? 'all';
 		const alreadyLoaded = feedState.status !== 'idle' || feedState.feeds.length > 0;
-		
+
 		if (alreadyLoaded && urlTab !== feedState.activeTab) {
 			logger.log('[Page] URL tab changed from', feedState.activeTab, 'to', urlTab, ', reloading...');
 			loadFeeds(urlTab);

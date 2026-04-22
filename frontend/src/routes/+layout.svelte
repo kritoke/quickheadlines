@@ -47,11 +47,16 @@
 		}
 	});
 	
+	let layoutMounted = $state(false);
+
 	$effect(() => {
+		if (layoutMounted) return;
+		layoutMounted = true;
+
 		if (typeof window !== 'undefined' && isIOS()) {
 			document.documentElement.classList.add('ios-device');
 		}
-		
+
 		initTheme();
 		initLayout();
 		initBreakpoints();

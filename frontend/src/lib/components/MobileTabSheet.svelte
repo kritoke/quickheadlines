@@ -72,12 +72,12 @@
 						onclick={() => selectTab(tab.name)}
 						class="w-full px-4 {spacing.spacious} text-left rounded-lg transition-colors
 							{activeTab === tab.name 
-								? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 font-medium' 
-								: 'hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300'}"
+								? 'theme-bg-secondary theme-accent font-medium' 
+								: 'hover:theme-bg-secondary theme-text-primary'}"
 					>
 						<span class="capitalize">{tab.name === 'all' ? 'All' : tab.name}</span>
 						{#if activeTab === tab.name}
-							<svg class="w-5 h-5 inline float-right text-blue-500" fill="currentColor" viewBox="0 0 20 20">
+							<svg class="w-5 h-5 inline float-right theme-accent" fill="currentColor" viewBox="0 0 20 20">
 								<path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
 							</svg>
 						{/if}

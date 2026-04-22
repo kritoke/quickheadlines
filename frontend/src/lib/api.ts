@@ -4,7 +4,8 @@ import type {
 	ClustersResponse,
 	ClusterItemsResponse,
 	FeedResponse,
-	ConfigResponse
+	ConfigResponse,
+	TabsResponse
 } from './types';
 import { toastStore } from './stores/toast.svelte';
 
@@ -33,26 +34,11 @@ async function apiFetch<T>(url: string, options: FetchOptions = {}): Promise<T> 
 		fetchOptions.body = JSON.stringify(body);
 	}
 
-	const controller = timeout > 0 ? new AbortController() : null;
-	if (controller) {
+	let timeoutId: ReturnType<typeof setTimeout> | undefined;
+	if (timeout > 0) {
+		const controller = new AbortController();
 		fetchOptions.signal = controller.signal;
-		const timeoutId = setTimeout(() => controller.abort(), timeout);
-		try {
-			const response = await fetch(url, fetchOptions);
-			clearTimeout(timeoutId);
-			if (!response.ok) {
-				throw new Error(`Failed to ${errorContext.toLowerCase()}: ${response.statusText}`);
-			}
-			return response.json();
-		} catch (error) {
-			clearTimeout(timeoutId);
-			if (error instanceof Error && error.name === 'AbortError') {
-				throw error;
-			}
-			const msg = error instanceof Error ? error.message : `Failed to ${errorContext.toLowerCase()}`;
-			toastStore.error(msg, errorContext);
-			throw error;
-		}
+		timeoutId = setTimeout(() => controller.abort(), timeout);
 	}
 
 	try {
@@ -62,64 +48,25 @@ async function apiFetch<T>(url: string, options: FetchOptions = {}): Promise<T> 
 		}
 		return response.json();
 	} catch (error) {
-		if (error instanceof Error && error.name === 'AbortError') {
-			throw error;
-		}
+		if (error instanceof Error && error.name === 'AbortError') throw error;
 		const msg = error instanceof Error ? error.message : `Failed to ${errorContext.toLowerCase()}`;
 		toastStore.error(msg, errorContext);
 		throw error;
-	}
-}
-
-async function doFetchFeeds(tab: string, signal?: AbortSignal): Promise<FeedsPageResponse> {
-	const url = `${API_BASE}/feeds?tab=${encodeURIComponent(tab)}`;
-	
-	// Create timeout controller
-	const timeoutController = new AbortController();
-	const timeoutId = setTimeout(() => timeoutController.abort(), FETCH_TIMEOUT_MS);
-	
-	// Set up abort handling
-	const onAbort = () => {
-		timeoutController.abort();
-		clearTimeout(timeoutId);
-	};
-	signal?.addEventListener('abort', onAbort);
-	
-		try {
-		// Use timeout controller's signal, or combined if external signal exists
-		const fetchSignal = signal 
-			? (signal.aborted ? signal : timeoutController.signal)
-			: timeoutController.signal;
-		
-		const response = await fetch(url, { signal: fetchSignal });
-		if (!response.ok) {
-			throw new Error(`Failed to fetch feeds: ${response.statusText}`);
-		}
-		const data = await response.json();
-		return data;
-	} catch (error) {
-		if (error instanceof Error && error.name === 'AbortError') {
-			throw error;
-		}
-		const errorMessage = error instanceof Error ? error.message : 'Failed to fetch feeds';
-		toastStore.error(errorMessage, 'Feed Error');
-		throw error;
 	} finally {
-		clearTimeout(timeoutId);
-		signal?.removeEventListener('abort', onAbort);
+		if (timeoutId) clearTimeout(timeoutId);
 	}
 }
 
-export async function fetchFeeds(tab: string = 'all', signal?: AbortSignal): Promise<FeedsPageResponse> {
-	// Don't dedupe when caller provides their own signal (they manage lifecycle)
-	if (signal) {
-		return doFetchFeeds(tab, signal);
-	}
-	
+async function doFetchFeeds(tab: string): Promise<FeedsPageResponse> {
+	const url = `${API_BASE}/feeds?tab=${encodeURIComponent(tab)}`;
+	return apiFetch<FeedsPageResponse>(url, { timeout: FETCH_TIMEOUT_MS, errorContext: 'Fetch Feeds' });
+}
+
+export async function fetchFeeds(tab: string = 'all'): Promise<FeedsPageResponse> {
 	const cacheKey = `feeds-${tab}`;
 	
 	if (pendingRequests.has(cacheKey)) {
-		return pendingRequests.get(cacheKey)!;
+		return pendingRequests.get(cacheKey) as Promise<FeedsPageResponse>;
 	}
 	
 	const promise = doFetchFeeds(tab).finally(() => {
@@ -180,7 +127,7 @@ export async function saveHeaderColor(
 }
 
 export function formatTimestamp(ms?: number): string {
-	if (!ms) return '';
+	if (ms == null) return '';
 	const date = new Date(ms);
 	const now = new Date();
 	const diffMs = now.getTime() - date.getTime();
@@ -197,7 +144,7 @@ export function formatTimestamp(ms?: number): string {
 }
 
 export function formatDate(ms?: number): string {
-	if (!ms) return '';
+	if (ms == null) return '';
 	const date = new Date(ms);
 	return date.toLocaleDateString('en-US', {
 		weekday: 'long',

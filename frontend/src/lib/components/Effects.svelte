@@ -30,6 +30,7 @@
 	let particles = $state<Particle[]>([]);
 	let nextParticleId = 0;
 	let lastTouchCoords = { x: 0, y: 0 };
+	let activeTimeouts: ReturnType<typeof setTimeout>[] = [];
 
 	function handleMouseMove(e: MouseEvent) {
 		if (!showEffects) return;
@@ -55,28 +56,29 @@
 		const angleStep = (2 * Math.PI) / particleCount;
 		const distance = 60;
 
+		const newParticleIds: number[] = [];
 		const newParticles: Particle[] = [];
 		for (let i = 0; i < particleCount; i++) {
 			const angle = i * angleStep + (Math.random() * 0.3);
 			const dist = distance + (Math.random() * 20);
-			const endX = Math.cos(angle) * dist;
-			const endY = Math.sin(angle) * dist;
-			
 			const particle: Particle = {
 				id: nextParticleId++,
 				x,
 				y,
-				endX,
-				endY
+				endX: Math.cos(angle) * dist,
+				endY: Math.sin(angle) * dist
 			};
+			newParticleIds.push(particle.id);
 			newParticles.push(particle);
 		}
 
 		particles = [...particles, ...newParticles];
 
-		setTimeout(() => {
-			particles = particles.filter(p => !newParticles.find(np => np.id === p.id));
+		const idSet = new Set(newParticleIds);
+		const timeoutId = setTimeout(() => {
+			particles = particles.filter(p => !idSet.has(p.id));
 		}, 400);
+		activeTimeouts.push(timeoutId);
 	}
 
 	function onPointerDown(e: PointerEvent) {
@@ -95,18 +97,12 @@
 		}
 	}
 
-	function onClick(e: MouseEvent) {
-		if (!showEffects) return;
-		spawnParticles(e.clientX, e.clientY);
-	}
-
 	onMount(() => {
 		window.addEventListener('mousemove', handleMouseMove);
 		window.addEventListener('touchmove', handleTouchMove);
 		window.addEventListener('touchstart', handleTouchStart, { passive: true });
 		window.addEventListener('pointerdown', onPointerDown);
 		window.addEventListener('touchend', onTouchEnd);
-		window.addEventListener('click', onClick);
 
 		return () => {
 			window.removeEventListener('mousemove', handleMouseMove);
@@ -114,7 +110,8 @@
 			window.removeEventListener('touchstart', handleTouchStart);
 			window.removeEventListener('pointerdown', onPointerDown);
 			window.removeEventListener('touchend', onTouchEnd);
-			window.removeEventListener('click', onClick);
+			activeTimeouts.forEach(id => clearTimeout(id));
+			activeTimeouts = [];
 		};
 	});
 </script>
