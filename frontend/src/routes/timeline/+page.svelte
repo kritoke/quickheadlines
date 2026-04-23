@@ -22,18 +22,19 @@
 		getFilteredItems,
 		isLoading,
 		isError,
-		getError
+		getError,
+		cancelRetry
 	} from '$lib/stores/timelineStore.svelte';
-	import { searchState, setSearchQuery, toggleSearch, closeSearch } from '$lib/stores/search.svelte';
+	import { searchState, setSearchQuery, toggleSearch } from '$lib/stores/search.svelte';
 	import { toastStore } from '$lib/stores/toast.svelte';
 	import { createLazyLoader } from '$lib/utils/lazyComponent';
+	import { onMount } from 'svelte';
 
 	const loadTimelineView = createLazyLoader(() => import('$lib/components/TimelineView.svelte'));
 	const loadSearchModal = createLazyLoader(() => import('$lib/components/BitsSearchModal.svelte'));
 
 	let tabs = $state<TabResponse[]>([]);
 	let timelineEffects: ReturnType<typeof createTimelineEffects> | null = null;
-	let initialized = $state(false);
 	let sentinelElement: HTMLDivElement | undefined = $state();
 	
 	let filteredItems = $derived(getFilteredItems(searchState.query));
@@ -65,9 +66,7 @@
 	
 	let currentTab = $derived($page.url?.searchParams.get('tab') ?? 'all');
     
-	$effect(() => {
-		if (initialized) return;
-		
+	onMount(() => {
 		const currentTab = $page.url?.searchParams.get('tab') ?? 'all';
 		
 		(async () => {
@@ -76,7 +75,6 @@
 			loadTabs();
 			timelineEffects = createTimelineEffects();
 			timelineEffects.start();
-			initialized = true;
 		})();
 		
 		return () => {
@@ -84,12 +82,13 @@
 				timelineEffects.stop();
 				timelineEffects = null;
 			}
+			cancelRetry();
 		};
 	});
     
 	$effect(() => {
 		const urlTab = $page.url?.searchParams.get('tab') ?? 'all';
-		if (initialized && urlTab !== timelineState.tabName) {
+		if (urlTab !== timelineState.tabName) {
 			logger.log(`[Timeline] Tab changed from ${timelineState.tabName} to ${urlTab}, reloading...`);
 			loadTimeline(false, urlTab);
 		}
@@ -170,15 +169,22 @@
 				<span class="theme-text-secondary">Loading timeline...</span>
 			</div>
 		{:else if error && timelineState.items.length === 0}
-			<div class="bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 px-4 py-3 rounded-xl">
-				<span>{error}</span>
-				<button
-					onclick={handleRetry}
-					class="ml-3 underline hover:no-underline font-medium"
-				>
-					Retry
-				</button>
-			</div>
+			{#if timelineState.retryAfterMs > 0}
+				<div class="bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 px-4 py-3 rounded-xl flex items-center gap-2">
+					<div class="w-4 h-4 border-2 border-amber-500 border-t-transparent rounded-full animate-spin"></div>
+					<span class="text-sm font-medium">Rate limited — retrying in {Math.ceil(timelineState.retryAfterMs / 1000)}s...</span>
+				</div>
+			{:else}
+				<div class="bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 px-4 py-3 rounded-xl">
+					<span>{error}</span>
+					<button
+						onclick={handleRetry}
+						class="ml-3 underline hover:no-underline font-medium"
+					>
+						Retry
+					</button>
+				</div>
+			{/if}
 		{:else}
 			{#if loading && timelineState.items.length > 0}
 				<div class="sticky top-[var(--header-height,3.5rem)] z-20 theme-bg-primary/90 backdrop-blur-sm py-3 flex items-center justify-center gap-2 border-b theme-border">

@@ -1,4 +1,4 @@
-import { fetchTimeline, fetchConfig } from '$lib/api';
+import { fetchTimeline, fetchConfig, RateLimitError } from '$lib/api';
 import { deepClone } from '$lib/utils/clone';
 import { isIdle, isLoading, isRefreshing, isError, getError } from '$lib/utils/storeTypes';
 import type { LoadStatus } from '$lib/utils/storeTypes';
@@ -17,6 +17,7 @@ type BaseTimelineState = {
 	isClustering: boolean;
 	refreshMinutes: number;
 	tabName: string;
+	retryAfterMs: number;
 };
 
 export type TimelineStateIdle = BaseTimelineState & { status: 'idle' };
@@ -36,7 +37,8 @@ const initialBaseState: BaseTimelineState = {
 	loadingMore: false,
 	isClustering: false,
 	refreshMinutes: 10,
-	tabName: 'all'
+	tabName: 'all',
+	retryAfterMs: 0
 };
 
 const initialState: TimelineStateIdle = {
@@ -129,6 +131,14 @@ export function resetTimelineStore(): void {
 }
 
 let timelineRequestId = 0;
+let retryTimerId: ReturnType<typeof setTimeout> | null = null;
+
+export function cancelRetry(): void {
+	if (retryTimerId) {
+		clearTimeout(retryTimerId);
+		retryTimerId = null;
+	}
+}
 
 export async function loadTimeline(append: boolean = false, tab?: string): Promise<void> {
 	const requestId = ++timelineRequestId;
@@ -160,8 +170,25 @@ export async function loadTimeline(append: boolean = false, tab?: string): Promi
 	try {
 		const response = await fetchTimeline(500, append ? timelineState.offset : 0, 30, tab === 'all' ? undefined : tab);
 		if (requestId !== timelineRequestId) return;
+		cancelRetry();
 		Object.assign(timelineState, setTimelineData(timelineState, response.items, response.has_more, append));
 	} catch (e) {
+		if (requestId !== timelineRequestId) return;
+
+		if (e instanceof RateLimitError) {
+			Object.assign(timelineState, {
+				...setError(timelineState, 'Rate limited'),
+				retryAfterMs: e.retryAfterMs
+			});
+			cancelRetry();
+			retryTimerId = setTimeout(() => {
+				retryTimerId = null;
+				if (requestId === timelineRequestId) {
+					loadTimeline(append, tab);
+				}
+			}, e.retryAfterMs);
+			return;
+		}
 
 		toastStore.error('Failed to load timeline', 'Timeline');
 		Object.assign(timelineState, setError(timelineState, e instanceof Error ? e.message : 'Failed to load timeline'));

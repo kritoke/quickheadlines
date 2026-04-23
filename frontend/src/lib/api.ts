@@ -11,9 +11,19 @@ import { toastStore } from './stores/toast.svelte';
 
 const API_BASE = '/api';
 
+export class RateLimitError extends Error {
+	retryAfterMs: number;
+	constructor(retryAfterMs: number) {
+		super('Rate limit exceeded');
+		this.name = 'RateLimitError';
+		this.retryAfterMs = retryAfterMs;
+	}
+}
+
 const pendingRequests = new Map<string, Promise<unknown>>();
 
 const FETCH_TIMEOUT_MS = 30000;
+const TIMELINE_FETCH_TIMEOUT_MS = 15000;
 const MS_PER_MINUTE = 60000;
 const MS_PER_HOUR = 3600000;
 const MS_PER_DAY = 86400000;
@@ -43,11 +53,17 @@ async function apiFetch<T>(url: string, options: FetchOptions = {}): Promise<T> 
 
 	try {
 		const response = await fetch(url, fetchOptions);
+		if (response.status === 429) {
+			const retryAfter = parseInt(response.headers.get('Retry-After') || '5', 10);
+			const err = new RateLimitError(Math.max(retryAfter, 1) * 1000);
+			throw err;
+		}
 		if (!response.ok) {
 			throw new Error(`Failed to ${errorContext.toLowerCase()}: ${response.statusText}`);
 		}
 		return response.json();
 	} catch (error) {
+		if (error instanceof RateLimitError) throw error;
 		if (error instanceof Error && error.name === 'AbortError') throw error;
 		const msg = error instanceof Error ? error.message : `Failed to ${errorContext.toLowerCase()}`;
 		toastStore.error(msg, errorContext);
@@ -87,7 +103,7 @@ export async function fetchTimeline(
 	if (tab) {
 		url += `&tab=${encodeURIComponent(tab)}`;
 	}
-	return apiFetch<TimelinePageResponse>(url, { errorContext: 'Fetch Timeline' });
+	return apiFetch<TimelinePageResponse>(url, { timeout: TIMELINE_FETCH_TIMEOUT_MS, errorContext: 'Fetch Timeline' });
 }
 
 export async function fetchClusters(): Promise<ClustersResponse> {
