@@ -98,13 +98,10 @@ def refresh_all(config : Config, cache : FeedCache, db_service : DatabaseService
   # Build new state immutably
   new_feeds = config.feeds.map { |feed| fetched_map[feed.url]? || FeedFetcher.instance.build_error_feed(feed, "Failed to fetch") }
   new_tabs = config.tabs.map { |tab_config| build_tab_feeds(tab_config, fetched_map, config.item_limit) }
-  new_software_releases = build_software_releases(config.software_releases, config.item_limit)
 
-  # Atomic state update - no mutations
   StateStore.update do |state|
     state.copy_with(
       feeds: new_feeds,
-      software_releases: new_software_releases,
       tabs: new_tabs,
       updated_at: Time.utc
     )

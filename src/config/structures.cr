@@ -95,6 +95,4 @@ end
 record DbRepairResult,
   status : DbHealthStatus,
   backup_path : String?,
-  repair_time : Time,
-  feeds_to_restore : Int32,
-  items_to_restore : Int32
+  repair_time : Time

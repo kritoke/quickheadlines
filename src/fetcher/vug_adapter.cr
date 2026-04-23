@@ -29,11 +29,11 @@ module VugAdapter
     )
   end
 
-  def self.fetch(url : String) : Vug::Result
+  private def self.fetch(url : String) : Vug::Result
     Vug.fetch(url, config, CACHE)
   end
 
-  def self.fetch_for_site(site_url : String) : Vug::Result
+  private def self.fetch_for_site(site_url : String) : Vug::Result
     Vug.site(site_url, config, CACHE)
   end
 

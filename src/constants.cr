@@ -60,6 +60,8 @@ module QuickHeadlines::Constants
 
   PROXY_DEFAULT_MAX_BYTES = 2 * 1024 * 1024
 
+  CLUSTER_TITLE_TRUNCATE_LENGTH = 50
+
   ALLOWED_PROXY_DOMAINS = {
     "i.imgur.com",
     "pbs.twimg.com",

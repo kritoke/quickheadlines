@@ -126,8 +126,8 @@ class QuickHeadlines::Controllers::AdminController < QuickHeadlines::Controllers
       websocket_messages_sent: broadcaster_stats["sent"].to_i64,
       websocket_messages_dropped: broadcaster_stats["dropped"].to_i64,
       websocket_send_errors: ws_stats["send_errors"].to_i64,
+      websocket_connections_closed: ws_stats["closed_total"].to_i64,
       broadcaster_processed: broadcaster_stats["processed"].to_i64,
-      broadcaster_dropped: broadcaster_stats["dropped"].to_i64,
     )
   end
 

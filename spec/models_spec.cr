@@ -111,7 +111,6 @@ describe "Models" do
       StateStore.clear
       state = StateStore.get
       state.feeds.should be_empty
-      state.software_releases.should be_empty
       state.tabs.should be_empty
       state.config_title.should eq("Quick Headlines")
       state.config.should be_nil

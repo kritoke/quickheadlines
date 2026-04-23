@@ -95,13 +95,5 @@ module QuickHeadlines
       elapsed = now - oldest
       [@window_seconds - elapsed, 1].max
     end
-
-    def self.reset(key : String)
-      @@instances.delete(key)
-    end
-
-    def self.reset_all
-      @@instances.clear
-    end
   end
 end

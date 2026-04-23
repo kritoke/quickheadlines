@@ -1,13 +1,5 @@
 require "yaml"
 
-def load_config(path : String) : Config
-  config = File.open(path) do |io|
-    Config.from_yaml(io)
-  end
-
-  config
-end
-
 def load_validated_config(path : String) : ConfigLoadResult
   content = File.read(path)
 

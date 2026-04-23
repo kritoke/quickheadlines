@@ -33,17 +33,6 @@ module FaviconCache
     end
   end
 
-  def self.size : Int32
-    @@cache.size
-  end
-
-  def self.clear : Nil
-    @@mutex.synchronize do
-      @@cache.clear
-      @@access_order.clear
-    end
-  end
-
   def self.warm_from_dir(dir : String) : Int32
     count = 0
     if Dir.exists?(dir)

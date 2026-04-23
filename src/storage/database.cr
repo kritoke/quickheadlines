@@ -176,8 +176,6 @@ def repair_database(config : Config?, backup_path : String? = nil) : DbRepairRes
         status: DbHealthStatus::Corrupted,
         backup_path: nil,
         repair_time: repair_time,
-        feeds_to_restore: 0,
-        items_to_restore: 0
       )
     end
   end
@@ -189,8 +187,6 @@ def repair_database(config : Config?, backup_path : String? = nil) : DbRepairRes
       status: DbHealthStatus::Repaired,
       backup_path: actual_backup_path,
       repair_time: repair_time,
-      feeds_to_restore: 0,
-      items_to_restore: 0
     )
   rescue ex : Exception
     Log.for("quickheadlines.storage").error(exception: ex) { "Failed to create new database" }
@@ -204,8 +200,6 @@ def repair_database(config : Config?, backup_path : String? = nil) : DbRepairRes
       status: DbHealthStatus::Corrupted,
       backup_path: actual_backup_path,
       repair_time: repair_time,
-      feeds_to_restore: 0,
-      items_to_restore: 0
     )
   end
 end

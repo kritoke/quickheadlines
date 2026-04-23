@@ -193,8 +193,8 @@ module QuickHeadlines::DTOs
     property websocket_messages_sent : Int64
     property websocket_messages_dropped : Int64
     property websocket_send_errors : Int64
+    property websocket_connections_closed : Int64
     property broadcaster_processed : Int64
-    property broadcaster_dropped : Int64
 
     def initialize(
       @clustering : Bool,
@@ -204,8 +204,8 @@ module QuickHeadlines::DTOs
       @websocket_messages_sent : Int64 = 0_i64,
       @websocket_messages_dropped : Int64 = 0_i64,
       @websocket_send_errors : Int64 = 0_i64,
+      @websocket_connections_closed : Int64 = 0_i64,
       @broadcaster_processed : Int64 = 0_i64,
-      @broadcaster_dropped : Int64 = 0_i64,
     )
     end
   end

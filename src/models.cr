@@ -45,7 +45,6 @@ record Tab,
 # Immutable state record for functional updates
 record AppStateSnapshot,
   feeds : Array(FeedData),
-  software_releases : Array(FeedData),
   tabs : Array(Tab),
   updated_at : Time,
   config_title : String,
@@ -57,7 +56,6 @@ record AppStateSnapshot,
 module StateStore
   @@current = AppStateSnapshot.new(
     feeds: [] of FeedData,
-    software_releases: [] of FeedData,
     tabs: [] of Tab,
     updated_at: Time.utc,
     config_title: "Quick Headlines",
@@ -85,10 +83,6 @@ module StateStore
 
   def self.tabs
     get.tabs
-  end
-
-  def self.software_releases
-    get.software_releases
   end
 
   def self.updated_at
@@ -147,7 +141,6 @@ module StateStore
     @@mutex.synchronize do
       @@current = AppStateSnapshot.new(
         feeds: [] of FeedData,
-        software_releases: [] of FeedData,
         tabs: [] of Tab,
         updated_at: Time.utc,
         config_title: "Quick Headlines",

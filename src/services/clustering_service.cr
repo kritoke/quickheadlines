@@ -56,11 +56,11 @@ class QuickHeadlines::Services::ClusteringService
       cluster_items = cache.get_cluster_items(best_match)
       cluster_id = cluster_items.any? { |id| id != best_match } ? cluster_items.first : best_match
       cache.assign_cluster(item_id, cluster_id)
-      Log.for("quickheadlines.clustering").debug { "Clustered '#{title[0...50]}...' with '#{best_title[0...50]}...'" } if ENV["DEBUG_CLUSTERING"]?
+      Log.for("quickheadlines.clustering").debug { "Clustered '#{title[0...QuickHeadlines::Constants::CLUSTER_TITLE_TRUNCATE_LENGTH]}...' with '#{best_title[0...QuickHeadlines::Constants::CLUSTER_TITLE_TRUNCATE_LENGTH]}...'" } if ENV["DEBUG_CLUSTERING"]?
       cluster_id
     else
       cache.assign_cluster(item_id, item_id)
-      Log.for("quickheadlines.clustering").debug { "Created new cluster for '#{title[0...50]}...'" } if ENV["DEBUG_CLUSTERING"]?
+      Log.for("quickheadlines.clustering").debug { "Created new cluster for '#{title[0...QuickHeadlines::Constants::CLUSTER_TITLE_TRUNCATE_LENGTH]}...'" } if ENV["DEBUG_CLUSTERING"]?
       item_id
     end
   end

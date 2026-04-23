@@ -48,11 +48,7 @@ class FeedCache
     @header_color_store = QuickHeadlines::Storage::HeaderColorStore.new(@db, @mutex)
     @cleanup_store = QuickHeadlines::Storage::CleanupStore.new(@db, @mutex, @db_path)
 
-    begin
-      create_schema(@db, @db_path)
-    rescue ex
-      raise ex
-    end
+    create_schema(@db, @db_path)
     Log.for("quickheadlines.storage").info { "Database initialized: #{@db_path}" }
 
     log_db_size(@db_path, "on startup")

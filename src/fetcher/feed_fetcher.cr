@@ -190,18 +190,6 @@ class FeedFetcher
     {favicon, favicon_data}
   end
 
-  private def safe_get_favicon_with_fallback(site_link : String, parsed_favicon : String?, prev_favicon : String?, prev_favicon_data : String?) : {String?, String?}
-    favicon, favicon_data = nil, nil
-    begin
-      favicon, favicon_data = VugAdapter.get_favicon(site_link, parsed_favicon, prev_favicon, prev_favicon_data)
-    rescue ex : IO::TimeoutError | Socket::Addrinfo::Error | HTTP::Client::OverloadError
-      Log.for("quickheadlines.feed").debug { "VugAdapter.get_favicon failed for #{site_link}: #{ex.class}" }
-    rescue ex
-      Log.for("quickheadlines.feed").warn { "VugAdapter.get_favicon unexpected error for #{site_link}: #{ex.class} - #{ex.message}" }
-    end
-    {favicon, favicon_data}
-  end
-
   private def extract_domain_for_favicon(site_link : String, feed_url : String) : String?
     if site_link && !site_link.starts_with?("#") && !site_link.includes?("#") && !site_link.starts_with?("placeholder:") && site_link.presence
       uri = URI.parse(site_link)
@@ -228,7 +216,7 @@ class FeedFetcher
 
     cached_tabs = config.tabs.map do |tab_config|
       tab_feeds = tab_config.feeds.compact_map { |feed_config| @cache.get(feed_config.url) }
-      tab_releases = build_software_releases_internal(tab_config.software_releases, item_limit)
+      tab_releases = build_software_releases(tab_config.software_releases, item_limit)
       Tab.new(tab_config.name, tab_feeds, tab_releases)
     end
 
@@ -249,13 +237,10 @@ class FeedFetcher
     true
   end
 
-  private def build_software_releases_internal(software_config : SoftwareConfig?, item_limit : Int32) : Array(FeedData)
+  private def build_software_releases(software_config : SoftwareConfig?, item_limit : Int32) : Array(FeedData)
     return [] of FeedData unless software_config
-    if software_feed = ::fetch_sw_with_config(software_config, item_limit)
-      [software_feed]
-    else
-      [] of FeedData
-    end
+    feed = ::fetch_sw_with_config(software_config, item_limit)
+    feed ? [feed] : [] of FeedData
   end
 
   # Build error feed data for failed fetches
@@ -337,7 +322,7 @@ class FeedFetcher
   private def handle_timeout_error(feed : Feed, retries : Int32) : Int32
     new_retries = retries + 1
     backoff_seconds = calculate_backoff(feed, new_retries)
-    Log.for("quickheadlines.feed").warn { "fetch_feed(#{feed.url}) timeout, retry #{new_retries}/3 in #{backoff_seconds}s" }
+    Log.for("quickheadlines.feed").warn { "fetch_feed(#{feed.url}) timeout, retry #{new_retries}/#{QuickHeadlines::Constants::MAX_RETRIES} in #{backoff_seconds}s" }
     sleep(backoff_seconds.seconds)
     new_retries
   end

@@ -14,7 +14,9 @@ module QuickHeadlines::Storage
     end
 
     def assign_cluster(item_id : Int64, cluster_id : Int64?)
-      @db.exec("UPDATE items SET cluster_id = ? WHERE id = ?", cluster_id, item_id)
+      @mutex.synchronize do
+        @db.exec("UPDATE items SET cluster_id = ? WHERE id = ?", cluster_id, item_id)
+      end
     end
 
     def store_item_signature(item_id : Int64, signature : Array(UInt32))

@@ -32,23 +32,7 @@ module FaviconStorage
     return if @@initialized
     dir = favicon_dir
     FileUtils.mkdir_p(dir) unless Dir.exists?(dir)
-    migrate_old_favicons if Dir.exists?("public/favicons")
     @@initialized = true
-  end
-
-  def self.migrate_old_favicons : Nil
-    old_dir = "public/favicons"
-    return unless Dir.exists?(old_dir)
-    return unless Dir.exists?(favicon_dir)
-
-    Dir.each_child(old_dir) do |filename|
-      old_path = File.join(old_dir, filename)
-      new_path = File.join(favicon_dir, filename)
-      unless File.exists?(new_path)
-        FileUtils.mv(old_path, new_path)
-        Log.for("quickheadlines.storage").info { "Migrated favicon: #{filename}" }
-      end
-    end
   end
 
   private def self.favicon_hash_for_url(url : String) : String
@@ -168,45 +152,6 @@ module FaviconStorage
     end
 
     nil
-  end
-
-  def self.convert_data_uri(data_uri : String, url : String) : String?
-    return unless data_uri.starts_with?("data:image/")
-
-    match = data_uri.match(/^data:image\/([a-z]+);base64,(.+)$/i)
-    return unless match
-
-    content_type = "image/#{match[1]}"
-    base64_data = match[2]
-
-    begin
-      image_data = Base64.decode(base64_data)
-      hash = favicon_hash_for_url_full(url)
-      ext = extension_from_content_type(content_type)
-      filename = "#{hash[0...QuickHeadlines::Constants::FAVICON_HASH_PREFIX_LENGTH]}.#{ext}"
-      filepath = File.join(favicon_dir, filename)
-
-      @@mutex.synchronize do
-        unless File.exists?(filepath)
-          File.write(filepath, image_data)
-        end
-      end
-
-      "/favicons/#{filename}"
-    rescue ex
-      Log.for("quickheadlines.storage").error(exception: ex) { "Error converting data URI" }
-      nil
-    end
-  end
-
-  def self.clear : Nil
-    dir = favicon_dir
-    @@mutex.synchronize do
-      if Dir.exists?(dir)
-        FileUtils.rm_rf(dir)
-        FileUtils.mkdir_p(dir)
-      end
-    end
   end
 
   private def self.extension_from_content_type(content_type : String) : String
