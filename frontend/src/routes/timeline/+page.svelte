@@ -5,15 +5,12 @@
 	import BitsSearchModal from '$lib/components/BitsSearchModal.svelte';
 	import { fetchFeeds } from '$lib/api';
 	import type { TabResponse } from '$lib/types';
-	import { SvelteSet } from 'svelte/reactivity';
 	import {
 		createTimelineEffects,
 	} from '$lib/stores/effects.svelte';
-	import { logger, initDebug, setDebugEnabled } from '$lib/utils/debug';
-	import { goto } from '$app/navigation';
+	import { logger } from '$lib/utils/debug';
 	import { NavigationService } from '$lib/services/navigationService';
 	import { page } from '$app/stores';
-	import { themeState } from '$lib/stores/theme.svelte';
 	import {
 		timelineState,
 		loadTimeline,
@@ -26,7 +23,6 @@
 		cancelRetry
 	} from '$lib/stores/timelineStore.svelte';
 	import { searchState, setSearchQuery, toggleSearch } from '$lib/stores/search.svelte';
-	import { toastStore } from '$lib/stores/toast.svelte';
 	import { createLazyLoader } from '$lib/utils/lazyComponent';
 	import { onMount } from 'svelte';
 
