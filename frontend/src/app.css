@@ -340,11 +340,11 @@ html.custom-theme .theme-bg-secondary {
 }
 
 html.custom-theme .theme-text-primary {
-	color: var(--theme-text);
+	color: var(--color-text-primary, var(--theme-text));
 }
 
 html.custom-theme .theme-text-secondary {
-	color: var(--theme-text);
+	color: var(--color-text-secondary, var(--theme-text));
 	opacity: 0.8;
 }
 
