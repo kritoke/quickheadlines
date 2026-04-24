@@ -28,12 +28,17 @@ FSTAB /usr/local/bastille/cache/crystal/quickheadlines /home/qh/.cache nullfs rw
 # If the binary is already there and we aren't in dev mode, we skip the acquisition steps
 CMD sh -c "if [ '${MODE}' != 'dev' ] && [ -f /usr/local/share/quickheadlines/quickheadlines ]; then touch /tmp/skip_download && echo '✅ Existing binary found. Skipping acquisition.'; fi"
 
-# 5. Clone Source (Into /tmp/qh)
-# We only clone if we aren't skipping the download (saves bandwidth/time)
-CMD sh -c "if [ ! -f /tmp/skip_download ]; then rm -rf /tmp/qh && git clone ${REPO_URL} /tmp/qh && chown -R qh:qh /tmp/qh; fi"
+# 5. Cache Clear (Optional) - Must run BEFORE clone to ensure fresh deps
+# Clear shards cache AND /tmp/qh to ensure fresh dependency resolution (especially for vug updates)
+CMD sh -c "if [ '${CLEAR_CACHE}' = 'true' ]; then \
+    rm -rf /home/qh/.cache/shards /var/cache/quickheadlines/*; \
+    rm -rf /tmp/qh; \
+    echo '✅ Cleared shards cache and /tmp/qh for fresh dependency resolution'; \
+fi"
 
-# 6. Cache Clear (Optional)
-CMD sh -c "if [ '${CLEAR_CACHE}' = 'true' ]; then rm -rf /home/qh/.cache/shards /var/cache/quickheadlines/*; fi"
+# 6. Clone Source (Into /tmp/qh)
+# We clone if skip_download doesn't exist OR if we cleared cache (which deleted /tmp/qh)
+CMD sh -c "if [ ! -f /tmp/skip_download ] || [ '${CLEAR_CACHE}' = 'true' ]; then rm -rf /tmp/qh && git clone ${REPO_URL} /tmp/qh && chown -R qh:qh /tmp/qh; fi"
 
 # 7a. DEV MODE: Build (Only runs if MODE=dev)
 CMD sh -c "if [ '${MODE}' = 'dev' ]; then \
