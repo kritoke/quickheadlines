@@ -46,7 +46,7 @@ module QuickHeadlines::Repositories
           item_pub_date_str = rows.read(String?)
           feed_url = rows.read(String)
           feed_title = rows.read(String)
-          feed_link = rows.read(String)
+          feed_link = rows.read(String?) || ""
           favicon = rows.read(String?)
           favicon_data = rows.read(String?)
           header_color = rows.read(String?)
@@ -58,19 +58,19 @@ module QuickHeadlines::Repositories
 
           cluster_items[cluster_id] ||= [] of {id: Int64, title: String, link: String, pub_date: Time?, feed_url: String, feed_title: String, feed_link: String, favicon: String?, favicon_data: String?, header_color: String?, header_text_color: String?, comment_url: String?, commentary_url: String?}
           cluster_items[cluster_id] << {
-            id:               item_id,
-            title:            item_title,
-            link:             item_link,
-            pub_date:         item_pub_date,
-            feed_url:         feed_url,
-            feed_title:       feed_title,
-            feed_link:        feed_link,
-            favicon:          favicon,
-            favicon_data:     favicon_data,
-            header_color:     header_color,
+            id:                item_id,
+            title:             item_title,
+            link:              item_link,
+            pub_date:          item_pub_date,
+            feed_url:          feed_url,
+            feed_title:        feed_title,
+            feed_link:         feed_link,
+            favicon:           favicon,
+            favicon_data:      favicon_data,
+            header_color:      header_color,
             header_text_color: header_text_color,
-            comment_url:      comment_url,
-            commentary_url:   commentary_url,
+            comment_url:       comment_url,
+            commentary_url:    commentary_url,
           }
         end
       end

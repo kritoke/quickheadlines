@@ -84,9 +84,9 @@ class FaviconSyncService
   end
 
   private def find_local_favicon(favicon : String) : Tuple(Bool, String?)
-    hash = FaviconStorage.favicon_hash_for_url_full(favicon)
+    hash = FaviconStorage.favicon_hash_for_url(favicon)
     FaviconStorage::POSSIBLE_EXTENSIONS.each do |ext|
-      filename = "#{hash[0...QuickHeadlines::Constants::FAVICON_HASH_PREFIX_LENGTH]}.#{ext}"
+      filename = FaviconStorage.favicon_filename(hash, ext)
       filepath = File.join(FaviconStorage.favicon_dir, filename)
       if File.exists?(filepath)
         return {true, "/favicons/#{filename}"}

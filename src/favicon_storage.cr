@@ -15,6 +15,8 @@ require "./storage/cache_utils"
 module FaviconStorage
   POSSIBLE_EXTENSIONS = {"png", "jpg", "jpeg", "ico", "svg", "webp"}
 
+  # NOTE: Uses :unchecked mutex to avoid Boehm GC mutex initialization
+  # deadlocks on FreeBSD. See AGENTS.md for details.
   @@mutex = Mutex.new(:unchecked)
   @@favicon_dir : String? = nil
   @@initialized = false
@@ -35,17 +37,9 @@ module FaviconStorage
     @@initialized = true
   end
 
-  private def self.favicon_hash_for_url(url : String) : String
-    hash_input = begin
-      url[0..255]
-    rescue IndexError
-      url
-    end
+  def self.favicon_hash_for_url(url : String) : String
+    hash_input = url.size > 4096 ? url[0..4096] : url
     OpenSSL::Digest.new("SHA256").update(hash_input).final.hexstring
-  end
-
-  def self.favicon_hash_for_url_full(url : String) : String
-    OpenSSL::Digest.new("SHA256").update(url).final.hexstring
   end
 
   def self.save_favicon(url : String, image_data : Bytes, content_type : String) : String?
@@ -54,7 +48,7 @@ module FaviconStorage
 
     hash = favicon_hash_for_url(url)
     ext = extension_from_content_type(content_type)
-    filename = "#{hash[0...QuickHeadlines::Constants::FAVICON_HASH_PREFIX_LENGTH]}.#{ext}"
+    filename = favicon_filename(hash, ext)
     filepath = File.join(favicon_dir, filename)
 
     @@mutex.synchronize do
@@ -86,15 +80,10 @@ module FaviconStorage
     uri = URI.parse(url)
     host = uri.host
     return unless host
-    if Utils.private_host?(host)
-      Log.for("quickheadlines.storage").debug { "SSRF blocked: private host #{host} in #{url}" }
-      return
-    end
+    return if reject_private_host?(host, url)
 
     client = HTTP::Client.new(host, port: uri.port, tls: uri.scheme == "https")
-    client.read_timeout = QuickHeadlines::Constants::HTTP_READ_TIMEOUT.seconds
-    client.write_timeout = QuickHeadlines::Constants::HTTP_WRITE_TIMEOUT.seconds
-    client.connect_timeout = QuickHeadlines::Constants::HTTP_CONNECT_TIMEOUT.seconds
+    apply_default_timeouts(client)
 
     redirect_client : HTTP::Client? = nil
 
@@ -110,14 +99,9 @@ module FaviconStorage
           redirected_uri = uri.resolve(redirect_url)
           redirect_host = redirected_uri.host
           if redirect_host
-            if Utils.private_host?(redirect_host)
-              Log.for("quickheadlines.storage").debug { "SSRF blocked: private redirect host #{redirect_host} in #{url}" }
-              return
-            end
+            return if reject_private_host?(redirect_host, url)
             redirect_client = HTTP::Client.new(redirect_host, port: redirected_uri.port, tls: redirected_uri.scheme == "https")
-            redirect_client.read_timeout = QuickHeadlines::Constants::HTTP_READ_TIMEOUT.seconds
-            redirect_client.write_timeout = QuickHeadlines::Constants::HTTP_WRITE_TIMEOUT.seconds
-            redirect_client.connect_timeout = QuickHeadlines::Constants::HTTP_CONNECT_TIMEOUT.seconds
+            apply_default_timeouts(redirect_client)
             response = redirect_client.get(redirected_uri.request_target, headers: headers)
           end
         end
@@ -141,13 +125,14 @@ module FaviconStorage
   end
 
   def self.get_or_fetch(url : String) : String?
-    hash = favicon_hash_for_url_full(url)
+    hash = favicon_hash_for_url(url)
     dir = favicon_dir
 
     @@mutex.synchronize do
       POSSIBLE_EXTENSIONS.each do |ext|
-        filepath = File.join(dir, "#{hash[0...QuickHeadlines::Constants::FAVICON_HASH_PREFIX_LENGTH]}.#{ext}")
-        return "/favicons/#{hash[0...QuickHeadlines::Constants::FAVICON_HASH_PREFIX_LENGTH]}.#{ext}" if File.exists?(filepath)
+        filename = favicon_filename(hash, ext)
+        filepath = File.join(dir, filename)
+        return "/favicons/#{filename}" if File.exists?(filepath)
       end
     end
 
@@ -165,5 +150,23 @@ module FaviconStorage
     when "image/webp"               then "webp"
     else                                 "png"
     end
+  end
+
+  def self.favicon_filename(hash : String, ext : String) : String
+    "#{hash[0...QuickHeadlines::Constants::FAVICON_HASH_PREFIX_LENGTH]}.#{ext}"
+  end
+
+  private def self.apply_default_timeouts(client : HTTP::Client) : Nil
+    client.read_timeout = QuickHeadlines::Constants::HTTP_READ_TIMEOUT.seconds
+    client.write_timeout = QuickHeadlines::Constants::HTTP_WRITE_TIMEOUT.seconds
+    client.connect_timeout = QuickHeadlines::Constants::HTTP_CONNECT_TIMEOUT.seconds
+  end
+
+  private def self.reject_private_host?(host : String, url : String) : Bool
+    if Utils.private_host?(host)
+      Log.for("quickheadlines.storage").debug { "SSRF blocked: private host #{host} in #{url}" }
+      return true
+    end
+    false
   end
 end

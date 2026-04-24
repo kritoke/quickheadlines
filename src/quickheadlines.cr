@@ -61,8 +61,8 @@ def initiate_shutdown(signal_name : String) : Nil
   SocketManager.instance.shutdown_all_connections
 end
 
-Signal::TERM.trap { initiate_shutdown("SIGTERM") }
-Signal::INT.trap { initiate_shutdown("SIGINT") }
+Process.on_terminate { initiate_shutdown("SIGTERM") }
+Process.on_terminate { initiate_shutdown("SIGINT") }
 
 begin
   config = QuickHeadlines.initial_config

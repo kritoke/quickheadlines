@@ -23,25 +23,25 @@ describe QuickHeadlines::Services::ClusteringService do
       )
 
       db.exec(
-        "INSERT INTO items (id, feed_id, title, link, pub_date, version, position) VALUES (?, ?, ?, ?, ?, ?, ?)",
-        1_i64, 1_i64, "OpenAI releases GPT-5 with improved reasoning capabilities today", "https://tech.example.com/gpt5", Time.utc.to_s("%Y-%m-%d %H:%M:%S"), 1, 0
+        "INSERT INTO items (id, feed_id, title, link, pub_date, version) VALUES (?, ?, ?, ?, ?, ?)",
+        1_i64, 1_i64, "OpenAI releases GPT-5 with improved reasoning capabilities today", "https://tech.example.com/gpt5", Time.utc.to_s("%Y-%m-%d %H:%M:%S"), 1
       )
       db.exec(
-        "INSERT INTO items (id, feed_id, title, link, pub_date, version, position) VALUES (?, ?, ?, ?, ?, ?, ?)",
-        2_i64, 2_i64, "OpenAI releases GPT-5 with improved reasoning capabilities now", "https://news.example.com/gpt5", Time.utc.to_s("%Y-%m-%d %H:%M:%S"), 1, 0
+        "INSERT INTO items (id, feed_id, title, link, pub_date, version) VALUES (?, ?, ?, ?, ?, ?)",
+        2_i64, 2_i64, "OpenAI releases GPT-5 with improved reasoning capabilities now", "https://news.example.com/gpt5", Time.utc.to_s("%Y-%m-%d %H:%M:%S"), 1
       )
       db.exec(
-        "INSERT INTO items (id, feed_id, title, link, pub_date, version, position) VALUES (?, ?, ?, ?, ?, ?, ?)",
-        3_i64, 2_i64, "OpenAI releases GPT-5 with improved reasoning capabilities soon", "https://tech.example.com/gpt5-v2", Time.utc.to_s("%Y-%m-%d %H:%M:%S"), 1, 0
+        "INSERT INTO items (id, feed_id, title, link, pub_date, version) VALUES (?, ?, ?, ?, ?, ?)",
+        3_i64, 2_i64, "OpenAI releases GPT-5 with improved reasoning capabilities soon", "https://tech.example.com/gpt5-v2", Time.utc.to_s("%Y-%m-%d %H:%M:%S"), 1
       )
 
       db.exec(
-        "INSERT INTO items (id, feed_id, title, link, pub_date, version, position) VALUES (?, ?, ?, ?, ?, ?, ?)",
-        10_i64, 1_i64, "Completely different story about cooking", "https://tech.example.com/cooking", Time.utc.to_s("%Y-%m-%d %H:%M:%S"), 1, 0
+        "INSERT INTO items (id, feed_id, title, link, pub_date, version) VALUES (?, ?, ?, ?, ?, ?)",
+        10_i64, 1_i64, "Completely different story about cooking", "https://tech.example.com/cooking", Time.utc.to_s("%Y-%m-%d %H:%M:%S"), 1
       )
       db.exec(
-        "INSERT INTO items (id, feed_id, title, link, pub_date, version, position) VALUES (?, ?, ?, ?, ?, ?, ?)",
-        11_i64, 2_i64, "Another unrelated tech story about phones", "https://news.example.com/phones", Time.utc.to_s("%Y-%m-%d %H:%M:%S"), 1, 0
+        "INSERT INTO items (id, feed_id, title, link, pub_date, version) VALUES (?, ?, ?, ?, ?, ?)",
+        11_i64, 2_i64, "Another unrelated tech story about phones", "https://news.example.com/phones", Time.utc.to_s("%Y-%m-%d %H:%M:%S"), 1
       )
 
       service = QuickHeadlines::Services::ClusteringService.new(cache.db_service)
@@ -73,12 +73,12 @@ describe QuickHeadlines::Services::ClusteringService do
       )
 
       db.exec(
-        "INSERT INTO items (id, feed_id, title, link, pub_date, version, position) VALUES (?, ?, ?, ?, ?, ?, ?)",
-        1_i64, 1_i64, "Short title", "https://tech.example.com/1", Time.utc.to_s("%Y-%m-%d %H:%M:%S"), 1, 0
+        "INSERT INTO items (id, feed_id, title, link, pub_date, version) VALUES (?, ?, ?, ?, ?, ?)",
+        1_i64, 1_i64, "Short title", "https://tech.example.com/1", Time.utc.to_s("%Y-%m-%d %H:%M:%S"), 1
       )
       db.exec(
-        "INSERT INTO items (id, feed_id, title, link, pub_date, version, position) VALUES (?, ?, ?, ?, ?, ?, ?)",
-        2_i64, 1_i64, "OpenAI releases new AI model today for users", "https://tech.example.com/2", Time.utc.to_s("%Y-%m-%d %H:%M:%S"), 1, 0
+        "INSERT INTO items (id, feed_id, title, link, pub_date, version) VALUES (?, ?, ?, ?, ?, ?)",
+        2_i64, 1_i64, "OpenAI releases new AI model today for users", "https://tech.example.com/2", Time.utc.to_s("%Y-%m-%d %H:%M:%S"), 1
       )
 
       service = QuickHeadlines::Services::ClusteringService.new(cache.db_service)
@@ -107,12 +107,12 @@ describe QuickHeadlines::Services::ClusteringService do
       )
 
       db.exec(
-        "INSERT INTO items (id, feed_id, title, link, pub_date, version, position, cluster_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-        1_i64, 1_i64, "OpenAI releases GPT-5 with improved reasoning capabilities today", "https://tech.example.com/1", Time.utc.to_s("%Y-%m-%d %H:%M:%S"), 1, 0, 1_i64
+        "INSERT INTO items (id, feed_id, title, link, pub_date, version, cluster_id) VALUES (?, ?, ?, ?, ?, ?, ?)",
+        1_i64, 1_i64, "OpenAI releases GPT-5 with improved reasoning capabilities today", "https://tech.example.com/1", Time.utc.to_s("%Y-%m-%d %H:%M:%S"), 1, 1_i64
       )
       db.exec(
-        "INSERT INTO items (id, feed_id, title, link, pub_date, version, position, cluster_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-        2_i64, 2_i64, "OpenAI releases GPT-5 with improved reasoning capabilities now", "https://tech.example.com/2", Time.utc.to_s("%Y-%m-%d %H:%M:%S"), 1, 0, 1_i64
+        "INSERT INTO items (id, feed_id, title, link, pub_date, version, cluster_id) VALUES (?, ?, ?, ?, ?, ?, ?)",
+        2_i64, 2_i64, "OpenAI releases GPT-5 with improved reasoning capabilities now", "https://tech.example.com/2", Time.utc.to_s("%Y-%m-%d %H:%M:%S"), 1, 1_i64
       )
 
       service = QuickHeadlines::Services::ClusteringService.new(cache.db_service)
@@ -140,12 +140,12 @@ describe QuickHeadlines::Services::ClusteringService do
       )
 
       db.exec(
-        "INSERT INTO items (id, feed_id, title, link, pub_date, version, position, cluster_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-        1_i64, 1_i64, "OpenAI releases GPT-5 with improved reasoning", "https://tech.example.com/1", Time.utc.to_s("%Y-%m-%d %H:%M:%S"), 1, 0, 1_i64
+        "INSERT INTO items (id, feed_id, title, link, pub_date, version, cluster_id) VALUES (?, ?, ?, ?, ?, ?, ?)",
+        1_i64, 1_i64, "OpenAI releases GPT-5 with improved reasoning", "https://tech.example.com/1", Time.utc.to_s("%Y-%m-%d %H:%M:%S"), 1, 1_i64
       )
       db.exec(
-        "INSERT INTO items (id, feed_id, title, link, pub_date, version, position, cluster_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-        2_i64, 1_i64, "OpenAI announces GPT-5 with improved reasoning", "https://tech.example.com/2", Time.utc.to_s("%Y-%m-%d %H:%M:%S"), 1, 0, 1_i64
+        "INSERT INTO items (id, feed_id, title, link, pub_date, version, cluster_id) VALUES (?, ?, ?, ?, ?, ?, ?)",
+        2_i64, 1_i64, "OpenAI announces GPT-5 with improved reasoning", "https://tech.example.com/2", Time.utc.to_s("%Y-%m-%d %H:%M:%S"), 1, 1_i64
       )
 
       service = QuickHeadlines::Services::ClusteringService.new(cache.db_service)

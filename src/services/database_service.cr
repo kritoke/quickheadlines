@@ -1,5 +1,6 @@
 require "db"
 require "sqlite3"
+require "mutex"
 require "../config"
 require "../storage/schema"
 require "../storage/cache_utils"
@@ -7,6 +8,7 @@ require "../storage/database"
 
 class DatabaseService
   @@instance : DatabaseService?
+  @@instance_mutex = Mutex.new
 
   getter db_path : String
   getter db : DB::Database
@@ -16,32 +18,22 @@ class DatabaseService
     ensure_cache_dir(cache_dir)
 
     @db_path = get_cache_db_path(config).as(String)
-    @db = DB.open("sqlite3://#{@db_path}?busy_timeout=5000")
+    @db = DB.open("sqlite3://#{@db_path}?busy_timeout=#{QuickHeadlines::Constants::SQLITE_BUSY_TIMEOUT_MS}")
     ::create_schema(@db, @db_path)
 
     Log.for("quickheadlines.storage").info { "DatabaseService initialized: #{@db_path}" }
   end
 
   def self.instance : DatabaseService
-    @@instance ||= begin
-      raise "DatabaseService: Not initialized. AppBootstrap must create DatabaseService before accessing instance."
+    @@instance_mutex.synchronize do
+      @@instance ||= begin
+        raise "DatabaseService: Not initialized. AppBootstrap must create DatabaseService before accessing instance."
+      end
     end
   end
 
   def self.instance=(service : DatabaseService)
-    @@instance = service
-  end
-
-  private def get_cache_dir(config : Config) : String
-    ::get_cache_dir(config)
-  end
-
-  private def get_cache_db_path(config : Config) : String
-    ::get_cache_db_path(config)
-  end
-
-  private def ensure_cache_dir(cache_dir : String)
-    ::ensure_cache_dir(cache_dir)
+    @@instance_mutex.synchronize { @@instance = service }
   end
 
   def close

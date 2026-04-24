@@ -50,7 +50,7 @@ module ColorExtractor
   private def self.cached_theme_colors(path : String) : Hash(String, String | Hash(String, String))?
     @@cache_mutex.synchronize do
       if entry = @@extraction_cache[path]?
-        if (Time.local - entry.timestamp).to_i < QuickHeadlines::Constants::COLOR_CACHE_EXPIRY_DAYS * 24 * 60 * 60
+        if (Time.utc - entry.timestamp).to_i < QuickHeadlines::Constants::COLOR_CACHE_EXPIRY_DAYS * 24 * 60 * 60
           entry.access_order = Time.utc.to_unix_ms
           text_val = entry.text
           text_hash = normalize_text_value(text_val)
@@ -78,7 +78,7 @@ module ColorExtractor
       text_val = result["text"]
       stored_text = normalize_text_value_for_storage(text_val)
 
-      @@extraction_cache[path] = CacheEntry.new(bg_val, stored_text, Time.local, Time.utc.to_unix_ms)
+      @@extraction_cache[path] = CacheEntry.new(bg_val, stored_text, Time.utc, Time.utc.to_unix_ms)
     end
   end
 

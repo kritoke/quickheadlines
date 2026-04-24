@@ -9,9 +9,10 @@ require "../storage"
 require "../color_extractor"
 require "./vug_adapter"
 require "./theme_helper"
+require "./software_util"
 
 # FeedFetcher encapsulates all feed fetching logic with proper dependency injection.
-# Use FeedFetcher.instance for singleton access or inject FeedCache for testing.
+# Use FeedFetcher.instance for singleton access after AppBootstrap initializes it.
 class FeedFetcher
   include Fetcher::ThemeHelper
 
@@ -37,7 +38,7 @@ class FeedFetcher
   @@instance_mutex = Mutex.new
 
   def self.instance : FeedFetcher
-    @@instance_mutex.synchronize { @@instance ||= FeedFetcher.new(FeedCache.instance) }
+    @@instance_mutex.synchronize { @@instance.not_nil! }
   end
 
   def self.instance=(fetcher : FeedFetcher)
@@ -212,7 +213,8 @@ class FeedFetcher
   def load_from_cache(config : Config, item_limit : Int32 = config.item_limit) : Bool
     StateStore.update(&.copy_with(config_title: config.page_title, config: config))
 
-    cached_feeds = config.feeds.compact_map { |feed_config| @cache.get(feed_config.url) }
+    all_feed_urls = config.all_feed_urls
+    all_cached_feeds = all_feed_urls.compact_map { |url| @cache.get(url) }
 
     cached_tabs = config.tabs.map do |tab_config|
       tab_feeds = tab_config.feeds.compact_map { |feed_config| @cache.get(feed_config.url) }
@@ -222,25 +224,23 @@ class FeedFetcher
 
     StateStore.update do |state|
       state.copy_with(
-        feeds: cached_feeds,
+        feeds: all_cached_feeds,
         tabs: cached_tabs,
         updated_at: Time.utc
       )
     end
 
-    if cached_feeds.empty? && cached_tabs.all?(&.feeds.empty?)
+    if all_cached_feeds.empty? && cached_tabs.all?(&.feeds.empty?)
       Log.for("quickheadlines.feed").debug { "load_feeds_from_cache: no cached data found" }
       return false
     end
 
-    Log.for("quickheadlines.feed").debug { "load_feeds_from_cache: loaded #{cached_feeds.size} feeds and #{cached_tabs.size} tabs from cache" }
+    Log.for("quickheadlines.feed").debug { "load_feeds_from_cache: loaded #{all_cached_feeds.size} feeds and #{cached_tabs.size} tabs from cache" }
     true
   end
 
   private def build_software_releases(software_config : SoftwareConfig?, item_limit : Int32) : Array(FeedData)
-    return [] of FeedData unless software_config
-    feed = ::fetch_sw_with_config(software_config, item_limit)
-    feed ? [feed] : [] of FeedData
+    QuickHeadlines::SoftwareUtil.build_software_releases(software_config, item_limit)
   end
 
   # Build error feed data for failed fetches
@@ -274,15 +274,7 @@ class FeedFetcher
   end
 
   private def safe_get_favicon(site_link : String) : {String?, String?}
-    favicon, favicon_data = nil, nil
-    begin
-      favicon, favicon_data = VugAdapter.get_favicon(site_link, nil, nil, nil)
-    rescue ex : IO::TimeoutError | Socket::Addrinfo::Error
-      Log.for("quickheadlines.feed").debug { "Favicon fetch failed for #{site_link}: #{ex.class}" }
-    rescue ex
-      Log.for("quickheadlines.feed").warn { "Favicon fetch unexpected error for #{site_link}: #{ex.class} - #{ex.message}" }
-    end
-    {favicon, favicon_data}
+    safe_get_favicon_with_fallback(site_link, nil, nil, nil)
   end
 
   private def safe_get_favicon_with_fallback(site_link : String, parsed_favicon : String?, prev_favicon : String?, prev_favicon_data : String?) : {String?, String?}

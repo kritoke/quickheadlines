@@ -1,6 +1,8 @@
 module FaviconCache
   MAX_ENTRIES = 200
 
+  # NOTE: Uses :unchecked mutex to avoid Boehm GC mutex initialization
+  # deadlocks on FreeBSD. See AGENTS.md for details.
   @@mutex = Mutex.new(:unchecked)
   @@cache = {} of String => String
   @@access_order = [] of String
@@ -11,8 +13,6 @@ module FaviconCache
         @@access_order.delete(key)
         @@access_order << key
         data
-      else
-        nil
       end
     end
   end

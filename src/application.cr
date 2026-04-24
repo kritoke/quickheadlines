@@ -67,7 +67,7 @@ begin
 
   begin
     validate_feed_urls!(config)
-  rescue ex : ConfigValidationError
+  rescue ex : QuickHeadlines::ConfigValidationError
     Log.for("quickheadlines.app").fatal { "\nFeed URL validation failed:" }
     Log.for("quickheadlines.app").fatal { ex.message.to_s }
     exit 1
@@ -76,8 +76,11 @@ begin
   QuickHeadlines.initial_config = config
 
   bootstrap = AppBootstrap.new(config)
-  DatabaseService.instance = bootstrap.db_service
   QuickHeadlines.bootstrap = bootstrap
+
+  Log.for("quickheadlines.app").info { "Synchronously loading feeds from cache..." }
+  FeedFetcher.load_feeds_from_cache(config)
+  Log.for("quickheadlines.app").info { "StateStore pre-loaded with #{StateStore.feeds.size} feeds and #{StateStore.tabs.size} tabs" }
 rescue ex : Exception
   Log.for("quickheadlines.app").fatal(exception: ex) { "Failed to initialize application" }
   exit 1

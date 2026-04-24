@@ -17,14 +17,13 @@ require "../repositories/feed_repository"
 
 class FeedCache
   @@instance : FeedCache?
-  @@instance_mutex = Mutex.new
 
   def self.instance : FeedCache
-    @@instance_mutex.synchronize { @@instance ||= FeedCache.new(QuickHeadlines.initial_config.as(Config), DatabaseService.instance) }
+    @@instance || raise "FeedCache: Not initialized. AppBootstrap must create FeedCache before accessing instance."
   end
 
   def self.instance=(cache : FeedCache)
-    @@instance_mutex.synchronize { @@instance = cache }
+    @@instance = cache
   end
 
   @mutex : Mutex
@@ -48,7 +47,6 @@ class FeedCache
     @header_color_store = QuickHeadlines::Storage::HeaderColorStore.new(@db, @mutex)
     @cleanup_store = QuickHeadlines::Storage::CleanupStore.new(@db, @mutex, @db_path)
 
-    create_schema(@db, @db_path)
     Log.for("quickheadlines.storage").info { "Database initialized: #{@db_path}" }
 
     log_db_size(@db_path, "on startup")

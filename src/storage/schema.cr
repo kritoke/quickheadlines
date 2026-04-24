@@ -25,7 +25,6 @@ module Schema
       link TEXT NOT NULL,
       pub_date TEXT,
       version TEXT,
-      position INTEGER NOT NULL,
       minhash_signature BLOB,
       cluster_id INTEGER REFERENCES items(id),
       FOREIGN KEY (feed_id) REFERENCES feeds(id) ON DELETE CASCADE,

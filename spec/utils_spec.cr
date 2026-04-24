@@ -96,10 +96,10 @@ describe "Utils" do
   end
 end
 
-describe "ConfigValidationError" do
+describe "QuickHeadlines::ConfigValidationError" do
   it "formats error message with single invalid feed" do
     invalid = [{"Feed", "http://bad", "Invalid scheme"}]
-    error = ConfigValidationError.new(invalid)
+    error = QuickHeadlines::ConfigValidationError.new(invalid)
     error.message.should contain("Invalid feed URLs found")
     error.message.should contain("Feed")
     error.message.should contain("http://bad")
@@ -111,7 +111,7 @@ describe "ConfigValidationError" do
       {"Feed1", "ftp://bad1", "Invalid scheme"},
       {"Feed2", "not-a-url", "Malformed URL"},
     ]
-    error = ConfigValidationError.new(invalid)
+    error = QuickHeadlines::ConfigValidationError.new(invalid)
     error.message.should contain("Invalid feed URLs found")
     error.message.should contain("Feed1")
     error.message.should contain("Feed2")
@@ -119,7 +119,7 @@ describe "ConfigValidationError" do
 
   it "stores invalid feeds for programmatic access" do
     invalid = [{"Feed", "http://bad", "Invalid scheme"}]
-    error = ConfigValidationError.new(invalid)
+    error = QuickHeadlines::ConfigValidationError.new(invalid)
     error.invalid_feeds.should eq(invalid)
   end
 end
@@ -142,7 +142,7 @@ describe "validate_feed_urls!" do
           url: "ftp://example.com/feed.xml"
       YAML
     config = Config.from_yaml(yaml)
-    expect_raises(ConfigValidationError) { validate_feed_urls!(config) }
+    expect_raises(QuickHeadlines::ConfigValidationError) { validate_feed_urls!(config) }
   end
 
   it "raises for empty URL" do
@@ -152,7 +152,7 @@ describe "validate_feed_urls!" do
           url: ""
       YAML
     config = Config.from_yaml(yaml)
-    expect_raises(ConfigValidationError) { validate_feed_urls!(config) }
+    expect_raises(QuickHeadlines::ConfigValidationError) { validate_feed_urls!(config) }
   end
 
   it "raises for malformed URL" do
@@ -162,7 +162,7 @@ describe "validate_feed_urls!" do
           url: "not a url"
       YAML
     config = Config.from_yaml(yaml)
-    expect_raises(ConfigValidationError) { validate_feed_urls!(config) }
+    expect_raises(QuickHeadlines::ConfigValidationError) { validate_feed_urls!(config) }
   end
 
   it "raises for invalid feed in tabs" do
@@ -174,7 +174,7 @@ describe "validate_feed_urls!" do
               url: "ftp://bad.com"
       YAML
     config = Config.from_yaml(yaml)
-    expect_raises(ConfigValidationError) { validate_feed_urls!(config) }
+    expect_raises(QuickHeadlines::ConfigValidationError) { validate_feed_urls!(config) }
   end
 
   it "raises with all invalid feeds listed" do
@@ -189,7 +189,7 @@ describe "validate_feed_urls!" do
     begin
       validate_feed_urls!(config)
       fail("Expected ConfigValidationError to be raised")
-    rescue ex : ConfigValidationError
+    rescue ex : QuickHeadlines::ConfigValidationError
       ex.message.should contain("Bad1")
       ex.message.should contain("Bad2")
     end

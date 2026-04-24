@@ -11,8 +11,6 @@ class QuickHeadlines::Controllers::ProxyController < QuickHeadlines::Controllers
     raise AHK::Exception::BadRequest.new("Missing 'url' parameter") if url.nil? || url.strip.empty?
     raise AHK::Exception::HTTPException.new(403, "Disallowed proxy domain") unless validate_proxy_url(url)
 
-    max_bytes = {max_bytes, QuickHeadlines::Constants::MAX_PROXY_IMAGE_BYTES.to_i64}.min
-
     check_rate_limit!(request, "proxy", 30, 60)
 
     proxy_image_fetch(url, max_bytes)
@@ -49,9 +47,9 @@ class QuickHeadlines::Controllers::ProxyController < QuickHeadlines::Controllers
       end
 
       AHTTP::Response.new(body, 200, HTTP::Headers{
-        "content-type"            => content_type,
-        "cache-control"           => "public, max-age=86400",
-        "x-content-type-options"  => "nosniff",
+        "content-type"           => content_type,
+        "cache-control"          => "public, max-age=86400",
+        "x-content-type-options" => "nosniff",
       })
     rescue ex : AHK::Exception::HTTPException
       raise ex
@@ -76,9 +74,9 @@ class QuickHeadlines::Controllers::ProxyController < QuickHeadlines::Controllers
     cached = FaviconCache.get(cache_key)
     if cached
       AHTTP::Response.new(cached, 200, HTTP::Headers{
-        "content-type"                    => mime_type_from_ext(ext),
-        "cache-control"                  => "public, max-age=604800, immutable",
-        "x-content-type-options"         => "nosniff",
+        "content-type"           => mime_type_from_ext(ext),
+        "cache-control"          => "public, max-age=604800, immutable",
+        "x-content-type-options" => "nosniff",
       })
     else
       raise AHK::Exception::NotFound.new("Favicon not found") unless File.exists?(favicon_path)
@@ -86,9 +84,9 @@ class QuickHeadlines::Controllers::ProxyController < QuickHeadlines::Controllers
       content = File.read(favicon_path)
       FaviconCache.put(cache_key, content)
       AHTTP::Response.new(content, 200, HTTP::Headers{
-        "content-type"                    => mime_type_from_ext(ext),
-        "cache-control"                  => "public, max-age=604800, immutable",
-        "x-content-type-options"         => "nosniff",
+        "content-type"           => mime_type_from_ext(ext),
+        "cache-control"          => "public, max-age=604800, immutable",
+        "x-content-type-options" => "nosniff",
       })
     end
   end

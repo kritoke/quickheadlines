@@ -102,10 +102,13 @@ module StateStore
   end
 
   def self.clustering=(value : Bool)
-    @@mutex.synchronize do
-      @@current = @@current.copy_with(clustering: value)
-      unless value
+    update do |state|
+      if value
+        @@clustering_start_time = Time.utc
+        state.copy_with(clustering: true)
+      else
         @@clustering_start_time = nil
+        state.copy_with(clustering: false)
       end
     end
   end
@@ -122,7 +125,7 @@ module StateStore
   end
 
   def self.clustering_start_time : Time?
-    @@clustering_start_time
+    @@mutex.synchronize { @@clustering_start_time }
   end
 
   def self.refreshing?

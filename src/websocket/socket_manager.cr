@@ -4,6 +4,8 @@ require "channel"
 require "../constants"
 
 class SocketManager
+  # NOTE: Uses :unchecked mutex to avoid Boehm GC mutex initialization
+  # deadlocks on FreeBSD. See AGENTS.md for details.
   @@instance : SocketManager?
   @@mutex = Mutex.new(:unchecked)
 
@@ -59,10 +61,10 @@ class SocketManager
         registration_state = registration_state.merge({ip_counted: true})
 
         outgoing = Channel(String).new(QuickHeadlines::Constants::CONNECTION_QUEUE_SIZE)
-        connection = Connection.new(websocket: ws, ip: ip, outgoing: outgoing, created_at: Time.local)
+        connection = Connection.new(websocket: ws, ip: ip, outgoing: outgoing, created_at: Time.utc)
 
         @activity_mutex.synchronize do
-          @last_activity[ws] = Time.local
+          @last_activity[ws] = Time.utc
         end
 
         spawn writer_fiber(connection)
@@ -94,7 +96,7 @@ class SocketManager
         @messages_sent.add(1)
 
         @activity_mutex.synchronize do
-          @last_activity[connection.websocket] = Time.local
+          @last_activity[connection.websocket] = Time.utc
         end
       rescue Channel::ClosedError
         break
@@ -206,7 +208,7 @@ class SocketManager
 
   def cleanup_dead_connections : Int32
     dead = [] of Connection
-    now = Time.local
+    now = Time.utc
 
     @connections_mutex.synchronize do
       @connections.each do |conn|

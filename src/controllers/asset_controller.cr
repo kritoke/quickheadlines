@@ -22,27 +22,28 @@ class QuickHeadlines::Controllers::AssetController < QuickHeadlines::Controllers
     raise AHK::Exception::NotFound.new("Favicon not found")
   end
 
+  private def serve_icon(name : String) : AHTTP::Response
+    content = FrontendAssets.get("#{name}.svg").gets_to_end
+    AHTTP::Response.new(content, 200, HTTP::Headers{"content-type" => "image/svg+xml"})
+  end
+
   @[ARTA::Get(path: "/api/sun-icon.svg")]
   def sun_icon_svg : AHTTP::Response
-    content = FrontendAssets.get("sun-icon.svg").gets_to_end
-    AHTTP::Response.new(content, 200, HTTP::Headers{"content-type" => "image/svg+xml"})
+    serve_icon("sun-icon")
   end
 
   @[ARTA::Get(path: "/api/moon-icon.svg")]
   def moon_icon_svg : AHTTP::Response
-    content = FrontendAssets.get("moon-icon.svg").gets_to_end
-    AHTTP::Response.new(content, 200, HTTP::Headers{"content-type" => "image/svg+xml"})
+    serve_icon("moon-icon")
   end
 
   @[ARTA::Get(path: "/api/home-icon.svg")]
   def home_icon_svg : AHTTP::Response
-    content = FrontendAssets.get("home-icon.svg").gets_to_end
-    AHTTP::Response.new(content, 200, HTTP::Headers{"content-type" => "image/svg+xml"})
+    serve_icon("home-icon")
   end
 
   @[ARTA::Get(path: "/api/timeline-icon.svg")]
   def timeline_icon_svg : AHTTP::Response
-    content = FrontendAssets.get("timeline-icon.svg").gets_to_end
-    AHTTP::Response.new(content, 200, HTTP::Headers{"content-type" => "image/svg+xml"})
+    serve_icon("timeline-icon")
   end
 end

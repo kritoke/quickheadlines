@@ -14,7 +14,7 @@ module VugAdapter
         FaviconStorage.save_favicon(url, data, content_type)
       end,
       on_load: ->(url : String) do
-        return nil if url.nil? || url.starts_with?("placeholder:") || url.includes?("#placeholder")
+        return if url.nil? || url.starts_with?("placeholder:") || url.includes?("#placeholder")
         FaviconStorage.get_or_fetch(url)
       end,
       on_debug: ->(msg : String) do

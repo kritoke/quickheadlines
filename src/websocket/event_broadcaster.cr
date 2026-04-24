@@ -35,7 +35,7 @@ class EventBroadcaster
         # Event queued for broadcast
       when timeout(QuickHeadlines::Constants::WEBSOCKET_SEND_TIMEOUT_MS.milliseconds)
         DROPPED_EVENTS.add(1)
-        Log.for("quickheadlines.websocket").warn { "Channel full, dropping event (buffer size: 100)" }
+        Log.for("quickheadlines.websocket").warn { "Channel full, dropping event (buffer size: #{QuickHeadlines::Constants::WEBSOCKET_CHANNEL_SIZE})" }
       end
     rescue Channel::ClosedError
       Log.for("quickheadlines.websocket").error { "Channel closed, cannot send update" }
@@ -58,8 +58,6 @@ class EventBroadcaster
 end
 
 struct FeedUpdateEvent
-  include JSON::Serializable
-
   property timestamp : Int64
   property type : String
 
@@ -73,8 +71,6 @@ struct FeedUpdateEvent
 end
 
 struct HeartbeatEvent
-  include JSON::Serializable
-
   property timestamp : Int64
   property type : String
 

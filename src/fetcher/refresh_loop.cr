@@ -7,6 +7,7 @@ require "../services/clustering_service"
 require "../software_fetcher"
 require "../websocket"
 require "./feed_fetcher"
+require "./software_util"
 
 private def collect_feed_configs(config : Config) : Hash(String, Feed)
   all_configs = {} of String => Feed
@@ -55,12 +56,7 @@ private def fetch_feeds_concurrently(all_configs : Hash(String, Feed), existing_
 end
 
 private def build_software_releases(software_config : SoftwareConfig?, item_limit : Int32) : Array(FeedData)
-  return [] of FeedData unless software_config
-  if software_feed = fetch_sw_with_config(software_config, item_limit)
-    [software_feed]
-  else
-    [] of FeedData
-  end
+  QuickHeadlines::SoftwareUtil.build_software_releases(software_config, item_limit)
 end
 
 private def build_tab_feeds(tab_config : TabConfig, fetched_map : Hash(String, FeedData), item_limit : Int32) : Tab

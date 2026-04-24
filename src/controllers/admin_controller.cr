@@ -77,8 +77,7 @@ class QuickHeadlines::Controllers::AdminController < QuickHeadlines::Controllers
 
     cluster_repo = QuickHeadlines::Repositories::ClusterRepository.new(@db_service)
     feed_repo = QuickHeadlines::Repositories::FeedRepository.new(@db_service)
-    existing_feeds = feed_repo.find_all_urls
-    db_urls = existing_feeds
+    db_urls = feed_repo.find_all_urls
 
     orphaned = db_urls - config_urls
 

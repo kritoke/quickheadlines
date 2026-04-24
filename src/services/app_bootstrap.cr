@@ -29,6 +29,7 @@ class AppBootstrap
     DatabaseService.instance = @db_service
 
     @feed_cache = load_feed_cache(@config, @db_service)
+    FeedCache.instance = @feed_cache
     Log.for("quickheadlines.app").info { "Loaded #{@feed_cache.size} feeds from cache" }
 
     FaviconStorage.init
@@ -38,6 +39,7 @@ class AppBootstrap
 
     cleanup_stale_feeds
 
+    FeedFetcher.instance = FeedFetcher.new(@feed_cache)
     FeedFetcher.load_feeds_from_cache(@config)
 
     EventBroadcaster.start

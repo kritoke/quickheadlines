@@ -51,6 +51,11 @@ MIGRATIONS = [
     ensure_column(db, "items", "comment_url", "TEXT")
     ensure_column(db, "items", "commentary_url", "TEXT")
   end,
+  DatabaseMigration.new(version: 8, name: "drop_position_column") do |db|
+    if column_exists?(db, "items", "position")
+      db.exec("ALTER TABLE items DROP COLUMN position")
+    end
+  end,
 ]
 
 private def ensure_schema_info_table(db : DB::Database) : Nil
@@ -128,7 +133,7 @@ def check_db_health(db_path : String) : DbHealthStatus
     return DbHealthStatus::NeedsRepopulation
   end
 
-  DB.open("sqlite3://#{db_path}?busy_timeout=5000") do |database|
+  DB.open("sqlite3://#{db_path}?busy_timeout=#{QuickHeadlines::Constants::SQLITE_BUSY_TIMEOUT_MS}") do |database|
     integrity_result = database.query_one("PRAGMA integrity_check", as: {String})
     if integrity_result != "ok"
       Log.for("quickheadlines.storage").error { "Database integrity check failed: #{integrity_result}" }

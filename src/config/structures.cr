@@ -63,8 +63,6 @@ struct ClusteringConfig
     _enabled
   end
 
-  property schedule_minutes : Int32 = 60
-
   @[YAML::Field(key: "run_on_startup")]
   private property _run_on_startup : Bool = true
 

@@ -1,6 +1,6 @@
 require "uri"
 
-class ConfigValidationError < Exception
+class QuickHeadlines::ConfigValidationError < Exception
   getter invalid_feeds : Array({String, String, String})
 
   @msg : String
@@ -34,7 +34,7 @@ def validate_feed_urls!(config : Config) : Nil
 
   return if invalid_feeds.empty?
 
-  raise ConfigValidationError.new(invalid_feeds)
+  raise QuickHeadlines::ConfigValidationError.new(invalid_feeds)
 end
 
 private def invalid_url_reason(url : String) : String?
