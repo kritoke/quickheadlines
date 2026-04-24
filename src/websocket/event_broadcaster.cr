@@ -4,6 +4,7 @@ require "./socket_manager"
 
 class EventBroadcaster
   UPDATE_CHANNEL   = Channel(FeedUpdateEvent).new(QuickHeadlines::Constants::WEBSOCKET_CHANNEL_SIZE)
+  SHUTDOWN_CHANNEL = Channel(Nil).new(1)
   DROPPED_EVENTS   = Atomic(Int64).new(0)
   PROCESSED_EVENTS = Atomic(Int64).new(0)
 
@@ -16,6 +17,10 @@ class EventBroadcaster
           PROCESSED_EVENTS.add(1)
         when timeout(QuickHeadlines::Constants::WEBSOCKET_HEARTBEAT_SECONDS.seconds)
           SocketManager.instance.broadcast(HeartbeatEvent.new.to_json)
+        when SHUTDOWN_CHANNEL.receive?
+          UPDATE_CHANNEL.close
+          Log.for("quickheadlines.websocket").info { "EventBroadcaster shutting down" }
+          break
         end
       end
     end
@@ -45,6 +50,10 @@ class EventBroadcaster
       "dropped"   => DROPPED_EVENTS.get,
       "processed" => PROCESSED_EVENTS.get,
     }
+  end
+
+  def self.shutdown : Nil
+    SHUTDOWN_CHANNEL.send(nil)
   end
 end
 

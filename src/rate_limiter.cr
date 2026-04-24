@@ -25,6 +25,7 @@ module QuickHeadlines
         @@cleanup_fiber = spawn do
           loop do
             sleep QuickHeadlines::Constants::RATE_LIMITER_CLEANUP_INTERVAL.seconds
+            break if QuickHeadlines.shutting_down?
             begin
               cleanup_stale_instances
             rescue ex

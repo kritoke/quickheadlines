@@ -8,7 +8,8 @@ ARG CLEAR_CACHE=false
 
 # 0. Initial Cleanup & Service Stop
 CMD service quickheadlines stop 2>/dev/null || true
-CMD pkill -9 -u qh 2>/dev/null || true
+CMD sleep 2
+CMD sh -c "for i in 1 2 3 4 5; do pgrep -u qh quickheadlines >/dev/null 2>&1 || exit 0; echo \"Waiting for quickheadlines to stop (attempt \$i/5)...\"; sleep 2; done; echo \"Processes still running, forcing kill\"; pkill -9 -u qh 2>/dev/null || true"
 CMD rm -f /var/run/quickheadlines/quickheadlines.pid /tmp/skip_download 2>/dev/null || true
 
 # 1. System Dependencies

@@ -108,6 +108,7 @@ class AppBootstrap
     spawn do
       loop do
         sleep @clustering_interval
+        break if QuickHeadlines.shutting_down?
         if start_time = StateStore.clustering_start_time
           if Time.utc - start_time > QuickHeadlines::Constants::STUCK_CLUSTER_THRESHOLD
             Log.for("quickheadlines.app").warn { "Clustering stuck for >4 hours, resetting state" }
@@ -141,6 +142,7 @@ class AppBootstrap
     spawn do
       loop do
         sleep @cleanup_interval
+        break if QuickHeadlines.shutting_down?
         begin
           VugAdapter.clear_cache
           Log.for("quickheadlines.app").debug { "Cleared Vug cache" }
@@ -158,6 +160,7 @@ class AppBootstrap
     spawn do
       loop do
         sleep @ws_janitor_interval
+        break if QuickHeadlines.shutting_down?
         begin
           removed = SocketManager.instance.cleanup_dead_connections
           stats = SocketManager.instance.stats

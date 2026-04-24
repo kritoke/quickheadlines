@@ -3,6 +3,8 @@ require "./websocket"
 
 require "http"
 require "log"
+require "process"
+require "signal"
 require "time"
 
 Log.setup do |builder|
@@ -41,6 +43,26 @@ class RequestTimingHandler
     end
   end
 end
+
+SHUTDOWN_LOG = Log.for("quickheadlines.shutdown")
+
+def initiate_shutdown(signal_name : String) : Nil
+  return if QuickHeadlines.shutting_down?
+  QuickHeadlines.shutting_down = true
+  SHUTDOWN_LOG.info { "Received #{signal_name}, initiating graceful shutdown..." }
+
+  spawn do
+    sleep 10.seconds
+    SHUTDOWN_LOG.error { "Graceful shutdown timed out after 10s, forcing exit" }
+    Process.exit(1)
+  end
+
+  EventBroadcaster.shutdown
+  SocketManager.instance.shutdown_all_connections
+end
+
+Signal::TERM.trap { initiate_shutdown("SIGTERM") }
+Signal::INT.trap { initiate_shutdown("SIGINT") }
 
 begin
   config = QuickHeadlines.initial_config

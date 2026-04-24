@@ -257,4 +257,18 @@ class SocketManager
       "closed_total"     => closed_total,
     }
   end
+
+  def shutdown_all_connections : Nil
+    snapshot = @connections_mutex.synchronize { @connections.dup }
+    snapshot.each do |conn|
+      begin
+        conn.outgoing.close
+      rescue Channel::ClosedError
+      end
+      begin
+        conn.websocket.close
+      rescue IO::Error
+      end
+    end
+  end
 end
