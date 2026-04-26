@@ -51,14 +51,22 @@ def initiate_shutdown(signal_name : String) : Nil
   QuickHeadlines.shutting_down = true
   SHUTDOWN_LOG.info { "Received #{signal_name}, initiating graceful shutdown..." }
 
+  # Force exit after 5 seconds if graceful shutdown doesn't complete
+  # This handles cases where GC or other operations block shutdown
   spawn do
-    sleep 10.seconds
-    SHUTDOWN_LOG.error { "Graceful shutdown timed out after 10s, forcing exit" }
+    sleep 5.seconds
+    SHUTDOWN_LOG.warn { "Graceful shutdown taking too long, forcing exit" }
     Process.exit(1)
   end
 
+  SHUTDOWN_LOG.info { "Shutting down WebSocket connections..." }
   EventBroadcaster.shutdown
+
+  # Force close the update channel to unblock any fibers waiting on it
+  EventBroadcaster.close_update_channel
+
   SocketManager.instance.shutdown_all_connections
+  SHUTDOWN_LOG.info { "Shutdown complete" }
 end
 
 Process.on_terminate { initiate_shutdown("SIGTERM") }

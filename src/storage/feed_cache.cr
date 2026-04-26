@@ -50,6 +50,9 @@ class FeedCache
     Log.for("quickheadlines.storage").info { "Database initialized: #{@db_path}" }
 
     log_db_size(@db_path, "on startup")
+
+    # Ensure WAL is checkpointed at startup to prevent unbounded growth
+    @cleanup_store.ensure_wal_checkpoint
   end
 
   private def feed_repository : QuickHeadlines::Repositories::FeedRepository
@@ -259,6 +262,9 @@ def save_feed_cache(cache : FeedCache, retention_hours : Int32 = QuickHeadlines:
     rescue ex
       Log.for("quickheadlines.storage").warn { "vacuum failed: #{ex.message}" }
     end
+
+    # Ensure WAL is truncated after vacuum to reclaim disk space
+    cache.cleanup_store.ensure_wal_checkpoint
 
     cache.cleanup_old_entries(retention_hours)
     cache.cleanup_old_articles(QuickHeadlines::Constants::CACHE_RETENTION_DAYS)

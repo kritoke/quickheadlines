@@ -3,7 +3,26 @@ require "../repositories/repository_base"
 
 module QuickHeadlines::Storage
   class CleanupStore
+    # Maximum WAL size before forcing a checkpoint truncate (500MB)
+    MAX_WAL_SIZE_BEFORE_TRUNCATE = 500 * 1024 * 1024
+
     def initialize(@db : DB::Database, @mutex : Mutex, @db_path : String)
+    end
+
+    # Called at startup and periodically to ensure WAL doesn't grow unbounded
+    def ensure_wal_checkpoint
+      actual_size = actual_wal_file_size
+      if actual_size > MAX_WAL_SIZE_BEFORE_TRUNCATE
+        Log.for("quickheadlines.storage").warn { "WAL file too large (#{(actual_size / 1024.0 / 1024.0).round(1)}MB), forcing checkpoint truncate" }
+        @db.exec("PRAGMA wal_checkpoint(TRUNCATE)")
+        new_size = actual_wal_file_size
+        Log.for("quickheadlines.storage").info { "WAL truncated from #{(actual_size / 1024.0 / 1024.0).round(1)}MB to #{(new_size / 1024.0 / 1024.0).round(1)}MB" }
+      elsif actual_size > 0
+        # Normal checkpoint for WAL files > 10MB
+        @db.exec("PRAGMA wal_checkpoint(TRUNCATE)")
+      end
+    rescue ex
+      Log.for("quickheadlines.storage").error(exception: ex) { "WAL checkpoint failed: #{ex.message}" }
     end
 
     def cleanup_old_entries(retention_hours : Int32 = QuickHeadlines::Constants::CACHE_RETENTION_HOURS, config_urls : Array(String)? = nil)
@@ -108,12 +127,32 @@ module QuickHeadlines::Storage
 
     private def run_wal_checkpoint
       wal_size = wal_file_size
-      if wal_size > 0
-        Log.for("quickheadlines.storage").debug { "Running WAL checkpoint (WAL size: #{(wal_size / 1024.0).round(1)}KB)" }
-        @db.exec("PRAGMA wal_checkpoint(TRUNCATE)")
-        new_wal_size = wal_file_size
-        Log.for("quickheadlines.storage").debug { "WAL checkpoint done (new WAL size: #{(new_wal_size / 1024.0).round(1)}KB)" }
+      # Always checkpoint if WAL exists, even if size reports 0 (can happen on some BSD systems)
+      # Also checkpoint if WAL is larger than 10MB to prevent unbounded growth
+      if wal_size > 0 || wal_size == 0
+        # On some systems wal_size can be 0 even when WAL exists and is huge
+        # Check actual file size directly
+        actual_size = actual_wal_file_size
+        if actual_size > 10 * 1024 * 1024 || wal_size > 0
+          Log.for("quickheadlines.storage").info { "Running WAL checkpoint (WAL size: #{(actual_size / 1024.0 / 1024.0).round(1)}MB)" }
+          @db.exec("PRAGMA wal_checkpoint(TRUNCATE)")
+          new_size = actual_wal_file_size
+          Log.for("quickheadlines.storage").info { "WAL checkpoint done (new WAL size: #{(new_size / 1024.0 / 1024.0).round(1)}MB)" }
+        end
       end
+    rescue ex
+      Log.for("quickheadlines.storage").error(exception: ex) { "WAL checkpoint failed: #{ex.message}" }
+    end
+
+    private def actual_wal_file_size : Int64
+      wal_path = "#{@db_path}-wal"
+      if File.exists?(wal_path)
+        File.size(wal_path)
+      else
+        0_i64
+      end
+    rescue ex
+      0_i64
     end
 
     private def wal_file_size : Int64

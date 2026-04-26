@@ -276,13 +276,19 @@ def start_refresh_loop(config_path : String, cache : FeedCache, db_service : Dat
 end
 
 # Help Boehm GC on FreeBSD/BSD release memory back to OS
-private @@last_gc_collect = Time.utc
+module GCCollector
+  @@last_gc_collect = Time.utc
+
+  def self.trigger_if_needed : Nil
+    now = Time.utc
+    if now - @@last_gc_collect >= QuickHeadlines::Constants::GC_COLLECT_INTERVAL
+      GC.collect
+      @@last_gc_collect = now
+      Log.for("quickheadlines.gc").debug { "Triggered GC.collect to release memory" }
+    end
+  end
+end
 
 private def trigger_gc_collection : Nil
-  now = Time.utc
-  if now - @@last_gc_collect >= QuickHeadlines::Constants::GC_COLLECT_INTERVAL
-    GC.collect
-    @@last_gc_collect = now
-    Log.for("quickheadlines.gc").debug { "Triggered GC.collect to release memory" }
-  end
+  GCCollector.trigger_if_needed
 end
