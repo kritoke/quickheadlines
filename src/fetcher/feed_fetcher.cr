@@ -244,18 +244,20 @@ class FeedFetcher
   end
 
   # Build error feed data for failed fetches
+  # NOTE: We skip VugAdapter favicon fetching here because:
+  # 1. Error feeds don't need favicons - they display an error state
+  # 2. VugAdapter calls can hang on DNS revalidation failures, blocking the server
+  # 3. We already fallback to Google favicon URL below if no cached favicon exists
   def build_error_feed(feed : Feed, message : String) : FeedData
     site_link = feed.url
 
     Log.for("quickheadlines.feed").warn { "[FEED ERROR] #{feed.title} (#{feed.url}) - #{message}" }
 
-    favicon, favicon_data = safe_get_favicon(site_link)
+    # Skip VugAdapter for error feeds - use Google favicon directly as fallback
+    favicon = VugAdapter.google_favicon_url(site_link.presence || feed.url)
+    favicon_data = nil
 
     header_color, header_text_color = extract_header_colors(feed, favicon_data)
-
-    if favicon.nil? && favicon_data.nil?
-      favicon = VugAdapter.google_favicon_url(site_link.presence || feed.url)
-    end
 
     FeedData.new(
       title: feed.title,

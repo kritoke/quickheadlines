@@ -115,7 +115,7 @@
 					class:dark:bg-slate-800={searchExpanded}
 					aria-label="Search"
 				>
-					<svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-slate-600 dark:text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+					<svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 theme-text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
 						<path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
 					</svg>
 				</button>
@@ -126,12 +126,12 @@
 					aria-label={viewLink.icon === 'clock' ? 'Timeline view' : 'Feed view'}
 				>
 					{#if viewLink.icon === 'clock'}
-						<svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-slate-600 dark:text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+						<svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 theme-text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
 							<circle cx="12" cy="12" r="10" />
 							<polyline points="12 6 12 12 16 14" />
 						</svg>
 					{:else}
-						<svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-slate-600 dark:text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+						<svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 theme-text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
 							<path d="M4 11a9 9 0 0 1 9 9" />
 							<path d="M4 4a16 16 0 0 1 16 16" />
 							<circle cx="5" cy="19" r="1" fill="currentColor" />
@@ -148,7 +148,7 @@
 					<svg 
 						class="w-5 h-5 transition-all duration-200"
 						class:drop-shadow-lg={themeState.effects}
-						style="color: {themeState.effects ? resolvedThemeColors.accent : '#94a3b8'};"
+						style="color: {themeState.effects ? resolvedThemeColors.accent : 'var(--color-text-primary, var(--theme-text))'};"
 						viewBox="0 0 24 24" 
 						fill="currentColor"
 					>

@@ -3,6 +3,9 @@ require "../favicon_storage"
 require "../config"
 
 module VugAdapter
+  @@favicon_semaphore = Channel(Nil).new(4)  # Limit concurrent favicon fetches to 4
+  4.times { @@favicon_semaphore.send(nil) }
+
   CACHE = Vug::MemoryCache.new
 
   def self.config : Vug::Config
