@@ -7,7 +7,6 @@ require "../config"
 require "../constants"
 require "../models"
 require "../services/database_service"
-require "../services/favicon_sync_service"
 require "./cache_utils"
 require "./database"
 require "./clustering_store"
@@ -270,6 +269,4 @@ def save_feed_cache(cache : FeedCache, retention_hours : Int32 = QuickHeadlines:
     cache.cleanup_old_articles(QuickHeadlines::Constants::CACHE_RETENTION_DAYS)
     QuickHeadlines::Storage.last_cache_cleanup = now
   end
-
-  FaviconSyncService.new(cache.db).sync_favicon_paths
 end

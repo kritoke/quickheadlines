@@ -58,11 +58,9 @@ class EventBroadcaster
 
   # Force close the update channel to unblock any waiting fibers
   def self.close_update_channel : Nil
-    begin
-      UPDATE_CHANNEL.close
-    rescue Channel::ClosedError
-      # Already closed
-    end
+    UPDATE_CHANNEL.close
+  rescue Channel::ClosedError
+    # Already closed
   end
 end
 

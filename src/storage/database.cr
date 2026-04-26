@@ -56,6 +56,9 @@ MIGRATIONS = [
       db.exec("ALTER TABLE items DROP COLUMN position")
     end
   end,
+  DatabaseMigration.new(version: 9, name: "add_date_normalized_column") do |db|
+    ensure_column(db, "items", "date_normalized", "INTEGER NOT NULL DEFAULT 0")
+  end,
 ]
 
 private def ensure_schema_info_table(db : DB::Database) : Nil
@@ -99,7 +102,7 @@ def create_schema(db : DB::Database, db_path : String)
   db.exec("PRAGMA cache_size = -64000")
   db.exec("PRAGMA foreign_keys = ON")
   db.exec("PRAGMA mmap_size = 0")
-  db.exec("PRAGMA wal_autocheckpoint = 20")
+  db.exec("PRAGMA wal_autocheckpoint = 10000")
 
   db.exec(Schema::FEEDS_TABLE)
   db.exec(Schema::ITEMS_TABLE)
@@ -174,6 +177,8 @@ def repair_database(config : Config?, backup_path : String? = nil) : DbRepairRes
   unless File.exists?(actual_backup_path)
     begin
       File.rename(db_path, actual_backup_path) if File.exists?(db_path)
+      File.delete("#{db_path}-wal") if File.exists?("#{db_path}-wal")
+      File.delete("#{db_path}-shm") if File.exists?("#{db_path}-shm")
       Log.for("quickheadlines.storage").info { "Backed up corrupted database to: #{actual_backup_path}" }
     rescue ex : Exception
       Log.for("quickheadlines.storage").error(exception: ex) { "Failed to backup corrupted database" }

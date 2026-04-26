@@ -11,18 +11,6 @@ module QuickHeadlines::Storage
 
     # Called at startup and periodically to ensure WAL doesn't grow unbounded
     def ensure_wal_checkpoint
-      actual_size = actual_wal_file_size
-      if actual_size > MAX_WAL_SIZE_BEFORE_TRUNCATE
-        Log.for("quickheadlines.storage").warn { "WAL file too large (#{(actual_size / 1024.0 / 1024.0).round(1)}MB), forcing checkpoint truncate" }
-        @db.exec("PRAGMA wal_checkpoint(TRUNCATE)")
-        new_size = actual_wal_file_size
-        Log.for("quickheadlines.storage").info { "WAL truncated from #{(actual_size / 1024.0 / 1024.0).round(1)}MB to #{(new_size / 1024.0 / 1024.0).round(1)}MB" }
-      elsif actual_size > 0
-        # Normal checkpoint for WAL files > 10MB
-        @db.exec("PRAGMA wal_checkpoint(TRUNCATE)")
-      end
-    rescue ex
-      Log.for("quickheadlines.storage").error(exception: ex) { "WAL checkpoint failed: #{ex.message}" }
     end
 
     def cleanup_old_entries(retention_hours : Int32 = QuickHeadlines::Constants::CACHE_RETENTION_HOURS, config_urls : Array(String)? = nil)
@@ -126,22 +114,6 @@ module QuickHeadlines::Storage
     end
 
     private def run_wal_checkpoint
-      wal_size = wal_file_size
-      # Always checkpoint if WAL exists, even if size reports 0 (can happen on some BSD systems)
-      # Also checkpoint if WAL is larger than 10MB to prevent unbounded growth
-      if wal_size > 0 || wal_size == 0
-        # On some systems wal_size can be 0 even when WAL exists and is huge
-        # Check actual file size directly
-        actual_size = actual_wal_file_size
-        if actual_size > 10 * 1024 * 1024 || wal_size > 0
-          Log.for("quickheadlines.storage").info { "Running WAL checkpoint (WAL size: #{(actual_size / 1024.0 / 1024.0).round(1)}MB)" }
-          @db.exec("PRAGMA wal_checkpoint(TRUNCATE)")
-          new_size = actual_wal_file_size
-          Log.for("quickheadlines.storage").info { "WAL checkpoint done (new WAL size: #{(new_size / 1024.0 / 1024.0).round(1)}MB)" }
-        end
-      end
-    rescue ex
-      Log.for("quickheadlines.storage").error(exception: ex) { "WAL checkpoint failed: #{ex.message}" }
     end
 
     private def actual_wal_file_size : Int64
@@ -201,32 +173,47 @@ module QuickHeadlines::Storage
 
     def normalize_pub_dates
       @mutex.synchronize do
-        Log.for("quickheadlines.storage").debug { "Normalizing pub_date values..." }
+        batch_size = QuickHeadlines::Constants::NORMALIZE_BATCH_SIZE
+        total_updated = 0
 
-        rows = [] of {Int64, String?}
-        @db.query("SELECT id, pub_date FROM items WHERE pub_date IS NOT NULL") do |result_set|
-          result_set.each do
-            rows << {result_set.read(Int64), result_set.read(String?)}
-          end
-        end
-
-        updated = 0
-        rows.each do |id, raw|
-          next if raw.nil?
-          str = raw.as(String)
-
-          next if str =~ /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/
-
-          if parsed = parse_date_with_formats(str)
-            formatted = parsed.to_s(QuickHeadlines::Constants::DB_TIME_FORMAT)
-            if formatted != str
-              @db.exec("UPDATE items SET pub_date = ? WHERE id = ?", formatted, id)
-              updated += 1
+        loop do
+          rows = [] of {Int64, String?}
+          @db.query("SELECT id, pub_date FROM items WHERE pub_date IS NOT NULL AND date_normalized = 0 LIMIT ?", batch_size) do |result_set|
+            result_set.each do
+              rows << {result_set.read(Int64), result_set.read(String?)}
             end
           end
+
+          break if rows.empty?
+
+          updated = 0
+          rows.each do |id, raw|
+            next if raw.nil?
+            str = raw.as(String)
+
+            is_normalized = str =~ /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/
+
+            if is_normalized
+              @db.exec("UPDATE items SET date_normalized = 1 WHERE id = ?", id)
+            elsif parsed = parse_date_with_formats(str)
+              formatted = parsed.to_s(QuickHeadlines::Constants::DB_TIME_FORMAT)
+              if formatted != str
+                @db.exec("UPDATE items SET pub_date = ?, date_normalized = 1 WHERE id = ?", formatted, id)
+                updated += 1
+              else
+                @db.exec("UPDATE items SET date_normalized = 1 WHERE id = ?", id)
+              end
+            else
+              @db.exec("UPDATE items SET date_normalized = 1 WHERE id = ?", id)
+            end
+          end
+
+          total_updated += updated
+          Log.for("quickheadlines.storage").debug { "Normalized batch: #{updated} rows updated" }
+          break if rows.size < batch_size
         end
 
-        Log.for("quickheadlines.storage").debug { "Normalized #{updated} pub_date rows" }
+        Log.for("quickheadlines.storage").debug { "Normalized #{total_updated} pub_date rows total" }
       end
     rescue ex
       Log.for("quickheadlines.storage").error(exception: ex) { "Error normalizing pub_date" }

@@ -54,15 +54,16 @@ module QuickHeadlines::Constants
   INITIAL_CLUSTER_DELAY   = 30.seconds
   STUCK_CLUSTER_THRESHOLD = 4.hours
 
-  # GC collection interval for Boehm GC on FreeBSD/BSD to release memory back to OS
-  GC_COLLECT_INTERVAL     = 5.minutes
-
   CACHE_ONE_YEAR = 31536000
   CACHE_ONE_HOUR =     3600
 
   PROXY_DEFAULT_MAX_BYTES = 2 * 1024 * 1024
 
   SQLITE_BUSY_TIMEOUT_MS = 5000
+
+  NORMALIZE_BATCH_SIZE =  500
+  MAX_FEED_ITEMS_LOAD  = 1000
+  DB_MAX_POOL_SIZE     =   10
 
   CLUSTER_TITLE_TRUNCATE_LENGTH = 50
 

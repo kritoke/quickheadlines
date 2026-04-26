@@ -1,9 +1,7 @@
-require "gc"
 require "time"
 require "../config"
 require "../models"
 require "../storage"
-require "../services/clustering_service"
 require "../software_fetcher"
 require "../websocket"
 require "./feed_fetcher"
@@ -91,7 +89,6 @@ def refresh_all(config : Config, cache : FeedCache, db_service : DatabaseService
     Log.for("quickheadlines.feed").debug { "refresh_all: building new state (feeds=#{fetched_map.size}, tabs=#{config.tabs.size})" }
   end
 
-  # Build new state immutably
   new_feeds = config.feeds.map { |feed| fetched_map[feed.url]? || FeedFetcher.instance.build_error_feed(feed, "Failed to fetch") }
   new_tabs = config.tabs.map { |tab_config| build_tab_feeds(tab_config, fetched_map, config.item_limit) }
 
@@ -103,85 +100,10 @@ def refresh_all(config : Config, cache : FeedCache, db_service : DatabaseService
     )
   end
 
-  # Broadcast update to WebSocket clients
   EventBroadcaster.notify_feed_update(StateStore.updated_at.to_unix_ms)
 
   if config.debug?
-    Log.for("quickheadlines.feed").debug { "refresh_all: STATE updated - feeds=#{new_feeds.size}, tabs=#{new_tabs.size}" }
-  end
-
-  # Ensure feeds are persisted to database before clustering runs
-  # This prevents KeyError on fresh deployments when feeds aren't in DB yet
-  async_clustering(fetched_map.values.to_a, cache, db_service)
-
-  GC.collect
-
-  if config.debug?
     Log.for("quickheadlines.feed").debug { "refresh_all: complete - StateStore.feeds=#{new_feeds.size}, StateStore.tabs=#{new_tabs.size}" }
-  end
-end
-
-def async_clustering(feeds : Array(FeedData), cache : FeedCache, db_service : DatabaseService)
-  return if feeds.empty?
-  return if StateStore.clustering?
-
-  clustering_service = QuickHeadlines::Services::ClusteringService.new(db_service)
-  semaphore = Channel(Nil).new(QuickHeadlines::Constants::MAX_PARALLEL_CLUSTERING)
-  QuickHeadlines::Constants::MAX_PARALLEL_CLUSTERING.times { semaphore.send(nil) }
-
-  completion_channel = Channel(Nil).new(feeds.size)
-
-  StateStore.update(&.copy_with(clustering: true))
-
-  spawn do
-    feeds.each do |feed_data|
-      spawn do
-        semaphore.receive
-        begin
-          process_clustering(feed_data, cache, clustering_service)
-        rescue ex
-          Log.for("quickheadlines.clustering").error(exception: ex) { "async_clustering: error processing #{feed_data.url}" }
-        ensure
-          semaphore.send(nil)
-          completion_channel.send(nil)
-        end
-      end
-    end
-  end
-
-  spawn do
-    completed = 0
-    timeout_span = QuickHeadlines::Constants::CLUSTERING_TIMEOUT_SECONDS.seconds
-    feeds.size.times do
-      select
-      when completion_channel.receive?
-        completed += 1
-      when timeout(timeout_span)
-        Log.for("quickheadlines.clustering").warn { "async_clustering timed out after #{completed}/#{feeds.size} completions" }
-        break
-      end
-    end
-    StateStore.update(&.copy_with(clustering: false))
-  end
-end
-
-def process_clustering(feed_data : FeedData, cache : FeedCache, clustering_service : QuickHeadlines::Services::ClusteringService) : Nil
-  return if feed_data.items.empty?
-
-  feed_id = cache.get_feed_id(feed_data.url)
-  return unless feed_id
-
-  item_keys = feed_data.items.map do |item|
-    QuickHeadlines::Storage::ClusteringStore::ItemKey.new(feed_data.url, item.link)
-  end
-  id_map = cache.get_item_ids_batch(item_keys)
-
-  feed_data.items.each do |item|
-    item_id = id_map["#{feed_data.url}|#{item.link}"]?
-
-    next unless item_id
-
-    clustering_service.compute_item_cluster(item_id, item.title, cache, feed_id)
   end
 end
 
@@ -245,15 +167,12 @@ def start_refresh_loop(config_path : String, cache : FeedCache, db_service : Dat
             else
               refresh_all(active_config, cache, db_service)
               if active_config.debug?
-                Log.for("quickheadlines.feed").debug { "Refreshed feeds and ran GC" }
+                Log.for("quickheadlines.feed").debug { "Refreshed feeds" }
               end
             end
           end
 
           save_feed_cache(cache, active_config.cache_retention_hours, active_config.max_cache_size_mb)
-
-          # Help Boehm GC release memory back to OS on FreeBSD/BSD systems
-          trigger_gc_collection
 
           refresh_duration = (Time.utc - refresh_start_time).total_seconds
           if refresh_duration > (active_config.refresh_minutes * QuickHeadlines::Constants::SECONDS_PER_MINUTE) * 2
@@ -273,22 +192,4 @@ def start_refresh_loop(config_path : String, cache : FeedCache, db_service : Dat
       end
     end
   end
-end
-
-# Help Boehm GC on FreeBSD/BSD release memory back to OS
-module GCCollector
-  @@last_gc_collect = Time.utc
-
-  def self.trigger_if_needed : Nil
-    now = Time.utc
-    if now - @@last_gc_collect >= QuickHeadlines::Constants::GC_COLLECT_INTERVAL
-      GC.collect
-      @@last_gc_collect = now
-      Log.for("quickheadlines.gc").debug { "Triggered GC.collect to release memory" }
-    end
-  end
-end
-
-private def trigger_gc_collection : Nil
-  GCCollector.trigger_if_needed
 end

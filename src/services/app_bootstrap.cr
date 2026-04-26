@@ -3,7 +3,6 @@ require "../constants"
 require "../storage"
 require "./database_service"
 require "./favicon_sync_service"
-require "../favicon_cache"
 require "../websocket"
 require "../fetcher/vug_adapter"
 
@@ -33,8 +32,6 @@ class AppBootstrap
     Log.for("quickheadlines.app").info { "Loaded #{@feed_cache.size} feeds from cache" }
 
     FaviconStorage.init
-    warmed = FaviconCache.warm_from_dir(FaviconStorage.favicon_dir)
-    Log.for("quickheadlines.app").info { "Warmed favicon cache with #{warmed} entries" } if warmed > 0
     VugAdapter.clear_cache
 
     cleanup_stale_feeds

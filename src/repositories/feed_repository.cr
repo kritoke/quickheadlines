@@ -172,7 +172,7 @@ module QuickHeadlines::Repositories
       return unless feed_result
 
       items = [] of Item
-      db.query("SELECT title, link, pub_date, version, comment_url, commentary_url FROM items WHERE feed_id = ? AND (pub_date IS NULL OR pub_date <= datetime('now', '+1 day')) ORDER BY pub_date DESC", feed_result.id) do |rows|
+      db.query("SELECT title, link, pub_date, version, comment_url, commentary_url FROM items WHERE feed_id = ? AND (pub_date IS NULL OR pub_date <= datetime('now', '+1 day')) ORDER BY pub_date DESC LIMIT ?", feed_result.id, QuickHeadlines::Constants::MAX_FEED_ITEMS_LOAD) do |rows|
         rows.each do
           items << read_item(rows)
         end
