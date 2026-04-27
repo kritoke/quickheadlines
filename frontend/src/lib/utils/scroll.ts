@@ -30,15 +30,11 @@ export function scrollToPosition(y: number, container?: ScrollTarget): void {
 
 	const target = container || getScrollContainer();
 	if (target === window) {
-		window.scrollTo({ top: y, behavior: 'auto' });
+		window.scrollTo({ top: y });
 		document.documentElement.scrollTop = y;
 		document.body.scrollTop = y;
 	} else {
-		try {
-			target.scrollTo({ top: y, behavior: 'auto' });
-		} catch {
-			target.scrollTop = y;
-		}
+		target.scrollTop = y;
 	}
 }
 

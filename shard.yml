@@ -20,7 +20,7 @@ dependencies:
     version: "~> 0.5.0"
   prismatiq:
     github: kritoke/prismatiq
-    version: "~> 0.6.2"
+    version: "~> 0.7.0"
   baked_file_system:
     github: schovi/baked_file_system
     version: ~> 0.13.0
@@ -30,6 +30,8 @@ dependencies:
   vug:
     github: kritoke/vug.cr
     version: "~> 0.5.2"
+  azurite:
+    path: src/azurite
 
 development_dependencies:
   ameba:

@@ -36,6 +36,7 @@ require "./controllers/timeline_controller"
 require "./controllers/asset_controller"
 require "./controllers/proxy_controller"
 require "./controllers/admin_controller"
+require "./controllers/content_controller"
 
 # Svelte frontend with baked assets
 require "./web/assets"

@@ -26,6 +26,8 @@ module QuickHeadlines::DTOs
     property title : String
     property link : String
     @[JSON::Field(emit_null: true)]
+    property content : String?
+    @[JSON::Field(emit_null: true)]
     property version : String?
     @[JSON::Field(emit_null: true)]
     property pub_date : Int64?
@@ -37,6 +39,7 @@ module QuickHeadlines::DTOs
     def initialize(
       @title : String,
       @link : String,
+      @content : String? = nil,
       @version : String? = nil,
       @pub_date : Int64? = nil,
       @comment_url : String? = nil,
@@ -126,6 +129,9 @@ module QuickHeadlines::DTOs
     @[JSON::Field(emit_null: true)]
     property commentary_url : String?
 
+    @[JSON::Field(emit_null: true)]
+    property content : String?
+
     def initialize(
       @id : String,
       @title : String,
@@ -143,6 +149,7 @@ module QuickHeadlines::DTOs
       @cluster_size : Int32? = nil,
       @comment_url : String? = nil,
       @commentary_url : String? = nil,
+      @content : String? = nil,
     )
     end
   end

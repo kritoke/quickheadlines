@@ -2,9 +2,19 @@ require "json"
 require "../models"
 require "../dtos/api_responses"
 require "../storage/feed_cache"
+require "../azurite/src/azurite"
 
 module QuickHeadlines::Services
   module FeedService
+    @@content_store : Azurite::AzuriteStore?
+
+    def self.content_store=(store : Azurite::AzuriteStore)
+      @@content_store = store
+    end
+
+    def self.content_store
+      @@content_store
+    end
     def self.build_feed_response(
       feed : FeedData,
       cache : FeedCache,
@@ -33,9 +43,14 @@ module QuickHeadlines::Services
       displayed_items = feed.items.first(limit)
 
       items_response = displayed_items.map do |item|
+        stored_content = item.content
+        if stored_content.nil?
+          stored_content = @@content_store.try(&.get_content(item.link))
+        end
         QuickHeadlines::DTOs::ItemResponse.new(
           title: item.title,
           link: item.link,
+          content: stored_content,
           version: item.version,
           pub_date: item.pub_date.try(&.to_unix_ms),
           comment_url: item.comment_url,
@@ -74,9 +89,14 @@ module QuickHeadlines::Services
       trimmed_items = feed.items[offset...Math.min(offset + limit, feed.items.size)]
 
       items_response = trimmed_items.map do |item|
+        stored_content = item.content
+        if stored_content.nil?
+          stored_content = @@content_store.try(&.get_content(item.link))
+        end
         QuickHeadlines::DTOs::ItemResponse.new(
           title: item.title,
           link: item.link,
+          content: stored_content,
           version: item.version,
           pub_date: item.pub_date.try(&.to_unix_ms),
           comment_url: item.comment_url,

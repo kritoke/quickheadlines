@@ -5,6 +5,7 @@ export interface TabResponse {
 export interface ItemResponse {
 	title: string;
 	link: string;
+	content?: string;
 	version?: string;
 	pub_date?: number;
 	comment_url?: string;
@@ -44,6 +45,7 @@ export interface TimelineItemResponse {
 	cluster_size?: number;
 	comment_url?: string;
 	commentary_url?: string;
+	content?: string;
 }
 
 export interface StoryResponse {

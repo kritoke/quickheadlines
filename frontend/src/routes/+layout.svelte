@@ -1,6 +1,7 @@
 <script lang="ts">
 	import '../app.css';
 	import { themeState, initTheme } from '$lib/stores/theme.svelte';
+	import { initReadMode } from '$lib/stores/readMode.svelte';
 	import { initLayout } from '$lib/stores/layout.svelte';
 	import { isIOS } from '$lib/utils/theme';
 	import { initBreakpoints } from '$lib/utils/breakpoint.svelte';
@@ -58,6 +59,7 @@
 		}
 
 		initTheme();
+		initReadMode();
 		initLayout();
 		initBreakpoints();
 	});

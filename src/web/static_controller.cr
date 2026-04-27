@@ -70,6 +70,16 @@ class StaticController < Athena::Framework::Controller
     serve_asset("timeline.html")
   end
 
+  @[ARTA::Get(path: "/reader")]
+  def reader : AHTTP::Response
+    serve_asset("reader.html")
+  end
+
+  @[ARTA::Get(path: "/reader/")]
+  def reader_slash : AHTTP::Response
+    serve_asset("reader.html")
+  end
+
   @[ARTA::Get(path: "/favicon.svg")]
   def favicon_svg : AHTTP::Response
     serve_asset("favicon.svg")
@@ -103,5 +113,10 @@ class StaticController < Athena::Framework::Controller
   @[ARTA::Get(path: "/_app/{filename}", requirements: {"filename" => /[^\/]+/})]
   def app_root_assets(filename : String) : AHTTP::Response
     serve_asset("_app/#{filename}")
+  end
+
+  @[ARTA::Get(path: "/{**_path}")]
+  def spa_fallback(_path : String) : AHTTP::Response
+    serve_asset("index.html")
   end
 end

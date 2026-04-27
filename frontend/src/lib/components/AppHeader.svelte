@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { themeState, toggleEffects, getThemeColors } from '$lib/stores/theme.svelte';
+	import { readModeState, toggleReadMode } from '$lib/stores/readMode.svelte';
 	import ThemePicker from './ThemePicker.svelte';
 	import TabSelector from './TabSelector.svelte';
 	import { goto } from '$app/navigation';
@@ -118,6 +119,25 @@
 					<svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 theme-text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
 						<path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
 					</svg>
+				</button>
+				
+				<button
+					onclick={toggleReadMode}
+					class="p-2.5 rounded-lg transition-colors focus-visible:ring-2 focus-visible:ring-[var(--theme-accent)] focus-visible:ring-offset-1"
+					class:bg-slate-100={readModeState.mode === 'read'}
+					class:dark:bg-slate-800={readModeState.mode === 'read'}
+					aria-label={readModeState.mode === 'link' ? 'Switch to read mode' : 'Switch to link mode'}
+					title={readModeState.mode === 'link' ? 'Switch to read mode' : 'Switch to link mode'}
+				>
+					{#if readModeState.mode === 'link'}
+						<svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 theme-text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+							<path stroke-linecap="round" stroke-linejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+						</svg>
+					{:else}
+						<svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 theme-text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+							<path stroke-linecap="round" stroke-linejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+						</svg>
+					{/if}
 				</button>
 				
 				<button 

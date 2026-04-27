@@ -1,30 +1,26 @@
 require "log"
 
 module QuickHeadlines
+  @[ADI::Register]
   class ErrorRenderer
     include Athena::HTTPKernel::ErrorRendererInterface
 
     def render(exception : Exception) : AHTTP::Response
       status, message, details = classify_exception(exception)
 
-      Log.error do
-        "Error: #{exception.class}: #{exception.message}\n#{exception.backtrace.join("\n")}"
+      if status.value >= 500
+        Log.error do
+          "Error: #{exception.class}: #{exception.message}\n#{exception.backtrace.join("\n")}"
+        end
       end
 
-      error_response = {
-        "code"    => status.value,
-        "message" => message,
-      }
-
-      if details && ENV["APP_ENV"]? == "development"
-        error_response["details"] = details
-      end
-
-      AHTTP::Response.new(error_response.to_json, status, HTTP::Headers{"content-type" => "application/json"})
+      AHTTP::Response.new(message || "Error", status, HTTP::Headers{"content-type" => "text/plain"})
     end
 
     private def classify_exception(exception : Exception) : {HTTP::Status, String?, String?}
       case exception
+      when AHK::Exception::NotFound
+        {HTTP::Status::NOT_FOUND, "Not Found", nil}
       when AHK::Exception::HTTPException
         {exception.status, exception.message, nil}
       else

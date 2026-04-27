@@ -3,7 +3,9 @@
 	import { fetchClusterItems as defaultFetchClusterItems, formatTimestamp } from '$lib/api';
 	import ClusterExpansion from './ClusterExpansion.svelte';
 	import { themeState, customThemeIds, isDarkTheme } from '$lib/stores/theme.svelte';
+	import { readModeState } from '$lib/stores/readMode.svelte';
 	import { layoutState } from '$lib/stores/layout.svelte';
+	import { goto } from '$app/navigation';
 	import { getFaviconSrc, getHeaderStyle } from '$lib/utils/feedItem';
 	import { sanitizeUrl } from '$lib/utils/validation';
 
@@ -165,14 +167,32 @@
 						
 						<!-- Item Content -->
 						<div class="block px-3 py-2 hover:theme-bg-secondary transition-colors gap-2">
-							<h3 class="text-base font-medium theme-text-primary line-clamp-2">
-								<a
-									href={sanitizeUrl(item.link)}
-									target="_blank"
-									rel="noopener noreferrer"
-									class="hover:underline"
-								>{item.title}</a>
-							</h3>
+							{#if readModeState.mode === 'read'}
+								<button
+									type="button"
+									onclick={() => {
+										const params = new URLSearchParams({
+											url: item.link,
+											title: item.title
+										});
+										goto(`/reader?${params.toString()}`);
+									}}
+									class="text-left w-full"
+								>
+									<h3 class="text-base font-medium theme-text-primary line-clamp-2 hover:opacity-80 transition-opacity">
+										{item.title}
+									</h3>
+								</button>
+							{:else}
+								<h3 class="text-base font-medium theme-text-primary line-clamp-2">
+									<a
+										href={sanitizeUrl(item.link)}
+										target="_blank"
+										rel="noopener noreferrer"
+										class="hover:underline"
+									>{item.title}</a>
+								</h3>
+							{/if}
 							<div class="flex items-center gap-2 mt-1">
 								<p class="text-sm theme-text-secondary">
 									{formatTimestamp(item.pub_date)}

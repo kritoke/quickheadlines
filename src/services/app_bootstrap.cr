@@ -2,9 +2,11 @@ require "../config"
 require "../constants"
 require "../storage"
 require "./database_service"
+require "./content_service"
 require "./favicon_sync_service"
 require "../websocket"
 require "../fetcher/vug_adapter"
+require "../azurite/src/azurite"
 
 class AppBootstrap
   @config : Config
@@ -38,6 +40,13 @@ class AppBootstrap
 
     FeedFetcher.instance = FeedFetcher.new(@feed_cache)
     FeedFetcher.load_feeds_from_cache(@config)
+
+    content_db_path = File.join(get_cache_dir(@config), Azurite::Constants::CONTENT_DB_NAME)
+    content_store = Azurite::AzuriteStore.new(content_db_path)
+    QuickHeadlines::Services::ContentService.instance = QuickHeadlines::Services::ContentService.new(content_store)
+    content_store.cleanup_old_entries
+    QuickHeadlines::Services::FeedService.content_store = content_store
+    Log.for("quickheadlines.app").info { "Azurite content store initialized: #{content_db_path} (#{content_store.db_size_mb.round(2)}MB)" }
 
     EventBroadcaster.start
 
@@ -147,6 +156,7 @@ class AppBootstrap
           Log.for("quickheadlines.app").debug { "Cleared Vug cache" }
           @feed_cache.cleanup_old_articles(QuickHeadlines::Constants::CACHE_RETENTION_DAYS)
           @feed_cache.cleanup_old_entries(@config.cache_retention_hours || QuickHeadlines::Constants::CACHE_RETENTION_HOURS)
+          QuickHeadlines::Services::ContentService.instance.check_size_and_cleanup
           Log.for("quickheadlines.app").debug { "Scheduled cleanup completed" }
         rescue ex
           Log.for("quickheadlines.app").error(exception: ex) { "Scheduled cleanup failed" }

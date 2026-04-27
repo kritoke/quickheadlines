@@ -96,7 +96,8 @@ def refresh_all(config : Config, cache : FeedCache, db_service : DatabaseService
     state.copy_with(
       feeds: new_feeds,
       tabs: new_tabs,
-      updated_at: Time.utc
+      updated_at: Time.utc,
+      refreshing: false
     )
   end
 

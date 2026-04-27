@@ -1,6 +1,6 @@
 require "mutex"
 
-record Item, title : String, link : String, pub_date : Time?, version : String? = nil, comment_url : String? = nil, commentary_url : String? = nil
+record Item, title : String, link : String, pub_date : Time?, content : String? = nil, version : String? = nil, comment_url : String? = nil, commentary_url : String? = nil
 
 record ClusteringItemRow,
   id : Int64,

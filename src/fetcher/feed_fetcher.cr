@@ -166,6 +166,8 @@ class FeedFetcher
 
     feed_data = feed_data.with_theme_colors(preserved_theme) if preserved_theme
 
+    store_content_from_items(feed_data)
+
     @cache.add(feed_data)
 
     if final_result = process_response_result(feed_data, feed, effective_item_limit, previous_data)
@@ -333,8 +335,25 @@ class FeedFetcher
   private def entries_to_items(entries : Array(Fetcher::Entry)) : Array(Item)
     entries.map do |entry|
       comment_url = entry.comment_url || (entry.is_discussion_url ? entry.url : nil)
-      Item.new(entry.title, entry.url, entry.published_at, nil, comment_url, entry.commentary_url)
+      Item.new(entry.title, entry.url, entry.published_at, entry.content, comment_url, entry.commentary_url)
+    end.sort_by { |item| item.pub_date || Time.unix(0) }.reverse
+  end
+
+  private def store_content_from_items(feed_data : FeedData)
+    return unless feed_data.items.any?(&.content)
+    begin
+      content_service = QuickHeadlines::Services::ContentService.instance
+    rescue
+      return
     end
+
+    feed_data.items.each do |item|
+      if content = item.content
+        content_service.store_content(item.link, feed_data.url, item.title, content)
+      end
+    end
+  rescue ex
+    Log.for("quickheadlines.feed").debug { "Content storage skipped: #{ex.message}" }
   end
 
   private def get_stale_cached_feed(feed : Feed, item_limit : Int32, previous_data : FeedData?) : FeedData?

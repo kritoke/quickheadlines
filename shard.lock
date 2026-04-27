@@ -60,6 +60,10 @@ shards:
     git: https://github.com/athena-framework/validator.git
     version: 0.5.0
 
+  azurite:
+    path: src/azurite
+    version: 0.1.0
+
   baked_file_system:
     git: https://github.com/schovi/baked_file_system.git
     version: 0.13.0
@@ -106,7 +110,7 @@ shards:
 
   prismatiq:
     git: https://github.com/kritoke/prismatiq.git
-    version: 0.6.2
+    version: 0.7.0
 
   sanitize:
     git: https://github.com/straight-shoota/sanitize.git

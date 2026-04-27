@@ -1,49 +1,57 @@
 <script lang="ts">
-  import { themeState, getScrollButtonColors } from '$lib/stores/theme.svelte';
-  import { breakpointState } from '$lib/utils/breakpoint.svelte';
-  import { zIndex } from '$lib/design/tokens';
-  import { logger } from '$lib/utils/debug';
-  import { getScrollContainer, getScrollTop, scrollToPosition as doScrollToPosition } from '$lib/utils/scroll';
-  
-  let colors = $derived(getScrollButtonColors(themeState.theme));
-  let isMobile = $derived(breakpointState.isMobile);
-  let visible = $state(true);
-  let container: Window | HTMLElement | null = null;
-  let scrollCleanup: (() => void) | null = null;
+	import { themeState, getScrollButtonColors } from '$lib/stores/theme.svelte';
+	import { getScrollContainer, getScrollTop } from '$lib/utils/scroll';
+	
+	let colors = $derived(getScrollButtonColors(themeState.theme));
+	let isMobile = $state(false);
+	let visible = $state(true);
 
-  $effect(() => {
-    if (typeof window === 'undefined') return;
-    
-    const scrollTarget = getScrollContainer();
-    container = scrollTarget;
-    const handler = () => {
-      const top = getScrollTop(scrollTarget);
-      visible = top >= 100;
-    };
-    handler();
-    const target = scrollTarget === window ? window : scrollTarget;
-    target.addEventListener('scroll', handler);
-    scrollCleanup = () => target.removeEventListener('scroll', handler);
-    
-    return () => {
-      scrollCleanup?.();
-      scrollCleanup = null;
-    };
-  });
+	$effect(() => {
+		if (typeof window === 'undefined') return;
+		isMobile = window.innerWidth < 768;
+		const handleResize = () => (isMobile = window.innerWidth < 768);
+		window.addEventListener('resize', handleResize);
+		return () => window.removeEventListener('resize', handleResize);
+	});
 
-  function doScroll(e: Event) {
-    e.preventDefault();
-    e.stopPropagation();
-    const scrollTarget = container || getScrollContainer();
-    doScrollToPosition(0, scrollTarget);
-  }
+	$effect(() => {
+		if (typeof window === 'undefined') return;
+
+		function checkScroll() {
+			const c = getScrollContainer();
+			const top = getScrollTop(c);
+			visible = top < 100 ? false : true;
+		}
+
+		checkScroll();
+		window.addEventListener('scroll', checkScroll, { passive: true });
+		const app = document.getElementById('app');
+		if (app) app.addEventListener('scroll', checkScroll, { passive: true });
+		return () => {
+			window.removeEventListener('scroll', checkScroll);
+			if (app) app.removeEventListener('scroll', checkScroll);
+		};
+	});
+
+	function doScroll(e: Event) {
+		e.preventDefault();
+		e.stopPropagation();
+		const c = getScrollContainer();
+		if (c === window) {
+			window.scrollTo(0, 0);
+			document.documentElement.scrollTop = 0;
+			document.body.scrollTop = 0;
+		} else {
+			(c as HTMLElement).scrollTop = 0;
+		}
+	}
 </script>
 
 <button
 	type="button"
 	class="scroll-btn"
 	class:mobile={isMobile}
-	style="background-color: {colors.bg}; color: {colors.text}; z-index: {zIndex.scrollToTop};"
+	style="background-color: {colors.bg}; color: {colors.text}; z-index: 999999;"
 	aria-label="Scroll to top"
 	title="Back to top"
 	onclick={doScroll}
@@ -72,6 +80,8 @@
 		border: none;
 		outline: none;
 		transition: bottom 0.2s ease;
+		-webkit-tap-highlight-color: transparent;
+		touch-action: manipulation;
 	}
 	
 	.scroll-btn.mobile {

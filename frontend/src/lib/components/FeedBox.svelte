@@ -2,11 +2,13 @@
 	import type { FeedResponse } from '$lib/types';
 	import { formatTimestamp } from '$lib/api';
 	import { themeState, isDarkTheme } from '$lib/stores/theme.svelte';
+	import { readModeState } from '$lib/stores/readMode.svelte';
 	import { breakpointState } from '$lib/utils/breakpoint.svelte';
 	import { getFaviconSrc } from '$lib/utils/feedItem';
 	import { feedState } from '$lib/stores/feedStore.svelte';
 	import Card from './ui/Card.svelte';
 	import { sanitizeUrl, sanitizeCssColor } from '$lib/utils/validation';
+	import { goto } from '$app/navigation';
 
 	interface Props {
 		feed: FeedResponse;
@@ -92,6 +94,22 @@
 		<ul class="divide-y divide-slate-200 dark:divide-slate-700/50">
 			{#each feed.items as item, i (`${feed.url}-${i}`)}
 				<li class="flex items-start gap-2 py-2">
+					{#if readModeState.mode === 'read'}
+						<button
+							type="button"
+							onclick={() => goto(`/reader?url=${encodeURIComponent(item.link)}&title=${encodeURIComponent(item.title)}`)}
+							class="flex-1 min-w-0 block text-left hover:opacity-70 transition-opacity"
+						>
+							<p class="text-sm theme-text-primary line-clamp-2 leading-tight font-medium">
+								{item.title}
+							</p>
+							{#if item.pub_date}
+								<p class="text-xs theme-text-secondary mt-0.5">
+									{formatTimestamp(item.pub_date)}
+								</p>
+							{/if}
+						</button>
+					{:else}
 					<a
 						href={sanitizeUrl(item.link)}
 						target="_blank"
@@ -107,6 +125,7 @@
 							</p>
 						{/if}
 					</a>
+					{/if}
 					{#if item.comment_url || item.commentary_url}
 						<div class="flex shrink-0 gap-1 mt-0.5">
 							{#if item.comment_url}
