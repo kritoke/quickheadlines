@@ -90,7 +90,7 @@
 	
 	@media (min-width: 640px) {
 		.scroll-btn {
-			right: 1rem;
+			right: max(1rem, calc((100vw - 1400px) / 2 + 0.75rem));
 		}
 	}
 	

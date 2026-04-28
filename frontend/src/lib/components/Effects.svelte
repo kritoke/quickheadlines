@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { spring } from 'svelte/motion';
-	import { themeState, getCursorColors, getThemeAccentColors } from '$lib/stores/theme.svelte';
+	import { themeState, getCursorColors, getAccentColor } from '$lib/stores/theme.svelte';
 	import { zIndex } from '$lib/design/tokens';
 	import { onMount } from 'svelte';
 
@@ -9,7 +9,7 @@
 
 	let cursorColors = $derived(getCursorColors(themeState.theme));
 	let effectsEnabled = $derived(themeState.mounted && themeState.effects);
-	let accentColor = $derived(getThemeAccentColors(themeState.theme).accent);
+	let accentColor = $derived(getAccentColor());
 	let reducedMotion = $state(false);
 
 	$effect(() => {

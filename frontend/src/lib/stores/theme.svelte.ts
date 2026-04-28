@@ -1,365 +1,135 @@
-export type ThemeStyle = 'light' | 'dark' | 'retro' | 'matrix' | 'ocean' | 'sunset' | 'hotdog' | 'dracula' | 'cyberpunk' | 'forest';
+export type ThemeId = string;
 
-export const DARK_THEMES: readonly ThemeStyle[] = ['dark', 'retro', 'matrix', 'ocean', 'sunset', 'hotdog', 'dracula', 'cyberpunk', 'forest'] as const;
+const SKELETON_PRESETS = ['catppuccin','cerberus','concord','crimson','fennec','hamlindigo','legacy','mint','modern','mona','nosh','nouveau','pine','reign','rocket','rose','sahara','seafoam','terminus','vintage','vox','wintry'] as const;
+const NOVELTY_THEMES = ['matrix','hotdog'] as const;
+const CUSTOM_DARK_THEMES = ['matrix','hotdog'] as const;
 
-export const customThemeIds = ['retro', 'matrix', 'ocean', 'sunset', 'hotdog', 'dracula', 'cyberpunk', 'forest'] as const;
-export type CustomThemeId = typeof customThemeIds[number];
-
-export function isDarkTheme(theme: ThemeStyle): boolean {
-	return (DARK_THEMES as readonly string[]).includes(theme);
-}
-
-export const themeStyles: { id: ThemeStyle; name: string; description: string }[] = [
-	{ id: 'light', name: 'Light', description: 'Clean light theme' },
-	{ id: 'dark', name: 'Dark', description: 'Easy on the eyes' },
-	{ id: 'retro', name: 'Retro', description: 'Neon synthwave vibes' },
-	{ id: 'matrix', name: 'Matrix', description: 'Digital green rain' },
-	{ id: 'ocean', name: 'Ocean', description: 'Deep blue waves' },
-	{ id: 'sunset', name: 'Sunset', description: 'Warm amber tones' },
-	{ id: 'hotdog', name: 'Hot Dog Stand', description: 'Windows 3.1 vibes' },
-	{ id: 'dracula', name: 'Dracula', description: 'Popular purple dark' },
-	{ id: 'cyberpunk', name: 'Cyberpunk', description: 'Neon magenta cyan' },
-	{ id: 'forest', name: 'Forest', description: 'Earthy greens' }
-];
-
-export interface ThemeColors {
-	bg: string;
-	bgSecondary: string;
-	text: string;
-	border: string;
-	accent: string;
-	shadow: string;
-	cursor: { primary: string; trail: string };
-	scrollButton: { bg: string; text: string; hover: string };
-	dotIndicator: string;
-	preview: string;
-	semantic: Record<string, string>;
-}
-
-export const themes: Record<ThemeStyle, ThemeColors> = {
-	light: {
-		bg: '#ffffff',
-		bgSecondary: '#f1f5f9',
-		text: '#0f172a',
-		border: '#e2e8f0',
-		accent: '#3b82f6',
-		shadow: 'rgba(59, 130, 246, 0.15)',
-		cursor: { primary: '#64748b', trail: 'rgba(100, 116, 139, 0.3)' },
-		scrollButton: { bg: '#334155', text: '#ffffff', hover: '#475569' },
-		dotIndicator: '#64748b',
-		preview: 'linear-gradient(135deg, #ffffff 50%, #e2e8f0 50%)',
-		semantic: {
-			'--color-bg-primary': '#ffffff',
-			'--color-bg-secondary': '#f1f5f9',
-			'--color-text-primary': '#0f172a',
-			'--color-text-secondary': '#64748b',
-			'--color-border': '#e2e8f0',
-			'--color-accent': '#3b82f6',
-		}
-	},
-	dark: {
-		bg: '#1e293b',
-		bgSecondary: '#0f172a',
-		text: '#f1f5f9',
-		border: '#334155',
-		accent: '#60a5fa',
-		shadow: 'rgba(96, 165, 250, 0.2)',
-		cursor: { primary: '#94a3b8', trail: 'rgba(148, 163, 184, 0.3)' },
-		scrollButton: { bg: '#e2e8f0', text: '#0f172a', hover: '#cbd5e1' },
-		dotIndicator: '#94a3b8',
-		preview: 'linear-gradient(135deg, #1e293b 50%, #0f172a 50%)',
-		semantic: {
-			'--color-bg-primary': '#1e293b',
-			'--color-bg-secondary': '#0f172a',
-			'--color-text-primary': '#f1f5f9',
-			'--color-text-secondary': '#94a3b8',
-			'--color-border': '#334155',
-			'--color-accent': '#60a5fa',
-		}
-	},
-	retro: {
-		bg: '#1a1a2e',
-		bgSecondary: '#0d0d1a',
-		text: '#f1f5f9',
-		border: '#ff71ce',
-		accent: '#00d4ff',
-		shadow: 'rgba(255, 113, 206, 0.3)',
-		cursor: { primary: '#ff71ce', trail: 'rgba(255, 113, 206, 0.4)' },
-		scrollButton: { bg: '#ff71ce', text: '#000000', hover: '#ff99da' },
-		dotIndicator: '#00d4ff',
-		preview: 'linear-gradient(135deg, #00d4ff 50%, #ff71ce 50%)',
-		semantic: {
-			'--color-bg-primary': '#1a1a2e',
-			'--color-bg-secondary': '#0d0d1a',
-			'--color-text-primary': '#f1f5f9',
-			'--color-text-secondary': '#cbd5e1',
-			'--color-border': '#ff71ce',
-			'--color-accent': '#00d4ff',
-		}
-	},
-	matrix: {
-		bg: '#000a00',
-		bgSecondary: '#001a00',
-		text: '#22c55e',
-		border: '#166534',
-		accent: '#00ff00',
-		shadow: 'rgba(0, 255, 0, 0.3)',
-		cursor: { primary: '#22c55e', trail: 'rgba(34, 197, 94, 0.4)' },
-		scrollButton: { bg: '#22c55e', text: '#000000', hover: '#4ade80' },
-		dotIndicator: '#22c55e',
-		preview: 'linear-gradient(135deg, #22c55e 50%, #166534 50%)',
-		semantic: {
-			'--color-bg-primary': '#000a00',
-			'--color-bg-secondary': '#001a00',
-			'--color-text-primary': '#22c55e',
-			'--color-text-secondary': '#86efac',
-			'--color-border': '#166534',
-			'--color-accent': '#00ff00',
-		}
-	},
-	ocean: {
-		bg: '#2e3440',
-		bgSecondary: '#242933',
-		text: '#88c0d0',
-		border: '#5e81ac',
-		accent: '#88c0d0',
-		shadow: 'rgba(136, 192, 208, 0.25)',
-		cursor: { primary: '#88c0d0', trail: 'rgba(136, 192, 208, 0.4)' },
-		scrollButton: { bg: '#88c0d0', text: '#2e3440', hover: '#a3d4e0' },
-		dotIndicator: '#88c0d0',
-		preview: 'linear-gradient(135deg, #88c0d0 50%, #5e81ac 50%)',
-		semantic: {
-			'--color-bg-primary': '#2e3440',
-			'--color-bg-secondary': '#242933',
-			'--color-text-primary': '#88c0d0',
-			'--color-text-secondary': '#81a1c1',
-			'--color-border': '#5e81ac',
-			'--color-accent': '#88c0d0',
-		}
-	},
-	sunset: {
-		bg: '#1c1309',
-		bgSecondary: '#0e0904',
-		text: '#fed7aa',
-		border: '#f97316',
-		accent: '#f97316',
-		shadow: 'rgba(249, 115, 22, 0.25)',
-		cursor: { primary: '#f97316', trail: 'rgba(249, 115, 22, 0.4)' },
-		scrollButton: { bg: '#f97316', text: '#ffffff', hover: '#fb923c' },
-		dotIndicator: '#fed7aa',
-		preview: 'linear-gradient(135deg, #f97316 50%, #431407 50%)',
-		semantic: {
-			'--color-bg-primary': '#1c1309',
-			'--color-bg-secondary': '#0e0904',
-			'--color-text-primary': '#fed7aa',
-			'--color-text-secondary': '#fdba74',
-			'--color-border': '#f97316',
-			'--color-accent': '#f97316',
-		}
-	},
-	hotdog: {
-		bg: '#008080',
-		bgSecondary: '#006666',
-		text: '#FFEB3B',
-		border: '#ff0000',
-		accent: '#ff0000',
-		shadow: 'rgba(255, 0, 0, 0.3)',
-		cursor: { primary: '#FFEB3B', trail: 'rgba(255, 235, 59, 0.4)' },
-		scrollButton: { bg: '#ff0000', text: '#FFEB3B', hover: '#ff3333' },
-		dotIndicator: '#FFEB3B',
-		preview: 'linear-gradient(135deg, #008080 50%, #FFEB3B 50%)',
-		semantic: {
-			'--color-bg-primary': '#008080',
-			'--color-bg-secondary': '#006666',
-			'--color-text-primary': '#FFEB3B',
-			'--color-text-secondary': '#FFD700',
-			'--color-border': '#ff0000',
-			'--color-accent': '#ff0000',
-		}
-	},
-	dracula: {
-		bg: '#282a36',
-		bgSecondary: '#1d1e26',
-		text: '#f8f8f2',
-		border: '#44475a',
-		accent: '#bd93f9',
-		shadow: 'rgba(189, 147, 249, 0.3)',
-		cursor: { primary: '#bd93f9', trail: 'rgba(189, 147, 249, 0.4)' },
-		scrollButton: { bg: '#bd93f9', text: '#000000', hover: '#d4b4ff' },
-		dotIndicator: '#bd93f9',
-		preview: 'linear-gradient(135deg, #bd93f9 50%, #282a36 50%)',
-		semantic: {
-			'--color-bg-primary': '#282a36',
-			'--color-bg-secondary': '#1d1e26',
-			'--color-text-primary': '#f8f8f2',
-			'--color-text-secondary': '#bfc7d5',
-			'--color-border': '#44475a',
-			'--color-accent': '#bd93f9',
-		}
-	},
-	cyberpunk: {
-		bg: '#0d0221',
-		bgSecondary: '#060115',
-		text: '#00ffff',
-		border: '#ff00ff',
-		accent: '#ff00ff',
-		shadow: 'rgba(255, 0, 255, 0.3)',
-		cursor: { primary: '#ff00ff', trail: 'rgba(255, 0, 255, 0.4)' },
-		scrollButton: { bg: '#ff00ff', text: '#ffffff', hover: '#ff66ff' },
-		dotIndicator: '#00ffff',
-		preview: 'linear-gradient(135deg, #ff00ff 50%, #00ffff 50%)',
-		semantic: {
-			'--color-bg-primary': '#0d0221',
-			'--color-bg-secondary': '#060115',
-			'--color-text-primary': '#00ffff',
-			'--color-text-secondary': '#67ffff',
-			'--color-border': '#ff00ff',
-			'--color-accent': '#ff00ff',
-		}
-	},
-	forest: {
-		bg: '#1a2e1a',
-		bgSecondary: '#0f1a0f',
-		text: '#d1fae5',
-		border: '#166534',
-		accent: '#4ade80',
-		shadow: 'rgba(74, 222, 128, 0.25)',
-		cursor: { primary: '#4ade80', trail: 'rgba(74, 222, 128, 0.4)' },
-		scrollButton: { bg: '#4ade80', text: '#000000', hover: '#6ee7a0' },
-		dotIndicator: '#4ade80',
-		preview: 'linear-gradient(135deg, #4ade80 50%, #1a2e1a 50%)',
-		semantic: {
-			'--color-bg-primary': '#1a2e1a',
-			'--color-bg-secondary': '#0f1a0f',
-			'--color-text-primary': '#d1fae5',
-			'--color-text-secondary': '#a7f3d0',
-			'--color-border': '#166534',
-			'--color-accent': '#4ade80',
-		}
-	}
+const LEGACY_THEME_MAP: Record<string, string> = {
+	light: 'modern',
+	dark: 'modern',
+	retro: 'modern',
+	ocean: 'modern',
+	sunset: 'modern',
+	dracula: 'modern',
+	cyberpunk: 'modern',
+	forest: 'modern'
 };
 
+export const ALL_THEMES = [...SKELETON_PRESETS, ...NOVELTY_THEMES] as const;
+export type AllTheme = typeof ALL_THEMES[number];
+
+export const NOVELTY_THEME_IDS = NOVELTY_THEMES;
+export type NoveltyThemeId = typeof NOVELTY_THEMES[number];
+
+export function isSkeletonPreset(theme: string): boolean {
+	return (SKELETON_PRESETS as readonly string[]).includes(theme);
+}
+
+export function isNoveltyTheme(theme: string): boolean {
+	return (NOVELTY_THEMES as readonly string[]).includes(theme);
+}
+
+export function isCustomDarkTheme(theme: string): boolean {
+	return (CUSTOM_DARK_THEMES as readonly string[]).includes(theme);
+}
+
+export function isDarkTheme(): boolean {
+	return document.documentElement.classList.contains('dark');
+}
+
+export const themeStyles = ALL_THEMES.map(id => ({ id, name: id, description: `Skeleton ${id} theme` }));
+
+export function getThemePreview(_theme: string): string {
+	return 'linear-gradient(135deg, var(--color-surface-50) 50%, var(--color-surface-500) 50%)';
+}
+
+export function getThemeAccentColors() {
+	return { bg: '', bgSecondary: '', text: '', border: '', accent: '', shadow: '' };
+}
+
+export function getDotIndicatorColors(): string {
+	return 'var(--color-primary-500, #94a3b8)';
+}
+
 export const themeState = $state({
-	theme: 'light' as ThemeStyle,
+	theme: 'modern' as ThemeId,
 	effects: true,
 	mounted: false
 });
 
-export function getThemeColors(theme: ThemeStyle): ThemeColors {
-	return themes[theme];
+export function getThemeColors(): { primary: string; surface: string; contrast: string } {
+	const style = getComputedStyle(document.documentElement);
+	return {
+		primary: style.getPropertyValue('--color-primary-500').trim() || '#3b82f6',
+		surface: style.getPropertyValue('--color-surface-50').trim() || '#ffffff',
+		contrast: style.getPropertyValue('--color-surface-contrast-light').trim() || '#000000'
+	};
 }
 
-export function getThemePreview(theme: ThemeStyle): string {
-	return themes[theme].preview;
+export function getCursorColors(): { primary: string; trail: string } {
+	const style = getComputedStyle(document.documentElement);
+	const primary = style.getPropertyValue('--color-primary-500').trim() || '#64748b';
+	return {
+		primary,
+		trail: primary + '4D'
+	};
 }
 
-export function getCursorColors(theme: ThemeStyle): { primary: string; trail: string } {
-	return themes[theme].cursor;
+export function getAccentColor(): string {
+	const style = getComputedStyle(document.documentElement);
+	return style.getPropertyValue('--color-primary-500').trim() || '#3b82f6';
 }
 
-export function getScrollButtonColors(theme: ThemeStyle): { bg: string; text: string; hover: string } {
-	return themes[theme].scrollButton;
-}
-
-export function getThemeAccentColors(theme: ThemeStyle): { bg: string; bgSecondary: string; text: string; border: string; accent: string; shadow: string } {
-	const currentTheme = themes[theme];
-	return { bg: currentTheme.bg, bgSecondary: currentTheme.bgSecondary, text: currentTheme.text, border: currentTheme.border, accent: currentTheme.accent, shadow: currentTheme.shadow };
-}
-
-export function getDotIndicatorColors(theme: ThemeStyle): string {
-	return themes[theme].dotIndicator;
-}
-
-export interface ThemeTokens {
-	colors: ThemeColors;
-	preview: string;
-	cursor: { primary: string; trail: string };
-	scrollButton: { bg: string; text: string; hover: string };
-	dotIndicator: string;
-}
-
-// Memoized theme tokens by theme
-const themeTokenCache = new Map<string, ThemeTokens>();
-
-export function getThemeTokens(theme: ThemeStyle): ThemeTokens {
-	const cacheKey = theme;
-	if (!themeTokenCache.has(cacheKey)) {
-		const currentTheme = themes[theme];
-		themeTokenCache.set(cacheKey, {
-			colors: currentTheme,
-			preview: currentTheme.preview,
-			cursor: currentTheme.cursor,
-			scrollButton: currentTheme.scrollButton,
-			dotIndicator: currentTheme.dotIndicator
-		});
-	}
-	return themeTokenCache.get(cacheKey)!;
-}
-
-export function clearThemeTokenCache() {
-	themeTokenCache.clear();
+export function getScrollButtonColors(): { bg: string; text: string; hover: string } {
+	const style = getComputedStyle(document.documentElement);
+	const primary = style.getPropertyValue('--color-primary-500').trim() || '#334155';
+	const primary600 = style.getPropertyValue('--color-primary-600').trim() || '#475569';
+	return {
+		bg: primary,
+		text: '#ffffff',
+		hover: primary600
+	};
 }
 
 export function initTheme() {
 	if (typeof window === 'undefined') return;
 
 	try {
-		const savedTheme = localStorage.getItem('quickheadlines-theme');
-		if (savedTheme && themeStyles.some(style => style.id === savedTheme)) {
-			themeState.theme = savedTheme;
-		} else {
-			themeState.theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+		let savedTheme = localStorage.getItem('quickheadlines-theme') || 'modern';
+
+		if (LEGACY_THEME_MAP[savedTheme]) {
+			savedTheme = LEGACY_THEME_MAP[savedTheme];
+			localStorage.setItem('quickheadlines-theme', savedTheme);
 		}
-		applyTheme(themeState.theme);
+
+		if (!ALL_THEMES.includes(savedTheme as AllTheme)) {
+			savedTheme = 'modern';
+		}
+
+		themeState.theme = savedTheme;
+		applyTheme(savedTheme);
 
 		const savedEffects = localStorage.getItem('quickheadlines-effects');
 		const savedCoolMode = localStorage.getItem('quickheadlines-coolmode');
 		themeState.effects = savedEffects !== 'false' && savedCoolMode !== 'false';
 	} catch {
-		themeState.theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-		applyTheme(themeState.theme);
+		themeState.theme = 'modern';
+		applyTheme('modern');
 	}
 
 	themeState.mounted = true;
 }
 
-export function applyTheme(theme: ThemeStyle) {
-	const isDarkMode = theme === 'dark';
-	const isCustomTheme = customThemeIds.includes(theme as CustomThemeId);
-	
+export function applyTheme(theme: ThemeId) {
 	document.documentElement.setAttribute('data-theme', theme);
-	document.documentElement.classList.toggle('dark', isDarkMode || isCustomTheme);
-	
-	applyCustomThemeColors(theme);
-	
-	if (isCustomTheme) {
-		document.documentElement.classList.add('custom-theme');
-	} else {
-		document.documentElement.classList.remove('custom-theme');
-	}
+
+	const isCustomDark = isCustomDarkTheme(theme);
+	document.documentElement.classList.toggle('dark', isCustomDark);
 }
 
-function applyCustomThemeColors(theme: ThemeStyle) {
-	const currentTheme = themes[theme];
-	document.documentElement.style.setProperty('--theme-bg', currentTheme.bg);
-	document.documentElement.style.setProperty('--theme-bg-secondary', currentTheme.bgSecondary);
-	document.documentElement.style.setProperty('--theme-text', currentTheme.text);
-	document.documentElement.style.setProperty('--theme-text-secondary', currentTheme.semantic?.['--color-text-secondary'] ?? currentTheme.text);
-	document.documentElement.style.setProperty('--theme-border', currentTheme.border);
-	document.documentElement.style.setProperty('--theme-accent', currentTheme.accent);
-	document.documentElement.style.setProperty('--theme-shadow', currentTheme.shadow);
-	
-	if (currentTheme.semantic) {
-		Object.entries(currentTheme.semantic).forEach(([key, value]) => {
-			document.documentElement.style.setProperty(key, value);
-		});
-	}
-}
-
-export function setTheme(theme: ThemeStyle) {
+export function setTheme(theme: ThemeId) {
 	themeState.theme = theme;
 	applyTheme(theme);
-	clearThemeTokenCache(); // Clear cache when theme changes
 	try {
 		localStorage.setItem('quickheadlines-theme', theme);
 	} catch {
@@ -368,8 +138,12 @@ export function setTheme(theme: ThemeStyle) {
 }
 
 export function toggleTheme() {
-	const newTheme = themeState.theme === 'light' ? 'dark' : 'light';
-	setTheme(newTheme);
+	const isDark = document.documentElement.classList.contains('dark');
+	if (isDark) {
+		document.documentElement.classList.remove('dark');
+	} else {
+		document.documentElement.classList.add('dark');
+	}
 }
 
 export function toggleEffects() {

@@ -70,13 +70,12 @@
 			'»', '→', '...', '…', '›'
 		];
 		
-		const commentsTexts = ['comment', 'comments', 'discuss', 'discussion', 'reply', 'replies'];
+		const commentsTexts = ['comment', 'comments', 'discuss', 'discussion', 'reply', 'replies', 'forum', 'forums'];
 		
 		doc.querySelectorAll('a[href]').forEach(link => {
 			const rawHref = link.getAttribute('href') || '';
 			let href = rawHref.replace(/^https?:\/\//, '').replace(/\/$/, '').split('#')[0].split('?')[0];
 			const linkBase = href;
-			const hash = rawHref.includes('#') ? rawHref.split('#')[1] : '';
 			
 			const isSelfLink = linkBase === articleBase || 
 			                   linkBase === decodedBase ||
@@ -88,18 +87,24 @@
 			                   href.endsWith(decodedBase.split('/').slice(-1)[0]);
 			
 			if (isSelfLink) {
-				const text = link.textContent?.trim().toLowerCase() || '';
-				const isCtaLink = selfLinkTexts.some(cta => text === cta || text.includes(cta) || cta.includes(text));
-				const isCommentsLink = commentsTexts.some(cta => text === cta || text.includes(cta));
+				const linkText = link.textContent?.trim().toLowerCase() || '';
+				const parentText = link.parentElement?.textContent?.trim().toLowerCase() || '';
+				const combinedText = (linkText + ' ' + parentText).trim();
+				const isCtaLink = selfLinkTexts.some(cta => linkText === cta || linkText.includes(cta) || cta.includes(linkText));
+				const isCommentsLink = commentsTexts.some(cta => linkText.includes(cta) || parentText.includes(cta) || combinedText.includes('discuss') || combinedText.includes('comment'));
 				
 				if (isCommentsLink && rawHref) {
 					commentsUrl = rawHref;
 					const parent = link.parentElement;
-					if (parent && parent.textContent?.trim() === link.textContent?.trim()) {
-						parent.remove();
-					} else {
-						link.remove();
+					if (parent) {
+						const parentText = parent.textContent?.trim().toLowerCase() || '';
+						const linkTextOnly = link.textContent?.trim().toLowerCase() || '';
+						if (commentsTexts.some(cta => parentText.includes(cta)) && parent.children.length <= 2) {
+							parent.remove();
+							return;
+						}
 					}
+					link.remove();
 					return;
 				}
 				
