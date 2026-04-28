@@ -14,7 +14,7 @@ describe "Models" do
 
     it "creates with all fields" do
       pub_date = Time.utc(2024, 1, 15)
-      item = Item.new("Test Title", "https://example.com/article", pub_date, "1.0.0")
+      item = Item.new("Test Title", "https://example.com/article", pub_date, nil, "1.0.0")
       item.title.should eq("Test Title")
       item.link.should eq("https://example.com/article")
       item.pub_date.should eq(pub_date)
