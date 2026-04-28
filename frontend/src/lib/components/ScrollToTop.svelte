@@ -65,7 +65,7 @@
 	.scroll-btn {
 		position: fixed;
 		bottom: 2rem;
-		right: 2rem;
+		right: 1rem;
 		width: 3rem;
 		height: 3rem;
 		display: flex;
@@ -86,6 +86,12 @@
 	
 	.scroll-btn.mobile {
 		bottom: 5rem;
+	}
+	
+	@media (min-width: 640px) {
+		.scroll-btn {
+			right: 1rem;
+		}
 	}
 	
 	.scroll-btn:hover {

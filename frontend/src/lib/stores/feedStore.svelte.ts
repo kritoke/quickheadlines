@@ -143,6 +143,13 @@ export async function loadFeeds(tab: string, force: boolean = false): Promise<vo
 	
 	if (!force && feedState.tabCache[tab]?.loaded) {
 		feedState.feeds = feedState.tabCache[tab].feeds;
+		Object.assign(feedState, setLoading(feedState, tab));
+		try {
+			const response = await fetchFeeds(tab);
+			Object.assign(feedState, setFeedsData(feedState, response, tab));
+		} catch (e) {
+			Object.assign(feedState, setError(feedState, e instanceof Error ? e.message : 'Failed to load feeds'));
+		}
 		return;
 	}
 

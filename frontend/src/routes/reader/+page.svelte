@@ -11,6 +11,7 @@
 	let error: string | null = $state(null);
 	let articleUrl: string | null = $state(null);
 	let isSummary = $state(false);
+	let commentsUrl: string | null = $state(null);
 	
 	const SUMMARY_LENGTH_THRESHOLD = 500;
 	const SUMMARY_PARAGRAPH_COUNT = 2;
@@ -69,10 +70,13 @@
 			'»', '→', '...', '…', '›'
 		];
 		
+		const commentsTexts = ['comment', 'comments', 'discuss', 'discussion', 'reply', 'replies'];
+		
 		doc.querySelectorAll('a[href]').forEach(link => {
-			let href = link.getAttribute('href') || '';
-			href = href.replace(/^https?:\/\//, '').replace(/\/$/, '').split('#')[0].split('?')[0];
+			const rawHref = link.getAttribute('href') || '';
+			let href = rawHref.replace(/^https?:\/\//, '').replace(/\/$/, '').split('#')[0].split('?')[0];
 			const linkBase = href;
+			const hash = rawHref.includes('#') ? rawHref.split('#')[1] : '';
 			
 			const isSelfLink = linkBase === articleBase || 
 			                   linkBase === decodedBase ||
@@ -86,6 +90,18 @@
 			if (isSelfLink) {
 				const text = link.textContent?.trim().toLowerCase() || '';
 				const isCtaLink = selfLinkTexts.some(cta => text === cta || text.includes(cta) || cta.includes(text));
+				const isCommentsLink = commentsTexts.some(cta => text === cta || text.includes(cta));
+				
+				if (isCommentsLink && rawHref) {
+					commentsUrl = rawHref;
+					const parent = link.parentElement;
+					if (parent && parent.textContent?.trim() === link.textContent?.trim()) {
+						parent.remove();
+					} else {
+						link.remove();
+					}
+					return;
+				}
 				
 				if (isCtaLink || href === articleUrl || href === decodedUrl) {
 					const parent = link.parentElement;
@@ -154,7 +170,7 @@
 	{/if}
 </AppHeader>
 
-<main class="pt-16 px-4 md:px-6 max-w-4xl mx-auto">
+<main class="pt-16 px-4 md:px-6 max-w-[1400px] mx-auto">
 	{#if loading}
 		<div class="flex items-center justify-center py-20">
 			<div class="w-8 h-8 border-4 theme-accent-border border-t-transparent rounded-full animate-spin"></div>
@@ -174,7 +190,7 @@
 			</button>
 		</div>
 	{:else if content}
-		<article class="py-6">
+		<article class="py-6 max-w-4xl mx-auto">
 			<h1 class="text-2xl sm:text-3xl font-bold theme-text-primary mb-6">{title}</h1>
 			
 			{#if isSummary}
@@ -196,7 +212,7 @@
 				{@html content}
 			</div>
 			
-			<div class="mt-8 pt-6 border-t border-slate-200 dark:border-slate-700">
+			<div class="mt-8 pt-6 border-t border-slate-200 dark:border-slate-700 flex flex-wrap gap-3">
 				<a
 					href={articleUrl}
 					target="_blank"
@@ -208,6 +224,19 @@
 					</svg>
 					View original article
 				</a>
+				{#if commentsUrl}
+					<a
+						href={commentsUrl}
+						target="_blank"
+						rel="noopener noreferrer"
+						class="inline-flex items-center gap-2 px-4 py-2 rounded-lg theme-bg-secondary theme-text-primary theme-border hover:opacity-80 transition-opacity text-sm font-medium"
+					>
+						<svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+							<path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+						</svg>
+						View comments
+					</a>
+				{/if}
 			</div>
 		</article>
 	{/if}
