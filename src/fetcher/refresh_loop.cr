@@ -139,9 +139,10 @@ def start_refresh_loop(config_path : String, cache : FeedCache, db_service : Dat
             if active_config.debug?
               Log.for("quickheadlines.feed").debug { "Running initial refresh to fetch feeds" }
             end
-            refresh_all(active_config, cache, db_service)
+            # Don't block server startup - spawn the initial refresh in background
+            spawn { refresh_all(active_config, cache, db_service) }
             if active_config.debug?
-              Log.for("quickheadlines.feed").debug { "Initial refresh complete" }
+              Log.for("quickheadlines.feed").debug { "Initial refresh started in background" }
             end
           else
             current_mtime = File.info(config_path).modification_time
