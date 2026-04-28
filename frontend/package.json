@@ -22,7 +22,6 @@
   },
   "dependencies": {
     "@sveltejs/kit": "^2.57.1",
-    "@types/dompurify": "^3.0.5",
     "dompurify": "^3.4.1",
     "svelte": "^5.55.4",
     "typescript": "^5.9.3",
