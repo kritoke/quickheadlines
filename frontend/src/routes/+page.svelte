@@ -10,6 +10,7 @@
 	import { createFeedEffects } from '$lib/stores/effects.svelte';
 	import { logger, initDebug, setDebugEnabled } from '$lib/utils/debug';
 	import { page } from '$app/stores';
+	import { onMount } from 'svelte';
 	import {
 		feedState,
 		loadFeeds,
@@ -56,25 +57,26 @@
 		await loadFeeds(feedState.activeTab, true);
 	}
 	
-		$effect(() => {
-		const initialized = feedState.status !== 'idle' || feedState.feeds.length > 0;
+	let feedEffects: ReturnType<typeof createFeedEffects> | null = null;
 
-		if (!initialized) {
-			const params = new URLSearchParams(window.location.search);
-			const urlTab = params.get('tab') || 'all';
+	onMount(() => {
+		const params = new URLSearchParams(window.location.search);
+		const urlTab = params.get('tab') || 'all';
 
-			loadFeeds(urlTab, true);
-			loadFeedConfig();
-			initDebug();
+		loadFeeds(urlTab, true);
+		loadFeedConfig();
+		initDebug();
 
-			const feedEffects = createFeedEffects();
-			feedEffects.start();
+		feedEffects = createFeedEffects();
+		feedEffects.start();
 
-			return () => {
-				if (tabChangeTimeout) clearTimeout(tabChangeTimeout);
+		return () => {
+			if (tabChangeTimeout) clearTimeout(tabChangeTimeout);
+			if (feedEffects) {
 				feedEffects.stop();
-			};
-		}
+				feedEffects = null;
+			}
+		};
 	});
 
 	$effect(() => {
@@ -92,7 +94,7 @@
 	}
 </script>
 
-<div class="min-h-screen theme-bg-primary transition-colors duration-200" data-name="feeds-page">
+<div class="bg-surface-50 dark:bg-surface-950 transition-colors duration-200" data-name="feeds-page">
 	<AppHeader 
 		title="QuickHeadlines"
 		tabs={feedState.tabs}
@@ -109,7 +111,7 @@
 	</AppHeader>
 
 	{#if feedState.tabs.length > 0}
-		<div class="md:hidden fixed top-14 left-0 right-0 z-40 theme-bg-primary border-b theme-border">
+		<div class="md:hidden fixed top-14 left-0 right-0 z-40 bg-surface-50 dark:bg-surface-950 border-b border-surface-200 dark:border-surface-700">
 			<TabSelector 
 				tabs={feedState.tabs}
 				activeTab={feedState.activeTab}
@@ -132,8 +134,8 @@
 		
 		{#if loading && feedState.feeds.length === 0}
 			<div class="flex items-center justify-center py-24 gap-3">
-				<div class="w-6 h-6 border-2 theme-accent-border border-t-transparent rounded-full animate-spin"></div>
-				<span class="theme-text-secondary">Loading feeds...</span>
+				<div class="w-6 h-6 border-2 border-primary-500 border-t-transparent rounded-full animate-spin"></div>
+				<span class="text-surface-700 dark:text-surface-300">Loading feeds...</span>
 			</div>
 		{:else if error && feedState.feeds.length === 0}
 			<div class="bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 px-4 py-3 rounded-xl mx-4">
@@ -147,9 +149,9 @@
 			</div>
 		{:else}
 			{#if loading}
-				<div class="sticky top-[var(--header-height,3.5rem)] z-20 theme-bg-primary/90 backdrop-blur-sm py-3 flex items-center justify-center gap-2 border-b theme-border">
-					<div class="w-4 h-4 border-2 theme-accent-border border-t-transparent rounded-full animate-spin"></div>
-					<span class="text-sm theme-text-secondary">Loading feeds...</span>
+				<div class="sticky top-[var(--header-height,3.5rem)] z-20 bg-surface-50 dark:bg-surface-950/90 backdrop-blur-sm py-3 flex items-center justify-center gap-2 border-b border-surface-200 dark:border-surface-700">
+					<div class="w-4 h-4 border-2 border-primary-500 border-t-transparent rounded-full animate-spin"></div>
+					<span class="text-sm text-surface-700 dark:text-surface-300">Loading feeds...</span>
 				</div>
 			{/if}
 
@@ -162,12 +164,12 @@
 					</div>
 				{/key}
 			{:else if searchState.query}
-				<div class="text-center py-24 text-slate-500 dark:text-slate-400">
+				<div class="text-center py-24 text-surface-500 dark:text-surface-400">
 					<p class="text-lg">No results for "{searchState.query}"</p>
 					<p class="text-sm mt-2">Try a different search term</p>
 				</div>
 			{:else}
-				<div class="text-center py-24 text-slate-500 dark:text-slate-400">
+				<div class="text-center py-24 text-surface-500 dark:text-surface-400">
 					<p class="text-lg">No feeds found</p>
 					<p class="text-sm mt-2">Check your configuration</p>
 				</div>

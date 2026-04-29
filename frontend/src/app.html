@@ -1,58 +1,23 @@
 <!doctype html>
-<html lang="en" data-theme="light">
+<html lang="en" data-theme="modern">
 	<head>
 		<meta charset="utf-8" />
 		<script>
 (function() {
-  // SYNC: keep in sync with DARK_THEMES in src/lib/stores/theme.svelte.ts
-  var darkThemes = ['dark', 'retro', 'matrix', 'ocean', 'sunset', 'hotdog', 'dracula', 'cyberpunk', 'forest'];
-  var customThemes = ['retro', 'matrix', 'ocean', 'sunset', 'hotdog', 'dracula', 'cyberpunk', 'forest'];
-  var themes = {
-    light: { bg: '#ffffff', bgSecondary: '#f1f5f9', text: '#0f172a', textSecondary: '#64748b', border: '#e2e8f0', accent: '#3b82f6', shadow: 'rgba(59, 130, 246, 0.15)' },
-    dark: { bg: '#1e293b', bgSecondary: '#0f172a', text: '#f1f5f9', textSecondary: '#94a3b8', border: '#334155', accent: '#60a5fa', shadow: 'rgba(96, 165, 250, 0.2)' },
-    retro: { bg: '#1a1a2e', bgSecondary: '#0d0d1a', text: '#f1f5f9', textSecondary: '#cbd5e1', border: '#ff71ce', accent: '#00d4ff', shadow: 'rgba(255, 113, 206, 0.3)' },
-    matrix: { bg: '#000a00', bgSecondary: '#001a00', text: '#22c55e', textSecondary: '#86efac', border: '#166534', accent: '#00ff00', shadow: 'rgba(0, 255, 0, 0.3)' },
-    ocean: { bg: '#2e3440', bgSecondary: '#242933', text: '#88c0d0', textSecondary: '#81a1c1', border: '#5e81ac', accent: '#88c0d0', shadow: 'rgba(136, 192, 208, 0.25)' },
-    sunset: { bg: '#1c1309', bgSecondary: '#0e0904', text: '#fed7aa', textSecondary: '#fdba74', border: '#f97316', accent: '#f97316', shadow: 'rgba(249, 115, 22, 0.25)' },
-    hotdog: { bg: '#008080', bgSecondary: '#006666', text: '#FFEB3B', textSecondary: '#FFD700', border: '#ff0000', accent: '#ff0000', shadow: 'rgba(255, 0, 0, 0.3)' },
-    dracula: { bg: '#282a36', bgSecondary: '#1d1e26', text: '#f8f8f2', textSecondary: '#bfc7d5', border: '#44475a', accent: '#bd93f9', shadow: 'rgba(189, 147, 249, 0.3)' },
-    cyberpunk: { bg: '#0d0221', bgSecondary: '#060115', text: '#00ffff', textSecondary: '#67ffff', border: '#ff00ff', accent: '#ff00ff', shadow: 'rgba(255, 0, 255, 0.3)' },
-    forest: { bg: '#1a2e1a', bgSecondary: '#0f1a0f', text: '#d1fae5', textSecondary: '#a7f3d0', border: '#166534', accent: '#4ade80', shadow: 'rgba(74, 222, 128, 0.25)' }
-  };
+  var SKELETON_THEMES = ['catppuccin','cerberus','concord','crimson','fennec','hamlindigo','legacy','mint','modern','mona','nosh','nouveau','pine','reign','rocket','rose','sahara','seafoam','terminus','vintage','vox','wintry','matrix','hotdog'];
+  var CUSTOM_DARK_THEMES = ['matrix'];
 
-  function applyTheme(theme) {
-    var t = themes[theme];
-    if (!t) return;
-    // Set theme-* variables
-    document.documentElement.style.setProperty('--theme-bg', t.bg);
-    document.documentElement.style.setProperty('--theme-bg-secondary', t.bgSecondary);
-    document.documentElement.style.setProperty('--theme-text', t.text);
-    document.documentElement.style.setProperty('--theme-text-secondary', t.textSecondary);
-    document.documentElement.style.setProperty('--theme-border', t.border);
-    document.documentElement.style.setProperty('--theme-accent', t.accent);
-    document.documentElement.style.setProperty('--theme-shadow', t.shadow);
-    // Set color-* semantic variables
-    document.documentElement.style.setProperty('--color-bg-primary', t.bg);
-    document.documentElement.style.setProperty('--color-bg-secondary', t.bgSecondary);
-    document.documentElement.style.setProperty('--color-text-primary', t.text);
-    document.documentElement.style.setProperty('--color-text-secondary', t.textSecondary);
-    document.documentElement.style.setProperty('--color-border', t.border);
-    document.documentElement.style.setProperty('--color-accent', t.accent);
-    document.documentElement.setAttribute('data-theme', theme);
-    // Toggle dark class for dark/custom themes
-    var isDark = darkThemes.indexOf(theme) !== -1;
-    document.documentElement.classList.toggle('dark', isDark);
-    // Toggle custom-theme class for custom themes
-    var isCustom = customThemes.indexOf(theme) !== -1;
-    document.documentElement.classList.toggle('custom-theme', isCustom);
+  var theme = 'modern';
+  try { theme = localStorage.getItem('quickheadlines-theme') || 'modern'; } catch(e) {}
+
+  if (SKELETON_THEMES.indexOf(theme) === -1) {
+    theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'modern' : 'modern';
   }
 
-  var theme = 'light';
-  try { theme = localStorage.getItem('quickheadlines-theme') || 'light'; } catch(e) {}
-  if (Object.keys(themes).indexOf(theme) === -1) {
-    theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-  }
-  applyTheme(theme);
+  document.documentElement.setAttribute('data-theme', theme);
+
+  var isCustomDark = CUSTOM_DARK_THEMES.indexOf(theme) !== -1;
+  document.documentElement.classList.toggle('dark', isCustomDark);
 })();
 		</script>
 		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
@@ -65,7 +30,7 @@
 		<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap&subset=latin&display=swap" rel="stylesheet" media="print" onload="this.media='all'" />
 		%sveltekit.head%
 	</head>
-	<body data-sveltekit-preload-data="hover" class="theme-bg-primary">
+	<body data-sveltekit-preload-data="hover">
 		<div style="display: contents">%sveltekit.body%</div>
 	</body>
 </html>

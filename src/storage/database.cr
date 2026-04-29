@@ -103,6 +103,7 @@ def create_schema(db : DB::Database, db_path : String)
   db.exec("PRAGMA foreign_keys = ON")
   db.exec("PRAGMA mmap_size = 0")
   db.exec("PRAGMA wal_autocheckpoint = 10000")
+  db.exec("PRAGMA busy_timeout = #{QuickHeadlines::Constants::SQLITE_BUSY_TIMEOUT_MS}")
 
   db.exec(Schema::FEEDS_TABLE)
   db.exec(Schema::ITEMS_TABLE)

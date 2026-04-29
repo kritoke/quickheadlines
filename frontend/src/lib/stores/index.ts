@@ -32,8 +32,18 @@ export {
 	setTheme, 
 	toggleTheme,
 	toggleEffects,
-	getThemeAccentColors,
-	type ThemeStyle 
+	getThemeColors,
+	getCursorColors,
+	getAccentColor,
+	getScrollButtonColors,
+	isSkeletonPreset,
+	isNoveltyTheme,
+	isCustomDarkTheme,
+	ALL_THEMES,
+	NOVELTY_THEME_IDS,
+	type ThemeId,
+	type AllTheme,
+	type NoveltyThemeId
 } from './theme.svelte';
 
 export {

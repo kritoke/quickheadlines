@@ -99,8 +99,12 @@ module QuickHeadlines::Storage
           begin
             run_vacuum
             Log.for("quickheadlines.storage").info { "Vacuumed database after size cleanup" }
-          rescue ex
-            Log.for("quickheadlines.storage").error(exception: ex) { "Vacuum failed" }
+          rescue ex : Exception
+            if ex.message.try(&.includes?("database is locked")) || ex.message.try(&.includes?("database locked"))
+              Log.for("quickheadlines.storage").warn { "VACUUM skipped - database is locked (likely refresh in progress)" }
+            else
+              Log.for("quickheadlines.storage").error(exception: ex) { "Vacuum failed" }
+            end
           end
         end
       end

@@ -1,8 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/svelte';
-import { themeState, initTheme, toggleTheme } from '../stores/theme.svelte';
+import { themeState, initTheme, toggleTheme, setTheme } from '../stores/theme.svelte';
 
-// Mock localStorage
 const localStorageMock = (() => {
 	let store: Record<string, string> = {};
 	return {
@@ -14,7 +12,6 @@ const localStorageMock = (() => {
 
 Object.defineProperty(window, 'localStorage', { value: localStorageMock });
 
-// Mock matchMedia
 Object.defineProperty(window, 'matchMedia', {
 	value: vi.fn().mockImplementation((query: string) => ({
 		matches: false,
@@ -28,39 +25,45 @@ describe('Theme Store', () => {
 	beforeEach(() => {
 		localStorageMock.clear();
 		document.documentElement.classList.remove('dark');
-		themeState.theme = 'light';
+		document.documentElement.removeAttribute('data-theme');
+		themeState.theme = 'modern';
 		themeState.mounted = false;
 	});
 
-	it('initializes with light theme by default', () => {
+	it('initializes with modern theme by default', () => {
 		initTheme();
-		expect(themeState.theme).toBe('light');
+		expect(themeState.theme).toBe('modern');
 		expect(themeState.mounted).toBe(true);
 	});
 
 	it('loads saved theme from localStorage', () => {
+		localStorageMock.setItem('quickheadlines-theme', 'catppuccin');
+		initTheme();
+		expect(themeState.theme).toBe('catppuccin');
+	});
+
+	it('migrates legacy themes to modern', () => {
 		localStorageMock.setItem('quickheadlines-theme', 'dark');
 		initTheme();
-		expect(themeState.theme).toBe('dark');
-		expect(document.documentElement.classList.contains('dark')).toBe(true);
+		expect(themeState.theme).toBe('modern');
+		expect(localStorageMock.getItem('quickheadlines-theme')).toBe('modern');
 	});
 
-	it('toggleTheme switches between light and dark', () => {
+	it('setTheme persists to localStorage', () => {
 		initTheme();
-		expect(themeState.theme).toBe('light');
-		
-		toggleTheme();
-		expect(themeState.theme).toBe('dark');
-		expect(document.documentElement.classList.contains('dark')).toBe(true);
-		
-		toggleTheme();
-		expect(themeState.theme).toBe('light');
+		setTheme('rose');
+		expect(themeState.theme).toBe('rose');
+		expect(localStorageMock.getItem('quickheadlines-theme')).toBe('rose');
+	});
+
+	it('toggleTheme toggles dark class', () => {
+		initTheme();
 		expect(document.documentElement.classList.contains('dark')).toBe(false);
-	});
 
-	it('persists theme to localStorage', () => {
-		initTheme();
 		toggleTheme();
-		expect(localStorageMock.getItem('quickheadlines-theme')).toBe('dark');
+		expect(document.documentElement.classList.contains('dark')).toBe(true);
+
+		toggleTheme();
+		expect(document.documentElement.classList.contains('dark')).toBe(false);
 	});
 });

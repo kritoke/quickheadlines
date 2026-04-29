@@ -1,14 +1,13 @@
 <script lang="ts">
 	import type { FeedResponse } from '$lib/types';
 	import { formatTimestamp } from '$lib/api';
-	import { themeState, isDarkTheme } from '$lib/stores/theme.svelte';
 	import { readModeState } from '$lib/stores/readMode.svelte';
 	import { breakpointState } from '$lib/utils/breakpoint.svelte';
 	import { getFaviconSrc } from '$lib/utils/feedItem';
 	import { feedState } from '$lib/stores/feedStore.svelte';
-	import Card from './ui/Card.svelte';
 	import { sanitizeUrl, sanitizeCssColor } from '$lib/utils/validation';
 	import { goto } from '$app/navigation';
+	import { cn } from '$lib/utils';
 
 	interface Props {
 		feed: FeedResponse;
@@ -17,8 +16,6 @@
 	}
 
 	let { feed, onLoadMore, loading = false }: Props = $props();
-	
-	let resolvedTheme = $derived(themeState.theme);
 
 	let isMobile = $derived(breakpointState.isMobile);
 
@@ -29,7 +26,7 @@
 
 	function resolveThemeColors(): { bg?: string; text?: string } | null {
 		if (!feed.header_theme_colors) return null;
-		const colors = isDarkTheme(resolvedTheme) ? feed.header_theme_colors.dark : feed.header_theme_colors.light;
+		const colors = document.documentElement.classList.contains('dark') ? feed.header_theme_colors.dark : feed.header_theme_colors.light;
 		if (!colors) return null;
 		return { bg: sanitizeCssColor(colors.bg), text: sanitizeCssColor(colors.text) };
 	}
@@ -61,10 +58,8 @@
 	let feedLoading = $derived(feedState.status === 'loading' || feedState.status === 'refreshing');
 </script>
 
-<Card 
-	class="overflow-hidden flex flex-col group"
-	headerBgColor={cardColors.bg}
-	headerColor={cardColors.text}
+<div 
+	class={cn('rounded-2xl border border-surface-200 dark:border-surface-700 transition-shadow duration-200 overflow-hidden flex flex-col group', 'bg-surface-50 dark:bg-surface-950')}
 	data-name="feed-box"
 >
 	<a
@@ -100,11 +95,11 @@
 							onclick={() => goto(`/reader?url=${encodeURIComponent(item.link)}&title=${encodeURIComponent(item.title)}`)}
 							class="flex-1 min-w-0 block text-left hover:opacity-70 transition-opacity"
 						>
-							<p class="text-sm theme-text-primary line-clamp-2 leading-tight font-medium">
+							<p class="text-sm text-surface-950 dark:text-surface-50 line-clamp-2 leading-tight font-medium">
 								{item.title}
 							</p>
 							{#if item.pub_date}
-								<p class="text-xs theme-text-secondary mt-0.5">
+								<p class="text-xs text-surface-700 dark:text-surface-300 mt-0.5">
 									{formatTimestamp(item.pub_date)}
 								</p>
 							{/if}
@@ -116,11 +111,11 @@
 						rel="noopener noreferrer"
 						class="flex-1 min-w-0 block hover:opacity-70 transition-opacity"
 					>
-						<p class="text-sm theme-text-primary line-clamp-2 leading-tight font-medium">
+						<p class="text-sm text-surface-950 dark:text-surface-50 line-clamp-2 leading-tight font-medium">
 							{item.title}
 						</p>
 						{#if item.pub_date}
-							<p class="text-xs theme-text-secondary mt-0.5">
+							<p class="text-xs text-surface-700 dark:text-surface-300 mt-0.5">
 								{formatTimestamp(item.pub_date)}
 							</p>
 						{/if}
@@ -136,7 +131,7 @@
 									title="Comments"
 									class="p-1 hover:opacity-80 transition-opacity"
 								>
-									<svg class="w-4 h-4 theme-text-secondary" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+									<svg class="w-4 h-4 text-surface-700 dark:text-surface-300" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
 										<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
 									</svg>
 								</a>
@@ -149,7 +144,7 @@
 									title="Discussion"
 									class="p-1 hover:opacity-80 transition-opacity"
 								>
-									<svg class="w-4 h-4 theme-text-secondary" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+									<svg class="w-4 h-4 text-surface-700 dark:text-surface-300" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
 										<path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path>
 									</svg>
 								</a>
@@ -161,11 +156,11 @@
 				<li class="py-6 text-center">
 					{#if feedLoading}
 						<div class="flex items-center justify-center gap-2">
-							<div class="w-3 h-3 border-2 theme-accent-border border-t-transparent rounded-full animate-spin"></div>
-							<span class="text-sm theme-text-secondary">Loading...</span>
+							<div class="w-3 h-3 border-2 border-primary-500 border-t-transparent rounded-full animate-spin"></div>
+							<span class="text-sm text-surface-700 dark:text-surface-300">Loading...</span>
 						</div>
 					{:else}
-						<span class="text-sm theme-text-secondary">No items</span>
+						<span class="text-sm text-surface-700 dark:text-surface-300">No items</span>
 					{/if}
 				</li>
 			{/each}
@@ -181,7 +176,7 @@
 				onclick={() => {
 					onLoadMore?.();
 				}}
-				class="w-full py-2 text-sm font-medium theme-text-secondary hover:theme-text-primary transition-colors disabled:opacity-50"
+				class="w-full py-2 text-sm font-medium text-surface-700 dark:text-surface-300 hover:text-surface-950 dark:text-surface-50 transition-colors disabled:opacity-50"
 			>
 				{#if loading}
 					<span class="inline-flex items-center gap-2">
@@ -197,10 +192,10 @@
 			</button>
 		{:else if feed.items.length > 0 && feed.items.length >= feed.total_item_count}
 			<div class="py-2 text-center">
-				<span class="text-sm theme-text-secondary">No more items</span>
+				<span class="text-sm text-surface-700 dark:text-surface-300">No more items</span>
 			</div>
 		{:else}
 			<div class="py-2"></div>
 		{/if}
 	</div>
-</Card>
+</div>

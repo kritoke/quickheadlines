@@ -336,7 +336,7 @@ class FeedFetcher
     entries.map do |entry|
       comment_url = entry.comment_url || (entry.is_discussion_url ? entry.url : nil)
       Item.new(entry.title, entry.url, entry.published_at, entry.content, comment_url, entry.commentary_url)
-    end.sort_by { |item| item.pub_date || Time.unix(0) }.reverse
+    end.sort_by! { |item| item.pub_date || Time.unix(0) }.reverse!
   end
 
   private def store_content_from_items(feed_data : FeedData)

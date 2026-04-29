@@ -1,6 +1,39 @@
 @import "tailwindcss";
 
+@import '@skeletonlabs/skeleton';
+@import '@skeletonlabs/skeleton-common';
+
+/* Register Skeleton preset themes */
+@import './lib/themes/skeleton/catppuccin.css';
+@import './lib/themes/skeleton/cerberus.css';
+@import './lib/themes/skeleton/concord.css';
+@import './lib/themes/skeleton/crimson.css';
+@import './lib/themes/skeleton/fennec.css';
+@import './lib/themes/skeleton/hamlindigo.css';
+@import './lib/themes/skeleton/legacy.css';
+@import './lib/themes/skeleton/mint.css';
+@import './lib/themes/skeleton/modern.css';
+@import './lib/themes/skeleton/mona.css';
+@import './lib/themes/skeleton/nosh.css';
+@import './lib/themes/skeleton/nouveau.css';
+@import './lib/themes/skeleton/pine.css';
+@import './lib/themes/skeleton/reign.css';
+@import './lib/themes/skeleton/rocket.css';
+@import './lib/themes/skeleton/rose.css';
+@import './lib/themes/skeleton/sahara.css';
+@import './lib/themes/skeleton/seafoam.css';
+@import './lib/themes/skeleton/terminus.css';
+@import './lib/themes/skeleton/vintage.css';
+@import './lib/themes/skeleton/vox.css';
+@import './lib/themes/skeleton/wintry.css';
+
+/* Register custom novelty themes */
+@import './lib/themes/matrix.css';
+@import './lib/themes/hotdog.css';
+
 @custom-variant dark (&:where(.dark, .dark *));
+
+
 
 @keyframes fade-in {
 	from { opacity: 0; }
@@ -65,7 +98,7 @@ html, body {
 	height: 100%;
 	overflow-x: hidden;
 	scrollbar-width: thin;
-	scrollbar-color: var(--color-accent, var(--theme-accent, #94a3b8)) transparent;
+	scrollbar-color: var(--color-primary-500, #94a3b8) transparent;
 }
 
 html::-webkit-scrollbar,
@@ -81,13 +114,13 @@ body::-webkit-scrollbar-track {
 
 html::-webkit-scrollbar-thumb,
 body::-webkit-scrollbar-thumb {
-	background-color: var(--color-accent, var(--theme-accent, #94a3b8));
+	background-color: var(--color-primary-500, #94a3b8);
 	border-radius: 4px;
 }
 
 html::-webkit-scrollbar-thumb:hover,
 body::-webkit-scrollbar-thumb:hover {
-	background-color: var(--color-accent, var(--theme-accent, #64748b));
+	background-color: var(--color-primary-600, #64748b);
 }
 
 #app {
@@ -116,11 +149,11 @@ body::-webkit-scrollbar-thumb:hover {
 }
 
 .group:hover .feed-box-scroll::-webkit-scrollbar-thumb {
-	background-color: var(--color-border, var(--theme-border, #e2e8f0));
+	background-color: var(--color-surface-300, #e2e8f0);
 }
 
 .feed-box-scroll::-webkit-scrollbar-thumb:hover {
-	background-color: var(--color-text-secondary, var(--theme-text, #64748b));
+	background-color: var(--color-surface-500, #64748b);
 }
 
 .feed-box-scroll {
@@ -129,27 +162,7 @@ body::-webkit-scrollbar-thumb:hover {
 }
 
 .group:hover .feed-box-scroll {
-	scrollbar-color: var(--color-border, var(--theme-border, #e2e8f0)) transparent;
-}
-
-/* Shadow with theme accent color */
-.shadow-theme {
-	box-shadow: 0 4px 12px var(--theme-shadow, rgba(59, 130, 246, 0.15));
-}
-
-/* Hover glow with theme accent */
-.hover-glow {
-	transition: box-shadow 0.3s ease;
-}
-.hover-glow:hover {
-	box-shadow: 0 0 25px var(--theme-shadow, rgba(150, 173, 141, 0.6));
-}
-
-/* Always show a subtle glow for touch devices */
-@media (hover: none) {
-	.hover-glow {
-		box-shadow: 0 0 15px var(--theme-shadow, rgba(150, 173, 141, 0.3));
-	}
+	scrollbar-color: var(--color-surface-300, #e2e8f0) transparent;
 }
 
 /* iOS momentum scrolling */
@@ -190,12 +203,12 @@ html.ios-device {
 }
 
 .tab-bar::-webkit-scrollbar-thumb {
-	background-color: var(--color-text-secondary, #94a3b8);
+	background-color: var(--color-surface-400, #94a3b8);
 	border-radius: 3px;
 }
 
 .tab-bar::-webkit-scrollbar-thumb:hover {
-	background-color: var(--color-text-secondary, #64748b);
+	background-color: var(--color-surface-500, #64748b);
 }
 
 /* Auto-hide scrollbar styles */
@@ -209,100 +222,18 @@ html.ios-device {
 }
 
 .auto-hide-scroll::-webkit-scrollbar-thumb {
-	background-color: var(--color-accent, var(--theme-accent, #94a3b8));
+	background-color: var(--color-primary-500, #94a3b8);
 	border-radius: 3px;
 }
 
 .auto-hide-scroll::-webkit-scrollbar-thumb:hover {
-	background-color: var(--color-accent, var(--theme-accent, #64748b));
-}
-
-/* Accent color utility */
-.text-accent {
-	color: var(--color-accent, var(--theme-accent, #96ad8d));
+	background-color: var(--color-primary-600, #64748b);
 }
 
 /* Cursor trail CSS variables */
 :root {
 	--cursor-x: -100px;
 	--cursor-y: -100px;
-	--theme-bg: #ffffff;
-	--theme-text: #0f172a;
-	--theme-border: #e2e8f0;
-	--theme-accent: #3b82f6;
-	--theme-shadow: rgba(59, 130, 246, 0.15);
-}
-
-/* Dark mode shadow */
-html.dark, 
-html[data-theme="dark"] {
-	--theme-shadow: rgba(96, 165, 250, 0.2);
-	--theme-accent: #60a5fa;
-}
-
-/* ============================================
-   SEMANTIC TOKEN UTILITY CLASSES
-   These use CSS variables set by theme.svelte.ts
-   with fallbacks to maintain backward compat
-   ============================================ */
-
-/* Semantic background colors */
-.theme-bg-primary {
-	background-color: var(--color-bg-primary, var(--theme-bg));
-}
-
-.theme-bg-secondary {
-	background-color: var(--color-bg-secondary, var(--theme-bg));
-}
-
-/* Semantic text colors */
-.theme-text-primary {
-	color: var(--color-text-primary, var(--theme-text));
-}
-
-.theme-text-secondary {
-	color: var(--color-text-secondary, var(--theme-text));
-}
-
-.hover\:theme-text-primary:hover {
-	color: var(--color-text-primary, var(--theme-text));
-}
-
-/* Semantic border colors */
-.theme-border {
-	border-color: var(--color-border, var(--theme-border));
-}
-
-/* Semantic accent color */
-.theme-accent {
-	color: var(--color-accent, var(--theme-accent));
-}
-
-.theme-accent-bg {
-	background-color: var(--color-accent, var(--theme-accent));
-}
-
-.theme-accent-border {
-	border-color: var(--color-accent, var(--theme-accent));
-}
-
-/* Semantic shadow */
-.theme-shadow {
-	box-shadow: 0 4px 12px var(--color-shadow, var(--theme-shadow));
-}
-
-/* Combined semantic card styles */
-.theme-card {
-	background-color: var(--color-bg-primary, var(--theme-bg));
-	color: var(--color-text-primary, var(--theme-text));
-	border-color: var(--color-border, var(--theme-border));
-}
-
-/* Combined semantic header styles */
-.theme-header {
-	background-color: var(--color-bg-primary, var(--theme-bg));
-	color: var(--color-text-primary, var(--theme-text));
-	border-color: var(--color-border, var(--theme-border));
 }
 
 /* Ensure scroll to top button is always clickable */
@@ -310,44 +241,4 @@ html[data-theme="dark"] {
 	pointer-events: auto;
 	opacity: 1;
 	visibility: visible;
-}
-
-/* ============================================
-   CUSTOM THEME ROOT STYLING  
-   These make Tailwind dark mode work with custom themes
-   by using semantic classes that set proper CSS variables
-   ============================================ */
-
-/* Root background for custom themes - applies to everything */
-html.custom-theme {
-	background-color: var(--theme-bg);
-	color: var(--theme-text);
-}
-
-html.custom-theme body,
-html.custom-theme #app {
-	background-color: var(--theme-bg);
-	color: var(--theme-text);
-}
-
-/* Semantic classes provide theme-aware styling without !important */
-html.custom-theme .theme-bg-primary {
-	background-color: var(--theme-bg);
-}
-
-html.custom-theme .theme-bg-secondary {
-	background-color: var(--theme-bg-secondary);
-}
-
-html.custom-theme .theme-text-primary {
-	color: var(--color-text-primary, var(--theme-text));
-}
-
-html.custom-theme .theme-text-secondary {
-	color: var(--color-text-secondary, var(--theme-text));
-	opacity: 0.8;
-}
-
-html.custom-theme .theme-border {
-	border-color: var(--theme-border);
 }

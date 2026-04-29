@@ -2,7 +2,7 @@
 	import type { TimelineItemResponse, ClusterItemsResponse } from '$lib/types';
 	import { fetchClusterItems as defaultFetchClusterItems, formatTimestamp } from '$lib/api';
 	import ClusterExpansion from './ClusterExpansion.svelte';
-	import { themeState, customThemeIds, isDarkTheme } from '$lib/stores/theme.svelte';
+	import { themeState, isDarkTheme } from '$lib/stores/theme.svelte';
 	import { readModeState } from '$lib/stores/readMode.svelte';
 	import { layoutState } from '$lib/stores/layout.svelte';
 	import { goto } from '$app/navigation';
@@ -19,7 +19,7 @@
 
 	let { items, hasMore, onLoadMore, fetchClusterItems = defaultFetchClusterItems }: Props = $props();
 	let resolvedTheme = $derived(themeState.theme);
-	let isDark = $derived(isDarkTheme(resolvedTheme));
+	let isDark = $derived(isDarkTheme());
 
 	let expandedClusterId = $state<string | null>(null);
 	let clusterItems = $state<Record<string, TimelineItemResponse[]>>({});
@@ -115,7 +115,7 @@
 	{#each groupIndex as [date, dateItems], groupIdx (date)}
 		{@const groupStartIndex = getGroupStartIndex(groupIdx)}
 		<div class="day-group mb-4 sm:mb-6">
-			<h2 class="text-base sm:text-lg font-semibold theme-text-secondary mb-2 sm:mb-3 sticky top-14 sm:top-16 theme-bg-primary py-2 z-10">
+			<h2 class="text-base sm:text-lg font-semibold text-surface-700 dark:text-surface-300 mb-2 sm:mb-3 sticky top-14 sm:top-16 bg-surface-50 dark:bg-surface-950 py-2 z-10">
 				{date}
 			</h2>
 			
@@ -123,8 +123,8 @@
 				{#each dateItems as item, i (`${date}-${item.id}`)}
 					{@const globalIndex = groupStartIndex + i}
 					<div 
-						class="timeline-item theme-bg-primary rounded-lg shadow-sm theme-border overflow-hidden transition-all duration-200 relative hover-glow"
-						style="touch-action: manipulation; -webkit-tap-highlight-color: transparent;"
+						class="timeline-item rounded-lg shadow-sm overflow-hidden transition-all duration-200 relative"
+						style="background-color: var(--color-surface-50); border: 1px solid var(--color-surface-200); touch-action: manipulation; -webkit-tap-highlight-color: transparent;"
 					>
 						<!-- Item Header with Feed Info -->
 						<div
@@ -147,8 +147,8 @@
 								<button
 									type="button"
 									onclick={() => toggleCluster(item)}
-									class="ml-auto theme-accent-bg/20 hover:theme-accent-bg/30 active:theme-accent-bg/40 px-2 py-1 rounded text-xs transition-colors cursor-pointer flex items-center gap-1"
-									style="touch-action: manipulation; -webkit-tap-highlight-color: transparent;"
+									class="ml-auto bg-[var(--color-primary-500,#334155)]/20 hover:bg-[var(--color-primary-500,#334155)]/30 active:bg-[var(--color-primary-500,#334155)]/40 px-2 py-1 rounded text-xs transition-colors cursor-pointer flex items-center gap-1"
+									style="color: inherit; touch-action: manipulation; -webkit-tap-highlight-color: transparent;"
 									aria-label="Show {item.cluster_size} similar stories"
 								>
 									{item.cluster_size} sources
@@ -166,7 +166,7 @@
 						</div>
 						
 						<!-- Item Content -->
-						<div class="block px-3 py-2 hover:theme-bg-secondary transition-colors gap-2">
+						<div class="block px-3 py-2 transition-colors gap-2">
 							{#if readModeState.mode === 'read'}
 								<button
 									type="button"
@@ -179,12 +179,12 @@
 									}}
 									class="text-left w-full"
 								>
-									<h3 class="text-base font-medium theme-text-primary line-clamp-2 hover:opacity-80 transition-opacity">
+									<h3 class="text-base font-medium text-surface-950 dark:text-surface-50 line-clamp-2 hover:opacity-80 transition-opacity">
 										{item.title}
 									</h3>
 								</button>
 							{:else}
-								<h3 class="text-base font-medium theme-text-primary line-clamp-2">
+								<h3 class="text-base font-medium text-surface-950 dark:text-surface-50 line-clamp-2">
 									<a
 										href={sanitizeUrl(item.link)}
 										target="_blank"
@@ -194,7 +194,7 @@
 								</h3>
 							{/if}
 							<div class="flex items-center gap-2 mt-1">
-								<p class="text-sm theme-text-secondary">
+								<p class="text-sm text-surface-700 dark:text-surface-300">
 									{formatTimestamp(item.pub_date)}
 								</p>
 								{#if item.comment_url}
@@ -205,7 +205,7 @@
 										title="Comments"
 										class="p-0.5 hover:opacity-80 transition-opacity"
 									>
-										<svg class="w-4 h-4 theme-text-secondary" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+										<svg class="w-4 h-4 text-surface-700 dark:text-surface-300" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
 											<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
 										</svg>
 									</a>
@@ -218,7 +218,7 @@
 										title="Discussion"
 										class="p-0.5 hover:opacity-80 transition-opacity"
 									>
-										<svg class="w-4 h-4 theme-text-secondary" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+										<svg class="w-4 h-4 text-surface-700 dark:text-surface-300" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
 											<path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path>
 										</svg>
 									</a>
@@ -246,7 +246,7 @@
 				onclick={() => {
 					onLoadMore?.();
 				}}
-				class="px-4 py-2 text-sm rounded-lg transition-colors theme-bg-secondary theme-text-primary theme-border"
+				class="px-4 py-2 text-sm rounded-lg transition-colors bg-surface-100 dark:bg-surface-800 text-surface-950 dark:text-surface-50 border-surface-200 dark:border-surface-700"
 			>
 				Load More
 			</button>

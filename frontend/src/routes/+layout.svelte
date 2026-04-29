@@ -66,8 +66,8 @@
 </script>
 
 <Effects />
-<div id="app" class="min-h-screen bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-50 transition-colors duration-200" data-name="app-layout">
-	{@render children()}
+<div id="app" class="flex min-h-screen flex-col bg-surface-50 dark:bg-surface-950 text-surface-950 dark:text-surface-50 transition-colors duration-200" data-name="app-layout">
+		{@render children()}
 	<div class="pb-6 flex justify-center">
 		<CrystalBadge />
 	</div>

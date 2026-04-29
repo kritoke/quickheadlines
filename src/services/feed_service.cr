@@ -15,6 +15,7 @@ module QuickHeadlines::Services
     def self.content_store
       @@content_store
     end
+
     def self.build_feed_response(
       feed : FeedData,
       cache : FeedCache,

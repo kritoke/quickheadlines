@@ -75,6 +75,6 @@
 	}
 
 	.scrollbar-thumb {
-		background-color: var(--theme-accent, #94a3b8);
+		background-color: var(--color-primary-500, #94a3b8);
 	}
 </style>

@@ -1,15 +1,14 @@
 <script lang="ts">
 	import { spring } from 'svelte/motion';
-	import { themeState, getCursorColors, getThemeAccentColors } from '$lib/stores/theme.svelte';
-	import { zIndex } from '$lib/design/tokens';
+	import { themeState, getCursorColors, getAccentColor } from '$lib/stores/theme.svelte';
 	import { onMount } from 'svelte';
 
 	let coords = spring({ x: -100, y: -100 }, { stiffness: 0.1, damping: 0.25 });
 	let trail = spring({ x: -100, y: -100 }, { stiffness: 0.05, damping: 0.3 });
 
-	let cursorColors = $derived(getCursorColors(themeState.theme));
+	let cursorColors = $derived(getCursorColors());
 	let effectsEnabled = $derived(themeState.mounted && themeState.effects);
-	let accentColor = $derived(getThemeAccentColors(themeState.theme).accent);
+	let accentColor = $derived(getAccentColor());
 	let reducedMotion = $state(false);
 
 	$effect(() => {
@@ -119,11 +118,11 @@
 {#if showEffects}
 	<div
 		class="pointer-events-none fixed rounded-full"
-		style="transform: translate({$coords.x}px, {$coords.y}px); background: {cursorColors.primary}; width: 12px; height: 12px; z-index: {zIndex.effects};"
+		style="transform: translate({$coords.x}px, {$coords.y}px); background: {cursorColors.primary}; width: 12px; height: 12px; z-index: 300;"
 	></div>
 	<div
 		class="pointer-events-none fixed rounded-full"
-		style="transform: translate({$trail.x - 16}px, {$trail.y - 16}px); background: {cursorColors.trail}; filter: blur(12px); width: 32px; height: 32px; z-index: {zIndex.effects - 1};"
+		style="transform: translate({$trail.x - 16}px, {$trail.y - 16}px); background: {cursorColors.trail}; filter: blur(12px); width: 32px; height: 32px; z-index: 299;"
 	></div>
 
 	{#each particles as particle (particle.id)}

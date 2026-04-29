@@ -129,7 +129,7 @@ def start_refresh_loop(config_path : String, cache : FeedCache, db_service : Dat
         if StateStore.refreshing?
           Log.for("quickheadlines.feed").warn { "Refresh already in progress, skipping this cycle" }
           sleep (active_config.refresh_minutes * 60).seconds
-          break if QuickHeadlines.shutting_down?
+          next unless QuickHeadlines.shutting_down?
           next
         end
 
@@ -161,7 +161,7 @@ def start_refresh_loop(config_path : String, cache : FeedCache, db_service : Dat
                   Log.for("quickheadlines.feed").debug { "Refreshed after config change" }
                 end
                 sleep (active_config.refresh_minutes * QuickHeadlines::Constants::SECONDS_PER_MINUTE).seconds
-                break if QuickHeadlines.shutting_down?
+                next unless QuickHeadlines.shutting_down?
                 next
               else
                 Log.for("quickheadlines.feed").error { "Config reload failed: #{load_result.error_message}#{load_result.suggestion ? " - #{load_result.suggestion}" : ""}" }
@@ -182,7 +182,7 @@ def start_refresh_loop(config_path : String, cache : FeedCache, db_service : Dat
           end
 
           sleep (active_config.refresh_minutes * QuickHeadlines::Constants::SECONDS_PER_MINUTE).seconds
-          break if QuickHeadlines.shutting_down?
+          next unless QuickHeadlines.shutting_down?
         ensure
           StateStore.refreshing = false
         end
@@ -190,7 +190,7 @@ def start_refresh_loop(config_path : String, cache : FeedCache, db_service : Dat
         Log.for("quickheadlines.feed").error(exception: ex) { "refresh_loop" }
         StateStore.refreshing = false
         sleep 1.minute
-        break if QuickHeadlines.shutting_down?
+        next unless QuickHeadlines.shutting_down?
       end
     end
   end
