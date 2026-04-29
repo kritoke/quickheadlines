@@ -365,8 +365,8 @@ class FeedFetcher
 
   private def build_cached_feed(cached : FeedData, previous_data : FeedData?) : FeedData?
     if previous_data && (prev_favicon_data = previous_data.favicon_data)
-      favicon_path = FaviconStorage.favicon_dir + prev_favicon_data
-      if File.exists?(favicon_path)
+      favicon_path = FaviconStorage.disk_path(prev_favicon_data)
+      if favicon_path && File.exists?(favicon_path)
         favicon = prev_favicon_data.starts_with?("/favicons/") ? prev_favicon_data : cached.favicon
         return FeedData.new(
           title: cached.title,
@@ -386,8 +386,8 @@ class FeedFetcher
 
     cached_favicon = cached.favicon_data
     if cached_favicon.is_a?(String) && cached_favicon.starts_with?("/favicons/")
-      favicon_path = FaviconStorage.favicon_dir + cached_favicon
-      unless File.exists?(favicon_path)
+      favicon_path = FaviconStorage.disk_path(cached_favicon)
+      unless favicon_path && File.exists?(favicon_path)
         return FeedData.new(
           title: cached.title,
           url: cached.url,

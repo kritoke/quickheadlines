@@ -3,7 +3,7 @@
 	import TabSelector from '$lib/components/TabSelector.svelte';
 	import LayoutPicker from '$lib/components/LayoutPicker.svelte';
 	import BitsSearchModal from '$lib/components/BitsSearchModal.svelte';
-	import { fetchFeeds } from '$lib/api';
+	import { fetchFeeds, fetchTabs } from '$lib/api';
 	import type { TabResponse } from '$lib/types';
 	import {
 		createTimelineEffects,
@@ -66,9 +66,11 @@
 		const currentTab = $page.url?.searchParams.get('tab') ?? 'all';
 		
 		(async () => {
-			await loadTimeline(false, currentTab);
-			await loadTimelineConfig();
-			loadTabs();
+			await Promise.all([
+				loadTimeline(false, currentTab),
+				loadTimelineConfig(),
+				loadTabs()
+			]);
 			timelineEffects = createTimelineEffects();
 			timelineEffects.start();
 		})();
@@ -97,7 +99,7 @@
 
 	async function loadTabs() {
 		try {
-			const response = await fetchFeeds('all');
+			const response = await fetchTabs();
 			tabs = response.tabs;
 		} catch (e) {
 			logger.log('[Timeline] Failed to load tabs:', e);

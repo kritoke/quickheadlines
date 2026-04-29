@@ -8,9 +8,11 @@
 	interface Props {
 		items: StoryResponse[];
 		loading?: boolean;
+		error?: boolean;
+		onRetry?: () => void;
 	}
 
-	let { items, loading = false }: Props = $props();
+	let { items, loading = false, error = false, onRetry }: Props = $props();
 
 	let open = $state(false);
 </script>
@@ -18,6 +20,19 @@
 {#if loading}
 	<div class="p-4 px-3 text-center text-surface-500 dark:text-surface-400 text-sm">
 		Loading similar stories...
+	</div>
+{:else if error}
+	<div class="p-3 px-3 text-center border-t border-slate-200 dark:border-slate-700">
+		<p class="text-xs text-surface-500 dark:text-surface-400">Failed to load similar stories</p>
+		{#if onRetry}
+			<button
+				type="button"
+				onclick={onRetry}
+				class="mt-1 text-xs text-primary-500 hover:underline"
+			>
+				Retry
+			</button>
+		{/if}
 	</div>
 {:else if items.length > 0}
 	<Collapsible.Root bind:open class="border-t border-slate-200 dark:border-slate-700" data-name="cluster-expansion">

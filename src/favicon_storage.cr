@@ -26,6 +26,12 @@ module FaviconStorage
     @@favicon_dir.as(String)
   end
 
+  def self.disk_path(db_path : String) : String?
+    return unless db_path.starts_with?("/favicons/")
+    filename = db_path.lchop("/favicons")
+    File.join(favicon_dir, filename)
+  end
+
   def self.compute_favicon_dir : String
     File.join(get_cache_dir(nil), "favicons")
   end

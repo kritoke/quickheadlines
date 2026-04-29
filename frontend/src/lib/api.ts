@@ -113,7 +113,7 @@ export async function fetchClusters(): Promise<ClustersResponse> {
 
 export async function fetchClusterItems(clusterId: string): Promise<ClusterItemsResponse> {
 	const url = `${API_BASE}/clusters/${clusterId}/items`;
-	return apiFetch<ClusterItemsResponse>(url, { errorContext: 'Fetch Cluster Items' });
+	return apiFetch<ClusterItemsResponse>(url, { timeout: 10000, errorContext: 'Fetch Cluster Items' });
 }
 
 export async function fetchMoreFeedItems(

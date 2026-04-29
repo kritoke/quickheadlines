@@ -24,6 +24,7 @@
 	let expandedClusterId = $state<string | null>(null);
 	let clusterItems = $state<Record<string, TimelineItemResponse[]>>({});
 	let clusterLoading = $state<Record<string, boolean>>({});
+	let clusterErrors = $state<Record<string, boolean>>({});
 
 	let columns = $derived(layoutState.timelineColumns);
 
@@ -46,6 +47,7 @@
 
 		if (!clusterItems[item.cluster_id]) {
 			clusterLoading = { ...clusterLoading, [item.cluster_id]: true };
+			clusterErrors = { ...clusterErrors, [item.cluster_id]: false };
 			try {
 				const response = await fetchClusterItems(item.cluster_id);
 				clusterItems = {
@@ -67,11 +69,16 @@
 					}))
 				};
 			} catch (e) {
-				// Failed to fetch cluster items
+				clusterErrors = { ...clusterErrors, [item.cluster_id]: true };
 			} finally {
 				clusterLoading = { ...clusterLoading, [item.cluster_id]: false };
 			}
 		}
+	}
+
+	function retryCluster(item: TimelineItemResponse): void {
+		delete clusterItems[item.cluster_id!];
+		toggleCluster(item);
 	}
 
 
@@ -231,6 +238,8 @@
 							<ClusterExpansion
 								items={clusterItems[item.cluster_id] || []}
 								loading={clusterLoading[item.cluster_id]}
+								error={clusterErrors[item.cluster_id]}
+								onRetry={() => retryCluster(item)}
 							/>
 						{/if}
 					</div>
