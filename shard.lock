@@ -61,8 +61,8 @@ shards:
     version: 0.5.0
 
   azurite:
-    path: src/azurite
-    version: 0.1.0
+    git: https://github.com/kritoke/azurite.cr.git
+    version: 0.1.0+git.commit.cc6200b6e66d805fde41bb84716c3c58562071cb
 
   baked_file_system:
     git: https://github.com/schovi/baked_file_system.git

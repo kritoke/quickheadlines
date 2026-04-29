@@ -6,7 +6,7 @@ require "./content_service"
 require "./favicon_sync_service"
 require "../websocket"
 require "../fetcher/vug_adapter"
-require "../azurite/src/azurite"
+require "azurite"
 
 class AppBootstrap
   @config : Config
@@ -41,8 +41,15 @@ class AppBootstrap
     FeedFetcher.instance = FeedFetcher.new(@feed_cache)
     FeedFetcher.load_feeds_from_cache(@config)
 
-    content_db_path = File.join(get_cache_dir(@config), Azurite::Constants::CONTENT_DB_NAME)
-    content_store = Azurite::AzuriteStore.new(content_db_path)
+    content_db_path = File.join(get_cache_dir(@config), "content.db")
+    content_store = Azurite::Builder.new
+      .db_path(content_db_path)
+      .retention_days(Azurite::Constants::DEFAULT_RETENTION_DAYS)
+      .max_size_mb(Azurite::Constants::DEFAULT_MAX_SIZE_MB)
+      .warning_size_mb(Azurite::Constants::DEFAULT_WARNING_SIZE_MB)
+      .hard_limit_mb(Azurite::Constants::DEFAULT_HARD_LIMIT_MB)
+      .max_content_bytes(Azurite::Constants::DEFAULT_MAX_CONTENT_BYTES)
+      .build
     QuickHeadlines::Services::ContentService.instance = QuickHeadlines::Services::ContentService.new(content_store)
     content_store.cleanup_old_entries
     QuickHeadlines::Services::FeedService.content_store = content_store

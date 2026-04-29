@@ -31,6 +31,8 @@
 @import './lib/themes/matrix.css';
 @import './lib/themes/hotdog.css';
 
+@plugin '@tailwindcss/typography';
+
 @custom-variant dark (&:where(.dark, .dark *));
 
 

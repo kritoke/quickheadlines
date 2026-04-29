@@ -31,7 +31,7 @@ dependencies:
     github: kritoke/vug.cr
     version: "~> 0.5.2"
   azurite:
-    path: src/azurite
+    github: kritoke/azurite.cr
 
 development_dependencies:
   ameba:

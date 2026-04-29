@@ -1,4 +1,4 @@
-require "../azurite/src/azurite"
+require "azurite"
 
 module QuickHeadlines::Services
   class ContentService
@@ -12,9 +12,9 @@ module QuickHeadlines::Services
       @@instance = service
     end
 
-    @store : Azurite::AzuriteStore
+    @store : Azurite::Store
 
-    def initialize(@store : Azurite::AzuriteStore)
+    def initialize(@store : Azurite::Store)
     end
 
     def get_content(item_link : String) : String?
@@ -33,7 +33,7 @@ module QuickHeadlines::Services
       @store.check_size_and_cleanup
     end
 
-    def cleanup_old_entries(retention_days : Int32 = Azurite::Constants::CONTENT_RETENTION_DAYS) : Int32
+    def cleanup_old_entries(retention_days : Int32 = Azurite::Constants::DEFAULT_RETENTION_DAYS) : Int32
       @store.cleanup_old_entries(retention_days)
     end
 

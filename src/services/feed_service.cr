@@ -2,13 +2,13 @@ require "json"
 require "../models"
 require "../dtos/api_responses"
 require "../storage/feed_cache"
-require "../azurite/src/azurite"
+require "azurite"
 
 module QuickHeadlines::Services
   module FeedService
-    @@content_store : Azurite::AzuriteStore?
+    @@content_store : Azurite::Store?
 
-    def self.content_store=(store : Azurite::AzuriteStore)
+    def self.content_store=(store : Azurite::Store)
       @@content_store = store
     end
 

@@ -22,6 +22,7 @@
   },
   "dependencies": {
     "@sveltejs/kit": "^2.57.1",
+    "@tailwindcss/typography": "^0.5.19",
     "dompurify": "^3.4.1",
     "svelte": "^5.55.4",
     "typescript": "^5.9.3",
