@@ -41,6 +41,8 @@ class SocketManager
 
   def register(ws : HTTP::WebSocket, ip : String) : Bool
     @connections_mutex.synchronize do
+      purge_closed_connections
+
       if @connections.size >= QuickHeadlines::Constants::MAX_CONNECTIONS
         Log.for("quickheadlines.websocket").warn { "Connection rejected: max #{QuickHeadlines::Constants::MAX_CONNECTIONS} connections reached" }
         return false
@@ -162,6 +164,24 @@ class SocketManager
     # Don't call unregister_connection here - the channel close will trigger
     # writer_fiber's Channel::ClosedError which will call unregister_connection.
     # Calling it here would cause double-decrement of IP counts.
+  end
+
+  private def purge_closed_connections : Nil
+    @connections.each do |conn|
+      begin
+        if conn.websocket.closed?
+          @connections.delete(conn)
+          decrement_ip_count(conn.ip)
+          begin
+            conn.outgoing.close
+          rescue Channel::ClosedError
+          end
+        end
+      rescue ex
+        @connections.delete(conn)
+        decrement_ip_count(conn.ip)
+      end
+    end
   end
 
   def broadcast(message : String) : Nil

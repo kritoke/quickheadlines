@@ -21,7 +21,7 @@
 		const pageTitle = $page.url.searchParams.get('title');
 		
 		if (url) {
-			articleUrl = decodeURIComponent(url);
+			try { articleUrl = decodeURIComponent(url); } catch { articleUrl = url; }
 			title = pageTitle ? decodeURIComponent(pageTitle) : 'Article';
 			fetchContent();
 		} else {
@@ -132,7 +132,11 @@
 	}
 	
 	function handleBack() {
-		goto('/');
+		if (window.history.length > 1) {
+			window.history.back();
+		} else {
+			goto('/');
+		}
 	}
 	
 	function openOriginal() {
@@ -157,7 +161,7 @@
 		class="p-2.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
 		title="Back to feeds"
 	>
-		<svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 theme-text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+		<svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-surface-950 dark:text-surface-50" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
 			<path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
 		</svg>
 	</button>
@@ -168,7 +172,7 @@
 			class="p-2.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
 			title="Open original article"
 		>
-			<svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 theme-text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+			<svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-surface-950 dark:text-surface-50" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
 				<path stroke-linecap="round" stroke-linejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
 			</svg>
 		</button>
@@ -178,25 +182,25 @@
 <main class="pt-16 px-4 md:px-6 max-w-[1400px] mx-auto">
 	{#if loading}
 		<div class="flex items-center justify-center py-20">
-			<div class="w-8 h-8 border-4 theme-accent-border border-t-transparent rounded-full animate-spin"></div>
-			<span class="ml-4 theme-text-secondary">Loading article...</span>
+			<div class="w-8 h-8 border-4 border-primary-500 border-t-transparent rounded-full animate-spin"></div>
+			<span class="ml-4 text-surface-700 dark:text-surface-300">Loading article...</span>
 		</div>
 	{:else if error}
 		<div class="text-center py-20">
-			<svg xmlns="http://www.w3.org/2000/svg" class="w-12 h-12 mx-auto theme-text-tertiary mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+			<svg xmlns="http://www.w3.org/2000/svg" class="w-12 h-12 mx-auto text-surface-500 dark:text-surface-400 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
 				<path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
 			</svg>
-			<p class="theme-text-secondary mb-4">{error}</p>
+			<p class="text-surface-700 dark:text-surface-300 mb-4">{error}</p>
 			<button
 				onclick={handleBack}
-				class="px-4 py-2 rounded-lg theme-bg-secondary theme-text-primary theme-border"
+				class="px-4 py-2 rounded-lg bg-surface-100 dark:bg-surface-900 text-surface-950 dark:text-surface-50 border-surface-200 dark:border-surface-700"
 			>
 				Back to feeds
 			</button>
 		</div>
 	{:else if content}
 		<article class="py-6 max-w-4xl mx-auto">
-			<h1 class="text-2xl sm:text-3xl font-bold theme-text-primary mb-6">{title}</h1>
+			<h1 class="text-2xl sm:text-3xl font-bold text-surface-950 dark:text-surface-50 mb-6">{title}</h1>
 			
 			{#if isSummary}
 				<div class="mb-4 px-3 py-2 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700/50">
@@ -210,10 +214,10 @@
 			{/if}
 			
 			<div class="prose prose-slate dark:prose-invert max-w-none
-				prose-a:text-[var(--theme-accent)] prose-a:no-underline hover:prose-a:underline
-				prose-a:font-medium prose-headings:theme-text-primary
+				prose-a:text-[var(--color-primary-500)] prose-a:no-underline hover:prose-a:underline
+				prose-a:font-medium prose-headings:text-surface-950 dark:prose-headings:text-surface-50
 				prose-img:rounded-lg prose-pre:bg-slate-100 prose-pre:dark:bg-slate-800
-				prose-blockquote:border-l-[var(--theme-accent)]">
+				prose-blockquote:border-l-[var(--color-primary-500)]">
 				{@html content}
 			</div>
 			
@@ -222,7 +226,7 @@
 					href={articleUrl}
 					target="_blank"
 					rel="noopener noreferrer"
-					class="inline-flex items-center gap-2 px-4 py-2 rounded-lg theme-bg-secondary theme-text-primary theme-border hover:opacity-80 transition-opacity text-sm font-medium"
+					class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-surface-100 dark:bg-surface-900 text-surface-950 dark:text-surface-50 border-surface-200 dark:border-surface-700 hover:opacity-80 transition-opacity text-sm font-medium"
 				>
 					<svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
 						<path stroke-linecap="round" stroke-linejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
@@ -234,7 +238,7 @@
 						href={commentsUrl}
 						target="_blank"
 						rel="noopener noreferrer"
-						class="inline-flex items-center gap-2 px-4 py-2 rounded-lg theme-bg-secondary theme-text-primary theme-border hover:opacity-80 transition-opacity text-sm font-medium"
+						class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-surface-100 dark:bg-surface-900 text-surface-950 dark:text-surface-50 border-surface-200 dark:border-surface-700 hover:opacity-80 transition-opacity text-sm font-medium"
 					>
 						<svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
 							<path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />

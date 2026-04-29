@@ -46,7 +46,7 @@
     href="https://crystal-lang.org/"
     target="_blank"
     rel="noopener noreferrer"
-    class="text-xs text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300 transition-colors"
+    class="text-xs text-surface-500 dark:text-surface-400 hover:text-slate-700 dark:hover:text-slate-300 transition-colors"
   >
     Powered by Crystal
   </a>

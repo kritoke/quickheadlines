@@ -1,8 +1,6 @@
 <script lang="ts">
-	import { themeState, getScrollButtonColors } from '$lib/stores/theme.svelte';
 	import { getScrollContainer, getScrollTop } from '$lib/utils/scroll';
 	
-	let colors = $derived(getScrollButtonColors(themeState.theme));
 	let isMobile = $state(false);
 	let visible = $state(true);
 
@@ -51,7 +49,7 @@
 	type="button"
 	class="scroll-btn"
 	class:mobile={isMobile}
-	style="background-color: {colors.bg}; color: {colors.text}; z-index: 999999;"
+	style="background-color: var(--color-primary-500, #334155); color: #ffffff; z-index: 999999;"
 	aria-label="Scroll to top"
 	title="Back to top"
 	onclick={doScroll}

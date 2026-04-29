@@ -1,72 +1,106 @@
 <script lang="ts">
-	import { DropdownMenu } from 'bits-ui';
-	import { themeState, setTheme, themeStyles, getThemePreview, type ThemeStyle } from '$lib/stores/theme.svelte';
+	import { Popover, Portal } from '@skeletonlabs/skeleton-svelte';
+	import { themeState, setTheme, ALL_THEMES, isNoveltyTheme } from '$lib/stores/theme.svelte';
 
-	function selectTheme(theme: ThemeStyle) {
+	let searchQuery = $state('');
+
+	const standardThemes = ALL_THEMES.filter(t => !isNoveltyTheme(t));
+	const noveltyThemes = ALL_THEMES.filter(t => isNoveltyTheme(t));
+
+	let filteredStandard = $derived(
+		searchQuery
+			? standardThemes.filter(t => t.includes(searchQuery.toLowerCase()))
+			: standardThemes
+	);
+
+	let filteredNovelty = $derived(
+		searchQuery
+			? noveltyThemes.filter(t => t.includes(searchQuery.toLowerCase()))
+			: noveltyThemes
+	);
+
+	function selectTheme(theme: string) {
 		setTheme(theme);
 	}
-
-	function getPreview(themeId: ThemeStyle): string {
-		try {
-			const preview = getThemePreview(themeId);
-			return preview || 'linear-gradient(135deg, #94a3b8 50%, #64748b 50%)';
-		} catch {
-			return 'linear-gradient(135deg, #94a3b8 50%, #64748b 50%)';
-		}
-	}
-
-	let themePreviews = $derived(
-		themeStyles.reduce((acc, t) => {
-			acc[t.id] = getPreview(t.id);
-			return acc;
-		}, {} as Record<ThemeStyle, string>)
-	);
 </script>
 
-<DropdownMenu.Root>
-	<DropdownMenu.Trigger
-		class="flex items-center gap-1 p-2 rounded-lg transition-colors hover:opacity-80 text-slate-700 dark:text-slate-300 focus-visible:ring-2 focus-visible:ring-[var(--theme-accent)] focus-visible:ring-offset-1"
+<Popover>
+	<Popover.Trigger
+		class="flex items-center gap-1 p-2 rounded-lg transition-colors hover:opacity-80 text-surface-950 dark:text-surface-50 focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-1"
 		title="Theme"
 	>
 		<span
-			class="w-5 h-5 rounded-full border border-slate-300 dark:border-slate-600 shrink-0"
-			style="background: {themePreviews[themeState.theme]}"
+			class="w-5 h-5 rounded-full border border-surface-300 dark:border-surface-600 shrink-0"
+			style="background-color: var(--color-primary-500);"
 		></span>
 		<svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
 			<polyline points="6 9 12 15 18 9"/>
 		</svg>
 		<span class="sr-only">Select theme</span>
-	</DropdownMenu.Trigger>
+	</Popover.Trigger>
 
-	<DropdownMenu.Portal>
-	<DropdownMenu.Content
-		class="z-50 w-80 rounded-lg shadow-lg p-3 theme-bg-primary theme-border"
-		sideOffset={8}
-	>
-		<div class="pb-2 text-xs font-semibold uppercase tracking-wider opacity-70 theme-text-secondary">
-			Theme
-		</div>
-		<div class="grid grid-cols-2 gap-2">
-			{#each themeStyles as theme (theme.id)}
-				<DropdownMenu.Item
-					onSelect={() => selectTheme(theme.id)}
-					class="px-3 py-2 text-left hover:opacity-80 rounded-md transition-colors flex items-center gap-2 cursor-pointer outline-none {themeState.theme === theme.id ? 'theme-bg-secondary' : 'bg-transparent'}"
-				>
-						<span
-							class="w-4 h-4 rounded-full border border-slate-300 dark:border-slate-600 shrink-0"
-							style="background: {themePreviews[theme.id]}"
-						></span>
-						<div class="flex-1 min-w-0">
-							<div class="text-sm truncate theme-text-primary">{theme.name}</div>
-						</div>
-						{#if themeState.theme === theme.id}
-							<svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 shrink-0 theme-accent" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-								<polyline points="20 6 9 17 4 12"/>
-							</svg>
-						{/if}
-					</DropdownMenu.Item>
-			{/each}
-		</div>
-	</DropdownMenu.Content>
-	</DropdownMenu.Portal>
-</DropdownMenu.Root>
+	<Portal>
+		<Popover.Positioner>
+			<Popover.Content class="card bg-surface-100-900 w-80 shadow-xl p-3 z-[9999]">
+				<div class="pb-2">
+					<input
+						type="text"
+						bind:value={searchQuery}
+						placeholder="Search themes..."
+						class="w-full px-3 py-2 text-sm bg-surface-200 dark:bg-surface-800 border border-surface-300 dark:border-surface-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-surface-950 dark:text-surface-50 placeholder-surface-400"
+					/>
+				</div>
+
+				{#if filteredStandard.length > 0}
+					<div class="pb-1 text-xs font-semibold uppercase tracking-wider text-surface-500 dark:text-surface-400">
+						Standard
+					</div>
+					<div class="grid grid-cols-2 gap-2 mb-3">
+						{#each filteredStandard as theme (theme)}
+							<button
+								type="button"
+								onclick={() => selectTheme(theme)}
+								class="flex items-center gap-2 px-2 py-1.5 rounded-md transition-colors hover:bg-surface-200 dark:hover:bg-surface-800 cursor-pointer outline-none {themeState.theme === theme ? 'bg-surface-200 dark:bg-surface-800 ring-1 ring-primary-500' : ''}"
+							>
+								<span
+									class="w-4 h-4 rounded-full shrink-0"
+									data-theme={theme}
+									style="background-color: var(--color-primary-500);"
+								></span>
+								<span class="text-sm capitalize text-surface-950 dark:text-surface-50 truncate">{theme}</span>
+							</button>
+						{/each}
+					</div>
+				{/if}
+
+				{#if filteredNovelty.length > 0}
+					<div class="pb-1 text-xs font-semibold uppercase tracking-wider text-surface-500 dark:text-surface-400">
+						Novelty
+					</div>
+					<div class="grid grid-cols-2 gap-2">
+						{#each filteredNovelty as theme (theme)}
+							<button
+								type="button"
+								onclick={() => selectTheme(theme)}
+								class="flex items-center gap-2 px-2 py-1.5 rounded-md transition-colors hover:bg-surface-200 dark:hover:bg-surface-800 cursor-pointer outline-none {themeState.theme === theme ? 'bg-surface-200 dark:bg-surface-800 ring-1 ring-primary-500' : ''}"
+							>
+								<span
+									class="w-4 h-4 rounded-full shrink-0"
+									data-theme={theme}
+									style="background-color: var(--color-primary-500);"
+								></span>
+								<span class="text-sm capitalize text-surface-950 dark:text-surface-50 truncate">{theme}</span>
+							</button>
+						{/each}
+					</div>
+				{/if}
+
+				{#if searchQuery && filteredStandard.length === 0 && filteredNovelty.length === 0}
+					<div class="py-4 text-center text-sm text-surface-500 dark:text-surface-400">
+						No themes found
+					</div>
+				{/if}
+			</Popover.Content>
+		</Popover.Positioner>
+	</Portal>
+</Popover>

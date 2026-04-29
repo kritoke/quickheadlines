@@ -2,7 +2,7 @@ export type ThemeId = string;
 
 const SKELETON_PRESETS = ['catppuccin','cerberus','concord','crimson','fennec','hamlindigo','legacy','mint','modern','mona','nosh','nouveau','pine','reign','rocket','rose','sahara','seafoam','terminus','vintage','vox','wintry'] as const;
 const NOVELTY_THEMES = ['matrix','hotdog'] as const;
-const CUSTOM_DARK_THEMES = ['matrix','hotdog'] as const;
+const CUSTOM_DARK_THEMES = ['matrix'] as const;
 
 const LEGACY_THEME_MAP: Record<string, string> = {
 	light: 'modern',
@@ -57,21 +57,23 @@ export const themeState = $state({
 	mounted: false
 });
 
-export function getThemeColors(): { primary: string; surface: string; contrast: string } {
+export function getThemeColors(): { primary: string; surface: string; contrast: string; bgSecondary: string; accent: string } {
 	const style = getComputedStyle(document.documentElement);
 	return {
 		primary: style.getPropertyValue('--color-primary-500').trim() || '#3b82f6',
 		surface: style.getPropertyValue('--color-surface-50').trim() || '#ffffff',
-		contrast: style.getPropertyValue('--color-surface-contrast-light').trim() || '#000000'
+		contrast: style.getPropertyValue('--color-surface-contrast-light').trim() || '#000000',
+		bgSecondary: style.getPropertyValue('--color-secondary-100').trim() || '#e2e8f0',
+		accent: style.getPropertyValue('--color-secondary-500').trim() || '#64748b'
 	};
 }
 
 export function getCursorColors(): { primary: string; trail: string } {
 	const style = getComputedStyle(document.documentElement);
-	const primary = style.getPropertyValue('--color-primary-500').trim() || '#64748b';
+	const secondary = style.getPropertyValue('--color-secondary-500').trim() || '#64748b';
 	return {
-		primary,
-		trail: primary + '4D'
+		primary: secondary,
+		trail: secondary + '4D'
 	};
 }
 

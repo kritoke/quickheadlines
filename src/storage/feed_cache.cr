@@ -1,4 +1,5 @@
 require "db"
+require "../models"
 require "sqlite3"
 require "mutex"
 require "time"
@@ -256,17 +257,20 @@ def save_feed_cache(cache : FeedCache, retention_hours : Int32 = QuickHeadlines:
 
   now = Time.utc
   if now - QuickHeadlines::Storage.last_cache_cleanup >= 1.hour
-    begin
-      cache.vacuum
-    rescue ex
-      Log.for("quickheadlines.storage").warn { "vacuum failed: #{ex.message}" }
-    end
+      begin
+        cache.vacuum
+      rescue ex : Exception
+        if ex.message.try(&.includes?("database is locked")) || ex.message.try(&.includes?("database locked"))
+          Log.for("quickheadlines.storage").warn { "Periodic VACUUM skipped - database is locked (refresh in progress)" }
+        else
+          Log.for("quickheadlines.storage").warn { "vacuum failed: #{ex.message}" }
+        end
+      end
 
-    # Ensure WAL is truncated after vacuum to reclaim disk space
-    cache.cleanup_store.ensure_wal_checkpoint
+      cache.cleanup_store.ensure_wal_checkpoint
 
-    cache.cleanup_old_entries(retention_hours)
-    cache.cleanup_old_articles(QuickHeadlines::Constants::CACHE_RETENTION_DAYS)
-    QuickHeadlines::Storage.last_cache_cleanup = now
+      cache.cleanup_old_entries(retention_hours)
+      cache.cleanup_old_articles(QuickHeadlines::Constants::CACHE_RETENTION_DAYS)
+      QuickHeadlines::Storage.last_cache_cleanup = now
   end
 end

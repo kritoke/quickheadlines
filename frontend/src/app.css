@@ -4,13 +4,36 @@
 @import '@skeletonlabs/skeleton-common';
 
 /* Register Skeleton preset themes */
-@import '@skeletonlabs/skeleton/themes/modern';
+@import './lib/themes/skeleton/catppuccin.css';
+@import './lib/themes/skeleton/cerberus.css';
+@import './lib/themes/skeleton/concord.css';
+@import './lib/themes/skeleton/crimson.css';
+@import './lib/themes/skeleton/fennec.css';
+@import './lib/themes/skeleton/hamlindigo.css';
+@import './lib/themes/skeleton/legacy.css';
+@import './lib/themes/skeleton/mint.css';
+@import './lib/themes/skeleton/modern.css';
+@import './lib/themes/skeleton/mona.css';
+@import './lib/themes/skeleton/nosh.css';
+@import './lib/themes/skeleton/nouveau.css';
+@import './lib/themes/skeleton/pine.css';
+@import './lib/themes/skeleton/reign.css';
+@import './lib/themes/skeleton/rocket.css';
+@import './lib/themes/skeleton/rose.css';
+@import './lib/themes/skeleton/sahara.css';
+@import './lib/themes/skeleton/seafoam.css';
+@import './lib/themes/skeleton/terminus.css';
+@import './lib/themes/skeleton/vintage.css';
+@import './lib/themes/skeleton/vox.css';
+@import './lib/themes/skeleton/wintry.css';
 
 /* Register custom novelty themes */
 @import './lib/themes/matrix.css';
 @import './lib/themes/hotdog.css';
 
 @custom-variant dark (&:where(.dark, .dark *));
+
+
 
 @keyframes fade-in {
 	from { opacity: 0; }

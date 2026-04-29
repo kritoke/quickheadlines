@@ -117,7 +117,7 @@
 	<title>Timeline - QuickHeadlines</title>
 </svelte:head>
 
-<div class="min-h-screen theme-bg-primary transition-colors">
+<div class="bg-surface-50 dark:bg-surface-950 transition-colors">
 	<AppHeader 
 		title="QuickHeadlines"
 		tabs={tabs}
@@ -128,7 +128,7 @@
 		onSearchToggle={toggleSearch}
 		onLogoClick={handleLogoClick}
 	>
-		<span class="text-sm text-slate-500 dark:text-slate-400">
+		<span class="text-sm text-surface-500 dark:text-surface-400">
 			{filteredItems.length} items
 		</span>
 		
@@ -138,7 +138,7 @@
 	</AppHeader>
 
 	{#if tabs.length > 0}
-		<div class="md:hidden fixed top-14 left-0 right-0 z-40 theme-bg-primary border-b theme-border">
+		<div class="md:hidden fixed top-14 left-0 right-0 z-40 bg-surface-50 dark:bg-surface-950 border-b border-surface-200 dark:border-surface-700">
 			<TabSelector 
 				tabs={tabs}
 				activeTab={timelineState.tabName}
@@ -161,8 +161,8 @@
 		
 		{#if loading && timelineState.items.length === 0}
 			<div class="flex items-center justify-center py-24 gap-3">
-				<div class="w-6 h-6 border-2 theme-accent-border border-t-transparent rounded-full animate-spin"></div>
-				<span class="theme-text-secondary">Loading timeline...</span>
+				<div class="w-6 h-6 border-2 border-primary-500 border-t-transparent rounded-full animate-spin"></div>
+				<span class="text-surface-700 dark:text-surface-300">Loading timeline...</span>
 			</div>
 		{:else if error && timelineState.items.length === 0}
 			{#if timelineState.retryAfterMs > 0}
@@ -183,9 +183,9 @@
 			{/if}
 		{:else}
 			{#if loading && timelineState.items.length > 0}
-				<div class="sticky top-[var(--header-height,3.5rem)] z-20 theme-bg-primary/90 backdrop-blur-sm py-3 flex items-center justify-center gap-2 border-b theme-border">
-					<div class="w-4 h-4 border-2 theme-accent-border border-t-transparent rounded-full animate-spin"></div>
-					<span class="text-sm theme-text-secondary">Refreshing...</span>
+				<div class="sticky top-[var(--header-height,3.5rem)] z-20 bg-surface-50 dark:bg-surface-950/90 backdrop-blur-sm py-3 flex items-center justify-center gap-2 border-b border-surface-200 dark:border-surface-700">
+					<div class="w-4 h-4 border-2 border-primary-500 border-t-transparent rounded-full animate-spin"></div>
+					<span class="text-sm text-surface-700 dark:text-surface-300">Refreshing...</span>
 				</div>
 			{/if}
 
