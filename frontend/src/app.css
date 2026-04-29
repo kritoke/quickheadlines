@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@plugin '@tailwindcss/typography';
 
 @import '@skeletonlabs/skeleton';
 @import '@skeletonlabs/skeleton-common';
@@ -30,8 +31,6 @@
 /* Register custom novelty themes */
 @import './lib/themes/matrix.css';
 @import './lib/themes/hotdog.css';
-
-@plugin '@tailwindcss/typography';
 
 @custom-variant dark (&:where(.dark, .dark *));
 
