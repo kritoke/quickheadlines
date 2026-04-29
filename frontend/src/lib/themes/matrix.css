@@ -184,11 +184,15 @@
 	--color-surface-300: oklch(55% 0.08 142);
 	--color-surface-400: oklch(40% 0.06 142);
 	--color-surface-500: oklch(30% 0.04 142);
-	--color-surface-600: oklch(22% 0.03 150);
-	--color-surface-700: oklch(16% 0.02 150);
-	--color-surface-800: oklch(10% 0.015 150);
-	--color-surface-900: oklch(6% 0.01 150);
-	--color-surface-950: oklch(3% 0.005 150);
-	--color-surface-contrast-dark: oklch(3% 0.005 150);
+	--color-surface-600: oklch(22% 0.03 142);
+	--color-surface-700: oklch(16% 0.02 142);
+	--color-surface-800: oklch(10% 0.015 142);
+	--color-surface-900: oklch(6% 0.01 142);
+	--color-surface-950: oklch(3% 0.005 142);
+	--color-surface-contrast-dark: oklch(3% 0.005 142);
 	--color-surface-contrast-light: oklch(87% 0.18 142);
+}
+
+[data-theme='matrix'] .tab-label {
+	font-weight: bold;
 }

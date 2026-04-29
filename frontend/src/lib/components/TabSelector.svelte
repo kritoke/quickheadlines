@@ -71,7 +71,7 @@
 							: 'text-surface-700 dark:text-surface-300 hover:bg-surface-100/50 dark:hover:bg-surface-800/50'
 					)}
 				>
-					{tab.name === 'all' ? 'All' : tab.name}
+					<span class="tab-label">{tab.name === 'all' ? 'All' : tab.name}</span>
 				</Tabs.Trigger>
 			{/each}
 
