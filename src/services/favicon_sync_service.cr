@@ -66,6 +66,15 @@ class FaviconSyncService
       favicon_data = nil
     end
 
+    if favicon_data && favicon_data.starts_with?("/favicons/")
+      favicon_path = FaviconStorage.favicon_dir + favicon_data
+      unless File.exists?(favicon_path)
+        Log.for("quickheadlines.cache").debug { "Missing favicon file on disk: #{favicon_path} for #{url}" }
+        favicon_data = nil
+        clear_favicon = true
+      end
+    end
+
     if favicon && favicon_data.nil? && favicon.starts_with?("/favicons/")
       sync_favicon_data = favicon
     end

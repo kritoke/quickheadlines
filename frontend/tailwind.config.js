@@ -6,5 +6,7 @@ export default {
 		'./src/routes/**/*.svelte'
 	],
 	darkMode: 'class',
-	plugins: []
+	plugins: [
+		require('@tailwindcss/typography')
+	]
 };
