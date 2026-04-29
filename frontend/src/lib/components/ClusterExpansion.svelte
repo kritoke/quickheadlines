@@ -14,7 +14,7 @@
 
 	let { items, loading = false, error = false, onRetry }: Props = $props();
 
-	let open = $state(false);
+	let open = $state(true);
 </script>
 
 {#if loading}
