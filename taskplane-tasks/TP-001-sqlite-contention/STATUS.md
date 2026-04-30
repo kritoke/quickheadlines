@@ -47,3 +47,5 @@ _(worker fills this in)_
 
 | 2026-04-30 10:22 | Task started | Runtime V2 lane-runner execution |
 | 2026-04-30 10:40 | Task complete | Build passes, all steps complete
+| 2026-04-30 10:30 | Worker iter 1 | done in 462s, tools: 56 |
+| 2026-04-30 10:30 | Task complete | .DONE created |
