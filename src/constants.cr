@@ -30,7 +30,7 @@ module QuickHeadlines::Constants
 
   MAX_REQUEST_BODY_SIZE = 1_048_576
 
-  MAX_PARALLEL_CLUSTERING    =  20
+  MAX_PARALLEL_CLUSTERING    =   6
   CLUSTERING_TIMEOUT_SECONDS = 300
   FEED_FETCH_TIMEOUT_SECONDS = 300
 
@@ -63,7 +63,9 @@ module QuickHeadlines::Constants
 
   NORMALIZE_BATCH_SIZE =  500
   MAX_FEED_ITEMS_LOAD  = 1000
-  DB_MAX_POOL_SIZE     =    3
+  DB_MAX_POOL_SIZE     =   12
+  # WAL checkpoint threshold - smaller value = more frequent checkpoints = less WAL growth
+  WAL_AUTOCHECKPOINT_PAGES = 1000
 
   CLUSTER_TITLE_TRUNCATE_LENGTH = 50
 
