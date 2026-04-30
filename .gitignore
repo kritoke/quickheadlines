@@ -115,3 +115,6 @@ openspec/
 
 # Roadmap planning documents (not for commit)
 /roadmap/
+
+# Taskplane task files
+.taskplane-tasks/

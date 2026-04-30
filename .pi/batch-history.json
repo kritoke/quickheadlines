@@ -1,0 +1,105 @@
+[
+  {
+    "batchId": "20260430T052235",
+    "status": "completed",
+    "startedAt": 1777544555701,
+    "endedAt": 1777545525046,
+    "durationMs": 969345,
+    "totalWaves": 2,
+    "totalTasks": 3,
+    "succeededTasks": 1,
+    "failedTasks": 0,
+    "skippedTasks": 0,
+    "blockedTasks": 0,
+    "tokens": {
+      "input": 76270,
+      "output": 10231,
+      "cacheRead": 2732352,
+      "cacheWrite": 0,
+      "costUsd": 0.19909931999999997
+    },
+    "tasks": [
+      {
+        "taskId": "TP-001",
+        "taskName": "TP-001",
+        "status": "succeeded",
+        "wave": 1,
+        "lane": 1,
+        "durationMs": 461972,
+        "tokens": {
+          "input": 76270,
+          "output": 10231,
+          "cacheRead": 2732352,
+          "cacheWrite": 0,
+          "costUsd": 0.19909931999999997
+        },
+        "exitReason": ".DONE file created by lane-runner"
+      },
+      {
+        "taskId": "TP-002",
+        "taskName": "TP-002",
+        "status": "pending",
+        "wave": 2,
+        "lane": 0,
+        "durationMs": 0,
+        "tokens": {
+          "input": 0,
+          "output": 0,
+          "cacheRead": 0,
+          "cacheWrite": 0,
+          "costUsd": 0
+        },
+        "exitReason": null
+      },
+      {
+        "taskId": "TP-003",
+        "taskName": "TP-003",
+        "status": "pending",
+        "wave": 2,
+        "lane": 0,
+        "durationMs": 0,
+        "tokens": {
+          "input": 0,
+          "output": 0,
+          "cacheRead": 0,
+          "cacheWrite": 0,
+          "costUsd": 0
+        },
+        "exitReason": null
+      }
+    ],
+    "waves": [
+      {
+        "wave": 1,
+        "tasks": [
+          "TP-001"
+        ],
+        "mergeStatus": "partial",
+        "durationMs": 461972,
+        "tokens": {
+          "input": 76270,
+          "output": 10231,
+          "cacheRead": 2732352,
+          "cacheWrite": 0,
+          "costUsd": 0.19909931999999997
+        }
+      },
+      {
+        "wave": 2,
+        "tasks": [
+          "TP-002",
+          "TP-003"
+        ],
+        "mergeStatus": "skipped",
+        "durationMs": 0,
+        "tokens": {
+          "input": 0,
+          "output": 0,
+          "cacheRead": 0,
+          "cacheWrite": 0,
+          "costUsd": 0
+        }
+      }
+    ]
+  }
+]

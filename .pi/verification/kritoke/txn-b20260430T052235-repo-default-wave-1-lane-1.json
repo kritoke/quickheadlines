@@ -1,0 +1,16 @@
+{
+  "opId": "kritoke",
+  "batchId": "20260430T052235",
+  "waveIndex": 1,
+  "laneNumber": 1,
+  "repoId": null,
+  "baseHEAD": "69dfba67a6d0fbdd5f60149db83ea1afbb0817d5",
+  "laneHEAD": "609484e51e83cee2edb9649953eeff5ea9a13fbc",
+  "mergedHEAD": "69dfba67a6d0fbdd5f60149db83ea1afbb0817d5",
+  "status": "committed",
+  "rollbackAttempted": false,
+  "rollbackResult": null,
+  "recoveryCommands": [],
+  "startedAt": "2026-04-30T10:41:01.211Z",
+  "completedAt": "2026-04-30T10:42:39.505Z"
+}

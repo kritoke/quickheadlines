@@ -1,0 +1,26 @@
+{
+  "configVersion": 1,
+  "taskRunner": {
+    "project": {
+      "name": "quickheadlines",
+      "description": ""
+    },
+    "paths": {
+      "tasks": ".taskplane-tasks"
+    },
+    "testing": {
+      "commands": {
+        "build": "just nix-build",
+        "lint": "ameba src/",
+        "test": "crystal spec"
+      }
+    },
+    "taskAreas": {
+      "general": {
+        "path": ".taskplane-tasks",
+        "prefix": "TP",
+        "context": ".taskplane-tasks/CONTEXT.md"
+      }
+    }
+  }
+}

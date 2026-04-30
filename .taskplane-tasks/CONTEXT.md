@@ -30,7 +30,7 @@ Wave plan: Wave 1 → TP-001, Wave 2 → TP-002 + TP-003 (parallel)
 
 | Category | Path |
 |----------|------|
-| Tasks | `taskplane-tasks/` |
+| Tasks | `..taskplane-tasks/` |
 | Config | `.pi/taskplane-config.json` |
 | Feed Config | `feeds.yml` |
 | Source | `src/` |
