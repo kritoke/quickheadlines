@@ -191,7 +191,7 @@
 									</h3>
 								</button>
 							{:else}
-								<h3 class="text-base font-medium text-surface-950 dark:text-surface-50 line-clamp-2">
+								<h3 class="text-base font-medium text-surface-950 dark:text-surface-50 line-clamp-2 item-title">
 									<a
 										href={sanitizeUrl(item.link)}
 										target="_blank"
@@ -200,7 +200,7 @@
 									>{item.title}</a>
 								</h3>
 							{/if}
-							<div class="flex items-center gap-2 mt-1">
+							<div class="flex items-center gap-2 mt-1 meta-text">
 								<p class="text-sm text-surface-700 dark:text-surface-300">
 									{formatTimestamp(item.pub_date)}
 								</p>
@@ -210,7 +210,7 @@
 										target="_blank"
 										rel="noopener noreferrer"
 										title="Comments"
-										class="p-0.5 hover:opacity-80 transition-opacity"
+										class="p-0.5 hover:opacity-80 transition-opacity comment-icon"
 									>
 										<svg class="w-4 h-4 text-surface-700 dark:text-surface-300" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
 											<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>

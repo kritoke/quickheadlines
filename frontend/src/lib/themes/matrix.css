@@ -201,16 +201,28 @@
 	color: #00ff00;
 }
 
+[data-theme='matrix'] .timeline-item .item-title a {
+	color: #00ff00;
+}
+
+[data-theme='matrix'] .timeline-item .item-title a:hover {
+	color: #00ff00;
+	text-decoration: underline;
+}
+
 [data-theme='matrix'] .timeline-item .item-meta {
 	color: #00cc00;
 }
 
-[data-theme='matrix'] .timeline-item .cluster-badge {
-	background-color: rgba(0, 255, 0, 0.2);
+[data-theme='matrix'] .timeline-item .comment-icon {
 	color: #00ff00;
 }
 
-[data-theme='matrix'] .timeline-item .comment-icon {
+[data-theme='matrix'] .timeline-item .meta-text {
+	color: #00cc00;
+}
+
+[data-theme='matrix'] .timeline-item .meta-text a {
 	color: #00ff00;
 }
 
