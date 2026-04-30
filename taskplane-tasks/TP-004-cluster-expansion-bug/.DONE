@@ -1,0 +1,27 @@
+# TP-004: Fix Cluster Expansion Flashes Then Disappears
+
+**Completed:** 2026-04-30 11:15 UTC
+
+## Summary
+Fixed the cluster expansion UI bug where clicking a clustered story's "N sources" button briefly flashes the expanded content then immediately disappears.
+
+## Root Cause
+`ClusterExpansion.svelte` had local `open = $state(true)` state independent of the parent's `expandedClusterId`. When the parent re-rendered after fetch completed, the component's local state reset, causing the Collapsible to collapse.
+
+## Solution
+- Made `open` prop required in `ClusterExpansion.svelte`
+- Parent passes `open={expandedClusterId === item.cluster_id}` (derived from its own state)
+- Component initializes `localOpen = false` and syncs via `$effect` to prevent flash-and-disappear
+
+## Verification
+| Check | Status |
+|-------|--------|
+| Frontend tests (`npm run test`) | ✅ 26/26 passed |
+| Frontend build (`npm run build`) | ✅ Pass |
+| Crystal build (`just nix-build`) | ✅ Pass |
+| Branch pushed | ✅ `task/kritoke-lane-2-20260430T055157` |
+
+## Commits
+- `c3d8e4a5` - feat(TP-004): fix cluster expansion flash-then-disappear bug
+- `b4c7a445` - fix: resolve enforce_size_limits → check_size_and_cleanup method name
+- `5aaf33a3` - chore(TP-004): update status to reflect completion
