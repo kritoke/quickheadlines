@@ -17,7 +17,6 @@
 
 **Root Cause Identified:** In `ClusterExpansion.svelte`, the local `open = $state(true)` state is independent from the parent's `expandedClusterId` state. When the parent re-renders (e.g., after fetch completes), the component's local `open` state resets. The Skeleton Collapsible component relies on this local state, so when it resets, the content collapses even though the parent is still rendering the expansion.
 **Iteration:** 2
-**Current Step:** Step 0: Preflight
 
 **Fix:** Use a derived state from props to control the open state, ensuring the expansion stays open based on the parent's `expandedClusterId`, not local state.
 
