@@ -16,7 +16,8 @@
 - [x] Look for Skeleton layout observer/resize handler
 
 **Root Cause Identified:** In `ClusterExpansion.svelte`, the local `open = $state(true)` state is independent from the parent's `expandedClusterId` state. When the parent re-renders (e.g., after fetch completes), the component's local `open` state resets. The Skeleton Collapsible component relies on this local state, so when it resets, the content collapses even though the parent is still rendering the expansion.
-**Iteration:** 2
+**Current Step:** Step 0: Preflight
+**Iteration:** 3
 
 **Fix:** Use a derived state from props to control the open state, ensuring the expansion stays open based on the parent's `expandedClusterId`, not local state.
 
@@ -53,3 +54,9 @@ _(worker fills this in)_
 | 2026-04-30 11:03 | Worker iter 1 | done in 666s, tools: 87 |
 | 2026-04-30 11:03 | Step 0 started | Preflight |
 | 2026-04-30 11:05 | Step 0 complete | Build issue: enforce_size_limits → check_size_and_cleanup |
+| 2026-04-30 11:15 | Exit intercept reprompt | Supervisor provided instructions (229 chars) — reprompting worker |
+| 2026-04-30 11:16 | Exit intercept reprompt | Supervisor provided instructions (56 chars) — reprompting worker |
+| 2026-04-30 11:17 | Exit intercept close | Supervisor directed session close: "skip" |
+| 2026-04-30 11:17 | Worker iter 2 | done in 864s, tools: 66 |
+| 2026-04-30 11:17 | No progress | Iteration 2: 0 new checkboxes (1/3 stall limit) |
+| 2026-04-30 11:17 | Step 0 started | Preflight |
