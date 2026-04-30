@@ -10,11 +10,22 @@
 		loading?: boolean;
 		error?: boolean;
 		onRetry?: () => void;
+		open: boolean;  // Required - parent controls open state
 	}
 
-	let { items, loading = false, error = false, onRetry }: Props = $props();
+	let { items, loading = false, error = false, onRetry, open }: Props = $props();
 
-	let open = $state(true);
+	// Track open state locally to avoid re-render issues.
+	// The Collapsible manages its own open state internally via zag-js.
+	// We sync with the parent's open prop but don't bind - this prevents
+	// the flash-and-disappear where local state resets during re-renders.
+	// Initialize localOpen with the current open value.
+	let localOpen = $state(false);
+
+	// Initialize from prop on mount
+	$effect(() => {
+		localOpen = open;
+	});
 </script>
 
 {#if loading}
@@ -35,7 +46,7 @@
 		{/if}
 	</div>
 {:else if items.length > 0}
-	<Collapsible.Root bind:open class="border-t border-slate-200 dark:border-slate-700" data-name="cluster-expansion">
+	<Collapsible.Root bind:open={localOpen} class="border-t border-slate-200 dark:border-slate-700" data-name="cluster-expansion">
 		<Collapsible.Trigger class="w-full">
 			<div class="flex items-center justify-between p-4 px-3 bg-slate-50 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
 				<span class="text-xs font-medium text-surface-600 dark:text-surface-400">
