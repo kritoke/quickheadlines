@@ -11,6 +11,7 @@ module QuickHeadlines::Storage
 
     # Called at startup and periodically to ensure WAL doesn't grow unbounded
     def ensure_wal_checkpoint
+      @mutex.synchronize { perform_wal_checkpoint(truncate: false) }
     end
 
     def cleanup_old_entries(retention_hours : Int32 = QuickHeadlines::Constants::CACHE_RETENTION_HOURS, config_urls : Array(String)? = nil)
@@ -117,7 +118,21 @@ module QuickHeadlines::Storage
       end
     end
 
+    private def perform_wal_checkpoint(truncate : Bool)
+      wal_size = wal_file_size
+      if truncate || wal_size > MAX_WAL_SIZE_BEFORE_TRUNCATE
+        Log.for("quickheadlines.storage").warn { "WAL file size (#{wal_size / (1024 * 1024)}MB) exceeds limit or truncate requested, checkpointing with TRUNCATE" }
+        @db.exec("PRAGMA wal_checkpoint(TRUNCATE)")
+      elsif wal_size > 0
+        @db.exec("PRAGMA wal_checkpoint(PASSIVE)")
+        Log.for("quickheadlines.storage").debug { "WAL checkpoint performed, size: #{wal_size / (1024 * 1024)}MB" }
+      end
+    rescue ex : Exception
+      Log.for("quickheadlines.storage").warn { "WAL checkpoint failed: #{ex.message}" }
+    end
+
     private def run_wal_checkpoint
+      perform_wal_checkpoint(truncate: false)
     end
 
     private def actual_wal_file_size : Int64
