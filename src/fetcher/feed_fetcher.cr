@@ -97,6 +97,22 @@ class FeedFetcher
       return cached_data
     end
 
+    # Hard wall-clock timeout for entire fetch operation to prevent semaphore exhaustion
+    timeout_seconds = QuickHeadlines::Constants::FETCH_TIMEOUT_SECONDS
+    result = select
+    when timeout(timeout_seconds.seconds)
+      Log.for("quickheadlines.feed").warn { "fetch_feed(#{feed.url}) exceeded #{timeout_seconds}s wall-clock limit, aborting" }
+      if stale_cache = get_stale_cached_feed(feed, effective_item_limit, previous_data)
+        stale_cache
+      else
+        build_error_feed(feed, "Error: Fetch timeout after #{timeout_seconds}s")
+      end
+    else
+      do_fetch_with_retry(feed, effective_item_limit, db_fetch_limit, previous_data)
+    end
+  end
+
+  private def do_fetch_with_retry(feed : Feed, effective_item_limit : Int32, db_fetch_limit : Int32, previous_data : FeedData?) : FeedData
     current_url = feed.url
     redirects = 0
     retries = 0
@@ -120,7 +136,7 @@ class FeedFetcher
           return handle_error(result, feed, effective_item_limit, previous_data)
         end
       rescue IO::TimeoutError
-        Log.for("quickheadlines.feed").warn { "fetch_feed(#{feed.url}) timeout after 60s" }
+        Log.for("quickheadlines.feed").warn { "fetch_feed(#{feed.url}) timeout after #{QuickHeadlines::Constants::HTTP_READ_TIMEOUT}s" }
         retries = handle_timeout_error(feed, retries)
       rescue ex
         error_result = handle_fetch_exception(ex, feed, effective_item_limit, previous_data, retries)
