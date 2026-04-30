@@ -2,6 +2,7 @@
 
 ## Current Step: Step 3
 ## Status: ✅ Complete
+## Progress: 100%
 
 ### Step 0: Preflight
 - [x] Verify PROMPT.md is readable
@@ -10,6 +11,7 @@
 
 **Identified issues:**
 - Line 133-134: `next unless shutting_down?; next` (after refresh-already-in-progress sleep)
+**Status:** ✅ Complete
 - Line 164-165: `next unless shutting_down?; next` (after config-change refresh sleep)
 - Line 193-194: `next unless shutting_down?; next` (in rescue block)
 
@@ -48,3 +50,5 @@ _(worker fills this in)_
 - [x] No other changes to refresh loop behavior
 
 **Note:** The build fails due to uncommitted changes in `lib/azurite/` (removed `enforce_size_limits` method), unrelated to TP-003 shutdown fix.
+| 2026-04-30 10:59 | Worker iter 1 | done in 451s, tools: 52 |
+| 2026-04-30 10:59 | Task complete | .DONE created |
