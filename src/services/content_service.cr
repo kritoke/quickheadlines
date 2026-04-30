@@ -30,7 +30,7 @@ module QuickHeadlines::Services
     end
 
     def check_size_and_cleanup
-      @store.check_size_and_cleanup
+      @store.enforce_size_limits
     end
 
     def cleanup_old_entries(retention_days : Int32 = Azurite::Constants::DEFAULT_RETENTION_DAYS) : Int32
