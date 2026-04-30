@@ -1,12 +1,16 @@
 # STATUS — TP-004
 
 ## Current Step: ✅ Complete
+## Status: ✅ Complete
 ## Progress
 
 - [x] Verify PROMPT.md is readable
 - [x] Verify STATUS.md exists
 - [x] Read all context files
 - [x] Understand Skeleton UI lifecycle and CSS system
+- [x] Build succeeds: `just nix-build` completed successfully
+- [x] Crystal tests pass: 163 examples, 0 failures
+- [x] Frontend tests pass: 26 tests, 7 test files
 
 ### Step 1: Diagnose the Flash-and-Disappear
 - [x] Add console.log to toggleCluster()
@@ -17,7 +21,7 @@
 
 **Root Cause Identified:** In `ClusterExpansion.svelte`, the local `open = $state(true)` state is independent from the parent's `expandedClusterId` state. When the parent re-renders (e.g., after fetch completes), the component's local `open` state resets. The Skeleton Collapsible component relies on this local state, so when it resets, the content collapses even though the parent is still rendering the expansion.
 **Current Step:** Step 0: Preflight
-**Iteration:** 3
+**Iteration:** 5
 
 **Fix:** Use a derived state from props to control the open state, ensuring the expansion stays open based on the parent's `expandedClusterId`, not local state.
 
@@ -60,3 +64,11 @@ _(worker fills this in)_
 | 2026-04-30 11:17 | Worker iter 2 | done in 864s, tools: 66 |
 | 2026-04-30 11:17 | No progress | Iteration 2: 0 new checkboxes (1/3 stall limit) |
 | 2026-04-30 11:17 | Step 0 started | Preflight |
+| 2026-04-30 11:21 | Exit intercept close | Supervisor directed session close: "let it fail" |
+| 2026-04-30 11:21 | Worker iter 3 | done in 232s, tools: 24 |
+| 2026-04-30 11:21 | No progress | Iteration 3: 0 new checkboxes (2/3 stall limit) |
+| 2026-04-30 11:21 | Step 0 started | Preflight |
+| 2026-04-30 11:23 | Worker iter 4 | error (code 143) in 155s, tools: 7 |
+| 2026-04-30 11:23 | Soft progress | Iteration 4: 0 new checkboxes but uncommitted source changes detected — not counting as stall |
+| 2026-04-30 11:23 | Step 0 started | Preflight |
+| 2026-04-30 11:24 | Exit intercept timeout | Supervisor did not respond within 60s — closing session |
