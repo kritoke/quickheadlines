@@ -16,6 +16,8 @@
 - [x] Look for Skeleton layout observer/resize handler
 
 **Root Cause Identified:** In `ClusterExpansion.svelte`, the local `open = $state(true)` state is independent from the parent's `expandedClusterId` state. When the parent re-renders (e.g., after fetch completes), the component's local `open` state resets. The Skeleton Collapsible component relies on this local state, so when it resets, the content collapses even though the parent is still rendering the expansion.
+**Iteration:** 2
+**Current Step:** Step 0: Preflight
 
 **Fix:** Use a derived state from props to control the open state, ensuring the expansion stays open based on the parent's `expandedClusterId`, not local state.
 
@@ -40,13 +42,15 @@
 
 | Date | Discovery |
 |------|-----------|
-| 2026-04-30 05:59 | **Root Cause:** The `ClusterExpansion.svelte` had a local `open = $state(true)` state independent of the parent's `expandedClusterId`. When the parent re-rendered (e.g., after fetch completes), the local state was not preserved, causing the Collapsible to collapse. |
-| 2026-04-30 05:59 | **Solution:** Added an `open` prop to `ClusterExpansion` that receives the parent's `expandedClusterId === item.cluster_id` comparison. The component now initializes `localOpen = false` and syncs via `$effect` to prevent the flash-and-disappear issue. |
-| 2026-04-30 05:59 | The Skeleton Collapsible component uses zag-js internally and binds `open` state. The issue was that the local state was not being re-initialized when the prop changed. |
-| 2026-04-30 05:59 | Svelte 5 warning `state_referenced_locally` about `$state(open)` in initialization - resolved by initializing with `false` and using `$effect` to sync. |
+| 2026-04-30 06:01 | **Root Cause:** The `ClusterExpansion.svelte` had a local `open = $state(true)` state independent of the parent's `expandedClusterId`. When the parent re-rendered (e.g., after fetch completes), the component's local `open` state resets. The Skeleton Collapsible component relies on this local state, so when it resets, the content collapses even though the parent is still rendering the expansion. |
+| 2026-04-30 06:01 | **Solution:** Made the `open` prop required in `ClusterExpansion`. The parent passes `open={expandedClusterId === item.cluster_id}` which is derived from its own state. The component initializes `localOpen = false` and syncs via `$effect` to prevent the flash-and-disappear issue. |
 
 ## Review History
 _(worker fills this in)_
 
 | 2026-04-30 10:51 | Task started | Runtime V2 lane-runner execution |
 | 2026-04-30 10:51 | Step 0 started | Preflight |
+| 2026-04-30 11:01 | Task complete | Fix committed, tests pass, build succeeds |
+| 2026-04-30 11:03 | Worker iter 1 | done in 666s, tools: 87 |
+| 2026-04-30 11:03 | Step 0 started | Preflight |
+| 2026-04-30 11:05 | Step 0 complete | Build issue: enforce_size_limits → check_size_and_cleanup |
