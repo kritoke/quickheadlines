@@ -146,15 +146,16 @@ def start_refresh_loop(config_path : String, cache : FeedCache, db_service : Dat
   spawn do
     loop do
       begin
-        check_semaphore_health
-
         refresh_start_time = Time.utc
 
         if StateStore.refreshing?
           Log.for("quickheadlines.feed").warn { "Refresh already in progress, skipping this cycle" }
           sleep (active_config.refresh_minutes * 60).seconds
           break if QuickHeadlines.shutting_down?
+          next
         end
+
+        check_semaphore_health
 
         begin
           if first_run

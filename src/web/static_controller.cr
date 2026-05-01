@@ -85,6 +85,18 @@ class StaticController < Athena::Framework::Controller
     serve_asset("favicon.svg")
   end
 
+  @[ARTA::Get(path: "/robots.txt")]
+  def robots_txt : AHTTP::Response
+    response = AHTTP::Response.new(
+      status: 200,
+      headers: HTTP::Headers{
+        "Content-Type" => "text/plain",
+      },
+      content: "User-agent: *\nDisallow: /\n"
+    )
+    response
+  end
+
   @[ARTA::Get(path: "/favicon.ico")]
   def favicon_ico : AHTTP::Response
     serve_asset("favicon.svg")

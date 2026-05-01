@@ -80,10 +80,10 @@
 					<button
 						type="button"
 						onclick={toggleMore}
-						class="px-4 py-2 text-sm font-medium text-surface-700 dark:text-surface-300 hover:text-surface-950 dark:text-surface-50 rounded-lg flex items-center gap-1 cursor-pointer hover:bg-surface-100/50 dark:hover:bg-surface-800/50 transition-colors"
+						class="px-4 py-2 text-sm font-medium text-surface-700 dark:text-surface-300 hover:text-surface-950 dark:hover:text-surface-50 rounded-lg flex items-center gap-1 cursor-pointer hover:bg-surface-100/50 dark:hover:bg-surface-800/50 transition-colors"
 						aria-expanded={showMore}
 					>
-						More
+						<span class="tab-label">More</span>
 						<svg 
 							class="w-4 h-4 transition-transform duration-200 {showMore ? 'rotate-180' : ''}" 
 							fill="none" 
