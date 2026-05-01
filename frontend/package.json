@@ -21,10 +21,10 @@
     "cookie": ">=0.7.0"
   },
   "dependencies": {
-    "@sveltejs/kit": "^2.57.1",
+    "@sveltejs/kit": "^2.58.0",
     "@tailwindcss/typography": "^0.5.19",
-    "dompurify": "^3.4.1",
-    "svelte": "^5.55.4",
+    "dompurify": "^3.4.2",
+    "svelte": "^5.55.5",
     "typescript": "^5.9.3",
     "vite": "^7.3.2"
   },
@@ -44,8 +44,8 @@
     "autoprefixer": "^10.5.0",
     "clsx": "^2.1.1",
     "happy-dom": "^17.6.3",
-    "postcss": "^8.5.10",
-    "svelte-check": "^4.4.6",
+    "postcss": "^8.5.13",
+    "svelte-check": "^4.4.7",
     "tailwind-merge": "^3.5.0",
     "tailwindcss": "^4.2.4",
     "vitest": "^4.1.5"
