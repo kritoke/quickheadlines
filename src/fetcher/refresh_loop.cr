@@ -7,6 +7,30 @@ require "../websocket"
 require "./feed_fetcher"
 require "./software_util"
 
+private def check_semaphore_health
+  expected = QuickHeadlines::Constants::CONCURRENCY
+  available = 0
+  expected.times do
+    select
+    when CONCURRENCY_SEMAPHORE.receive?
+      available += 1
+    else
+      break
+    end
+  end
+
+  if available != expected
+    Log.for("quickheadlines.feed").warn { "Semaphore health check: only #{available}/#{expected} slots available - refilling" }
+  end
+
+  refill = expected - available
+  refill.times { CONCURRENCY_SEMAPHORE.send(nil) }
+
+  if refill > 0
+    Log.for("quickheadlines.feed").warn { "Semaphore refilled #{refill} slots" }
+  end
+end
+
 private def collect_feed_configs(config : Config) : Hash(String, Feed)
   all_configs = {} of String => Feed
   config.feeds.each { |feed| all_configs[feed.url] = feed }
@@ -120,12 +144,16 @@ def start_refresh_loop(config_path : String, cache : FeedCache, db_service : Dat
   save_feed_cache(cache, active_config.cache_retention_hours, active_config.max_cache_size_mb)
 
   first_run = true
+  cycle_count = 0
+  heartbeat_interval = 10
 
   spawn do
     loop do
-      refresh_start_time = Time.utc
-
       begin
+        check_semaphore_health
+
+        refresh_start_time = Time.utc
+
         if StateStore.refreshing?
           Log.for("quickheadlines.feed").warn { "Refresh already in progress, skipping this cycle" }
           sleep (active_config.refresh_minutes * 60).seconds
@@ -138,7 +166,6 @@ def start_refresh_loop(config_path : String, cache : FeedCache, db_service : Dat
             if active_config.debug?
               Log.for("quickheadlines.feed").debug { "Running initial refresh to fetch feeds" }
             end
-            # Don't block server startup - spawn the initial refresh in background
             spawn { refresh_all(active_config, cache, db_service) }
             if active_config.debug?
               Log.for("quickheadlines.feed").debug { "Initial refresh started in background" }
@@ -181,13 +208,22 @@ def start_refresh_loop(config_path : String, cache : FeedCache, db_service : Dat
 
           sleep (active_config.refresh_minutes * QuickHeadlines::Constants::SECONDS_PER_MINUTE).seconds
           break if QuickHeadlines.shutting_down?
-        ensure
+
+          cycle_count += 1
+          if cycle_count % heartbeat_interval == 0
+            Log.for("quickheadlines.feed").debug { "Refresh loop heartbeat: #{cycle_count} cycles completed" }
+          end
+        rescue ex
+          Log.for("quickheadlines.feed").error(exception: ex) { "refresh_loop inner exception" }
           StateStore.refreshing = false
+          sleep 1.minute
+          break if QuickHeadlines.shutting_down?
         end
       rescue ex
-        Log.for("quickheadlines.feed").error(exception: ex) { "refresh_loop" }
+        Log.for("quickheadlines.feed").error(exception: ex) { "refresh_loop outer handler: unhandled exception, restarting in 60s" }
         StateStore.refreshing = false
-        sleep 1.minute
+        cycle_count = 0
+        sleep 60.seconds
         break if QuickHeadlines.shutting_down?
       end
     end

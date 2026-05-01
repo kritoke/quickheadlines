@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { Collapsible } from '@skeletonlabs/skeleton-svelte';
 	import type { StoryResponse } from '$lib/types';
 	import { formatTimestamp } from '$lib/api';
 	import { getFaviconSrc } from '$lib/utils/feedItem';
@@ -10,22 +9,9 @@
 		loading?: boolean;
 		error?: boolean;
 		onRetry?: () => void;
-		open: boolean;  // Required - parent controls open state
 	}
 
-	let { items, loading = false, error = false, onRetry, open }: Props = $props();
-
-	// Track open state locally to avoid re-render issues.
-	// The Collapsible manages its own open state internally via zag-js.
-	// We sync with the parent's open prop but don't bind - this prevents
-	// the flash-and-disappear where local state resets during re-renders.
-	// Initialize localOpen with the current open value.
-	let localOpen = $state(false);
-
-	// Initialize from prop on mount
-	$effect(() => {
-		localOpen = open;
-	});
+	let { items, loading = false, error = false, onRetry }: Props = $props();
 </script>
 
 {#if loading}
@@ -46,65 +32,47 @@
 		{/if}
 	</div>
 {:else if items.length > 0}
-	<Collapsible.Root bind:open={localOpen} class="border-t border-slate-200 dark:border-slate-700" data-name="cluster-expansion">
-		<Collapsible.Trigger class="w-full">
-			<div class="flex items-center justify-between p-4 px-3 bg-slate-50 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
-				<span class="text-xs font-medium text-surface-600 dark:text-surface-400">
-					Similar stories ({items.length})
-				</span>
-				<Collapsible.Indicator class="text-surface-400 dark:text-surface-500 transition-transform duration-200">
-					<svg
-						xmlns="http://www.w3.org/2000/svg"
-						class="w-4 h-4 transform rotate-0 data-[state=open]:-rotate-180"
-						viewBox="0 0 24 24"
-						fill="none"
-						stroke="currentColor"
-						stroke-width="2"
-						stroke-linecap="round"
-						stroke-linejoin="round"
+	<div class="border-t border-slate-200 dark:border-slate-700">
+		<div class="p-4 px-3 bg-slate-50 dark:bg-slate-800/50">
+			<span class="text-xs font-medium text-surface-600 dark:text-surface-400">
+				Similar stories ({items.length})
+			</span>
+		</div>
+		<ul class="divide-y divide-slate-100 dark:divide-slate-700">
+			{#each items as item, i (`cluster-item-${item.id}-${i}`)}
+				<li>
+					<a
+						href={sanitizeUrl(item.link)}
+						target="_blank"
+						rel="noopener noreferrer"
+						class="flex items-start gap-2 px-3 p-4 hover:opacity-80 transition-opacity"
 					>
-						<polyline points="6 9 12 15 18 9" />
-					</svg>
-				</Collapsible.Indicator>
-			</div>
-		</Collapsible.Trigger>
-		<Collapsible.Content>
-			<ul class="divide-y divide-slate-100 dark:divide-slate-700">
-				{#each items as item, i (`cluster-item-${item.id}-${i}`)}
-					<li>
-						<a
-							href={sanitizeUrl(item.link)}
-							target="_blank"
-							rel="noopener noreferrer"
-							class="flex items-start gap-2 px-3 p-4 hover:opacity-80 transition-opacity"
-						>
-							<div class="w-4 h-4 rounded bg-surface-100 dark:bg-surface-800 p-0.5 flex items-center justify-center shadow-sm flex-shrink-0 mt-0.5">
-								<img
-									src={getFaviconSrc(item)}
-									alt="{item.feed_title} favicon"
-									class="w-3 h-3 rounded"
-									onerror={(e) => {
-										const target = e.target as HTMLImageElement;
-										target.src = '/favicon.svg';
-									}}
-								/>
-							</div>
-							<div class="flex-1 min-w-0">
-								<h4 class="text-sm text-surface-950 dark:text-surface-50 line-clamp-2">
-									{item.title}
-								</h4>
-								<p class="text-xs text-surface-700 dark:text-surface-300 mt-0.5">
-									{item.feed_title}
-									{#if item.pub_date}
-										<span class="mx-1">&middot;</span>
-										{formatTimestamp(item.pub_date)}
-									{/if}
-								</p>
-							</div>
-						</a>
-					</li>
-				{/each}
-			</ul>
-		</Collapsible.Content>
-	</Collapsible.Root>
+						<div class="w-4 h-4 rounded bg-surface-100 dark:bg-surface-800 p-0.5 flex items-center justify-center shadow-sm flex-shrink-0 mt-0.5">
+							<img
+								src={getFaviconSrc(item)}
+								alt="{item.feed_title} favicon"
+								class="w-3 h-3 rounded"
+								onerror={(e) => {
+									const target = e.target as HTMLImageElement;
+									target.src = '/favicon.svg';
+								}}
+							/>
+						</div>
+						<div class="flex-1 min-w-0">
+							<h4 class="text-sm text-surface-950 dark:text-surface-50 line-clamp-2">
+								{item.title}
+							</h4>
+							<p class="text-xs text-surface-700 dark:text-surface-300 mt-0.5">
+								{item.feed_title}
+								{#if item.pub_date}
+									<span class="mx-1">&middot;</span>
+									{formatTimestamp(item.pub_date)}
+								{/if}
+							</p>
+						</div>
+					</a>
+				</li>
+			{/each}
+		</ul>
+	</div>
 {/if}

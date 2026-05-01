@@ -239,7 +239,6 @@
 								items={clusterItems[item.cluster_id] || []}
 								loading={clusterLoading[item.cluster_id]}
 								error={clusterErrors[item.cluster_id]}
-								open={expandedClusterId === item.cluster_id}
 								onRetry={() => retryCluster(item)}
 							/>
 						{/if}

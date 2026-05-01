@@ -15,7 +15,7 @@ The system SHALL use WebSocket as the exclusive transport mechanism for deliveri
 - **THEN** both feed and timeline views are updated consistently through the same WebSocket event
 
 ### Requirement: Centralized event handling
-The system SHALL handle all WebSocket events centrally and dispatch appropriate actions to relevant stores and components.
+The system SHALL handle all WebSocket events centrally and dispatch appropriate actions to relevant stores and components. Cluster expansion toggle state SHALL be managed directly by the parent component without local state indirection in child components.
 
 #### Scenario: Feed update event received
 - **WHEN** a `feed_update` WebSocket message is received
@@ -24,6 +24,14 @@ The system SHALL handle all WebSocket events centrally and dispatch appropriate 
 #### Scenario: Multiple listeners registered
 - **WHEN** multiple components need to respond to feed updates
 - **THEN** all registered listeners receive the event through the central dispatcher
+
+#### Scenario: Cluster expansion toggle
+- **WHEN** a user clicks the cluster toggle button for an item with multiple sources
+- **THEN** the cluster expansion content appears immediately without flash or disappear behavior
+
+#### Scenario: Switching between clusters
+- **WHEN** a user clicks the toggle on a different cluster while one is already expanded
+- **THEN** the first cluster collapses and the second expands without visual artifacts
 
 ### Requirement: Configuration independence
 The system SHALL not require configuration options to enable or disable WebSocket functionality, as WebSocket communication is always enabled.
