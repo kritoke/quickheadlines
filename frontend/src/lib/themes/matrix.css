@@ -197,8 +197,14 @@
 	font-weight: bold;
 }
 
+[data-theme='matrix'] .timeline-item {
+	background-color: #000a00 !important;
+	border-color: #003300 !important;
+}
+
 [data-theme='matrix'] .timeline-item .item-title {
 	color: #00ff00;
+	font-weight: bold;
 }
 
 [data-theme='matrix'] .timeline-item .item-title a {
@@ -218,6 +224,10 @@
 	color: #00ff00;
 }
 
+[data-theme='matrix'] .timeline-item .comment-icon svg {
+	color: #00ff00 !important;
+}
+
 [data-theme='matrix'] .timeline-item .meta-text {
 	color: #00cc00;
 }
@@ -226,6 +236,31 @@
 	color: #00ff00;
 }
 
-[data-theme='matrix'] .tab-label {
+[data-theme='matrix'] .timeline-item .meta-text p {
+	color: #00cc00;
+}
+
+[data-theme='matrix'] .timeline-item .meta-text svg {
+	color: #00cc00 !important;
+	stroke: #00cc00;
+}
+
+[data-theme='matrix'] .timeline-view .day-group h2 {
+	color: #00ff00;
 	font-weight: bold;
+	background-color: #000a00;
+}
+
+[data-theme='matrix'] [data-name="app-header"] span.text-sm {
+	color: #00ff00 !important;
+}
+
+[data-theme='matrix'] [data-name="app-header"] svg {
+	color: #00ff00;
+	stroke: #00ff00;
+}
+
+[data-theme='matrix'] [data-name="app-header"] button svg {
+	color: #00ff00 !important;
+	stroke: #00ff00;
 }

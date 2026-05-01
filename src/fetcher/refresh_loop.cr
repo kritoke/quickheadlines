@@ -10,25 +10,21 @@ require "./software_util"
 private def check_semaphore_health
   expected = QuickHeadlines::Constants::CONCURRENCY
   available = 0
-  expected.times do
+  done = false
+  until done || available >= expected
     select
-    when CONCURRENCY_SEMAPHORE.receive?
+    when CONCURRENCY_SEMAPHORE.receive
       available += 1
-    else
-      break
+    when timeout(1.millisecond)
+      done = true
     end
   end
 
   if available != expected
-    Log.for("quickheadlines.feed").warn { "Semaphore health check: only #{available}/#{expected} slots available - refilling" }
+    Log.for("quickheadlines.feed").warn { "Semaphore health check: only #{available}/#{expected} slots available - refilling #{expected - available}" }
   end
 
-  refill = expected - available
-  refill.times { CONCURRENCY_SEMAPHORE.send(nil) }
-
-  if refill > 0
-    Log.for("quickheadlines.feed").warn { "Semaphore refilled #{refill} slots" }
-  end
+  expected.times { CONCURRENCY_SEMAPHORE.send(nil) }
 end
 
 private def collect_feed_configs(config : Config) : Hash(String, Feed)
