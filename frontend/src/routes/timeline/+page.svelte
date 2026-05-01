@@ -20,7 +20,9 @@
 		isLoading,
 		isError,
 		getError,
-		cancelRetry
+		cancelRetry,
+		loadAllRemainingItems,
+		isSearchLoadingAll
 	} from '$lib/stores/timelineStore.svelte';
 	import { searchState, setSearchQuery, toggleSearch } from '$lib/stores/search.svelte';
 	import { createLazyLoader } from '$lib/utils/lazyComponent';
@@ -214,11 +216,19 @@
 						<TimelineView items={filteredItems} hasMore={timelineState.hasMore} onLoadMore={doLoadMore} />
 					</div>
 				{/await}
-			{:else if searchState.query}
+		{:else if searchState.query && filteredItems.length === 0}
+			{#if isSearchLoadingAll()}
+				<div class="text-center py-24 text-slate-500 dark:text-slate-400">
+					<div class="w-5 h-5 border-2 border-slate-400 border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>
+					<p class="text-lg">Searching all items...</p>
+					<p class="text-sm mt-2">Loading remaining items to search</p>
+				</div>
+			{:else}
 				<div class="text-center py-24 text-slate-500 dark:text-slate-400">
 					<p class="text-lg">No results for "{searchState.query}"</p>
 					<p class="text-sm mt-2">Try a different search term</p>
 				</div>
+			{/if}
 			{/if}
 
 			{#if timelineState.loadingMore}

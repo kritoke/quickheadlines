@@ -222,9 +222,20 @@ export async function handleLoadMore(): Promise<void> {
 	}
 }
 
+let searchLoadingAll = false;
+
 export async function loadAllRemainingItems(): Promise<void> {
-	if (!timelineState.hasMore) return;
-	while (timelineState.hasMore) {
-		await handleLoadMore();
+	if (searchLoadingAll || !timelineState.hasMore) return;
+	searchLoadingAll = true;
+	try {
+		while (timelineState.hasMore) {
+			await handleLoadMore();
+		}
+	} finally {
+		searchLoadingAll = false;
 	}
+}
+
+export function isSearchLoadingAll(): boolean {
+	return searchLoadingAll;
 }
