@@ -35,6 +35,12 @@
 	
 	let filteredItems = $derived(getFilteredItems(searchState.query));
 	
+	$effect(() => {
+		if (searchState.expanded && timelineState.tabName === 'all' && timelineState.hasMore && !timelineState.loadingMore) {
+			loadAllRemainingItems();
+		}
+	});
+	
 	let loading = $derived(isLoading(timelineState));
 	let error = $derived(isError(timelineState) ? getError(timelineState) : null);
 	

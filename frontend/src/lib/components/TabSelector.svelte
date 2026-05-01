@@ -80,23 +80,25 @@
 					<button
 						type="button"
 						onclick={toggleMore}
-						class="px-4 py-2 text-sm font-medium text-surface-700 dark:text-surface-300 hover:text-surface-950 dark:hover:text-surface-50 rounded-lg flex items-center gap-1 cursor-pointer hover:bg-surface-100/50 dark:hover:bg-surface-800/50 transition-colors"
+						class="relative px-4 py-2 text-base font-medium leading-[1.5] rounded-lg transition-all duration-200 cursor-pointer text-surface-700 dark:text-surface-300 hover:bg-surface-100/50 dark:hover:bg-surface-800/50"
 						aria-expanded={showMore}
 					>
-						<span class="tab-label">More</span>
-						<svg 
-							class="w-4 h-4 transition-transform duration-200 {showMore ? 'rotate-180' : ''}" 
-							fill="none" 
-							viewBox="0 0 24 24" 
-							stroke="currentColor"
-						>
-							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-						</svg>
+						<span class="tab-label inline-flex items-center gap-1">
+							More
+							<svg 
+								class="w-4 h-4 transition-transform duration-200 {showMore ? 'rotate-180' : ''}" 
+								fill="none" 
+								viewBox="0 0 24 24" 
+								stroke="currentColor"
+							>
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+							</svg>
+						</span>
 					</button>
 
 					{#if showMore}
 						<div 
-							class="absolute top-full left-0 mt-2 bg-surface-50 dark:bg-surface-950 rounded-xl shadow-lg border border-surface-200 dark:border-surface-700 py-1 min-w-[140px] z-50"
+							class="absolute top-full left-0 mt-2 bg-surface-50 dark:bg-surface-950 rounded-xl shadow-lg border border-surface-200 dark:border-surface-700 py-1 min-w-[160px] z-50"
 							role="menu"
 						>
 							{#each overflowTabs as tab (tab.name)}
@@ -105,11 +107,11 @@
 									role="menuitem"
 									onclick={() => selectTab(tab.name)}
 									class={cn(
-										'w-full px-4 py-2.5 text-sm text-left cursor-pointer transition-colors',
+										'w-full px-4 py-2.5 text-sm font-medium text-left cursor-pointer transition-colors rounded-lg mx-1',
 									activeTab === tab.name
 										?
-											'text-white font-medium bg-[var(--color-primary-500,#334155)]'
-											: 'text-surface-700 dark:text-surface-300 hover:bg-surface-100 dark:hover:bg-surface-800'
+											'text-white bg-[var(--color-primary-500,#334155)]'
+											: 'text-surface-700 dark:text-surface-300 hover:bg-surface-100/50 dark:hover:bg-surface-800'
 									)}
 								>
 									{tab.name === 'all' ? 'All' : tab.name}

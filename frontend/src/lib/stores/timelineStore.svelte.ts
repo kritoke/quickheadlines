@@ -221,3 +221,10 @@ export async function handleLoadMore(): Promise<void> {
 		await loadTimeline(true);
 	}
 }
+
+export async function loadAllRemainingItems(): Promise<void> {
+	if (!timelineState.hasMore) return;
+	while (timelineState.hasMore) {
+		await handleLoadMore();
+	}
+}
