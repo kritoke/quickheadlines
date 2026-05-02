@@ -28,14 +28,15 @@ end
 private def check_semaphore_health
   expected = QuickHeadlines::Constants::CONCURRENCY
   available = 0
-  done = false
-  until done || available >= expected
-    select
-    when CONCURRENCY_SEMAPHORE.receive
-      available += 1
-    when timeout(1.millisecond)
-      done = true
+  # Use receive? (non-blocking) instead of select+timeout to avoid
+  # Pairing Heap tree corruption from rapid timer create/destroy cycles.
+  # Each call to select+timeout creates a libevent timer; rapid retries on
+  # exception handlers cause the heap to become inconsistent.
+  expected.times do
+    if (permit = CONCURRENCY_SEMAPHORE.receive?).nil?
+      break
     end
+    available += 1
   end
 
   if available != expected
@@ -43,8 +44,6 @@ private def check_semaphore_health
   end
 
   # Only send back exactly what was drained — not the full `expected` count.
-  # The previous code always sent `expected` permits back, which grew the
-  # semaphore channel unboundedly each time a slot was leaked.
   available.times { CONCURRENCY_SEMAPHORE.send(nil) }
 end
 
@@ -80,20 +79,18 @@ private def fetch_feeds_concurrently(all_configs : Hash(String, Feed), existing_
 
   all_configs.size.times do
     Fiber.yield
-    select
-    when data = channel.receive?
+    # Use non-blocking receive? instead of select+timeout to avoid
+    # Pairing Heap tree corruption from rapid timer create/destroy cycles.
+    if data = channel.receive?
       if data
         fetched_map[data.url] = data
       elsif config.debug?
         Log.for("quickheadlines.feed").warn { "refresh_all: failed to fetch feed" }
       end
       completed += 1
-    when timeout(1.millisecond)
-      # No feed ready yet; yield to allow other fibers to complete.
     end
 
-    # Wall-clock timeout check after each iteration.  This replaces the
-    # per-iteration timeout+break that was orphaning fibers.
+    # Wall-clock timeout check after each iteration.
     elapsed = Time.monotonic - fetch_start
     if elapsed > timeout_span
       Log.for("quickheadlines.feed").warn { "fetch_feeds_concurrently: timed out after #{completed}/#{all_configs.size} feeds" }
@@ -245,15 +242,20 @@ def start_refresh_loop(config_path : String, cache : FeedCache, db_service : Dat
           end
         end
 
-        # Outer timeout guard: if refresh_all blocks past 1.5× the refresh interval,
-        # log an error and proceed.  The `ensure` above resets `refreshing` regardless.
-        outer_timeout = (active_config.refresh_minutes * QuickHeadlines::Constants::SECONDS_PER_MINUTE * 3 // 2).seconds
+        # Outer timeout guard: use sleep + select to avoid multi-timeout Pairing Heap
+        # issues.  If refresh_all takes longer than outer_timeout, the outer rescue
+        # catches the exception and the loop continues after 60s.
         sleep_duration = (active_config.refresh_minutes * QuickHeadlines::Constants::SECONDS_PER_MINUTE).seconds
+        outer_timeout = (active_config.refresh_minutes * QuickHeadlines::Constants::SECONDS_PER_MINUTE * 3 // 2).seconds
+
+        # Start the sleep in a separate fiber so we can timeout it
+        sleep_done = Channel(Nil).new(1)
+        spawn { sleep sleep_duration; sleep_done.send(nil) }
         select
-        when timeout(sleep_duration)
+        when sleep_done.receive
           # Normal sleep completed
         when timeout(outer_timeout)
-          Log.for("quickheadlines.feed").error { "refresh_all timed out after #{outer_timeout.total_seconds.round}s" }
+          Log.for("quickheadlines.feed").error { "refresh loop sleep timed out after #{outer_timeout.total_seconds.round}s" }
         end
 
         break if QuickHeadlines.shutting_down?
