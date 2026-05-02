@@ -79,20 +79,15 @@ private def fetch_feeds_concurrently(all_configs : Hash(String, Feed), existing_
 
   all_configs.size.times do
     Fiber.yield
-    # Use non-blocking receive? instead of select+timeout to avoid
-    # Pairing Heap tree corruption from rapid timer create/destroy cycles.
-    if data = channel.receive?
+    select
+    when data = channel.receive?
       if data
         fetched_map[data.url] = data
       elsif config.debug?
         Log.for("quickheadlines.feed").warn { "refresh_all: failed to fetch feed" }
       end
       completed += 1
-    end
-
-    # Wall-clock timeout check after each iteration.
-    elapsed = Time.monotonic - fetch_start
-    if elapsed > timeout_span
+    when timeout(timeout_span)
       Log.for("quickheadlines.feed").warn { "fetch_feeds_concurrently: timed out after #{completed}/#{all_configs.size} feeds" }
       break
     end
