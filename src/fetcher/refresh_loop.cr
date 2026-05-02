@@ -24,7 +24,10 @@ private def check_semaphore_health
     Log.for("quickheadlines.feed").warn { "Semaphore health check: only #{available}/#{expected} slots available - refilling #{expected - available}" }
   end
 
-  expected.times { CONCURRENCY_SEMAPHORE.send(nil) }
+  # Only send back exactly what was drained — not the full `expected` count.
+  # The previous code always sent `expected` permits back, which grew the
+  # semaphore channel unboundedly each time a slot was leaked.
+  available.times { CONCURRENCY_SEMAPHORE.send(nil) }
 end
 
 private def collect_feed_configs(config : Config) : Hash(String, Feed)
@@ -55,6 +58,8 @@ private def fetch_feeds_concurrently(all_configs : Hash(String, Feed), existing_
   fetched_map = {} of String => FeedData
   completed = 0
   timeout_span = QuickHeadlines::Constants::FEED_FETCH_TIMEOUT_SECONDS.seconds
+  fetch_start = Time.monotonic
+
   all_configs.size.times do
     Fiber.yield
     select
@@ -65,7 +70,14 @@ private def fetch_feeds_concurrently(all_configs : Hash(String, Feed), existing_
         Log.for("quickheadlines.feed").warn { "refresh_all: failed to fetch feed" }
       end
       completed += 1
-    when timeout(timeout_span)
+    when timeout(1.millisecond)
+      # No feed ready yet; yield to allow other fibers to complete.
+    end
+
+    # Wall-clock timeout check after each iteration.  This replaces the
+    # per-iteration timeout+break that was orphaning fibers.
+    elapsed = Time.monotonic - fetch_start
+    if elapsed > timeout_span
       Log.for("quickheadlines.feed").warn { "fetch_feeds_concurrently: timed out after #{completed}/#{all_configs.size} feeds" }
       break
     end
@@ -145,76 +157,81 @@ def start_refresh_loop(config_path : String, cache : FeedCache, db_service : Dat
 
   spawn do
     loop do
+      refresh_start_time = Time.utc
+
+      if StateStore.refreshing?
+        Log.for("quickheadlines.feed").warn { "Refresh already in progress, skipping this cycle" }
+        sleep (active_config.refresh_minutes * 60).seconds
+        break if QuickHeadlines.shutting_down?
+        next
+      end
+
+      check_semaphore_health
+
       begin
-        refresh_start_time = Time.utc
+        if first_run
+          first_run = false
+          if active_config.debug?
+            Log.for("quickheadlines.feed").debug { "Running initial refresh to fetch feeds" }
+          end
+          spawn { refresh_all(active_config, cache, db_service) }
+          if active_config.debug?
+            Log.for("quickheadlines.feed").debug { "Initial refresh started in background" }
+          end
+        else
+          current_mtime = File.info(config_path).modification_time
 
-        if StateStore.refreshing?
-          Log.for("quickheadlines.feed").warn { "Refresh already in progress, skipping this cycle" }
-          sleep (active_config.refresh_minutes * 60).seconds
-          break if QuickHeadlines.shutting_down?
-          next
-        end
+          if current_mtime > last_mtime
+            load_result = load_validated_config(config_path)
+            if load_result.success && (new_config = load_result.config)
+              active_config = new_config
+              last_mtime = current_mtime
 
-        check_semaphore_health
-
-        begin
-          if first_run
-            first_run = false
-            if active_config.debug?
-              Log.for("quickheadlines.feed").debug { "Running initial refresh to fetch feeds" }
-            end
-            spawn { refresh_all(active_config, cache, db_service) }
-            if active_config.debug?
-              Log.for("quickheadlines.feed").debug { "Initial refresh started in background" }
-            end
-          else
-            current_mtime = File.info(config_path).modification_time
-
-            if current_mtime > last_mtime
-              load_result = load_validated_config(config_path)
-              if load_result.success && (new_config = load_result.config)
-                active_config = new_config
-                last_mtime = current_mtime
-
-                if active_config.debug?
-                  Log.for("quickheadlines.feed").debug { "Config change detected. Reloaded feeds.yml" }
-                end
-                refresh_all(active_config, cache, db_service)
-                if active_config.debug?
-                  Log.for("quickheadlines.feed").debug { "Refreshed after config change" }
-                end
-                sleep (active_config.refresh_minutes * QuickHeadlines::Constants::SECONDS_PER_MINUTE).seconds
-                break if QuickHeadlines.shutting_down?
-              else
-                Log.for("quickheadlines.feed").error { "Config reload failed: #{load_result.error_message}#{load_result.suggestion ? " - #{load_result.suggestion}" : ""}" }
-              end
-            else
-              refresh_all(active_config, cache, db_service)
               if active_config.debug?
-                Log.for("quickheadlines.feed").debug { "Refreshed feeds" }
+                Log.for("quickheadlines.feed").debug { "Config change detected. Reloaded feeds.yml" }
               end
             end
           end
 
+          begin
+            refresh_all(active_config, cache, db_service)
+            if active_config.debug?
+              Log.for("quickheadlines.feed").debug { "Refreshed feeds" }
+            end
+          rescue ex
+            Log.for("quickheadlines.feed").error(exception: ex) { "refresh_loop refresh_all failed" }
+          ensure
+            # Always reset the refreshing flag — even on exception or timeout.
+            # This prevents the loop from being permanently stuck.
+            StateStore.refreshing = false
+          end
+
+          # save_feed_cache runs after refresh_all completes and should be fast.
+          # It calls vacuum and cleanup, which are I/O-bound and bounded by DB size.
           save_feed_cache(cache, active_config.cache_retention_hours, active_config.max_cache_size_mb)
 
           refresh_duration = (Time.utc - refresh_start_time).total_seconds
           if refresh_duration > (active_config.refresh_minutes * QuickHeadlines::Constants::SECONDS_PER_MINUTE) * 2
             Log.for("quickheadlines.feed").warn { "Refresh took #{refresh_duration.round(2)}s (expected #{active_config.refresh_minutes * QuickHeadlines::Constants::SECONDS_PER_MINUTE}s) - possible hang detected" }
           end
+        end
 
-          sleep (active_config.refresh_minutes * QuickHeadlines::Constants::SECONDS_PER_MINUTE).seconds
-          break if QuickHeadlines.shutting_down?
+        # Outer timeout guard: if refresh_all blocks past 1.5× the refresh interval,
+        # log an error and proceed.  The `ensure` above resets `refreshing` regardless.
+        outer_timeout = (active_config.refresh_minutes * QuickHeadlines::Constants::SECONDS_PER_MINUTE * 3 // 2).seconds
+        sleep_duration = (active_config.refresh_minutes * QuickHeadlines::Constants::SECONDS_PER_MINUTE).seconds
+        select
+        when timeout(sleep_duration)
+          # Normal sleep completed
+        when timeout(outer_timeout)
+          Log.for("quickheadlines.feed").error { "refresh_all timed out after #{outer_timeout.total_seconds.round}s" }
+        end
 
-          cycle_count += 1
-          if cycle_count % heartbeat_interval == 0
-            Log.for("quickheadlines.feed").debug { "Refresh loop heartbeat: #{cycle_count} cycles completed" }
-          end
-        rescue ex
-          Log.for("quickheadlines.feed").error(exception: ex) { "refresh_loop inner exception" }
-          StateStore.refreshing = false
-          sleep 1.minute
-          break if QuickHeadlines.shutting_down?
+        break if QuickHeadlines.shutting_down?
+
+        cycle_count += 1
+        if cycle_count % heartbeat_interval == 0
+          Log.for("quickheadlines.feed").debug { "Refresh loop heartbeat: #{cycle_count} cycles completed" }
         end
       rescue ex
         Log.for("quickheadlines.feed").error(exception: ex) { "refresh_loop outer handler: unhandled exception, restarting in 60s" }
