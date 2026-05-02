@@ -62,7 +62,7 @@ shards:
 
   azurite:
     git: https://github.com/kritoke/azurite.cr.git
-    version: 0.1.0+git.commit.cc6200b6e66d805fde41bb84716c3c58562071cb
+    version: 0.1.0+git.commit.26022891039f4c77c9e86d58b3e1713adec00610
 
   baked_file_system:
     git: https://github.com/schovi/baked_file_system.git
@@ -90,7 +90,7 @@ shards:
 
   fetcher:
     git: https://github.com/kritoke/fetcher.cr.git
-    version: 0.9.7
+    version: 0.9.8
 
   html5:
     git: https://github.com/naqvis/crystal-html5.git
