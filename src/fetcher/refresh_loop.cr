@@ -1,3 +1,4 @@
+require "gc"
 require "time"
 require "../config"
 require "../models"
@@ -6,6 +7,23 @@ require "../software_fetcher"
 require "../websocket"
 require "./feed_fetcher"
 require "./software_util"
+
+module GCCollector
+  @@last_gc_collect = Time.utc
+
+  def self.trigger_if_needed : Nil
+    now = Time.utc
+    if now - @@last_gc_collect >= 5.minutes
+      GC.collect
+      @@last_gc_collect = now
+      Log.for("quickheadlines.gc").debug { "Triggered GC.collect to release memory" }
+    end
+  end
+end
+
+private def trigger_gc_collection : Nil
+  GCCollector.trigger_if_needed
+end
 
 private def check_semaphore_health
   expected = QuickHeadlines::Constants::CONCURRENCY
@@ -174,7 +192,15 @@ def start_refresh_loop(config_path : String, cache : FeedCache, db_service : Dat
           if active_config.debug?
             Log.for("quickheadlines.feed").debug { "Running initial refresh to fetch feeds" }
           end
-          spawn { refresh_all(active_config, cache, db_service) }
+          spawn do
+            begin
+              refresh_all(active_config, cache, db_service)
+            rescue ex
+              Log.for("quickheadlines.feed").error(exception: ex) { "Initial refresh failed" }
+            ensure
+              StateStore.refreshing = false
+            end
+          end
           if active_config.debug?
             Log.for("quickheadlines.feed").debug { "Initial refresh started in background" }
           end
@@ -209,6 +235,9 @@ def start_refresh_loop(config_path : String, cache : FeedCache, db_service : Dat
           # save_feed_cache runs after refresh_all completes and should be fast.
           # It calls vacuum and cleanup, which are I/O-bound and bounded by DB size.
           save_feed_cache(cache, active_config.cache_retention_hours, active_config.max_cache_size_mb)
+
+          # Help Boehm GC release memory back to OS on FreeBSD/BSD systems
+          trigger_gc_collection
 
           refresh_duration = (Time.utc - refresh_start_time).total_seconds
           if refresh_duration > (active_config.refresh_minutes * QuickHeadlines::Constants::SECONDS_PER_MINUTE) * 2
