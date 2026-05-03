@@ -90,7 +90,7 @@ shards:
 
   fetcher:
     git: https://github.com/kritoke/fetcher.cr.git
-    version: 0.9.8
+    version: 0.9.9
 
   html5:
     git: https://github.com/naqvis/crystal-html5.git
