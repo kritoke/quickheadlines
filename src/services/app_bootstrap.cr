@@ -44,11 +44,11 @@ class AppBootstrap
     content_db_path = File.join(get_cache_dir(@config), "content.db")
     content_store = Azurite::Builder.new
       .db_path(content_db_path)
-      .retention_days(Azurite::Constants::DEFAULT_RETENTION_DAYS)
-      .max_size_mb(Azurite::Constants::DEFAULT_MAX_SIZE_MB)
-      .warning_size_mb(Azurite::Constants::DEFAULT_WARNING_SIZE_MB)
-      .hard_limit_mb(Azurite::Constants::DEFAULT_HARD_LIMIT_MB)
-      .max_content_bytes(Azurite::Constants::DEFAULT_MAX_CONTENT_BYTES)
+      .retention_days(Azurite::RETENTION_DAYS_DEFAULT)
+      .max_size_mb(Azurite::MAX_SIZE_MB_DEFAULT)
+      .warning_size_mb(Azurite::WARNING_SIZE_MB_DEFAULT)
+      .hard_limit_mb(Azurite::HARD_LIMIT_MB_DEFAULT)
+      .max_content_bytes(Azurite::MAX_CONTENT_BYTES_DEFAULT)
       .build
     QuickHeadlines::Services::ContentService.instance = QuickHeadlines::Services::ContentService.new(content_store)
     content_store.cleanup_old_entries
