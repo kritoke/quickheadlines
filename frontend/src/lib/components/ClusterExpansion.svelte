@@ -32,13 +32,13 @@
 		{/if}
 	</div>
 {:else if items.length > 0}
-	<div class="border-t border-slate-200 dark:border-slate-700">
-		<div class="p-4 px-3 bg-slate-50 dark:bg-slate-800/50">
+	<div class="rounded-xl bg-[var(--color-primary-500,#334155)]/10">
+		<div class="p-3 bg-[var(--color-primary-500,#334155)]/15 rounded-t-xl">
 			<span class="text-xs font-medium text-surface-600 dark:text-surface-400">
 				Similar stories ({items.length})
 			</span>
 		</div>
-		<ul class="divide-y divide-slate-100 dark:divide-slate-700">
+		<ul class="divide-y divide-[var(--color-primary-500,#334155)]/10">
 			{#each items as item, i (`cluster-item-${item.id}-${i}`)}
 				<li>
 					<a
