@@ -25,13 +25,50 @@ private def trigger_gc_collection : Nil
   GCCollector.trigger_if_needed
 end
 
+module RefreshHealthMonitor
+  @@last_refresh_start : Atomic(Int64) = Atomic(Int64).new(0)
+  @@last_refresh_complete : Atomic(Int64) = Atomic(Int64).new(0)
+  @@refresh_cycles_completed : Atomic(Int32) = Atomic(Int32).new(0)
+  @@refresh_failures : Atomic(Int32) = Atomic(Int32).new(0)
+
+  def self.record_cycle_start : Nil
+    @@last_refresh_start.set(Time.utc.to_unix_ms)
+  end
+
+  def self.record_cycle_complete : Nil
+    @@last_refresh_complete.set(Time.utc.to_unix_ms)
+    @@refresh_cycles_completed.add(1)
+  end
+
+  def self.record_failure : Nil
+    @@refresh_failures.add(1)
+  end
+
+  def self.reset_failures : Nil
+    @@refresh_failures.set(0)
+  end
+
+  def self.status : {last_start: Int64, last_complete: Int64, cycles: Int32, failures: Int32}
+    {
+      last_start: @@last_refresh_start.get,
+      last_complete: @@last_refresh_complete.get,
+      cycles: @@refresh_cycles_completed.get,
+      failures: @@refresh_failures.get
+    }
+  end
+
+  def self.stuck?(max_age_seconds : Int32) : Bool
+    start_time = @@last_refresh_start.get
+    return false if start_time == 0
+    last_complete = @@last_refresh_complete.get
+    return false if last_complete > start_time
+    (Time.utc.to_unix_ms - start_time) > (max_age_seconds * 1000)
+  end
+end
+
 private def check_semaphore_health
   expected = QuickHeadlines::Constants::CONCURRENCY
   available = 0
-  # Use receive? (non-blocking) instead of select+timeout to avoid
-  # Pairing Heap tree corruption from rapid timer create/destroy cycles.
-  # Each call to select+timeout creates a libevent timer; rapid retries on
-  # exception handlers cause the heap to become inconsistent.
   expected.times do
     if (permit = CONCURRENCY_SEMAPHORE.receive?).nil?
       break
@@ -43,7 +80,6 @@ private def check_semaphore_health
     Log.for("quickheadlines.feed").warn { "Semaphore health check: only #{available}/#{expected} slots available - refilling #{expected - available}" }
   end
 
-  # Only send back exactly what was drained — not the full `expected` count.
   available.times { CONCURRENCY_SEMAPHORE.send(nil) }
 end
 
@@ -112,6 +148,7 @@ end
 def refresh_all(config : Config, cache : FeedCache, db_service : DatabaseService)
   StateStore.update(&.copy_with(refreshing: true))
   StateStore.update(&.copy_with(config_title: config.page_title, config: config))
+  RefreshHealthMonitor.record_cycle_start
 
   all_configs = collect_feed_configs(config)
 
@@ -144,10 +181,16 @@ def refresh_all(config : Config, cache : FeedCache, db_service : DatabaseService
   end
 
   EventBroadcaster.notify_feed_update(StateStore.updated_at.to_unix_ms)
+  RefreshHealthMonitor.record_cycle_complete
 
   if config.debug?
     Log.for("quickheadlines.feed").debug { "refresh_all: complete - StateStore.feeds=#{new_feeds.size}, StateStore.tabs=#{new_tabs.size}" }
   end
+rescue ex
+  RefreshHealthMonitor.record_failure
+  RefreshHealthMonitor.record_cycle_complete
+  StateStore.update(&.copy_with(refreshing: false))
+  raise ex
 end
 
 def start_refresh_loop(config_path : String, cache : FeedCache, db_service : DatabaseService)
@@ -164,9 +207,23 @@ def start_refresh_loop(config_path : String, cache : FeedCache, db_service : Dat
   first_run = true
   cycle_count = 0
   heartbeat_interval = 10
+  stuck_threshold_seconds = (active_config.refresh_minutes * 60) * 3
 
-  spawn do
+  spawn(name: "refresh_supervisor") do
     loop do
+      break if QuickHeadlines.shutting_down?
+
+      if RefreshHealthMonitor.stuck?(stuck_threshold_seconds)
+        status = RefreshHealthMonitor.status
+        Log.for("quickheadlines.feed").error do
+          "REFRESH STUCK: last cycle started at #{status[:last_start]}, " \
+          "cycles completed: #{status[:cycles]}, failures: #{status[:failures]}"
+        end
+        Log.for("quickheadlines.feed").error { "Attempting to recover stuck refresh..." }
+        StateStore.update(&.copy_with(refreshing: false))
+        RefreshHealthMonitor.reset_failures
+      end
+
       refresh_start_time = Time.utc
 
       if StateStore.refreshing?
@@ -184,11 +241,12 @@ def start_refresh_loop(config_path : String, cache : FeedCache, db_service : Dat
           if active_config.debug?
             Log.for("quickheadlines.feed").debug { "Running initial refresh to fetch feeds" }
           end
-          spawn do
+          spawn(name: "initial_refresh") do
             begin
               refresh_all(active_config, cache, db_service)
             rescue ex
               Log.for("quickheadlines.feed").error(exception: ex) { "Initial refresh failed" }
+              RefreshHealthMonitor.record_failure
             ensure
               StateStore.refreshing = false
             end
@@ -196,6 +254,9 @@ def start_refresh_loop(config_path : String, cache : FeedCache, db_service : Dat
           if active_config.debug?
             Log.for("quickheadlines.feed").debug { "Initial refresh started in background" }
           end
+          sleep (active_config.refresh_minutes * 60).seconds
+          break if QuickHeadlines.shutting_down?
+          next
         else
           current_mtime = File.info(config_path).modification_time
 
@@ -218,17 +279,12 @@ def start_refresh_loop(config_path : String, cache : FeedCache, db_service : Dat
             end
           rescue ex
             Log.for("quickheadlines.feed").error(exception: ex) { "refresh_loop refresh_all failed" }
+            RefreshHealthMonitor.record_failure
           ensure
-            # Always reset the refreshing flag — even on exception or timeout.
-            # This prevents the loop from being permanently stuck.
             StateStore.refreshing = false
           end
 
-          # save_feed_cache runs after refresh_all completes and should be fast.
-          # It calls vacuum and cleanup, which are I/O-bound and bounded by DB size.
           save_feed_cache(cache, active_config.cache_retention_hours, active_config.max_cache_size_mb)
-
-          # Help Boehm GC release memory back to OS on FreeBSD/BSD systems
           trigger_gc_collection
 
           refresh_duration = (Time.utc - refresh_start_time).total_seconds
@@ -237,18 +293,13 @@ def start_refresh_loop(config_path : String, cache : FeedCache, db_service : Dat
           end
         end
 
-        # Outer timeout guard: use sleep + select to avoid multi-timeout Pairing Heap
-        # issues.  If refresh_all takes longer than outer_timeout, the outer rescue
-        # catches the exception and the loop continues after 60s.
         sleep_duration = (active_config.refresh_minutes * QuickHeadlines::Constants::SECONDS_PER_MINUTE).seconds
         outer_timeout = (active_config.refresh_minutes * QuickHeadlines::Constants::SECONDS_PER_MINUTE * 3 // 2).seconds
 
-        # Start the sleep in a separate fiber so we can timeout it
         sleep_done = Channel(Nil).new(1)
         spawn { sleep sleep_duration; sleep_done.send(nil) }
         select
         when sleep_done.receive
-          # Normal sleep completed
         when timeout(outer_timeout)
           Log.for("quickheadlines.feed").error { "refresh loop sleep timed out after #{outer_timeout.total_seconds.round}s" }
         end
@@ -257,14 +308,31 @@ def start_refresh_loop(config_path : String, cache : FeedCache, db_service : Dat
 
         cycle_count += 1
         if cycle_count % heartbeat_interval == 0
-          Log.for("quickheadlines.feed").debug { "Refresh loop heartbeat: #{cycle_count} cycles completed" }
+          status = RefreshHealthMonitor.status
+          Log.for("quickheadlines.feed").info do
+            "Refresh loop heartbeat: #{cycle_count} cycles, last complete: #{status[:last_complete]}"
+          end
         end
       rescue ex
         Log.for("quickheadlines.feed").error(exception: ex) { "refresh_loop outer handler: unhandled exception, restarting in 60s" }
         StateStore.refreshing = false
+        RefreshHealthMonitor.record_failure
         cycle_count = 0
         sleep 60.seconds
         break if QuickHeadlines.shutting_down?
+      end
+    end
+  end
+
+  spawn(name: "health_monitor_reporter") do
+    loop do
+      sleep 5.minutes
+      break if QuickHeadlines.shutting_down?
+      status = RefreshHealthMonitor.status
+      if status[:failures] > 0 || status[:last_complete] == 0
+        Log.for("quickheadlines.feed").warn do
+          "Refresh health: cycles=#{status[:cycles]}, failures=#{status[:failures]}, last_complete=#{status[:last_complete]}"
+        end
       end
     end
   end
