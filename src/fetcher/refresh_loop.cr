@@ -32,12 +32,16 @@ module RefreshHealthMonitor
   @@refresh_failures : Atomic(Int32) = Atomic(Int32).new(0)
 
   def self.record_cycle_start : Nil
-    @@last_refresh_start.set(Time.utc.to_unix_ms)
+    now_ms = Time.utc.to_unix_ms
+    @@last_refresh_start.set(now_ms)
+    Log.for("quickheadlines.feed").debug { "RefreshHealthMonitor: cycle start recorded at #{now_ms}" }
   end
 
   def self.record_cycle_complete : Nil
-    @@last_refresh_complete.set(Time.utc.to_unix_ms)
+    now_ms = Time.utc.to_unix_ms
+    @@last_refresh_complete.set(now_ms)
     @@refresh_cycles_completed.add(1)
+    Log.for("quickheadlines.feed").debug { "RefreshHealthMonitor: cycle complete at #{now_ms}, total cycles=#{@@refresh_cycles_completed.get}" }
   end
 
   def self.record_failure : Nil
@@ -62,7 +66,14 @@ module RefreshHealthMonitor
     return false if start_time == 0
     last_complete = @@last_refresh_complete.get
     return false if last_complete > start_time
-    (Time.utc.to_unix_ms - start_time) > (max_age_seconds * 1000)
+    age_ms = Time.utc.to_unix_ms - start_time
+    result = age_ms > (max_age_seconds * 1000)
+    if result
+      Log.for("quickheadlines.feed").warn do
+        "RefreshHealthMonitor.stuck? returning true: start=#{start_time}, last_complete=#{last_complete}, age_ms=#{age_ms}, threshold_ms=#{max_age_seconds * 1000}"
+      end
+    end
+    result
   end
 end
 
@@ -151,21 +162,18 @@ def refresh_all(config : Config, cache : FeedCache, db_service : DatabaseService
   RefreshHealthMonitor.record_cycle_start
 
   all_configs = collect_feed_configs(config)
-
-  if config.debug?
-    Log.for("quickheadlines.feed").debug { "refresh_all: starting - #{all_configs.size} feeds to fetch" }
-  end
+  Log.for("quickheadlines.feed").info { "refresh_all: starting - #{all_configs.size} feeds to fetch" }
 
   existing_data = (StateStore.feeds + StateStore.tabs.flat_map(&.feeds)).index_by(&.url)
-  if config.debug?
-    Log.for("quickheadlines.feed").debug { "refresh_all: existing_data.size=#{existing_data.size}" }
-  end
 
   fetched_map = fetch_feeds_concurrently(all_configs, existing_data, config)
+  fetched_count = fetched_map.size
+  missing_count = all_configs.size - fetched_count
 
-  if config.debug?
-    Log.for("quickheadlines.feed").debug { "refresh_all: fetched #{fetched_map.size}/#{all_configs.size} feeds successfully" }
-    Log.for("quickheadlines.feed").debug { "refresh_all: building new state (feeds=#{fetched_map.size}, tabs=#{config.tabs.size})" }
+  if missing_count > 0
+    Log.for("quickheadlines.feed").warn { "refresh_all: fetched #{fetched_count}/#{all_configs.size} feeds, #{missing_count} missing or timed out" }
+  else
+    Log.for("quickheadlines.feed").debug { "refresh_all: fetched #{fetched_count}/#{all_configs.size} feeds successfully" }
   end
 
   new_feeds = config.feeds.map { |feed| fetched_map[feed.url]? || FeedFetcher.instance.build_error_feed(feed, "Failed to fetch") }
@@ -222,6 +230,7 @@ def start_refresh_loop(config_path : String, cache : FeedCache, db_service : Dat
         Log.for("quickheadlines.feed").error { "Attempting to recover stuck refresh..." }
         StateStore.update(&.copy_with(refreshing: false))
         RefreshHealthMonitor.reset_failures
+        Log.for("quickheadlines.feed").info { "Recovery complete, will retry on next cycle" }
       end
 
       refresh_start_time = Time.utc
@@ -273,9 +282,13 @@ def start_refresh_loop(config_path : String, cache : FeedCache, db_service : Dat
           end
 
           begin
+            refresh_all_start = Time.utc
             refresh_all(active_config, cache, db_service)
+            refresh_all_duration = (Time.utc - refresh_all_start).total_seconds
             if active_config.debug?
-              Log.for("quickheadlines.feed").debug { "Refreshed feeds" }
+              Log.for("quickheadlines.feed").debug { "Refreshed feeds in #{refresh_all_duration.round(2)}s" }
+            elsif refresh_all_duration > 120
+              Log.for("quickheadlines.feed").warn { "refresh_all took #{refresh_all_duration.round(2)}s - long duration" }
             end
           rescue ex
             Log.for("quickheadlines.feed").error(exception: ex) { "refresh_loop refresh_all failed" }
@@ -284,7 +297,9 @@ def start_refresh_loop(config_path : String, cache : FeedCache, db_service : Dat
             StateStore.refreshing = false
           end
 
+          Log.for("quickheadlines.feed").debug { "Starting save_feed_cache..." }
           save_feed_cache(cache, active_config.cache_retention_hours, active_config.max_cache_size_mb)
+          Log.for("quickheadlines.feed").debug { "save_feed_cache complete" }
           trigger_gc_collection
 
           refresh_duration = (Time.utc - refresh_start_time).total_seconds
