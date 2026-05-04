@@ -121,10 +121,10 @@ private def fetch_feeds_concurrently(all_configs : Hash(String, Feed), existing_
 
   fetched_map = {} of String => FeedData
   completed = 0
-  timeout_span = QuickHeadlines::Constants::FEED_FETCH_TIMEOUT_SECONDS.seconds
-  fetch_start = Time.monotonic
+  total_feeds = all_configs.size
+  overall_timeout = 10.minutes
 
-  all_configs.size.times do
+  total_feeds.times do
     Fiber.yield
     select
     when data = channel.receive?
@@ -134,8 +134,8 @@ private def fetch_feeds_concurrently(all_configs : Hash(String, Feed), existing_
         Log.for("quickheadlines.feed").warn { "refresh_all: failed to fetch feed" }
       end
       completed += 1
-    when timeout(timeout_span)
-      Log.for("quickheadlines.feed").warn { "fetch_feeds_concurrently: timed out after #{completed}/#{all_configs.size} feeds" }
+    when timeout(overall_timeout)
+      Log.for("quickheadlines.feed").warn { "fetch_feeds_concurrently: timed out after #{completed}/#{total_feeds} feeds" }
       break
     end
   end
