@@ -143,6 +143,10 @@ class SocketManager
           # this is non-fatal and can happen if unregister is called from multiple code paths.
           if new_count < 0
             Log.for("quickheadlines.websocket").debug { "IP count for #{ip} went negative (#{count} -> #{new_count}). Clamping to 0." }
+            # In development runs we want to catch these cases early.
+            if ENV["APP_ENV"]? && ENV["APP_ENV"] == "development"
+              raise "IP count for #{ip} went negative (#{count} -> #{new_count})"
+            end
           end
           @ip_counts.delete(ip)
         else

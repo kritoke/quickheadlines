@@ -100,16 +100,29 @@ begin
     host = ctx.request.headers["Host"]?
 
     # Reject if origin header is missing (prevents cross-site WebSocket hijacking)
-    unless origin
+    # Allow missing Origin in development for local testing convenience.
+    if !origin && !(ENV["APP_ENV"]? && ENV["APP_ENV"] == "development")
       Log.for("quickheadlines.websocket").warn { "Rejected WebSocket: missing Origin header" }
       ws.close
       next
     end
 
-    if host
-      origin_host = origin.sub(/^https?:\/\//, "").rstrip("/")
-      unless origin_host == host
-        Log.for("quickheadlines.websocket").warn { "Rejected WebSocket from invalid Origin: #{origin} (expected: #{host})" }
+    if origin && host
+      origin_host = begin
+        URI.parse(origin).host
+      rescue
+        # Fallback: strip scheme and port
+        origin.sub(/^https?:\/\//, "").split("/").first.split(":").first
+      end
+
+      host_host = begin
+        host.split(":").first
+      rescue
+        host
+      end
+
+      if origin_host.nil? || origin_host != host_host
+        Log.for("quickheadlines.websocket").warn { "Rejected WebSocket from invalid Origin: #{origin} (expected host: #{host_host})" }
         ws.close
         next
       end
