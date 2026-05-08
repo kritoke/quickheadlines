@@ -177,7 +177,7 @@ class SocketManager
           rescue Channel::ClosedError
           end
         end
-      rescue ex
+      rescue
         @connections.delete(conn)
         decrement_ip_count(conn.ip)
       end

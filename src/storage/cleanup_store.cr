@@ -142,7 +142,7 @@ module QuickHeadlines::Storage
       else
         0_i64
       end
-    rescue ex
+    rescue
       0_i64
     end
 

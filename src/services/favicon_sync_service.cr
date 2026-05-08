@@ -54,6 +54,7 @@ class FaviconSyncService
     feeds_data
   end
 
+  # ameba:disable Metrics/CyclomaticComplexity
   private def process_feed_favicon(feed_id, url, favicon, favicon_data, _header_color, header_theme_colors, site_link)
     clear_external = false
     sync_favicon_data = nil
@@ -214,9 +215,6 @@ class FaviconSyncService
       return unless bg || text_val
 
       theme_json = extracted.to_json
-      text_light = nil
-      text_dark = nil
-
       if text_val.is_a?(Hash)
         text_light = text_val.as(Hash)["light"]?.try(&.to_s)
         text_dark = text_val.as(Hash)["dark"]?.try(&.to_s)

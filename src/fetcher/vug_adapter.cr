@@ -58,7 +58,7 @@ module VugAdapter
 
     # Timeout wrapper: favicon fetching must complete within 5 seconds
     # to prevent favicon hangs from blocking the feed pipeline
-    favicon_data = select
+    select
     when timeout(5.seconds)
       Log.for("quickheadlines.feed").debug { "get_favicon timed out for #{site_url}" }
       {nil, nil}
@@ -67,6 +67,7 @@ module VugAdapter
     end
   end
 
+  # ameba:disable Metrics/CyclomaticComplexity
   private def self.fetch_favicon_impl(site_url : String, parsed_favicon : String?) : {String?, String?}
     if parsed_favicon && !parsed_favicon.starts_with?("#") && !parsed_favicon.includes?("#") && !parsed_favicon.starts_with?("placeholder:")
       result = fetch(parsed_favicon)

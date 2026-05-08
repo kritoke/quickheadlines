@@ -38,7 +38,11 @@ class FeedFetcher
   @@instance_mutex = Mutex.new
 
   def self.instance : FeedFetcher
-    @@instance_mutex.synchronize { @@instance.not_nil! }
+    @@instance_mutex.synchronize do
+      instance = @@instance
+      raise "FeedFetcher not initialized. Call FeedFetcher.instance=(fetcher) first." unless instance
+      instance
+    end
   end
 
   def self.instance=(fetcher : FeedFetcher)
@@ -99,7 +103,7 @@ class FeedFetcher
 
     # Hard wall-clock timeout for entire fetch operation to prevent semaphore exhaustion
     timeout_seconds = QuickHeadlines::Constants::FETCH_TIMEOUT_SECONDS
-    result = select
+    select
     when timeout(timeout_seconds.seconds)
       Log.for("quickheadlines.feed").warn { "fetch_feed(#{feed.url}) exceeded #{timeout_seconds}s wall-clock limit, aborting" }
       if stale_cache = get_stale_cached_feed(feed, effective_item_limit, previous_data)
@@ -298,15 +302,13 @@ class FeedFetcher
   end
 
   private def safe_get_favicon_with_fallback(site_link : String, parsed_favicon : String?, prev_favicon : String?, prev_favicon_data : String?) : {String?, String?}
-    favicon, favicon_data = nil, nil
-    begin
-      favicon, favicon_data = VugAdapter.get_favicon(site_link, parsed_favicon, prev_favicon, prev_favicon_data)
-    rescue ex : IO::TimeoutError | Socket::Addrinfo::Error
-      Log.for("quickheadlines.feed").debug { "VugAdapter.get_favicon failed for #{site_link}: #{ex.class}" }
-    rescue ex
-      Log.for("quickheadlines.feed").warn { "VugAdapter.get_favicon unexpected error for #{site_link}: #{ex.class} - #{ex.message}" }
-    end
-    {favicon, favicon_data}
+    VugAdapter.get_favicon(site_link, parsed_favicon, prev_favicon, prev_favicon_data)
+  rescue ex : IO::TimeoutError | Socket::Addrinfo::Error
+    Log.for("quickheadlines.feed").debug { "VugAdapter.get_favicon failed for #{site_link}: #{ex.class}" }
+    {nil, nil}
+  rescue ex
+    Log.for("quickheadlines.feed").warn { "VugAdapter.get_favicon unexpected error for #{site_link}: #{ex.class} - #{ex.message}" }
+    {nil, nil}
   end
 
   # Private helper methods

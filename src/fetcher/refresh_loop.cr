@@ -54,10 +54,10 @@ module RefreshHealthMonitor
 
   def self.status : {last_start: Int64, last_complete: Int64, cycles: Int32, failures: Int32}
     {
-      last_start: @@last_refresh_start.get,
+      last_start:    @@last_refresh_start.get,
       last_complete: @@last_refresh_complete.get,
-      cycles: @@refresh_cycles_completed.get,
-      failures: @@refresh_failures.get
+      cycles:        @@refresh_cycles_completed.get,
+      failures:      @@refresh_failures.get,
     }
   end
 
@@ -81,7 +81,7 @@ private def check_semaphore_health
   expected = QuickHeadlines::Constants::CONCURRENCY
   available = 0
   expected.times do
-    if (permit = CONCURRENCY_SEMAPHORE.receive?).nil?
+    if CONCURRENCY_SEMAPHORE.receive?.nil?
       break
     end
     available += 1
@@ -201,6 +201,7 @@ rescue ex
   raise ex
 end
 
+# ameba:disable Metrics/CyclomaticComplexity
 def start_refresh_loop(config_path : String, cache : FeedCache, db_service : DatabaseService)
   load_result = load_validated_config(config_path)
   unless load_result.success && (initial_config = load_result.config)
@@ -250,9 +251,11 @@ def start_refresh_loop(config_path : String, cache : FeedCache, db_service : Dat
           if active_config.debug?
             Log.for("quickheadlines.feed").debug { "Running initial refresh to fetch feeds" }
           end
+          # Capture config snapshot before fiber to avoid shared variable
+          config_for_initial = active_config
           spawn(name: "initial_refresh") do
             begin
-              refresh_all(active_config, cache, db_service)
+              refresh_all(config_for_initial, cache, db_service)
             rescue ex
               Log.for("quickheadlines.feed").error(exception: ex) { "Initial refresh failed" }
               RefreshHealthMonitor.record_failure
