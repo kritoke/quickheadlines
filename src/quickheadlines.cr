@@ -99,7 +99,14 @@ begin
     origin = ctx.request.headers["Origin"]?
     host = ctx.request.headers["Host"]?
 
-    if origin && host
+    # Reject if origin header is missing (prevents cross-site WebSocket hijacking)
+    unless origin
+      Log.for("quickheadlines.websocket").warn { "Rejected WebSocket: missing Origin header" }
+      ws.close
+      next
+    end
+
+    if host
       origin_host = origin.sub(/^https?:\/\//, "").rstrip("/")
       unless origin_host == host
         Log.for("quickheadlines.websocket").warn { "Rejected WebSocket from invalid Origin: #{origin} (expected: #{host})" }

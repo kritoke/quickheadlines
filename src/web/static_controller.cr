@@ -11,6 +11,9 @@ class StaticController < Athena::Framework::Controller
     response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
 
     if mime.starts_with?("text/html")
+      # NOTE: 'unsafe-inline' for script-src is required by SvelteKit's SPA
+      # fallback page which uses inline <script> for initialization.
+      # To harden, switch to nonce-based CSP with a per-request nonce generator.
       csp = "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; " \
             "img-src 'self' https:; script-src 'self' 'unsafe-inline'; " \
             "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " \

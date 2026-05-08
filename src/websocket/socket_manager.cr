@@ -167,20 +167,22 @@ class SocketManager
   end
 
   private def purge_closed_connections : Nil
-    @connections.each do |conn|
-      begin
-        if conn.websocket.closed?
-          @connections.delete(conn)
-          decrement_ip_count(conn.ip)
-          begin
-            conn.outgoing.close
-          rescue Channel::ClosedError
-          end
-        end
+    @connections.reject! do |conn|
+      dead = begin
+        conn.websocket.closed?
       rescue
-        @connections.delete(conn)
-        decrement_ip_count(conn.ip)
+        true
       end
+
+      if dead
+        decrement_ip_count(conn.ip)
+        begin
+          conn.outgoing.close
+        rescue Channel::ClosedError
+        end
+      end
+
+      dead
     end
   end
 

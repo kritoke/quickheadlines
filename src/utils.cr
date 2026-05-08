@@ -96,6 +96,8 @@ module UrlNormalizer
   def self.normalize(url : String) : String
     normalized = url.strip
 
+    # Intentional: upgrade http to https — most RSS feeds support HTTPS,
+    # and this prevents duplicate cache entries for the same feed over different schemes
     normalized = "https://#{normalized[7..-1]}" if normalized.starts_with?("http://")
 
     normalized = normalized.sub("https://www.", "https://").sub("http://www.", "http://")

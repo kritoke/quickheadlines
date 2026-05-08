@@ -88,13 +88,15 @@ module QuickHeadlines
     end
 
     def retry_after(identifier : String) : Int32
-      times = @requests[identifier]?
-      return @window_seconds if times.nil? || times.empty?
+      @mutex.synchronize do
+        times = @requests[identifier]?
+        return @window_seconds if times.nil? || times.empty?
 
-      oldest = times.min
-      now = Time.utc.to_unix
-      elapsed = now - oldest
-      [@window_seconds - elapsed, 1].max
+        oldest = times.min
+        now = Time.utc.to_unix
+        elapsed = now - oldest
+        return [@window_seconds - elapsed, 1].max
+      end
     end
   end
 end

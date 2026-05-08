@@ -206,31 +206,33 @@ class FaviconSyncService
   end
 
   private def backfill_header_colors(feed_id : Int64, feed_url : String, favicon_path : String) : Nil
+    # Compute colors outside mutex — file I/O and image processing are expensive
+    extracted = ColorExtractor.extract_theme_colors(favicon_path, feed_url, nil)
+    return unless extracted
+
+    bg = extracted["bg"]?.try(&.to_s)
+    text_val = extracted["text"]?
+    return unless bg || text_val
+
+    theme_json = extracted.to_json
+    if text_val.is_a?(Hash)
+      text_light = text_val.as(Hash)["light"]?.try(&.to_s)
+      text_dark = text_val.as(Hash)["dark"]?.try(&.to_s)
+    else
+      normalized = ColorExtractor.normalize_text_value(text_val.to_s)
+      text_light = normalized["light"]?
+      text_dark = normalized["dark"]?
+    end
+
+    legacy_text = text_light || text_dark
+
+    # Only hold mutex for the DB write
     @mutex.synchronize do
-      extracted = ColorExtractor.extract_theme_colors(favicon_path, feed_url, nil)
-      return unless extracted
-
-      bg = extracted["bg"]?.try(&.to_s)
-      text_val = extracted["text"]?
-      return unless bg || text_val
-
-      theme_json = extracted.to_json
-      if text_val.is_a?(Hash)
-        text_light = text_val.as(Hash)["light"]?.try(&.to_s)
-        text_dark = text_val.as(Hash)["dark"]?.try(&.to_s)
-      else
-        normalized = ColorExtractor.normalize_text_value(text_val.to_s)
-        text_light = normalized["light"]?
-        text_dark = normalized["dark"]?
-      end
-
-      legacy_text = text_light || text_dark
-
       @db.exec("UPDATE feeds SET header_color = ?, header_text_color = ?, header_theme_colors = ? WHERE id = ?",
         bg, legacy_text, theme_json, feed_id)
-      Log.for("quickheadlines.cache").debug { "Backfilled header colors for #{feed_url}: bg=#{bg}, text=#{legacy_text}" }
-    rescue ex
-      Log.for("quickheadlines.cache").error(exception: ex) { "Backfill header colors failed for #{feed_url}" }
     end
+    Log.for("quickheadlines.cache").debug { "Backfilled header colors for #{feed_url}: bg=#{bg}, text=#{legacy_text}" }
+  rescue ex
+    Log.for("quickheadlines.cache").error(exception: ex) { "Backfill header colors failed for #{feed_url}" }
   end
 end
