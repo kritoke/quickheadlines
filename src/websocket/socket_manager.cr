@@ -138,10 +138,19 @@ class SocketManager
       if count = @ip_counts[ip]?
         new_count = count - 1
         if new_count <= 0
+          # In normal operation multiple connections per-IP are expected (especially in dev).
+          # If we somehow end up with a negative count, clamp to zero and emit a debug message —
+          # this is non-fatal and can happen if unregister is called from multiple code paths.
+          if new_count < 0
+            Log.for("quickheadlines.websocket").debug { "IP count for #{ip} went negative (#{count} -> #{new_count}). Clamping to 0." }
+          end
           @ip_counts.delete(ip)
         else
           @ip_counts[ip] = new_count
         end
+      else
+        # No entry for this IP — could be a stale unregister call. Log at debug level only.
+        Log.for("quickheadlines.websocket").debug { "decrement_ip_count called for unknown IP: #{ip}" }
       end
     end
   end

@@ -62,11 +62,13 @@ module QuickHeadlines
     end
 
     def cleanup
-      cutoff = Time.utc.to_unix - @window_seconds
-      @requests.each do |key, times|
-        @requests[key] = times.select { |_t| _t > cutoff }
+      @mutex.synchronize do
+        cutoff = Time.utc.to_unix - @window_seconds
+        @requests.each do |key, times|
+          @requests[key] = times.select { |_t| _t > cutoff }
+        end
+        @requests.reject! { |_, _times| _times.empty? }
       end
-      @requests.reject! { |_, _times| _times.empty? }
     end
 
     def allowed?(identifier : String) : Bool
