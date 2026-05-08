@@ -10,10 +10,10 @@ module QuickHeadlines::Constants
   HTTP_CONNECT_TIMEOUT   =   10
   HTTP_READ_TIMEOUT      =   30
   HTTP_WRITE_TIMEOUT     =   10
-  FETCH_TIMEOUT_SECONDS       =  45
-  MAX_REDIRECTS             =   10
-  MAX_RETRIES               =    2
-  MAX_BACKOFF_SECONDS       =   10
+  FETCH_TIMEOUT_SECONDS  =   45
+  MAX_REDIRECTS          =   10
+  MAX_RETRIES            =    2
+  MAX_BACKOFF_SECONDS    =   10
   MAX_CONNECTIONS        = 1000
   MAX_CONNECTIONS_PER_IP =   10
   STALE_CONNECTION_AGE   =  120

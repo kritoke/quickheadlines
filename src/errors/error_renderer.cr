@@ -6,7 +6,7 @@ module QuickHeadlines
     include Athena::HTTPKernel::ErrorRendererInterface
 
     def render(exception : Exception) : AHTTP::Response
-      status, message, details = classify_exception(exception)
+      status, message, _ = classify_exception(exception)
 
       if status.value >= 500
         Log.error do

@@ -193,8 +193,8 @@ module QuickHeadlines::DTOs
   class AdminStatusResponse
     include JSON::Serializable
 
-    property clustering : Bool
-    property refreshing : Bool
+    property? clustering : Bool
+    property? refreshing : Bool
     property active_jobs : Int32
     property websocket_connections : Int32
     property websocket_messages_sent : Int64
@@ -221,7 +221,7 @@ module QuickHeadlines::DTOs
     include JSON::Serializable
 
     property updated_at : Int64
-    property clustering : Bool
+    property? clustering : Bool
 
     def initialize(@updated_at : Int64, @clustering : Bool)
     end

@@ -7,7 +7,7 @@ class QuickHeadlines::Controllers::ContentController < QuickHeadlines::Controlle
     check_rate_limit!(request, "api_content", 120, 60)
 
     item_link = request.query_params["link"]?
-    unless item_link && !item_link.empty?
+    if item_link.nil? || item_link.empty?
       return QuickHeadlines::DTOs::ContentResponse.new(error: "Missing link parameter")
     end
 
