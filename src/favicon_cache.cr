@@ -35,12 +35,32 @@ module FaviconCache
 
   def self.warm_from_dir(dir : String) : Int32
     count = 0
-    if Dir.exists?(dir)
-      Dir.each_child(dir) do |filename|
-        filepath = File.join(dir, filename)
-        if File.file?(filepath)
+    # Resolve the base directory to its canonical path to prevent path traversal
+    # via symlinks (e.g., "../../../etc/passwd" attacks)
+    base_dir = File.expand_path(dir)
+
+    if Dir.exists?(base_dir)
+      Dir.each_child(base_dir) do |filename|
+        next if filename.starts_with?('.') # Skip hidden files
+
+        filepath = File.join(base_dir, filename)
+
+        # Security: Resolve symlinks and verify the file is still within base_dir
+        # This prevents reading files outside the intended cache directory
+        begin
+          real_path = File.expand_path(filepath)
+          unless real_path.starts_with?(base_dir)
+            Log.for("quickheadlines.cache").warn { "Skipped path traversal attempt: #{filename}" }
+            next
+          end
+        rescue ex
+          Log.for("quickheadlines.cache").warn(exception: ex) { "Failed to resolve path: #{filename}" }
+          next
+        end
+
+        if File.file?(real_path)
           begin
-            data = File.read(filepath)
+            data = File.read(real_path)
             @@mutex.synchronize do
               if @@cache.size >= MAX_ENTRIES
                 evict
