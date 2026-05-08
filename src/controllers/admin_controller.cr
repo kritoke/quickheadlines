@@ -11,6 +11,7 @@ class QuickHeadlines::Controllers::AdminController < QuickHeadlines::Controllers
     check_rate_limit!(request, "cluster", 1, 60)
 
     spawn do
+      start_time = Time.utc
       begin
         service = clustering_service
         cluster_limit = StateStore.config.try(&.clustering).try(&.max_items) || StateStore.config.try(&.db_fetch_limit) || 5000
@@ -20,7 +21,11 @@ class QuickHeadlines::Controllers::AdminController < QuickHeadlines::Controllers
           Log.for("quickheadlines.clustering").debug { "Running clustering..." }
         end
         service.recluster_with_lsh(@feed_cache, cluster_limit, threshold)
+        duration_ms = (Time.utc - start_time).total_milliseconds.to_i64
+        StateStore.set_cluster_completed(duration_ms, "success")
       rescue ex
+        duration_ms = (Time.utc - start_time).total_milliseconds.to_i64
+        StateStore.set_cluster_completed(duration_ms, "failed: #{ex.message}")
         Log.for("quickheadlines.clustering").error(exception: ex) { "Clustering error" }
       end
     end
@@ -41,12 +46,17 @@ class QuickHeadlines::Controllers::AdminController < QuickHeadlines::Controllers
     raise AHK::Exception::BadRequest.new("Unknown action: #{action}") unless action.in?(VALID_ADMIN_ACTIONS)
 
     spawn do
+      start_time = Time.utc
       begin
         case action
         when "clear-cache"      then handle_clear_cache
         when "cleanup-orphaned" then handle_cleanup_orphaned
         end
+        duration_ms = (Time.utc - start_time).total_milliseconds.to_i64
+        StateStore.set_admin_completed(action, duration_ms, "success")
       rescue ex
+        duration_ms = (Time.utc - start_time).total_milliseconds.to_i64
+        StateStore.set_admin_completed(action, duration_ms, "failed: #{ex.message}")
         Log.for("quickheadlines.app").error(exception: ex) { "Admin action error" }
       end
     end
@@ -127,6 +137,13 @@ class QuickHeadlines::Controllers::AdminController < QuickHeadlines::Controllers
       websocket_send_errors: ws_stats["send_errors"].to_i64,
       websocket_connections_closed: ws_stats["closed_total"].to_i64,
       broadcaster_processed: broadcaster_stats["processed"].to_i64,
+      last_cluster_run: StateStore.last_cluster_run.try(&.to_unix_ms),
+      last_cluster_duration_ms: StateStore.last_cluster_duration_ms,
+      last_cluster_status: StateStore.last_cluster_status,
+      last_admin_action: StateStore.last_admin_action,
+      last_admin_run: StateStore.last_admin_run.try(&.to_unix_ms),
+      last_admin_duration_ms: StateStore.last_admin_duration_ms,
+      last_admin_status: StateStore.last_admin_status,
     )
   end
 

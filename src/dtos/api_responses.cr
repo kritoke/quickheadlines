@@ -203,6 +203,28 @@ module QuickHeadlines::DTOs
     property websocket_connections_closed : Int64
     property broadcaster_processed : Int64
 
+    # Background task tracking
+    @[JSON::Field(emit_null: true)]
+    property last_cluster_run : Int64?
+
+    @[JSON::Field(emit_null: true)]
+    property last_cluster_duration_ms : Int64?
+
+    @[JSON::Field(emit_null: true)]
+    property last_cluster_status : String?
+
+    @[JSON::Field(emit_null: true)]
+    property last_admin_action : String?
+
+    @[JSON::Field(emit_null: true)]
+    property last_admin_run : Int64?
+
+    @[JSON::Field(emit_null: true)]
+    property last_admin_duration_ms : Int64?
+
+    @[JSON::Field(emit_null: true)]
+    property last_admin_status : String?
+
     def initialize(
       @clustering : Bool,
       @refreshing : Bool,
@@ -213,6 +235,13 @@ module QuickHeadlines::DTOs
       @websocket_send_errors : Int64 = 0_i64,
       @websocket_connections_closed : Int64 = 0_i64,
       @broadcaster_processed : Int64 = 0_i64,
+      @last_cluster_run : Int64? = nil,
+      @last_cluster_duration_ms : Int64? = nil,
+      @last_cluster_status : String? = nil,
+      @last_admin_action : String? = nil,
+      @last_admin_run : Int64? = nil,
+      @last_admin_duration_ms : Int64? = nil,
+      @last_admin_status : String? = nil,
     )
     end
   end

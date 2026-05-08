@@ -66,6 +66,15 @@ module StateStore
   @@mutex = Mutex.new
   @@clustering_start_time : Time?
 
+  # Background task tracking
+  @@last_cluster_run : Time?
+  @@last_cluster_duration_ms : Int64 = 0_i64
+  @@last_cluster_status : String = "idle"
+  @@last_admin_action : String?
+  @@last_admin_run : Time?
+  @@last_admin_duration_ms : Int64 = 0_i64
+  @@last_admin_status : String = "idle"
+
   def self.get : AppStateSnapshot
     @@mutex.synchronize { @@current }
   end
@@ -126,6 +135,51 @@ module StateStore
 
   def self.clustering_start_time : Time?
     @@mutex.synchronize { @@clustering_start_time }
+  end
+
+  def self.last_cluster_run : Time?
+    @@mutex.synchronize { @@last_cluster_run }
+  end
+
+  def self.last_cluster_duration_ms : Int64
+    @@mutex.synchronize { @@last_cluster_duration_ms }
+  end
+
+  def self.last_cluster_status : String
+    @@mutex.synchronize { @@last_cluster_status }
+  end
+
+  def self.set_cluster_completed(duration_ms : Int64, status : String) : Nil
+    @@mutex.synchronize do
+      @@last_cluster_run = Time.utc
+      @@last_cluster_duration_ms = duration_ms
+      @@last_cluster_status = status
+    end
+  end
+
+  def self.last_admin_action : String?
+    @@mutex.synchronize { @@last_admin_action }
+  end
+
+  def self.last_admin_run : Time?
+    @@mutex.synchronize { @@last_admin_run }
+  end
+
+  def self.last_admin_duration_ms : Int64
+    @@mutex.synchronize { @@last_admin_duration_ms }
+  end
+
+  def self.last_admin_status : String
+    @@mutex.synchronize { @@last_admin_status }
+  end
+
+  def self.set_admin_completed(action : String, duration_ms : Int64, status : String) : Nil
+    @@mutex.synchronize do
+      @@last_admin_action = action
+      @@last_admin_run = Time.utc
+      @@last_admin_duration_ms = duration_ms
+      @@last_admin_status = status
+    end
   end
 
   def self.refreshing?
