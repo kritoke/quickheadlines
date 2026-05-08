@@ -58,6 +58,7 @@ module QuickHeadlines::Constants
   CACHE_ONE_HOUR =     3600
 
   PROXY_DEFAULT_MAX_BYTES = 2 * 1024 * 1024
+  PROXY_MAX_ALLOWED_BYTES = 10_i64 * 1024 * 1024  # Hard ceiling to prevent abuse
 
   SQLITE_BUSY_TIMEOUT_MS = 30000
 

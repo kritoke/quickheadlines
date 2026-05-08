@@ -6,7 +6,12 @@ class QuickHeadlines::Controllers::ProxyController < QuickHeadlines::Controllers
   def proxy_image(request : AHTTP::Request) : AHTTP::Response
     url = request.query_params["url"]?
     raw_max = request.query_params["max"]?
-    max_bytes = raw_max.try(&.to_i64?) || QuickHeadlines::Constants::PROXY_DEFAULT_MAX_BYTES.to_i64
+    # Parse max parameter and clamp to hard ceiling to prevent abuse
+    max_bytes : Int64 = QuickHeadlines::Constants::PROXY_DEFAULT_MAX_BYTES.to_i64
+    if (parsed = raw_max.try(&.to_i64?))
+      max_bytes = {parsed, QuickHeadlines::Constants::PROXY_MAX_ALLOWED_BYTES}.min
+      max_bytes = {max_bytes, 1_i64}.max
+    end
 
     raise AHK::Exception::BadRequest.new("Missing 'url' parameter") if url.nil? || url.strip.empty?
     raise AHK::Exception::HTTPException.new(403, "Disallowed proxy domain") unless validate_proxy_url(url)
