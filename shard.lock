@@ -2,7 +2,7 @@ version: 2.0
 shards:
   ameba:
     git: https://github.com/crystal-ameba/ameba.git
-    version: 1.7.0-dev+git.commit.77bf37bb5d3f7751bb531d2e5e67d66a28474579
+    version: 1.7.0-dev+git.commit.41b12e4fba6ab4bd68b746a6b942dd16e432f21c
 
   athena:
     git: https://github.com/athena-framework/framework.git
@@ -62,7 +62,7 @@ shards:
 
   azurite:
     git: https://github.com/kritoke/azurite.cr.git
-    version: 0.1.0+git.commit.26022891039f4c77c9e86d58b3e1713adec00610
+    version: 0.1.0+git.commit.f589dc7bc1c791269f1d72990bfbd888720c88f3
 
   baked_file_system:
     git: https://github.com/schovi/baked_file_system.git
@@ -90,7 +90,7 @@ shards:
 
   fetcher:
     git: https://github.com/kritoke/fetcher.cr.git
-    version: 0.9.10
+    version: 0.9.11
 
   html5:
     git: https://github.com/naqvis/crystal-html5.git
@@ -110,7 +110,7 @@ shards:
 
   prismatiq:
     git: https://github.com/kritoke/prismatiq.git
-    version: 0.7.0
+    version: 0.7.1
 
   sanitize:
     git: https://github.com/straight-shoota/sanitize.git
