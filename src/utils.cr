@@ -79,17 +79,23 @@ module Utils
 end
 
 def read_body_safe(io : IO, max_size : Int32 = QuickHeadlines::Constants::MAX_REQUEST_BODY_SIZE) : String
-  buffer = Bytes.new(max_size)
-  index = 0
-  while index < max_size
-    bytes_read = io.read(buffer[index..])
+  # Use growing buffer instead of fixed max-size allocation
+  buffer = IO::Memory.new
+  buffer_bytes = Bytes.new(8192)  # 8KB chunk
+  bytes_copied = 0
+
+  while bytes_copied < max_size
+    bytes_read = io.read(buffer_bytes)
     break if bytes_read == 0
-    index += bytes_read
+    buffer.write(buffer_bytes[0, bytes_read])
+    bytes_copied += bytes_read
   end
-  if index >= max_size && io.read_byte
+
+  if bytes_copied >= max_size && io.read_byte
     raise IO::EOFError.new("Request body exceeds #{max_size} bytes")
   end
-  String.new(buffer[0, index])
+
+  buffer.to_s
 end
 
 module UrlNormalizer
@@ -131,6 +137,9 @@ end
 
 def extract_client_ip(request) : String
   if ENV["TRUSTED_PROXY"]?
+    # DEPRECATED: This blindly trusts X-Forwarded-For without verifying proxy IP
+    # Consider using X-Client-IP from a trusted reverse proxy instead
+    Log.for("quickheadlines.utils").warn { "TRUSTED_PROXY is deprecated - use reverse proxy to set X-Client-IP" } if ENV["APP_ENV"]? && ENV["APP_ENV"] == "development"
     if xff = request.headers["X-Forwarded-For"]?
       if first_ip = xff.split(",").first?.try(&.strip)
         return first_ip

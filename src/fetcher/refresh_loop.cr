@@ -78,6 +78,9 @@ module RefreshHealthMonitor
 end
 
 private def check_semaphore_health
+  # Note: This briefly blocks concurrent fetches while draining and refilling permits.
+  # Impact is minimal (~8 receives/sends) and the check only runs periodically.
+  # If the semaphore never gets out of sync, this health check could be removed.
   expected = QuickHeadlines::Constants::CONCURRENCY
   available = 0
   expected.times do
