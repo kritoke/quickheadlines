@@ -137,5 +137,5 @@ def extract_client_ip(request) : String
       end
     end
   end
-  request.headers["X-Client-IP"]?.try(&.strip) || "local"
+  request.headers["X-Client-IP"]?.try(&.strip) || "unknown"
 end
