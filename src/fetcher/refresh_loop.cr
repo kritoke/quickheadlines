@@ -321,6 +321,8 @@ def start_refresh_loop(config_path : String, cache : FeedCache, db_service : Dat
         when timeout(outer_timeout)
           Log.for("quickheadlines.feed").error { "refresh loop sleep timed out after #{outer_timeout.total_seconds.round}s" }
         end
+        # Ensure the spawned fiber doesn't leak - close the channel so any pending send will raise
+        sleep_done.close unless sleep_done.closed?
 
         break if QuickHeadlines.shutting_down?
 
