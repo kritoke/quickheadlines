@@ -111,7 +111,19 @@ private def fetch_feeds_concurrently(all_configs : Hash(String, Feed), existing_
       CONCURRENCY_SEMAPHORE.receive
       begin
         prev = existing_data[feed.url]?
-        channel.send(FeedFetcher.instance.fetch(feed, config.item_limit, config.db_fetch_limit, prev))
+        # Per-feed timeout to prevent one hung fetch from blocking the semaphore slot
+        # This is critical for preventing semaphore exhaustion over long running sessions
+        timeout_channel = Channel(FeedData?).new(1)
+        spawn do
+          timeout_channel.send(FeedFetcher.instance.fetch(feed, config.item_limit, config.db_fetch_limit, prev))
+        end
+        result = select
+        when timeout(QuickHeadlines::Constants::FETCH_TIMEOUT_SECONDS.seconds)
+          Log.for("quickheadlines.feed").warn { "fetch_feeds_concurrently: feed #{feed.url} timed out after #{QuickHeadlines::Constants::FETCH_TIMEOUT_SECONDS}s in semaphore, returning error feed" }
+          channel.send(FeedFetcher.instance.build_error_feed(feed, "Error: Fetch timeout in semaphore"))
+        when value = timeout_channel.receive?
+          channel.send(value)
+        end
       rescue ex
         Log.for("quickheadlines.feed").error(exception: ex) { "fetch_feeds_concurrently: error fetching #{feed.url}" }
         channel.send(nil)

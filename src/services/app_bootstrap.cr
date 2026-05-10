@@ -161,6 +161,11 @@ class AppBootstrap
         begin
           VugAdapter.clear_cache
           Log.for("quickheadlines.app").debug { "Cleared Vug cache" }
+
+          # Clear DNS cache and rate limiters to prevent memory/resource leaks
+          Fetcher::CrestHttpClient.clear_dns_cache
+          Fetcher::CrestHttpClient.clear_rate_limiters
+
           @feed_cache.cleanup_old_articles(QuickHeadlines::Constants::CACHE_RETENTION_DAYS)
           @feed_cache.cleanup_old_entries(@config.cache_retention_hours || QuickHeadlines::Constants::CACHE_RETENTION_HOURS)
           QuickHeadlines::Services::ContentService.instance.check_size_and_cleanup
