@@ -14,11 +14,13 @@
   "type": "module",
   "pnpm": {
     "onlyBuiltDependencies": [
-      "esbuild"
+      "esbuild",
+      "@sveltejs/kit"
     ]
   },
   "overrides": {
-    "cookie": ">=0.7.0"
+    "cookie": ">=0.7.0",
+    "esbuild": "0.24.2"
   },
   "dependencies": {
     "@sveltejs/kit": "^2.59.1",
@@ -26,7 +28,7 @@
     "dompurify": "^3.4.2",
     "svelte": "^5.55.5",
     "typescript": "^5.9.3",
-    "vite": "^7.3.3"
+    "vite": "^6.2.0"
   },
   "browserslist": [
     "Safari >= 13",
