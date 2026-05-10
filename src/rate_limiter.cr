@@ -4,6 +4,7 @@ require "mutex"
 module QuickHeadlines
   class RateLimiter
     @@instances = {} of String => RateLimiter
+    @@instances_lock = Mutex.new
     @@cleanup_lock = Mutex.new
     @@cleanup_fiber : Fiber?
     @@last_cleanup = Time.utc
@@ -38,7 +39,7 @@ module QuickHeadlines
 
     def self.get_or_create(key : String, max_requests : Int32 = 1, window_seconds : Int32 = 60) : RateLimiter
       start_cleanup_fiber
-      @@cleanup_lock.synchronize do
+      @@instances_lock.synchronize do
         unless @@instances[key]?
           @@instances[key] = RateLimiter.new(max_requests, window_seconds)
         end
@@ -50,13 +51,21 @@ module QuickHeadlines
 
     def self.cleanup_stale_instances
       @@cleanup_lock.synchronize do
+        # Quick check without holding instances lock
         now = Time.utc
         return if (now - @@last_cleanup).total_seconds < QuickHeadlines::Constants::RATE_LIMITER_CLEANUP_INTERVAL
 
+        # Only hold instances lock briefly for the actual cleanup
         cutoff = now.to_unix - QuickHeadlines::Constants::RATE_LIMITER_INSTANCE_TTL
-        @@instances.reject! do |_, limiter|
-          limiter.last_accessed < cutoff
+        removed = 0
+        @@instances_lock.synchronize do
+          removed = @@instances.size
+          @@instances.reject! do |_, limiter|
+            limiter.last_accessed < cutoff
+          end
+          removed -= @@instances.size
         end
+        Log.for("quickheadlines.ratelimiter").debug { "Cleaned up #{removed} stale rate limiter instances" } if removed > 0
         @@last_cleanup = now
       end
     end

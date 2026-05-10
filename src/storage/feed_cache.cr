@@ -254,6 +254,11 @@ end
 def save_feed_cache(cache : FeedCache, retention_hours : Int32 = QuickHeadlines::Constants::CACHE_RETENTION_HOURS, max_cache_size_mb : Int32 = 100)
   cache.check_size_limit(max_cache_size_mb)
 
+  # Always checkpoint WAL to prevent unbounded growth
+  # WAL can grow significantly between vacuum cycles (refresh runs every 30 min)
+  # Checkpoint is cheap (just syncing WAL to main db), so do it every time
+  cache.cleanup_store.ensure_wal_checkpoint
+
   now = Time.utc
   if now - QuickHeadlines::Storage.last_cache_cleanup >= 1.hour
     begin
@@ -265,8 +270,6 @@ def save_feed_cache(cache : FeedCache, retention_hours : Int32 = QuickHeadlines:
         Log.for("quickheadlines.storage").warn { "vacuum failed: #{ex.message}" }
       end
     end
-
-    cache.cleanup_store.ensure_wal_checkpoint
 
     cache.cleanup_old_entries(retention_hours)
     cache.cleanup_old_articles(QuickHeadlines::Constants::CACHE_RETENTION_DAYS)

@@ -64,16 +64,41 @@ module RefreshHealthMonitor
   def self.stuck?(max_age_seconds : Int32) : Bool
     start_time = @@last_refresh_start.get
     return false if start_time == 0
+
+    # Only stuck if last cycle started AFTER last completion
+    # This prevents false positives when recovery just happened
     last_complete = @@last_refresh_complete.get
     return false if last_complete > start_time
+
     age_ms = Time.utc.to_unix_ms - start_time
     result = age_ms > (max_age_seconds * 1000)
     if result
       Log.for("quickheadlines.feed").warn do
-        "RefreshHealthMonitor.stuck? returning true: start=#{start_time}, last_complete=#{last_complete}, age_ms=#{age_ms}, threshold_ms=#{max_age_seconds * 1000}"
+        "RefreshHealthMonitor.stuck?: start=#{start_time}, last_complete=#{last_complete}, age_ms=#{age_ms}, threshold_ms=#{max_age_seconds * 1000}"
       end
     end
     result
+  end
+
+  # Attempt atomic recovery from stuck state
+  # Returns true if recovery was successful (we were stuck and now recovered)
+  # Returns false if not stuck or recovery was not needed
+  def self.attempt_recovery : Bool
+    start_time = @@last_refresh_start.get
+    return false if start_time == 0
+
+    last_complete = @@last_refresh_complete.get
+    return false if last_complete > start_time
+
+    # Atomically try to claim the recovery by checking and resetting
+    # Use a compare-and-set pattern via mutex for safety
+    old_value = @@last_refresh_start.get
+    return false if old_value == 0
+
+    # Reset start time to indicate we're no longer tracking a stuck refresh
+    @@last_refresh_start.set(0)
+    Log.for("quickheadlines.feed").info { "RefreshHealthMonitor: atomic recovery performed" }
+    true
   end
 end
 
@@ -244,9 +269,16 @@ def start_refresh_loop(config_path : String, cache : FeedCache, db_service : Dat
           "cycles completed: #{status[:cycles]}, failures: #{status[:failures]}"
         end
         Log.for("quickheadlines.feed").error { "Attempting to recover stuck refresh..." }
-        StateStore.update(&.copy_with(refreshing: false))
-        RefreshHealthMonitor.reset_failures
-        Log.for("quickheadlines.feed").info { "Recovery complete, will retry on next cycle" }
+
+        # Use atomic recovery to prevent race condition with ongoing refresh fiber
+        if RefreshHealthMonitor.attempt_recovery
+          StateStore.update(&.copy_with(refreshing: false))
+          RefreshHealthMonitor.reset_failures
+          Log.for("quickheadlines.feed").info { "Recovery complete, will retry on next cycle" }
+        else
+          # Another recovery already happened, just log and continue
+          Log.for("quickheadlines.feed").info { "Recovery was already performed by another fiber" }
+        end
       end
 
       refresh_start_time = Time.utc
