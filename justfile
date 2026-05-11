@@ -270,7 +270,7 @@ check-deps:
 # Install Svelte dependencies
 svelte-install:
     @echo "Installing Svelte dependencies..."
-    cd frontend && npm install --legacy-peer-deps
+    cd frontend && pnpm install
     @echo "✓ Svelte dependencies installed"
 
 # Check if dist is stale (source files newer than dist)
@@ -315,9 +315,11 @@ svelte-build: check-dist-fresh
     @if [ ! -d "frontend/node_modules" ]; then \
         cd frontend && npm install --legacy-peer-deps; \
     fi
-    cd frontend && npm run build
+    cd frontend && pnpm run build
     @# Copy static assets
     @cp frontend/static/logo.svg frontend/dist/ 2>/dev/null || true
+    @# Touch assets.cr to force BakedFileSystem to pick up new frontend
+    @touch src/web/assets.cr
     @echo "✓ Svelte built to frontend/dist/"
 
 # Force Svelte rebuild (skip freshness check)
@@ -327,9 +329,11 @@ svelte-build-force:
     @if [ ! -d "frontend/node_modules" ]; then \
         cd frontend && npm install --legacy-peer-deps; \
     fi
-    cd frontend && npm run build
+    cd frontend && pnpm run build
     @# Copy static assets
     @cp frontend/static/logo.svg frontend/dist/ 2>/dev/null || true
+    @# Touch assets.cr to force BakedFileSystem to pick up new frontend
+    @touch src/web/assets.cr
     @echo "✓ Svelte rebuilt to frontend/dist/"
 
 # Verify baked assets are present in binary

@@ -12,12 +12,6 @@
     "test:watch": "vitest"
   },
   "type": "module",
-  "pnpm": {
-    "onlyBuiltDependencies": [
-      "esbuild",
-      "@sveltejs/kit"
-    ]
-  },
   "overrides": {
     "cookie": ">=0.7.0",
     "esbuild": "0.24.2"
