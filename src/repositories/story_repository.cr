@@ -3,8 +3,8 @@ require "../services/database_service"
 require "./repository_base"
 
 module QuickHeadlines::Repositories
-  class StoryRepository < RepositoryBase
-    private record TimelineEntry,
+  # Public record for timeline items - shared between StoryRepository and DTOs
+  record TimelineEntry,
       id : Int64,
       title : String,
       link : String,
@@ -21,6 +21,8 @@ module QuickHeadlines::Repositories
       cluster_size : Int32,
       comment_url : String? = nil,
       commentary_url : String? = nil
+
+  class StoryRepository < RepositoryBase
 
     private def cluster_info_cte : String
       <<-SQL

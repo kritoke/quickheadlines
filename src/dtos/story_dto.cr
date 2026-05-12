@@ -1,4 +1,6 @@
 require "json"
+require "../models"
+require "../repositories/story_repository"
 
 class QuickHeadlines::DTOs::StoryResponse
   include JSON::Serializable
@@ -56,6 +58,47 @@ class QuickHeadlines::DTOs::StoryResponse
       header_text_color: story.header_text_color,
       comment_url: story.comment_url,
       commentary_url: story.commentary_url,
+    )
+  end
+
+  def self.from_cluster_item(item : ClusteringItemRow) : QuickHeadlines::DTOs::StoryResponse
+    new(
+      id: item.id.to_s,
+      title: item.title,
+      link: item.link,
+      pub_date: item.pub_date.try(&.to_unix_ms),
+      feed_title: item.feed_title,
+      feed_url: item.feed_url,
+      feed_link: item.feed_link,
+      favicon: item.favicon,
+      favicon_data: item.favicon_data,
+      header_color: item.header_color,
+      header_text_color: item.header_text_color,
+      comment_url: item.comment_url,
+      commentary_url: item.commentary_url,
+    )
+  end
+
+  # Maps TimelineItemRow to TimelineItemResponse
+  # Note: Different from StoryResponse - has cluster_id, is_representative, cluster_size
+  def self.from_timeline_item(item : QuickHeadlines::Repositories::TimelineEntry) : QuickHeadlines::DTOs::TimelineItemResponse
+    QuickHeadlines::DTOs::TimelineItemResponse.new(
+      id: item.id.to_s,
+      title: item.title,
+      link: item.link,
+      pub_date: item.pub_date.try(&.to_unix_ms),
+      feed_title: item.feed_title,
+      feed_url: item.feed_url,
+      feed_link: item.feed_link,
+      favicon: item.favicon,
+      favicon_data: item.favicon_data,
+      header_color: item.header_color,
+      header_text_color: item.header_text_color,
+      cluster_id: item.cluster_id.try(&.to_s),
+      is_representative: item.representative,
+      cluster_size: item.cluster_size,
+      comment_url: item.comment_url,
+      commentary_url: item.commentary_url
     )
   end
 end

@@ -386,19 +386,7 @@ class FeedFetcher
       favicon_path = FaviconStorage.disk_path(prev_favicon_data)
       if favicon_path && File.exists?(favicon_path)
         favicon = prev_favicon_data.starts_with?("/favicons/") ? prev_favicon_data : cached.favicon
-        return FeedData.new(
-          title: cached.title,
-          url: cached.url,
-          site_link: cached.site_link,
-          header_color: cached.header_color,
-          header_text_color: cached.header_text_color,
-          items: cached.items,
-          etag: cached.etag,
-          last_modified: cached.last_modified,
-          favicon: favicon,
-          favicon_data: prev_favicon_data,
-          header_theme_colors: cached.header_theme_colors,
-        )
+        return build_feed_data_with_favicon(cached, favicon, prev_favicon_data)
       end
     end
 
@@ -406,23 +394,27 @@ class FeedFetcher
     if cached_favicon.is_a?(String) && cached_favicon.starts_with?("/favicons/")
       favicon_path = FaviconStorage.disk_path(cached_favicon)
       unless favicon_path && File.exists?(favicon_path)
-        return FeedData.new(
-          title: cached.title,
-          url: cached.url,
-          site_link: cached.site_link,
-          header_color: cached.header_color,
-          header_text_color: cached.header_text_color,
-          items: cached.items,
-          etag: cached.etag,
-          last_modified: cached.last_modified,
-          favicon: cached.favicon,
-          favicon_data: nil,
-          header_theme_colors: cached.header_theme_colors,
-        )
+        return build_feed_data_with_favicon(cached, cached.favicon, nil)
       end
     end
 
     cached
+  end
+
+  private def build_feed_data_with_favicon(feed : FeedData, favicon : String?, favicon_data : String?) : FeedData
+    FeedData.new(
+      title: feed.title,
+      url: feed.url,
+      site_link: feed.site_link,
+      header_color: feed.header_color,
+      header_text_color: feed.header_text_color,
+      items: feed.items,
+      etag: feed.etag,
+      last_modified: feed.last_modified,
+      favicon: favicon,
+      favicon_data: favicon_data,
+      header_theme_colors: feed.header_theme_colors,
+    )
   end
 
   def self.fetcher_config : Fetcher::RequestConfig

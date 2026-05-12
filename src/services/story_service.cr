@@ -1,5 +1,6 @@
 require "../repositories/story_repository"
 require "../dtos/api_responses"
+require "../dtos/story_dto"
 
 module QuickHeadlines::Services
   module StoryService
@@ -15,24 +16,7 @@ module QuickHeadlines::Services
       has_more = offset + limit < total_count
 
       timeline_items = items.map do |item|
-        QuickHeadlines::DTOs::TimelineItemResponse.new(
-          id: item.id.to_s,
-          title: item.title,
-          link: item.link,
-          pub_date: item.pub_date.try(&.to_unix_ms),
-          feed_title: item.feed_title,
-          feed_url: item.feed_url,
-          feed_link: item.feed_link,
-          favicon: item.favicon,
-          favicon_data: item.favicon_data,
-          header_color: item.header_color,
-          header_text_color: item.header_text_color,
-          cluster_id: item.cluster_id.try(&.to_s),
-          is_representative: item.representative,
-          cluster_size: item.cluster_size,
-          comment_url: item.comment_url,
-          commentary_url: item.commentary_url
-        )
+        QuickHeadlines::DTOs::StoryResponse.from_timeline_item(item)
       end
 
       TimelineResult.new(

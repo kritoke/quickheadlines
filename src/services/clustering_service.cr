@@ -118,21 +118,7 @@ class QuickHeadlines::Services::ClusteringService
     db_items = feed_cache.get_cluster_items_full(parsed_id)
 
     items = db_items.map do |item|
-      QuickHeadlines::DTOs::StoryResponse.new(
-        id: item.id.to_s,
-        title: item.title,
-        link: item.link,
-        pub_date: item.pub_date.try(&.to_unix_ms),
-        feed_title: item.feed_title,
-        feed_url: item.feed_url,
-        feed_link: item.feed_link,
-        favicon: item.favicon,
-        favicon_data: item.favicon_data,
-        header_color: item.header_color,
-        header_text_color: item.header_text_color,
-        comment_url: item.comment_url,
-        commentary_url: item.commentary_url,
-      )
+      QuickHeadlines::DTOs::StoryResponse.from_cluster_item(item)
     end
 
     QuickHeadlines::DTOs::ClusterItemsResponse.new(
