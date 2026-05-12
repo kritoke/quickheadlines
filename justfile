@@ -400,27 +400,36 @@ test-frontend:
 # --- Crystal Tasks ---
 
 # Build Release Binary (includes baked Svelte assets)
+# Works on all platforms: Linux, macOS, FreeBSD, Docker
 build: check-deps
-    @echo "Building Svelte frontend..."
-    @# Check if dist is stale and force rebuild if needed
-    @if [ ! -d "frontend/dist" ]; then \
-        echo "Dist not found, building..."; \
-        cd frontend && npm run build; \
-        cp frontend/static/logo.svg frontend/dist/ 2>/dev/null || true; \
-    elif [ -n "$(find frontend/src -newer frontend/dist -type f 2>/dev/null | head -1)" ]; then \
-        echo "Source files newer than dist, rebuilding..."; \
-        cd frontend && npm run build; \
-        cp frontend/static/logo.svg frontend/dist/ 2>/dev/null || true; \
+    @echo "Building QuickHeadlines for {{os}}-{{arch}}..."
+    @# Ensure frontend is built - this is CRITICAL for BakedFileSystem
+    @if [ ! -d "frontend/dist" ] || [ ! -f "frontend/dist/index.html" ]; then \
+        echo "Frontend dist not found or incomplete. Building..."; \
+        cd frontend && pnpm install --frozen-lockfile 2>/dev/null || npm install 2>/dev/null || true; \
+        pnpm run build 2>/dev/null || npm run build 2>/dev/null || { \
+            echo "❌ Failed to build frontend"; \
+            exit 1; \
+        }; \
     fi
-    @echo "Compiling release binary for {{os}}-{{arch}}..."
+    @# Check if dist is stale (source newer than dist)
+    @STALE=$(find frontend/src -newer frontend/dist -type f 2>/dev/null | head -1)
+    @if [ -n "$STALE" ]; then \
+        echo "Frontend source files newer than dist. Rebuilding..."; \
+        cd frontend && pnpm run build 2>/dev/null || npm run build 2>/dev/null; \
+    fi
+    @# Copy static assets
+    @cp frontend/static/logo.svg frontend/dist/ 2>/dev/null || true
+    @echo "Frontend built to frontend/dist/"
+    @echo "Compiling release binary..."
     @mkdir -p bin
-    @# Force BakedFileSystem recompilation by updating assets.cr with build timestamp
-    @sed -i 's/# Build:.*/# Build: $(date -Iseconds)/' src/web/assets.cr 2>/dev/null || \
-        sed -i '' 's/# Build:.*/# Build: '$(date -Iseconds)'/' src/web/assets.cr 2>/dev/null || \
-        true
-    @echo "Note: Frontend assets are baked into the binary"
+    @# Force BakedFileSystem to pick up new frontend by updating timestamp
+    @sed -i 's/# Build:.*/# Build: '$(date -Iseconds)'/' src/web/assets.cr 2>/dev/null || \
+        sed -i '' 's/# Build:.*/# Build: '$(date -Iseconds)'/' src/web/assets.cr 2>/dev/null || true
+    @echo "Baking frontend assets into binary..."
     @APP_ENV=production {{FINAL_CRYSTAL}} build --release --no-debug src/quickheadlines.cr -o bin/{{NAME}}
     @echo "✓ Built bin/{{NAME}}"
+    @ls -lh bin/{{NAME}}
 
 # Build using nix develop (recommended for this project)
 nix-build:
@@ -468,32 +477,32 @@ nix-build-optimized:
 
 # Build with specific OS/Arch naming for GitHub Releases (optimized by default)
 build-release: check-deps
-    @echo "Building Svelte frontend..."
-    @if [ ! -d "frontend/dist" ]; then \
-        cd frontend && npm run build; \
-        cp frontend/static/logo.svg frontend/dist/ 2>/dev/null || true; \
-    elif [ -n "$(find frontend/src -newer frontend/dist -type f 2>/dev/null | head -1)" ]; then \
-        cd frontend && npm run build; \
-        cp frontend/static/logo.svg frontend/dist/ 2>/dev/null || true; \
+    @echo "Building QuickHeadlines {{BUILD_REV}} for {{os}}-{{arch}}..."
+    @# Ensure frontend is built - CRITICAL for BakedFileSystem
+    @if [ ! -d "frontend/dist" ] || [ ! -f "frontend/dist/index.html" ]; then \
+        echo "Frontend dist not found. Building..."; \
+        cd frontend && pnpm install --frozen-lockfile 2>/dev/null || npm install 2>/dev/null || true; \
+        pnpm run build 2>/dev/null || npm run build 2>/dev/null || { \
+            echo "❌ Failed to build frontend"; \
+            exit 1; \
+        }; \
     fi
-    @echo "Compiling release binary (optimized: -Os -Dpreview_lto): bin/{{NAME}}-{{BUILD_REV}}-{{os}}-{{arch}}"
-    @mkdir -p bin
-    @touch src/web/assets.cr
-    APP_ENV=production {{FINAL_CRYSTAL}} build --release --no-debug -Os -Dpreview_lto -Dversion={{BUILD_REV}} src/quickheadlines.cr -o bin/{{NAME}}-{{BUILD_REV}}-{{os}}-{{arch}}
-    @echo "✓ Built bin/{{NAME}}-{{BUILD_REV}}-{{os}}-{{arch}}"
-    @ls -lh bin/{{NAME}}-{{BUILD_REV}}-{{os}}-{{arch}}
-    @echo "Building Svelte frontend..."
-    @if [ ! -d "frontend/dist" ]; then \
-        cd frontend && npm run build; \
-        cp frontend/static/logo.svg frontend/dist/ 2>/dev/null || true; \
-    elif [ -n "$(find frontend/src -newer frontend/dist -type f 2>/dev/null | head -1)" ]; then \
-        cd frontend && npm run build; \
-        cp frontend/static/logo.svg frontend/dist/ 2>/dev/null || true; \
+    @# Check if dist is stale
+    @STALE=$(find frontend/src -newer frontend/dist -type f 2>/dev/null | head -1)
+    @if [ -n "$STALE" ]; then \
+        echo "Frontend source newer than dist. Rebuilding..."; \
+        cd frontend && pnpm run build 2>/dev/null || npm run build 2>/dev/null; \
     fi
-    @echo "Compiling release binary: bin/{{NAME}}-{{BUILD_REV}}-{{os}}-{{arch}}"
+    @# Copy static assets
+    @cp frontend/static/logo.svg frontend/dist/ 2>/dev/null || true
+    @echo "Frontend built to frontend/dist/"
+    @echo "Compiling release binary (optimized: -Os -Dpreview_lto)..."
     @mkdir -p bin
-    @touch src/web/assets.cr
-    APP_ENV=production {{FINAL_CRYSTAL}} build --release --no-debug -Dversion={{BUILD_REV}} src/quickheadlines.cr -o bin/{{NAME}}-{{BUILD_REV}}-{{os}}-{{arch}}
+    @# Force BakedFileSystem to pick up new frontend
+    @sed -i 's/# Build:.*/# Build: '$(date -Iseconds)'/' src/web/assets.cr 2>/dev/null || \
+        sed -i '' 's/# Build:.*/# Build: '$(date -Iseconds)'/' src/web/assets.cr 2>/dev/null || true
+    @echo "Baking frontend assets into binary..."
+    @APP_ENV=production {{FINAL_CRYSTAL}} build --release --no-debug -Os -Dpreview_lto -Dversion={{BUILD_REV}} src/quickheadlines.cr -o bin/{{NAME}}-{{BUILD_REV}}-{{os}}-{{arch}}
     @echo "✓ Built bin/{{NAME}}-{{BUILD_REV}}-{{os}}-{{arch}}"
     @ls -lh bin/{{NAME}}-{{BUILD_REV}}-{{os}}-{{arch}}
 
