@@ -139,8 +139,26 @@ private def fetch_feeds_concurrently(all_configs : Hash(String, Feed), existing_
         # Per-feed timeout to prevent one hung fetch from blocking the semaphore slot
         # This is critical for preventing semaphore exhaustion over long running sessions
         timeout_channel = Channel(FeedData?).new(1)
+        # NOTE: This inner spawn MUST be protected - if fetch() throws an exception
+        # that isn't caught, the fiber dies silently, causing the timeout_channel
+        # to never send, which can hang the entire refresh cycle.
         spawn do
-          timeout_channel.send(FeedFetcher.instance.fetch(feed, config.item_limit, config.db_fetch_limit, prev))
+          begin
+            result = FeedFetcher.instance.fetch(feed, config.item_limit, config.db_fetch_limit, prev)
+            # Wrap send in begin/rescue - if channel closed (timeout fired), discard result
+            begin
+              timeout_channel.send(result)
+            rescue Channel::ClosedError
+              # Timeout fired first, result is discarded - this is expected behavior
+            end
+          rescue ex
+            Log.for("quickheadlines.feed").error(exception: ex) { "Inner fetch fiber crashed for #{feed.url}" }
+            begin
+              timeout_channel.send(FeedFetcher.instance.build_error_feed(feed, "Error: #{ex.class}"))
+            rescue Channel::ClosedError
+              # Channel already closed, fiber dying anyway
+            end
+          end
         end
         result = select
         when timeout(QuickHeadlines::Constants::FETCH_TIMEOUT_SECONDS.seconds)
@@ -151,7 +169,7 @@ private def fetch_feeds_concurrently(all_configs : Hash(String, Feed), existing_
         end
       rescue ex
         Log.for("quickheadlines.feed").error(exception: ex) { "fetch_feeds_concurrently: error fetching #{feed.url}" }
-        channel.send(nil)
+        channel.send(FeedFetcher.instance.build_error_feed(feed, "Error: #{ex.class}"))
       ensure
         CONCURRENCY_SEMAPHORE.send(nil)
       end
