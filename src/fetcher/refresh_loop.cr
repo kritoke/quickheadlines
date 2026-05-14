@@ -131,8 +131,11 @@ end
 
 private def fetch_feeds_concurrently(all_configs : Hash(String, Feed), existing_data : Hash(String, FeedData), config : Config) : Hash(String, FeedData)
   channel = Channel(FeedData?).new
+  feed_index = 0
   all_configs.each_value do |feed|
-    spawn do
+    current_index = feed_index
+    feed_index += 1
+    spawn(name: "feed_fetch_outer_#{current_index}") do
       CONCURRENCY_SEMAPHORE.receive
       begin
         prev = existing_data[feed.url]?
@@ -142,7 +145,7 @@ private def fetch_feeds_concurrently(all_configs : Hash(String, Feed), existing_
         # NOTE: This inner spawn MUST be protected - if fetch() throws an exception
         # that isn't caught, the fiber dies silently, causing the timeout_channel
         # to never send, which can hang the entire refresh cycle.
-        spawn do
+        spawn(name: "feed_fetch_inner_#{current_index}") do
           begin
             result = FeedFetcher.instance.fetch(feed, config.item_limit, config.db_fetch_limit, prev)
             # Wrap send in begin/rescue - if channel closed (timeout fired), discard result
@@ -160,7 +163,7 @@ private def fetch_feeds_concurrently(all_configs : Hash(String, Feed), existing_
             end
           end
         end
-        result = select
+        select
         when timeout(QuickHeadlines::Constants::FETCH_TIMEOUT_SECONDS.seconds)
           Log.for("quickheadlines.feed").warn { "fetch_feeds_concurrently: feed #{feed.url} timed out after #{QuickHeadlines::Constants::FETCH_TIMEOUT_SECONDS}s in semaphore, returning error feed" }
           channel.send(FeedFetcher.instance.build_error_feed(feed, "Error: Fetch timeout in semaphore"))
@@ -395,7 +398,9 @@ def start_refresh_loop(config_path : String, cache : FeedCache, db_service : Dat
         if cycle_count % heartbeat_interval == 0
           status = RefreshHealthMonitor.status
           Log.for("quickheadlines.feed").info do
-            "Refresh loop heartbeat: #{cycle_count} cycles, last complete: #{status[:last_complete]}"
+            "Refresh loop heartbeat: #{cycle_count} cycles, " \
+            "completed: #{status[:cycles]}, failures: #{status[:failures]}, " \
+            "last_start: #{status[:last_start]}, last_complete: #{status[:last_complete]}"
           end
         end
       rescue ex

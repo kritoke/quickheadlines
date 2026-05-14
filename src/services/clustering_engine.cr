@@ -92,19 +92,21 @@ module QuickHeadlines::Services
       signatures = {} of Int64 => Array(UInt32)
       items_map = {} of Int64 => ClusteringItem
 
-      items.each do |item|
+      items.each_with_index do |item, idx|
         next unless can_cluster?(item.title)
 
         sig = compute_minhash_signature(item.title)
         signatures[item.id] = sig
         items_map[item.id] = item
         index.add_with_signature(item.id.to_i32, sig)
+        # Yield periodically to prevent GC pressure and allow event loop processing
+        Fiber.yield if idx % 100 == 0
       end
 
       candidate_pairs = index.find_similar_pairs(threshold)
       verified_pairs = [] of Tuple(Int64, Int64, Float64)
 
-      candidate_pairs.each do |pair|
+      candidate_pairs.each_with_index do |pair, idx|
         a = pair[0].to_i64
         b = pair[1].to_i64
 
@@ -119,6 +121,8 @@ module QuickHeadlines::Services
         if sim >= threshold
           verified_pairs << {a, b, sim}
         end
+        # Yield periodically during expensive similarity computation
+        Fiber.yield if idx % 100 == 0
       end
 
       verified_pairs
@@ -150,15 +154,18 @@ module QuickHeadlines::Services
         end
       end
 
-      pairs.each do |pair|
+      # Union-Find with periodic yielding to prevent blocking
+      pairs.each_with_index do |pair, idx|
         union.call(pair[0], pair[1])
+        Fiber.yield if idx % 500 == 0
       end
 
       clusters = {} of Int64 => Array(Int64)
-      item_ids.each do |id|
+      item_ids.each_with_index do |id, idx|
         root = find.call(id)
         clusters[root] ||= [] of Int64
         clusters[root] << id
+        Fiber.yield if idx % 500 == 0
       end
 
       rep_map = {} of Int64 => Array(Int64)
