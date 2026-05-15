@@ -43,9 +43,44 @@ CMD sh -c "if [ ! -f /tmp/skip_download ] || [ '${CLEAR_CACHE}' = 'true' ]; then
 # 7a. DEV MODE: Build (Only runs if MODE=dev)
 CMD sh -c "if [ '${MODE}' = 'dev' ]; then \
     echo '🛠️ MODE: dev - Compiling from source...'; \
-    npm install -g pnpm && cd /tmp/qh/frontend && pnpm install && pnpm run build; \
-    echo '📁 Frontend dist contents:'; \
-    ls -la /tmp/qh/frontend/dist/ 2>/dev/null || echo 'ERROR: frontend/dist not created!'; \
+    npm install -g pnpm; \
+    \
+    # Fix pnpm esbuild build issue on FreeBSD - esbuild needs to be built for Vite to work \
+    echo 'onlyBuiltDependencies=[\"esbuild\"]' >> /tmp/qh/frontend/.npmrc 2>/dev/null || true; \
+    cd /tmp/qh/frontend && pnpm install 2>&1; \
+    \
+    # Build Svelte frontend \
+    echo 'Building Svelte frontend...'; \
+    cd /tmp/qh/frontend && pnpm run build 2>&1; \
+    BUILD_STATUS=\$?; \
+    \
+    # Check if build succeeded \
+    if [ \$BUILD_STATUS -ne 0 ]; then \
+        echo '❌ Svelte build failed with exit code: '\$BUILD_STATUS; \
+        ls -la /tmp/qh/frontend/dist/ 2>/dev/null || echo 'frontend/dist does not exist'; \
+        exit 1; \
+    fi; \
+    \
+    # Copy logo.svg to dist (required by BakedFileSystem bake_folder directive) \
+    if [ -f /tmp/qh/frontend/static/logo.svg ]; then \
+        cp /tmp/qh/frontend/static/logo.svg /tmp/qh/frontend/dist/; \
+        echo '✓ Copied logo.svg to frontend/dist/'; \
+    fi; \
+    \
+    echo '📁 Verifying frontend dist contents:'; \
+    if [ ! -f /tmp/qh/frontend/dist/index.html ]; then \
+        echo '❌ ERROR: frontend/dist/index.html not found! BakedFileSystem will bake empty assets!'; \
+        ls -la /tmp/qh/frontend/dist/ 2>/dev/null || echo 'frontend/dist does not exist'; \
+        exit 1; \
+    fi; \
+    if [ ! -d /tmp/qh/frontend/dist/_app ]; then \
+        echo '❌ ERROR: frontend/dist/_app not found! JS files will be missing!'; \
+        ls -la /tmp/qh/frontend/dist/; \
+        exit 1; \
+    fi; \
+    echo '✓ Frontend assets verified'; \
+    ls -la /tmp/qh/frontend/dist/; \
+    \
     sudo -u qh sh -c 'export HOME=/home/qh && export PATH=/usr/local/bin:/usr/bin:/bin && cd /tmp/qh && shards install && touch src/web/assets.cr && crystal build --release -Os -Dpreview_lto src/quickheadlines.cr -o /tmp/qh/quickheadlines'; \
     touch /tmp/skip_download; \
 fi"
