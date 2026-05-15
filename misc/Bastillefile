@@ -9,7 +9,7 @@ ARG CLEAR_CACHE=false
 # 0. Initial Cleanup & Service Stop
 CMD service quickheadlines stop 2>/dev/null || true
 CMD sleep 2
-CMD sh -c "for i in 1 2 3 4 5; do pgrep -u qh quickheadlines >/dev/null 2>&1 || exit 0; echo \"Waiting for quickheadlines to stop (attempt \$i/5)...\"; sleep 2; done; echo \"Processes still running, forcing kill\"; pkill -9 -u qh 2>/dev/null || true"
+CMD pkill -9 -u qh 2>/dev/null || true
 CMD rm -f /var/run/quickheadlines/quickheadlines.pid /tmp/skip_download 2>/dev/null || true
 
 # 1. System Dependencies
@@ -25,84 +25,61 @@ CMD chown -R qh:qh /usr/local/share/quickheadlines /var/cache/quickheadlines /ho
 FSTAB /usr/local/bastille/cache/crystal/quickheadlines /home/qh/.cache nullfs rw 0 0
 
 # 4. Binary Guard (The "No-Arg" Fix)
-# If the binary is already there and we aren't in dev mode, we skip the acquisition steps
-CMD sh -c "if [ '${MODE}' != 'dev' ] && [ -f /usr/local/share/quickheadlines/quickheadlines ]; then touch /tmp/skip_download && echo '✅ Existing binary found. Skipping acquisition.'; fi"
+CMD [ "${MODE}" != "dev" ] && [ -f /usr/local/share/quickheadlines/quickheadlines ] && touch /tmp/skip_download
 
-# 5. Cache Clear (Optional) - Must run BEFORE clone to ensure fresh deps
-# Clear shards cache AND /tmp/qh to ensure fresh dependency resolution (especially for vug updates)
-CMD sh -c "if [ '${CLEAR_CACHE}' = 'true' ]; then \
-    rm -rf /home/qh/.cache/shards /var/cache/quickheadlines/*; \
-    rm -rf /tmp/qh; \
-    echo '✅ Cleared shards cache and /tmp/qh for fresh dependency resolution'; \
-fi"
+# 5. Cache Clear (Optional)
+CMD [ "${CLEAR_CACHE}" = "true" ] && rm -rf /home/qh/.cache/shards /var/cache/quickheadlines/* /tmp/qh
 
 # 6. Clone Source (Into /tmp/qh)
-# We clone if skip_download doesn't exist OR if we cleared cache (which deleted /tmp/qh)
-CMD sh -c "if [ ! -f /tmp/skip_download ] || [ '${CLEAR_CACHE}' = 'true' ]; then rm -rf /tmp/qh && git clone ${REPO_URL} /tmp/qh && chown -R qh:qh /tmp/qh; fi"
+CMD rm -rf /tmp/qh && git clone ${REPO_URL} /tmp/qh && chown -R qh:qh /tmp/qh
 
 # 7a. DEV MODE: Build (Only runs if MODE=dev)
-CMD sh -c "if [ '${MODE}' = 'dev' ]; then \
-    echo '🛠️ MODE: dev - Compiling from source...'; \
-    npm install -g pnpm; \
-    \
-    # Fix pnpm esbuild build issue on FreeBSD - esbuild needs to be built for Vite to work \
-    echo 'onlyBuiltDependencies=[\"esbuild\"]' >> /tmp/qh/frontend/.npmrc 2>/dev/null || true; \
-    cd /tmp/qh/frontend && pnpm install 2>&1; \
-    \
-    # Build Svelte frontend \
-    echo 'Building Svelte frontend...'; \
-    cd /tmp/qh/frontend && pnpm run build 2>&1; \
-    BUILD_STATUS=\$?; \
-    \
-    # Check if build succeeded \
-    if [ \$BUILD_STATUS -ne 0 ]; then \
-        echo '❌ Svelte build failed with exit code: '\$BUILD_STATUS; \
-        ls -la /tmp/qh/frontend/dist/ 2>/dev/null || echo 'frontend/dist does not exist'; \
-        exit 1; \
-    fi; \
-    \
-    # Copy logo.svg to dist (required by BakedFileSystem bake_folder directive) \
-    if [ -f /tmp/qh/frontend/static/logo.svg ]; then \
-        cp /tmp/qh/frontend/static/logo.svg /tmp/qh/frontend/dist/; \
-        echo '✓ Copied logo.svg to frontend/dist/'; \
-    fi; \
-    \
-    echo '📁 Verifying frontend dist contents:'; \
-    if [ ! -f /tmp/qh/frontend/dist/index.html ]; then \
-        echo '❌ ERROR: frontend/dist/index.html not found! BakedFileSystem will bake empty assets!'; \
-        ls -la /tmp/qh/frontend/dist/ 2>/dev/null || echo 'frontend/dist does not exist'; \
-        exit 1; \
-    fi; \
-    if [ ! -d /tmp/qh/frontend/dist/_app ]; then \
-        echo '❌ ERROR: frontend/dist/_app not found! JS files will be missing!'; \
-        ls -la /tmp/qh/frontend/dist/; \
-        exit 1; \
-    fi; \
-    echo '✓ Frontend assets verified'; \
-    ls -la /tmp/qh/frontend/dist/; \
-    \
-    sudo -u qh sh -c 'export HOME=/home/qh && export PATH=/usr/local/bin:/usr/bin:/bin && cd /tmp/qh && shards install && touch src/web/assets.cr && crystal build --release -Os -Dpreview_lto src/quickheadlines.cr -o /tmp/qh/quickheadlines'; \
-    touch /tmp/skip_download; \
-fi"
+CMD if [ "${MODE}" = "dev" ]; then
+    echo "🛠️ MODE: dev - Compiling from source..."
+    npm install -g pnpm
+    # Fix pnpm esbuild build issue on FreeBSD
+    echo "onlyBuiltDependencies=[\"esbuild\"]" >> /tmp/qh/frontend/.npmrc
+    cd /tmp/qh/frontend && pnpm install
+    echo "Building Svelte frontend..."
+    cd /tmp/qh/frontend && pnpm run build
+    # Copy logo.svg to dist
+    cp /tmp/qh/frontend/static/logo.svg /tmp/qh/frontend/dist/ 2>/dev/null || true
+    # Verify frontend assets
+    if [ ! -f /tmp/qh/frontend/dist/index.html ]; then
+        echo "❌ ERROR: frontend/dist/index.html not found!"
+        exit 1
+    fi
+    if [ ! -d /tmp/qh/frontend/dist/_app ]; then
+        echo "❌ ERROR: frontend/dist/_app not found!"
+        exit 1
+    fi
+    echo "✓ Frontend assets verified"
+    ls -la /tmp/qh/frontend/dist/
+    # Build Crystal binary
+    cd /tmp/qh && shards install && touch src/web/assets.cr
+    crystal build --release -Os -Dpreview_lto src/quickheadlines.cr -o /tmp/qh/quickheadlines
+    touch /tmp/skip_download
+fi
 
-# 7b. PROD MODE: Dynamic Download (Only if NOT skipped)
-CMD sh -c "if [ ! -f /tmp/skip_download ]; then \
-    echo '📦 MODE: prod - Resolving latest version...'; \
-    LATEST=\$(git ls-remote --sort=v:refname --tags ${REPO_URL} | tail -1 | cut -d/ -f3); \
-    V='${TAG:-\$LATEST}'; \
-    echo \"📥 Downloading version: \$V\"; \
-    curl -fSL \"https://github.com/kritoke/quickheadlines/releases/download/\$V/quickheadlines-\$V-freebsd-x64\" -o /tmp/qh/quickheadlines; \
-fi"
+# 7b. PROD MODE: Dynamic Download
+CMD if [ ! -f /tmp/skip_download ]; then
+    echo "📦 MODE: prod - Downloading latest release..."
+    LATEST=$(git ls-remote --sort=v:refname --tags ${REPO_URL} | tail -1 | cut -d/ -f3)
+    V="${TAG:-$LATEST}"
+    echo "📥 Downloading version: $V"
+    curl -fSL "https://github.com/kritoke/quickheadlines/releases/download/$V/quickheadlines-$V-freebsd-x64" -o /tmp/qh/quickheadlines
+fi
 
-# 8. THE ATOMIC SWAP (Fixes "Busy" error)
-CMD sh -c "if [ -f /tmp/qh/quickheadlines ]; then \
-    [ -f /usr/local/share/quickheadlines/quickheadlines ] && mv /usr/local/share/quickheadlines/quickheadlines /usr/local/share/quickheadlines/quickheadlines.old && rm -f /usr/local/share/quickheadlines/quickheadlines.old; \
-    mv /tmp/qh/quickheadlines /usr/local/share/quickheadlines/quickheadlines && chmod +x /usr/local/share/quickheadlines/quickheadlines; \
-fi"
+# 8. THE ATOMIC SWAP
+CMD if [ -f /tmp/qh/quickheadlines ]; then
+    [ -f /usr/local/share/quickheadlines/quickheadlines ] && rm -f /usr/local/share/quickheadlines/quickheadlines.old
+    mv /tmp/qh/quickheadlines /usr/local/share/quickheadlines/quickheadlines
+    chmod +x /usr/local/share/quickheadlines/quickheadlines
+fi
 
 # 9. Config & Service Setup
-CMD sh -c "TARGET='/usr/local/share/quickheadlines/feeds.yml'; if [ ! -f \"\$TARGET\" ]; then if [ -f '/tmp/qh/feeds.yml' ]; then cp /tmp/qh/feeds.yml \"\$TARGET\"; else curl -fSL https://raw.githubusercontent.com/kritoke/quickheadlines/main/feeds.yml -o \"\$TARGET\"; fi; fi"
-CMD sh -c "RCSCRIPT='/usr/local/etc/rc.d/quickheadlines'; if [ ! -f \"\$RCSCRIPT\" ]; then if [ -f '/tmp/qh/misc/quickheadlines' ]; then cp /tmp/qh/misc/quickheadlines \"\$RCSCRIPT\"; else curl -fSL https://raw.githubusercontent.com/kritoke/quickheadlines/main/misc/quickheadlines -o \"\$RCSCRIPT\"; fi; fi && chmod +x \"\$RCSCRIPT\""
+CMD [ ! -f /usr/local/share/quickheadlines/feeds.yml ] && curl -fSL https://raw.githubusercontent.com/kritoke/quickheadlines/main/feeds.yml -o /usr/local/share/quickheadlines/feeds.yml
+CMD [ ! -f /usr/local/etc/rc.d/quickheadlines ] && curl -fSL https://raw.githubusercontent.com/kritoke/quickheadlines/main/misc/quickheadlines -o /usr/local/etc/rc.d/quickheadlines && chmod +x /usr/local/etc/rc.d/quickheadlines
 
 # 10. Launch
 SYSRC quickheadlines_enable="YES"
