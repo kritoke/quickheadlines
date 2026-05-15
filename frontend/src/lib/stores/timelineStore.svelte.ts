@@ -58,6 +58,8 @@ export function setLoading(state: TimelineState, isAppend: boolean): TimelineSta
 	if (isRefreshing(state) || isLoading(state)) {
 		return state;
 	}
+	// Optimistic UI: keep existing items visible when tab changes
+	// Only show loading indicator, don't clear items until new data arrives
 	return { ...state, status: 'loading', loadingMore: false };
 }
 

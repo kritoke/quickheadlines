@@ -193,9 +193,15 @@
 			{/if}
 		{:else}
 			{#if loading && timelineState.items.length > 0}
-				<div class="sticky top-[var(--header-height,3.5rem)] z-20 bg-surface-50 dark:bg-surface-950/90 backdrop-blur-sm py-3 flex items-center justify-center gap-2 border-b border-surface-200 dark:border-surface-700">
+				<div class="sticky top-[var(--header-height,3.5rem)] z-20 bg-surface-50/80 dark:bg-surface-950/80 backdrop-blur-sm py-2 flex items-center justify-center gap-2 border-b border-surface-200 dark:border-surface-700">
 					<div class="w-4 h-4 border-2 border-primary-500 border-t-transparent rounded-full animate-spin"></div>
 					<span class="text-sm text-surface-700 dark:text-surface-300">Refreshing...</span>
+				</div>
+			{:else if loading}
+				<!-- Optimistic UI: show subtle indicator while keeping current content visible -->
+				<div class="sticky top-[var(--header-height,3.5rem)] z-20 bg-surface-50/80 dark:bg-surface-950/80 backdrop-blur-sm py-2 flex items-center justify-center gap-2">
+					<div class="w-4 h-4 border-2 border-primary-500 border-t-transparent rounded-full animate-spin"></div>
+					<span class="text-sm text-surface-700 dark:text-surface-300">Switching to {timelineState.tabName}...</span>
 				</div>
 			{/if}
 
@@ -232,14 +238,17 @@
 			{/if}
 
 			{#if timelineState.loadingMore}
-				<div class="text-center py-6">
-					<span class="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
-						<svg class="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-							<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-							<path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-						</svg>
-						Loading more...
-					</span>
+				<!-- Optimistic UI: Show placeholder items while loading more -->
+				<div class="space-y-3 py-6 animate-pulse">
+					{#each Array(5) as _, i}
+						<div class="flex gap-3 p-3 rounded-xl bg-surface-100/50 dark:bg-surface-800/50">
+							<div class="w-12 h-12 rounded-lg bg-surface-200 dark:bg-surface-700 flex-shrink-0"></div>
+							<div class="flex-1 space-y-2">
+								<div class="h-4 bg-surface-200 dark:bg-surface-700 rounded w-3/4"></div>
+								<div class="h-3 bg-surface-200 dark:bg-surface-700 rounded w-1/2"></div>
+							</div>
+						</div>
+					{/each}
 				</div>
 			{/if}
 			
