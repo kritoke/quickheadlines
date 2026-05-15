@@ -45,10 +45,7 @@ CMD sh -c "if [ '${MODE}' = 'dev' ]; then \
     echo '🛠️ MODE: dev - Compiling from source...'; \
     npm install -g pnpm && \
     cd /tmp/qh/frontend && \
-    echo 'onlyBuiltDependencies=esbuild' > .npmrc && \
-    pnpm config set onlyBuiltDependencies esbuild --location=project && \
-    pnpm install && \
-    pnpm run build; \
+    npm install && npm run build; \
     cp /tmp/qh/frontend/static/logo.svg /tmp/qh/frontend/dist/ 2>/dev/null || true; \
     if [ ! -f /tmp/qh/frontend/dist/index.html ] || [ ! -d /tmp/qh/frontend/dist/_app ]; then \
         echo '❌ Frontend build failed or missing assets!'; ls -la /tmp/qh/frontend/dist/ 2>/dev/null; exit 1; \
