@@ -59,6 +59,14 @@ MIGRATIONS = [
   DatabaseMigration.new(version: 9, name: "add_date_normalized_column") do |db|
     ensure_column(db, "items", "date_normalized", "INTEGER NOT NULL DEFAULT 0")
   end,
+  DatabaseMigration.new(version: 10, name: "add_normalized_link_column") do |db|
+    ensure_column(db, "items", "normalized_link", "TEXT NOT NULL DEFAULT ''")
+    # Populate normalized_link from existing link values
+    db.exec("UPDATE items SET normalized_link = link")
+    # Create the new unique index
+    db.exec("DROP INDEX IF EXISTS idx_items_unique_feed_link")
+    db.exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_items_unique_feed_link ON items(feed_id, normalized_link)")
+  end,
 ]
 
 private def ensure_schema_info_table(db : DB::Database) : Nil

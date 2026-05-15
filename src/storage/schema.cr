@@ -23,12 +23,13 @@ module Schema
       feed_id INTEGER NOT NULL,
       title TEXT NOT NULL,
       link TEXT NOT NULL,
+      normalized_link TEXT NOT NULL DEFAULT '',
       pub_date TEXT,
       version TEXT,
       minhash_signature BLOB,
       cluster_id INTEGER REFERENCES items(id),
       FOREIGN KEY (feed_id) REFERENCES feeds(id) ON DELETE CASCADE,
-      UNIQUE(feed_id, link)
+      UNIQUE(feed_id, normalized_link)
     )
     SQL
 
@@ -51,7 +52,8 @@ module Schema
     CREATE INDEX IF NOT EXISTS idx_feeds_url ON feeds(url);
     CREATE INDEX IF NOT EXISTS idx_items_cluster ON items(cluster_id);
     CREATE INDEX IF NOT EXISTS idx_lsh_band_search ON lsh_bands(band_index, band_hash);
-    CREATE UNIQUE INDEX IF NOT EXISTS idx_items_unique_feed_link ON items(feed_id, link);
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_items_unique_feed_link ON items(feed_id, normalized_link);
+    CREATE INDEX IF NOT EXISTS idx_items_link ON items(link);
     CREATE INDEX IF NOT EXISTS idx_items_timeline ON items(pub_date DESC, id DESC, cluster_id);
     CREATE INDEX IF NOT EXISTS idx_items_cluster_rep ON items(cluster_id, id);
     CREATE INDEX IF NOT EXISTS idx_items_feed_timeline ON items(feed_id, pub_date DESC, id DESC);

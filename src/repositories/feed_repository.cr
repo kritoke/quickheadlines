@@ -1,6 +1,7 @@
 require "db"
 require "../models"
 require "../services/database_service"
+require "../utils/url_normalizer"
 require "./repository_base"
 
 module QuickHeadlines::Repositories
@@ -151,13 +152,14 @@ module QuickHeadlines::Repositories
     private def batch_insert(items : Array(Item), feed_id : Int64) : Nil
       items.each_slice(50) do |batch|
         values_clause = batch.map do
-          "(?, ?, ?, ?, ?, ?, ?)"
+          "(?, ?, ?, ?, ?, ?, ?, ?)"
         end.join(", ")
         args = batch.flat_map do |item|
           pub_date_str = item.pub_date.try(&.to_s(QuickHeadlines::Constants::DB_TIME_FORMAT))
-          [feed_id, item.title, item.link, pub_date_str, item.version, item.comment_url, item.commentary_url]
+          normalized = QuickHeadlines::Utils::UrlNormalizer.normalize(item.link)
+          [feed_id, item.title, item.link, normalized, pub_date_str, item.version, item.comment_url, item.commentary_url]
         end
-        db.exec("INSERT OR IGNORE INTO items (feed_id, title, link, pub_date, version, comment_url, commentary_url) VALUES #{values_clause}", args: args)
+        db.exec("INSERT OR IGNORE INTO items (feed_id, title, link, normalized_link, pub_date, version, comment_url, commentary_url) VALUES #{values_clause}", args: args)
       end
     end
 
