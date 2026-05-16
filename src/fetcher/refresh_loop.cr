@@ -465,13 +465,17 @@ def start_refresh_loop(config_path : String, cache : FeedCache, db_service : Dat
 
   spawn(name: "health_monitor_reporter") do
     loop do
-      sleep 5.minutes
-      break if QuickHeadlines.shutting_down?
-      status = RefreshHealthMonitor.status
-      if status[:failures] > 0 || status[:last_complete] == 0
-        Log.for("quickheadlines.feed").warn do
-          "Refresh health: cycles=#{status[:cycles]}, failures=#{status[:failures]}, last_complete=#{status[:last_complete]}"
+      begin
+        sleep 5.minutes
+        break if QuickHeadlines.shutting_down?
+        status = RefreshHealthMonitor.status
+        if status[:failures] > 0 || status[:last_complete] == 0
+          Log.for("quickheadlines.feed").warn do
+            "Refresh health: cycles=#{status[:cycles]}, failures=#{status[:failures]}, last_complete=#{status[:last_complete]}"
+          end
         end
+      rescue ex
+        Log.for("quickheadlines.feed").error(exception: ex) { "Health monitor reporter error" }
       end
     end
   end
