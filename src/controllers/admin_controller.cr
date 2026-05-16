@@ -188,10 +188,10 @@ class QuickHeadlines::Controllers::AdminController < QuickHeadlines::Controllers
 
   private def perform_cleanup(db, orphaned : Set(String)) : Nil
     placeholders = QuickHeadlines::Repositories::RepositoryBase.placeholders(orphaned.size)
-    deleted_items = db.exec(
+    db.exec(
       "DELETE FROM items WHERE feed_id IN (SELECT id FROM feeds WHERE url IN (#{placeholders}))",
       args: orphaned.to_a
-    ).rows_affected
+    )
 
     db.exec("DELETE FROM feeds WHERE url IN (#{placeholders})", args: orphaned.to_a)
 
@@ -220,7 +220,7 @@ class QuickHeadlines::Controllers::AdminController < QuickHeadlines::Controllers
 
     ws_stats = WebSocketStats.from_hash(@socket_manager.stats)
     broadcaster_stats = BroadcasterStats.from_hash(EventBroadcaster.stats)
-    admin_state = build_admin_state
+    build_admin_state
 
     QuickHeadlines::DTOs::AdminStatusResponse.new(
       clustering: StateStore.clustering?,

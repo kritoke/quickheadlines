@@ -90,10 +90,9 @@ module QuickHeadlines::Services
     end
 
     private def self.parse_theme_colors(json : String?) : JSON::Any?
-      return nil unless json
+      return unless json
       JSON.parse(json)
     rescue JSON::ParseException
-      nil
     end
 
     def self.build_feed_more_response(

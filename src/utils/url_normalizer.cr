@@ -49,6 +49,7 @@ module QuickHeadlines::Utils
     # - Fragments
     # - Normalizes trailing slashes
     # - Lowercases scheme and host
+    # ameba:disable Metrics/CyclomaticComplexity
     def self.normalize(url : String) : String
       return "" if url.empty?
 
@@ -120,12 +121,10 @@ module QuickHeadlines::Utils
 
     # Extract just the host/domain from a URL
     def self.extract_domain(url : String) : String
-      begin
-        uri = URI.parse(url)
-        uri.host.try(&.downcase) || ""
-      rescue URI::Error
-        ""
-      end
+      uri = URI.parse(url)
+      uri.host.try(&.downcase) || ""
+    rescue URI::Error
+      ""
     end
 
     # Check if two URLs are the same after normalization
