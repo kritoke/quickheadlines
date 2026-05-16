@@ -115,24 +115,32 @@ class AppBootstrap
 
   private def start_feed_refresh
     spawn do
-      start_refresh_loop("feeds.yml", @feed_cache, @db_service)
+      begin
+        start_refresh_loop("feeds.yml", @feed_cache, @db_service)
+      rescue ex
+        Log.for("quickheadlines.app").error(exception: ex) { "start_feed_refresh failed" }
+      end
     end
   end
 
   private def start_clustering_scheduler
     spawn do
       loop do
-        sleep @clustering_interval
-        break if QuickHeadlines.shutting_down?
-        if start_time = StateStore.clustering_start_time
-          if Time.utc - start_time > QuickHeadlines::Constants::STUCK_CLUSTER_THRESHOLD
-            Log.for("quickheadlines.app").warn { "Clustering stuck for >4 hours, resetting state" }
-            StateStore.clustering = false
+        begin
+          sleep @clustering_interval
+          break if QuickHeadlines.shutting_down?
+          if start_time = StateStore.clustering_start_time
+            if Time.utc - start_time > QuickHeadlines::Constants::STUCK_CLUSTER_THRESHOLD
+              Log.for("quickheadlines.app").warn { "Clustering stuck for >4 hours, resetting state" }
+              StateStore.clustering = false
+            end
           end
+          next if StateStore.clustering?
+          threshold = StateStore.config.try(&.clustering).try(&.threshold) || 0.35
+          QuickHeadlines::Services::ClusteringService.new(@db_service).recluster_with_lsh(@feed_cache, @config.db_fetch_limit, threshold)
+        rescue ex
+          Log.for("quickheadlines.app").error(exception: ex) { "Clustering scheduler iteration failed" }
         end
-        next if StateStore.clustering?
-        threshold = StateStore.config.try(&.clustering).try(&.threshold) || 0.35
-        QuickHeadlines::Services::ClusteringService.new(@db_service).recluster_with_lsh(@feed_cache, @config.db_fetch_limit, threshold)
       end
     end
   end

@@ -54,9 +54,13 @@ def initiate_shutdown(signal_name : String) : Nil
   # Force exit after 5 seconds if graceful shutdown doesn't complete
   # This handles cases where GC or other operations block shutdown
   spawn do
-    sleep 5.seconds
-    SHUTDOWN_LOG.warn { "Graceful shutdown taking too long, forcing exit" }
-    Process.exit(1)
+    begin
+      sleep 5.seconds
+      SHUTDOWN_LOG.warn { "Graceful shutdown taking too long, forcing exit" }
+      Process.exit(1)
+    rescue ex
+      SHUTDOWN_LOG.error(exception: ex) { "Force exit fiber failed" }
+    end
   end
 
   SHUTDOWN_LOG.info { "Shutting down WebSocket connections..." }

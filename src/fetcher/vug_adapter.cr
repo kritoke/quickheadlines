@@ -3,8 +3,10 @@ require "../favicon_storage"
 require "../config"
 
 module VugAdapter
-  @@favicon_semaphore = Channel(Nil).new(4) # Limit concurrent favicon fetches to 4
-  4.times { @@favicon_semaphore.send(nil) }
+  # NOTE: Semaphore pattern not currently used but kept for potential future rate limiting
+  # If re-enabled, add corresponding receive calls when using: @@favicon_semaphore.receive
+  # @@favicon_semaphore = Channel(Nil).new(4)
+  # 4.times { @@favicon_semaphore.send(nil) }
 
   CACHE = Vug::MemoryCache.new
 

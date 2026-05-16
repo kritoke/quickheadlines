@@ -11,16 +11,20 @@ class EventBroadcaster
   def self.start : Nil
     spawn do
       loop do
-        select
-        when event = UPDATE_CHANNEL.receive?
-          SocketManager.instance.broadcast(event.to_json)
-          PROCESSED_EVENTS.add(1)
-        when timeout(QuickHeadlines::Constants::WEBSOCKET_HEARTBEAT_SECONDS.seconds)
-          SocketManager.instance.broadcast(HeartbeatEvent.new.to_json)
-        when SHUTDOWN_CHANNEL.receive?
-          UPDATE_CHANNEL.close
-          Log.for("quickheadlines.websocket").info { "EventBroadcaster shutting down" }
-          break
+        begin
+          select
+          when event = UPDATE_CHANNEL.receive?
+            SocketManager.instance.broadcast(event.to_json)
+            PROCESSED_EVENTS.add(1)
+          when timeout(QuickHeadlines::Constants::WEBSOCKET_HEARTBEAT_SECONDS.seconds)
+            SocketManager.instance.broadcast(HeartbeatEvent.new.to_json)
+          when SHUTDOWN_CHANNEL.receive?
+            UPDATE_CHANNEL.close
+            Log.for("quickheadlines.websocket").info { "EventBroadcaster shutting down" }
+            break
+          end
+        rescue ex
+          Log.for("quickheadlines.websocket").error(exception: ex) { "EventBroadcaster loop error" }
         end
       end
     end

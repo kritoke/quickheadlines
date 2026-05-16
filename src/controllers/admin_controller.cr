@@ -10,7 +10,7 @@ private struct WebSocketStats
   def initialize(
     @connections : Int32 = 0,
     @send_errors : Int64 = 0_i64,
-    @closed_total : Int64 = 0_i64
+    @closed_total : Int64 = 0_i64,
   )
   end
 
@@ -32,7 +32,7 @@ private struct BroadcasterStats
   def initialize(
     @sent : Int64 = 0_i64,
     @dropped : Int64 = 0_i64,
-    @processed : Int64 = 0_i64
+    @processed : Int64 = 0_i64,
   )
   end
 
@@ -249,16 +249,15 @@ class QuickHeadlines::Controllers::AdminController < QuickHeadlines::Controllers
     last_admin_action: String?,
     last_admin_run: Int64?,
     last_admin_duration_ms: Int64?,
-    last_admin_status: String?
-  )
+    last_admin_status: String?)
     {
-      last_cluster_run: StateStore.last_cluster_run.try(&.to_unix_ms),
+      last_cluster_run:         StateStore.last_cluster_run.try(&.to_unix_ms),
       last_cluster_duration_ms: StateStore.last_cluster_duration_ms,
-      last_cluster_status: StateStore.last_cluster_status,
-      last_admin_action: StateStore.last_admin_action,
-      last_admin_run: StateStore.last_admin_run.try(&.to_unix_ms),
-      last_admin_duration_ms: StateStore.last_admin_duration_ms,
-      last_admin_status: StateStore.last_admin_status,
+      last_cluster_status:      StateStore.last_cluster_status,
+      last_admin_action:        StateStore.last_admin_action,
+      last_admin_run:           StateStore.last_admin_run.try(&.to_unix_ms),
+      last_admin_duration_ms:   StateStore.last_admin_duration_ms,
+      last_admin_status:        StateStore.last_admin_status,
     }
   end
 
