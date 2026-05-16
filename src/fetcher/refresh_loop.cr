@@ -21,8 +21,61 @@ module GCCollector
   end
 end
 
+private def log_duration_warning(refresh_duration, active_config)
+  threshold = (active_config.refresh_minutes * QuickHeadlines::Constants::SECONDS_PER_MINUTE) * 2
+  if refresh_duration > threshold
+    Log.for("quickheadlines.feed").warn { "Refresh took #{refresh_duration.round(2)}s (expected #{active_config.refresh_minutes * QuickHeadlines::Constants::SECONDS_PER_MINUTE}s) - possible hang detected" }
+  end
+end
+
 private def trigger_gc_collection : Nil
   GCCollector.trigger_if_needed
+end
+
+# Fetch a single feed with hard timeout. Returns FeedData or error feed.
+# Uses select+timeout pattern to ensure fetch completes within time limit.
+private def fetch_single_feed_with_timeout(feed : Feed, config : Config, prev : FeedData?, index : Int32) : FeedData
+  timeout_seconds = QuickHeadlines::Constants::FETCH_TIMEOUT_SECONDS
+
+  # Create a channel to receive the result
+  result_channel = Channel(FeedData | Exception).new
+
+  # Spawn the actual fetch in a separate fiber
+  spawn(name: "feed_fetch_inner_#{index}") do
+    begin
+      fetch_result = FeedFetcher.instance.fetch(feed, config.item_limit, config.db_fetch_limit, prev)
+      result_channel.send(fetch_result)
+    rescue ex : Exception
+      result_channel.send(ex)
+    end
+  end
+
+  # Wait for result or timeout
+  timed_out = false
+  result_value = nil
+
+  select
+  when value = result_channel.receive?
+    result_value = value
+  when timeout(timeout_seconds.seconds)
+    timed_out = true
+  end
+
+  if timed_out
+    Log.for("quickheadlines.feed").warn { "fetch_single_feed_with_timeout: feed #{feed.url} timed out after #{timeout_seconds}s" }
+    FeedFetcher.instance.build_error_feed(feed, "Error: Fetch timeout after #{timeout_seconds}s")
+  elsif value = result_value
+    if value.is_a?(Exception)
+      Log.for("quickheadlines.feed").error(exception: value) { "Fetch failed for #{feed.url}" }
+      FeedFetcher.instance.build_error_feed(feed, "Error: #{value.class}")
+    else
+      value
+    end
+  else
+    # This should never happen but handle defensively
+    Log.for("quickheadlines.feed").error { "fetch_single_feed_with_timeout: unexpected nil result for #{feed.url}" }
+    FeedFetcher.instance.build_error_feed(feed, "Error: Unexpected nil result")
+  end
 end
 
 module RefreshHealthMonitor
@@ -116,7 +169,7 @@ private def check_semaphore_health
   end
 
   if available != expected
-    Log.for("quickheadlines.feed").warn { "Semaphore health check: only #{available}/#{expected} slots available - refilling #{expected - available}" }
+    Log.for("quickheadlines.feed").warn { "Semaphore health check: only #{available}/#{expected} slots available - refilling #{available}" }
   end
 
   available.times { CONCURRENCY_SEMAPHORE.send(nil) }
@@ -141,40 +194,18 @@ private def fetch_feeds_concurrently(all_configs : Hash(String, Feed), existing_
         prev = existing_data[feed.url]?
         # Per-feed timeout to prevent one hung fetch from blocking the semaphore slot
         # This is critical for preventing semaphore exhaustion over long running sessions
-        timeout_channel = Channel(FeedData?).new(1)
-        # NOTE: This inner spawn MUST be protected - if fetch() throws an exception
-        # that isn't caught, the fiber dies silently, causing the timeout_channel
-        # to never send, which can hang the entire refresh cycle.
-        spawn(name: "feed_fetch_inner_#{current_index}") do
-          begin
-            result = FeedFetcher.instance.fetch(feed, config.item_limit, config.db_fetch_limit, prev)
-            # Wrap send in begin/rescue - if channel closed (timeout fired), discard result
-            begin
-              timeout_channel.send(result)
-            rescue Channel::ClosedError
-              # Timeout fired first, result is discarded - this is expected behavior
-            end
-          rescue ex
-            Log.for("quickheadlines.feed").error(exception: ex) { "Inner fetch fiber crashed for #{feed.url}" }
-            begin
-              timeout_channel.send(FeedFetcher.instance.build_error_feed(feed, "Error: #{ex.class}"))
-            rescue Channel::ClosedError
-              # Channel already closed, fiber dying anyway
-            end
-          end
-        end
-        select
-        when timeout(QuickHeadlines::Constants::FETCH_TIMEOUT_SECONDS.seconds)
-          Log.for("quickheadlines.feed").warn { "fetch_feeds_concurrently: feed #{feed.url} timed out after #{QuickHeadlines::Constants::FETCH_TIMEOUT_SECONDS}s in semaphore, returning error feed" }
-          channel.send(FeedFetcher.instance.build_error_feed(feed, "Error: Fetch timeout in semaphore"))
-        when value = timeout_channel.receive?
-          channel.send(value)
-        end
+        result = fetch_single_feed_with_timeout(feed, config, prev, current_index)
+        channel.send(result)
       rescue ex
         Log.for("quickheadlines.feed").error(exception: ex) { "fetch_feeds_concurrently: error fetching #{feed.url}" }
         channel.send(FeedFetcher.instance.build_error_feed(feed, "Error: #{ex.class}"))
       ensure
-        CONCURRENCY_SEMAPHORE.send(nil)
+        # Ensure semaphore slot is always returned, even on exceptions
+        begin
+          CONCURRENCY_SEMAPHORE.send(nil)
+        rescue ex
+          Log.for("quickheadlines.feed").error(exception: ex) { "Failed to release semaphore for #{feed.url}" }
+        end
       end
     end
     Fiber.yield
@@ -192,7 +223,7 @@ private def fetch_feeds_concurrently(all_configs : Hash(String, Feed), existing_
       if data
         fetched_map[data.url] = data
       elsif config.debug?
-        Log.for("quickheadlines.feed").warn { "refresh_all: failed to fetch feed" }
+        Log.for("quickheadlines.feed").warn { "fetch_feeds_concurrently: failed to fetch feed" }
       end
       completed += 1
     when timeout(overall_timeout)
@@ -352,42 +383,58 @@ def start_refresh_loop(config_path : String, cache : FeedCache, db_service : Dat
             end
           end
 
-          begin
-            refresh_all_start = Time.utc
-            refresh_all(active_config, cache, db_service)
-            refresh_all_duration = (Time.utc - refresh_all_start).total_seconds
-            if active_config.debug?
-              Log.for("quickheadlines.feed").debug { "Refreshed feeds in #{refresh_all_duration.round(2)}s" }
-            elsif refresh_all_duration > 120
-              Log.for("quickheadlines.feed").warn { "refresh_all took #{refresh_all_duration.round(2)}s - long duration" }
+          refresh_all_start = Time.utc
+          # Outer timeout to prevent refresh_all from blocking indefinitely.
+          # If refresh hangs, the `ensure` block still releases semaphore permits via spawned fiber.
+          outer_timeout = (active_config.refresh_minutes * QuickHeadlines::Constants::SECONDS_PER_MINUTE * 3 // 2).seconds
+          # Capture config in local var to avoid SharedVarInFiber warnings
+          config_snapshot = active_config
+          done = Channel(Nil).new(1)
+          spawn(name: "refresh_worker") do
+            begin
+              refresh_all(config_snapshot, cache, db_service)
+              refresh_all_duration = (Time.utc - refresh_all_start).total_seconds
+              if config_snapshot.debug?
+                Log.for("quickheadlines.feed").debug { "Refreshed feeds in #{refresh_all_duration.round(2)}s" }
+              elsif refresh_all_duration > 120
+                Log.for("quickheadlines.feed").warn { "refresh_all took #{refresh_all_duration.round(2)}s - long duration" }
+              end
+            rescue ex
+              Log.for("quickheadlines.feed").error(exception: ex) { "refresh_loop refresh_all failed" }
+              RefreshHealthMonitor.record_failure
+            ensure
+              StateStore.refreshing = false
             end
-          rescue ex
-            Log.for("quickheadlines.feed").error(exception: ex) { "refresh_loop refresh_all failed" }
-            RefreshHealthMonitor.record_failure
-          ensure
-            StateStore.refreshing = false
+            done.send(nil)
           end
 
-          Log.for("quickheadlines.feed").debug { "Starting save_feed_cache..." }
-          save_feed_cache(cache, active_config.cache_retention_hours, active_config.max_cache_size_mb)
-          Log.for("quickheadlines.feed").debug { "save_feed_cache complete" }
-          trigger_gc_collection
-
-          refresh_duration = (Time.utc - refresh_start_time).total_seconds
-          if refresh_duration > (active_config.refresh_minutes * QuickHeadlines::Constants::SECONDS_PER_MINUTE) * 2
-            Log.for("quickheadlines.feed").warn { "Refresh took #{refresh_duration.round(2)}s (expected #{active_config.refresh_minutes * QuickHeadlines::Constants::SECONDS_PER_MINUTE}s) - possible hang detected" }
+          select
+          when done.receive?
+            refresh_duration = (Time.utc - refresh_start_time).total_seconds
+            Log.for("quickheadlines.feed").debug { "Starting save_feed_cache..." }
+            save_feed_cache(cache, active_config.cache_retention_hours, active_config.max_cache_size_mb)
+            Log.for("quickheadlines.feed").debug { "save_feed_cache complete" }
+            trigger_gc_collection
+            log_duration_warning(refresh_duration, active_config)
+          when timeout(outer_timeout)
+            Log.error { "refresh_all timed out after #{outer_timeout.total_seconds.round}s - refresh continues in background" }
+            RefreshHealthMonitor.record_failure
+            refresh_duration = (Time.utc - refresh_start_time).total_seconds
+            log_duration_warning(refresh_duration, active_config)
           end
         end
 
+        log_duration_warning(refresh_duration, active_config)
+
         sleep_duration = (active_config.refresh_minutes * QuickHeadlines::Constants::SECONDS_PER_MINUTE).seconds
-        outer_timeout = (active_config.refresh_minutes * QuickHeadlines::Constants::SECONDS_PER_MINUTE * 3 // 2).seconds
+        outer_sleep_timeout = (active_config.refresh_minutes * QuickHeadlines::Constants::SECONDS_PER_MINUTE * 3 // 2).seconds
 
         sleep_done = Channel(Nil).new(1)
         spawn { sleep sleep_duration; sleep_done.send(nil) }
         select
         when sleep_done.receive
-        when timeout(outer_timeout)
-          Log.for("quickheadlines.feed").error { "refresh loop sleep timed out after #{outer_timeout.total_seconds.round}s" }
+        when timeout(outer_sleep_timeout)
+          Log.for("quickheadlines.feed").error { "refresh loop sleep timed out after #{outer_sleep_timeout.total_seconds.round}s" }
         end
         # Ensure the spawned fiber doesn't leak - close the channel so any pending send will raise
         sleep_done.close unless sleep_done.closed?

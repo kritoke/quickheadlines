@@ -93,7 +93,9 @@ class FeedFetcher
     end
   end
 
-  # Main entry point - fetch a feed with caching and retry logic
+  # Main entry point - fetch a feed with caching and retry logic.
+  # Note: Timeout control is handled at the caller level (fetch_single_feed_with_timeout).
+  # This method does NOT have its own select timeout to avoid double-timeout issues.
   def fetch(feed : Feed, display_item_limit : Int32, db_fetch_limit : Int32, previous_data : FeedData? = nil) : FeedData
     effective_item_limit = feed.item_limit || display_item_limit
 
@@ -101,19 +103,7 @@ class FeedFetcher
       return cached_data
     end
 
-    # Hard wall-clock timeout for entire fetch operation to prevent semaphore exhaustion
-    timeout_seconds = QuickHeadlines::Constants::FETCH_TIMEOUT_SECONDS
-    select
-    when timeout(timeout_seconds.seconds)
-      Log.for("quickheadlines.feed").warn { "fetch_feed(#{feed.url}) exceeded #{timeout_seconds}s wall-clock limit, aborting" }
-      if stale_cache = get_stale_cached_feed(feed, effective_item_limit, previous_data)
-        stale_cache
-      else
-        build_error_feed(feed, "Error: Fetch timeout after #{timeout_seconds}s")
-      end
-    else
-      do_fetch_with_retry(feed, effective_item_limit, db_fetch_limit, previous_data)
-    end
+    do_fetch_with_retry(feed, effective_item_limit, db_fetch_limit, previous_data)
   end
 
   private def do_fetch_with_retry(feed : Feed, effective_item_limit : Int32, db_fetch_limit : Int32, previous_data : FeedData?) : FeedData
