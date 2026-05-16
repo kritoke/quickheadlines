@@ -1,0 +1,13 @@
+# Catseye project configuration for QuickHeadlines
+# Suppresses false positive findings documented in planning/catseye-false-positives.md
+
+[claws]
+# These are domain-specific functions where many params are inherent to the domain
+# See: planning/catseye-false-positives.md "LongParameterList (Legitimate Warnings - Ignored)"
+
+[claws.suppress]
+# DTOs with JSON::Serializable — intentionally data-only Crystal structs
+DataClass = ["**/dtos/**", "**/config/structures.cr"]
+
+# God objects are core domain files with many legitimate methods
+GodObject = ["**/feed_cache.cr", "**/feed_fetcher.cr", "**/models.cr"]
