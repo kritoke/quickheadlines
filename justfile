@@ -434,7 +434,7 @@ build: check-deps
 # Build using nix develop (recommended for this project)
 nix-build:
     @echo "Building with nix develop..."
-    @cd frontend && npm run build
+    @cd frontend && pnpm install && pnpm run build
     @cp frontend/static/logo.svg frontend/dist/ 2>/dev/null || true
     @sed -i 's/# Build:.*/# Build: '$(date -Iseconds)'/' src/web/assets.cr 2>/dev/null || true
     @rm -f bin/quickheadlines
@@ -445,7 +445,7 @@ nix-build:
 # Build with size optimization (-Os = optimize for size)
 nix-build-size:
     @echo "Building with nix develop (size optimized -Os)..."
-    @cd frontend && npm run build
+    @cd frontend && pnpm install && pnpm run build
     @cp frontend/static/logo.svg frontend/dist/ 2>/dev/null || true
     @sed -i 's/# Build:.*/# Build: '$(date -Iseconds)'/' src/web/assets.cr 2>/dev/null || true
     @rm -f bin/quickheadlines
@@ -456,7 +456,7 @@ nix-build-size:
 # Build with LTO (smaller + faster runtime)
 nix-build-lto:
     @echo "Building with nix develop (LTO)..."
-    @cd frontend && npm run build
+    @cd frontend && pnpm install && pnpm run build
     @cp frontend/static/logo.svg frontend/dist/ 2>/dev/null || true
     @sed -i 's/# Build:.*/# Build: '$(date -Iseconds)'/' src/web/assets.cr 2>/dev/null || true
     @rm -f bin/quickheadlines
@@ -467,7 +467,7 @@ nix-build-lto:
 # Build with both size optimization and LTO
 nix-build-optimized:
     @echo "Building with nix develop (optimized: size + LTO)..."
-    @cd frontend && npm run build
+    @cd frontend && pnpm install && pnpm run build
     @cp frontend/static/logo.svg frontend/dist/ 2>/dev/null || true
     @sed -i 's/# Build:.*/# Build: '$(date -Iseconds)'/' src/web/assets.cr 2>/dev/null || true
     @rm -f bin/quickheadlines
