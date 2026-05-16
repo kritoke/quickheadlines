@@ -18,10 +18,10 @@
     "esbuild": "0.24.2"
   },
   "dependencies": {
-    "@sveltejs/kit": "^2.59.1",
+    "@sveltejs/kit": "^2.60.1",
     "@tailwindcss/typography": "^0.5.19",
     "dompurify": "^3.4.2",
-    "svelte": "^5.55.5",
+    "svelte": "^5.55.7",
     "typescript": "^5.9.3",
     "vite": "^6.4.2"
   },
@@ -40,7 +40,7 @@
     "@testing-library/svelte": "^5.3.1",
     "autoprefixer": "^10.5.0",
     "clsx": "^2.1.1",
-    "happy-dom": "^17.6.3",
+    "happy-dom": "^20.9.0",
     "postcss": "^8.5.14",
     "svelte-check": "^4.4.8",
     "tailwind-merge": "^3.6.0",
