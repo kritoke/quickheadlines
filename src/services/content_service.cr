@@ -25,23 +25,35 @@ module QuickHeadlines::Services
       # Wrap Azurite store with small retry/backoff to mitigate transient SQLITE_BUSY errors
       max_retries = 3
       attempt = 0
-      begin
+      loop do
         attempt += 1
-        return @store.store(item_link, feed_url, title, content)
-      rescue DB::Error, SQLite3::Exception => ex
-        if attempt <= max_retries
-          backoff = (0.1 * (2 ** (attempt - 1))).to_f
-          Log.for("quickheadlines.azurite").warn { "ContentService.store_content: transient DB error on attempt #{attempt}/#{max_retries} for #{item_link} - #{ex.message}; retrying in #{backoff}s" }
-          sleep backoff
-          retry
-        else
-          Log.for("quickheadlines.azurite").error(exception: ex) { "ContentService.store_content: failed to store content for #{item_link} after #{max_retries} attempts" }
-          raise
+        begin
+          return @store.store(item_link, feed_url, title, content)
+        rescue ex : DB::Error
+          if attempt < max_retries
+            backoff = (0.1 * (2 ** (attempt - 1))).to_f
+            Log.for("quickheadlines.azurite").warn { "ContentService.store_content: transient DB error on attempt #{attempt}/#{max_retries} for #{item_link} - #{ex.message}; retrying in #{backoff}s" }
+            sleep backoff
+            next
+          else
+            Log.for("quickheadlines.azurite").error(exception: ex) { "ContentService.store_content: failed to store content for #{item_link} after #{max_retries} attempts" }
+            raise ex
+          end
+        rescue ex : SQLite3::Exception
+          if attempt < max_retries
+            backoff = (0.1 * (2 ** (attempt - 1))).to_f
+            Log.for("quickheadlines.azurite").warn { "ContentService.store_content: transient SQLite error on attempt #{attempt}/#{max_retries} for #{item_link} - #{ex.message}; retrying in #{backoff}s" }
+            sleep backoff
+            next
+          else
+            Log.for("quickheadlines.azurite").error(exception: ex) { "ContentService.store_content: failed to store content for #{item_link} after #{max_retries} attempts" }
+            raise ex
+          end
+        rescue ex
+          # Unexpected exception - log and re-raise
+          Log.for("quickheadlines.azurite").error(exception: ex) { "ContentService.store_content: unexpected error storing content for #{item_link}: #{ex.class} - #{ex.message}" }
+          raise ex
         end
-      rescue ex
-        # Unexpected exception - log and re-raise
-        Log.for("quickheadlines.azurite").error(exception: ex) { "ContentService.store_content: unexpected error storing content for #{item_link}: #{ex.class} - #{ex.message}" }
-        raise
       end
     end
 
