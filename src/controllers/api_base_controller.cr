@@ -113,6 +113,82 @@ class QuickHeadlines::Controllers::ApiBaseController < Athena::Framework::Contro
     validate_int(value, default, min, max)
   end
 
+  # Local-only health endpoint: returns refresh health and StateStore counts.
+  # Accessible only from loopback addresses (127.0.0.1 or ::1) to avoid exposing admin info publicly.
+  @[ARTA::Get(path: "/api/health")]
+  def health(request : AHTTP::Request) : QuickHeadlines::DTOs::HealthResponse
+    ip = client_ip(request)
+    allowed = ["127.0.0.1", "::1", "::ffff:127.0.0.1"]
+    # Some requests running in this environment return 'unknown' from extract_client_ip()
+    # Treat 'unknown' as local (dev) so curl from the host can access the health endpoint.
+    unless ip == "unknown" || allowed.includes?(ip)
+      raise AHK::Exception::HTTPException.new(401, "Unauthorized")
+    end
+
+    status = begin
+      RefreshHealthMonitor.status
+    rescue
+      { last_start: 0_i64, last_complete: 0_i64, cycles: 0_i32, failures: 0_i32 }
+    end
+
+    QuickHeadlines::DTOs::HealthResponse.new(
+      status[:last_start],
+      status[:last_complete],
+      status[:cycles],
+      status[:failures],
+      StateStore.refreshing?,
+      StateStore.feeds.size,
+      StateStore.tabs.size
+    )
+  end
+
+  # DEV ONLY: force stuck state for testing watchdog. Local-only access.
+  @[ARTA::Post(path: "/api/_dev/force_stuck")]
+  def force_stuck(request : AHTTP::Request) : QuickHeadlines::DTOs::HealthResponse
+    # Opt-in guard: only allow when QUICKHEADLINES_ENABLE_DEV_ENDPOINT is explicitly set to "true"
+    unless ENV["QUICKHEADLINES_ENABLE_DEV_ENDPOINT"]? && ENV["QUICKHEADLINES_ENABLE_DEV_ENDPOINT"] == "true"
+      # Hide the endpoint when not enabled
+      raise AHK::Exception::HTTPException.new(404, "Not Found")
+    end
+
+    ip = client_ip(request)
+    allowed = ["127.0.0.1", "::1", "::ffff:127.0.0.1"]
+    unless ip == "unknown" || allowed.includes?(ip)
+      raise AHK::Exception::HTTPException.new(401, "Unauthorized")
+    end
+
+    body = request.body
+    seconds = 600
+    if body
+      content = read_body_safe(body)
+      begin
+        parsed = JSON.parse(content)
+        # JSON::Any -> try as Int64 then convert
+        if parsed["seconds"]?
+          begin
+            seconds = parsed["seconds"].to_s.to_i32
+          rescue
+            # ignore parse errors and keep default
+          end
+        end
+      rescue
+      end
+    end
+
+    RefreshHealthMonitor.force_stuck!(seconds)
+
+    status = RefreshHealthMonitor.status
+    QuickHeadlines::DTOs::HealthResponse.new(
+      status[:last_start],
+      status[:last_complete],
+      status[:cycles],
+      status[:failures],
+      StateStore.refreshing?,
+      StateStore.feeds.size,
+      StateStore.tabs.size
+    )
+  end
+
   private def clustering_service : QuickHeadlines::Services::ClusteringService
     @clustering_service ||= QuickHeadlines::Services::ClusteringService.new(
       @db_service,

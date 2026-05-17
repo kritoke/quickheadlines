@@ -153,6 +153,14 @@ module RefreshHealthMonitor
     Log.for("quickheadlines.feed").info { "RefreshHealthMonitor: atomic recovery performed" }
     true
   end
+
+  # DEV-ONLY: Force a stuck state for testing watchdog (local-only trigger should call this)
+  def self.force_stuck!(seconds : Int32 = 600) : Nil
+    now_ms = Time.utc.to_unix_ms
+    @@last_refresh_start.set(now_ms - (seconds * 1000))
+    @@last_refresh_complete.set(0)
+    Log.for("quickheadlines.watchdog").info { "RefreshHealthMonitor: forced stuck state for testing (#{seconds}s)" }
+  end
 end
 
 private def check_semaphore_health
@@ -270,6 +278,9 @@ def refresh_all(config : Config, cache : FeedCache, db_service : DatabaseService
 
   new_feeds = config.feeds.map { |feed| fetched_map[feed.url]? || FeedFetcher.instance.build_error_feed(feed, "Failed to fetch") }
   new_tabs = config.tabs.map { |tab_config| build_tab_feeds(tab_config, fetched_map, config.item_limit) }
+
+  # Diagnostic log: indicate sizes coming into StateStore update
+  Log.for("quickheadlines.feed").info { "refresh_all: about to update StateStore - fetched_count=#{fetched_count}, missing_count=#{missing_count}, new_feeds=#{new_feeds.size}, new_tabs=#{new_tabs.size}" }
 
   StateStore.update do |state|
     state.copy_with(

@@ -79,4 +79,11 @@ module QuickHeadlines::Constants
     "images.unsplash.com",
     "fastly.picsum.photos",
   }
+
+  # Watchdog defaults for auto-recovery
+  WATCHDOG_INTERVAL_SECONDS = 30
+  WATCHDOG_RETRY_INTERVAL_SECONDS = 30
+  WATCHDOG_MAX_ATTEMPTS = 3
+  WATCHDOG_DEBOUNCE_COUNT = 2
+  WATCHDOG_ESCALATE_EXIT = if ENV["QUICKHEADLINES_WATCHDOG_EXIT_ON_FAIL"]? && ENV["QUICKHEADLINES_WATCHDOG_EXIT_ON_FAIL"] == "true"; true; else; false; end
 end

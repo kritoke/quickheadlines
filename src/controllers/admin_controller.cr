@@ -222,6 +222,13 @@ class QuickHeadlines::Controllers::AdminController < QuickHeadlines::Controllers
     broadcaster_stats = BroadcasterStats.from_hash(EventBroadcaster.stats)
     build_admin_state
 
+    # Include refresh health metrics if available from RefreshHealthMonitor
+    refresh_status = begin
+      RefreshHealthMonitor.status
+    rescue
+      { last_start: 0_i64, last_complete: 0_i64, cycles: 0_i32, failures: 0_i32 }
+    end
+
     QuickHeadlines::DTOs::AdminStatusResponse.new(
       clustering: StateStore.clustering?,
       refreshing: StateStore.refreshing?,
@@ -239,6 +246,10 @@ class QuickHeadlines::Controllers::AdminController < QuickHeadlines::Controllers
       last_admin_run: StateStore.last_admin_run.try(&.to_unix_ms),
       last_admin_duration_ms: StateStore.last_admin_duration_ms,
       last_admin_status: StateStore.last_admin_status,
+      last_refresh_start: refresh_status[:last_start],
+      last_refresh_complete: refresh_status[:last_complete],
+      refresh_cycles: refresh_status[:cycles],
+      refresh_failures: refresh_status[:failures],
     )
   end
 

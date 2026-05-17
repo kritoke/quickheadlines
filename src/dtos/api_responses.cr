@@ -225,6 +225,19 @@ module QuickHeadlines::DTOs
     @[JSON::Field(emit_null: true)]
     property last_admin_status : String?
 
+    # Refresh health metrics
+    @[JSON::Field(emit_null: true)]
+    property last_refresh_start : Int64?
+
+    @[JSON::Field(emit_null: true)]
+    property last_refresh_complete : Int64?
+
+    @[JSON::Field(emit_null: true)]
+    property refresh_cycles : Int32?
+
+    @[JSON::Field(emit_null: true)]
+    property refresh_failures : Int32?
+
     def initialize(
       @clustering : Bool,
       @refreshing : Bool,
@@ -242,6 +255,10 @@ module QuickHeadlines::DTOs
       @last_admin_run : Int64? = nil,
       @last_admin_duration_ms : Int64? = nil,
       @last_admin_status : String? = nil,
+      @last_refresh_start : Int64? = nil,
+      @last_refresh_complete : Int64? = nil,
+      @refresh_cycles : Int32? = nil,
+      @refresh_failures : Int32? = nil,
     )
     end
   end
@@ -272,6 +289,30 @@ module QuickHeadlines::DTOs
     property status : String
 
     def initialize(@status : String)
+    end
+  end
+
+  # Local-only health response for refresh diagnostics (bound to localhost)
+  class HealthResponse
+    include JSON::Serializable
+
+    property last_refresh_start : Int64
+    property last_refresh_complete : Int64
+    property refresh_cycles : Int32
+    property refresh_failures : Int32
+    property refreshing : Bool
+    property feeds_count : Int32
+    property tabs_count : Int32
+
+    def initialize(
+      @last_refresh_start : Int64 = 0_i64,
+      @last_refresh_complete : Int64 = 0_i64,
+      @refresh_cycles : Int32 = 0_i32,
+      @refresh_failures : Int32 = 0_i32,
+      @refreshing : Bool = false,
+      @feeds_count : Int32 = 0_i32,
+      @tabs_count : Int32 = 0_i32
+    )
     end
   end
 end

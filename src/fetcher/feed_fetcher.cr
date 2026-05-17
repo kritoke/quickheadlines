@@ -234,6 +234,8 @@ class FeedFetcher
       Tab.new(tab_config.name, tab_feeds, tab_releases)
     end
 
+    Log.for("quickheadlines.feed").info { "load_feeds_from_cache: found cached_feeds=#{all_cached_feeds.size}, cached_tabs=#{cached_tabs.size}; updating StateStore" }
+
     StateStore.update do |state|
       state.copy_with(
         feeds: all_cached_feeds,
