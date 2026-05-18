@@ -100,6 +100,11 @@
 		}
 	});
 	
+	// Computed: use current feeds, or empty array if never loaded
+	let displayFeeds = $derived(
+		hasEverLoadedFeeds ? filteredFeeds : []
+	);
+	
 	async function handleLogoClick() {
 		await NavigationService.navigateToGlobalFeeds();
 	}
@@ -166,7 +171,7 @@
 				</div>
 			{/if}
 
-				{#if filteredFeeds.length > 0}
+				{#if displayFeeds.length > 0}
 				{#key feedState.activeTab}
 					<div class="grid {feedGridClass} gap-3 sm:gap-4 md:gap-5 pt-2 sm:pt-4 md:pt-6">
 						{#each filteredFeeds as feed, i (`feed-${i}`)}

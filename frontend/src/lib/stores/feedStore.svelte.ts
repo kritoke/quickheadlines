@@ -64,13 +64,12 @@ export function setFeedsData(state: FeedState, response: FeedsPageResponse, tab:
 	// This prevents overwriting valid cached feeds with empty responses
 	const feedsToUse = newFeeds.length > 0 ? newFeeds : (state.feeds.length > 0 ? state.feeds : []);
 	
-	// Only mark cache as loaded if we have feeds OR we're replacing existing feeds
-	// Don't cache empty results that would overwrite valid data
-	const shouldCache = newFeeds.length > 0 || state.feeds.length === 0;
-	
-	const updatedCache = shouldCache ? {
+	// Only mark cache as loaded if we got actual new data from API
+	// Don't cache empty results - they should NOT mark cache as loaded
+	// so next refresh will try again
+	const updatedCache = newFeeds.length > 0 ? {
 		...state.tabCache,
-		[tab]: { feeds: deepClone(feedsToUse), loaded: true }
+		[tab]: { feeds: deepClone(newFeeds), loaded: true }
 	} : state.tabCache;
 	
 	return {
@@ -155,9 +154,12 @@ export async function loadFeeds(tab: string, force: boolean = false): Promise<vo
 	Object.assign(feedState, setActiveTab(feedState, tab));
 	
 	if (!force && feedState.tabCache[tab]?.loaded) {
-		// Use cached feeds if available (even if empty, we'll refresh)
+		// Use cached feeds if available
 		if (feedState.tabCache[tab].feeds.length > 0) {
 			feedState.feeds = feedState.tabCache[tab].feeds;
+		} else if (currentFeeds.length > 0) {
+			// Cache is empty but we have feeds - use them
+			feedState.feeds = currentFeeds;
 		}
 		Object.assign(feedState, setLoading(feedState, tab));
 		try {
@@ -170,12 +172,10 @@ export async function loadFeeds(tab: string, force: boolean = false): Promise<vo
 			}
 			Object.assign(feedState, newState);
 		} catch (e) {
-			// On error, preserve existing feeds if we have them
-			if (currentFeeds.length > 0) {
-				feedState.status = 'idle';
-			} else {
-				Object.assign(feedState, setError(feedState, e instanceof Error ? e.message : 'Failed to load feeds'));
-			}
+			// On error, ALWAYS restore feeds and set idle (don't show error if we have data)
+			feedState.feeds = currentFeeds.length > 0 ? currentFeeds : feedState.feeds;
+			feedState.tabs = currentTabs.length > 0 ? currentTabs : feedState.tabs;
+			feedState.status = 'idle';
 		}
 		return;
 	}
@@ -192,12 +192,10 @@ export async function loadFeeds(tab: string, force: boolean = false): Promise<vo
 		}
 		Object.assign(feedState, newState);
 	} catch (e) {
-		// On error, preserve existing feeds if we have them
-		if (currentFeeds.length > 0) {
-			feedState.status = 'idle';
-		} else {
-			Object.assign(feedState, setError(feedState, e instanceof Error ? e.message : 'Failed to load feeds'));
-		}
+		// On error, ALWAYS restore feeds and set idle (don't show error if we have data)
+		feedState.feeds = currentFeeds.length > 0 ? currentFeeds : feedState.feeds;
+		feedState.tabs = currentTabs.length > 0 ? currentTabs : feedState.tabs;
+		feedState.status = 'idle';
 	}
 }
 
