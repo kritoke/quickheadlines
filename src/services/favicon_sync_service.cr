@@ -7,6 +7,64 @@ require "../models"
 require "../favicon_storage"
 require "../color_extractor"
 
+# Struct representing a feed row from the database for favicon sync processing.
+private struct FeedFaviconRow
+  getter feed_id : Int64
+  getter url : String
+  getter favicon : String?
+  getter favicon_data : String?
+  getter header_color : String?
+  getter header_theme_colors : String?
+  getter site_link : String
+
+  def initialize(
+    @feed_id : Int64,
+    @url : String,
+    @favicon : String?,
+    @favicon_data : String?,
+    @header_color : String?,
+    @header_theme_colors : String?,
+    @site_link : String,
+  )
+  end
+end
+
+# Struct holding the result of favicon processing for a single feed.
+private struct FaviconUpdateResult
+  getter feed_id : Int64
+  getter url : String
+  getter clear_external : Bool
+  getter sync_data : String?
+  getter update_favicon : String?
+  getter update_favicon_data : String?
+  getter clear_favicon : Bool
+
+  def initialize(
+    @feed_id : Int64,
+    @url : String,
+    @clear_external : Bool = false,
+    @sync_data : String? = nil,
+    @update_favicon : String? = nil,
+    @update_favicon_data : String? = nil,
+    @clear_favicon : Bool = false,
+  )
+  end
+end
+
+# Struct holding backfill lists categorized by favicon source type.
+private struct BackfillLists
+  getter local : Array({Int64, String, String})
+  getter google : Array({Int64, String, String})
+  getter missing : Array({Int64, String, String})
+
+  def initialize(
+    @local : Array({Int64, String, String}) = [] of {Int64, String, String},
+    @google : Array({Int64, String, String}) = [] of {Int64, String, String},
+    @missing : Array({Int64, String, String}) = [] of {Int64, String, String},
+  )
+  end
+end
+
 class FaviconSyncService
   @db : DB::Database
   @mutex : Mutex
@@ -17,50 +75,49 @@ class FaviconSyncService
 
   def sync_favicon_paths : Nil
     feeds_data = load_feeds_data
-    local_backfills = [] of {Int64, String, String}
-    google_backfills = [] of {Int64, String, String}
-    missing_backfills = [] of {Int64, String, String}
+    backfills = BackfillLists.new
 
-    feeds_data.each do |feed_id, url, favicon, favicon_data, header_color, header_theme_colors, site_link|
-      clear_external, sync_data, update_fav, update_fav_data, clear_fav =
-        process_feed_favicon(feed_id, url, favicon, favicon_data, header_color, header_theme_colors, site_link)
+    feeds_data.each do |row|
+      result = process_feed_favicon(row)
+      @mutex.synchronize { apply_favicon_updates(result) }
 
-      @mutex.synchronize { apply_favicon_updates(feed_id, url, clear_external, sync_data, update_fav, update_fav_data, clear_fav) }
-
-      categorize_backfill(feed_id, url, favicon, header_theme_colors, site_link, local_backfills, google_backfills, missing_backfills)
+      categorize_backfill(row, backfills)
     end
 
-    Log.for("quickheadlines.cache").info { "Backfill summary: local=#{local_backfills.size}, google=#{google_backfills.size}, missing=#{missing_backfills.size}" }
+    Log.for("quickheadlines.cache").info { "Backfill summary: local=#{backfills.local.size}, google=#{backfills.google.size}, missing=#{backfills.missing.size}" }
 
-    local_backfills.each { |args| backfill_header_colors(*args) }
-    process_google_backfills(google_backfills)
-    process_missing_backfills(missing_backfills)
+    backfills.local.each { |args| backfill_header_colors(*args) }
+    process_google_backfills(backfills.google)
+    process_missing_backfills(backfills.missing)
   end
 
-  private def load_feeds_data : Array({Int64, String, String?, String?, String?, String?, String})
-    feeds_data = [] of {Int64, String, String?, String?, String?, String?, String}
+  private def load_feeds_data : Array(FeedFaviconRow)
+    feeds_data = [] of FeedFaviconRow
     @db.query("SELECT id, url, favicon, favicon_data, header_color, header_theme_colors, site_link FROM feeds") do |rows|
       rows.each do
-        feed_id = rows.read(Int64)
-        url = rows.read(String)
-        favicon = rows.read(String?)
-        favicon_data = rows.read(String?)
-        header_color = rows.read(String?)
-        header_theme_colors = rows.read(String?)
-        site_link = rows.read(String)
-        feeds_data << {feed_id, url, favicon, favicon_data, header_color, header_theme_colors, site_link}
+        feeds_data << FeedFaviconRow.new(
+          feed_id: rows.read(Int64),
+          url: rows.read(String),
+          favicon: rows.read(String?),
+          favicon_data: rows.read(String?),
+          header_color: rows.read(String?),
+          header_theme_colors: rows.read(String?),
+          site_link: rows.read(String),
+        )
       end
     end
     feeds_data
   end
 
   # ameba:disable Metrics/CyclomaticComplexity
-  private def process_feed_favicon(feed_id, url, favicon, favicon_data, _header_color, header_theme_colors, site_link)
+  private def process_feed_favicon(row : FeedFaviconRow) : FaviconUpdateResult
     clear_external = false
     sync_favicon_data = nil
     clear_favicon = false
     update_favicon = nil
     update_favicon_data = nil
+
+    favicon_data = row.favicon_data
 
     if favicon_data && favicon_data.starts_with?("http")
       clear_external = true
@@ -70,18 +127,18 @@ class FaviconSyncService
     if favicon_data && favicon_data.starts_with?("/favicons/")
       favicon_path = FaviconStorage.disk_path(favicon_data)
       unless favicon_path && File.exists?(favicon_path)
-        Log.for("quickheadlines.cache").debug { "Missing favicon file on disk for #{url}" }
+        Log.for("quickheadlines.cache").debug { "Missing favicon file on disk for #{row.url}" }
         favicon_data = nil
-        clear_favicon = true if favicon && favicon.starts_with?("/favicons/")
+        clear_favicon = true if row.favicon.try(&.starts_with?("/favicons/"))
       end
     end
 
-    if favicon && favicon_data.nil? && favicon.starts_with?("/favicons/")
-      sync_favicon_data = favicon
+    if (fav = row.favicon) && favicon_data.nil? && fav.starts_with?("/favicons/")
+      sync_favicon_data = fav
     end
 
-    if favicon && favicon.starts_with?("http") && !favicon.includes?("google.com/s2/favicons")
-      found_local, local_path = find_local_favicon(favicon)
+    if (fav = row.favicon) && fav.starts_with?("http") && !fav.includes?("google.com/s2/favicons")
+      found_local, local_path = find_local_favicon(fav)
       if found_local
         update_favicon = local_path
         update_favicon_data = local_path
@@ -90,7 +147,15 @@ class FaviconSyncService
       end
     end
 
-    {clear_external, sync_favicon_data, update_favicon, update_favicon_data, clear_favicon}
+    FaviconUpdateResult.new(
+      feed_id: row.feed_id,
+      url: row.url,
+      clear_external: clear_external,
+      sync_data: sync_favicon_data,
+      update_favicon: update_favicon,
+      update_favicon_data: update_favicon_data,
+      clear_favicon: clear_favicon,
+    )
   end
 
   private def find_local_favicon(favicon : String) : Tuple(Bool, String?)
@@ -105,35 +170,36 @@ class FaviconSyncService
     {false, nil}
   end
 
-  private def apply_favicon_updates(feed_id, url, clear_external, sync_data, update_fav, update_fav_data, clear_fav)
-    if clear_external
-      @db.exec("UPDATE feeds SET favicon_data = NULL WHERE id = ?", feed_id)
-      Log.for("quickheadlines.cache").info { "Cleared external URL from favicon_data for #{url}" }
+  private def apply_favicon_updates(result : FaviconUpdateResult) : Nil
+    if result.clear_external
+      @db.exec("UPDATE feeds SET favicon_data = NULL WHERE id = ?", result.feed_id)
+      Log.for("quickheadlines.cache").info { "Cleared external URL from favicon_data for #{result.url}" }
     end
 
-    if sync_data
-      @db.exec("UPDATE feeds SET favicon_data = ? WHERE id = ?", sync_data, feed_id)
-      Log.for("quickheadlines.cache").debug { "Synced favicon_data for #{url}: #{sync_data}" }
+    if result.sync_data
+      @db.exec("UPDATE feeds SET favicon_data = ? WHERE id = ?", result.sync_data, result.feed_id)
+      Log.for("quickheadlines.cache").debug { "Synced favicon_data for #{result.url}: #{result.sync_data}" }
     end
 
-    if update_fav && update_fav_data
-      @db.exec("UPDATE feeds SET favicon = ?, favicon_data = ? WHERE id = ?", update_fav, update_fav_data, feed_id)
-      Log.for("quickheadlines.cache").debug { "Synced favicon for #{url}" }
+    if result.update_favicon && result.update_favicon_data
+      @db.exec("UPDATE feeds SET favicon = ?, favicon_data = ? WHERE id = ?", result.update_favicon, result.update_favicon_data, result.feed_id)
+      Log.for("quickheadlines.cache").debug { "Synced favicon for #{result.url}" }
     end
 
-    if clear_fav
-      @db.exec("UPDATE feeds SET favicon = NULL, favicon_data = NULL WHERE id = ?", feed_id)
-      Log.for("quickheadlines.cache").debug { "Cleared missing favicon for #{url}" }
+    if result.clear_favicon
+      @db.exec("UPDATE feeds SET favicon = NULL, favicon_data = NULL WHERE id = ?", result.feed_id)
+      Log.for("quickheadlines.cache").debug { "Cleared missing favicon for #{result.url}" }
     end
   end
 
-  private def categorize_backfill(feed_id, url, favicon, header_theme_colors, site_link, local_backfills, google_backfills, missing_backfills)
-    if header_theme_colors.nil? && favicon && favicon.starts_with?("/favicons/")
-      local_backfills << {feed_id, url, favicon}
-    elsif header_theme_colors.nil? && favicon && favicon.starts_with?("http") && favicon.includes?("google.com/s2/favicons")
-      google_backfills << {feed_id, url, favicon}
-    elsif header_theme_colors.nil? && favicon.nil? && site_link && !site_link.empty?
-      missing_backfills << {feed_id, url, site_link}
+  private def categorize_backfill(row : FeedFaviconRow, backfills : BackfillLists) : Nil
+    fav = row.favicon
+    if row.header_theme_colors.nil? && fav && fav.starts_with?("/favicons/")
+      backfills.local << {row.feed_id, row.url, fav}
+    elsif row.header_theme_colors.nil? && fav && fav.starts_with?("http") && fav.includes?("google.com/s2/favicons")
+      backfills.google << {row.feed_id, row.url, fav}
+    elsif row.header_theme_colors.nil? && fav.nil? && row.site_link && !row.site_link.empty?
+      backfills.missing << {row.feed_id, row.url, row.site_link}
     end
   end
 

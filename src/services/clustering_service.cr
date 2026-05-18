@@ -19,7 +19,7 @@ class QuickHeadlines::Services::ClusteringService
     @cluster_repository ||= QuickHeadlines::Repositories::ClusterRepository.new(@db_service)
   end
 
-  private def best_cluster_match(candidates : Array(Int64), item_id : Int64, title_set : Set(String), cache : FeedCache, item_feed_id : Int64?) : Tuple(Int64?, Float64, String, Int64?)
+  private def best_cluster_match(candidates : Array(Int64), item_id : Int64, title_set : Set(String), cache : FeedCache, item_feed_id : Int64?) : ClusterMatchResult
     best_match = nil
     best_similarity = 0.0_f64
     best_title = ""
@@ -48,15 +48,26 @@ class QuickHeadlines::Services::ClusteringService
       end
     end
 
-    {best_match, best_similarity, best_title, best_feed_id}
+    ClusterMatchResult.new(best_match, best_similarity, best_title, best_feed_id)
   end
 
-  private def assign_cluster_item(item_id : Int64, best_match : Int64?, best_similarity : Float64, best_title : String, threshold : Float64, title : String, cache : FeedCache) : Int64
-    if best_match && best_similarity >= threshold
-      cluster_items = cache.get_cluster_items(best_match)
-      cluster_id = cluster_items.any? { |id| id != best_match } ? cluster_items.first : best_match
+  # Result of finding the best cluster match for an item
+  private struct ClusterMatchResult
+    getter match_id : Int64?
+    getter similarity : Float64
+    getter match_title : String
+    getter match_feed_id : Int64?
+
+    def initialize(@match_id : Int64?, @similarity : Float64, @match_title : String, @match_feed_id : Int64?)
+    end
+  end
+
+  private def assign_cluster_item(item_id : Int64, match : ClusterMatchResult, threshold : Float64, title : String, cache : FeedCache) : Int64
+    if match.match_id && match.similarity >= threshold
+      cluster_items = cache.get_cluster_items(match.match_id)
+      cluster_id = cluster_items.any? { |id| id != match.match_id } ? cluster_items.first : match.match_id
       cache.assign_cluster(item_id, cluster_id)
-      Log.for("quickheadlines.clustering").debug { "Clustered '#{title[0...QuickHeadlines::Constants::CLUSTER_TITLE_TRUNCATE_LENGTH]}...' with '#{best_title[0...QuickHeadlines::Constants::CLUSTER_TITLE_TRUNCATE_LENGTH]}...'" } if ENV["DEBUG_CLUSTERING"]?
+      Log.for("quickheadlines.clustering").debug { "Clustered '#{title[0...QuickHeadlines::Constants::CLUSTER_TITLE_TRUNCATE_LENGTH]}...' with '#{match.match_title[0...QuickHeadlines::Constants::CLUSTER_TITLE_TRUNCATE_LENGTH]}...'" } if ENV["DEBUG_CLUSTERING"]?
       cluster_id
     else
       cache.assign_cluster(item_id, item_id)
@@ -84,11 +95,11 @@ class QuickHeadlines::Services::ClusteringService
       return item_id
     end
 
-    best_match, best_similarity, best_title, _feed_id = best_cluster_match(candidates, item_id, title_set, cache, item_feed_id)
+    best_match = best_cluster_match(candidates, item_id, title_set, cache, item_feed_id)
 
-    Log.for("quickheadlines.clustering").debug { "Best match similarity: #{best_similarity.round(2)} (threshold: #{threshold})" } if ENV["DEBUG_CLUSTERING"]?
+    Log.for("quickheadlines.clustering").debug { "Best match similarity: #{best_match.similarity.round(2)} (threshold: #{threshold})" } if ENV["DEBUG_CLUSTERING"]?
 
-    assign_cluster_item(item_id, best_match, best_similarity, best_title, threshold, title, cache)
+    assign_cluster_item(item_id, best_match, threshold, title, cache)
   end
 
   def get_all_clusters_from_db : Array(QuickHeadlines::Entities::Cluster)

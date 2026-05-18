@@ -43,8 +43,42 @@ class QuickHeadlines::DTOs::StoryResponse
   )
   end
 
-  def self.from_entity(story : QuickHeadlines::Entities::Story) : QuickHeadlines::DTOs::StoryResponse
+  # Shared helper to build a StoryResponse from common feed item fields.
+  # Eliminates duplication between from_entity and from_cluster_item.
+  private def self.build(
+    id : String,
+    title : String,
+    link : String,
+    pub_date : Int64?,
+    feed_title : String,
+    feed_url : String,
+    feed_link : String,
+    favicon : String?,
+    favicon_data : String?,
+    header_color : String?,
+    header_text_color : String?,
+    comment_url : String?,
+    commentary_url : String?,
+  )
     new(
+      id: id,
+      title: title,
+      link: link,
+      pub_date: pub_date,
+      feed_title: feed_title,
+      feed_url: feed_url,
+      feed_link: feed_link,
+      favicon: favicon,
+      favicon_data: favicon_data,
+      header_color: header_color,
+      header_text_color: header_text_color,
+      comment_url: comment_url,
+      commentary_url: commentary_url,
+    )
+  end
+
+  def self.from_entity(story : QuickHeadlines::Entities::Story) : QuickHeadlines::DTOs::StoryResponse
+    build(
       id: story.id,
       title: story.title,
       link: story.link,
@@ -62,7 +96,7 @@ class QuickHeadlines::DTOs::StoryResponse
   end
 
   def self.from_cluster_item(item : ClusteringItemRow) : QuickHeadlines::DTOs::StoryResponse
-    new(
+    build(
       id: item.id.to_s,
       title: item.title,
       link: item.link,

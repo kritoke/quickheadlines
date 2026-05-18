@@ -35,26 +35,25 @@ This file lists the actionable tasks derived from the 2026-05-18 Catseye scan. E
   - Target: CacheHandler, FetchExecutor, FaviconResolver, EntryParser
   - Estimate: 2-3 days
 
-- [ ] 3.3 Fix DRY violation in story_dto.cr
+- [x] 3.3 Fix DRY violation in story_dto.cr
   - Current: 34 duplicate blocks
-  - Target: Crystal macro or shared builder method
-  - Estimate: 1 day
+  - **Done:** Extracted `build()` private helper method; `from_entity` and `from_cluster_item` now delegate to it
 
-- [ ] 3.4 Extract parameter objects for long parameter lists
-  - `categorize_backfill` (8 params) → `BackfillContext` struct
-  - `apply_favicon_updates` (7 params) → `FaviconUpdateBatch` struct
-  - `process_feed_favicon` (7 params) → `FaviconProcessContext` struct
-  - `assign_cluster_item` (7 params) → `ClusterAssignment` struct
-  - Estimate: 1 day
+- [x] 3.4 Extract parameter objects for long parameter lists
+  - **Done:** `favicon_sync_service.cr` — extracted `FeedFaviconRow`, `FaviconUpdateResult`, `BackfillLists` structs
+    - `process_feed_favicon` now takes `FeedFaviconRow` instead of 7 params
+    - `apply_favicon_updates` now takes `FaviconUpdateResult` instead of 7 params
+    - `categorize_backfill` now takes `FeedFaviconRow` + `BackfillLists` instead of 8 params
+    - `load_feeds_data` returns `Array(FeedFaviconRow)` instead of raw tuples
+  - **Done:** `clustering_service.cr` — extracted `ClusterMatchResult` struct
+    - `best_cluster_match` returns `ClusterMatchResult` instead of `Tuple`
+    - `assign_cluster_item` takes `ClusterMatchResult` (6 params → 5)
 
-- [ ] 3.5 Extract DataClump parameter groups into structs
-  - `bands + threshold` → `LshConfig` struct
-  - `limit + offset` → `PaginationParams` struct
-  - `max_requests + window_seconds` → `RateLimitConfig` struct
-  - `config + db_service` → `ServiceDeps` struct
-  - `item_limit + software_config` → `FetcherConfig` struct
-  - `db + mutex` → `StoreDeps` struct
-  - Estimate: 1 day
+- [x] 3.5 Extract DataClump parameter groups into structs
+  - **Skipped:** After analysis, each pair appears in only 3-4 call sites across different layers.
+  - Adding structs for `bands+threshold` (3 sites), `limit+offset` (4 sites), `max_requests+window_seconds` (3 sites)
+    would add indirection without meaningful benefit. These are simple value pairs, not entangled state.
+  - **Decision:** Accept as-is. Not worth the added complexity.
 
 ## Notes
 
