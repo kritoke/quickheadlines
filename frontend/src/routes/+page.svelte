@@ -30,6 +30,10 @@
 
 	let tabChangeTimeout: ReturnType<typeof setTimeout> | null = null;
 
+	// Track if feeds have ever been loaded successfully to distinguish between
+	// "no feeds configured" vs "feeds failed temporarily"
+	let hasEverLoadedFeeds = $state(false);
+
 	let filteredFeeds = $derived(getFilteredFeeds(searchState.query));
 
 	let lastUpdated = $derived(
@@ -86,6 +90,13 @@
 		if (alreadyLoaded && urlTab !== feedState.activeTab) {
 			logger.log('[Page] URL tab changed from', feedState.activeTab, 'to', urlTab, ', reloading...');
 			loadFeeds(urlTab);
+		}
+	});
+	
+	// Track when feeds are successfully loaded
+	$effect(() => {
+		if (feedState.feeds.length > 0 && feedState.status === 'idle') {
+			hasEverLoadedFeeds = true;
 		}
 	});
 	
@@ -168,10 +179,15 @@
 					<p class="text-lg">No results for "{searchState.query}"</p>
 					<p class="text-sm mt-2">Try a different search term</p>
 				</div>
-			{:else}
+			{:else if !hasEverLoadedFeeds}
 				<div class="text-center py-24 text-surface-500 dark:text-surface-400">
 					<p class="text-lg">No feeds found</p>
 					<p class="text-sm mt-2">Check your configuration</p>
+				</div>
+			{:else}
+				<!-- Feeds are being loaded or recently cleared, show subtle indicator -->
+				<div class="text-center py-24 text-surface-400 dark:text-surface-500">
+					<p class="text-sm">Refreshing feeds...</p>
 				</div>
 			{/if}
 		{/if}

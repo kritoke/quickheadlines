@@ -58,19 +58,29 @@ export function setLoading(state: FeedState, tab: string): FeedStateLoading | Fe
 
 export function setFeedsData(state: FeedState, response: FeedsPageResponse, tab: string): FeedStateIdle {
 	const swReleases = response.software_releases || [];
-	const feeds = [...swReleases, ...(response.feeds || [])];
+	const newFeeds = [...swReleases, ...(response.feeds || [])];
+	
+	// Only update feeds if the response has data, OR if we don't have existing feeds
+	// This prevents overwriting valid cached feeds with empty responses
+	const feedsToUse = newFeeds.length > 0 ? newFeeds : (state.feeds.length > 0 ? state.feeds : []);
+	
+	// Only mark cache as loaded if we have feeds OR we're replacing existing feeds
+	// Don't cache empty results that would overwrite valid data
+	const shouldCache = newFeeds.length > 0 || state.feeds.length === 0;
+	
+	const updatedCache = shouldCache ? {
+		...state.tabCache,
+		[tab]: { feeds: deepClone(feedsToUse), loaded: true }
+	} : state.tabCache;
 	
 	return {
 		...state,
-		feeds,
+		feeds: feedsToUse,
 		tabs: response.tabs || [],
 		activeTab: tab,
 		status: 'idle',
 		lastUpdated: response.updated_at || Date.now(),
-		tabCache: {
-			...state.tabCache,
-			[tab]: { feeds: deepClone(feeds), loaded: true }
-		}
+		tabCache: updatedCache
 	};
 }
 
@@ -139,16 +149,33 @@ export function resetFeedStore(): void {
 }
 
 export async function loadFeeds(tab: string, force: boolean = false): Promise<void> {
+	const currentFeeds = feedState.feeds;
+	const currentTabs = feedState.tabs;
+	
 	Object.assign(feedState, setActiveTab(feedState, tab));
 	
 	if (!force && feedState.tabCache[tab]?.loaded) {
-		feedState.feeds = feedState.tabCache[tab].feeds;
+		// Use cached feeds if available (even if empty, we'll refresh)
+		if (feedState.tabCache[tab].feeds.length > 0) {
+			feedState.feeds = feedState.tabCache[tab].feeds;
+		}
 		Object.assign(feedState, setLoading(feedState, tab));
 		try {
 			const response = await fetchFeeds(tab);
-			Object.assign(feedState, setFeedsData(feedState, response, tab));
+			const newState = setFeedsData(feedState, response, tab);
+			// Preserve feeds if the response is empty but we have existing data
+			if (newState.feeds.length === 0 && currentFeeds.length > 0) {
+				newState.feeds = currentFeeds;
+				newState.tabs = currentTabs;
+			}
+			Object.assign(feedState, newState);
 		} catch (e) {
-			Object.assign(feedState, setError(feedState, e instanceof Error ? e.message : 'Failed to load feeds'));
+			// On error, preserve existing feeds if we have them
+			if (currentFeeds.length > 0) {
+				feedState.status = 'idle';
+			} else {
+				Object.assign(feedState, setError(feedState, e instanceof Error ? e.message : 'Failed to load feeds'));
+			}
 		}
 		return;
 	}
@@ -157,9 +184,20 @@ export async function loadFeeds(tab: string, force: boolean = false): Promise<vo
 	
 	try {
 		const response = await fetchFeeds(tab);
-		Object.assign(feedState, setFeedsData(feedState, response, tab));
+		const newState = setFeedsData(feedState, response, tab);
+		// Preserve feeds if the response is empty but we have existing data
+		if (newState.feeds.length === 0 && currentFeeds.length > 0) {
+			newState.feeds = currentFeeds;
+			newState.tabs = currentTabs;
+		}
+		Object.assign(feedState, newState);
 	} catch (e) {
-		Object.assign(feedState, setError(feedState, e instanceof Error ? e.message : 'Failed to load feeds'));
+		// On error, preserve existing feeds if we have them
+		if (currentFeeds.length > 0) {
+			feedState.status = 'idle';
+		} else {
+			Object.assign(feedState, setError(feedState, e instanceof Error ? e.message : 'Failed to load feeds'));
+		}
 	}
 }
 
