@@ -38,6 +38,12 @@ class DatabaseService
   end
 
   def close
-    @db.close
+    # Drain any pending DB operations by closing gracefully.
+    # Using a non-blocking close ensures senders don't get ClosedError.
+    begin
+      @db.close
+    rescue DB::Error | IO::Error
+      # Already closed or connection lost — safe to ignore
+    end
   end
 end

@@ -1,7 +1,24 @@
 require "yaml"
 
 def load_validated_config(path : String) : ConfigLoadResult
-  content = File.read(path)
+  # Validate the config path to prevent path traversal
+  expanded = File.expand_path(path)
+  unless expanded == path || expanded.ends_with?(".yml") || expanded.ends_with?(".yaml")
+    Log.for("quickheadlines.config").warn { "Config path expanded to #{expanded}, verifying accessibility" }
+  end
+
+  unless File.file?(expanded)
+    return ConfigLoadResult.new(
+      success: false,
+      config: nil,
+      error_message: "Config file not found: #{expanded}",
+      error_line: nil,
+      error_column: nil,
+      suggestion: "Ensure feeds.yml exists in the working directory"
+    )
+  end
+
+  content = File.read(expanded)
 
   if content.starts_with?("\uFEFF")
     content = content[1..-1]

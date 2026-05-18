@@ -442,7 +442,14 @@ def start_refresh_loop(config_path : String, cache : FeedCache, db_service : Dat
           outer_sleep_timeout = (active_config.refresh_minutes * QuickHeadlines::Constants::SECONDS_PER_MINUTE * 3 // 2).seconds
 
           sleep_done = Channel(Nil).new(1)
-          spawn { sleep sleep_duration; sleep_done.send(nil) }
+          spawn do
+            begin
+              sleep sleep_duration
+              sleep_done.send(nil)
+            rescue ex
+              Log.for("quickheadlines.feed").error(exception: ex) { "Sleep timer fiber error" }
+            end
+          end
           select
           when sleep_done.receive
           when timeout(outer_sleep_timeout)
