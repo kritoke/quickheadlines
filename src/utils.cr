@@ -81,7 +81,7 @@ end
 def read_body_safe(io : IO, max_size : Int32 = QuickHeadlines::Constants::MAX_REQUEST_BODY_SIZE) : String
   # Use growing buffer instead of fixed max-size allocation
   buffer = IO::Memory.new
-  buffer_bytes = Bytes.new(8192)  # 8KB chunk
+  buffer_bytes = Bytes.new(8192) # 8KB chunk
   bytes_copied = 0
 
   while bytes_copied < max_size

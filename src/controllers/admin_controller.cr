@@ -220,13 +220,11 @@ class QuickHeadlines::Controllers::AdminController < QuickHeadlines::Controllers
 
     ws_stats = WebSocketStats.from_hash(@socket_manager.stats)
     broadcaster_stats = BroadcasterStats.from_hash(EventBroadcaster.stats)
-    build_admin_state
 
-    # Include refresh health metrics if available from RefreshHealthMonitor
     refresh_status = begin
       RefreshHealthMonitor.status
     rescue
-      { last_start: 0_i64, last_complete: 0_i64, cycles: 0_i32, failures: 0_i32 }
+      {last_start: 0_i64, last_complete: 0_i64, cycles: 0_i32, failures: 0_i32}
     end
 
     QuickHeadlines::DTOs::AdminStatusResponse.new(
@@ -251,25 +249,6 @@ class QuickHeadlines::Controllers::AdminController < QuickHeadlines::Controllers
       refresh_cycles: refresh_status[:cycles],
       refresh_failures: refresh_status[:failures],
     )
-  end
-
-  private def build_admin_state : NamedTuple(
-    last_cluster_run: Int64?,
-    last_cluster_duration_ms: Int64?,
-    last_cluster_status: String?,
-    last_admin_action: String?,
-    last_admin_run: Int64?,
-    last_admin_duration_ms: Int64?,
-    last_admin_status: String?)
-    {
-      last_cluster_run:         StateStore.last_cluster_run.try(&.to_unix_ms),
-      last_cluster_duration_ms: StateStore.last_cluster_duration_ms,
-      last_cluster_status:      StateStore.last_cluster_status,
-      last_admin_action:        StateStore.last_admin_action,
-      last_admin_run:           StateStore.last_admin_run.try(&.to_unix_ms),
-      last_admin_duration_ms:   StateStore.last_admin_duration_ms,
-      last_admin_status:        StateStore.last_admin_status,
-    }
   end
 
   @[ARTA::Get(path: "/api/version")]

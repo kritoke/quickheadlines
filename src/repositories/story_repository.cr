@@ -5,25 +5,24 @@ require "./repository_base"
 module QuickHeadlines::Repositories
   # Public record for timeline items - shared between StoryRepository and DTOs
   record TimelineEntry,
-      id : Int64,
-      title : String,
-      link : String,
-      pub_date : Time?,
-      feed_title : String,
-      feed_url : String,
-      feed_link : String,
-      favicon : String?,
-      favicon_data : String?,
-      header_color : String?,
-      header_text_color : String?,
-      cluster_id : Int64?,
-      representative : Bool,
-      cluster_size : Int32,
-      comment_url : String? = nil,
-      commentary_url : String? = nil
+    id : Int64,
+    title : String,
+    link : String,
+    pub_date : Time?,
+    feed_title : String,
+    feed_url : String,
+    feed_link : String,
+    favicon : String?,
+    favicon_data : String?,
+    header_color : String?,
+    header_text_color : String?,
+    cluster_id : Int64?,
+    representative : Bool,
+    cluster_size : Int32,
+    comment_url : String? = nil,
+    commentary_url : String? = nil
 
   class StoryRepository < RepositoryBase
-
     private def cluster_info_cte : String
       <<-SQL
         WITH cluster_info AS (

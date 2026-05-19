@@ -193,13 +193,17 @@ class FaviconSyncService
   end
 
   private def categorize_backfill(row : FeedFaviconRow, backfills : BackfillLists) : Nil
+    return unless row.header_theme_colors.nil?
+
     fav = row.favicon
-    if row.header_theme_colors.nil? && fav && fav.starts_with?("/favicons/")
+    if !fav
+      if row.site_link && !row.site_link.empty?
+        backfills.missing << {row.feed_id, row.url, row.site_link}
+      end
+    elsif fav.starts_with?("/favicons/")
       backfills.local << {row.feed_id, row.url, fav}
-    elsif row.header_theme_colors.nil? && fav && fav.starts_with?("http") && fav.includes?("google.com/s2/favicons")
+    elsif fav.starts_with?("http") && fav.includes?("google.com/s2/favicons")
       backfills.google << {row.feed_id, row.url, fav}
-    elsif row.header_theme_colors.nil? && fav.nil? && row.site_link && !row.site_link.empty?
-      backfills.missing << {row.feed_id, row.url, row.site_link}
     end
   end
 

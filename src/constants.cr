@@ -58,7 +58,7 @@ module QuickHeadlines::Constants
   CACHE_ONE_HOUR =     3600
 
   PROXY_DEFAULT_MAX_BYTES = 2 * 1024 * 1024
-  PROXY_MAX_ALLOWED_BYTES = 10_i64 * 1024 * 1024  # Hard ceiling to prevent abuse
+  PROXY_MAX_ALLOWED_BYTES = 10_i64 * 1024 * 1024 # Hard ceiling to prevent abuse
 
   SQLITE_BUSY_TIMEOUT_MS = 30000
 
@@ -81,9 +81,13 @@ module QuickHeadlines::Constants
   }
 
   # Watchdog defaults for auto-recovery
-  WATCHDOG_INTERVAL_SECONDS = 30
+  WATCHDOG_INTERVAL_SECONDS       = 30
   WATCHDOG_RETRY_INTERVAL_SECONDS = 30
-  WATCHDOG_MAX_ATTEMPTS = 3
-  WATCHDOG_DEBOUNCE_COUNT = 2
-  WATCHDOG_ESCALATE_EXIT = if ENV["QUICKHEADLINES_WATCHDOG_EXIT_ON_FAIL"]? && ENV["QUICKHEADLINES_WATCHDOG_EXIT_ON_FAIL"] == "true"; true; else; false; end
+  WATCHDOG_MAX_ATTEMPTS           =  3
+  WATCHDOG_DEBOUNCE_COUNT         =  2
+  WATCHDOG_ESCALATE_EXIT          = if ENV["QUICKHEADLINES_WATCHDOG_EXIT_ON_FAIL"]? && ENV["QUICKHEADLINES_WATCHDOG_EXIT_ON_FAIL"] == "true"
+                                      true
+                                    else
+                                      false
+                                    end
 end

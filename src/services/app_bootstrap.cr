@@ -149,7 +149,6 @@ class AppBootstrap
             Log.for("quickheadlines.watchdog").fatal { "Watchdog: exiting process to allow external supervisor to restart" }
             exit 1
           end
-
         rescue ex
           Log.for("quickheadlines.watchdog").error(exception: ex) { "Watchdog fiber error" }
         end

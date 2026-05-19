@@ -74,9 +74,11 @@ class QuickHeadlines::Controllers::ApiBaseController < Athena::Framework::Contro
   private def validate_proxy_url(url : String) : Bool
     uri = URI.parse(url)
     return false unless uri.scheme == "https"
-    return false if !uri.host.is_a?(String) || uri.host.to_s.empty?
 
-    host = uri.host.as(String).downcase
+    host = uri.host
+    return false if host.nil? || host.empty?
+
+    host = host.downcase
     return false unless QuickHeadlines::Constants::ALLOWED_PROXY_DOMAINS.includes?(host)
     return false if uri.user || uri.password
     return false if uri.port && uri.port != 443
@@ -128,7 +130,7 @@ class QuickHeadlines::Controllers::ApiBaseController < Athena::Framework::Contro
     status = begin
       RefreshHealthMonitor.status
     rescue
-      { last_start: 0_i64, last_complete: 0_i64, cycles: 0_i32, failures: 0_i32 }
+      {last_start: 0_i64, last_complete: 0_i64, cycles: 0_i32, failures: 0_i32}
     end
 
     QuickHeadlines::DTOs::HealthResponse.new(
@@ -163,15 +165,13 @@ class QuickHeadlines::Controllers::ApiBaseController < Athena::Framework::Contro
       content = read_body_safe(body)
       begin
         parsed = JSON.parse(content)
-        # JSON::Any -> try as Int64 then convert
-        if parsed["seconds"]?
-          begin
-            seconds = parsed["seconds"].to_s.to_i32
-          rescue
-            # ignore parse errors and keep default
-          end
+        if (val = parsed["seconds"]?)
+          seconds = val.to_s.to_i32
         end
-      rescue
+      rescue JSON::ParseException
+        # Invalid JSON — use default seconds
+      rescue ArgumentError
+        # Invalid number format — use default seconds
       end
     end
 

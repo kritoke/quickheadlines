@@ -311,7 +311,7 @@ module QuickHeadlines::DTOs
       @refresh_failures : Int32 = 0_i32,
       @refreshing : Bool = false,
       @feeds_count : Int32 = 0_i32,
-      @tabs_count : Int32 = 0_i32
+      @tabs_count : Int32 = 0_i32,
     )
     end
   end

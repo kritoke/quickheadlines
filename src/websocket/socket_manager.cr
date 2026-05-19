@@ -54,13 +54,13 @@ class SocketManager
         return false
       end
 
-      registration_state = {ip_counted: false, connection_registered: false}
+      ip_counted = false
 
       begin
         @ip_mutex.synchronize do
           @ip_counts[ip] = (count || 0) + 1
         end
-        registration_state = registration_state.merge({ip_counted: true})
+        ip_counted = true
 
         outgoing = Channel(String).new(QuickHeadlines::Constants::CONNECTION_QUEUE_SIZE)
         connection = Connection.new(websocket: ws, ip: ip, outgoing: outgoing, created_at: Time.utc)
@@ -71,11 +71,10 @@ class SocketManager
 
         spawn writer_fiber(connection)
         @connections << connection
-        registration_state = registration_state.merge({connection_registered: true})
         Log.for("quickheadlines.websocket").info { "Client connected from #{ip}. Total: #{@connections.size}" }
         true
       rescue ex
-        if registration_state[:ip_counted] && !registration_state[:connection_registered]
+        if ip_counted
           @ip_mutex.synchronize do
             if c = @ip_counts[ip]?
               @ip_counts[ip] = c - 1

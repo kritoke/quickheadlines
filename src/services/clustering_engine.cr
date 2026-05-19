@@ -7,6 +7,32 @@ module QuickHeadlines::Services
     feed_id : Int64,
     feed_url : String
 
+  # Union-Find (Disjoint Set) data structure for clustering.
+  # Uses path compression and union by rank (smaller ID wins).
+  struct UnionFind
+    @parent = {} of Int64 => Int64
+
+    def find(x : Int64) : Int64
+      @parent[x] ||= x
+      while @parent[x] != x
+        @parent[x] = @parent[@parent[x]]
+        x = @parent[x]
+      end
+      x
+    end
+
+    def union(a : Int64, b : Int64) : Nil
+      ra = find(a)
+      rb = find(b)
+      return if ra == rb
+      if ra < rb
+        @parent[rb] = ra
+      else
+        @parent[ra] = rb
+      end
+    end
+  end
+
   module ClusteringEngine
     STOP_WORDS = Set.new([
       "the", "a", "an", "and", "or", "but", "in", "on", "at", "to", "for",
@@ -132,37 +158,16 @@ module QuickHeadlines::Services
       pairs : Array(Tuple(Int64, Int64, Float64)),
       item_ids : Array(Int64),
     ) : Hash(Int64, Array(Int64))
-      parent = {} of Int64 => Int64
+      uf = UnionFind.new
 
-      find = ->(x : Int64) do
-        parent[x] ||= x
-        while parent[x] != x
-          parent[x] = parent[parent[x]]
-          x = parent[x]
-        end
-        x
-      end
-
-      union = ->(a : Int64, b : Int64) do
-        ra = find.call(a)
-        rb = find.call(b)
-        return if ra == rb
-        if ra < rb
-          parent[rb] = ra
-        else
-          parent[ra] = rb
-        end
-      end
-
-      # Union-Find with periodic yielding to prevent blocking
       pairs.each_with_index do |pair, idx|
-        union.call(pair[0], pair[1])
+        uf.union(pair[0], pair[1])
         Fiber.yield if idx % 500 == 0
       end
 
       clusters = {} of Int64 => Array(Int64)
       item_ids.each_with_index do |id, idx|
-        root = find.call(id)
+        root = uf.find(id)
         clusters[root] ||= [] of Int64
         clusters[root] << id
         Fiber.yield if idx % 500 == 0

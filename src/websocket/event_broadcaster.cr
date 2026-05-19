@@ -57,16 +57,14 @@ class EventBroadcaster
   end
 
   def self.shutdown : Nil
-    begin
-      select
-      when SHUTDOWN_CHANNEL.send(nil)
-        # Shutdown signal sent successfully
-      when timeout(2.seconds)
-        Log.for("quickheadlines.websocket").warn { "SHUTDOWN_CHANNEL send timed out — channel may be closed" }
-      end
-    rescue Channel::ClosedError
-      # Broadcaster loop already shut down — safe to ignore
+    select
+    when SHUTDOWN_CHANNEL.send(nil)
+      # Shutdown signal sent successfully
+    when timeout(2.seconds)
+      Log.for("quickheadlines.websocket").warn { "SHUTDOWN_CHANNEL send timed out — channel may be closed" }
     end
+  rescue Channel::ClosedError
+    # Broadcaster loop already shut down — safe to ignore
   end
 
   # Force close the update channel to unblock any waiting fibers

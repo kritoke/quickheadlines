@@ -82,40 +82,40 @@ module ColorExtractor
     end
   end
 
-  def self.normalize_text_value(text_val : String | Hash(String, String)) : Hash(String, String)
-    if text_val.is_a?(Hash)
-      text_val.as(Hash(String, String))
-    elsif text_val.is_a?(String)
-      begin
-        tmp = JSON.parse(text_val.to_s).as_h
-        normalized = {} of String => String
-        tmp.each do |k, v|
-          normalized[k.to_s] = v.to_s
-        end
-        normalized
-      rescue JSON::ParseException | TypeCastError
-        {"light" => text_val.to_s, "dark" => text_val.to_s}
+  def self.normalize_text_value(text_val : Hash(String, String)) : Hash(String, String)
+    text_val
+  end
+
+  def self.normalize_text_value(text_val : String) : Hash(String, String)
+    begin
+      tmp = JSON.parse(text_val).as_h
+      normalized = {} of String => String
+      tmp.each do |k, v|
+        normalized[k.to_s] = v.to_s
       end
-    else
-      {"light" => "", "dark" => ""}
+      normalized
+    rescue JSON::ParseException | TypeCastError
+      {"light" => text_val, "dark" => text_val}
     end
   end
 
-  private def self.normalize_text_value_for_storage(text_val : String | Hash(String, String) | JSON::Any) : String | Hash(String, String)
-    if text_val.is_a?(JSON::Any)
-      begin
-        h = text_val.as_h
-        normalized = {} of String => String
-        h.each do |k, v|
-          normalized[k.to_s] = v.to_s
-        end
-        normalized
-      rescue TypeCastError
-        text_val.to_s
+  private def self.normalize_text_value_for_storage(text_val : Hash(String, String)) : Hash(String, String)
+    text_val
+  end
+
+  private def self.normalize_text_value_for_storage(text_val : String) : String
+    text_val
+  end
+
+  private def self.normalize_text_value_for_storage(text_val : JSON::Any) : Hash(String, String) | String
+    begin
+      h = text_val.as_h
+      normalized = {} of String => String
+      h.each do |k, v|
+        normalized[k.to_s] = v.to_s
       end
-    elsif text_val.is_a?(Hash)
-      text_val.as(Hash(String, String))
-    else
+      normalized
+    rescue TypeCastError
       text_val.to_s
     end
   end
