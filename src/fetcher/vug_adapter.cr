@@ -23,7 +23,7 @@ module VugAdapter
         FaviconStorage.get_or_fetch(url)
       end,
       on_debug: ->(msg : String) do
-        debug_log(msg)
+        Log.for("quickheadlines.vug").debug { msg }
       end,
       on_error: ->(ctx : String, error_msg : String) do
         Log.for("quickheadlines.feed").error { "ERROR in #{ctx}: #{error_msg}" }

@@ -115,3 +115,16 @@ def ensure_cache_dir(cache_dir : String)
     end
   end
 end
+
+# Tracks last cache cleanup timestamp for periodic vacuum scheduling.
+module QuickHeadlines::Storage
+  @@last_cache_cleanup = Time.utc
+
+  def self.last_cache_cleanup=(value : Time)
+    @@last_cache_cleanup = value
+  end
+
+  def self.last_cache_cleanup
+    @@last_cache_cleanup
+  end
+end

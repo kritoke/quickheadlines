@@ -230,7 +230,6 @@ class QuickHeadlines::Controllers::AdminController < QuickHeadlines::Controllers
     QuickHeadlines::DTOs::AdminStatusResponse.new(
       clustering: StateStore.clustering?,
       refreshing: StateStore.refreshing?,
-      active_jobs: 0,
       websocket_connections: ws_stats.connections,
       websocket_messages_sent: broadcaster_stats.sent,
       websocket_messages_dropped: broadcaster_stats.dropped,

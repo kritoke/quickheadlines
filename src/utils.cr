@@ -2,14 +2,6 @@ require "http/client"
 require "uri"
 require "./constants"
 
-def debug_log(message : String) : Nil
-  if config = StateStore.config
-    if config.debug?
-      Log.for("quickheadlines.debug").debug { message }
-    end
-  end
-end
-
 CONCURRENCY_SEMAPHORE = Channel(Nil).new(QuickHeadlines::Constants::CONCURRENCY).tap { |channel| QuickHeadlines::Constants::CONCURRENCY.times { channel.send(nil) } }
 
 module Utils
@@ -147,4 +139,18 @@ def extract_client_ip(request) : String
     end
   end
   request.headers["X-Client-IP"]?.try(&.strip) || "unknown"
+end
+
+# Timing-safe string comparison to prevent timing attacks on auth tokens.
+def timing_safe_compare(a : String, b : String) : Bool
+  a_bytes = a.bytes
+  b_bytes = b.bytes
+  max_len = {a_bytes.size, b_bytes.size}.max
+  result = 0
+  max_len.times do |i|
+    a_byte = i < a_bytes.size ? a_bytes[i] : 0
+    b_byte = i < b_bytes.size ? b_bytes[i] : 0
+    result |= a_byte ^ b_byte
+  end
+  result == 0
 end

@@ -196,83 +196,71 @@ class FeedCache
   def db : DB::Database
     @db
   end
-end
 
-def load_feed_cache(config : Config, db_service : DatabaseService) : FeedCache
-  cache_dir = get_cache_dir(config)
-  ensure_cache_dir(cache_dir)
-  db_path : String = get_cache_db_path(config)
+  def self.load(config : Config, db_service : DatabaseService) : FeedCache
+    cache_dir = get_cache_dir(config)
+    ensure_cache_dir(cache_dir)
+    db_path : String = get_cache_db_path(config)
 
-  init_db(config) unless File.exists?(db_path)
+    init_db(config) unless File.exists?(db_path)
 
-  health_status = DbHealthStatus::Healthy
-  if File.exists?(db_path)
-    health_status = check_db_health(db_path)
+    health_status = DbHealthStatus::Healthy
+    if File.exists?(db_path)
+      health_status = check_db_health(db_path)
 
-    case health_status
-    when DbHealthStatus::Corrupted
-      Log.for("quickheadlines.storage").error { "Database corruption detected, attempting repair..." }
-      repair_result = repair_database(config)
+      case health_status
+      when DbHealthStatus::Corrupted
+        Log.for("quickheadlines.storage").error { "Database corruption detected, attempting repair..." }
+        repair_result = repair_database(config)
 
-      if repair_result.status == DbHealthStatus::Repaired
-        Log.for("quickheadlines.storage").info { "Database was previously repaired" }
-      end
-    end
-  end
-
-  cache = FeedCache.new(config, db_service)
-
-  cache.ensure_indexes
-
-  if health_status == DbHealthStatus::Healthy
-    cache.cleanup_old_articles(QuickHeadlines::Constants::CACHE_RETENTION_DAYS)
-  end
-
-  retention_hours = config.try(&.cache_retention_hours) || QuickHeadlines::Constants::CACHE_RETENTION_HOURS
-
-  config_urls = config.try(&.all_feed_urls)
-
-  cache.cleanup_old_entries(retention_hours, config_urls)
-
-  cache.check_size_limit(QuickHeadlines::Constants::DB_SIZE_HARD_LIMIT)
-
-  cache
-end
-
-module QuickHeadlines::Storage
-  @@last_cache_cleanup = Time.utc
-
-  def self.last_cache_cleanup=(value : Time)
-    @@last_cache_cleanup = value
-  end
-
-  def self.last_cache_cleanup
-    @@last_cache_cleanup
-  end
-end
-
-def save_feed_cache(cache : FeedCache, retention_hours : Int32 = QuickHeadlines::Constants::CACHE_RETENTION_HOURS, max_cache_size_mb : Int32 = 100)
-  cache.check_size_limit(max_cache_size_mb)
-
-  # Always checkpoint WAL to prevent unbounded growth
-  # WAL can grow significantly between vacuum cycles (refresh runs every 30 min)
-  # Checkpoint is cheap (just syncing WAL to main db), so do it every time
-  cache.cleanup_store.ensure_wal_checkpoint
-
-  now = Time.utc
-  if now - QuickHeadlines::Storage.last_cache_cleanup >= 1.hour
-    begin
-      cache.vacuum
-    rescue ex : Exception
-      if ex.message.try(&.includes?("database is locked")) || ex.message.try(&.includes?("database locked"))
-        Log.for("quickheadlines.storage").warn { "Periodic VACUUM skipped - database is locked (refresh in progress)" }
-      else
-        Log.for("quickheadlines.storage").warn { "vacuum failed: #{ex.message}" }
+        if repair_result.status == DbHealthStatus::Repaired
+          Log.for("quickheadlines.storage").info { "Database was previously repaired" }
+        end
       end
     end
 
-    cache.cleanup_old_entries(retention_hours)
-    cache.cleanup_old_articles(QuickHeadlines::Constants::CACHE_RETENTION_DAYS)
-    QuickHeadlines::Storage.last_cache_cleanup = now
+    cache = FeedCache.new(config, db_service)
+
+    cache.ensure_indexes
+
+    if health_status == DbHealthStatus::Healthy
+      cache.cleanup_old_articles(QuickHeadlines::Constants::CACHE_RETENTION_DAYS)
+    end
+
+    retention_hours = config.try(&.cache_retention_hours) || QuickHeadlines::Constants::CACHE_RETENTION_HOURS
+
+    config_urls = config.try(&.all_feed_urls)
+
+    cache.cleanup_old_entries(retention_hours, config_urls)
+
+    cache.check_size_limit(QuickHeadlines::Constants::DB_SIZE_HARD_LIMIT)
+
+    cache
+  end
+
+  def save(retention_hours : Int32 = QuickHeadlines::Constants::CACHE_RETENTION_HOURS, max_cache_size_mb : Int32 = 100) : Nil
+    check_size_limit(max_cache_size_mb)
+
+    # Always checkpoint WAL to prevent unbounded growth
+    # WAL can grow significantly between vacuum cycles (refresh runs every 30 min)
+    # Checkpoint is cheap (just syncing WAL to main db), so do it every time
+    cleanup_store.ensure_wal_checkpoint
+
+    now = Time.utc
+    if now - QuickHeadlines::Storage.last_cache_cleanup >= 1.hour
+      begin
+        vacuum
+      rescue ex : Exception
+        if ex.message.try(&.includes?("database is locked")) || ex.message.try(&.includes?("database locked"))
+          Log.for("quickheadlines.storage").warn { "Periodic VACUUM skipped - database is locked (refresh in progress)" }
+        else
+          Log.for("quickheadlines.storage").warn { "vacuum failed: #{ex.message}" }
+        end
+      end
+
+      cleanup_old_entries(retention_hours)
+      cleanup_old_articles(QuickHeadlines::Constants::CACHE_RETENTION_DAYS)
+      QuickHeadlines::Storage.last_cache_cleanup = now
+    end
   end
 end

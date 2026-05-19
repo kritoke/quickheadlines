@@ -195,7 +195,6 @@ module QuickHeadlines::DTOs
 
     property? clustering : Bool
     property? refreshing : Bool
-    property active_jobs : Int32
     property websocket_connections : Int32
     property websocket_messages_sent : Int64
     property websocket_messages_dropped : Int64
@@ -241,7 +240,6 @@ module QuickHeadlines::DTOs
     def initialize(
       @clustering : Bool,
       @refreshing : Bool,
-      @active_jobs : Int32 = 0,
       @websocket_connections : Int32 = 0,
       @websocket_messages_sent : Int64 = 0_i64,
       @websocket_messages_dropped : Int64 = 0_i64,

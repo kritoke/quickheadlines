@@ -492,7 +492,7 @@ private def run_timed_refresh(state : RefreshLoopState, cache : FeedCache, db_se
   when done.receive?
     refresh_duration = (Time.utc - refresh_start_time).total_seconds
     Log.for("quickheadlines.feed").debug { "Starting save_feed_cache..." }
-    save_feed_cache(cache, state.active_config.cache_retention_hours, state.active_config.max_cache_size_mb)
+    cache.save(state.active_config.cache_retention_hours, state.active_config.max_cache_size_mb)
     Log.for("quickheadlines.feed").debug { "save_feed_cache complete" }
     trigger_gc_collection
     refresh_duration
@@ -567,7 +567,7 @@ def start_refresh_loop(config_path : String, cache : FeedCache, db_service : Dat
   end
 
   state = RefreshLoopState.new(initial_config, File.info(config_path).modification_time)
-  save_feed_cache(cache, state.active_config.cache_retention_hours, state.active_config.max_cache_size_mb)
+  cache.save(state.active_config.cache_retention_hours, state.active_config.max_cache_size_mb)
 
   spawn(name: "refresh_supervisor") do
     loop do

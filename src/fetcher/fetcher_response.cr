@@ -17,7 +17,7 @@ module FetcherResponse
     Log.for("quickheadlines.feed").debug { "handle_success: #{feed.url} - items.size=#{items.size}" }
 
     if items.empty?
-      debug_log("Feed returned no items: #{feed.title} (#{feed.url})")
+      Log.for("quickheadlines.feed").debug { "Feed returned no items: #{feed.title} (#{feed.url})" }
       return build_error_feed(feed, "No items found (or unsupported format)")
     end
 

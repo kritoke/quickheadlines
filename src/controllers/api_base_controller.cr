@@ -45,19 +45,6 @@ class QuickHeadlines::Controllers::ApiBaseController < Athena::Framework::Contro
     false
   end
 
-  private def timing_safe_compare(a : String, b : String) : Bool
-    a_bytes = a.bytes
-    b_bytes = b.bytes
-    max_len = {a_bytes.size, b_bytes.size}.max
-    result = 0
-    max_len.times do |i|
-      a_byte = i < a_bytes.size ? a_bytes[i] : 0
-      b_byte = i < b_bytes.size ? b_bytes[i] : 0
-      result |= a_byte ^ b_byte
-    end
-    result == 0
-  end
-
   private def check_rate_limit!(request : AHTTP::Request, key : String, max_requests : Int32, window_seconds : Int32) : Nil
     ip = client_ip(request)
     limiter = RateLimiter.get_or_create("#{key}:#{ip}", max_requests, window_seconds)
