@@ -155,7 +155,9 @@ module QuickHeadlines::Repositories
           "(?, ?, ?, ?, ?, ?, ?, ?)"
         end.join(", ")
         args = batch.flat_map do |item|
-          pub_date_str = item.pub_date.try(&.to_s(QuickHeadlines::Constants::DB_TIME_FORMAT))
+          # Convert to UTC before storing to avoid timezone offset issues
+          utc_time = item.pub_date.try(&.to_utc)
+          pub_date_str = utc_time.try(&.to_s(QuickHeadlines::Constants::DB_TIME_FORMAT))
           normalized = QuickHeadlines::Utils::UrlNormalizer.normalize(item.link)
           [feed_id, item.title, item.link, normalized, pub_date_str, item.version, item.comment_url, item.commentary_url]
         end

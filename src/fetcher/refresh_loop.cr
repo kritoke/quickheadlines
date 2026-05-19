@@ -205,7 +205,7 @@ private def collect_feed_configs(config : Config) : Hash(String, Feed)
 end
 
 private def fetch_feeds_concurrently(all_configs : Hash(String, Feed), existing_data : Hash(String, FeedData), config : Config) : Hash(String, FeedData)
-  channel = Channel(FeedData?).new
+  channel = Channel(FeedData?).new(all_configs.size)  # buffered so senders don't block on timeout
   feed_index = 0
   all_configs.each_value do |feed|
     current_index = feed_index
