@@ -17,7 +17,9 @@ class QuickHeadlines::Controllers::FeedsController < QuickHeadlines::Controllers
     tabs_snapshot = state.tabs
     is_clustering = state.clustering
 
-    if feeds_snapshot.size + tabs_snapshot.sum(&.feeds.size) == 0
+    has_valid_feeds = feeds_snapshot.any?(&.failed?.!) || tabs_snapshot.any?(&.feeds.any?(&.failed?.!))
+
+    unless has_valid_feeds
       feeds_snapshot, tabs_snapshot_hash = load_feeds_from_cache_fallback(cache)
       tabs_snapshot = tabs_snapshot_hash.map { |tab| Tab.new(tab[:name], tab[:feeds], tab[:software_releases]) }
     end

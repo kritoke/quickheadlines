@@ -63,18 +63,32 @@ private def fetch_single_feed_with_timeout(feed : Feed, config : Config, prev : 
 
   if timed_out
     Log.for("quickheadlines.feed").warn { "fetch_single_feed_with_timeout: feed #{feed.url} timed out after #{timeout_seconds}s" }
-    FeedFetcher.instance.build_error_feed(feed, "Error: Fetch timeout after #{timeout_seconds}s")
+    if prev && !prev.failed?
+      Log.for("quickheadlines.feed").info { "fetch_single_feed_with_timeout: using cached data for #{feed.url}" }
+      prev
+    else
+      FeedFetcher.instance.build_error_feed(feed, "Error: Fetch timeout after #{timeout_seconds}s")
+    end
   elsif value = result_value
     if value.is_a?(Exception)
       Log.for("quickheadlines.feed").error(exception: value) { "Fetch failed for #{feed.url}" }
-      FeedFetcher.instance.build_error_feed(feed, "Error: #{value.class}")
+      if prev && !prev.failed?
+        Log.for("quickheadlines.feed").info { "fetch_single_feed_with_timeout: using cached data after exception for #{feed.url}" }
+        prev
+      else
+        FeedFetcher.instance.build_error_feed(feed, "Error: #{value.class}")
+      end
     else
       value
     end
   else
     # This should never happen but handle defensively
     Log.for("quickheadlines.feed").error { "fetch_single_feed_with_timeout: unexpected nil result for #{feed.url}" }
-    FeedFetcher.instance.build_error_feed(feed, "Error: Unexpected nil result")
+    if prev && !prev.failed?
+      prev
+    else
+      FeedFetcher.instance.build_error_feed(feed, "Error: Unexpected nil result")
+    end
   end
 end
 
@@ -206,7 +220,13 @@ private def fetch_feeds_concurrently(all_configs : Hash(String, Feed), existing_
         channel.send(result)
       rescue ex
         Log.for("quickheadlines.feed").error(exception: ex) { "fetch_feeds_concurrently: error fetching #{feed.url}" }
-        channel.send(FeedFetcher.instance.build_error_feed(feed, "Error: #{ex.class}"))
+        prev = existing_data[feed.url]?
+        if prev && !prev.failed?
+          Log.for("quickheadlines.feed").info { "fetch_feeds_concurrently: using cached data after outer error for #{feed.url}" }
+          channel.send(prev)
+        else
+          channel.send(FeedFetcher.instance.build_error_feed(feed, "Error: #{ex.class}"))
+        end
       ensure
         # Ensure semaphore slot is always returned, even on exceptions
         begin
@@ -246,8 +266,22 @@ private def build_software_releases(software_config : SoftwareConfig?, item_limi
   QuickHeadlines::SoftwareUtil.build_software_releases(software_config, item_limit)
 end
 
-private def build_tab_feeds(tab_config : TabConfig, fetched_map : Hash(String, FeedData), item_limit : Int32) : Tab
-  tab_feeds = tab_config.feeds.map { |feed| fetched_map[feed.url]? || FeedFetcher.instance.build_error_feed(feed, "Failed to fetch") }
+private def build_tab_feeds(tab_config : TabConfig, fetched_map : Hash(String, FeedData), existing_data : Hash(String, FeedData), item_limit : Int32) : Tab
+  tab_feeds = tab_config.feeds.map do |feed|
+    fetched = fetched_map[feed.url]?
+    existing = existing_data[feed.url]?
+    if fetched && !fetched.failed?
+      fetched
+    elsif existing && !existing.failed?
+      existing
+    elsif fetched
+      fetched
+    elsif existing
+      existing
+    else
+      FeedFetcher.instance.build_error_feed(feed, "Failed to fetch")
+    end
+  end
   tab_releases = build_software_releases(tab_config.software_releases, item_limit)
   Tab.new(tab_config.name, tab_feeds, tab_releases)
 end
@@ -276,8 +310,24 @@ def refresh_all(config : Config, cache : FeedCache, db_service : DatabaseService
     Log.for("quickheadlines.feed").debug { "refresh_all: fetched #{fetched_count}/#{all_configs.size} feeds successfully" }
   end
 
-  new_feeds = config.feeds.map { |feed| fetched_map[feed.url]? || FeedFetcher.instance.build_error_feed(feed, "Failed to fetch") }
-  new_tabs = config.tabs.map { |tab_config| build_tab_feeds(tab_config, fetched_map, config.item_limit) }
+  # Resolve the best data for a feed: prefer fresh fetch, fall back to previous good data,
+  # then to any previous data, and finally to an error feed.
+  new_feeds = config.feeds.map do |feed|
+    fetched = fetched_map[feed.url]?
+    existing = existing_data[feed.url]?
+    if fetched && !fetched.failed?
+      fetched
+    elsif existing && !existing.failed?
+      existing
+    elsif fetched
+      fetched # failed fetch is better than nothing
+    elsif existing
+      existing # even failed existing data is better than generating new error
+    else
+      FeedFetcher.instance.build_error_feed(feed, "Failed to fetch")
+    end
+  end
+  new_tabs = config.tabs.map { |tab_config| build_tab_feeds(tab_config, fetched_map, existing_data, config.item_limit) }
 
   # Diagnostic log: indicate sizes coming into StateStore update
   Log.for("quickheadlines.feed").info { "refresh_all: about to update StateStore - fetched_count=#{fetched_count}, missing_count=#{missing_count}, new_feeds=#{new_feeds.size}, new_tabs=#{new_tabs.size}" }
