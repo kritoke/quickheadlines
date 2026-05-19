@@ -12,7 +12,9 @@ module FetcherResponse
 
   # Process a successful fetch result into a FeedData with favicons and theme colors.
   def handle_success(result, feed : Feed, effective_item_limit : Int32, previous_data : FeedData?) : FeedData
+    Log.for("quickheadlines.feed").debug { "handle_success: #{feed.url} - result.entries.size=#{result.entries.size}, effective_item_limit=#{effective_item_limit}" }
     items = entries_to_items(result.entries)
+    Log.for("quickheadlines.feed").debug { "handle_success: #{feed.url} - items.size=#{items.size}" }
 
     if items.empty?
       debug_log("Feed returned no items: #{feed.title} (#{feed.url})")

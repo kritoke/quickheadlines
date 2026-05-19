@@ -179,7 +179,7 @@ module QuickHeadlines::Repositories
           items << read_item(rows)
         end
       end
-
+      Log.for("quickheadlines.feed").debug { "find_with_items: #{url} - items.size=#{items.size}" }
       feed_result.to_feed_data(items)
     end
 
