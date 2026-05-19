@@ -130,6 +130,13 @@ class StaticController < Athena::Framework::Controller
     serve_asset("_app/#{filename}")
   end
 
+  # Well-known paths probed by browsers/extensions (Chrome DevTools, Apple, etc.)
+  # Return 404 quietly — these are never real app requests.
+  @[ARTA::Get(path: "/.well-known/{**_path}")]
+  def well_known_fallback(_path : String) : AHTTP::Response
+    AHTTP::Response.new("Not Found", 404, HTTP::Headers{"content-type" => "text/plain"})
+  end
+
   @[ARTA::Get(path: "/{**_path}")]
   def spa_fallback(_path : String) : AHTTP::Response
     serve_asset("index.html")
