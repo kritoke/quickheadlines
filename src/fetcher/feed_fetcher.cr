@@ -146,7 +146,7 @@ class FeedFetcher
       ),
       max_redirects: QuickHeadlines::Constants::MAX_REDIRECTS,
       streaming: Fetcher::StreamingConfig.new(
-        enabled: debug_enabled,
+        enabled: false,
         debug: debug_enabled
       )
     )
