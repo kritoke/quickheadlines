@@ -12,27 +12,23 @@ class SocketManager
   record Connection, websocket : HTTP::WebSocket, ip : String, outgoing : Channel(String), created_at : Time
 
   @connections : Array(Connection)
-  @connections_mutex : Mutex
+  @mutex : Mutex
   @ip_counts : Hash(String, Int32)
-  @ip_mutex : Mutex
   @messages_sent : Atomic(Int64)
   @messages_dropped : Atomic(Int64)
   @send_errors : Atomic(Int64)
   @closed_total : Atomic(Int64)
   @last_activity : Hash(HTTP::WebSocket, Time)
-  @activity_mutex : Mutex
 
   def initialize
     @connections = [] of Connection
-    @connections_mutex = Mutex.new(:unchecked)
+    @mutex = Mutex.new(:unchecked)
     @ip_counts = {} of String => Int32
-    @ip_mutex = Mutex.new(:unchecked)
     @messages_sent = Atomic(Int64).new(0)
     @messages_dropped = Atomic(Int64).new(0)
     @send_errors = Atomic(Int64).new(0)
     @closed_total = Atomic(Int64).new(0)
     @last_activity = {} of HTTP::WebSocket => Time
-    @activity_mutex = Mutex.new(:unchecked)
   end
 
   def self.instance : SocketManager
@@ -40,7 +36,7 @@ class SocketManager
   end
 
   def register(ws : HTTP::WebSocket, ip : String) : Bool
-    @connections_mutex.synchronize do
+    @mutex.synchronize do
       purge_closed_connections
 
       if @connections.size >= QuickHeadlines::Constants::MAX_CONNECTIONS
@@ -57,17 +53,13 @@ class SocketManager
       ip_counted = false
 
       begin
-        @ip_mutex.synchronize do
-          @ip_counts[ip] = (count || 0) + 1
-        end
+        @ip_counts[ip] = (count || 0) + 1
         ip_counted = true
 
         outgoing = Channel(String).new(QuickHeadlines::Constants::CONNECTION_QUEUE_SIZE)
         connection = Connection.new(websocket: ws, ip: ip, outgoing: outgoing, created_at: Time.utc)
 
-        @activity_mutex.synchronize do
-          @last_activity[ws] = Time.utc
-        end
+        @last_activity[ws] = Time.utc
 
         spawn writer_fiber(connection)
         @connections << connection
@@ -75,11 +67,9 @@ class SocketManager
         true
       rescue ex
         if ip_counted
-          @ip_mutex.synchronize do
-            if c = @ip_counts[ip]?
-              @ip_counts[ip] = c - 1
-              @ip_counts.delete(ip) if @ip_counts[ip] == 0
-            end
+          if c = @ip_counts[ip]?
+            @ip_counts[ip] = c - 1
+            @ip_counts.delete(ip) if @ip_counts[ip] == 0
           end
         end
         Log.for("quickheadlines.websocket").error(exception: ex) { "Registration failed: #{ex.message}" }
@@ -96,7 +86,7 @@ class SocketManager
         connection.websocket.send(message)
         @messages_sent.add(1)
 
-        @activity_mutex.synchronize do
+        @mutex.synchronize do
           @last_activity[connection.websocket] = Time.utc
         end
       rescue Channel::ClosedError
@@ -122,46 +112,43 @@ class SocketManager
   end
 
   private def unregister_connection(connection : Connection) : Nil
-    @connections_mutex.synchronize do
+    @mutex.synchronize do
       @connections.delete(connection)
-    end
-    decrement_ip_count(connection.ip)
-    @activity_mutex.synchronize do
       @last_activity.delete(connection.websocket)
+      decrement_ip_count_locked(connection.ip)
     end
     Log.for("quickheadlines.websocket").info { "Client disconnected from #{connection.ip}. Total: #{connection_count}" }
   end
 
-  private def decrement_ip_count(ip : String) : Nil
-    @ip_mutex.synchronize do
-      if count = @ip_counts[ip]?
-        new_count = count - 1
-        if new_count <= 0
-          # In normal operation multiple connections per-IP are expected (especially in dev).
-          # If we somehow end up with a negative count, clamp to zero and emit a debug message —
-          # this is non-fatal and can happen if unregister is called from multiple code paths.
-          if new_count < 0
-            Log.for("quickheadlines.websocket").debug { "IP count for #{ip} went negative (#{count} -> #{new_count}). Clamping to 0." }
-            # In development runs we want to catch these cases early.
-            if ENV["APP_ENV"]? && ENV["APP_ENV"] == "development"
-              raise "IP count for #{ip} went negative (#{count} -> #{new_count})"
-            end
+  # Must be called inside @mutex.synchronize
+  private def decrement_ip_count_locked(ip : String) : Nil
+    if count = @ip_counts[ip]?
+      new_count = count - 1
+      if new_count <= 0
+        if new_count < 0
+          Log.for("quickheadlines.websocket").debug { "IP count for #{ip} went negative (#{count} -> #{new_count}). Clamping to 0." }
+          if ENV["APP_ENV"]? && ENV["APP_ENV"] == "development"
+            raise "IP count for #{ip} went negative (#{count} -> #{new_count})"
           end
-          @ip_counts.delete(ip)
-        else
-          @ip_counts[ip] = new_count
         end
+        @ip_counts.delete(ip)
       else
-        # No entry for this IP — could be a stale unregister call. Log at debug level only.
-        Log.for("quickheadlines.websocket").debug { "decrement_ip_count called for unknown IP: #{ip}" }
+        @ip_counts[ip] = new_count
       end
+    else
+      Log.for("quickheadlines.websocket").debug { "decrement_ip_count called for unknown IP: #{ip}" }
     end
+  end
+
+  # Thread-safe decrement for calls outside mutex
+  private def decrement_ip_count(ip : String) : Nil
+    @mutex.synchronize { decrement_ip_count_locked(ip) }
   end
 
   def unregister(ws : HTTP::WebSocket, ip : String) : Nil
     connection_to_remove = nil
 
-    @connections_mutex.synchronize do
+    @mutex.synchronize do
       idx = @connections.index { |conn| conn.websocket == ws }
       if idx
         connection_to_remove = @connections[idx]
@@ -179,6 +166,7 @@ class SocketManager
   end
 
   private def purge_closed_connections : Nil
+    # Must be called inside @mutex.synchronize
     @connections.reject! do |conn|
       dead = begin
         conn.websocket.closed?
@@ -187,7 +175,7 @@ class SocketManager
       end
 
       if dead
-        decrement_ip_count(conn.ip)
+        decrement_ip_count_locked(conn.ip)
         begin
           conn.outgoing.close
         rescue Channel::ClosedError
@@ -199,7 +187,7 @@ class SocketManager
   end
 
   def broadcast(message : String) : Nil
-    connections_snapshot = @connections_mutex.synchronize { @connections.dup }
+    connections_snapshot = @mutex.synchronize { @connections.dup }
 
     connections_snapshot.each do |conn|
       begin
@@ -221,7 +209,7 @@ class SocketManager
   end
 
   def connection_count : Int32
-    @connections_mutex.synchronize { @connections.size }
+    @mutex.synchronize { @connections.size }
   end
 
   def messages_sent : Int64
@@ -244,7 +232,7 @@ class SocketManager
     dead = [] of Connection
     now = Time.utc
 
-    @connections_mutex.synchronize do
+    @mutex.synchronize do
       @connections.each do |conn|
         begin
           # Check if websocket is closed
@@ -254,7 +242,7 @@ class SocketManager
           end
 
           # Check if connection is stale (no activity for QuickHeadlines::Constants::STALE_CONNECTION_AGE seconds)
-          last_active = @activity_mutex.synchronize { @last_activity[conn.websocket]? }
+          last_active = @last_activity[conn.websocket]?
           if last_active && (now - last_active).total_seconds > QuickHeadlines::Constants::STALE_CONNECTION_AGE
             Log.for("quickheadlines.websocket").debug { "Stale connection detected: #{conn.ip} (inactive for #{((now - last_active).total_seconds).round(0)}s)" }
             dead << conn
@@ -295,7 +283,7 @@ class SocketManager
   end
 
   def shutdown_all_connections : Nil
-    snapshot = @connections_mutex.synchronize { @connections.dup }
+    snapshot = @mutex.synchronize { @connections.dup }
     snapshot.each do |conn|
       begin
         conn.outgoing.close
