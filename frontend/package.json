@@ -14,15 +14,14 @@
   },
   "type": "module",
   "overrides": {
-    "cookie": ">=0.7.0",
-    "esbuild": "0.24.2"
+    "cookie": ">=0.7.0"
   },
   "dependencies": {
     "@sveltejs/kit": "^2.60.1",
     "@tailwindcss/typography": "^0.5.19",
     "dompurify": "^3.4.2",
     "svelte": "^5.55.7",
-    "typescript": "^5.9.3",
+    "typescript": "^6.0.3",
     "vite": "^6.4.2"
   },
   "browserslist": [
