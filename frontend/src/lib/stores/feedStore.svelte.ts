@@ -153,13 +153,16 @@ export async function loadFeeds(tab: string, force: boolean = false): Promise<vo
 	
 	Object.assign(feedState, setActiveTab(feedState, tab));
 	
+	// Determine what feeds we should show while loading
+	let feedsToShowWhileLoading = currentFeeds;
+	
 	if (!force && feedState.tabCache[tab]?.loaded) {
 		// Use cached feeds if available
 		if (feedState.tabCache[tab].feeds.length > 0) {
 			feedState.feeds = feedState.tabCache[tab].feeds;
+			feedsToShowWhileLoading = feedState.tabCache[tab].feeds;
 		} else if (currentFeeds.length > 0) {
-			// Cache is empty but we have feeds - use them
-			feedState.feeds = currentFeeds;
+			feedsToShowWhileLoading = currentFeeds;
 		}
 		Object.assign(feedState, setLoading(feedState, tab));
 		try {
@@ -172,9 +175,9 @@ export async function loadFeeds(tab: string, force: boolean = false): Promise<vo
 			}
 			Object.assign(feedState, newState);
 		} catch (e) {
-			// On error, ALWAYS restore feeds and set idle (don't show error if we have data)
-			feedState.feeds = currentFeeds.length > 0 ? currentFeeds : feedState.feeds;
-			feedState.tabs = currentTabs.length > 0 ? currentTabs : feedState.tabs;
+			// On error, preserve the feeds we were showing (cache or existing)
+			feedState.feeds = feedsToShowWhileLoading;
+			feedState.tabs = currentTabs;
 			feedState.status = 'idle';
 		}
 		return;
@@ -192,9 +195,9 @@ export async function loadFeeds(tab: string, force: boolean = false): Promise<vo
 		}
 		Object.assign(feedState, newState);
 	} catch (e) {
-		// On error, ALWAYS restore feeds and set idle (don't show error if we have data)
-		feedState.feeds = currentFeeds.length > 0 ? currentFeeds : feedState.feeds;
-		feedState.tabs = currentTabs.length > 0 ? currentTabs : feedState.tabs;
+		// On error, preserve existing feeds
+		feedState.feeds = currentFeeds;
+		feedState.tabs = currentTabs;
 		feedState.status = 'idle';
 	}
 }
