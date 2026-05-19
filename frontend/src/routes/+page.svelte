@@ -174,7 +174,7 @@
 				{#if displayFeeds.length > 0}
 				{#key feedState.activeTab}
 					<div class="grid {feedGridClass} gap-3 sm:gap-4 md:gap-5 pt-2 sm:pt-4 md:pt-6">
-						{#each filteredFeeds as feed, i (`feed-${i}`)}
+						{#each displayFeeds as feed, i (`feed-${i}`)}
 							<FeedBox {feed} onLoadMore={() => handleLoadMore(feed)} loading={feedState.loadingFeeds[feed.url] ?? false} />
 						{/each}
 					</div>
