@@ -73,13 +73,24 @@ async function apiFetch<T>(url: string, options: FetchOptions = {}): Promise<T> 
 	}
 }
 
-async function doFetchFeeds(tab: string): Promise<FeedsPageResponse> {
-	const url = `${API_BASE}/feeds?tab=${encodeURIComponent(tab)}`;
+interface FetchFeedsOptions {
+	force?: boolean;
+}
+
+async function doFetchFeeds(tab: string, options?: FetchFeedsOptions): Promise<FeedsPageResponse> {
+	// Add cache-buster when forcing to bypass browser HTTP cache
+	const cacheBuster = options?.force ? `&_t=${Date.now()}` : '';
+	const url = `${API_BASE}/feeds?tab=${encodeURIComponent(tab)}${cacheBuster}`;
 	return apiFetch<FeedsPageResponse>(url, { timeout: FETCH_TIMEOUT_MS, errorContext: 'Fetch Feeds' });
 }
 
-export async function fetchFeeds(tab: string = 'all'): Promise<FeedsPageResponse> {
+export async function fetchFeeds(tab: string = 'all', options?: FetchFeedsOptions): Promise<FeedsPageResponse> {
 	const cacheKey = `feeds-${tab}`;
+
+	// Force option bypasses dedup cache for WebSocket-triggered reloads
+	if (options?.force) {
+		return doFetchFeeds(tab, options);
+	}
 	
 	if (pendingRequests.has(cacheKey)) {
 		return pendingRequests.get(cacheKey) as Promise<FeedsPageResponse>;

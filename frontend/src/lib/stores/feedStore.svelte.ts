@@ -166,7 +166,7 @@ export async function loadFeeds(tab: string, force: boolean = false): Promise<vo
 		}
 		Object.assign(feedState, setLoading(feedState, tab));
 		try {
-			const response = await fetchFeeds(tab);
+			const response = await fetchFeeds(tab, { force });
 			const newState = setFeedsData(feedState, response, tab);
 			// Preserve feeds if the response is empty but we have existing data
 			if (newState.feeds.length === 0 && currentFeeds.length > 0) {
@@ -186,7 +186,7 @@ export async function loadFeeds(tab: string, force: boolean = false): Promise<vo
 	Object.assign(feedState, setLoading(feedState, tab));
 	
 	try {
-		const response = await fetchFeeds(tab);
+		const response = await fetchFeeds(tab, { force });
 		const newState = setFeedsData(feedState, response, tab);
 		// Preserve feeds if the response is empty but we have existing data
 		if (newState.feeds.length === 0 && currentFeeds.length > 0) {

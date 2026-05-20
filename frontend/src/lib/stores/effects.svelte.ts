@@ -19,25 +19,36 @@ function createEffectHandles(): EffectHandles {
 	};
 }
 
-let lastUpdate = Date.now();
+let lastUpdate = 0;
 let preservedScrollY = 0;
 let feedUpdateDebounce: ReturnType<typeof setTimeout> | null = null;
 const FEED_UPDATE_DEBOUNCE_MS = 2000;
 const CONFIG_CHECK_INTERVAL_MS = 60000;
 
+function resetLastUpdate() {
+	lastUpdate = 0;
+	logger.log('[Effects] lastUpdate reset');
+}
+
 function handleFeedUpdate(timestamp: number) {
-	if (timestamp > lastUpdate) {
-		logger.log('[Effects] Feed update received, scheduling reload...');
+	const delta = timestamp - lastUpdate;
+	logger.log(`[Effects] Feed update received: ts=${timestamp}, lastUpdate=${lastUpdate}, delta=${delta}ms`);
+
+	if (timestamp >= lastUpdate) {
+		logger.log('[Effects] Update accepted, scheduling reload...');
 		lastUpdate = timestamp;
 		preservedScrollY = window.scrollY;
 
 		if (feedUpdateDebounce) clearTimeout(feedUpdateDebounce);
 		feedUpdateDebounce = setTimeout(() => {
 			feedUpdateDebounce = null;
+			logger.log('[Effects] Debounce fired, reloading feeds and timeline...');
 			loadFeeds(feedState.activeTab, true);
 			loadTimeline();
 			window.scrollTo(0, preservedScrollY);
 		}, FEED_UPDATE_DEBOUNCE_MS);
+	} else {
+		logger.log('[Effects] Update rejected (stale)');
 	}
 }
 
@@ -92,6 +103,7 @@ function createRefreshEffect(refreshFn: () => void, onConnect?: () => void): { s
 		if (started) return;
 		started = true;
 
+		resetLastUpdate();
 		websocketConnection.addEventListener(handleWebSocketMessage);
 		websocketConnection.connect();
 
