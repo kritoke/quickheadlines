@@ -12,7 +12,7 @@ class QuickHeadlines::Controllers::FeedPaginationController < QuickHeadlines::Co
       raise AHK::Exception::BadRequest.new("Missing 'url' parameter")
     end
 
-    check_rate_limit!(request, "feed_more", 30, 60)
+    check_rate_limit!(request, "feed_more", QuickHeadlines::Constants::DEFAULT_FEED_MORE_LIMIT, 60)
 
     config = StateStore.config
     if config.nil?

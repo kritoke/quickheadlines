@@ -19,7 +19,7 @@
   "dependencies": {
     "@sveltejs/kit": "^2.60.1",
     "@tailwindcss/typography": "^0.5.19",
-    "dompurify": "^3.4.2",
+    "dompurify": "^3.4.5",
     "svelte": "^5.55.7",
     "typescript": "^6.0.3",
     "vite": "^6.4.2"
@@ -37,6 +37,7 @@
     "@tailwindcss/postcss": "^4.3.0",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/svelte": "^5.3.1",
+    "@types/dompurify": "^3.0.5",
     "autoprefixer": "^10.5.0",
     "clsx": "^2.1.1",
     "happy-dom": "^20.9.0",

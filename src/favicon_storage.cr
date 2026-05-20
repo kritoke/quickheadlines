@@ -44,7 +44,7 @@ module FaviconStorage
   end
 
   def self.favicon_hash_for_url(url : String) : String
-    hash_input = url.size > 4096 ? url[0..4096] : url
+    hash_input = url.size > QuickHeadlines::Constants::MAX_FAVICON_HASH ? url[0..QuickHeadlines::Constants::MAX_FAVICON_HASH] : url
     OpenSSL::Digest.new("SHA256").update(hash_input).final.hexstring
   end
 

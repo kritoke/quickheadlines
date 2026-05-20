@@ -68,7 +68,7 @@ class QuickHeadlines::Controllers::ApiBaseController < Athena::Framework::Contro
     host = host.downcase
     return false unless QuickHeadlines::Constants::ALLOWED_PROXY_DOMAINS.includes?(host)
     return false if uri.user || uri.password
-    return false if uri.port && uri.port != 443
+    return false if uri.port && uri.port != QuickHeadlines::Constants::HTTPS_PORT
 
     true
   rescue URI::Error
@@ -147,7 +147,7 @@ class QuickHeadlines::Controllers::ApiBaseController < Athena::Framework::Contro
     end
 
     body = request.body
-    seconds = 600
+    seconds = QuickHeadlines::Constants::API_CACHE_TTL_SECONDS
     if body
       content = read_body_safe(body)
       begin

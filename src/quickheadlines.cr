@@ -90,8 +90,20 @@ begin
     if ENV["SKIP_STARTUP_TASKS"]?
       Log.for("quickheadlines.app").info { "SKIP_STARTUP_TASKS set; not starting background tasks on startup" }
     else
-      spawn bootstrap.start_background_tasks
-      spawn bootstrap.verify_feeds_loaded
+      spawn do
+        begin
+          bootstrap.start_background_tasks
+        rescue ex
+          Log.for("quickheadlines.app").error(exception: ex) { "start_background_tasks fiber crashed" }
+        end
+      end
+      spawn do
+        begin
+          bootstrap.verify_feeds_loaded
+        rescue ex
+          Log.for("quickheadlines.app").error(exception: ex) { "verify_feeds_loaded fiber crashed" }
+        end
+      end
     end
   end
 

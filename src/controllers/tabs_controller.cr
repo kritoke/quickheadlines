@@ -3,7 +3,7 @@ require "./api_base_controller"
 class QuickHeadlines::Controllers::TabsController < QuickHeadlines::Controllers::ApiBaseController
   @[ARTA::Get(path: "/api/tabs")]
   def tabs(request : AHTTP::Request) : QuickHeadlines::DTOs::TabsResponse
-    check_rate_limit!(request, "api_tabs", 600, 60)
+    check_rate_limit!(request, "api_tabs", QuickHeadlines::Constants::API_CACHE_TTL_SECONDS, 60)
 
     state = StateStore.get
     tabs_snapshot = state.tabs

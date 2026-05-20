@@ -52,11 +52,11 @@ module Utils
     return true if PRIVATE_PREFIXES.any? { |prefix| host.starts_with?(prefix) }
 
     if host.starts_with?("100.")
-      return private_cidr_range?(host, 64, 127)
+      return private_cidr_range?(host, QuickHeadlines::Constants::CGNAT_RANGE_MIN_BITS, QuickHeadlines::Constants::CGNAT_RANGE_MAX_BITS)
     end
 
     if host.starts_with?("172.")
-      return private_cidr_range?(host, 16, 31)
+      return private_cidr_range?(host, QuickHeadlines::Constants::PRIVATE_172_MIN_BITS, QuickHeadlines::Constants::PRIVATE_172_MAX_BITS)
     end
 
     false
@@ -73,7 +73,7 @@ end
 def read_body_safe(io : IO, max_size : Int32 = QuickHeadlines::Constants::MAX_REQUEST_BODY_SIZE) : String
   # Use growing buffer instead of fixed max-size allocation
   buffer = IO::Memory.new
-  buffer_bytes = Bytes.new(8192) # 8KB chunk
+  buffer_bytes = Bytes.new(QuickHeadlines::Constants::BUFFER_SIZE) # 8KB chunk
   bytes_copied = 0
 
   while bytes_copied < max_size

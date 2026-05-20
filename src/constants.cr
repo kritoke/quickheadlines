@@ -68,6 +68,42 @@ module QuickHeadlines::Constants
   # WAL checkpoint threshold - smaller value = more frequent checkpoints = less WAL growth
   WAL_AUTOCHECKPOINT_PAGES = 1000
 
+  # Network ports
+  HTTP_PORT  = 80
+  HTTPS_PORT = 443
+
+  # Controller cache TTLs (seconds)
+  API_CACHE_TTL_SECONDS      = 600
+  TIMELINE_CACHE_TTL_SECONDS = 360
+
+  # Pagination
+  DEFAULT_FEED_MORE_LIMIT = 30
+  BATCH_INSERT_SIZE        = 50
+
+  # Storage sizes
+  BYTES_PER_KB    = 1024
+  BUFFER_SIZE     = 8192
+  MAX_FAVICON_HASH = 4096
+
+  # Clustering
+  LSH_BANDS = 16
+
+  # Private IP ranges (CGNAT)
+  CGNAT_OCTET_START    = 100
+  CGNAT_RANGE_MIN_BITS = 64
+  CGNAT_RANGE_MAX_BITS = 127
+  PRIVATE_172_PREFIX   = 172
+  PRIVATE_172_MIN_BITS = 16
+  PRIVATE_172_MAX_BITS = 31
+
+  # Refresh loop thresholds
+  STUCK_THRESHOLD_SECONDS  = 3
+  OUTER_TIMEOUT_SECONDS    = 3
+  SLEEP_TIMEOUT_SECONDS    = 3
+
+  # Color cache
+  COLOR_CACHE_MAX_ENTRIES = 24
+
   CLUSTER_TITLE_TRUNCATE_LENGTH = 50
 
   ALLOWED_PROXY_DOMAINS = {

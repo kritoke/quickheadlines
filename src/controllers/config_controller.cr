@@ -3,7 +3,7 @@ require "./api_base_controller"
 class QuickHeadlines::Controllers::ConfigController < QuickHeadlines::Controllers::ApiBaseController
   @[ARTA::Get(path: "/api/config")]
   def config(request : AHTTP::Request) : QuickHeadlines::DTOs::ConfigResponse
-    check_rate_limit!(request, "api_config", 600, 60)
+    check_rate_limit!(request, "api_config", QuickHeadlines::Constants::API_CACHE_TTL_SECONDS, 60)
 
     config = StateStore.config
     refresh_minutes = config.try(&.refresh_minutes) || 10

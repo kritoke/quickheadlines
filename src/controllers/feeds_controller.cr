@@ -4,7 +4,7 @@ require "../fetcher/refresh_loop"
 class QuickHeadlines::Controllers::FeedsController < QuickHeadlines::Controllers::ApiBaseController
   @[ARTA::Get(path: "/api/feeds")]
   def feeds(request : AHTTP::Request) : QuickHeadlines::DTOs::FeedsPageResponse
-    check_rate_limit!(request, "api_feeds", 600, 60)
+    check_rate_limit!(request, "api_feeds", QuickHeadlines::Constants::API_CACHE_TTL_SECONDS, 60)
 
     raw_tab = request.query_params["tab"]?
     active_tab = raw_tab.presence || "all"

@@ -150,7 +150,7 @@ module QuickHeadlines::Repositories
     end
 
     private def batch_insert(items : Array(Item), feed_id : Int64) : Nil
-      items.each_slice(50) do |batch|
+      items.each_slice(QuickHeadlines::Constants::BATCH_INSERT_SIZE) do |batch|
         values_clause = batch.map do
           "(?, ?, ?, ?, ?, ?, ?, ?)"
         end.join(", ")

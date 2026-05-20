@@ -8,7 +8,11 @@ class QuickHeadlines::Controllers::HeaderColorController < QuickHeadlines::Contr
     body_io = request.body
     raise AHK::Exception::BadRequest.new("Missing request body") if body_io.nil?
 
-    body = JSON.parse(read_body_safe(body_io))
+    begin
+      body = JSON.parse(read_body_safe(body_io))
+    rescue JSON::ParseException
+      raise AHK::Exception::BadRequest.new("Invalid JSON in request body")
+    end
     feed_url, color, text_color = parse_color_params(body)
 
     raise AHK::Exception::BadRequest.new("Missing feed_url, color, or text_color") unless feed_url && color && text_color

@@ -67,7 +67,7 @@ module QuickHeadlines::Utils
 
         # Preserve port if non-standard
         port = ""
-        if uri.port && uri.port != 80 && uri.port != 443
+        if uri.port && uri.port != QuickHeadlines::Constants::HTTP_PORT && uri.port != QuickHeadlines::Constants::HTTPS_PORT
           port = ":#{uri.port}"
         end
 

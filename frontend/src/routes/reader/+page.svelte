@@ -218,7 +218,7 @@
 				prose-a:font-medium prose-headings:text-surface-950 dark:prose-headings:text-surface-50
 				prose-img:rounded-lg prose-pre:bg-slate-100 prose-pre:dark:bg-slate-800
 				prose-blockquote:border-l-[var(--color-primary-500)]">
-				{@html content}
+				{@html DOMPurify.sanitize(content)}
 			</div>
 			
 			<div class="mt-8 pt-6 border-t border-slate-200 dark:border-slate-700 flex flex-wrap gap-3">
