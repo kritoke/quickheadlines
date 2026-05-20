@@ -57,7 +57,7 @@ module QuickHeadlines::Repositories
           f.url as feed_url,
           f.site_link as feed_link,
           f.favicon,
-          f.favicon_data,
+          NULL as favicon_data,
           f.header_color,
           f.header_text_color,
           i.cluster_id,

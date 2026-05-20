@@ -51,6 +51,7 @@ jobs:
 
       - name: Build Crystal binary
         run: |
+          mkdir -p bin
           touch src/web/assets.cr
           crystal build --release src/quickheadlines.cr -o bin/quickheadlines
 
@@ -95,6 +96,7 @@ jobs:
 
       - name: Build Crystal binary
         run: |
+          mkdir -p bin
           touch src/web/assets.cr
           crystal build --release src/quickheadlines.cr -o bin/quickheadlines
 

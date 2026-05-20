@@ -167,7 +167,7 @@ module QuickHeadlines::Repositories
 
     def find_with_items(url : String) : FeedData?
       feed_result = db.query_one?(
-        "SELECT id, title, url, site_link, header_color, header_text_color, header_theme_colors, etag, last_modified, favicon, favicon_data FROM feeds WHERE url = ?",
+        "SELECT id, title, url, site_link, header_color, header_text_color, header_theme_colors, etag, last_modified, favicon, NULL as favicon_data FROM feeds WHERE url = ?",
         url
       ) do |row|
         feed_id = row.read(Int64)

@@ -11,20 +11,31 @@ module FetcherResponse
   include Fetcher::ThemeHelper
 
   # Process a successful fetch result into a FeedData with favicons and theme colors.
+  # Content is persisted to the Azurite DB first, then stripped from in-memory items
+  # to reduce memory usage. Content is fetched on-demand via ContentService.
   def handle_success(result, feed : Feed, effective_item_limit : Int32, previous_data : FeedData?) : FeedData
     Log.for("quickheadlines.feed").debug { "handle_success: #{feed.url} - result.entries.size=#{result.entries.size}, effective_item_limit=#{effective_item_limit}" }
-    items = entries_to_items(result.entries)
-    Log.for("quickheadlines.feed").debug { "handle_success: #{feed.url} - items.size=#{items.size}" }
 
-    if items.empty?
+    if result.entries.empty?
       Log.for("quickheadlines.feed").debug { "Feed returned no items: #{feed.title} (#{feed.url})" }
       return build_error_feed(feed, "No items found (or unsupported format)")
     end
 
+    # Persist content to DB BEFORE stripping it from items
+    persist_entry_content(result.entries, feed.url)
+
+    # Build items WITHOUT content to save memory (~20-50KB per article)
+    items = entries_to_items(result.entries, strip_content: true)
+    Log.for("quickheadlines.feed").debug { "handle_success: #{feed.url} - items.size=#{items.size}" }
+
     site_link = result.site_link || feed.url
     favicon, favicon_data = resolve_favicons(site_link, feed, result.favicon, previous_data)
 
-    local_favicon_path = favicon_data || (favicon && favicon.starts_with?("/favicons/") ? favicon : nil)
+    # Clear favicon_data from memory after it's been saved to disk by resolve_favicons
+    # The favicon is served via /favicons/{hash}.png, not from memory
+    favicon_path = favicon_data || (favicon && favicon.starts_with?("/favicons/") ? favicon : nil)
+
+    local_favicon_path = favicon_path
     header_color, header_text_color, header_theme_json = extract_header_colors(feed, local_favicon_path)
     final_header_color, final_text_color = parse_legacy_theme(header_color, header_text_color, header_theme_json)
 
@@ -41,13 +52,11 @@ module FetcherResponse
       items,
       result.etag,
       result.last_modified,
-      favicon,
-      favicon_data
+      favicon_path,
+      nil # favicon_data cleared — served from disk via /favicons/ route
     )
 
     feed_data = feed_data.with_theme_colors(preserved_theme) if preserved_theme
-
-    store_content_from_items(feed_data)
 
     cache.add(feed_data)
 
@@ -96,25 +105,30 @@ module FetcherResponse
   end
 
   # Convert fetcher entries to sorted Item array.
-  private def entries_to_items(entries : Array(Fetcher::Entry)) : Array(Item)
+  # Content is stored to the DB separately and stripped from in-memory items
+  # to reduce memory usage. Content is fetched on-demand via ContentService.
+  private def entries_to_items(entries : Array(Fetcher::Entry), strip_content : Bool = false) : Array(Item)
     entries.map do |entry|
       comment_url = entry.comment_url || (entry.is_discussion_url ? entry.url : nil)
-      Item.new(entry.title, entry.url, entry.published_at, entry.content, comment_url, entry.commentary_url)
+      Item.new(entry.title, entry.url, entry.published_at, strip_content ? nil : entry.content, comment_url, entry.commentary_url)
     end.sort_by! { |item| item.pub_date || Time.unix(0) }.reverse!
   end
 
-  # Store item content for full-article viewing.
-  private def store_content_from_items(feed_data : FeedData)
-    return unless feed_data.items.any?(&.content)
+  # Persist entry content to the Azurite DB directly from raw entries.
+  # This is done BEFORE creating Item objects so we can strip content from memory.
+  private def persist_entry_content(entries : Array(Fetcher::Entry), feed_url : String) : Nil
+    has_content = entries.any?(&.content.presence)
+    return unless has_content
+
     begin
       content_service = QuickHeadlines::Services::ContentService.instance
     rescue
       return
     end
 
-    feed_data.items.each do |item|
-      if content = item.content
-        content_service.store_content(item.link, feed_data.url, item.title, content)
+    entries.each do |entry|
+      if content = entry.content.presence
+        content_service.store_content(entry.url, feed_url, entry.title, content)
       end
     end
   rescue ex
