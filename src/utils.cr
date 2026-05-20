@@ -4,6 +4,25 @@ require "./constants"
 
 CONCURRENCY_SEMAPHORE = Channel(Nil).new(QuickHeadlines::Constants::CONCURRENCY).tap { |channel| QuickHeadlines::Constants::CONCURRENCY.times { channel.send(nil) } }
 
+# Atomic counter to track available semaphore slots without draining the channel.
+# Updated on every acquire/release; read by health check for zero-side-effect inspection.
+CONCURRENCY_AVAILABLE = Atomic(Int32).new(QuickHeadlines::Constants::CONCURRENCY)
+
+# Thread-safe semaphore helpers: update both channel and atomic counter together.
+def acquire_semaphore : Nil
+  CONCURRENCY_SEMAPHORE.receive
+  CONCURRENCY_AVAILABLE.sub(1, :relaxed)
+end
+
+def release_semaphore : Nil
+  CONCURRENCY_SEMAPHORE.send(nil)
+  CONCURRENCY_AVAILABLE.add(1, :relaxed)
+end
+
+def semaphore_health_status : NamedTuple(available: Int32, expected: Int32)
+  {available: CONCURRENCY_AVAILABLE.get(:relaxed), expected: QuickHeadlines::Constants::CONCURRENCY}
+end
+
 module Utils
   MIME_TYPES = {
     "html"  => "text/html; charset=utf-8",
@@ -48,17 +67,9 @@ module Utils
     return true if host == "::1" || host == "[::1]"
     return true if host.starts_with?("[::")
     return true if host.starts_with?("fe80::") || host.starts_with?("[fe80::")
-
     return true if PRIVATE_PREFIXES.any? { |prefix| host.starts_with?(prefix) }
-
-    if host.starts_with?("100.")
-      return private_cidr_range?(host, QuickHeadlines::Constants::CGNAT_RANGE_MIN_BITS, QuickHeadlines::Constants::CGNAT_RANGE_MAX_BITS)
-    end
-
-    if host.starts_with?("172.")
-      return private_cidr_range?(host, QuickHeadlines::Constants::PRIVATE_172_MIN_BITS, QuickHeadlines::Constants::PRIVATE_172_MAX_BITS)
-    end
-
+    return private_cidr_range?(host, QuickHeadlines::Constants::CGNAT_RANGE_MIN_BITS, QuickHeadlines::Constants::CGNAT_RANGE_MAX_BITS) if host.starts_with?("100.")
+    return private_cidr_range?(host, QuickHeadlines::Constants::PRIVATE_172_MIN_BITS, QuickHeadlines::Constants::PRIVATE_172_MAX_BITS) if host.starts_with?("172.")
     false
   end
 
@@ -91,6 +102,8 @@ def read_body_safe(io : IO, max_size : Int32 = QuickHeadlines::Constants::MAX_RE
 end
 
 module UrlNormalizer
+  FEED_SUFFIXES = {"/feed.xml", "/feed", "/rss.xml", "/rss", "/atom"}
+
   def self.normalize(url : String) : String
     normalized = url.strip
 
@@ -101,17 +114,16 @@ module UrlNormalizer
     normalized = normalized.sub("https://www.", "https://").sub("http://www.", "http://")
 
     normalized = normalized.rchop('/')
-    normalized = normalized.rchop("/feed")
-    normalized = normalized.rchop("/feed.xml")
-    normalized = normalized.rchop("/rss")
-    normalized = normalized.rchop("/rss.xml")
-    normalized = normalized.rchop("/atom")
 
-    if q_idx = normalized.index('?')
-      normalized = normalized[0...q_idx]
+    FEED_SUFFIXES.each do |suffix|
+      normalized = normalized.rchop(suffix) if normalized.ends_with?(suffix)
     end
-    if f_idx = normalized.index('#')
-      normalized = normalized[0...f_idx]
+
+    if query_index = normalized.index('?')
+      normalized = normalized[0...query_index]
+    end
+    if fragment_index = normalized.index('#')
+      normalized = normalized[0...fragment_index]
     end
 
     normalized

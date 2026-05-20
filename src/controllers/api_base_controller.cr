@@ -196,8 +196,11 @@ class QuickHeadlines::Controllers::ApiBaseController < Athena::Framework::Contro
 
     cached_tabs = config.tabs.map do |tab_config|
       tab_feeds = tab_config.feeds.compact_map do |feed_config|
-        cached = cache.get(feed_config.url)
-        cached || cache.get(normalize_feed_url(feed_config.url))
+        cached = cache.get(feed_config.url) || cache.get(normalize_feed_url(feed_config.url))
+        unless cached
+          Log.for("quickheadlines.cache").debug { "Fallback: feed not in cache, dropping: #{feed_config.url}" }
+        end
+        cached
       end
 
       {name: tab_config.name, feeds: tab_feeds, software_releases: [] of FeedData}

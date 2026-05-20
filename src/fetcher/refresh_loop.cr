@@ -22,59 +22,59 @@ module GCCollector
 end
 
 private def log_duration_warning(refresh_duration, active_config)
-  threshold = (active_config.refresh_minutes * QuickHeadlines::Constants::SECONDS_PER_MINUTE) * 2
-  if refresh_duration > threshold
-    Log.for("quickheadlines.feed").warn { "Refresh took #{refresh_duration.round(2)}s (expected #{active_config.refresh_minutes * QuickHeadlines::Constants::SECONDS_PER_MINUTE}s) - possible hang detected" }
+  expected_seconds = active_config.refresh_minutes * QuickHeadlines::Constants::SECONDS_PER_MINUTE
+  hang_threshold = expected_seconds * 2
+  if refresh_duration > hang_threshold
+    Log.for("quickheadlines.feed").warn { "Refresh took #{refresh_duration.round(2)}s (expected #{expected_seconds}s) - possible hang detected" }
   end
 end
 
-private def trigger_gc_collection : Nil
-  GCCollector.trigger_if_needed
+# Resolve the best available data for a feed.
+# Priority: fresh-good > stale-good > fresh-bad > stale-bad > synthetic error
+private def best_available_feed(feed : Feed, fetched : FeedData?, existing : FeedData?) : FeedData
+  return fetched if fetched && !fetched.failed?
+  return existing if existing && !existing.failed?
+  fetched || existing || FeedFetcher.instance.build_error_feed(feed, "Failed to fetch")
 end
-
-# Fetch a single feed with hard timeout. Returns FeedData or error feed.
 # Uses select+timeout pattern to ensure fetch completes within time limit.
-private def fetch_single_feed_with_timeout(feed : Feed, config : Config, prev : FeedData?, index : Int32) : FeedData
+private def fetch_single_feed_with_timeout(feed : Feed, config : Config, previous_feed_data : FeedData?, index : Int32) : FeedData
   timeout_seconds = QuickHeadlines::Constants::FETCH_TIMEOUT_SECONDS
 
-  # Create a channel to receive the result
   result_channel = Channel(FeedData | Exception).new
 
-  # Spawn the actual fetch in a separate fiber
   spawn(name: "feed_fetch_inner_#{index}") do
     begin
-      fetch_result = FeedFetcher.instance.fetch(feed, config.item_limit, config.db_fetch_limit, prev)
+      fetch_result = FeedFetcher.instance.fetch(feed, config.item_limit, config.db_fetch_limit, previous_feed_data)
       result_channel.send(fetch_result)
     rescue ex : Exception
       result_channel.send(ex)
     end
   end
 
-  # Wait for result or timeout
   timed_out = false
-  result_value = nil
+  channel_result = nil
 
   select
   when value = result_channel.receive?
-    result_value = value
+    channel_result = value
   when timeout(timeout_seconds.seconds)
     timed_out = true
   end
 
   if timed_out
     Log.for("quickheadlines.feed").warn { "fetch_single_feed_with_timeout: feed #{feed.url} timed out after #{timeout_seconds}s" }
-    if prev && !prev.failed?
+    if previous_feed_data && !previous_feed_data.failed?
       Log.for("quickheadlines.feed").info { "fetch_single_feed_with_timeout: using cached data for #{feed.url}" }
-      prev
+      previous_feed_data
     else
       FeedFetcher.instance.build_error_feed(feed, "Error: Fetch timeout after #{timeout_seconds}s")
     end
-  elsif value = result_value
+  elsif value = channel_result
     if value.is_a?(Exception)
       Log.for("quickheadlines.feed").error(exception: value) { "Fetch failed for #{feed.url}" }
-      if prev && !prev.failed?
+      if previous_feed_data && !previous_feed_data.failed?
         Log.for("quickheadlines.feed").info { "fetch_single_feed_with_timeout: using cached data after exception for #{feed.url}" }
-        prev
+        previous_feed_data
       else
         FeedFetcher.instance.build_error_feed(feed, "Error: #{value.class}")
       end
@@ -82,10 +82,9 @@ private def fetch_single_feed_with_timeout(feed : Feed, config : Config, prev : 
       value
     end
   else
-    # This should never happen but handle defensively
     Log.for("quickheadlines.feed").error { "fetch_single_feed_with_timeout: unexpected nil result for #{feed.url}" }
-    if prev && !prev.failed?
-      prev
+    if previous_feed_data && !previous_feed_data.failed?
+      previous_feed_data
     else
       FeedFetcher.instance.build_error_feed(feed, "Error: Unexpected nil result")
     end
@@ -178,23 +177,10 @@ module RefreshHealthMonitor
 end
 
 private def check_semaphore_health
-  # Note: This briefly blocks concurrent fetches while draining and refilling permits.
-  # Impact is minimal (~8 receives/sends) and the check only runs periodically.
-  # If the semaphore never gets out of sync, this health check could be removed.
-  expected = QuickHeadlines::Constants::CONCURRENCY
-  available = 0
-  expected.times do
-    if CONCURRENCY_SEMAPHORE.receive?.nil?
-      break
-    end
-    available += 1
+  status = semaphore_health_status
+  if status[:available] != status[:expected]
+    Log.for("quickheadlines.feed").warn { "Semaphore health check: #{status[:available]}/#{status[:expected]} slots available" }
   end
-
-  if available != expected
-    Log.for("quickheadlines.feed").warn { "Semaphore health check: only #{available}/#{expected} slots available - refilling #{available}" }
-  end
-
-  available.times { CONCURRENCY_SEMAPHORE.send(nil) }
 end
 
 private def collect_feed_configs(config : Config) : Hash(String, Feed)
@@ -211,26 +197,26 @@ private def fetch_feeds_concurrently(all_configs : Hash(String, Feed), existing_
     current_index = feed_index
     feed_index += 1
     spawn(name: "feed_fetch_outer_#{current_index}") do
-      CONCURRENCY_SEMAPHORE.receive
+      acquire_semaphore
       begin
-        prev = existing_data[feed.url]?
+        previous_feed_data = existing_data[feed.url]?
         # Per-feed timeout to prevent one hung fetch from blocking the semaphore slot
         # This is critical for preventing semaphore exhaustion over long running sessions
-        result = fetch_single_feed_with_timeout(feed, config, prev, current_index)
+        result = fetch_single_feed_with_timeout(feed, config, previous_feed_data, current_index)
         channel.send(result)
       rescue ex
         Log.for("quickheadlines.feed").error(exception: ex) { "fetch_feeds_concurrently: error fetching #{feed.url}" }
-        prev = existing_data[feed.url]?
-        if prev && !prev.failed?
+        previous_feed_data = existing_data[feed.url]?
+        if previous_feed_data && !previous_feed_data.failed?
           Log.for("quickheadlines.feed").info { "fetch_feeds_concurrently: using cached data after outer error for #{feed.url}" }
-          channel.send(prev)
+          channel.send(previous_feed_data)
         else
           channel.send(FeedFetcher.instance.build_error_feed(feed, "Error: #{ex.class}"))
         end
       ensure
         # Ensure semaphore slot is always returned, even on exceptions
         begin
-          CONCURRENCY_SEMAPHORE.send(nil)
+          release_semaphore
         rescue ex
           Log.for("quickheadlines.feed").error(exception: ex) { "Failed to release semaphore for #{feed.url}" }
         end
@@ -247,9 +233,9 @@ private def fetch_feeds_concurrently(all_configs : Hash(String, Feed), existing_
   total_feeds.times do
     Fiber.yield
     select
-    when data = channel.receive?
-      if data
-        fetched_map[data.url] = data
+    when feed_data = channel.receive?
+      if feed_data
+        fetched_map[feed_data.url] = feed_data
       elsif config.debug?
         Log.for("quickheadlines.feed").warn { "fetch_feeds_concurrently: failed to fetch feed" }
       end
@@ -268,19 +254,7 @@ end
 
 private def build_tab_feeds(tab_config : TabConfig, fetched_map : Hash(String, FeedData), existing_data : Hash(String, FeedData), item_limit : Int32) : Tab
   tab_feeds = tab_config.feeds.map do |feed|
-    fetched = fetched_map[feed.url]?
-    existing = existing_data[feed.url]?
-    if fetched && !fetched.failed?
-      fetched
-    elsif existing && !existing.failed?
-      existing
-    elsif fetched
-      fetched
-    elsif existing
-      existing
-    else
-      FeedFetcher.instance.build_error_feed(feed, "Failed to fetch")
-    end
+    best_available_feed(feed, fetched_map[feed.url]?, existing_data[feed.url]?)
   end
   tab_releases = build_software_releases(tab_config.software_releases, item_limit)
   Tab.new(tab_config.name, tab_feeds, tab_releases)
@@ -311,22 +285,9 @@ def refresh_all(config : Config, cache : FeedCache, db_service : DatabaseService
     Log.for("quickheadlines.feed").debug { "refresh_all: fetched #{fetched_count}/#{all_configs.size} feeds successfully" }
   end
 
-  # Resolve the best data for a feed: prefer fresh fetch, fall back to previous good data,
-  # then to any previous data, and finally to an error feed.
+  # Resolve the best data for each feed using priority logic.
   new_feeds = config.feeds.map do |feed|
-    fetched = fetched_map[feed.url]?
-    existing = existing_data[feed.url]?
-    if fetched && !fetched.failed?
-      fetched
-    elsif existing && !existing.failed?
-      existing
-    elsif fetched
-      fetched # failed fetch is better than nothing
-    elsif existing
-      existing # even failed existing data is better than generating new error
-    else
-      FeedFetcher.instance.build_error_feed(feed, "Failed to fetch")
-    end
+    best_available_feed(feed, fetched_map[feed.url]?, existing_data[feed.url]?)
   end
   new_tabs = config.tabs.map { |tab_config| build_tab_feeds(tab_config, fetched_map, existing_data, config.item_limit) }
 
@@ -485,7 +446,7 @@ private def run_timed_refresh(state : RefreshLoopState, cache : FeedCache, db_se
   config_snapshot = state.active_config
   refresh_all_start = Time.utc
 
-  done = Channel(Nil).new(1)
+  completion_channel = Channel(Nil).new(1)
   spawn(name: "refresh_worker") do
     begin
       refresh_all(config_snapshot, cache, db_service)
@@ -499,17 +460,17 @@ private def run_timed_refresh(state : RefreshLoopState, cache : FeedCache, db_se
       Log.for("quickheadlines.feed").error(exception: ex) { "refresh_loop refresh_all failed" }
       RefreshHealthMonitor.record_failure
     end
-    done.send(nil)
+    completion_channel.send(nil)
   end
 
   select
-  when done.receive?
+  when completion_channel.receive?
     StateStore.refreshing = false
     refresh_duration = (Time.utc - refresh_start_time).total_seconds
     Log.for("quickheadlines.feed").debug { "Starting save_feed_cache..." }
     cache.save(state.active_config.cache_retention_hours, state.active_config.max_cache_size_mb)
     Log.for("quickheadlines.feed").debug { "save_feed_cache complete" }
-    trigger_gc_collection
+    GCCollector.trigger_if_needed
     refresh_duration
   when timeout(outer_timeout)
     StateStore.refreshing = false # Clear immediately on timeout to prevent stall

@@ -23,10 +23,7 @@ module FetcherCache
 
   # Check if a cached result is actually an error feed that should be treated as stale.
   def stale_cache_fallback?(result : FeedData, feed : Feed) : Bool
-    result.items.size >= 1 &&
-      (first_item = result.items.first) &&
-      first_item.title.starts_with?("Error:") &&
-      first_item.link == feed.url
+    result.failed? && result.items.any? { |item| item.link == feed.url }
   end
 
   # Build a cached feed with favicon path validation.

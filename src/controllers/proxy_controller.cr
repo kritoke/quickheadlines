@@ -71,8 +71,9 @@ class QuickHeadlines::Controllers::ProxyController < QuickHeadlines::Controllers
     raise AHK::Exception::BadRequest.new("Invalid favicon hash") unless hash.matches?(/\A[a-f0-9]{16}\z/)
     raise AHK::Exception::BadRequest.new("Invalid favicon extension") unless ext.in?("png", "ico", "svg", "gif", "jpg", "jpeg", "webp")
 
-    favicon_path = File.join(FaviconStorage.favicon_dir, "#{hash}.#{ext}")
-    raise AHK::Exception::BadRequest.new("Invalid favicon path") unless favicon_path.starts_with?(FaviconStorage.favicon_dir)
+    favicon_path = File.expand_path(File.join(FaviconStorage.favicon_dir, "#{hash}.#{ext}"))
+    favicon_base = File.expand_path(FaviconStorage.favicon_dir) + "/"
+    raise AHK::Exception::BadRequest.new("Invalid favicon path") unless favicon_path.starts_with?(favicon_base)
 
     cache_key = "#{hash}.#{ext}"
 

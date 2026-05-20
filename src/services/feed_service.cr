@@ -135,19 +135,19 @@ module QuickHeadlines::Services
       is_all_tab = active_tab.to_s.downcase == "all"
 
       feeds_response = if is_all_tab
-                         all_feeds_with_tabs = [] of {feed: FeedData, tab_name: String}
+                         feed_tab_pairs = [] of {feed: FeedData, tab_name: String}
 
                          feeds_snapshot.each do |feed|
-                           all_feeds_with_tabs << {feed: feed, tab_name: ""} unless feed.failed?
+                           feed_tab_pairs << {feed: feed, tab_name: ""} unless feed.failed?
                          end
 
                          tabs_snapshot.each do |tab|
                            tab.feeds.each do |feed|
-                             all_feeds_with_tabs << {feed: feed, tab_name: tab.name} unless feed.failed?
+                             feed_tab_pairs << {feed: feed, tab_name: tab.name} unless feed.failed?
                            end
                          end
 
-                         all_feeds_with_tabs.map { |entry| build_feed_response(entry[:feed], cache, tab_name: entry[:tab_name], total_count: cache.item_count(entry[:feed].url), display_item_limit: item_limit) }
+                         feed_tab_pairs.map { |entry| build_feed_response(entry[:feed], cache, tab_name: entry[:tab_name], total_count: cache.item_count(entry[:feed].url), display_item_limit: item_limit) }
                        else
                          tab_feeds = tabs_snapshot.find { |tab| tab.name.downcase == active_tab.downcase }
                          if tab_feeds

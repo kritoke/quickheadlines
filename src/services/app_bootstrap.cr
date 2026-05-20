@@ -90,8 +90,8 @@ class AppBootstrap
           break if QuickHeadlines.shutting_down?
           sleep QuickHeadlines::Constants::WATCHDOG_INTERVAL_SECONDS
 
-          cfg = StateStore.config
-          stuck_threshold = stuck_threshold_seconds(cfg)
+          config = StateStore.config
+          stuck_threshold = stuck_threshold_seconds(config)
 
           unless RefreshHealthMonitor.stuck?(stuck_threshold)
             consecutive = 0
@@ -102,7 +102,7 @@ class AppBootstrap
           Log.for("quickheadlines.watchdog").warn { "Watchdog: detected stuck refresh (count=#{consecutive})" }
           next if consecutive < QuickHeadlines::Constants::WATCHDOG_DEBOUNCE_COUNT
 
-          consecutive = watchdog_recover(cfg, consecutive)
+          consecutive = watchdog_recover(config, consecutive)
         rescue ex
           Log.for("quickheadlines.watchdog").error(exception: ex) { "Watchdog fiber error" }
         end
@@ -110,34 +110,34 @@ class AppBootstrap
     end
   end
 
-  private def stuck_threshold_seconds(cfg : Config?) : Int32
-    refresh_minutes = cfg.try(&.refresh_minutes) || 10
+  private def stuck_threshold_seconds(config : Config?) : Int32
+    refresh_minutes = config.try(&.refresh_minutes) || 10
     (refresh_minutes * QuickHeadlines::Constants::SECONDS_PER_MINUTE) * 3
   end
 
-  private def watchdog_recover(cfg : Config?, consecutive : Int32) : Int32
+  private def watchdog_recover(config : Config?, consecutive : Int32) : Int32
     Log.for("quickheadlines.watchdog").info { "Watchdog: attempting recovery (attempting atomic recovery)" }
 
     if RefreshHealthMonitor.attempt_recovery
       Log.for("quickheadlines.watchdog").info { "Watchdog: atomic recovery succeeded, repopulating StateStore from cache" }
-      if cfg && FeedFetcher.load_feeds_from_cache(cfg)
+      if config && FeedFetcher.load_feeds_from_cache(config)
         Log.for("quickheadlines.watchdog").info { "Watchdog: successfully repopulated StateStore from cache" }
         return 0
       end
       Log.for("quickheadlines.watchdog").warn { "Watchdog: repopulate from cache after atomic recovery failed or returned no data" }
     end
 
-    watchdog_retry_from_cache(cfg, consecutive)
+    watchdog_retry_from_cache(config, consecutive)
   end
 
-  private def watchdog_retry_from_cache(cfg : Config?, consecutive : Int32) : Int32
+  private def watchdog_retry_from_cache(config : Config?, consecutive : Int32) : Int32
     attempts = 0
     success = false
 
     while attempts < QuickHeadlines::Constants::WATCHDOG_MAX_ATTEMPTS
       attempts += 1
       Log.for("quickheadlines.watchdog").info { "Watchdog: load_feeds_from_cache attempt #{attempts}" }
-      if cfg && FeedFetcher.load_feeds_from_cache(cfg)
+      if config && FeedFetcher.load_feeds_from_cache(config)
         Log.for("quickheadlines.watchdog").info { "Watchdog: load_feeds_from_cache succeeded on attempt #{attempts}" }
         success = true
         break
