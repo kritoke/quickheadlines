@@ -1,3 +1,5 @@
+require "./utils"
+
 module FaviconCache
   MAX_ENTRIES = 200
 
@@ -60,7 +62,7 @@ module FaviconCache
 
         if File.file?(real_path)
           begin
-            data = File.read(real_path)
+            data = read_binary_file(real_path)
             @@mutex.synchronize do
               if @@cache.size >= MAX_ENTRIES
                 evict

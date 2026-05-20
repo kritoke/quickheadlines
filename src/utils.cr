@@ -101,6 +101,14 @@ def read_body_safe(io : IO, max_size : Int32 = QuickHeadlines::Constants::MAX_RE
   buffer.to_s
 end
 
+# Read a file as binary data, preserving raw bytes without UTF-8 decoding.
+# Use this for image files (ICO, PNG, etc.) where File.read would corrupt
+# non-UTF-8 byte sequences by replacing them with U+FFFD.
+def read_binary_file(path : String) : String
+  bytes = File.open(path, "rb", &.getb_to_end)
+  String.new(bytes)
+end
+
 module UrlNormalizer
   FEED_SUFFIXES = {"/feed.xml", "/feed", "/rss.xml", "/rss", "/atom"}
 

@@ -1,14 +1,34 @@
 <script lang="ts">
 	import { spring } from 'svelte/motion';
-	import { themeState, getCursorColors, getAccentColor } from '$lib/stores/theme.svelte';
+	import { themeState } from '$lib/stores/theme.svelte';
 	import { onMount } from 'svelte';
 
 	let coords = spring({ x: -100, y: -100 }, { stiffness: 0.1, damping: 0.25 });
 	let trail = spring({ x: -100, y: -100 }, { stiffness: 0.05, damping: 0.3 });
 
-	let cursorColors = $derived(getCursorColors());
+	// Read themeState.theme explicitly so Svelte tracks it as a dependency.
+	// getComputedStyle() reads aren't tracked by Svelte's reactivity system,
+	// so without this the derived values would cache the initial theme's colors.
+	// The $effect below re-reads after the DOM updates with new CSS vars.
+	let cursorColors = $state({ primary: '#64748b', trail: '#64748b4D' });
+	let accentColor = $state('#3b82f6');
+
+	$effect(() => {
+		// Read themeState.theme to establish reactive dependency —
+		// getComputedStyle() reads aren't tracked by Svelte's reactivity system,
+		// so without this, the $derived colors would cache the initial theme forever.
+		if (!themeState.mounted || !themeState.theme) return;
+		// Use requestAnimationFrame to ensure CSS variables are applied after
+		// applyTheme() sets data-theme on the document element.
+		requestAnimationFrame(() => {
+			const style = getComputedStyle(document.documentElement);
+			const secondary = style.getPropertyValue('--color-secondary-500').trim() || '#64748b';
+			cursorColors = { primary: secondary, trail: secondary + '4D' };
+			accentColor = style.getPropertyValue('--color-primary-500').trim() || '#3b82f6';
+		});
+	});
+
 	let effectsEnabled = $derived(themeState.mounted && themeState.effects);
-	let accentColor = $derived(getAccentColor());
 	let reducedMotion = $state(false);
 
 	$effect(() => {

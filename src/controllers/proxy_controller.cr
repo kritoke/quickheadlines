@@ -87,7 +87,9 @@ class QuickHeadlines::Controllers::ProxyController < QuickHeadlines::Controllers
     else
       raise AHK::Exception::NotFound.new("Favicon not found") unless File.exists?(favicon_path)
 
-      content = File.read(favicon_path)
+      # Read favicon as binary to avoid UTF-8 corruption of ICO files.
+      # File.read decodes as UTF-8, replacing invalid byte sequences with U+FFFD.
+      content = read_binary_file(favicon_path)
       FaviconCache.put(cache_key, content)
       AHTTP::Response.new(content, 200, HTTP::Headers{
         "content-type"           => mime_type_from_ext(ext),
