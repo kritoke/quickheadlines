@@ -291,7 +291,8 @@ def refresh_all(config : Config)
 end
 
 def refresh_all(config : Config, cache : FeedCache, db_service : DatabaseService)
-  StateStore.update(&.copy_with(refreshing: true))
+  # NOTE: refreshing flag is managed by the caller (supervisor), not here.
+  # This prevents race conditions between timed-out workers and the supervisor.
   StateStore.update(&.copy_with(config_title: config.page_title, config: config))
   RefreshHealthMonitor.record_cycle_start
 
@@ -350,7 +351,7 @@ def refresh_all(config : Config, cache : FeedCache, db_service : DatabaseService
 rescue ex
   RefreshHealthMonitor.record_failure
   RefreshHealthMonitor.record_cycle_complete
-  StateStore.update(&.copy_with(refreshing: false))
+  # NOTE: refreshing flag is managed by the caller, not here.
   raise ex
 end
 
@@ -359,11 +360,13 @@ private struct RefreshLoopState
   property active_config : Config
   property last_mtime : Time
   property cycle_count : Int32
+  property consecutive_skips : Int32
   getter first_run : Bool
   @first_run : Bool = true
 
   def initialize(@active_config : Config, @last_mtime : Time)
     @cycle_count = 0
+    @consecutive_skips = 0
   end
 
   def mark_first_run_done : Nil
@@ -380,6 +383,15 @@ private struct RefreshLoopState
 
   def increment_cycle : Nil
     @cycle_count += 1
+  end
+
+  def reset_skips : Nil
+    @consecutive_skips = 0
+  end
+
+  def increment_skips : Int32
+    @consecutive_skips += 1
+    @consecutive_skips
   end
 
   def refresh_interval_seconds : Int32
@@ -401,6 +413,8 @@ private struct RefreshLoopState
   def heartbeat_interval : Int32
     10
   end
+
+  MAX_CONSECUTIVE_SKIPS = 3
 end
 
 # Check if the refresh loop is stuck and attempt recovery.
@@ -429,6 +443,7 @@ private def run_initial_refresh(state : RefreshLoopState, cache : FeedCache, db_
     Log.for("quickheadlines.feed").debug { "Running initial refresh to fetch feeds" }
   end
 
+  StateStore.refreshing = true
   config_for_initial = state.active_config
   spawn(name: "initial_refresh") do
     begin
@@ -464,6 +479,7 @@ end
 # Run a normal refresh cycle with timeout protection.
 # Returns the total refresh duration in seconds.
 private def run_timed_refresh(state : RefreshLoopState, cache : FeedCache, db_service : DatabaseService) : Float64
+  StateStore.refreshing = true # Supervisor owns the flag
   refresh_start_time = Time.utc
   outer_timeout = state.outer_timeout_seconds.seconds
   config_snapshot = state.active_config
@@ -482,14 +498,13 @@ private def run_timed_refresh(state : RefreshLoopState, cache : FeedCache, db_se
     rescue ex
       Log.for("quickheadlines.feed").error(exception: ex) { "refresh_loop refresh_all failed" }
       RefreshHealthMonitor.record_failure
-    ensure
-      StateStore.refreshing = false
     end
     done.send(nil)
   end
 
   select
   when done.receive?
+    StateStore.refreshing = false
     refresh_duration = (Time.utc - refresh_start_time).total_seconds
     Log.for("quickheadlines.feed").debug { "Starting save_feed_cache..." }
     cache.save(state.active_config.cache_retention_hours, state.active_config.max_cache_size_mb)
@@ -497,7 +512,8 @@ private def run_timed_refresh(state : RefreshLoopState, cache : FeedCache, db_se
     trigger_gc_collection
     refresh_duration
   when timeout(outer_timeout)
-    Log.error { "refresh_all timed out after #{outer_timeout.total_seconds.round}s - refresh continues in background" }
+    StateStore.refreshing = false # Clear immediately on timeout to prevent stall
+    Log.for("quickheadlines.feed").error { "refresh_all timed out after #{outer_timeout.total_seconds.round}s - refreshing flag reset, worker continues in background" }
     RefreshHealthMonitor.record_failure
     (Time.utc - refresh_start_time).total_seconds
   end
@@ -577,10 +593,20 @@ def start_refresh_loop(config_path : String, cache : FeedCache, db_service : Dat
         check_stuck_recovery(state.stuck_threshold_seconds)
 
         if StateStore.refreshing?
-          Log.for("quickheadlines.feed").warn { "Refresh already in progress, skipping this cycle" }
-          sleep state.refresh_interval_seconds.seconds
-          break if QuickHeadlines.shutting_down?
-          next
+          skip_count = state.increment_skips
+          if skip_count >= RefreshLoopState::MAX_CONSECUTIVE_SKIPS
+            Log.for("quickheadlines.feed").error { "Force-resetting refreshing flag after #{skip_count} consecutive skips - previous refresh may be stuck" }
+            StateStore.refreshing = false
+            state.reset_skips
+            # Fall through to start a fresh refresh instead of sleeping
+          else
+            Log.for("quickheadlines.feed").warn { "Refresh already in progress, skipping (#{skip_count}/#{RefreshLoopState::MAX_CONSECUTIVE_SKIPS})" }
+            sleep state.refresh_interval_seconds.seconds
+            break if QuickHeadlines.shutting_down?
+            next
+          end
+        else
+          state.reset_skips
         end
 
         check_semaphore_health
