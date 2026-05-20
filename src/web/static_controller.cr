@@ -51,6 +51,11 @@ class StaticController < Athena::Framework::Controller
     AHTTP::Response.new("Internal server error", 500, HTTP::Headers{"content-type" => "text/plain"})
   end
 
+  @[ARTA::Post(path: "/")]
+  def root_post : AHTTP::Response
+    AHTTP::Response.new("Method Not Allowed", 405, HTTP::Headers{"Allow" => "GET"})
+  end
+
   @[ARTA::Get(path: "/")]
   def index : AHTTP::Response
     serve_asset("index.html")
@@ -81,6 +86,21 @@ class StaticController < Athena::Framework::Controller
   @[ARTA::Get(path: "/reader/")]
   def reader_slash : AHTTP::Response
     serve_asset("reader.html")
+  end
+
+  @[ARTA::Get(path: "/apple-touch-icon.png")]
+  def apple_touch_icon : AHTTP::Response
+    AHTTP::Response.new("Not Found", 404, HTTP::Headers{"content-type" => "text/plain"})
+  end
+
+  @[ARTA::Get(path: "/apple-touch-icon.png/")]
+  def apple_touch_icon_slash : AHTTP::Response
+    AHTTP::Response.new("Not Found", 404, HTTP::Headers{"content-type" => "text/plain"})
+  end
+
+  @[ARTA::Get(path: "/apple-touch-icon-precomposed.png")]
+  def apple_touch_icon_precomposed : AHTTP::Response
+    AHTTP::Response.new("Not Found", 404, HTTP::Headers{"content-type" => "text/plain"})
   end
 
   @[ARTA::Get(path: "/favicon.svg")]
