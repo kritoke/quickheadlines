@@ -24,19 +24,6 @@ class QuickHeadlines::Controllers::TimelineController < QuickHeadlines::Controll
       allowed_feed_urls.empty? ? [] of String : allowed_feed_urls
     )
 
-    if result.total_count < 100 && !StateStore.clustering? && offset == 0
-      spawn do
-        begin
-          config = StateStore.config
-          if config
-            refresh_all(config)
-          end
-        rescue ex
-          Log.for("quickheadlines.feed").error(exception: ex) { "Background refresh error" }
-        end
-      end
-    end
-
     QuickHeadlines::DTOs::TimelinePageResponse.new(
       items: result.items,
       has_more: result.has_more?,
