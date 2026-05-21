@@ -46,7 +46,7 @@ private struct BroadcasterStats
 end
 
 class QuickHeadlines::Controllers::AdminController < QuickHeadlines::Controllers::ApiBaseController
-  VALID_ADMIN_ACTIONS = {"clear-cache", "cleanup-orphaned"}
+  VALID_ADMIN_ACTIONS = {"clear-cache", "cleanup-orphaned", "cleanup-low-quality"}
 
   @[ARTA::Post(path: "/api/cluster")]
   def cluster(request : AHTTP::Request) : QuickHeadlines::DTOs::AdminActionResponse
@@ -133,8 +133,9 @@ class QuickHeadlines::Controllers::AdminController < QuickHeadlines::Controllers
 
   private def execute_admin_action(action : String) : Nil
     case action
-    when "clear-cache"      then handle_clear_cache
-    when "cleanup-orphaned" then handle_cleanup_orphaned
+    when "clear-cache"           then handle_clear_cache
+    when "cleanup-orphaned"       then handle_cleanup_orphaned
+    when "cleanup-low-quality"    then handle_cleanup_low_quality
     end
   end
 
@@ -177,6 +178,13 @@ class QuickHeadlines::Controllers::AdminController < QuickHeadlines::Controllers
 
     perform_cleanup(db, orphaned)
     Log.for("quickheadlines.app").info { "Cleaned up #{orphaned.size} orphaned feeds" }
+  end
+
+  private def handle_cleanup_low_quality : Nil
+    content_service = QuickHeadlines::Services::ContentService.instance
+    min_length = 200 # Only store articles with substantial content
+    deleted = content_service.cleanup_low_quality_content(min_length)
+    Log.for("quickheadlines.admin").info { "Low-quality content cleanup deleted #{deleted} articles" }
   end
 
   private def collect_config_feed_urls : Set(String)

@@ -10,6 +10,11 @@ require "./software_util"
 module FetcherResponse
   include Fetcher::ThemeHelper
 
+  # Minimum content length for "real" article content
+  MIN_CONTENT_LENGTH     = 200
+  MIN_PARAGRAPH_LENGTH   = 50
+  SUMMARY_PATTERNS_REGEX = /read more|read full article|subscribe to|click here|sorry, this content|content is not available|log in to read/i
+
   # Process a successful fetch result into a FeedData with favicons and theme colors.
   # Content is persisted to the Azurite DB first, then stripped from in-memory items
   # to reduce memory usage. Content is fetched on-demand via ContentService.
@@ -116,6 +121,7 @@ module FetcherResponse
 
   # Persist entry content to the Azurite DB directly from raw entries.
   # This is done BEFORE creating Item objects so we can strip content from memory.
+  # Only stores content that meets quality thresholds (skips summary-only content).
   private def persist_entry_content(entries : Array(Fetcher::Entry), feed_url : String) : Nil
     has_content = entries.any?(&.content.presence)
     return unless has_content
@@ -127,12 +133,40 @@ module FetcherResponse
     end
 
     entries.each do |entry|
-      if content = entry.content.presence
-        content_service.store_content(entry.url, feed_url, entry.title, content)
-      end
+      content = entry.content.presence
+      next if summary_only_content?(content)
+      # content is guaranteed non-nil and non-empty here due to presence check above
+      content_service.store_content(entry.url, feed_url, entry.title, content.as(String))
     end
   rescue ex
     Log.for("quickheadlines.feed").debug { "Content storage skipped: #{ex.message}" }
+  end
+
+  # Detect if content is summary-only (not worth storing/displaying in reader mode).
+  private def summary_only_content?(content : String?) : Bool
+    return true if content.nil? || content.empty?
+
+    # Too short
+    return true if content.size < MIN_CONTENT_LENGTH
+
+    # Contains summary/subscription patterns
+    return true if content =~ SUMMARY_PATTERNS_REGEX
+
+    # Check paragraph structure - real articles typically have multiple paragraphs
+    paragraphs = content.split(/\n\s*\n+|\.<br\s*\/?>/i).reject(&.empty?)
+    if paragraphs.size < 2
+      # Single paragraph must be substantial to be considered real content
+      return true if content.size < MIN_CONTENT_LENGTH * 2
+    end
+
+    # Check for sentences - summaries often have short/bullety content
+    sentences = content.split(/[.!?]+/).reject(&.strip.empty?)
+    if sentences.size > 3
+      avg_sentence_len = sentences.sum(&.size).to_f / sentences.size
+      return true if avg_sentence_len < MIN_PARAGRAPH_LENGTH
+    end
+
+    false
   end
 
   # If the response is actually an error feed, try stale cache fallback.

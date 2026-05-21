@@ -69,6 +69,12 @@ module QuickHeadlines::Services
       @store.cleanup_old_entries(retention_days)
     end
 
+    # Remove low-quality content (summary-only articles) from the database.
+    # This is a one-time cleanup to remove articles that don't meet content quality thresholds.
+    def cleanup_low_quality_content(min_length : Int32 = 200) : Int32
+      @store.cleanup_low_quality_content(min_length)
+    end
+
     def db_size_mb : Float64
       @store.db_size_mb
     end
