@@ -115,7 +115,7 @@ module FetcherResponse
   private def entries_to_items(entries : Array(Fetcher::Entry), strip_content : Bool = false) : Array(Item)
     entries.map do |entry|
       comment_url = entry.comment_url || (entry.is_discussion_url ? entry.url : nil)
-      Item.new(entry.title, entry.url, entry.published_at, strip_content ? nil : entry.content, comment_url, entry.commentary_url)
+      Item.new(entry.title, entry.url, entry.published_at, strip_content ? nil : entry.content, nil, comment_url, entry.commentary_url)
     end.sort_by! { |item| item.pub_date || Time.unix(0) }.reverse!
   end
 

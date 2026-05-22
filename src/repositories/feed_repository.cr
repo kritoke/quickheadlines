@@ -161,7 +161,7 @@ module QuickHeadlines::Repositories
           normalized = QuickHeadlines::Utils::UrlNormalizer.normalize(item.link)
           [feed_id, item.title, item.link, normalized, pub_date_str, item.version, item.comment_url, item.commentary_url]
         end
-        db.exec("INSERT OR IGNORE INTO items (feed_id, title, link, normalized_link, pub_date, version, comment_url, commentary_url) VALUES #{values_clause}", args: args)
+        db.exec("INSERT OR REPLACE INTO items (feed_id, title, link, normalized_link, pub_date, version, comment_url, commentary_url) VALUES #{values_clause}", args: args)
       end
     end
 

@@ -10,15 +10,19 @@ describe "Models" do
       item.link.should eq("https://example.com/article")
       item.pub_date.should be_nil
       item.version.should be_nil
+      item.comment_url.should be_nil
+      item.commentary_url.should be_nil
     end
 
     it "creates with all fields" do
       pub_date = Time.utc(2024, 1, 15)
-      item = Item.new("Test Title", "https://example.com/article", pub_date, nil, "1.0.0")
+      item = Item.new("Test Title", "https://example.com/article", pub_date, nil, "1.0.0", "https://hn.com/123", "https://discuss.com")
       item.title.should eq("Test Title")
       item.link.should eq("https://example.com/article")
       item.pub_date.should eq(pub_date)
       item.version.should eq("1.0.0")
+      item.comment_url.should eq("https://hn.com/123")
+      item.commentary_url.should eq("https://discuss.com")
     end
   end
 
