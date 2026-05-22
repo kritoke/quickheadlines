@@ -2,7 +2,7 @@ version: 2.0
 shards:
   ameba:
     git: https://github.com/crystal-ameba/ameba.git
-    version: 1.7.0-dev+git.commit.d2c9dddd245777f7548d91ba42f6a5cd2bc53a15
+    version: 1.7.0-dev+git.commit.f5d1ef6b995a6c103267dd779426f83e0b25aa8c
 
   athena:
     git: https://github.com/athena-framework/framework.git
@@ -62,7 +62,7 @@ shards:
 
   azurite:
     git: https://github.com/kritoke/azurite.cr.git
-    version: 0.1.0+git.commit.f589dc7bc1c791269f1d72990bfbd888720c88f3
+    version: 0.1.0+git.commit.fc1ba26ad3cfdae69abc0cf4c48d877665b9204a
 
   baked_file_system:
     git: https://github.com/schovi/baked_file_system.git
@@ -122,7 +122,7 @@ shards:
 
   vug:
     git: https://github.com/kritoke/vug.cr.git
-    version: 0.5.3
+    version: 0.5.4
 
   xpath2:
     git: https://github.com/naqvis/crystal-xpath2.git
