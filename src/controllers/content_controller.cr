@@ -12,12 +12,34 @@ class QuickHeadlines::Controllers::ContentController < QuickHeadlines::Controlle
     end
 
     content_service = QuickHeadlines::Services::ContentService.instance
-    content = content_service.get_content(item_link)
+    article = content_service.get_article(item_link)
 
-    unless content
-      return QuickHeadlines::DTOs::ContentResponse.new(error: "Content not found")
+    unless article
+      return QuickHeadlines::DTOs::ContentResponse.new(
+        error: "Full article not available. Content is fetched from RSS feeds which typically contain only summaries, not full articles.",
+        is_summary: false,
+        article_url: item_link
+      )
     end
 
-    QuickHeadlines::DTOs::ContentResponse.new(content: content, content_type: "html")
+    # Check if the stored content is a summary (short or has summary patterns)
+    is_summary = article.content.size < 500 ||
+                 article.content =~ /read more|read full|subscribe|click here|sorry.*content/i
+
+    if is_summary
+      return QuickHeadlines::DTOs::ContentResponse.new(
+        content: article.content,
+        content_type: article.content_type,
+        is_summary: true,
+        article_url: item_link
+      )
+    end
+
+    QuickHeadlines::DTOs::ContentResponse.new(
+      content: article.content,
+      content_type: article.content_type,
+      is_summary: false,
+      article_url: item_link
+    )
   end
 end

@@ -21,6 +21,11 @@ module QuickHeadlines::Services
       @store.get_content(item_link)
     end
 
+    # Alias for get_content_with_info for cleaner API
+    def get_article(item_link : String) : Azurite::ArticleContent?
+      @store.get_article(item_link)
+    end
+
     def store_content(item_link : String, feed_url : String, title : String, content : String) : Bool
       # Wrap Azurite store with small retry/backoff to mitigate transient SQLITE_BUSY errors
       max_retries = 3

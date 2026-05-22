@@ -33,18 +33,22 @@
 	async function fetchContent() {
 		loading = true;
 		error = null;
+		content = null;
+		isSummary = false;
 		
 		try {
 			const response = await fetch(`/api/content?link=${encodeURIComponent(articleUrl!)}`);
 			const data = await response.json();
 			
 			if (data.error) {
+				// No content available - show informative message with link to original
 				error = data.error;
+				isSummary = data.is_summary || false;
 			} else if (data.content) {
 				const cleaned = cleanContent(data.content, articleUrl!);
 				const sanitized = DOMPurify.sanitize(cleaned, { USE_PROFILES: { html: true } });
 				content = sanitized;
-				isSummary = detectSummary(sanitized);
+				isSummary = data.is_summary || detectSummary(sanitized);
 			} else {
 				error = 'No content available for this article';
 			}
@@ -98,7 +102,7 @@
 					const parent = link.parentElement;
 					if (parent) {
 						const parentText = parent.textContent?.trim().toLowerCase() || '';
-						const linkTextOnly = link.textContent?.trim().toLowerCase() || '';
+						// Unused: const _linkTextOnly = link.textContent?.trim().toLowerCase() || '';
 						if (commentsTexts.some(cta => parentText.includes(cta)) && parent.children.length <= 2) {
 							parent.remove();
 							return;
@@ -190,13 +194,26 @@
 			<svg xmlns="http://www.w3.org/2000/svg" class="w-12 h-12 mx-auto text-surface-500 dark:text-surface-400 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
 				<path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
 			</svg>
-			<p class="text-surface-700 dark:text-surface-300 mb-4">{error}</p>
-			<button
-				onclick={handleBack}
-				class="px-4 py-2 rounded-lg bg-surface-100 dark:bg-surface-900 text-surface-950 dark:text-surface-50 border-surface-200 dark:border-surface-700"
-			>
-				Back to feeds
-			</button>
+			<p class="text-surface-700 dark:text-surface-300 mb-2">{error}</p>
+			{#if isSummary}
+				<p class="text-surface-500 dark:text-surface-400 text-sm mb-4">This article only has a summary available from the RSS feed.</p>
+			{/if}
+			<div class="flex flex-col sm:flex-row gap-3 justify-center">
+				<button
+					onclick={handleBack}
+					class="px-4 py-2 rounded-lg bg-surface-100 dark:bg-surface-900 text-surface-950 dark:text-surface-50 border border-surface-200 dark:border-surface-700 hover:bg-surface-200 dark:hover:bg-surface-800 transition-colors"
+				>
+					Back to feeds
+				</button>
+				{#if articleUrl}
+					<button
+						onclick={openOriginal}
+						class="px-4 py-2 rounded-lg bg-primary-500 text-white hover:bg-primary-600 transition-colors"
+					>
+						View original article
+					</button>
+				{/if}
+			</div>
 		</div>
 	{:else if content}
 		<article class="py-6 max-w-4xl mx-auto">
@@ -226,7 +243,7 @@
 					href={articleUrl}
 					target="_blank"
 					rel="noopener noreferrer"
-					class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-surface-100 dark:bg-surface-900 text-surface-950 dark:text-surface-50 border-surface-200 dark:border-surface-700 hover:opacity-80 transition-opacity text-sm font-medium"
+					class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-surface-100 dark:bg-surface-900 text-surface-950 dark:text-surface-50 border border-surface-200 dark:border-surface-700 hover:opacity-80 transition-opacity text-sm font-medium"
 				>
 					<svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
 						<path stroke-linecap="round" stroke-linejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
@@ -238,7 +255,7 @@
 						href={commentsUrl}
 						target="_blank"
 						rel="noopener noreferrer"
-						class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-surface-100 dark:bg-surface-900 text-surface-950 dark:text-surface-50 border-surface-200 dark:border-surface-700 hover:opacity-80 transition-opacity text-sm font-medium"
+						class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-surface-100 dark:bg-surface-900 text-surface-950 dark:text-surface-50 border border-surface-200 dark:border-surface-700 hover:opacity-80 transition-opacity text-sm font-medium"
 					>
 						<svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
 							<path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />

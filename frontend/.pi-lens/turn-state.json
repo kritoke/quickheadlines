@@ -1,0 +1,18 @@
+{
+  "files": {
+    "src/routes/reader/+page.svelte": {
+      "modifiedRanges": [
+        {
+          "start": 1,
+          "end": 269
+        }
+      ],
+      "importsChanged": false,
+      "lastEdit": "2026-05-22T14:52:09.371Z"
+    }
+  },
+  "turnCycles": 0,
+  "maxCycles": 3,
+  "lastUpdated": "2026-05-22T14:52:09.371Z",
+  "sessionId": "lens-mpgr4s68-9c3eefbb"
+}
