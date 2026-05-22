@@ -55,7 +55,7 @@ def initiate_shutdown(signal_name : String) : Nil
   # This handles cases where GC or other operations block shutdown
   spawn do
     begin
-      sleep 5.seconds
+      sleep(5.seconds)
       SHUTDOWN_LOG.warn { "Graceful shutdown taking too long, forcing exit" }
       Process.exit(1)
     rescue ex

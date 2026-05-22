@@ -63,7 +63,9 @@ module StateStore
     clustering: false,
     refreshing: false
   )
-  @@mutex = Mutex.new
+  # NOTE: Uses :unchecked mutex to avoid Boehm GC mutex initialization
+  # deadlocks on FreeBSD. See AGENTS.md for details.
+  @@mutex = Mutex.new(:unchecked)
   @@clustering_start_time : Time?
 
   # Background task tracking

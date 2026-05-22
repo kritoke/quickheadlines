@@ -88,7 +88,7 @@ class AppBootstrap
       loop do
         begin
           break if QuickHeadlines.shutting_down?
-          sleep QuickHeadlines::Constants::WATCHDOG_INTERVAL_SECONDS
+          sleep(QuickHeadlines::Constants::WATCHDOG_INTERVAL_SECONDS)
 
           config = StateStore.config
           stuck_threshold = stuck_threshold_seconds(config)
@@ -142,7 +142,7 @@ class AppBootstrap
         success = true
         break
       end
-      sleep QuickHeadlines::Constants::WATCHDOG_RETRY_INTERVAL_SECONDS
+      sleep(QuickHeadlines::Constants::WATCHDOG_RETRY_INTERVAL_SECONDS)
     end
 
     if success
@@ -206,7 +206,7 @@ class AppBootstrap
     spawn do
       loop do
         begin
-          sleep @clustering_interval
+          sleep(@clustering_interval)
           break if QuickHeadlines.shutting_down?
           if start_time = StateStore.clustering_start_time
             if Time.utc - start_time > QuickHeadlines::Constants::STUCK_CLUSTER_THRESHOLD
@@ -228,7 +228,7 @@ class AppBootstrap
     run_on_startup = @config.clustering.try(&.run_on_startup?)
     if run_on_startup != false
       spawn do
-        sleep QuickHeadlines::Constants::INITIAL_CLUSTER_DELAY
+        sleep(QuickHeadlines::Constants::INITIAL_CLUSTER_DELAY)
         begin
           Log.for("quickheadlines.app").info { "Running initial clustering on startup..." }
           threshold = @config.clustering.try(&.threshold) || 0.35
@@ -243,7 +243,7 @@ class AppBootstrap
   private def start_cleanup_scheduler
     spawn do
       loop do
-        sleep @cleanup_interval
+        sleep(@cleanup_interval)
         break if QuickHeadlines.shutting_down?
         begin
           VugAdapter.clear_cache
@@ -267,7 +267,7 @@ class AppBootstrap
   private def start_ws_janitor
     spawn do
       loop do
-        sleep @ws_janitor_interval
+        sleep(@ws_janitor_interval)
         break if QuickHeadlines.shutting_down?
         begin
           removed = SocketManager.instance.cleanup_dead_connections

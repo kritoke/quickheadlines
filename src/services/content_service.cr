@@ -33,7 +33,7 @@ module QuickHeadlines::Services
           if attempt < max_retries
             backoff = (0.1 * (2 ** (attempt - 1))).to_f
             Log.for("quickheadlines.azurite").warn { "ContentService.store_content: transient DB error on attempt #{attempt}/#{max_retries} for #{item_link} - #{ex.message}; retrying in #{backoff}s" }
-            sleep backoff
+            ::sleep(backoff.seconds)
             next
           else
             Log.for("quickheadlines.azurite").error(exception: ex) { "ContentService.store_content: failed to store content for #{item_link} after #{max_retries} attempts" }
@@ -43,7 +43,7 @@ module QuickHeadlines::Services
           if attempt < max_retries
             backoff = (0.1 * (2 ** (attempt - 1))).to_f
             Log.for("quickheadlines.azurite").warn { "ContentService.store_content: transient SQLite error on attempt #{attempt}/#{max_retries} for #{item_link} - #{ex.message}; retrying in #{backoff}s" }
-            sleep backoff
+            ::sleep(backoff.seconds)
             next
           else
             Log.for("quickheadlines.azurite").error(exception: ex) { "ContentService.store_content: failed to store content for #{item_link} after #{max_retries} attempts" }
