@@ -149,12 +149,20 @@ end
 
 def extract_client_ip(request) : String
   if ENV["TRUSTED_PROXY"]?
-    # DEPRECATED: This blindly trusts X-Forwarded-For without verifying proxy IP
-    # Consider using X-Client-IP from a trusted reverse proxy instead
-    Log.for("quickheadlines.utils").warn { "TRUSTED_PROXY is deprecated - use reverse proxy to set X-Client-IP" } if ENV["APP_ENV"]? && ENV["APP_ENV"] == "development"
+    # SECURITY NOTE: This trusts X-Forwarded-For from any client.
+    # Only enable if your deployment ensures only trusted proxies can reach this server
+    # (e.g., firewall rules, VPN, or direct server access is blocked).
+    # For safer behavior, use X-Client-IP from your reverse proxy instead.
+    Log.for("quickheadlines.utils").warn { "TRUSTED_PROXY enabled - ensure only trusted proxies can reach this server" } if ENV["APP_ENV"]? && ENV["APP_ENV"] == "development"
     if xff = request.headers["X-Forwarded-For"]?
       if first_ip = xff.split(",").first?.try(&.strip)
-        return first_ip
+        # Additional validation: only trust X-Forwarded-For if it appears to be from an internal/proxy source
+        # (loopback, private range, or internal network). This prevents direct client IP spoofing.
+        if Utils.private_host?(first_ip) || first_ip == "localhost" || first_ip.starts_with?("127.") || first_ip.starts_with?("[::1")
+          return first_ip
+        end
+        # For non-internal IPs, log and fall through to X-Client-IP
+        Log.for("quickheadlines.utils").debug { "TRUSTED_PROXY: X-Forwarded-For #{first_ip} not from internal range, using X-Client-IP" }
       end
     end
   end

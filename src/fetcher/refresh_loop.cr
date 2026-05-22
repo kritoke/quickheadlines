@@ -522,8 +522,12 @@ private def start_health_reporter : Nil
       begin
         health_check_done = Channel(Nil).new(1)
         spawn do
-          ::sleep(5.minutes)
-          health_check_done.send(nil)
+          begin
+            ::sleep(5.minutes)
+            health_check_done.send(nil)
+          rescue ex
+            Log.for("quickheadlines.feed").error(exception: ex) { "Health check timer failed" }
+          end
         end
         select
         when health_check_done.receive
@@ -587,8 +591,12 @@ def start_refresh_loop(config_path : String, cache : FeedCache, db_service : Dat
           # Wait for initial refresh with timeout protection
           initial_wait_done = Channel(Nil).new(1)
           spawn do
-            ::sleep(state.refresh_interval_seconds.seconds)
-            initial_wait_done.send(nil)
+            begin
+              ::sleep(state.refresh_interval_seconds.seconds)
+              initial_wait_done.send(nil)
+            rescue ex
+              Log.for("quickheadlines.feed").error(exception: ex) { "Initial refresh wait timer failed" }
+            end
           end
           select
           when initial_wait_done.receive
@@ -617,8 +625,12 @@ def start_refresh_loop(config_path : String, cache : FeedCache, db_service : Dat
         # Timeout-protected sleep before restart
         restart_done = Channel(Nil).new(1)
         spawn do
-          ::sleep(60.seconds)
-          restart_done.send(nil)
+          begin
+            ::sleep(60.seconds)
+            restart_done.send(nil)
+          rescue ex
+            Log.for("quickheadlines.feed").error(exception: ex) { "Restart delay timer failed" }
+          end
         end
         select
         when restart_done.receive

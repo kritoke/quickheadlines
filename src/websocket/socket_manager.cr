@@ -146,23 +146,22 @@ class SocketManager
   end
 
   def unregister(ws : HTTP::WebSocket, ip : String) : Nil
-    connection_to_remove = nil
-
     @mutex.synchronize do
       idx = @connections.index { |conn| conn.websocket == ws }
-      if idx
-        connection_to_remove = @connections[idx]
-        begin
-          connection_to_remove.outgoing.close
-        rescue Channel::ClosedError
-        end
-        @connections.delete_at(idx)
-      end
-    end
+      return unless idx
 
-    # Don't call unregister_connection here - the channel close will trigger
-    # writer_fiber's Channel::ClosedError which will call unregister_connection.
-    # Calling it here would cause double-decrement of IP counts.
+      connection = @connections[idx]
+      # Close the outgoing channel to unblock the writer_fiber.
+      # writer_fiber will receive Channel::ClosedError, call unregister_connection,
+      # and handle the IP count decrement there. This prevents double-decrement.
+      begin
+        connection.outgoing.close
+      rescue Channel::ClosedError
+      end
+      # Remove from connections array so we don't try to process it again.
+      # The writer_fiber will handle the final cleanup via unregister_connection.
+      @connections.delete_at(idx)
+    end
   end
 
   private def purge_closed_connections : Nil
