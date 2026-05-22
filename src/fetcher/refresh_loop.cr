@@ -468,7 +468,10 @@ private def run_timed_refresh(state : RefreshLoopState, cache : FeedCache, db_se
     StateStore.refreshing = false
     refresh_duration = (Time.utc - refresh_start_time).total_seconds
     Log.for("quickheadlines.feed").debug { "Starting save_feed_cache..." }
-    cache.save(state.active_config.cache_retention_hours, state.active_config.max_cache_size_mb)
+    # Use snapshot's cache settings to match what was just refreshed.
+    # This prevents race condition where config reload during refresh
+    # could cause mismatched cache parameters.
+    cache.save(config_snapshot.cache_retention_hours, config_snapshot.max_cache_size_mb)
     Log.for("quickheadlines.feed").debug { "save_feed_cache complete" }
     GCCollector.trigger_if_needed
     refresh_duration

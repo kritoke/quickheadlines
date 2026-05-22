@@ -248,13 +248,28 @@ class FeedCache
 
     now = Time.utc
     if now - QuickHeadlines::Storage.last_cache_cleanup >= 1.hour
-      begin
-        vacuum
-      rescue ex : Exception
-        if ex.message.try(&.includes?("database is locked")) || ex.message.try(&.includes?("database locked"))
-          Log.for("quickheadlines.storage").warn { "Periodic VACUUM skipped - database is locked (refresh in progress)" }
-        else
-          Log.for("quickheadlines.storage").warn { "vacuum failed: #{ex.message}" }
+      # Retry logic for VACUUM in case of temporary database locks
+      max_retries = 3
+      retry_delay = 5  # seconds between retries
+      vacuum_succeeded = false
+
+      max_retries.times do |attempt|
+        begin
+          vacuum
+          vacuum_succeeded = true
+          break
+        rescue ex : Exception
+          if ex.message.try(&.includes?("database is locked")) || ex.message.try(&.includes?("database locked"))
+            if attempt < max_retries - 1
+              Log.for("quickheadlines.storage").warn { "VACUUM locked (attempt #{attempt + 1}/#{max_retries}), retrying in #{retry_delay}s" }
+              sleep(retry_delay.seconds)
+            else
+              Log.for("quickheadlines.storage").warn { "VACUUM skipped - database locked after #{max_retries} attempts" }
+            end
+          else
+            Log.for("quickheadlines.storage").warn { "vacuum failed: #{ex.message}" }
+            break
+          end
         end
       end
 
