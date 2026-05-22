@@ -48,6 +48,10 @@ module FaviconStorage
     OpenSSL::Digest.new("SHA256").update(hash_input).final.hexstring
   end
 
+  # Minimum size threshold for favicons to avoid tiny 16x16 2-color icons.
+  # Favicons smaller than this will trigger a Google favicon fallback.
+  FAVICON_MIN_SIZE = 800
+
   def self.save_favicon(url : String, image_data : Bytes, content_type : String) : String?
     return if image_data.size > QuickHeadlines::Constants::FAVICON_MAX_SIZE
     return unless valid_image_data?(image_data)
@@ -68,7 +72,30 @@ module FaviconStorage
       end
     end
 
+    # If the saved favicon is too small (tiny 16x16 ICO), try Google favicon as fallback
+    if ext == "ico" && image_data.size < FAVICON_MIN_SIZE
+      Log.for("quickheadlines.storage").debug { "Tiny favicon (#{image_data.size} bytes) for #{url}, trying Google fallback" }
+      if domain = extract_domain_from_url(url)
+        google_url = "https://www.google.com/s2/favicons?domain=#{domain}&sz=128"
+        if google_saved = fetch_and_save(google_url)
+          Log.for("quickheadlines.storage").debug { "Google fallback saved: #{google_saved}" }
+          # Delete the tiny favicon to save space
+          File.delete(filepath) if File.exists?(filepath)
+          return google_saved
+        end
+      end
+    end
+
     "/favicons/#{filename}"
+  end
+
+  private def self.extract_domain_from_url(url : String) : String?
+    begin
+      uri = URI.parse(url)
+      uri.host
+    rescue
+      nil
+    end
   end
 
   def self.valid_image_data?(data : Bytes) : Bool
