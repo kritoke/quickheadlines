@@ -12,8 +12,8 @@ module VugAdapter
 
   def self.config : Vug::Config
     Vug::Config.new(
-      timeout: 10.seconds,
-      connect_timeout: 5.seconds,
+      timeout: 5.seconds,
+      connect_timeout: 3.seconds,
       on_save: ->(url : String, data : Bytes, content_type : String) do
         return if url.nil? || url.starts_with?("placeholder:") || url.includes?("#placeholder")
         FaviconStorage.save_favicon(url, data, content_type)
@@ -58,11 +58,12 @@ module VugAdapter
       end
     end
 
-    # Timeout wrapper: favicon fetching must complete within 5 seconds
-    # to prevent favicon hangs from blocking the feed pipeline
+    # Timeout wrapper: favicon fetching must complete within 3 seconds
+    # to prevent favicon hangs from blocking the feed pipeline.
+    # Shorter timeout reduces risk of OpenSSL/SSL socket crashes on FreeBSD.
     select
-    when timeout(5.seconds)
-      Log.for("quickheadlines.feed").debug { "get_favicon timed out for #{site_url}" }
+    when timeout(3.seconds)
+      Log.for("quickheadlines.feed").warn { "get_favicon timed out for #{site_url}" }
       {nil, nil}
     else
       fetch_favicon_impl(site_url, parsed_favicon)
