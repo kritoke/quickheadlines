@@ -520,13 +520,22 @@ private def start_health_reporter : Nil
   spawn(name: "health_monitor_reporter") do
     loop do
       begin
-        sleep 5.minutes
-        break if QuickHeadlines.shutting_down?
-        status = RefreshHealthMonitor.status
-        if status[:failures] > 0 || status[:last_complete] == 0
-          Log.for("quickheadlines.feed").warn do
-            "Refresh health: cycles=#{status[:cycles]}, failures=#{status[:failures]}, last_complete=#{status[:last_complete]}"
+        health_check_done = Channel(Nil).new(1)
+        spawn do
+          ::sleep(5.minutes)
+          health_check_done.send(nil)
+        end
+        select
+        when health_check_done.receive
+          break if QuickHeadlines.shutting_down?
+          status = RefreshHealthMonitor.status
+          if status[:failures] > 0 || status[:last_complete] == 0
+            Log.for("quickheadlines.feed").warn do
+              "Refresh health: cycles=#{status[:cycles]}, failures=#{status[:failures]}, last_complete=#{status[:last_complete]}"
+            end
           end
+        when timeout(30.seconds)
+          Log.for("quickheadlines.feed").warn { "Health reporter check timed out, continuing" }
         end
       rescue ex
         Log.for("quickheadlines.feed").error(exception: ex) { "Health monitor reporter error" }
@@ -575,7 +584,18 @@ def start_refresh_loop(config_path : String, cache : FeedCache, db_service : Dat
         if state.first_run
           state.mark_first_run_done
           run_initial_refresh(state, cache, db_service)
-          sleep state.refresh_interval_seconds.seconds
+          # Wait for initial refresh with timeout protection
+          initial_wait_done = Channel(Nil).new(1)
+          spawn do
+            ::sleep(state.refresh_interval_seconds.seconds)
+            initial_wait_done.send(nil)
+          end
+          select
+          when initial_wait_done.receive
+            # Normal completion
+          when timeout(state.outer_timeout_seconds.seconds)
+            Log.for("quickheadlines.feed").warn { "Initial refresh wait timed out after #{state.outer_timeout_seconds}s" }
+          end
           break if QuickHeadlines.shutting_down?
           next
         end
@@ -594,7 +614,18 @@ def start_refresh_loop(config_path : String, cache : FeedCache, db_service : Dat
         StateStore.refreshing = false
         RefreshHealthMonitor.record_failure
         state.reset_cycle_count
-        sleep 60.seconds
+        # Timeout-protected sleep before restart
+        restart_done = Channel(Nil).new(1)
+        spawn do
+          ::sleep(60.seconds)
+          restart_done.send(nil)
+        end
+        select
+        when restart_done.receive
+          # Normal restart delay
+        when timeout(state.outer_timeout_seconds.seconds)
+          Log.for("quickheadlines.feed").warn { "Restart delay timed out, continuing immediately" }
+        end
         break if QuickHeadlines.shutting_down?
       end
     end
