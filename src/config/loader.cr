@@ -77,6 +77,21 @@ rescue ex
   )
 end
 
+private def suggest_yaml_fix(error_msg : String, error_line : Int32?) : String?
+  case error_msg
+  when /cannot start any token/
+    "Check for invalid characters, missing quotes, or incorrect indentation at line #{error_line}"
+  when /mapping values are not allowed/
+    "Check for missing colon or incorrect list syntax at line #{error_line}"
+  when /did not find expected key/
+    "Check for inconsistent indentation or missing key at line #{error_line}"
+  when /unexpected character/
+    "Check for special characters that need quotes at line #{error_line}"
+  else
+    "Check YAML syntax at line #{error_line}. Ensure proper indentation and no trailing spaces"
+  end
+end
+
 private def validate_yaml_structure(content : String) : Nil
   lines = content.lines
 
@@ -103,20 +118,5 @@ private def validate_yaml_structure(content : String) : Nil
   if lines.size > non_empty_lines.size
     trailing_blanks = lines.size - non_empty_lines.size
     Log.for("quickheadlines.config").warn { "Found #{trailing_blanks} trailing blank line(s) at end of file" }
-  end
-end
-
-private def suggest_yaml_fix(error_msg : String, error_line : Int32?) : String?
-  case error_msg
-  when /cannot start any token/
-    "Check for invalid characters, missing quotes, or incorrect indentation at line #{error_line}"
-  when /mapping values are not allowed/
-    "Check for missing colon or incorrect list syntax at line #{error_line}"
-  when /did not find expected key/
-    "Check for inconsistent indentation or missing key at line #{error_line}"
-  when /unexpected character/
-    "Check for special characters that need quotes at line #{error_line}"
-  else
-    "Check YAML syntax at line #{error_line}. Ensure proper indentation and no trailing spaces"
   end
 end
