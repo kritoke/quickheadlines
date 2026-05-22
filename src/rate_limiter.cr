@@ -49,6 +49,18 @@ module QuickHeadlines
       end
     end
 
+    def self.shutdown : Nil
+      # Clean up rate limiter resources on shutdown.
+      Log.for("quickheadlines.ratelimiter").debug { "Shutting down rate limiter cleanup fiber" }
+      @@instances_lock.synchronize do
+        @@instances.clear
+      end
+      @@cleanup_lock.synchronize do
+        @@cleanup_fiber = nil
+      end
+      Log.for("quickheadlines.ratelimiter").debug { "Rate limiter shutdown complete" }
+    end
+
     def self.cleanup_stale_instances
       @@cleanup_lock.synchronize do
         # Quick check without holding instances lock

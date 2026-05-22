@@ -69,6 +69,9 @@ def initiate_shutdown(signal_name : String) : Nil
   # Force close the update channel to unblock any fibers waiting on it
   EventBroadcaster.close_update_channel
 
+  # Clean up rate limiter resources
+  QuickHeadlines::RateLimiter.shutdown
+
   SocketManager.instance.shutdown_all_connections
   SHUTDOWN_LOG.info { "Shutdown complete" }
 end
