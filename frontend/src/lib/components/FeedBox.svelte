@@ -41,19 +41,15 @@
 		return `background-color: ${bgColor}; color: ${textColor};`;
 	}
 
-	function getCardColors(): { bg?: string; text?: string } {
-		return resolveThemeColors() ?? {};
-	}
-
 	function getFaviconBgStyle(): string {
 		const themeColors = resolveThemeColors();
 		if (themeColors?.text) {
 			return `background-color: ${sanitizeCssColor(themeColors.text, '#ffffff')}20; border-color: ${sanitizeCssColor(themeColors.text, '#ffffff')}40`;
 		}
-		return 'background-color: rgba(255,255,255,0.9); border-color: rgba(255,255,255,0.2)';
+		// Use a neutral background so white/transparent favicons are visible
+		// In dark mode, Tailwind handles the dark: variants
+		return 'background-color: #e2e8f0; border-color: #cbd5e1';
 	}
-
-	let cardColors = $derived(getCardColors());
 
 	let feedLoading = $derived(feedState.status === 'loading' || feedState.status === 'refreshing');
 </script>
