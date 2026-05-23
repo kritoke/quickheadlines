@@ -51,6 +51,8 @@ module FaviconStorage
   # Minimum size threshold for favicons to avoid tiny 16x16 2-color icons.
   # Favicons smaller than this will trigger a Google favicon fallback.
   FAVICON_MIN_SIZE = 800
+  # Absolute minimum - any file smaller than this (like 1x1 placeholders) gets Google fallback
+  FAVICON_ABSOLUTE_MIN = 200
 
   def self.save_favicon(url : String, image_data : Bytes, content_type : String) : String?
     return if image_data.size > QuickHeadlines::Constants::FAVICON_MAX_SIZE
@@ -72,8 +74,9 @@ module FaviconStorage
       end
     end
 
-    # If the saved favicon is too small (tiny 16x16 ICO), try Google favicon as fallback
-    if ext == "ico" && image_data.size < FAVICON_MIN_SIZE
+    # If the saved favicon is too small, try Google favicon as fallback
+    # This handles tiny ICOs (16x16 2-color) AND 1x1 placeholder PNGs
+    if image_data.size < FAVICON_ABSOLUTE_MIN || (ext == "ico" && image_data.size < FAVICON_MIN_SIZE)
       Log.for("quickheadlines.storage").debug { "Tiny favicon (#{image_data.size} bytes) for #{url}, trying Google fallback" }
       if domain = extract_domain_from_url(url)
         google_url = "https://www.google.com/s2/favicons?domain=#{domain}&sz=128"
