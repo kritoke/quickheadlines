@@ -43,8 +43,12 @@ private def fetch_repo_release(repo_entry : String, item_limit : Int32) : Array(
   return if result.entries.empty?
 
   result.entries.map do |entry|
+    # Fix: Extract just repo name from "org/repo" for Codeberg releases
+    # Codeberg UI shows "repo v1.0" not "org/repo v1.0"
+    fixed_title = fix_software_title(entry.title, repo_entry)
+
     Item.new(
-      title: entry.title,
+      title: fixed_title,
       link: entry.url,
       pub_date: entry.published_at,
       version: entry.version,
@@ -55,6 +59,20 @@ private def fetch_repo_release(repo_entry : String, item_limit : Int32) : Array(
 rescue ex
   Log.for("quickheadlines.feed").error(exception: ex) { "Error fetching software releases for #{repo_entry}" }
   nil
+end
+
+private def fix_software_title(title : String, repo_entry : String) : String
+  # Codeberg releases show "org/repo v1.0" but should show just "repo v1.0"
+  # Other providers already show just the repo name
+  if repo_entry.includes?(":cb") || repo_entry.ends_with?("/codeberg")
+    # Extract just the repo name (last part after /) from the org/repo
+    repo_name = repo_entry.split('/').last
+    repo_name = repo_name.split(':').first # Handle "org:cb/repo:cb"
+    # Replace "org/repo" with just "repo" in the title
+    title.sub(/^[^\/]+\/#{repo_name}/, repo_name)
+  else
+    title
+  end
 end
 
 private def repo_entry_to_url(repo_entry : String) : String?
