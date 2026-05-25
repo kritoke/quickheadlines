@@ -13,18 +13,30 @@ module QuickHeadlines::Services
     @parent = {} of Int64 => Int64
 
     def find(x : Int64) : Int64
+      # Initialize x to point to itself if not seen before
       @parent[x] ||= x
-      while @parent[x] != x
-        @parent[x] = @parent[@parent[x]]
-        x = @parent[x]
+      
+      # Find root with path compression
+      root = x
+      while @parent[root] != root
+        root = @parent[root]
       end
-      x
+      
+      # Compress path: make all nodes point directly to root
+      while @parent[x] != root
+        next_parent = @parent[x]
+        @parent[x] = root
+        x = next_parent
+      end
+      
+      root
     end
 
     def union(a : Int64, b : Int64) : Nil
       ra = find(a)
       rb = find(b)
       return if ra == rb
+      # Union by rank: smaller ID wins
       if ra < rb
         @parent[rb] = ra
       else

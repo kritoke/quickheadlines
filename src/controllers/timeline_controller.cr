@@ -6,8 +6,10 @@ class QuickHeadlines::Controllers::TimelineController < QuickHeadlines::Controll
   def timeline(request : AHTTP::Request) : QuickHeadlines::DTOs::TimelinePageResponse
     check_rate_limit!(request, "api_timeline", QuickHeadlines::Constants::TIMELINE_CACHE_TTL_SECONDS, 60)
 
-    default_limit = StateStore.config.try(&.db_fetch_limit) || 500
-    default_days = (StateStore.config.try(&.cache_retention_hours) || 168) / 24
+    # Capture config once to avoid race condition from config reloading mid-request
+    config = StateStore.config
+    default_limit = config.try(&.db_fetch_limit) || 500
+    default_days = (config.try(&.cache_retention_hours) || 168) / 24
     limit = validate_limit(request.query_params["limit"]?, default_limit, max: 1000)
     offset = validate_offset(request.query_params["offset"]?)
     days = validate_days(request.query_params["days"]?, default_days.to_i32)

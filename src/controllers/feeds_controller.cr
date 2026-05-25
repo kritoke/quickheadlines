@@ -17,7 +17,9 @@ class QuickHeadlines::Controllers::FeedsController < QuickHeadlines::Controllers
     tabs_snapshot = state.tabs
     is_clustering = state.clustering
 
-    has_valid_feeds = feeds_snapshot.any?(&.failed?.!) || tabs_snapshot.any?(&.feeds.any?(&.failed?.!))
+    # Check if we have any successful (non-failed) feeds available
+    # A successful feed is one where !failed? returns true
+    has_valid_feeds = has_successful_feeds?(feeds_snapshot, tabs_snapshot)
 
     unless has_valid_feeds
       feeds_snapshot, tabs_snapshot_hash = load_feeds_from_cache_fallback(cache)
@@ -32,5 +34,13 @@ class QuickHeadlines::Controllers::FeedsController < QuickHeadlines::Controllers
       cache,
       item_limit,
     )
+  end
+
+  # Check if we have any successful (non-failed) feeds available
+  private def has_successful_feeds?(feeds : Array(FeedData), tabs : Array(Tab)) : Bool
+    # Check main feeds for any successful ones
+    return true if feeds.any? { |f| !f.failed? }
+    # Check tabs for any feeds that are successful
+    tabs.any? { |tab| tab.feeds.any? { |f| !f.failed? } }
   end
 end

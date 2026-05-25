@@ -80,15 +80,18 @@ interface FetchFeedsOptions {
 async function doFetchFeeds(tab: string, force: boolean): Promise<FeedsPageResponse> {
 	// Add cache-buster when forcing to bypass browser HTTP cache
 	const cacheBuster = force ? `&_t=${Date.now()}` : '';
+	// Use normalized tab name (already lowercased in fetchFeeds)
 	const url = `${API_BASE}/feeds?tab=${encodeURIComponent(tab)}${cacheBuster}`;
 	return apiFetch<FeedsPageResponse>(url, { timeout: FETCH_TIMEOUT_MS, errorContext: 'Fetch Feeds' });
 }
 
 export async function fetchFeeds(tab: string = 'all', options?: FetchFeedsOptions): Promise<FeedsPageResponse> {
 	const force = options?.force ?? false;
+	// Normalize tab name to lowercase to prevent rate limit bypass via case variation
+	const normalizedTab = tab.toLowerCase().trim();
 	// Use different cache keys for force vs non-force requests to prevent deduplication
 	// between WebSocket-triggered force refreshes and manual requests
-	const cacheKey = `feeds-${tab}${force ? '-force' : ''}`;
+	const cacheKey = `feeds-${normalizedTab}${force ? '-force' : ''}`;
 
 	if (pendingRequests.has(cacheKey)) {
 		return pendingRequests.get(cacheKey) as Promise<FeedsPageResponse>;

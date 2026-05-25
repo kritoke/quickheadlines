@@ -25,6 +25,20 @@
 	let clusterItems = $state<Record<string, TimelineItemResponse[]>>({});
 	let clusterLoading = $state<Record<string, boolean>>({});
 	let clusterErrors = $state<Record<string, boolean>>({});
+	// Track previous items to detect tab changes
+	let previousItemCount = $state(0);
+
+	// Reset cluster state when items change (indicates tab switch)
+	$effect(() => {
+		const currentCount = items.length;
+		if (previousItemCount > 0 && currentCount !== previousItemCount) {
+			expandedClusterId = null;
+			clusterItems = {};
+			clusterLoading = {};
+			clusterErrors = {};
+		}
+		previousItemCount = currentCount;
+	});
 
 	let columns = $derived(layoutState.timelineColumns);
 
@@ -77,7 +91,8 @@
 	}
 
 	function retryCluster(item: TimelineItemResponse): void {
-		delete clusterItems[item.cluster_id!];
+		if (!item.cluster_id) return;
+		delete clusterItems[item.cluster_id];
 		toggleCluster(item);
 	}
 
