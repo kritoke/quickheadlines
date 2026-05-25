@@ -119,7 +119,7 @@ begin
     host = ctx.request.headers["Host"]?
 
     is_development = ENV["APP_ENV"]? == "development"
-    
+
     # Reject if origin header is missing (prevents cross-site WebSocket hijacking)
     # Allow missing Origin only in development mode for local testing convenience.
     if !origin && !is_development

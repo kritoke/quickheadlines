@@ -126,7 +126,15 @@ class QuickHeadlines::Services::ClusteringService
       )
     end
 
-    db_items = feed_cache.get_cluster_items_full(parsed_id)
+    db_items = begin
+      feed_cache.get_cluster_items_full(parsed_id)
+    rescue ex
+      Log.for("quickheadlines.clustering").error(exception: ex) { "Failed to fetch cluster items for cluster #{cluster_id}" }
+      return QuickHeadlines::DTOs::ClusterItemsResponse.new(
+        cluster_id: cluster_id,
+        items: [] of QuickHeadlines::DTOs::StoryResponse,
+      )
+    end
 
     items = db_items.map do |item|
       QuickHeadlines::DTOs::StoryResponse.from_cluster_item(item)

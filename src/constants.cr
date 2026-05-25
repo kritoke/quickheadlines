@@ -69,7 +69,7 @@ module QuickHeadlines::Constants
   WAL_AUTOCHECKPOINT_PAGES = 1000
 
   # Network ports
-  HTTP_PORT  = 80
+  HTTP_PORT  =  80
   HTTPS_PORT = 443
 
   # Controller cache TTLs (seconds)
@@ -78,11 +78,11 @@ module QuickHeadlines::Constants
 
   # Pagination
   DEFAULT_FEED_MORE_LIMIT = 30
-  BATCH_INSERT_SIZE        = 50
+  BATCH_INSERT_SIZE       = 50
 
   # Storage sizes
-  BYTES_PER_KB    = 1024
-  BUFFER_SIZE     = 8192
+  BYTES_PER_KB     = 1024
+  BUFFER_SIZE      = 8192
   MAX_FAVICON_HASH = 4096
 
   # Clustering
@@ -90,16 +90,16 @@ module QuickHeadlines::Constants
 
   # Private IP ranges (CGNAT)
   CGNAT_OCTET_START    = 100
-  CGNAT_RANGE_MIN_BITS = 64
+  CGNAT_RANGE_MIN_BITS =  64
   CGNAT_RANGE_MAX_BITS = 127
   PRIVATE_172_PREFIX   = 172
-  PRIVATE_172_MIN_BITS = 16
-  PRIVATE_172_MAX_BITS = 31
+  PRIVATE_172_MIN_BITS =  16
+  PRIVATE_172_MAX_BITS =  31
 
   # Refresh loop thresholds
-  STUCK_THRESHOLD_SECONDS  = 3
-  OUTER_TIMEOUT_SECONDS    = 3
-  SLEEP_TIMEOUT_SECONDS    = 3
+  STUCK_THRESHOLD_SECONDS = 3
+  OUTER_TIMEOUT_SECONDS   = 3
+  SLEEP_TIMEOUT_SECONDS   = 3
 
   # Color cache
   COLOR_CACHE_MAX_ENTRIES = 24
@@ -119,8 +119,8 @@ module QuickHeadlines::Constants
   # Watchdog defaults for auto-recovery
   WATCHDOG_INTERVAL_SECONDS       = 30.seconds
   WATCHDOG_RETRY_INTERVAL_SECONDS = 30.seconds
-  WATCHDOG_MAX_ATTEMPTS           =  3
-  WATCHDOG_DEBOUNCE_COUNT         =  2
+  WATCHDOG_MAX_ATTEMPTS           = 3
+  WATCHDOG_DEBOUNCE_COUNT         = 2
   WATCHDOG_ESCALATE_EXIT          = if ENV["QUICKHEADLINES_WATCHDOG_EXIT_ON_FAIL"]? && ENV["QUICKHEADLINES_WATCHDOG_EXIT_ON_FAIL"] == "true"
                                       true
                                     else

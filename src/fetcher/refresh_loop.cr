@@ -36,6 +36,7 @@ private def best_available_feed(feed : Feed, fetched : FeedData?, existing : Fee
   return existing if existing && !existing.failed?
   fetched || existing || FeedFetcher.instance.build_error_feed(feed, "Failed to fetch")
 end
+
 # Uses select+timeout pattern to ensure fetch completes within time limit.
 private def fetch_single_feed_with_timeout(feed : Feed, config : Config, previous_feed_data : FeedData?, index : Int32) : FeedData
   timeout_seconds = QuickHeadlines::Constants::FETCH_TIMEOUT_SECONDS
@@ -191,7 +192,7 @@ private def collect_feed_configs(config : Config) : Hash(String, Feed)
 end
 
 private def fetch_feeds_concurrently(all_configs : Hash(String, Feed), existing_data : Hash(String, FeedData), config : Config) : Hash(String, FeedData)
-  channel = Channel(FeedData?).new(all_configs.size)  # buffered so senders don't block on timeout
+  channel = Channel(FeedData?).new(all_configs.size) # buffered so senders don't block on timeout
   feed_index = 0
   all_configs.each_value do |feed|
     current_index = feed_index

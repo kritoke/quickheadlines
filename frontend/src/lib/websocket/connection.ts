@@ -23,26 +23,45 @@ const DELAY_MULTIPLIER = 2;
 let currentDelayMs = INITIAL_DELAY_MS;
 
 // Message queue for offline buffering
-const messageQueue: WebSocketMessage[] = [];
+interface QueuedMessage {
+	message: WebSocketMessage;
+	queuedAt: number;
+}
+
+const messageQueue: QueuedMessage[] = [];
 const MAX_QUEUE_SIZE = 100;
+const MAX_QUEUE_AGE_MS = 5 * 60 * 1000; // 5 minutes - messages older than this are stale
 
 // Event listeners for WebSocket messages
 const listeners = new Set<(message: WebSocketMessage) => void>();
 
 function flushMessageQueue() {
+	const now = Date.now();
 	while (messageQueue.length > 0) {
-		const message = messageQueue.shift();
-		if (message) {
+		const queued = messageQueue.shift();
+		if (queued) {
+			// Skip stale messages
+			if (now - queued.queuedAt > MAX_QUEUE_AGE_MS) {
+				logger.debug('[WebSocket] Skipping stale queued message');
+				continue;
+			}
 			listeners.forEach(listener => {
-				try { listener(message); } catch (err) { logger.error('[WebSocket] Listener error:', err); }
+				try { listener(queued.message); } catch (err) { logger.error('[WebSocket] Listener error:', err); }
 			});
 		}
 	}
 }
 
 function queueMessage(message: WebSocketMessage) {
+	const now = Date.now();
+	
+	// Remove stale messages when adding new ones
+	while (messageQueue.length > 0 && now - messageQueue[0].queuedAt > MAX_QUEUE_AGE_MS) {
+		messageQueue.shift();
+	}
+	
 	if (messageQueue.length < MAX_QUEUE_SIZE) {
-		messageQueue.push(message);
+		messageQueue.push({ message, queuedAt: now });
 	}
 }
 
@@ -74,6 +93,13 @@ export function onReconnect(callback: () => void): () => void {
 	return () => reconnectListeners.delete(callback);
 }
 
+// Helper to reset connection state after failure
+function resetConnectionState(): void {
+	sharedConnection = null;
+	sharedState = 'disconnected';
+	setConnectionState('disconnected');
+}
+
 // Reconnection logic with exponential backoff
 function connectWebSocket() {
 	if (sharedConnection) {
@@ -85,9 +111,15 @@ function connectWebSocket() {
 	setConnectionState('connecting');
 
 	const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-	const wsUrl = `${protocol}//${window.location.host}/api/ws`;
+	const wsUrl = `${protocol}://${window.location.host}/api/ws`;
 
-	sharedConnection = new WebSocket(wsUrl);
+	try {
+		sharedConnection = new WebSocket(wsUrl);
+	} catch (e) {
+		logger.error('[WebSocket] Failed to create WebSocket:', e);
+		resetConnectionState();
+		return;
+	}
 
 	sharedConnection.onopen = () => {
 		const wasReconnect = currentDelayMs > INITIAL_DELAY_MS;
@@ -154,7 +186,12 @@ export function getWebSocketConnection() {
 		},
 
 		connect() {
-			if (sharedState === 'disconnected') {
+			// Connect if disconnected or if connection attempt failed and we're stuck in 'connecting'
+			if (sharedState === 'disconnected' || sharedState === 'connecting') {
+				// If stuck in 'connecting', reset state first
+				if (sharedState === 'connecting' && !sharedConnection) {
+					resetConnectionState();
+				}
 				connectWebSocket();
 			}
 		},

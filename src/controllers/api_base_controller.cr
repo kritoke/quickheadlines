@@ -30,10 +30,15 @@ class QuickHeadlines::Controllers::ApiBaseController < Athena::Framework::Contro
 
   private def check_admin_auth(request : AHTTP::Request) : Bool
     secret = ENV["ADMIN_SECRET"]?
-    
-    # Log warning if admin auth is attempted but no secret is configured
+
+    # Fail loudly in development if ADMIN_SECRET is not configured
+    # This helps catch misconfigurations early instead of silently denying access
     if secret.nil? || secret.empty?
-      Log.for("quickheadlines.auth").warn { "Admin auth attempt without ADMIN_SECRET configured from #{client_ip(request)}" } if has_auth_header?(request)
+      if ENV["APP_ENV"] == "development"
+        Log.for("quickheadlines.auth").error { "ADMIN_SECRET not configured! Set ADMIN_SECRET environment variable for admin endpoints to work." }
+      else
+        Log.for("quickheadlines.auth").warn { "Admin auth attempt without ADMIN_SECRET configured from #{client_ip(request)}" } if has_auth_header?(request)
+      end
       return false
     end
 
@@ -49,7 +54,7 @@ class QuickHeadlines::Controllers::ApiBaseController < Athena::Framework::Contro
   rescue ArgumentError
     false
   end
-  
+
   private def has_auth_header?(request : AHTTP::Request) : Bool
     request.headers["Authorization"]?.try(&.starts_with?("Bearer ")) || false
   end
@@ -161,7 +166,7 @@ class QuickHeadlines::Controllers::ApiBaseController < Athena::Framework::Contro
       content = read_body_safe(body)
       begin
         parsed = JSON.parse(content)
-        if (val = parsed["seconds"]?)
+        if val = parsed["seconds"]?
           seconds = val.to_s.to_i32
         end
       rescue JSON::ParseException

@@ -15,7 +15,7 @@ module QuickHeadlines::DTOs
       @content_type : String? = nil,
       @error : String? = nil,
       @is_summary : Bool = false,
-      @article_url : String? = nil
+      @article_url : String? = nil,
     )
     end
   end

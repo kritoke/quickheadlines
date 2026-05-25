@@ -133,9 +133,9 @@ class QuickHeadlines::Controllers::AdminController < QuickHeadlines::Controllers
 
   private def execute_admin_action(action : String) : Nil
     case action
-    when "clear-cache"           then handle_clear_cache
-    when "cleanup-orphaned"       then handle_cleanup_orphaned
-    when "cleanup-low-quality"    then handle_cleanup_low_quality
+    when "clear-cache"         then handle_clear_cache
+    when "cleanup-orphaned"    then handle_cleanup_orphaned
+    when "cleanup-low-quality" then handle_cleanup_low_quality
     end
   end
 

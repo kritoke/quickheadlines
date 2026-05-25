@@ -134,12 +134,17 @@ export function resetTimelineStore(): void {
 
 let timelineRequestId = 0;
 let retryTimerId: ReturnType<typeof setTimeout> | null = null;
+// Track the request ID that a pending retry is for
+let pendingRetryRequestId: number | null = null;
+let pendingRetryParams: { append: boolean; tab: string | undefined } | null = null;
 
 export function cancelRetry(): void {
 	if (retryTimerId) {
 		clearTimeout(retryTimerId);
 		retryTimerId = null;
 	}
+	pendingRetryRequestId = null;
+	pendingRetryParams = null;
 }
 
 export async function loadTimeline(append: boolean = false, tab?: string): Promise<void> {
@@ -183,11 +188,21 @@ export async function loadTimeline(append: boolean = false, tab?: string): Promi
 				retryAfterMs: e.retryAfterMs
 			});
 			cancelRetry();
+			// Store the request ID and params for the retry callback to use
+			// This fixes the bug where the comparison against timelineRequestId
+			// would never match because timelineRequestId is incremented before retry fires
+			pendingRetryRequestId = requestId;
+			pendingRetryParams = { append, tab };
 			retryTimerId = setTimeout(() => {
 				retryTimerId = null;
-				if (requestId === timelineRequestId) {
-					loadTimeline(append, tab);
+				const retryId = pendingRetryRequestId;
+				const params = pendingRetryParams;
+				// Only retry if this retry timer belongs to the current request
+				if (retryId === timelineRequestId && params) {
+					loadTimeline(params.append, params.tab);
 				}
+				pendingRetryRequestId = null;
+				pendingRetryParams = null;
 			}, e.retryAfterMs);
 			return;
 		}

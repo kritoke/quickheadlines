@@ -93,12 +93,10 @@ module FaviconStorage
   end
 
   private def self.extract_domain_from_url(url : String) : String?
-    begin
-      uri = URI.parse(url)
-      uri.host
-    rescue
-      nil
-    end
+    uri = URI.parse(url)
+    uri.host
+  rescue
+    nil
   end
 
   def self.valid_image_data?(data : Bytes) : Bool

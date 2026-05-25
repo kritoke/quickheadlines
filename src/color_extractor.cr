@@ -87,16 +87,14 @@ module ColorExtractor
   end
 
   def self.normalize_text_value(text_val : String) : Hash(String, String)
-    begin
-      tmp = JSON.parse(text_val).as_h
-      normalized = {} of String => String
-      tmp.each do |k, v|
-        normalized[k.to_s] = v.to_s
-      end
-      normalized
-    rescue JSON::ParseException | TypeCastError
-      {"light" => text_val, "dark" => text_val}
+    tmp = JSON.parse(text_val).as_h
+    normalized = {} of String => String
+    tmp.each do |k, v|
+      normalized[k.to_s] = v.to_s
     end
+    normalized
+  rescue JSON::ParseException | TypeCastError
+    {"light" => text_val, "dark" => text_val}
   end
 
   private def self.normalize_text_value_for_storage(text_val : Hash(String, String)) : Hash(String, String)
@@ -108,15 +106,13 @@ module ColorExtractor
   end
 
   private def self.normalize_text_value_for_storage(text_val : JSON::Any) : Hash(String, String) | String
-    begin
-      h = text_val.as_h
-      normalized = {} of String => String
-      h.each do |k, v|
-        normalized[k.to_s] = v.to_s
-      end
-      normalized
-    rescue TypeCastError
-      text_val.to_s
+    h = text_val.as_h
+    normalized = {} of String => String
+    h.each do |k, v|
+      normalized[k.to_s] = v.to_s
     end
+    normalized
+  rescue TypeCastError
+    text_val.to_s
   end
 end

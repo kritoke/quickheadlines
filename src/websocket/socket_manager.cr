@@ -158,7 +158,7 @@ class SocketManager
 
   def unregister(ws : HTTP::WebSocket, ip : String) : Nil
     connection_to_cleanup = nil
-    
+
     @mutex.synchronize do
       idx = @connections.index { |conn| conn.websocket == ws }
       return unless idx
@@ -169,7 +169,7 @@ class SocketManager
       # Decrement IP count here within the mutex to ensure single decrement
       decrement_ip_count_locked(connection_to_cleanup.ip)
     end
-    
+
     # Close channel OUTSIDE the mutex to avoid holding mutex while doing I/O
     if connection_to_cleanup
       begin

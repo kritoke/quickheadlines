@@ -250,7 +250,7 @@ class FeedCache
     if now - QuickHeadlines::Storage.last_cache_cleanup >= 1.hour
       # Retry logic for VACUUM in case of temporary database locks
       max_retries = 3
-      retry_delay = 5  # seconds between retries
+      retry_delay = 5 # seconds between retries
       vacuum_succeeded = false
 
       max_retries.times do |attempt|

@@ -77,26 +77,24 @@ interface FetchFeedsOptions {
 	force?: boolean;
 }
 
-async function doFetchFeeds(tab: string, options?: FetchFeedsOptions): Promise<FeedsPageResponse> {
+async function doFetchFeeds(tab: string, force: boolean): Promise<FeedsPageResponse> {
 	// Add cache-buster when forcing to bypass browser HTTP cache
-	const cacheBuster = options?.force ? `&_t=${Date.now()}` : '';
+	const cacheBuster = force ? `&_t=${Date.now()}` : '';
 	const url = `${API_BASE}/feeds?tab=${encodeURIComponent(tab)}${cacheBuster}`;
 	return apiFetch<FeedsPageResponse>(url, { timeout: FETCH_TIMEOUT_MS, errorContext: 'Fetch Feeds' });
 }
 
 export async function fetchFeeds(tab: string = 'all', options?: FetchFeedsOptions): Promise<FeedsPageResponse> {
-	const cacheKey = `feeds-${tab}`;
+	const force = options?.force ?? false;
+	// Use different cache keys for force vs non-force requests to prevent deduplication
+	// between WebSocket-triggered force refreshes and manual requests
+	const cacheKey = `feeds-${tab}${force ? '-force' : ''}`;
 
-	// Force option bypasses dedup cache for WebSocket-triggered reloads
-	if (options?.force) {
-		return doFetchFeeds(tab, options);
-	}
-	
 	if (pendingRequests.has(cacheKey)) {
 		return pendingRequests.get(cacheKey) as Promise<FeedsPageResponse>;
 	}
 	
-	const promise = doFetchFeeds(tab).finally(() => {
+	const promise = doFetchFeeds(tab, force).finally(() => {
 		pendingRequests.delete(cacheKey);
 	});
 	

@@ -54,7 +54,6 @@ module QuickHeadlines::Storage
       @mutex.synchronize do
         cutoff = (Time.utc - retention_days.days).to_s(QuickHeadlines::Constants::DB_TIME_FORMAT)
 
-
         @db.transaction do
           result = @db.exec("DELETE FROM items WHERE pub_date < ? AND (cluster_id IS NULL OR cluster_id = id)", cutoff)
           deleted_count = result.rows_affected

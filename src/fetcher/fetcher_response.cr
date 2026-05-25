@@ -12,7 +12,7 @@ module FetcherResponse
 
   # Minimum content length for "real" article content
   MIN_CONTENT_LENGTH     = 200
-  MIN_PARAGRAPH_LENGTH   = 50
+  MIN_PARAGRAPH_LENGTH   =  50
   SUMMARY_PATTERNS_REGEX = /read more|read full article|subscribe to|click here|sorry, this content|content is not available|log in to read/i
 
   # Process a successful fetch result into a FeedData with favicons and theme colors.
