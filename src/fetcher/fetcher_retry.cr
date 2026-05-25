@@ -43,18 +43,21 @@ module FetcherRetry
   end
 
   # Handle a fetch exception — all errors get retries with exponential backoff.
-  # Timeouts are handled specially to trigger retry; other errors get stale cache if available.
+  # Timeouts are handled specially to trigger retry and return nil data (so next attempt can succeed);
+  # other errors return stale cache if available to avoid disrupting the user experience.
   private def handle_fetch_exception(ex : Exception, feed : Feed, effective_item_limit : Int32, previous_data : FeedData?, retries : Int32) : FetchErrorResult
     error_msg = ex.message
     is_timeout = error_msg.is_a?(String) && error_msg.downcase.includes?("timeout")
 
     if is_timeout
       Log.for("quickheadlines.feed").warn { "fetch_feed(#{feed.url}) timeout: #{error_msg}" }
+      # Timeouts: return nil data and increment retries with backoff
+      # This allows the next iteration to retry without stale cache getting in the way
       FetchErrorResult.new(nil, handle_timeout_error(feed, retries))
     else
       Log.for("quickheadlines.feed").error(exception: ex) { "fetch_feed(#{feed.url})" }
-      # Non-timeout errors also increment retry count to prevent infinite loops.
-      # Without this, network errors with no stale cache would loop forever.
+      # Non-timeout errors: try stale cache to avoid disrupting user experience,
+      # but still increment retries to prevent infinite loops on persistent failures
       new_retries = retries + 1
       if stale_cache = get_stale_cached_feed(feed, effective_item_limit, previous_data)
         FetchErrorResult.new(stale_cache, new_retries)

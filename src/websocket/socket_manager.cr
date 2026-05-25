@@ -274,11 +274,10 @@ class SocketManager
 
     removed = 0
     dead.each do |conn|
-      begin
-        conn.outgoing.close
-        conn.websocket.close
-      rescue Channel::ClosedError | IO::Error
-      end
+      # Let unregister_connection handle cleanup - it will close the channel
+      # and websocket, and properly decrement IP counts only once.
+      # We don't need to close here since the connection is already dead
+      # and unregister_connection will handle it safely.
       unregister_connection(conn)
       removed += 1
     end

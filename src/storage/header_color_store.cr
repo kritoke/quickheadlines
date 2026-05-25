@@ -12,8 +12,10 @@ module QuickHeadlines::Storage
         existing = find_feed_colors(feed_url)
 
         if existing.nil?
+          # Sanitize feed URL for logging to avoid empty or confusing log messages
+          display_url = feed_url.empty? ? "(empty URL)" : feed_url
           all_urls = @db.query_all("SELECT url FROM feeds LIMIT 10", as: String)
-          Log.for("quickheadlines.storage").warn { "Feed '#{feed_url}' not found in database. Sample DB URLs: #{all_urls.join(", ")}" }
+          Log.for("quickheadlines.storage").warn { "Feed '#{display_url}' not found in database. Sample DB URLs: #{all_urls.join(", ")}" }
           return
         end
 

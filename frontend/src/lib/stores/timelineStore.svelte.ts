@@ -126,6 +126,7 @@ export function setTabName(state: TimelineState, tab: string): TimelineState {
 }
 
 export function resetTimelineStore(): void {
+	cancelAllRetries();
 	Object.assign(timelineState, {
 		...deepClone(initialBaseState),
 		itemIds: new SvelteSet<string>()
@@ -145,6 +146,11 @@ export function cancelRetry(): void {
 	}
 	pendingRetryRequestId = null;
 	pendingRetryParams = null;
+}
+
+// Cancel all pending retries - call this when component unmounts or store resets
+export function cancelAllRetries(): void {
+	cancelRetry();
 }
 
 export async function loadTimeline(append: boolean = false, tab?: string): Promise<void> {
