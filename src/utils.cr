@@ -61,15 +61,21 @@ module Utils
     end
   end
 
+  KNOWN_PRIVATE_HOSTS = {
+    "localhost",
+    "0.0.0.0",
+    "::1",
+    "[::1]",
+    "::ffff:127.0.0.1",
+    "[::ffff:127.0.0.1]",
+    "::ffff:0.0.0.0",
+    "[::ffff:0.0.0.0]",
+  }
+
   def self.private_host?(host : String) : Bool
-    return true if host == "localhost"
-    return true if host == "0.0.0.0"
-    return true if host == "::1" || host == "[::1]"
-    return true if host == "::ffff:127.0.0.1" || host == "[::ffff:127.0.0.1]"
-    return true if host == "::ffff:0.0.0.0" || host == "[::ffff:0.0.0.0]"
-    return true if host.starts_with?("[::")
-    return true if host.starts_with?("fe80::") || host.starts_with?("[fe80::")
-    return true if host.downcase.starts_with?("::ffff:") # IPv4-mapped IPv6 addresses
+    return true if KNOWN_PRIVATE_HOSTS.includes?(host)
+    return true if host.starts_with?("[::") || host.starts_with?("fe80::") || host.starts_with?("[fe80::")
+    return true if host.downcase.starts_with?("::ffff:")
     return true if PRIVATE_PREFIXES.any? { |prefix| host.starts_with?(prefix) }
     return private_cidr_range?(host, QuickHeadlines::Constants::CGNAT_RANGE_MIN_BITS, QuickHeadlines::Constants::CGNAT_RANGE_MAX_BITS) if host.starts_with?("100.")
     return private_cidr_range?(host, QuickHeadlines::Constants::PRIVATE_172_MIN_BITS, QuickHeadlines::Constants::PRIVATE_172_MAX_BITS) if host.starts_with?("172.")

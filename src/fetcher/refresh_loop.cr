@@ -231,8 +231,13 @@ private def fetch_feeds_concurrently(all_configs : Hash(String, Feed), existing_
   total_feeds = all_configs.size
   overall_timeout = 10.minutes
 
+  # Use select with timeout per iteration for overall timeout protection
+  # Instead of excessive Fiber.yield, use blocking receive with select wrapper
+  end_time = Time.utc + overall_timeout
   total_feeds.times do
-    Fiber.yield
+    remaining = (end_time - Time.utc).total_seconds
+    break if remaining <= 0
+
     select
     when feed_data = channel.receive?
       if feed_data
@@ -241,10 +246,17 @@ private def fetch_feeds_concurrently(all_configs : Hash(String, Feed), existing_
         Log.for("quickheadlines.feed").warn { "fetch_feeds_concurrently: failed to fetch feed" }
       end
       completed += 1
-    when timeout(overall_timeout)
-      Log.for("quickheadlines.feed").warn { "fetch_feeds_concurrently: timed out after #{completed}/#{total_feeds} feeds" }
-      break
+    when timeout(remaining.ceil.clamp(0.1, 10).seconds)
+      # Timeout on this iteration - check if we've completed all or should continue
+      if completed >= total_feeds
+        break
+      end
+      # Continue to next iteration for remaining time budget
     end
+  end
+
+  if completed < total_feeds
+    Log.for("quickheadlines.feed").warn { "fetch_feeds_concurrently: fetched #{completed}/#{total_feeds} feeds" }
   end
   fetched_map
 end

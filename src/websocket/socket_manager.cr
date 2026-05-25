@@ -50,12 +50,8 @@ class SocketManager
         return false
       end
 
-      ip_counted = false
-
+      @ip_counts[ip] = (count || 0) + 1
       begin
-        @ip_counts[ip] = (count || 0) + 1
-        ip_counted = true
-
         outgoing = Channel(String).new(QuickHeadlines::Constants::CONNECTION_QUEUE_SIZE)
         connection = Connection.new(websocket: ws, ip: ip, outgoing: outgoing, created_at: Time.utc)
 
@@ -66,11 +62,10 @@ class SocketManager
         Log.for("quickheadlines.websocket").info { "Client connected from #{ip}. Total: #{@connections.size}" }
         true
       rescue ex
-        if ip_counted
-          if c = @ip_counts[ip]?
-            @ip_counts[ip] = c - 1
-            @ip_counts.delete(ip) if @ip_counts[ip] == 0
-          end
+        # Roll back IP count on connection failure
+        if c = @ip_counts[ip]?
+          @ip_counts[ip] = c - 1
+          @ip_counts.delete(ip) if @ip_counts[ip] == 0
         end
         Log.for("quickheadlines.websocket").error(exception: ex) { "Registration failed: #{ex.message}" }
         false
