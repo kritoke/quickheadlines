@@ -5,6 +5,7 @@ import type { LoadStatus } from '$lib/utils/storeTypes';
 import type { TimelineItemResponse } from '$lib/types';
 import { SvelteSet } from 'svelte/reactivity';
 import { toastStore } from './toast.svelte';
+import { saveTab } from './tabStore.svelte';
 
 export type { LoadStatus };
 
@@ -119,6 +120,7 @@ export function setRefreshMinutes(state: TimelineState, minutes: number): Timeli
 }
 
 export function setTabName(state: TimelineState, tab: string): TimelineState {
+	saveTab(tab);
 	return {
 		...state,
 		tabName: tab

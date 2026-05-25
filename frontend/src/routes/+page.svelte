@@ -25,6 +25,7 @@
 	import { layoutState, getFeedGridClass } from '$lib/stores/layout.svelte';
 	import { searchState, setSearchQuery, toggleSearch, closeSearch } from '$lib/stores/search.svelte';
 	import { createLazyLoader } from '$lib/utils/lazyComponent';
+	import { getStoredTab } from '$lib/stores/tabStore.svelte';
 
 	const loadSearchModal = createLazyLoader(() => import('$lib/components/BitsSearchModal.svelte'));
 
@@ -65,7 +66,7 @@
 
 	onMount(() => {
 		const params = new URLSearchParams(window.location.search);
-		const urlTab = params.get('tab') || 'all';
+		const urlTab = params.get('tab') || getStoredTab();
 
 		loadFeeds(urlTab, true);
 		loadFeedConfig();
@@ -84,7 +85,7 @@
 	});
 
 	$effect(() => {
-		const urlTab = $page.url?.searchParams.get('tab') ?? 'all';
+		const urlTab = $page.url?.searchParams.get('tab') ?? getStoredTab();
 		const alreadyLoaded = feedState.status !== 'idle' || feedState.feeds.length > 0;
 
 		if (alreadyLoaded && urlTab !== feedState.activeTab) {

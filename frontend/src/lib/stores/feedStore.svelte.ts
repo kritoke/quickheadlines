@@ -4,6 +4,7 @@ import { isIdle, isLoading, isRefreshing, isError, getError } from '$lib/utils/s
 import type { LoadStatus } from '$lib/utils/storeTypes';
 import type { FeedResponse, FeedsPageResponse } from '$lib/types';
 import { toastStore } from './toast.svelte';
+import { saveTab } from './tabStore.svelte';
 
 export type { LoadStatus };
 
@@ -140,6 +141,7 @@ export function setRefreshMinutes(state: FeedState, minutes: number): FeedState 
 }
 
 export function setActiveTab(state: FeedState, tab: string): FeedState {
+	saveTab(tab);
 	return {
 		...state,
 		activeTab: tab

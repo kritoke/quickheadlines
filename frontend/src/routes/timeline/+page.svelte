@@ -27,6 +27,7 @@
 	import { searchState, setSearchQuery, toggleSearch } from '$lib/stores/search.svelte';
 	import { createLazyLoader } from '$lib/utils/lazyComponent';
 	import { onMount } from 'svelte';
+	import { getStoredTab } from '$lib/stores/tabStore.svelte';
 
 	const loadTimelineView = createLazyLoader(() => import('$lib/components/TimelineView.svelte'));
 	const loadSearchModal = createLazyLoader(() => import('$lib/components/BitsSearchModal.svelte'));
@@ -68,14 +69,14 @@
 		return () => observer.disconnect();
 	});
 	
-	let currentTab = $derived($page.url?.searchParams.get('tab') ?? 'all');
+	let currentTab = $derived($page.url?.searchParams.get('tab') ?? getStoredTab());
     
 	onMount(() => {
-		const currentTab = $page.url?.searchParams.get('tab') ?? 'all';
+		const tab = $page.url?.searchParams.get('tab') ?? getStoredTab();
 		
 		(async () => {
 			await Promise.all([
-				loadTimeline(false, currentTab),
+				loadTimeline(false, tab),
 				loadTimelineConfig(),
 				loadTabs()
 			]);
@@ -93,7 +94,7 @@
 	});
     
 	$effect(() => {
-		const urlTab = $page.url?.searchParams.get('tab') ?? 'all';
+		const urlTab = $page.url?.searchParams.get('tab') ?? getStoredTab();
 		if (urlTab !== timelineState.tabName) {
 			logger.log(`[Timeline] Tab changed from ${timelineState.tabName} to ${urlTab}, reloading...`);
 			loadTimeline(false, urlTab);
@@ -101,8 +102,8 @@
 	});
 	
 	async function handleRetry() {
-		const currentTab = $page.url?.searchParams.get('tab') ?? 'all';
-		await loadTimeline(false, currentTab);
+		const tab = $page.url?.searchParams.get('tab') ?? getStoredTab();
+		await loadTimeline(false, tab);
 	}
 
 	async function loadTabs() {
