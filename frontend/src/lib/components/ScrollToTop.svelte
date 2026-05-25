@@ -49,7 +49,7 @@
 	type="button"
 	class="scroll-btn"
 	class:mobile={isMobile}
-	style="background-color: var(--color-primary-500, #334155); color: #ffffff; z-index: 999999;"
+	style="background-color: var(--color-primary-500, #334155); color: #ffffff; z-index: 9000;"
 	aria-label="Scroll to top"
 	title="Back to top"
 	onclick={doScroll}
