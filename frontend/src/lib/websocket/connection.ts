@@ -22,6 +22,19 @@ const MAX_DELAY_MS = 30000;
 const DELAY_MULTIPLIER = 2;
 let currentDelayMs = INITIAL_DELAY_MS;
 
+// Rate limiting to prevent connection spam
+const MAX_CONNECT_ATTEMPTS_PER_MINUTE = 10;
+let connectAttempts = 0;
+let connectAttemptsResetTime = 0;
+
+function resetConnectAttemptsIfNeeded(): void {
+	const now = Date.now();
+	if (now > connectAttemptsResetTime) {
+		connectAttempts = 0;
+		connectAttemptsResetTime = now + 60000; // Reset every minute
+	}
+}
+
 // Message queue for offline buffering
 interface QueuedMessage {
 	message: WebSocketMessage;
@@ -102,10 +115,18 @@ function resetConnectionState(): void {
 
 // Reconnection logic with exponential backoff
 function connectWebSocket() {
-	if (sharedConnection) {
-		// Connection already exists, don't create another
+	// Guard against multiple simultaneous connection attempts
+	if (sharedConnection || sharedState === 'connecting') {
 		return;
 	}
+	
+	// Rate limit connection attempts
+	resetConnectAttemptsIfNeeded();
+	if (connectAttempts >= MAX_CONNECT_ATTEMPTS_PER_MINUTE) {
+		logger.warn('[WebSocket] Rate limited: too many connection attempts');
+		return;
+	}
+	connectAttempts++;
 
 	sharedState = 'connecting';
 	setConnectionState('connecting');

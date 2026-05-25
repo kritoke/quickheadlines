@@ -26,6 +26,9 @@ export type FeedState = FeedStateIdle | FeedStateLoading | FeedStateRefreshing |
 
 export { isIdle, isLoading, isRefreshing, isError, getError };
 
+// Request tracking to prevent race conditions on tab switch
+let feedRequestId = 0;
+
 const initialBaseState: BaseFeedState = {
 	feeds: [],
 	tabs: [],
@@ -144,10 +147,12 @@ export function setActiveTab(state: FeedState, tab: string): FeedState {
 }
 
 export function resetFeedStore(): void {
+	feedRequestId = 0;
 	Object.assign(feedState, { ...initialState });
 }
 
 export async function loadFeeds(tab: string, force: boolean = false): Promise<void> {
+	const requestId = ++feedRequestId;
 	const currentFeeds = feedState.feeds;
 	const currentTabs = feedState.tabs;
 	
@@ -167,6 +172,9 @@ export async function loadFeeds(tab: string, force: boolean = false): Promise<vo
 		Object.assign(feedState, setLoading(feedState, tab));
 		try {
 			const response = await fetchFeeds(tab, { force });
+			// Ignore stale responses from previous tab switches
+			if (requestId !== feedRequestId) return;
+			
 			const newState = setFeedsData(feedState, response, tab);
 			// Preserve feeds if the response is empty but we have existing data
 			if (newState.feeds.length === 0 && currentFeeds.length > 0) {
@@ -175,6 +183,9 @@ export async function loadFeeds(tab: string, force: boolean = false): Promise<vo
 			}
 			Object.assign(feedState, newState);
 		} catch (e) {
+			// Ignore errors from stale requests
+			if (requestId !== feedRequestId) return;
+			
 			// On error, preserve the feeds we were showing (cache or existing)
 			feedState.feeds = feedsToShowWhileLoading;
 			feedState.tabs = currentTabs;
@@ -187,6 +198,9 @@ export async function loadFeeds(tab: string, force: boolean = false): Promise<vo
 	
 	try {
 		const response = await fetchFeeds(tab, { force });
+		// Ignore stale responses from previous tab switches
+		if (requestId !== feedRequestId) return;
+		
 		const newState = setFeedsData(feedState, response, tab);
 		// Preserve feeds if the response is empty but we have existing data
 		if (newState.feeds.length === 0 && currentFeeds.length > 0) {
@@ -195,6 +209,9 @@ export async function loadFeeds(tab: string, force: boolean = false): Promise<vo
 		}
 		Object.assign(feedState, newState);
 	} catch (e) {
+		// Ignore errors from stale requests
+		if (requestId !== feedRequestId) return;
+		
 		// On error, preserve existing feeds
 		feedState.feeds = currentFeeds;
 		feedState.tabs = currentTabs;

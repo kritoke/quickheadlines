@@ -32,6 +32,19 @@
 			closeSearch();
 		}
 	}
+
+	// Sanitize user input to prevent XSS and injection
+	function sanitizeSearchInput(input: string): string {
+		return input
+			.replace(/[<>\"'&;\\]/g, '') // Remove potentially dangerous characters
+			.trim()
+			.slice(0, 200); // Limit length to prevent abuse
+	}
+
+	function handleInput(value: string) {
+		const sanitized = sanitizeSearchInput(value);
+		setSearchQuery(sanitized);
+	}
 </script>
 
 <Dialog open={isOpen} onOpenChange={handleOpenChange}>
@@ -45,7 +58,7 @@
 							<input 
 								bind:this={inputEl}
 								value={searchState.query}
-								oninput={(e) => setSearchQuery(e.currentTarget.value)}
+								oninput={(e) => handleInput(e.currentTarget.value)}
 								onkeydown={handleKeydown}
 								{placeholder}
 								class="w-full px-4 py-3 text-base bg-surface-200 dark:bg-surface-800 border border-surface-300 dark:border-surface-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-surface-950 dark:text-surface-50 placeholder-surface-400"
