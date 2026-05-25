@@ -8,46 +8,61 @@
 	import { goto } from '$app/navigation';
 	import { getFaviconSrc, getHeaderStyle } from '$lib/utils/feedItem';
 	import { sanitizeUrl } from '$lib/utils/validation';
+	import { getGridClass } from '$lib/tokens';
 
-
+	/**
+	 * TimelineView Props
+	 * 
+	 * @property items - Array of timeline items to display
+	 * @property hasMore - Whether there are more items to load
+	 * @property activeTab - The currently active tab (used to detect tab changes)
+	 * @property onLoadMore - Callback when user wants to load more items
+	 * @property fetchClusterItems - Function to fetch cluster items (default provided)
+	 */
 	interface Props {
 		items: TimelineItemResponse[];
 		hasMore: boolean;
+		activeTab?: string;
 		onLoadMore?: () => void;
 		fetchClusterItems?: (id: string) => Promise<ClusterItemsResponse>;
 	}
 
-	let { items, hasMore, onLoadMore, fetchClusterItems = defaultFetchClusterItems }: Props = $props();
+	let { 
+		items, 
+		hasMore, 
+		activeTab = 'all',
+		onLoadMore, 
+		fetchClusterItems = defaultFetchClusterItems 
+	}: Props = $props();
+	
 	let resolvedTheme = $derived(themeState.theme);
 	let isDark = $derived(isDarkTheme());
 
+	// Cluster expansion state
 	let expandedClusterId = $state<string | null>(null);
 	let clusterItems = $state<Record<string, TimelineItemResponse[]>>({});
 	let clusterLoading = $state<Record<string, boolean>>({});
 	let clusterErrors = $state<Record<string, boolean>>({});
-	// Track previous items to detect tab changes
-	let previousItemCount = $state(0);
 
-	// Reset cluster state when items change (indicates tab switch)
+	/**
+	 * Reset cluster expansion state when tab changes
+	 * This is the CORRECT way to detect tab changes - using the tab identifier,
+	 * not array length comparison (which was a hack)
+	 */
 	$effect(() => {
-		const currentCount = items.length;
-		if (previousItemCount > 0 && currentCount !== previousItemCount) {
+		const currentTab = activeTab;
+		// Reset cluster state on tab change (except for initial load)
+		if (currentTab) {
 			expandedClusterId = null;
 			clusterItems = {};
 			clusterLoading = {};
 			clusterErrors = {};
 		}
-		previousItemCount = currentCount;
 	});
 
+	// Get grid columns from layout state and use design tokens
 	let columns = $derived(layoutState.timelineColumns);
-
-	function getGridClass(cols: number): string {
-		if (cols <= 1) return 'grid-cols-1';
-		if (cols === 2) return 'sm:grid-cols-2';
-		if (cols === 3) return 'sm:grid-cols-2 lg:grid-cols-3';
-		return 'sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4';
-	}
+	let gridClass = $derived(getGridClass(columns as 1 | 2 | 3 | 4));
 
 	async function toggleCluster(item: TimelineItemResponse): Promise<void> {
 		if (!item.cluster_id) return;
@@ -82,7 +97,7 @@
 						cluster_size: item.cluster_size
 					}))
 				};
-			} catch (e) {
+			} catch {
 				clusterErrors = { ...clusterErrors, [item.cluster_id]: true };
 			} finally {
 				clusterLoading = { ...clusterLoading, [item.cluster_id]: false };
@@ -95,8 +110,6 @@
 		delete clusterItems[item.cluster_id];
 		toggleCluster(item);
 	}
-
-
 
 	function groupByDate(items: TimelineItemResponse[]): Map<string, TimelineItemResponse[]> {
 		const groups = new Map<string, TimelineItemResponse[]>();
@@ -119,10 +132,8 @@
 		return groups;
 	}
 
-		let groupedItems = $derived(groupByDate(items));
+	let groupedItems = $derived(groupByDate(items));
 	let groupIndex = $derived(Array.from(groupedItems.entries()));
-	
-	let gridClass = $derived(getGridClass(columns));
 
 	function getGroupStartIndex(groupIdx: number): number {
 		let idx = 0;
@@ -136,50 +147,48 @@
 <div class="timeline-view" data-name="timeline-view">
 	{#each groupIndex as [date, dateItems], groupIdx (date)}
 		{@const groupStartIndex = getGroupStartIndex(groupIdx)}
-		<div class="day-group mb-4 sm:mb-6">
-			<h2 class="text-base sm:text-lg font-semibold text-surface-700 dark:text-surface-300 mb-2 sm:mb-3 sticky top-14 sm:top-16 bg-surface-50 dark:bg-surface-950 py-2 z-10">
+		<div class="day-group">
+			<h2 class="date-header">
 				{date}
 			</h2>
 			
-				<div class="grid gap-3 {gridClass} transition-all duration-200">
+			<div class="items-grid {gridClass}">
 				{#each dateItems as item, i (`${date}-${item.id}`)}
 					{@const globalIndex = groupStartIndex + i}
 					<div 
-						class="timeline-item rounded-lg shadow-sm overflow-hidden transition-all duration-200 relative"
-						style="background-color: var(--color-surface-50); border: 1px solid var(--color-surface-200); touch-action: manipulation; -webkit-tap-highlight-color: transparent;"
+						class="timeline-item"
 					>
 						<!-- Item Header with Feed Info -->
 						<div
-							class="flex items-center gap-2 px-3 py-2 text-xs font-medium"
+							class="item-header"
 							style={getHeaderStyle(item, isDark)}
 						>
-							<div class="w-4 h-4 rounded bg-white/80 dark:bg-white/70 p-0.5 flex items-center justify-center shadow-sm border border-white/20">
+							<div class="favicon-wrapper">
 								<img
 									src={getFaviconSrc(item)}
 									alt="{item.feed_title} favicon"
-									class="w-3 h-3 rounded"
+									class="favicon"
 									onerror={(e) => {
 										const target = e.target as HTMLImageElement;
 										target.src = '/favicon.svg';
 									}}
 								/>
 							</div>
-							<span class="truncate">{item.feed_title}</span>
+							<span class="feed-title truncate">{item.feed_title}</span>
 							{#if item.cluster_size && item.cluster_size > 1}
 								<button
 									type="button"
 									onclick={() => toggleCluster(item)}
-									class="ml-auto bg-[var(--color-primary-500,#334155)]/20 hover:bg-[var(--color-primary-500,#334155)]/30 active:bg-[var(--color-primary-500,#334155)]/40 px-2 py-1 rounded text-xs transition-colors cursor-pointer flex items-center gap-1"
-									style="color: inherit; touch-action: manipulation; -webkit-tap-highlight-color: transparent;"
+									class="cluster-button"
 									aria-label="Show {item.cluster_size} similar stories"
 								>
 									{item.cluster_size} sources
 									{#if expandedClusterId === item.cluster_id}
-										<svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+										<svg xmlns="http://www.w3.org/2000/svg" class="chevron" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
 											<path stroke-linecap="round" stroke-linejoin="round" d="M5 15l7-7 7 7" />
 										</svg>
 									{:else}
-										<svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+										<svg xmlns="http://www.w3.org/2000/svg" class="chevron" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
 											<path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
 										</svg>
 									{/if}
@@ -188,7 +197,7 @@
 						</div>
 						
 						<!-- Item Content -->
-						<div class="block px-3 py-2 transition-colors gap-2">
+						<div class="item-content">
 							{#if readModeState.mode === 'read'}
 								<button
 									type="button"
@@ -199,35 +208,33 @@
 										});
 										goto(`/reader?${params.toString()}`);
 									}}
-									class="text-left w-full"
+									class="read-mode-link"
 								>
-									<h3 class="text-base font-medium text-surface-950 dark:text-surface-50 line-clamp-2 hover:opacity-80 transition-opacity">
-										{item.title}
-									</h3>
+									<h3 class="item-title">{item.title}</h3>
 								</button>
 							{:else}
-								<h3 class="text-base font-medium text-surface-950 dark:text-surface-50 line-clamp-2 item-title">
+								<h3 class="item-title">
 									<a
 										href={sanitizeUrl(item.link)}
 										target="_blank"
 										rel="noopener noreferrer"
-										class="hover:underline"
+										class="title-link"
 									>{item.title}</a>
 								</h3>
 							{/if}
-							<div class="flex items-center gap-2 mt-1 meta-text">
-								<p class="text-sm text-surface-700 dark:text-surface-300">
+							<div class="item-meta">
+								<span class="timestamp">
 									{formatTimestamp(item.pub_date)}
-								</p>
+								</span>
 								{#if item.comment_url}
 									<a
 										href={sanitizeUrl(item.comment_url)}
 										target="_blank"
 										rel="noopener noreferrer"
 										title="Comments"
-										class="p-0.5 hover:opacity-80 transition-opacity comment-icon"
+										class="icon-link"
 									>
-										<svg class="w-4 h-4 text-surface-700 dark:text-surface-300" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+										<svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
 											<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
 										</svg>
 									</a>
@@ -238,9 +245,9 @@
 										target="_blank"
 										rel="noopener noreferrer"
 										title="Discussion"
-										class="p-0.5 hover:opacity-80 transition-opacity"
+										class="icon-link"
 									>
-										<svg class="w-4 h-4 text-surface-700 dark:text-surface-300" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+										<svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
 											<path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path>
 										</svg>
 									</a>
@@ -264,16 +271,247 @@
 	{/each}
 
 	{#if hasMore}
-		<div class="load-more text-center py-4">
+		<div class="load-more">
 			<button
 				type="button"
 				onclick={() => {
 					onLoadMore?.();
 				}}
-				class="px-4 py-2 text-sm rounded-lg transition-colors bg-surface-100 dark:bg-surface-800 text-surface-950 dark:text-surface-50 border-surface-200 dark:border-surface-700"
+				class="load-more-button"
 			>
 				Load More
 			</button>
 		</div>
 	{/if}
 </div>
+
+<style>
+	.timeline-view {
+		display: flex;
+		flex-direction: column;
+		gap: var(--spacing-lg, 1.5rem);
+	}
+
+	.day-group {
+		display: flex;
+		flex-direction: column;
+		gap: var(--spacing-md, 1rem);
+	}
+
+	.date-header {
+		font-size: 1rem;
+		font-weight: 600;
+		color: var(--color-surface-700, #374151);
+		margin: 0;
+		padding: var(--spacing-sm, 0.5rem) 0;
+		position: sticky;
+		top: 3.5rem;
+		background-color: var(--color-surface-50, #f9fafb);
+		z-index: 10;
+	}
+
+	:global(.dark) .date-header {
+		color: var(--color-surface-300, #d1d5db);
+		background-color: var(--color-surface-950, #030712);
+	}
+
+	@media (min-width: 640px) {
+		.date-header {
+			top: 4rem;
+			font-size: 1.125rem;
+		}
+	}
+
+	.items-grid {
+		display: grid;
+		gap: var(--spacing-sm, 0.5rem);
+	}
+
+	.timeline-item {
+		display: flex;
+		flex-direction: column;
+		border-radius: var(--radius-lg, 0.75rem);
+		border: 1px solid var(--color-surface-200, #e5e7eb);
+		background-color: var(--color-surface-50, #f9fafb);
+		overflow: hidden;
+		transition: all 0.2s ease;
+		touch-action: manipulation;
+		-webkit-tap-highlight-color: transparent;
+	}
+
+	:global(.dark) .timeline-item {
+		border-color: var(--color-surface-700, #374151);
+		background-color: var(--color-surface-900, #111827);
+	}
+
+	.item-header {
+		display: flex;
+		align-items: center;
+		gap: var(--spacing-sm, 0.5rem);
+		padding: var(--spacing-sm, 0.5rem) var(--spacing-md, 1rem);
+		font-size: 0.75rem;
+		font-weight: 500;
+	}
+
+	.favicon-wrapper {
+		width: 1rem;
+		height: 1rem;
+		border-radius: var(--radius-sm, 0.125rem);
+		padding: 0.125rem;
+		background-color: rgb(255 255 255 / 0.8);
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		flex-shrink: 0;
+	}
+
+	:global(.dark) .favicon-wrapper {
+		background-color: rgb(255 255 255 / 0.7);
+	}
+
+	.favicon {
+		width: 0.75rem;
+		height: 0.75rem;
+		border-radius: var(--radius-sm, 0.125rem);
+	}
+
+	.feed-title {
+		font-size: 0.75rem;
+	}
+
+	.cluster-button {
+		margin-left: auto;
+		display: flex;
+		align-items: center;
+		gap: 0.25rem;
+		padding: 0.25rem 0.5rem;
+		border-radius: var(--radius-sm, 0.125rem);
+		font-size: 0.75rem;
+		font-weight: 500;
+		cursor: pointer;
+		transition: background-color 0.15s ease;
+		touch-action: manipulation;
+		-webkit-tap-highlight-color: transparent;
+		background-color: rgb(51 65 85 / 0.2);
+		border: none;
+	}
+
+	.cluster-button:hover {
+		background-color: rgb(51 65 85 / 0.3);
+	}
+
+	.cluster-button:active {
+		background-color: rgb(51 65 85 / 0.4);
+	}
+
+	.chevron {
+		width: 0.75rem;
+		height: 0.75rem;
+	}
+
+	.item-content {
+		display: flex;
+		flex-direction: column;
+		gap: var(--spacing-xs, 0.25rem);
+		padding: var(--spacing-sm, 0.5rem) var(--spacing-md, 1rem);
+	}
+
+	.item-title {
+		font-size: 1rem;
+		font-weight: 500;
+		color: var(--color-surface-950, #030712);
+		margin: 0;
+		line-height: 1.4;
+	}
+
+	:global(.dark) .item-title {
+		color: var(--color-surface-50, #f9fafb);
+	}
+
+	:global(.dark) .title-link {
+		color: var(--color-surface-50, #f9fafb);
+	}
+
+	.read-mode-link {
+		text-align: left;
+		width: 100%;
+		background: none;
+		border: none;
+		padding: 0;
+		cursor: pointer;
+	}
+
+	.read-mode-link:hover .item-title {
+		opacity: 0.8;
+	}
+
+	.title-link {
+		color: inherit;
+		text-decoration: none;
+	}
+
+	.title-link:hover {
+		text-decoration: underline;
+	}
+
+	.item-meta {
+		display: flex;
+		align-items: center;
+		gap: var(--spacing-sm, 0.5rem);
+	}
+
+	.timestamp {
+		font-size: 0.875rem;
+		color: var(--color-surface-700, #374151);
+	}
+
+	:global(.dark) .timestamp {
+		color: var(--color-surface-300, #d1d5db);
+	}
+
+	.icon-link {
+		padding: 0.125rem;
+		color: var(--color-surface-700, #374151);
+		transition: opacity 0.15s ease;
+	}
+
+	:global(.dark) .icon-link {
+		color: var(--color-surface-300, #d1d5db);
+	}
+
+	.icon-link:hover {
+		opacity: 0.8;
+	}
+
+	.icon {
+		width: 1rem;
+		height: 1rem;
+	}
+
+	.load-more {
+		display: flex;
+		justify-content: center;
+		padding: var(--spacing-md, 1rem) 0;
+	}
+
+	.load-more-button {
+		padding: var(--spacing-sm, 0.5rem) var(--spacing-md, 1rem);
+		font-size: 0.875rem;
+		border-radius: var(--radius-md, 0.5rem);
+		background-color: var(--color-surface-100, #f3f4f6);
+		color: var(--color-surface-950, #030712);
+		border: 1px solid var(--color-surface-200, #e5e7eb);
+		transition: background-color 0.15s ease;
+		cursor: pointer;
+	}
+
+	:global(.dark) .load-more-button {
+		background-color: var(--color-surface-800, #1f2937);
+		color: var(--color-surface-50, #f9fafb);
+		border-color: var(--color-surface-700, #374151);
+	}
+
+	.load-more-button:hover {
+		opacity: 0.9;
+	}
+</style>
