@@ -122,7 +122,7 @@ shards:
 
   vug:
     git: https://github.com/kritoke/vug.cr.git
-    version: 0.5.6
+    version: 0.5.7
 
   xpath2:
     git: https://github.com/naqvis/crystal-xpath2.git
