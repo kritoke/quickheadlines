@@ -37,6 +37,12 @@ module QuickHeadlines
       end
     end
 
+    # NOTE on lock ordering:
+    # cleanup_stale_instances acquires @@cleanup_lock first, then @@instances_lock.
+    # get_or_create calls start_cleanup_fiber (which uses @@cleanup_lock) BEFORE
+    # acquiring @@instances_lock. This consistent ordering prevents deadlocks.
+    # The cleanup fiber is started only once (guarded by @@cleanup_lock), so after
+    # initial startup, start_cleanup_fiber returns immediately without blocking.
     def self.get_or_create(key : String, max_requests : Int32 = 1, window_seconds : Int32 = 60) : RateLimiter
       start_cleanup_fiber
       @@instances_lock.synchronize do

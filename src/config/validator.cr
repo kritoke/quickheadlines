@@ -38,7 +38,8 @@ def validate_feed_urls!(config : Config) : Nil
 end
 
 private def invalid_url_reason(url : String) : String?
-  return "URL is empty" if url.strip.empty?
+  # Check for nil or empty URL - explicit nil check for defensive programming
+  return "URL is empty" if url.nil? || url.strip.empty?
 
   begin
     uri = URI.parse(url.strip)

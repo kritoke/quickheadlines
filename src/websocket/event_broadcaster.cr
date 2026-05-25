@@ -14,10 +14,20 @@ class EventBroadcaster
         begin
           select
           when event = UPDATE_CHANNEL.receive?
-            SocketManager.instance.broadcast(event.to_json)
-            PROCESSED_EVENTS.add(1)
+            begin
+              json = event.to_json
+              SocketManager.instance.broadcast(json)
+              PROCESSED_EVENTS.add(1)
+            rescue ex
+              Log.for("quickheadlines.websocket").error(exception: ex) { "EventBroadcaster to_json/broadcast error, dropping event" }
+            end
           when timeout(QuickHeadlines::Constants::WEBSOCKET_HEARTBEAT_SECONDS.seconds)
-            SocketManager.instance.broadcast(HeartbeatEvent.new.to_json)
+            begin
+              json = HeartbeatEvent.new.to_json
+              SocketManager.instance.broadcast(json)
+            rescue ex
+              Log.for("quickheadlines.websocket").error(exception: ex) { "EventBroadcaster heartbeat error" }
+            end
           when SHUTDOWN_CHANNEL.receive?
             UPDATE_CHANNEL.close
             Log.for("quickheadlines.websocket").info { "EventBroadcaster shutting down" }

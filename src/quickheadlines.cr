@@ -118,10 +118,12 @@ begin
     origin = ctx.request.headers["Origin"]?
     host = ctx.request.headers["Host"]?
 
+    is_development = ENV["APP_ENV"]? == "development"
+    
     # Reject if origin header is missing (prevents cross-site WebSocket hijacking)
-    # Allow missing Origin in development for local testing convenience.
-    if !origin && !(ENV["APP_ENV"]? && ENV["APP_ENV"] == "development")
-      Log.for("quickheadlines.websocket").warn { "Rejected WebSocket: missing Origin header" }
+    # Allow missing Origin only in development mode for local testing convenience.
+    if !origin && !is_development
+      Log.for("quickheadlines.websocket").warn { "Rejected WebSocket: missing Origin header (APP_ENV=#{ENV["APP_ENV"]? || "unset"})" }
       ws.close
       next
     end

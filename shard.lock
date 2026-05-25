@@ -90,7 +90,7 @@ shards:
 
   fetcher:
     git: https://github.com/kritoke/fetcher.cr.git
-    version: 0.9.15
+    version: 0.9.16
 
   html5:
     git: https://github.com/naqvis/crystal-html5.git
@@ -122,7 +122,7 @@ shards:
 
   vug:
     git: https://github.com/kritoke/vug.cr.git
-    version: 0.5.4
+    version: 0.5.6
 
   xpath2:
     git: https://github.com/naqvis/crystal-xpath2.git

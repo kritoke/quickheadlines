@@ -30,7 +30,12 @@ class QuickHeadlines::Controllers::ApiBaseController < Athena::Framework::Contro
 
   private def check_admin_auth(request : AHTTP::Request) : Bool
     secret = ENV["ADMIN_SECRET"]?
-    return false if secret.nil? || secret.empty?
+    
+    # Log warning if admin auth is attempted but no secret is configured
+    if secret.nil? || secret.empty?
+      Log.for("quickheadlines.auth").warn { "Admin auth attempt without ADMIN_SECRET configured from #{client_ip(request)}" } if has_auth_header?(request)
+      return false
+    end
 
     auth_header = request.headers["Authorization"]?
     return false unless auth_header
@@ -43,6 +48,10 @@ class QuickHeadlines::Controllers::ApiBaseController < Athena::Framework::Contro
     timing_safe_compare(secret, token)
   rescue ArgumentError
     false
+  end
+  
+  private def has_auth_header?(request : AHTTP::Request) : Bool
+    request.headers["Authorization"]?.try(&.starts_with?("Bearer ")) || false
   end
 
   private def check_rate_limit!(request : AHTTP::Request, key : String, max_requests : Int32, window_seconds : Int32) : Nil

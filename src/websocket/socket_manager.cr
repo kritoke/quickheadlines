@@ -112,10 +112,20 @@ class SocketManager
   end
 
   private def unregister_connection(connection : Connection) : Nil
+    # NOTE: IP count decrement is handled by unregister() to prevent double-decrement.
+    # This method is called by writer_fiber when the channel is closed.
+    # The connection should already be removed from @connections by unregister(),
+    # but we check and remove it anyway for safety.
     @mutex.synchronize do
+      was_present = @connections.includes?(connection)
       @connections.delete(connection)
       @last_activity.delete(connection.websocket)
-      decrement_ip_count_locked(connection.ip)
+      # Only decrement IP count if this is called directly (e.g., by janitor cleanup)
+      # NOT when called from writer_fiber after unregister() already decremented
+      if was_present
+        decrement_ip_count_locked(connection.ip)
+        Log.for("quickheadlines.websocket").warn { "unregister_connection: connection was still in array, decremented IP count" }
+      end
     end
     Log.for("quickheadlines.websocket").info { "Client disconnected from #{connection.ip}. Total: #{connection_count}" }
   end
@@ -124,19 +134,20 @@ class SocketManager
   private def decrement_ip_count_locked(ip : String) : Nil
     if count = @ip_counts[ip]?
       new_count = count - 1
-      if new_count <= 0
-        if new_count < 0
-          Log.for("quickheadlines.websocket").debug { "IP count for #{ip} went negative (#{count} -> #{new_count}). Clamping to 0." }
-          if ENV["APP_ENV"]? && ENV["APP_ENV"] == "development"
-            raise "IP count for #{ip} went negative (#{count} -> #{new_count})"
-          end
-        end
+      if new_count < 0
+        # BUG DETECTION: IP count went negative, indicating a double-decrement
+        # This should never happen - either unregister or writer_fiber should
+        # handle the decrement, not both.
+        Log.for("quickheadlines.websocket").error { "IP count for #{ip} went negative (#{count} -> #{new_count}). Potential double-decrement detected." }
+        @ip_counts[ip] = 0
+      elsif new_count == 0
         @ip_counts.delete(ip)
+        Log.for("quickheadlines.websocket").debug { "IP count for #{ip} reached 0, removed from tracking" }
       else
         @ip_counts[ip] = new_count
       end
     else
-      Log.for("quickheadlines.websocket").debug { "decrement_ip_count called for unknown IP: #{ip}" }
+      Log.for("quickheadlines.websocket").warn { "decrement_ip_count called for unknown IP: #{ip} - connection already cleaned up" }
     end
   end
 
@@ -146,21 +157,26 @@ class SocketManager
   end
 
   def unregister(ws : HTTP::WebSocket, ip : String) : Nil
+    connection_to_cleanup = nil
+    
     @mutex.synchronize do
       idx = @connections.index { |conn| conn.websocket == ws }
       return unless idx
 
-      connection = @connections[idx]
-      # Close the outgoing channel to unblock the writer_fiber.
-      # writer_fiber will receive Channel::ClosedError, call unregister_connection,
-      # and handle the IP count decrement there. This prevents double-decrement.
-      begin
-        connection.outgoing.close
-      rescue Channel::ClosedError
-      end
-      # Remove from connections array so we don't try to process it again.
-      # The writer_fiber will handle the final cleanup via unregister_connection.
+      connection_to_cleanup = @connections[idx]
       @connections.delete_at(idx)
+      @last_activity.delete(connection_to_cleanup.websocket)
+      # Decrement IP count here within the mutex to ensure single decrement
+      decrement_ip_count_locked(connection_to_cleanup.ip)
+    end
+    
+    # Close channel OUTSIDE the mutex to avoid holding mutex while doing I/O
+    if connection_to_cleanup
+      begin
+        connection_to_cleanup.outgoing.close
+      rescue Channel::ClosedError
+        # Channel already closed, safe to ignore
+      end
     end
   end
 
