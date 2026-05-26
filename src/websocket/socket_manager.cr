@@ -9,7 +9,7 @@ class SocketManager
   @@instance : SocketManager?
   @@mutex = Mutex.new(:unchecked)
 
-  record Connection, websocket : HTTP::WebSocket, ip : String, outgoing : Channel(String), created_at : Time
+  record Connection, websocket : HTTP::WebSocket, ip : String, outgoing : Channel(String), created_at : Time, unregistered : Bool = false
 
   @connections : Array(Connection)
   @mutex : Mutex
@@ -107,19 +107,24 @@ class SocketManager
   end
 
   private def unregister_connection(connection : Connection) : Nil
-    # NOTE: IP count decrement is handled by unregister() to prevent double-decrement.
-    # This method is called by writer_fiber when the channel is closed.
-    # The connection should already be removed from @connections by unregister(),
-    # but we check and remove it anyway for safety.
     @mutex.synchronize do
+      # If the connection was already unregistered by unregister(), skip cleanup.
+      # The unregister() method marks connections with unregistered: true before
+      # removing them, allowing us to detect this race condition safely.
+      if connection.unregistered
+        Log.for("quickheadlines.websocket").debug { "unregister_connection: connection already unregistered by unregister(), skipping" }
+        # Still clean up local state that unregister() may have left
+        @last_activity.delete(connection.websocket)
+        return
+      end
+
+      # Only called directly (e.g., by janitor cleanup) - not from writer_fiber
       was_present = @connections.includes?(connection)
       @connections.delete(connection)
       @last_activity.delete(connection.websocket)
-      # Only decrement IP count if this is called directly (e.g., by janitor cleanup)
-      # NOT when called from writer_fiber after unregister() already decremented
       if was_present
         decrement_ip_count_locked(connection.ip)
-        Log.for("quickheadlines.websocket").warn { "unregister_connection: connection was still in array, decremented IP count" }
+        Log.for("quickheadlines.websocket").debug { "unregister_connection: janitor cleanup, decremented IP count for #{connection.ip}" }
       end
     end
     Log.for("quickheadlines.websocket").info { "Client disconnected from #{connection.ip}. Total: #{connection_count}" }
@@ -152,13 +157,16 @@ class SocketManager
   end
 
   def unregister(ws : HTTP::WebSocket, ip : String) : Nil
-    connection_to_cleanup = nil
+    connection_to_cleanup : Connection? = nil
 
     @mutex.synchronize do
       idx = @connections.index { |conn| conn.websocket == ws }
       return unless idx
 
       connection_to_cleanup = @connections[idx]
+      # Mark as unregistered BEFORE removing to prevent race with writer_fiber
+      # This flag tells unregister_connection that unregister() already handled cleanup
+      @connections[idx] = connection_to_cleanup.copy_with(unregistered: true)
       @connections.delete_at(idx)
       @last_activity.delete(connection_to_cleanup.websocket)
       # Decrement IP count here within the mutex to ensure single decrement

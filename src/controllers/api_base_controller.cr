@@ -1,5 +1,6 @@
 require "athena"
 require "../constants"
+require "../utils"
 require "../dtos/config_dto"
 require "../dtos/api_responses"
 require "../web/assets"
@@ -83,6 +84,23 @@ class QuickHeadlines::Controllers::ApiBaseController < Athena::Framework::Contro
     return false unless QuickHeadlines::Constants::ALLOWED_PROXY_DOMAINS.includes?(host)
     return false if uri.user || uri.password
     return false if uri.port && uri.port != QuickHeadlines::Constants::HTTPS_PORT
+
+    # Additional SSRF protection: resolve the hostname and verify the IP is not private/internal
+    # This helps prevent DNS rebinding and SSRF attacks via open redirects on allowed domains
+    begin
+      addr_info = Socket::Addrinfo.resolve(host, 443, type: Socket::Type::STREAM)
+      if addr = addr_info.first?
+        ip_address = addr.ip_address.to_s
+        if ::Utils.private_host?(ip_address)
+          Log.for("quickheadlines.proxy").warn { "SSRF protection: #{host} resolved to private IP #{ip_address}" }
+          return false
+        end
+      end
+    rescue ex : Socket::Error | IO::Error
+      # DNS resolution failed - still allow the URL if domain is in allowlist
+      # This handles cases where DNS might be temporarily unavailable
+      Log.for("quickheadlines.proxy").debug { "DNS resolution failed for #{host}: #{ex.message}" }
+    end
 
     true
   rescue URI::Error

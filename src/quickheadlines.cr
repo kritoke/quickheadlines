@@ -130,10 +130,13 @@ begin
 
     if origin && host
       origin_host = begin
-        URI.parse(origin).host
+        uri = URI.parse(origin)
+        uri.host.try(&.downcase)
       rescue
-        # Fallback: strip scheme and port
-        origin.sub(/^https?:\/\//, "").split("/").first.split(":").first
+        # Fallback: strip scheme and extract host, ignoring port
+        # Only accept if it looks like a valid hostname (no IP with special formats)
+        cleaned = origin.sub(/^https?:\/\//, "").split("/").first.split(":").first
+        cleaned unless cleaned.empty?
       end
 
       host_host = begin
