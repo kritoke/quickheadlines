@@ -38,10 +38,16 @@ private def best_available_feed(feed : Feed, fetched : FeedData?, existing : Fee
 end
 
 # Uses select+timeout pattern to ensure fetch completes within time limit.
+# NOTE: The inner fiber may continue running after timeout and will complete when it can
+# send to the buffered channel (non-blocking send). This prevents fiber accumulation
+# that would occur with an unbuffered channel where send() blocks forever.
 private def fetch_single_feed_with_timeout(feed : Feed, config : Config, previous_feed_data : FeedData?, index : Int32) : FeedData
   timeout_seconds = QuickHeadlines::Constants::FETCH_TIMEOUT_SECONDS
 
-  result_channel = Channel(FeedData | Exception).new
+  # Buffered channel (size 1) prevents inner fiber from blocking on send() after timeout.
+  # Without buffering, the fiber would block forever waiting for a receiver that already
+  # returned. With buffering, the send succeeds immediately and the fiber completes.
+  result_channel = Channel(FeedData | Exception).new(1)
 
   spawn(name: "feed_fetch_inner_#{index}") do
     begin
@@ -97,6 +103,7 @@ module RefreshHealthMonitor
   @@last_refresh_complete : Atomic(Int64) = Atomic(Int64).new(0)
   @@refresh_cycles_completed : Atomic(Int32) = Atomic(Int32).new(0)
   @@refresh_failures : Atomic(Int32) = Atomic(Int32).new(0)
+  @@feeds_in_progress : Atomic(Int32) = Atomic(Int32).new(0)
 
   def self.record_cycle_start : Nil
     now_ms = Time.utc.to_unix_ms
@@ -119,12 +126,22 @@ module RefreshHealthMonitor
     @@refresh_failures.set(0)
   end
 
-  def self.status : {last_start: Int64, last_complete: Int64, cycles: Int32, failures: Int32}
+  # Track feed fetch start/end for monitoring fiber accumulation
+  def self.feed_fetch_started : Nil
+    @@feeds_in_progress.add(1)
+  end
+
+  def self.feed_fetch_completed : Nil
+    @@feeds_in_progress.add(-1)
+  end
+
+  def self.status : {last_start: Int64, last_complete: Int64, cycles: Int32, failures: Int32, feeds_in_progress: Int32}
     {
-      last_start:    @@last_refresh_start.get,
-      last_complete: @@last_refresh_complete.get,
-      cycles:        @@refresh_cycles_completed.get,
-      failures:      @@refresh_failures.get,
+      last_start:        @@last_refresh_start.get,
+      last_complete:     @@last_refresh_complete.get,
+      cycles:            @@refresh_cycles_completed.get,
+      failures:          @@refresh_failures.get,
+      feeds_in_progress: @@feeds_in_progress.get,
     }
   end
 
@@ -203,6 +220,7 @@ private def fetch_feeds_concurrently(all_configs : Hash(String, Feed), existing_
         previous_feed_data = existing_data[feed.url]?
         # Per-feed timeout to prevent one hung fetch from blocking the semaphore slot
         # This is critical for preventing semaphore exhaustion over long running sessions
+        RefreshHealthMonitor.feed_fetch_started
         result = fetch_single_feed_with_timeout(feed, config, previous_feed_data, current_index)
         channel.send(result)
       rescue ex
@@ -215,6 +233,7 @@ private def fetch_feeds_concurrently(all_configs : Hash(String, Feed), existing_
           channel.send(FeedFetcher.instance.build_error_feed(feed, "Error: #{ex.class}"))
         end
       ensure
+        RefreshHealthMonitor.feed_fetch_completed
         # Ensure semaphore slot is always returned, even on exceptions
         begin
           release_semaphore
