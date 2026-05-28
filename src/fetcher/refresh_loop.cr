@@ -237,15 +237,24 @@ private def fetch_feeds_concurrently(all_configs : Hash(String, Feed), existing_
         # This is critical for preventing semaphore exhaustion over long running sessions
         RefreshHealthMonitor.feed_fetch_started
         result = fetch_single_feed_with_timeout(feed, config, previous_feed_data, current_index)
-        channel.send(result)
+        begin
+          channel.send(result)
+        rescue Channel::ClosedError
+        end
       rescue ex
         Log.for("quickheadlines.feed").error(exception: ex) { "fetch_feeds_concurrently: error fetching #{feed.url}" }
         previous_feed_data = existing_data[feed.url]?
         if previous_feed_data && !previous_feed_data.failed?
           Log.for("quickheadlines.feed").info { "fetch_feeds_concurrently: using cached data after outer error for #{feed.url}" }
-          channel.send(previous_feed_data)
+          begin
+            channel.send(previous_feed_data)
+          rescue Channel::ClosedError
+          end
         else
-          channel.send(FeedFetcher.instance.build_error_feed(feed, "Error: #{ex.class}"))
+          begin
+            channel.send(FeedFetcher.instance.build_error_feed(feed, "Error: #{ex.class}"))
+          rescue Channel::ClosedError
+          end
         end
       ensure
         RefreshHealthMonitor.feed_fetch_completed
@@ -291,6 +300,7 @@ private def fetch_feeds_concurrently(all_configs : Hash(String, Feed), existing_
 
   if completed < total_feeds
     Log.for("quickheadlines.feed").warn { "fetch_feeds_concurrently: fetched #{completed}/#{total_feeds} feeds" }
+    channel.close
   end
   fetched_map
 end

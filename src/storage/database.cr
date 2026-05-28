@@ -107,7 +107,7 @@ end
 def create_schema(db : DB::Database, db_path : String)
   db.exec("PRAGMA journal_mode = WAL")
   db.exec("PRAGMA synchronous = NORMAL")
-  db.exec("PRAGMA cache_size = -64000")
+  db.exec("PRAGMA cache_size = -16000")
   db.exec("PRAGMA foreign_keys = ON")
   db.exec("PRAGMA mmap_size = 0")
   db.exec("PRAGMA wal_autocheckpoint = #{QuickHeadlines::Constants::WAL_AUTOCHECKPOINT_PAGES}")

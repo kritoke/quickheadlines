@@ -26,15 +26,16 @@ module FetcherResponse
       return build_error_feed(feed, "No items found (or unsupported format)")
     end
 
-    # Persist content to DB BEFORE stripping it from items
     persist_entry_content(result.entries, feed.url)
 
-    # Build items WITHOUT content to save memory (~20-50KB per article)
     items = entries_to_items(result.entries, strip_content: true)
-    Log.for("quickheadlines.feed").debug { "handle_success: #{feed.url} - items.size=#{items.size}" }
 
     site_link = result.site_link || feed.url
-    favicon, favicon_data = resolve_favicons(site_link, feed, result.favicon, previous_data)
+    result_favicon = result.favicon
+    result_etag = result.etag
+    result_last_modified = result.last_modified
+
+    favicon, favicon_data = resolve_favicons(site_link, feed, result_favicon, previous_data)
 
     # Clear favicon_data from memory after it's been saved to disk by resolve_favicons
     # The favicon is served via /favicons/{hash}.png, not from memory
@@ -55,10 +56,10 @@ module FetcherResponse
       preserved_header_color,
       preserved_text_color,
       items,
-      result.etag,
-      result.last_modified,
+      result_etag,
+      result_last_modified,
       favicon_path,
-      nil # favicon_data cleared — served from disk via /favicons/ route
+      nil
     )
 
     feed_data = feed_data.with_theme_colors(preserved_theme) if preserved_theme
