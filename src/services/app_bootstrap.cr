@@ -1,6 +1,7 @@
 require "../config"
 require "../constants"
 require "../storage"
+require "../color_extractor"
 require "./database_service"
 require "./content_service"
 require "./favicon_sync_service"
@@ -252,6 +253,9 @@ class AppBootstrap
           # Clear DNS cache and rate limiters to prevent memory/resource leaks
           Fetcher::CrestHttpClient.clear_dns_cache
           Fetcher::CrestHttpClient.clear_rate_limiters
+          Fetcher::URLValidator.clear_validated
+          Fetcher::CircuitBreaker::Registry.store.clear_expired
+          ColorExtractor.sweep_cache
 
           @feed_cache.cleanup_old_articles(QuickHeadlines::Constants::CACHE_RETENTION_DAYS)
           @feed_cache.cleanup_old_entries(@config.cache_retention_hours || QuickHeadlines::Constants::CACHE_RETENTION_HOURS)

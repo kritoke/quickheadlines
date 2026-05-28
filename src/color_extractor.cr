@@ -47,6 +47,16 @@ module ColorExtractor
     extracted
   end
 
+  def self.sweep_cache : Nil
+    @@cache_mutex.synchronize do
+      now = Time.utc
+      expiry_seconds = QuickHeadlines::Constants::COLOR_CACHE_EXPIRY_DAYS * 24 * 60 * 60
+      @@extraction_cache.reject! do |_, entry|
+        (now - entry.timestamp).to_i >= expiry_seconds
+      end
+    end
+  end
+
   private def self.cached_theme_colors(path : String) : Hash(String, String | Hash(String, String))?
     @@cache_mutex.synchronize do
       if entry = @@extraction_cache[path]?

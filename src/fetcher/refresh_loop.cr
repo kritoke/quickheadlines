@@ -8,12 +8,27 @@ require "../websocket"
 require "./feed_fetcher"
 require "./software_util"
 
+class CancelError < Exception
+  def initialize(message : String = "Refresh cancelled")
+    super(message)
+  end
+end
+
+private def cancel_check(cancel_ch : Channel(Bool)?) : Nil
+  return unless cancel_ch
+  select
+  when cancel_ch.receive?
+    raise CancelError.new
+  when timeout(0.seconds)
+  end
+end
+
 module GCCollector
   @@last_gc_collect = Time.utc
 
-  def self.trigger_if_needed : Nil
+  def self.maybe_collect : Nil
     now = Time.utc
-    if now - @@last_gc_collect >= 5.minutes
+    if now - @@last_gc_collect >= 90.seconds
       GC.collect
       @@last_gc_collect = now
       Log.for("quickheadlines.gc").debug { "Triggered GC.collect to release memory" }
@@ -292,11 +307,11 @@ private def build_tab_feeds(tab_config : TabConfig, fetched_map : Hash(String, F
   Tab.new(tab_config.name, tab_feeds, tab_releases)
 end
 
-def refresh_all(config : Config)
-  refresh_all(config, FeedCache.instance, DatabaseService.instance)
+def refresh_all(config : Config, cancel_ch : Channel(Bool)? = nil)
+  refresh_all(config, FeedCache.instance, DatabaseService.instance, cancel_ch)
 end
 
-def refresh_all(config : Config, cache : FeedCache, db_service : DatabaseService)
+def refresh_all(config : Config, cache : FeedCache, db_service : DatabaseService, cancel_ch : Channel(Bool)? = nil)
   # NOTE: refreshing flag is managed by the caller (supervisor), not here.
   # This prevents race conditions between timed-out workers and the supervisor.
   StateStore.update(&.copy_with(config_title: config.page_title, config: config))
@@ -306,6 +321,8 @@ def refresh_all(config : Config, cache : FeedCache, db_service : DatabaseService
   Log.for("quickheadlines.feed").info { "refresh_all: starting - #{all_configs.size} feeds to fetch" }
 
   existing_data = (StateStore.feeds + StateStore.tabs.flat_map(&.feeds)).index_by(&.url)
+
+  cancel_check(cancel_ch)
 
   fetched_map = fetch_feeds_concurrently(all_configs, existing_data, config)
   fetched_count = fetched_map.size
@@ -317,13 +334,15 @@ def refresh_all(config : Config, cache : FeedCache, db_service : DatabaseService
     Log.for("quickheadlines.feed").debug { "refresh_all: fetched #{fetched_count}/#{all_configs.size} feeds successfully" }
   end
 
-  # Resolve the best data for each feed using priority logic.
   new_feeds = config.feeds.map do |feed|
     best_available_feed(feed, fetched_map[feed.url]?, existing_data[feed.url]?)
   end
   new_tabs = config.tabs.map { |tab_config| build_tab_feeds(tab_config, fetched_map, existing_data, config.item_limit) }
 
-  # Diagnostic log: indicate sizes coming into StateStore update
+  existing_data = nil
+
+  cancel_check(cancel_ch)
+
   Log.for("quickheadlines.feed").info { "refresh_all: about to update StateStore - fetched_count=#{fetched_count}, missing_count=#{missing_count}, new_feeds=#{new_feeds.size}, new_tabs=#{new_tabs.size}" }
 
   StateStore.update do |state|
@@ -334,6 +353,8 @@ def refresh_all(config : Config, cache : FeedCache, db_service : DatabaseService
       refreshing: false
     )
   end
+
+  fetched_map = nil
 
   EventBroadcaster.notify_feed_update(StateStore.updated_at.to_unix_ms)
   RefreshHealthMonitor.record_cycle_complete
@@ -472,22 +493,26 @@ end
 # Run a normal refresh cycle with timeout protection.
 # Returns the total refresh duration in seconds.
 private def run_timed_refresh(state : RefreshLoopState, cache : FeedCache, db_service : DatabaseService) : Float64
-  StateStore.refreshing = true # Supervisor owns the flag
+  StateStore.refreshing = true
   refresh_start_time = Time.utc
   outer_timeout = state.outer_timeout_seconds.seconds
   config_snapshot = state.active_config
   refresh_all_start = Time.utc
 
+  cancel_ch = Channel(Bool).new(1)
   completion_channel = Channel(Nil).new(1)
   spawn(name: "refresh_worker") do
     begin
-      refresh_all(config_snapshot, cache, db_service)
+      refresh_all(config_snapshot, cache, db_service, cancel_ch)
       refresh_all_duration = (Time.utc - refresh_all_start).total_seconds
       if config_snapshot.debug?
         Log.for("quickheadlines.feed").debug { "Refreshed feeds in #{refresh_all_duration.round(2)}s" }
       elsif refresh_all_duration > 120
         Log.for("quickheadlines.feed").warn { "refresh_all took #{refresh_all_duration.round(2)}s - long duration" }
       end
+    rescue ex : CancelError
+      Log.for("quickheadlines.feed").warn { "Refresh worker cancelled by supervisor: #{ex.message}" }
+      RefreshHealthMonitor.record_failure
     rescue ex
       Log.for("quickheadlines.feed").error(exception: ex) { "refresh_loop refresh_all failed" }
       RefreshHealthMonitor.record_failure
@@ -500,17 +525,16 @@ private def run_timed_refresh(state : RefreshLoopState, cache : FeedCache, db_se
     StateStore.refreshing = false
     refresh_duration = (Time.utc - refresh_start_time).total_seconds
     Log.for("quickheadlines.feed").debug { "Starting save_feed_cache..." }
-    # Use snapshot's cache settings to match what was just refreshed.
-    # This prevents race condition where config reload during refresh
-    # could cause mismatched cache parameters.
     cache.save(config_snapshot.cache_retention_hours, config_snapshot.max_cache_size_mb)
     Log.for("quickheadlines.feed").debug { "save_feed_cache complete" }
-    GCCollector.trigger_if_needed
+    GC.collect
     refresh_duration
   when timeout(outer_timeout)
-    StateStore.refreshing = false # Clear immediately on timeout to prevent stall
-    Log.for("quickheadlines.feed").error { "refresh_all timed out after #{outer_timeout.total_seconds.round}s - refreshing flag reset, worker continues in background" }
+    cancel_ch.send(true)
+    StateStore.refreshing = false
+    Log.for("quickheadlines.feed").error { "refresh_all timed out after #{outer_timeout.total_seconds.round}s - worker signalled to cancel" }
     RefreshHealthMonitor.record_failure
+    GC.collect
     (Time.utc - refresh_start_time).total_seconds
   end
 end

@@ -94,7 +94,7 @@
 </Dialog>
 
 <style>
-	.dialog-backdrop {
+	:global(.dialog-backdrop) {
 		position: fixed;
 		inset: 0;
 		background-color: rgb(0 0 0 / 0.5);
@@ -102,7 +102,7 @@
 		z-index: 40;
 	}
 
-	.dialog-positioner {
+	:global(.dialog-positioner) {
 		position: fixed;
 		inset: 0;
 		display: flex;
@@ -112,13 +112,13 @@
 		padding-top: 0;
 	}
 
-	.dialog-content {
+	:global(.dialog-content) {
 		background-color: var(--color-surface-100, #f3f4f6);
 		width: 100%;
 		box-shadow: var(--shadow-xl, 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1));
 	}
 
-	:global(.dark) .dialog-content {
+	:global(.dark) :global(.dialog-content) {
 		background-color: var(--color-surface-900, #111827);
 	}
 
