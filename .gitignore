@@ -119,3 +119,7 @@ openspec/
 # Taskplane task files
 .taskplane-tasks/
 planning/
+# Local Pi runtime state
+.atl/
+.pi/
+.catseye.toml
