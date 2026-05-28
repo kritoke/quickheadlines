@@ -300,8 +300,8 @@ private def fetch_feeds_concurrently(all_configs : Hash(String, Feed), existing_
 
   if completed < total_feeds
     Log.for("quickheadlines.feed").warn { "fetch_feeds_concurrently: fetched #{completed}/#{total_feeds} feeds" }
-    channel.close
   end
+  channel.close
   fetched_map
 end
 

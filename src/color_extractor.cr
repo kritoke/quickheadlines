@@ -13,7 +13,6 @@ module ColorExtractor
   end
 
   @@extraction_cache = Hash(String, CacheEntry).new
-  @@cache_order = Deque(String).new
   @@cache_mutex = Mutex.new
 
   @@theme_extractor : PrismatIQ::ThemeExtractor?

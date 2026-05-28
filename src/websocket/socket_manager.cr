@@ -108,17 +108,12 @@ class SocketManager
 
   private def unregister_connection(connection : Connection) : Nil
     @mutex.synchronize do
-      # If the connection was already unregistered by unregister(), skip cleanup.
-      # The unregister() method marks connections with unregistered: true before
-      # removing them, allowing us to detect this race condition safely.
       if connection.unregistered
         Log.for("quickheadlines.websocket").debug { "unregister_connection: connection already unregistered by unregister(), skipping" }
-        # Still clean up local state that unregister() may have left
         @last_activity.delete(connection.websocket)
         return
       end
 
-      # Only called directly (e.g., by janitor cleanup) - not from writer_fiber
       was_present = @connections.includes?(connection)
       @connections.delete(connection)
       @last_activity.delete(connection.websocket)
@@ -126,6 +121,10 @@ class SocketManager
         decrement_ip_count_locked(connection.ip)
         Log.for("quickheadlines.websocket").debug { "unregister_connection: janitor cleanup, decremented IP count for #{connection.ip}" }
       end
+    end
+    begin
+      connection.outgoing.close
+    rescue Channel::ClosedError
     end
     Log.for("quickheadlines.websocket").info { "Client disconnected from #{connection.ip}. Total: #{connection_count}" }
   end

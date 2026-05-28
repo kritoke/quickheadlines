@@ -29,7 +29,7 @@ dependencies:
     commit: 07e823d2ed9b37cb969acbbbbdcb6505e2b6ba60
   vug:
     github: kritoke/vug.cr
-    version: "~> 0.5.7"
+    commit: 386ccaf068bf204863c67e531c50d471e1e83ae7
   azurite:
     github: kritoke/azurite.cr
 
