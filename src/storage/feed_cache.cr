@@ -42,8 +42,8 @@ class FeedCache
     @db_path = get_cache_db_path(config).as(String)
     @db = @db_service.db
 
-    @clustering_store = QuickHeadlines::Storage::ClusteringStore.new(@db, @mutex)
-    @header_color_store = QuickHeadlines::Storage::HeaderColorStore.new(@db, @mutex)
+    @clustering_store = QuickHeadlines::Storage::ClusteringStore.new(@db)
+    @header_color_store = QuickHeadlines::Storage::HeaderColorStore.new(@db)
     @cleanup_store = QuickHeadlines::Storage::CleanupStore.new(@db, @mutex, @db_path)
 
     Log.for("quickheadlines.storage").info { "Database initialized: #{@db_path}" }
