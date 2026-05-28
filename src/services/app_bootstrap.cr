@@ -250,8 +250,8 @@ class AppBootstrap
           VugAdapter.clear_cache
           Log.for("quickheadlines.app").debug { "Cleared Vug cache" }
 
-          # Clear DNS cache and rate limiters to prevent memory/resource leaks
-          Fetcher::CrestHttpClient.clear_dns_cache
+          # Clear expired DNS cache and rate limiters to prevent memory/resource leaks
+          Fetcher::CrestHttpClient.clear_expired_dns
           Fetcher::CrestHttpClient.clear_rate_limiters
           Fetcher::URLValidator.clear_validated
           Fetcher::CircuitBreaker::Registry.store.clear_expired
