@@ -90,7 +90,7 @@ shards:
 
   fetcher:
     git: https://github.com/kritoke/fetcher.cr.git
-    version: 0.9.20
+    version: 0.9.20+git.commit.07e823d2ed9b37cb969acbbbbdcb6505e2b6ba60
 
   html5:
     git: https://github.com/naqvis/crystal-html5.git
@@ -102,7 +102,7 @@ shards:
 
   http_proxy:
     git: https://github.com/mamantoha/http_proxy.git
-    version: 0.14.0
+    version: 0.15.1
 
   lexis-minhash:
     git: https://github.com/kritoke/lexis-minhash.git
