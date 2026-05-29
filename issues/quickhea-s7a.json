@@ -2,13 +2,14 @@
   "assignee": "kritoke",
   "blocked_by": [],
   "blocks": [],
+  "closed_at": "2026-05-29T12:11:37Z",
   "created": "2026-05-29T10:29:19Z",
   "description": "In database.cr create_schema function, the cleanup of duplicate items is not atomic. It runs after migrations and could fail partway through, leaving the database in an inconsistent state.\n\n**Location:** src/storage/database.cr:create_schema\n\n**Code:**\nUsage: crystal [command] [switches] [program file] [--] [arguments]\n\nCommand:\n    init                     generate a new project\n    build                    build an executable\n    clear_cache              clear the compiler cache\n    docs                     generate documentation\n    env                      print Crystal environment information\n    eval                     eval code from args or standard input\n    i/interactive            starts interactive Crystal\n    play                     starts Crystal playground server\n    run (default)            build and run program\n    spec                     build and run specs (in spec directory)\n    tool                     run a tool\n    help, --help, -h         show this help\n    version, --version, -v   show version\n\nRun a command followed by --help to see command specific information, ex:\n    crystal \u003ccommand\u003e --help\n\n**Issue:** This cleanup runs after table creation and migrations. If it fails partway, we've already committed earlier changes. Additionally, the GROUP BY might be slow on large tables since there's no index on (feed_id, link).\n\n**Edge case:** If the table is empty, this query will delete nothing (correct). But if the table has mixed NULL and non-NULL normalized_link values with same feed_id+link, the grouping behavior might be unpredictable.\n\n**Recommendation:** Consider wrapping the cleanup in a transaction and adding a warning log for large deletions.",
   "id": "quickhea-s7a",
   "labels": [],
   "priority": 3,
-  "status": "in_progress",
+  "status": "closed",
   "title": "Bug: Database cleanup duplicate check not atomic",
   "type": "bug",
-  "updated_at": "2026-05-29T12:11:09Z"
+  "updated_at": "2026-05-29T12:11:37Z"
 }
