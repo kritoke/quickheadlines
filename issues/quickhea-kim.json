@@ -1,5 +1,5 @@
 {
-  "assignee": "",
+  "assignee": "kritoke",
   "blocked_by": [],
   "blocks": [],
   "created": "2026-05-29T10:29:41Z",
@@ -7,8 +7,8 @@
   "id": "quickhea-kim",
   "labels": [],
   "priority": 3,
-  "status": "open",
+  "status": "in_progress",
   "title": "Bug: ProxyController image fetch has redirect URL validation gap",
   "type": "security",
-  "updated_at": "2026-05-29T10:29:41Z"
+  "updated_at": "2026-05-29T11:56:37Z"
 }
