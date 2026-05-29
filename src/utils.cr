@@ -168,6 +168,7 @@ def extract_client_ip(request) : String
         # Additional validation: only trust X-Forwarded-For if it appears to be from an internal/proxy source
         # (loopback, private range, or internal network). This prevents direct client IP spoofing.
         if Utils.private_host?(first_ip) || first_ip == "localhost" || first_ip.starts_with?("127.") || first_ip.starts_with?("[::1")
+          Log.for("quickheadlines.utils").debug { "TRUSTED_PROXY: using X-Forwarded-For IP #{first_ip}" }
           return first_ip
         end
         # For non-internal IPs, log and fall through to X-Client-IP
