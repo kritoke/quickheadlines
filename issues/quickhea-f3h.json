@@ -1,5 +1,5 @@
 {
-  "assignee": "",
+  "assignee": "kritoke",
   "blocked_by": [],
   "blocks": [],
   "created": "2026-05-29T10:29:29Z",
@@ -7,8 +7,8 @@
   "id": "quickhea-f3h",
   "labels": [],
   "priority": 3,
-  "status": "open",
+  "status": "in_progress",
   "title": "Bug: SocketManager IP tracking double-decrement protection flawed",
   "type": "bug",
-  "updated_at": "2026-05-29T10:29:29Z"
+  "updated_at": "2026-05-29T12:11:43Z"
 }
