@@ -124,7 +124,9 @@ module QuickHeadlines
         oldest = times.min
         now = Time.utc.to_unix
         elapsed = now - oldest
-        return [@window_seconds - elapsed, 1].max
+        # Ensure minimum retry_after of 1 second for valid identifier with requests
+        retry_seconds = @window_seconds - elapsed
+        retry_seconds < 1 ? 1 : retry_seconds
       end
     end
   end
