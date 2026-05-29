@@ -1,0 +1,14 @@
+{
+  "assignee": "",
+  "blocked_by": [],
+  "blocks": [],
+  "created": "2026-05-29T10:29:22Z",
+  "description": "In database.cr create_schema, the cleanup of duplicate items runs after migrations and could fail partway through, leaving the database in an inconsistent state. Also, the GROUP BY might be slow on large tables since there's no index on (feed_id, link). Consider wrapping the cleanup in a transaction and adding a warning log for large deletions.",
+  "id": "quickhea-zqy",
+  "labels": [],
+  "priority": 3,
+  "status": "open",
+  "title": "Bug: Database cleanup duplicate check not atomic",
+  "type": "bug",
+  "updated_at": "2026-05-29T10:29:22Z"
+}
