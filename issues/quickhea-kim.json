@@ -1,0 +1,14 @@
+{
+  "assignee": "",
+  "blocked_by": [],
+  "blocks": [],
+  "created": "2026-05-29T10:29:41Z",
+  "description": "In ProxyController.proxy_image_fetch, when following redirects, the code creates a new HTTP::Client for the redirect URL but doesn't validate that the redirect URL is still on an allowed domain. If the original URL redirects to a disallowed domain, the request will still proceed.\n\nThe reject_private_host? check only applies to the initial URL in fetch_and_save, not to redirect URLs.\n\nLocation: src/controllers/proxy_controller.cr",
+  "id": "quickhea-kim",
+  "labels": [],
+  "priority": 3,
+  "status": "open",
+  "title": "Bug: ProxyController image fetch has redirect URL validation gap",
+  "type": "security",
+  "updated_at": "2026-05-29T10:29:41Z"
+}
