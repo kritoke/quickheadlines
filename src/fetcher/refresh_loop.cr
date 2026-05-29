@@ -390,7 +390,7 @@ private struct RefreshLoopState
   property last_mtime : Time
   property cycle_count : Int32
   property consecutive_skips : Int32
-  getter first_run : Bool
+  getter? first_run : Bool
   @first_run : Bool = true
 
   def initialize(@active_config : Config, @last_mtime : Time)
@@ -659,7 +659,7 @@ def start_refresh_loop(config_path : String, cache : FeedCache, db_service : Dat
 
         check_semaphore_health
 
-        if state.first_run
+        if state.first_run?
           state.mark_first_run_done
           run_initial_refresh(state, cache, db_service)
           # Wait for initial refresh with timeout protection

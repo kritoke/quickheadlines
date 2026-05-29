@@ -33,11 +33,11 @@ end
 private struct FaviconUpdateResult
   getter feed_id : Int64
   getter url : String
-  getter clear_external : Bool
+  getter? clear_external : Bool
   getter sync_data : String?
   getter update_favicon : String?
   getter update_favicon_data : String?
-  getter clear_favicon : Bool
+  getter? clear_favicon : Bool
 
   def initialize(
     @feed_id : Int64,
@@ -171,7 +171,7 @@ class FaviconSyncService
   end
 
   private def apply_favicon_updates(result : FaviconUpdateResult) : Nil
-    if result.clear_external
+    if result.clear_external?
       @db.exec("UPDATE feeds SET favicon_data = NULL WHERE id = ?", result.feed_id)
       Log.for("quickheadlines.cache").info { "Cleared external URL from favicon_data for #{result.url}" }
     end
@@ -186,7 +186,7 @@ class FaviconSyncService
       Log.for("quickheadlines.cache").debug { "Synced favicon for #{result.url}" }
     end
 
-    if result.clear_favicon
+    if result.clear_favicon?
       @db.exec("UPDATE feeds SET favicon = NULL, favicon_data = NULL WHERE id = ?", result.feed_id)
       Log.for("quickheadlines.cache").debug { "Cleared missing favicon for #{result.url}" }
     end

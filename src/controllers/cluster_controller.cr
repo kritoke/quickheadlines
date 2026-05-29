@@ -5,7 +5,7 @@ class QuickHeadlines::Controllers::ClusterController < QuickHeadlines::Controlle
   def clusters(request : AHTTP::Request) : QuickHeadlines::DTOs::ClustersResponse
     check_rate_limit!(request, "api_clusters", 120, 60)
 
-    clustering_service.get_cluster_responses
+    clustering_service.cluster_responses
   end
 
   @[ARTA::Get(path: "/api/clusters/{id}/items")]

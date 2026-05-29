@@ -39,8 +39,8 @@ class QuickHeadlines::Controllers::FeedsController < QuickHeadlines::Controllers
   # Check if we have any successful (non-failed) feeds available
   private def has_successful_feeds?(feeds : Array(FeedData), tabs : Array(Tab)) : Bool
     # Check main feeds for any successful ones
-    return true if feeds.any? { |f| !f.failed? }
+    return true if feeds.any? { |feed| !feed.failed? }
     # Check tabs for any feeds that are successful
-    tabs.any? { |tab| tab.feeds.any? { |f| !f.failed? } }
+    tabs.any? { |tab| tab.feeds.any? { |feed| !feed.failed? } }
   end
 end

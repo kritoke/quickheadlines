@@ -48,16 +48,16 @@ max = [items.size, 3].min
   items_to_show << items[idx]
 end
 
-items_to_show.each_with_index do |it, i|
-  title = maybe_str(it["title"]) || "(nil)"
-  link = maybe_str(it["link"]) || "(nil)"
-  pub = it["pub_date"]
+items_to_show.each_with_index do |item, index|
+  title = maybe_str(item["title"]) || "(nil)"
+  link = maybe_str(item["link"]) || "(nil)"
+  pub = item["pub_date"]
   pub_s = if pub.nil?
             "(nil)"
           else
             maybe_str(pub) || "(nil)"
           end
-  puts "  #{i + 1}) title: #{title}"
+  puts "  #{index + 1}) title: #{title}"
   puts "     link: #{link}"
   puts "     pub_date(ms): #{pub_s}"
 end

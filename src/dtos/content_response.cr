@@ -7,7 +7,7 @@ module QuickHeadlines::DTOs
     property content : String?
     property content_type : String?
     property error : String?
-    property is_summary : Bool = false
+    property? is_summary : Bool = false
     property article_url : String? = nil
 
     def initialize(

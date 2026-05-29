@@ -125,7 +125,7 @@ describe QuickHeadlines::Services::ClusteringService do
     end
   end
 
-  describe "#get_all_clusters_from_db" do
+  describe "#all_clusters_from_db" do
     it "returns cluster information with representative and others" do
       cache = create_test_feed_cache
       db = cache.db
@@ -149,7 +149,7 @@ describe QuickHeadlines::Services::ClusteringService do
       )
 
       service = QuickHeadlines::Services::ClusteringService.new(cache.db_service)
-      clusters = service.get_all_clusters_from_db
+      clusters = service.all_clusters_from_db
 
       clusters.size.should eq(1)
       clusters[0].size.should eq(2)

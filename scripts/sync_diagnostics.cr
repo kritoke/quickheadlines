@@ -5,7 +5,7 @@ require "../src/storage.cr"
 # the contents of public/favicons/. This is safe to run locally and
 # helps reproduce what the server does on startup.
 
-cache = load_feed_cache(nil)
+load_feed_cache(nil)
 
 db_path = get_cache_db_path(nil)
 puts "Cache DB path: #{db_path}"

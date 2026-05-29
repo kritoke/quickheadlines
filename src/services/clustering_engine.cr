@@ -15,20 +15,20 @@ module QuickHeadlines::Services
     def find(x : Int64) : Int64
       # Initialize x to point to itself if not seen before
       @parent[x] ||= x
-      
+
       # Find root with path compression
       root = x
       while @parent[root] != root
         root = @parent[root]
       end
-      
+
       # Compress path: make all nodes point directly to root
       while @parent[x] != root
         next_parent = @parent[x]
         @parent[x] = root
         x = next_parent
       end
-      
+
       root
     end
 

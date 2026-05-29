@@ -298,7 +298,7 @@ module QuickHeadlines::DTOs
     property last_refresh_complete : Int64
     property refresh_cycles : Int32
     property refresh_failures : Int32
-    property refreshing : Bool
+    property? refreshing : Bool
     property feeds_count : Int32
     property tabs_count : Int32
 

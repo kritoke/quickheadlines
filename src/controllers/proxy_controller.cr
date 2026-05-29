@@ -30,7 +30,7 @@ class QuickHeadlines::Controllers::ProxyController < QuickHeadlines::Controllers
 
     begin
       # Disable automatic redirect following to validate each redirect destination
-      response = client.get(uri.request_target, max_redirects: 0)
+      response = client.get(uri.request_target)
 
       # Handle redirect manually with validation
       while response.status_code >= 300 && response.status_code < 400
@@ -51,7 +51,7 @@ class QuickHeadlines::Controllers::ProxyController < QuickHeadlines::Controllers
         client.read_timeout = QuickHeadlines::Constants::HTTP_READ_TIMEOUT.seconds
         client.write_timeout = QuickHeadlines::Constants::HTTP_WRITE_TIMEOUT.seconds
         client.connect_timeout = QuickHeadlines::Constants::HTTP_CONNECT_TIMEOUT.seconds
-        response = client.get(redirect_uri.request_target, max_redirects: 0)
+        response = client.get(redirect_uri.request_target)
       end
 
       if response.status_code >= 400

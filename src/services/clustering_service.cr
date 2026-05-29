@@ -102,13 +102,13 @@ class QuickHeadlines::Services::ClusteringService
     assign_cluster_item(item_id, best_match, threshold, title, cache)
   end
 
-  def get_all_clusters_from_db : Array(QuickHeadlines::Entities::Cluster)
+  def all_clusters_from_db : Array(QuickHeadlines::Entities::Cluster)
     fetch_limit = StateStore.config.try(&.clustering).try(&.max_fetch_items) || 1000
     cluster_repository.find_all(fetch_limit)
   end
 
-  def get_cluster_responses : QuickHeadlines::DTOs::ClustersResponse
-    clusters = get_all_clusters_from_db
+  def cluster_responses : QuickHeadlines::DTOs::ClustersResponse
+    clusters = all_clusters_from_db
     cluster_responses = clusters.map { |cluster| QuickHeadlines::DTOs::ClusterResponse.from_entity(cluster) }
     QuickHeadlines::DTOs::ClustersResponse.new(
       clusters: cluster_responses,
