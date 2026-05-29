@@ -29,7 +29,30 @@ class QuickHeadlines::Controllers::ProxyController < QuickHeadlines::Controllers
     client.connect_timeout = QuickHeadlines::Constants::HTTP_CONNECT_TIMEOUT.seconds
 
     begin
-      response = client.get(uri.request_target)
+      # Disable automatic redirect following to validate each redirect destination
+      response = client.get(uri.request_target, max_redirects: 0)
+
+      # Handle redirect manually with validation
+      while response.status_code >= 300 && response.status_code < 400
+        redirect_location = response.headers["Location"]?
+        unless redirect_location
+          raise AHK::Exception::HTTPException.new(502, "Bad Gateway")
+        end
+
+        # Validate the redirect URL before following
+        unless validate_proxy_url(redirect_location)
+          Log.for("quickheadlines.proxy").warn { "Redirect to unvalidated URL blocked: #{redirect_location}" }
+          raise AHK::Exception::HTTPException.new(403, "Disallowed redirect domain")
+        end
+
+        redirect_uri = URI.parse(redirect_location)
+        client.close
+        client = HTTP::Client.new(redirect_uri)
+        client.read_timeout = QuickHeadlines::Constants::HTTP_READ_TIMEOUT.seconds
+        client.write_timeout = QuickHeadlines::Constants::HTTP_WRITE_TIMEOUT.seconds
+        client.connect_timeout = QuickHeadlines::Constants::HTTP_CONNECT_TIMEOUT.seconds
+        response = client.get(redirect_uri.request_target, max_redirects: 0)
+      end
 
       if response.status_code >= 400
         raise AHK::Exception::HTTPException.new(502, "Bad Gateway")
