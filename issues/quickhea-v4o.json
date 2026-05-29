@@ -1,5 +1,5 @@
 {
-  "assignee": "",
+  "assignee": "kritoke",
   "blocked_by": [],
   "blocks": [],
   "created": "2026-05-29T10:28:58Z",
@@ -7,8 +7,8 @@
   "id": "quickhea-v4o",
   "labels": [],
   "priority": 3,
-  "status": "open",
+  "status": "in_progress",
   "title": "Bug: AdminController parse_admin_action silent failure handling",
   "type": "bug",
-  "updated_at": "2026-05-29T10:28:58Z"
+  "updated_at": "2026-05-29T12:09:44Z"
 }
