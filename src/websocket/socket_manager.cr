@@ -254,7 +254,11 @@ class SocketManager
         begin
           # Check if websocket is closed
           if conn.websocket.closed?
-            dead << conn
+            # Mark as unregistered BEFORE adding to dead array to prevent
+            # double-decrement if unregister() is called concurrently.
+            # unregister() creates a new Connection object with unregistered=true,
+            # so we'll have two different Connection objects pointing to the same socket.
+            dead << conn.copy_with(unregistered: true)
             next
           end
 
@@ -262,12 +266,12 @@ class SocketManager
           last_active = @last_activity[conn.websocket]?
           if last_active && (now - last_active).total_seconds > QuickHeadlines::Constants::STALE_CONNECTION_AGE
             Log.for("quickheadlines.websocket").debug { "Stale connection detected: #{conn.ip} (inactive for #{((now - last_active).total_seconds).round(0)}s)" }
-            dead << conn
+            dead << conn.copy_with(unregistered: true)
           end
         rescue IO::EOFError
           # Normal connection closure, not a dead connection
         rescue IO::Error
-          dead << conn
+          dead << conn.copy_with(unregistered: true)
         end
       end
     end
@@ -276,10 +280,8 @@ class SocketManager
 
     removed = 0
     dead.each do |conn|
-      # Let unregister_connection handle cleanup - it will close the channel
-      # and websocket, and properly decrement IP counts only once.
-      # We don't need to close here since the connection is already dead
-      # and unregister_connection will handle it safely.
+      # unregister_connection will see unregistered=true and skip the decrement
+      # since we already removed the connection from @connections above
       unregister_connection(conn)
       removed += 1
     end
