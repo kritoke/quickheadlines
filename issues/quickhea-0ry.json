@@ -1,0 +1,14 @@
+{
+  "assignee": "",
+  "blocked_by": [],
+  "blocks": [],
+  "created": "2026-05-29T10:29:07Z",
+  "description": "In extract_client_ip (utils.cr), when TRUSTED_PROXY is enabled, the code validates X-Forwarded-For IPs but only trusts them if they come from internal ranges. However, if an attacker can somehow inject a fake X-Forwarded-For header with an internal IP, and TRUSTED_PROXY is set (even wrongly), they could bypass IP-based rate limiting.\n\n**Location:** src/utils.cr:extract_client_ip\n\n**Current behavior:**\n1. Checks if TRUSTED_PROXY is set (via env var)\n2. If set, checks X-Forwarded-For\n3. Only trusts IPs from internal ranges or localhost\n\n**Issue:** Even with the internal IP check, if an attacker can send a request with X-Forwarded-For: 127.0.0.1, and TRUSTED_PROXY is somehow enabled (misconfiguration), the rate limiting would be bypassed using loopback IP.\n\n**Severity:** Medium - requires TRUSTED_PROXY to be set, which should only happen in controlled environments.\n\n**Recommendation:** Add a warning log when X-Forwarded-For is used, similar to the existing one for TRUSTED_PROXY being enabled.",
+  "id": "quickhea-0ry",
+  "labels": [],
+  "priority": 3,
+  "status": "open",
+  "title": "Bug: extract_client_ip TRUSTED_PROXY bypass for internal IPs",
+  "type": "security",
+  "updated_at": "2026-05-29T10:29:07Z"
+}
