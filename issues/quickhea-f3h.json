@@ -1,0 +1,14 @@
+{
+  "assignee": "",
+  "blocked_by": [],
+  "blocks": [],
+  "created": "2026-05-29T10:29:29Z",
+  "description": "In SocketManager.unregister, when we mark connection as unregistered=true and remove it from array, then decrement IP count within the same mutex block, there's still a potential race with the writer_fiber that also calls unregister_connection and tries to decrement IP count.\n\nEven though the code has decrement_ip_count_locked with negative count detection, the issue is that we mark unregistered=true but don't prevent the writer_fiber from calling unregister_connection. The writer_fiber will see unregistered=true and skip its own decrement, but by that time we may have already decremented.\n\nHowever, looking at the code more carefully - the issue is in cleanup_dead_connections which calls unregister_connection directly without setting the unregistered flag. This means cleanup_dead_connections could double-decrement if unregister is called between the websocket.closed? check and the actual cleanup.\n\nLocation: src/websocket/socket_manager.cr",
+  "id": "quickhea-f3h",
+  "labels": [],
+  "priority": 3,
+  "status": "open",
+  "title": "Bug: SocketManager IP tracking double-decrement protection flawed",
+  "type": "bug",
+  "updated_at": "2026-05-29T10:29:29Z"
+}
