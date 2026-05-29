@@ -1,5 +1,5 @@
 {
-  "assignee": "",
+  "assignee": "kritoke",
   "blocked_by": [],
   "blocks": [],
   "created": "2026-05-29T10:29:34Z",
@@ -7,8 +7,8 @@
   "id": "quickhea-q67",
   "labels": [],
   "priority": 2,
-  "status": "open",
+  "status": "in_progress",
   "title": "Bug: Connection unregistered flag not thread-safe in copy_with",
   "type": "bug",
-  "updated_at": "2026-05-29T10:29:34Z"
+  "updated_at": "2026-05-29T11:28:28Z"
 }
