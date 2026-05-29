@@ -1,0 +1,14 @@
+{
+  "assignee": "",
+  "blocked_by": [],
+  "blocks": [],
+  "created": "2026-05-29T10:28:58Z",
+  "description": "In AdminController.parse_admin_action, when body_content is empty, the method returns nil silently. This conflates empty body with invalid JSON. The error handling for empty body vs truncated body vs invalid JSON is not clearly distinguished. All three paths return nil, but have different causes and should probably have different handling.\n\n**Location:** src/controllers/admin_controller.cr:parse_admin_action\n\nConsider adding a debug log when body_content.empty? to distinguish from IO::EOFError path.",
+  "id": "quickhea-v4o",
+  "labels": [],
+  "priority": 3,
+  "status": "open",
+  "title": "Bug: AdminController parse_admin_action silent failure handling",
+  "type": "bug",
+  "updated_at": "2026-05-29T10:28:58Z"
+}
