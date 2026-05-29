@@ -55,7 +55,9 @@ module QuickHeadlines::Storage
         cutoff = (Time.utc - retention_days.days).to_s(QuickHeadlines::Constants::DB_TIME_FORMAT)
 
         @db.transaction do
-          result = @db.exec("DELETE FROM items WHERE pub_date < ? AND (cluster_id IS NULL OR cluster_id = id)", cutoff)
+          # Delete old unclustered items and singletons (cluster reps with no members)
+          # Keep cluster representatives that have other items in their cluster
+          result = @db.exec("DELETE FROM items WHERE pub_date < ? AND (cluster_id IS NULL OR (cluster_id = id AND id NOT IN (SELECT cluster_id FROM items WHERE cluster_id != id)))", cutoff)
           deleted_count = result.rows_affected
 
           if deleted_count > 0
@@ -83,13 +85,13 @@ module QuickHeadlines::Storage
         if current_size_mb > max_size_mb
           Log.for("quickheadlines.storage").warn { "Database size (#{current_size_mb.round(2)}MB) exceeds limit (#{max_size_mb}MB), running aggressive cleanup..." }
           cutoff = (Time.utc - QuickHeadlines::Constants::AGGRESSIVE_CLEANUP_DAYS.days).to_s(QuickHeadlines::Constants::DB_TIME_FORMAT)
-          result = @db.exec("DELETE FROM items WHERE pub_date < ? AND (cluster_id IS NULL OR cluster_id = id)", cutoff)
+          result = @db.exec("DELETE FROM items WHERE pub_date < ? AND (cluster_id IS NULL OR (cluster_id = id AND id NOT IN (SELECT cluster_id FROM items WHERE cluster_id != id)))", cutoff)
           deleted_count = result.rows_affected
           Log.for("quickheadlines.storage").info { "Aggressive cleanup deleted #{deleted_count} old articles" }
 
           if File.size(@db_path).to_f64 / (1024 * 1024) > max_size_mb
             cutoff = (Time.utc - QuickHeadlines::Constants::VERY_AGGRESSIVE_CLEANUP_DAYS.days).to_s(QuickHeadlines::Constants::DB_TIME_FORMAT)
-            result = @db.exec("DELETE FROM items WHERE pub_date < ? AND (cluster_id IS NULL OR cluster_id = id)", cutoff)
+            result = @db.exec("DELETE FROM items WHERE pub_date < ? AND (cluster_id IS NULL OR (cluster_id = id AND id NOT IN (SELECT cluster_id FROM items WHERE cluster_id != id)))", cutoff)
             deleted_count = result.rows_affected
             Log.for("quickheadlines.storage").info { "Very aggressive cleanup deleted #{deleted_count} recent-old articles" }
           end
