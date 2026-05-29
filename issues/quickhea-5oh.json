@@ -1,0 +1,14 @@
+{
+  "assignee": "",
+  "blocked_by": [],
+  "blocks": [],
+  "created": "2026-05-29T10:36:15Z",
+  "description": "In CleanupStore.cleanup_old_articles(), the DELETE query has a faulty condition:\n\nUsage: crystal [command] [switches] [program file] [--] [arguments]\n\nCommand:\n    init                     generate a new project\n    build                    build an executable\n    clear_cache              clear the compiler cache\n    docs                     generate documentation\n    env                      print Crystal environment information\n    eval                     eval code from args or standard input\n    i/interactive            starts interactive Crystal\n    play                     starts Crystal playground server\n    run (default)            build and run program\n    spec                     build and run specs (in spec directory)\n    tool                     run a tool\n    help, --help, -h         show this help\n    version, --version, -v   show version\n\nRun a command followed by --help to see command specific information, ex:\n    crystal \u003ccommand\u003e --help\n\nThe condition  is problematic:\n1.  - correctly targets unclustered items\n2.  - incorrectly targets ALL cluster representative items (where cluster_id equals its own id)\n\nThis means ALL cluster representatives older than cutoff are deleted, regardless of cluster membership. The intended behavior should be to preserve representatives of multi-item clusters.\n\nA representative item with cluster_id = id means:\n- It's the anchor item of its cluster (not a member)\n- It typically has the latest/most relevant content in the cluster\n- Deleting it breaks clustering display\n\nThe fix should distinguish between:\n- Items with cluster_id = id (singletons/representatives) - should preserve if cluster has other members\n- Items with cluster_id IS NULL - should delete based on age\n\nAlternatively, the condition should be  only, or the query should verify cluster membership before deletion.\n\nCode location: src/storage/cleanup_store.cr - cleanup_old_articles method",
+  "id": "quickhea-5oh",
+  "labels": [],
+  "priority": 2,
+  "status": "open",
+  "title": "Bug: cleanup_old_articles cluster_id condition logic error",
+  "type": "bug",
+  "updated_at": "2026-05-29T10:36:15Z"
+}
