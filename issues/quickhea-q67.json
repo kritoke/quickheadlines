@@ -2,13 +2,14 @@
   "assignee": "kritoke",
   "blocked_by": [],
   "blocks": [],
+  "closed_at": "2026-05-29T11:28:53Z",
   "created": "2026-05-29T10:29:34Z",
   "description": "In SocketManager.unregister, we use connection.copy_with(unregistered: true) to create a replacement for the connection in the array. However, copy_with on a record creates a shallow copy - the websocket reference is shared. More importantly, the writer_fiber reads connection.unregistered on the ORIGINAL connection object, but we've modified what the array points to.\n\nThe issue: we remove the original connection from @connections and add the modified copy. But writer_fiber holds a reference to the original connection object. So when writer_fiber checks connection.unregistered, it sees false (original value), not true (modified copy value).\n\nLocation: src/websocket/socket_manager.cr:unregister",
   "id": "quickhea-q67",
   "labels": [],
   "priority": 2,
-  "status": "in_progress",
+  "status": "closed",
   "title": "Bug: Connection unregistered flag not thread-safe in copy_with",
   "type": "bug",
-  "updated_at": "2026-05-29T11:28:28Z"
+  "updated_at": "2026-05-29T11:28:53Z"
 }
