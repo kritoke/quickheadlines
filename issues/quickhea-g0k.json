@@ -1,5 +1,5 @@
 {
-  "assignee": "",
+  "assignee": "kritoke",
   "blocked_by": [],
   "blocks": [],
   "created": "2026-05-29T10:30:04Z",
@@ -7,8 +7,8 @@
   "id": "quickhea-g0k",
   "labels": [],
   "priority": 2,
-  "status": "open",
+  "status": "in_progress",
   "title": "Bug: cleanup_old_articles cluster_id condition logic error",
   "type": "bug",
-  "updated_at": "2026-05-29T10:30:04Z"
+  "updated_at": "2026-05-29T11:28:53Z"
 }
