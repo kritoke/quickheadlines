@@ -2,13 +2,14 @@
   "assignee": "kritoke",
   "blocked_by": [],
   "blocks": [],
+  "closed_at": "2026-05-29T12:13:53Z",
   "created": "2026-05-29T10:30:27Z",
   "description": "In ContentService.store_content, the retry logic catches generic Exception for DB errors and SQLite3::Exception. However, catching generic Exception could mask programming errors (e.g., NoMethodError, TypeError) and cause infinite retry loops on bugs.\n\n**Issue:** The code catches 'ex : Exception' for DB::Error and SQLite3::Exception, but also has a generic 'rescue ex' that re-raises. If any other exception type occurs (programming bug), the specific catch blocks would not match, and we'd hit the generic 'rescue ex' which re-raises, causing a retry loop if the same code path is hit.\n\nActually wait - the generic 'rescue ex' re-raises, so it won't cause infinite retry. But the issue is the retry only happens for DB::Error or SQLite3::Exception, which is correct. However, the logging in the final 'rescue ex' says 'unexpected error' which is correct.\n\nLet me reconsider - the code is actually fine. The generic rescue at the end just re-raises, so bugs will propagate correctly. No issue here.\n\nLet me focus on other potential bugs.\n\nIn FeedFetcher.do_fetch_with_retry, there's a potential issue with the loop not having a sleep between iterations when retries == MAX_RETRIES but should_abort_fetch? doesn't abort (edge case where elapsed_seconds \u003c= timeout but retries already at max).\n\nActually, looking more carefully, should_abort_fetch? returns early when retries \u003e= MAX_RETRIES, so we'd exit the loop. No bug there.\n\nLocation: src/services/content_service.cr",
   "id": "quickhea-5lq",
   "labels": [],
   "priority": 4,
-  "status": "in_progress",
+  "status": "closed",
   "title": "Bug: ContentService store_content catches Exception instead of specific errors",
   "type": "bug",
-  "updated_at": "2026-05-29T12:12:57Z"
+  "updated_at": "2026-05-29T12:13:53Z"
 }
