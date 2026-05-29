@@ -1,5 +1,5 @@
 {
-  "assignee": "",
+  "assignee": "kritoke",
   "blocked_by": [],
   "blocks": [],
   "created": "2026-05-29T10:29:46Z",
@@ -7,8 +7,8 @@
   "id": "quickhea-3tj",
   "labels": [],
   "priority": 4,
-  "status": "open",
+  "status": "in_progress",
   "title": "Bug: RateLimiter retry_after returns 0 for valid token",
   "type": "bug",
-  "updated_at": "2026-05-29T10:29:46Z"
+  "updated_at": "2026-05-29T12:12:32Z"
 }
