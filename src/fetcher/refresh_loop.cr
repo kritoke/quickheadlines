@@ -28,7 +28,7 @@ module GCCollector
 
   def self.maybe_collect : Nil
     now = Time.utc
-    if now - @@last_gc_collect >= 90.seconds
+    if now - @@last_gc_collect >= 5.minutes
       GC.collect
       @@last_gc_collect = now
       Log.for("quickheadlines.gc").debug { "Triggered GC.collect to release memory" }
@@ -212,7 +212,12 @@ end
 private def check_semaphore_health
   status = semaphore_health_status
   if status[:available] != status[:expected]
-    Log.for("quickheadlines.feed").warn { "Semaphore health check: #{status[:available]}/#{status[:expected]} slots available" }
+    missing = status[:expected] - status[:available]
+    Log.for("quickheadlines.feed").warn { "Semaphore health check: #{status[:available]}/#{status[:expected]} slots available, repairing #{missing} missing" }
+    missing.times do
+      CONCURRENCY_SEMAPHORE.send(nil)
+      CONCURRENCY_AVAILABLE.add(1, :relaxed)
+    end
   end
 end
 
@@ -537,14 +542,14 @@ private def run_timed_refresh(state : RefreshLoopState, cache : FeedCache, db_se
     Log.for("quickheadlines.feed").debug { "Starting save_feed_cache..." }
     cache.save(config_snapshot.cache_retention_hours, config_snapshot.max_cache_size_mb)
     Log.for("quickheadlines.feed").debug { "save_feed_cache complete" }
-    GC.collect
+    GCCollector.maybe_collect
     refresh_duration
   when timeout(outer_timeout)
     cancel_ch.send(true)
     StateStore.refreshing = false
     Log.for("quickheadlines.feed").error { "refresh_all timed out after #{outer_timeout.total_seconds.round}s - worker signalled to cancel" }
     RefreshHealthMonitor.record_failure
-    GC.collect
+    GCCollector.maybe_collect
     (Time.utc - refresh_start_time).total_seconds
   end
 end
