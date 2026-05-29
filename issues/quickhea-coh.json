@@ -2,13 +2,14 @@
   "assignee": "kritoke",
   "blocked_by": [],
   "blocks": [],
+  "closed_at": "2026-05-29T11:55:51Z",
   "created": "2026-05-29T10:35:54Z",
   "description": "In ProxyController.proxy_image_fetch(), after validate_proxy_url() passes, the code creates a new HTTP::Client directly from the raw URL string without re-validating the redirect destination. This bypasses domain validation for redirects.\n\nAdditionally, there is no approved domain list that could be used for quickhea-kim since we have over 200 feeds. The current validation relies only on ALLOWED_PROXY_DOMAINS constant but doesn't enforce it consistently on redirects.\n\nExpected: All proxy image fetches (including redirects) should be validated against the allowed domain list.\n\nCode location: src/controllers/proxy_controller.cr - proxy_image_fetch() method",
   "id": "quickhea-coh",
   "labels": [],
   "priority": 2,
-  "status": "in_progress",
+  "status": "closed",
   "title": "Bug: ProxyController redirect URL validation gap",
   "type": "bug",
-  "updated_at": "2026-05-29T11:55:12Z"
+  "updated_at": "2026-05-29T11:55:51Z"
 }
