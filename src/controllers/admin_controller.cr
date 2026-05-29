@@ -211,7 +211,10 @@ class QuickHeadlines::Controllers::AdminController < QuickHeadlines::Controllers
     return unless body_io
 
     body_content = read_body_safe(body_io)
-    return if body_content.empty?
+    if body_content.empty?
+      Log.for("quickheadlines.app").debug { "Admin action: empty request body" }
+      return
+    end
 
     JSON.parse(body_content)["action"]?.try(&.as_s?)
   rescue IO::EOFError
