@@ -2,13 +2,14 @@
   "assignee": "kritoke",
   "blocked_by": [],
   "blocks": [],
+  "closed_at": "2026-05-29T12:12:49Z",
   "created": "2026-05-29T10:29:46Z",
   "description": "In RateLimiter.retry_after, when times is not empty, it calculates the oldest timestamp and returns @window_seconds - elapsed. If elapsed \u003e @window_seconds (shouldn't happen if cleanup is working), the result could be negative, but we use .max which clamps to 1.\n\nHowever, there's a potential issue: if the oldest timestamp is very old (cleanup failed), we could get a very small retry_after, like 1 second. This could allow rapid retry attempts.\n\nAlso, if window_seconds is 0 (edge case), we return @window_seconds which is 0.\n\nLocation: src/rate_limiter.cr:retry_after",
   "id": "quickhea-3tj",
   "labels": [],
   "priority": 4,
-  "status": "in_progress",
+  "status": "closed",
   "title": "Bug: RateLimiter retry_after returns 0 for valid token",
   "type": "bug",
-  "updated_at": "2026-05-29T12:12:32Z"
+  "updated_at": "2026-05-29T12:12:49Z"
 }
