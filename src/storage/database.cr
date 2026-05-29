@@ -121,18 +121,21 @@ def create_schema(db : DB::Database, db_path : String)
 
   run_migrations(db)
 
-  cleanup_result = db.exec(<<-SQL
-    DELETE FROM items
-    WHERE id NOT IN (
-      SELECT MAX(id)
-      FROM items
-      GROUP BY feed_id, link
+  # Wrap duplicate cleanup in a transaction for atomicity
+  db.transaction do
+    cleanup_result = db.exec(<<-SQL
+      DELETE FROM items
+      WHERE id NOT IN (
+        SELECT MAX(id)
+        FROM items
+        GROUP BY feed_id, normalized_link
+      )
+      SQL
     )
-    SQL
-  )
 
-  if cleanup_result.rows_affected > 0
-    Log.for("quickheadlines.storage").debug { "Cleaned up #{cleanup_result.rows_affected} duplicate items from database" }
+    if cleanup_result.rows_affected > 0
+      Log.for("quickheadlines.storage").info { "Cleaned up #{cleanup_result.rows_affected} duplicate items from database" }
+    end
   end
 end
 
