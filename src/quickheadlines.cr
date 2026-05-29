@@ -128,7 +128,14 @@ begin
       next
     end
 
-    if origin && host
+    # If origin is provided, host MUST also be provided for validation
+    if origin
+      if host.nil? || host.empty?
+        Log.for("quickheadlines.websocket").warn { "Rejected WebSocket: Origin header present but Host header missing" }
+        ws.close
+        next
+      end
+
       origin_host = begin
         uri = URI.parse(origin)
         uri.host.try(&.downcase)
