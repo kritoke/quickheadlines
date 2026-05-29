@@ -2,6 +2,7 @@
   "assignee": "kritoke",
   "blocked_by": [],
   "blocks": [],
+  "closed_at": "2026-05-29T11:28:28Z",
   "created": "2026-05-29T10:28:42Z",
   "description": "In FaviconStorage.save_favicon, when a tiny favicon triggers Google fallback, the function returns google_saved path but the tiny favicon was written to disk first. If Google fallback fails, we return nil but the tiny favicon file exists. Subsequent calls will see the tiny favicon exists and use it instead of retrying.\n\nMore critically: the hash is computed from the original URL before checking if we should use Google fallback. So if we delete the tiny favicon and save the Google version, the filename is still based on the original hash, which is correct. But there's a race window between File.exists? check and File.write where multiple threads could both pass the check and write simultaneously.\n\n**Location:** src/favicon_storage.cr\n\n**Race condition in save_favicon:**\n1. Thread A: File.exists?(filepath) returns false\n2. Thread B: File.exists?(filepath) returns false  \n3. Thread A: File.write(filepath, image_data)\n4. Thread B: File.write(filepath, image_data) - overwrites Thread A's data\n\nThe @@mutex only covers the check-and-write together, but the subsequent Google fallback check and potential delete happen outside the mutex, potentially causing the tiny favicon to be re-created if another thread reads before the Google fallback completes.\n\n**Fix:** Keep everything related to a single favicon save operation (including potential fallback) inside the mutex.",
   "id": "quickhea-u8r",
@@ -13,8 +14,8 @@
     }
   ],
   "priority": 2,
-  "status": "in_progress",
+  "status": "closed",
   "title": "Bug: FaviconStorage race condition - hash mismatch after save",
   "type": "bug",
-  "updated_at": "2026-05-29T11:27:53Z"
+  "updated_at": "2026-05-29T11:28:28Z"
 }
