@@ -55,7 +55,7 @@ module QuickHeadlines::Services
             raise ex
           end
         rescue ex
-          # Unexpected exception - log and re-raise
+          # Unexpected exception - log and re-raise (no retry for programming errors)
           Log.for("quickheadlines.azurite").error(exception: ex) { "ContentService.store_content: unexpected error storing content for #{item_link}: #{ex.class} - #{ex.message}" }
           raise ex
         end
