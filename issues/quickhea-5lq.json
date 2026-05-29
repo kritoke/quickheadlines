@@ -1,5 +1,5 @@
 {
-  "assignee": "",
+  "assignee": "kritoke",
   "blocked_by": [],
   "blocks": [],
   "created": "2026-05-29T10:30:27Z",
@@ -7,8 +7,8 @@
   "id": "quickhea-5lq",
   "labels": [],
   "priority": 4,
-  "status": "open",
+  "status": "in_progress",
   "title": "Bug: ContentService store_content catches Exception instead of specific errors",
   "type": "bug",
-  "updated_at": "2026-05-29T10:30:27Z"
+  "updated_at": "2026-05-29T12:12:57Z"
 }
