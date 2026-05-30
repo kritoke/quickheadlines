@@ -14,43 +14,42 @@ class QuickHeadlines::Controllers::ProxyController < QuickHeadlines::Controllers
     end
 
     raise AHK::Exception::BadRequest.new("Missing 'url' parameter") if url.nil? || url.strip.empty?
-    raise AHK::Exception::HTTPException.new(403, "Disallowed proxy domain") unless validate_proxy_url(url)
 
     check_rate_limit!(request, "proxy", 30, 60)
 
+    # proxy_image_fetch validates URL + resolves DNS with pinning
     proxy_image_fetch(url, max_bytes)
   end
 
   private def proxy_image_fetch(url : String, max_bytes : Int64) : AHTTP::Response
     uri = URI.parse(url)
-    client = HTTP::Client.new(uri)
-    client.read_timeout = QuickHeadlines::Constants::HTTP_READ_TIMEOUT.seconds
-    client.write_timeout = QuickHeadlines::Constants::HTTP_WRITE_TIMEOUT.seconds
-    client.connect_timeout = QuickHeadlines::Constants::HTTP_CONNECT_TIMEOUT.seconds
+
+    # Validate and resolve DNS once — pin to prevent rebinding
+    valid, resolved_ip = validate_proxy_url_with_ip(url)
+    raise AHK::Exception::HTTPException.new(403, "Disallowed proxy domain") unless valid
+
+    client = create_pinned_client(uri, resolved_ip)
 
     begin
-      # Disable automatic redirect following to validate each redirect destination
       response = client.get(uri.request_target)
 
-      # Handle redirect manually with validation
+      # Handle redirect manually with validation + DNS pinning
       while response.status_code >= 300 && response.status_code < 400
         redirect_location = response.headers["Location"]?
         unless redirect_location
           raise AHK::Exception::HTTPException.new(502, "Bad Gateway")
         end
 
-        # Validate the redirect URL before following
-        unless validate_proxy_url(redirect_location)
+        # Validate redirect URL and get pinned IP
+        redirect_valid, redirect_ip = validate_proxy_url_with_ip(redirect_location)
+        unless redirect_valid
           Log.for("quickheadlines.proxy").warn { "Redirect to unvalidated URL blocked: #{redirect_location}" }
           raise AHK::Exception::HTTPException.new(403, "Disallowed redirect domain")
         end
 
         redirect_uri = URI.parse(redirect_location)
         client.close
-        client = HTTP::Client.new(redirect_uri)
-        client.read_timeout = QuickHeadlines::Constants::HTTP_READ_TIMEOUT.seconds
-        client.write_timeout = QuickHeadlines::Constants::HTTP_WRITE_TIMEOUT.seconds
-        client.connect_timeout = QuickHeadlines::Constants::HTTP_CONNECT_TIMEOUT.seconds
+        client = create_pinned_client(redirect_uri, redirect_ip)
         response = client.get(redirect_uri.request_target)
       end
 

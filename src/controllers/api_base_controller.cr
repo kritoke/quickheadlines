@@ -73,38 +73,69 @@ class QuickHeadlines::Controllers::ApiBaseController < Athena::Framework::Contro
     extract_client_ip(request)
   end
 
-  private def validate_proxy_url(url : String) : Bool
+  # Validate proxy URL and return resolved IP to prevent DNS rebinding.
+  # Returns {valid, ip_address} where ip_address is the resolved IP for pinning.
+  private def validate_proxy_url_with_ip(url : String) : {Bool, String?}
     uri = URI.parse(url)
-    return false unless uri.scheme == "https"
+    return {false, nil} unless uri.scheme == "https"
 
     host = uri.host
-    return false if host.nil? || host.empty?
+    return {false, nil} if host.nil? || host.empty?
 
     host = host.downcase
-    return false unless QuickHeadlines::Constants::ALLOWED_PROXY_DOMAINS.includes?(host)
-    return false if uri.user || uri.password
-    return false if uri.port && uri.port != QuickHeadlines::Constants::HTTPS_PORT
+    return {false, nil} unless QuickHeadlines::Constants::ALLOWED_PROXY_DOMAINS.includes?(host)
+    return {false, nil} if uri.user || uri.password
+    return {false, nil} if uri.port && uri.port != QuickHeadlines::Constants::HTTPS_PORT
 
-    # Additional SSRF protection: resolve the hostname and verify the IP is not private/internal
-    # This helps prevent DNS rebinding and SSRF attacks via open redirects on allowed domains
+    # Resolve hostname once and verify IP is not private/internal.
+    # Returns the IP for use in proxy_image_fetch to prevent DNS rebinding.
     begin
       addr_info = Socket::Addrinfo.resolve(host, 443, type: Socket::Type::STREAM)
       if addr = addr_info.first?
-        ip_address = addr.ip_address.to_s
+        ip_address = addr.ip_address.address
         if ::Utils.private_host?(ip_address)
           Log.for("quickheadlines.proxy").warn { "SSRF protection: #{host} resolved to private IP #{ip_address}" }
-          return false
+          return {false, nil}
         end
+        return {true, ip_address}
       end
     rescue ex : Socket::Error | IO::Error
-      # DNS resolution failed - still allow the URL if domain is in allowlist
-      # This handles cases where DNS might be temporarily unavailable
       Log.for("quickheadlines.proxy").debug { "DNS resolution failed for #{host}: #{ex.message}" }
     end
 
-    true
+    # DNS failed but domain is in allowlist — allow with nil IP (will resolve normally)
+    {true, nil}
   rescue URI::Error
-    false
+    {false, nil}
+  end
+
+  # Backward-compatible wrapper for callers that only need bool
+  private def validate_proxy_url(url : String) : Bool
+    valid, _ = validate_proxy_url_with_ip(url)
+    valid
+  end
+
+  # Create HTTP::Client with DNS pinned to resolved_ip to prevent rebinding.
+  # If resolved_ip is nil, falls back to normal DNS resolution.
+  private def create_pinned_client(uri : URI, resolved_ip : String?) : HTTP::Client
+    if ip = resolved_ip
+      # Pin to resolved IP, use hostname for TLS SNI and Host header
+      host = uri.host || ""
+      port = uri.port || 443
+      tcp = TCPSocket.new(ip, port, connect_timeout: QuickHeadlines::Constants::HTTP_CONNECT_TIMEOUT.seconds)
+      tcp.read_timeout = QuickHeadlines::Constants::HTTP_READ_TIMEOUT.seconds
+      tcp.write_timeout = QuickHeadlines::Constants::HTTP_WRITE_TIMEOUT.seconds
+      tls_ctx = OpenSSL::SSL::Context::Client.new
+      tls_ctx.verify_mode = OpenSSL::SSL::VerifyMode::PEER
+      ssl = OpenSSL::SSL::Socket::Client.new(tcp, tls_ctx, hostname: host, sync_close: true)
+      HTTP::Client.new(ssl, host: host, port: port)
+    else
+      client = HTTP::Client.new(uri)
+      client.read_timeout = QuickHeadlines::Constants::HTTP_READ_TIMEOUT.seconds
+      client.write_timeout = QuickHeadlines::Constants::HTTP_WRITE_TIMEOUT.seconds
+      client.connect_timeout = QuickHeadlines::Constants::HTTP_CONNECT_TIMEOUT.seconds
+      client
+    end
   end
 
   private def validate_int(value : String?, default : Int32, min : Int32? = nil, max : Int32? = nil) : Int32
