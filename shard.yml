@@ -14,7 +14,7 @@ dependencies:
     version: ~> 0.22.0
   sqlite3:
     github: crystal-lang/crystal-sqlite3
-    version: ~> 0.22.0
+    version: ~> 0.23.0
   lexis-minhash:
     github: kritoke/lexis-minhash
     version: "~> 0.5.0"
@@ -32,7 +32,7 @@ dependencies:
     commit: 386ccaf068bf204863c67e531c50d471e1e83ae7
   azurite:
     github: kritoke/azurite.cr
-    commit: 1bce90ffcca7e09eb4a73346e933b3c860e9a963
+    commit: 9e0547a976865543186ebdbfbb99f95bc816dfe5
 
 development_dependencies:
   ameba:
