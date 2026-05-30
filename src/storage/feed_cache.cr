@@ -170,6 +170,11 @@ class FeedCache
     feed_repository.count_items(url)
   end
 
+  # Batch count items for multiple feed URLs in a single query.
+  def item_counts(urls : Array(String)) : Hash(String, Int32)
+    feed_repository.count_items_batch(urls)
+  end
+
   def size : Int32
     feed_repository.count_all
   end

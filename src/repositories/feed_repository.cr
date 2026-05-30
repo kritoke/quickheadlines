@@ -77,6 +77,29 @@ module QuickHeadlines::Repositories
       result ? result.to_i : 0
     end
 
+    # Batch count items for multiple feed URLs in a single query.
+    # Returns url => count mapping. Missing URLs default to 0.
+    def count_items_batch(urls : Array(String)) : Hash(String, Int32)
+      return {} of String => Int32 if urls.empty?
+
+      counts = {} of String => Int32
+      urls.each { |url| counts[url] = 0 }
+
+      placeholders = urls.map { '?' }.join(',')
+      db.query(
+        "SELECT feeds.url, COUNT(*) FROM items JOIN feeds ON items.feed_id = feeds.id WHERE feeds.url IN (#{placeholders}) GROUP BY feeds.url",
+        args: urls.map { |u| u.as(::DB::Any) }
+      ) do |rows|
+        rows.each do
+          url = rows.read(String)
+          count = rows.read(Int64).to_i
+          counts[url] = count
+        end
+      end
+
+      counts
+    end
+
     def upsert_with_items(feed_data : FeedData) : Nil
       db.transaction do
         feed_id = upsert_feed(feed_data)

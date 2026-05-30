@@ -134,6 +134,19 @@ module QuickHeadlines::Services
 
       is_all_tab = active_tab.to_s.downcase == "all"
 
+      # Collect all feed URLs for batch count query
+      all_urls = [] of String
+      if is_all_tab
+        feeds_snapshot.each { |f| all_urls << f.url unless f.failed? }
+        tabs_snapshot.each { |tab| tab.feeds.each { |f| all_urls << f.url unless f.failed? } }
+      else
+        tab_feeds = tabs_snapshot.find { |tab| tab.name.downcase == active_tab.downcase }
+        tab_feeds.try(&.feeds.each { |f| all_urls << f.url unless f.failed? })
+      end
+
+      # Single batch query for all item counts
+      item_counts = cache.item_counts(all_urls)
+
       feeds_response = if is_all_tab
                          feed_tab_pairs = [] of {feed: FeedData, tab_name: String}
 
@@ -147,11 +160,11 @@ module QuickHeadlines::Services
                            end
                          end
 
-                         feed_tab_pairs.map { |entry| build_feed_response(entry[:feed], cache, tab_name: entry[:tab_name], total_count: cache.item_count(entry[:feed].url), display_item_limit: item_limit) }
+                         feed_tab_pairs.map { |entry| build_feed_response(entry[:feed], cache, tab_name: entry[:tab_name], total_count: item_counts[entry[:feed].url]? || 0, display_item_limit: item_limit) }
                        else
                          tab_feeds = tabs_snapshot.find { |tab| tab.name.downcase == active_tab.downcase }
                          if tab_feeds
-                           tab_feeds.feeds.select { |feed| !feed.failed? }.map { |feed| build_feed_response(feed, cache, tab_name: active_tab, total_count: cache.item_count(feed.url), display_item_limit: item_limit) }
+                           tab_feeds.feeds.select { |feed| !feed.failed? }.map { |feed| build_feed_response(feed, cache, tab_name: active_tab, total_count: item_counts[feed.url]? || 0, display_item_limit: item_limit) }
                          else
                            [] of QuickHeadlines::DTOs::FeedResponse
                          end
@@ -163,7 +176,7 @@ module QuickHeadlines::Services
                                      tab_with_sr = tabs_snapshot.find { |tab| tab.name.downcase == active_tab.downcase }
                                      if tab_with_sr && tab_with_sr.software_releases.present?
                                        tab_with_sr.software_releases.map do |feed|
-                                         build_feed_response(feed, cache, tab_name: active_tab, total_count: cache.item_count(feed.url), display_item_limit: item_limit)
+                                         build_feed_response(feed, cache, tab_name: active_tab, total_count: item_counts[feed.url]? || 0, display_item_limit: item_limit)
                                        end
                                      else
                                        [] of QuickHeadlines::DTOs::FeedResponse
