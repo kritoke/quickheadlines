@@ -52,6 +52,42 @@ private def best_available_feed(feed : Feed, fetched : FeedData?, existing : Fee
   fetched || existing || FeedFetcher.instance.build_error_feed(feed, "Failed to fetch")
 end
 
+# Per-feed background fetch with semaphore management.
+# Extracted from spawn block to avoid capturing entire existing_data hash in closure.
+# Only previous_feed_data (single FeedData?) is captured, not the full hash.
+private def fetch_single_feed_in_background(feed : Feed, config : Config, previous_feed_data : FeedData?, channel : Channel(FeedData?), index : Int32)
+  acquire_semaphore
+  begin
+    RefreshHealthMonitor.feed_fetch_started
+    result = fetch_single_feed_with_timeout(feed, config, previous_feed_data, index)
+    begin
+      channel.send(result)
+    rescue Channel::ClosedError
+    end
+  rescue ex
+    Log.for("quickheadlines.feed").error(exception: ex) { "fetch_feeds_concurrently: error fetching #{feed.url}" }
+    if previous_feed_data && !previous_feed_data.failed?
+      Log.for("quickheadlines.feed").info { "fetch_feeds_concurrently: using cached data after outer error for #{feed.url}" }
+      begin
+        channel.send(previous_feed_data)
+      rescue Channel::ClosedError
+      end
+    else
+      begin
+        channel.send(FeedFetcher.instance.build_error_feed(feed, "Error: #{ex.class}"))
+      rescue Channel::ClosedError
+      end
+    end
+  ensure
+    RefreshHealthMonitor.feed_fetch_completed
+    begin
+      release_semaphore
+    rescue ex
+      Log.for("quickheadlines.feed").error(exception: ex) { "Failed to release semaphore for #{feed.url}" }
+    end
+  end
+end
+
 # Uses select+timeout pattern to ensure fetch completes within time limit.
 # NOTE: The inner fiber may continue running after timeout and will complete when it can
 # send to the buffered channel (non-blocking send). This prevents fiber accumulation
@@ -234,42 +270,10 @@ private def fetch_feeds_concurrently(all_configs : Hash(String, Feed), existing_
   all_configs.each_value do |feed|
     current_index = feed_index
     feed_index += 1
+    # Extract previous_feed_data BEFORE spawn to avoid capturing entire existing_data hash in closure
+    previous_feed_data = existing_data[feed.url]?
     spawn(name: "feed_fetch_outer_#{current_index}") do
-      acquire_semaphore
-      begin
-        previous_feed_data = existing_data[feed.url]?
-        # Per-feed timeout to prevent one hung fetch from blocking the semaphore slot
-        # This is critical for preventing semaphore exhaustion over long running sessions
-        RefreshHealthMonitor.feed_fetch_started
-        result = fetch_single_feed_with_timeout(feed, config, previous_feed_data, current_index)
-        begin
-          channel.send(result)
-        rescue Channel::ClosedError
-        end
-      rescue ex
-        Log.for("quickheadlines.feed").error(exception: ex) { "fetch_feeds_concurrently: error fetching #{feed.url}" }
-        previous_feed_data = existing_data[feed.url]?
-        if previous_feed_data && !previous_feed_data.failed?
-          Log.for("quickheadlines.feed").info { "fetch_feeds_concurrently: using cached data after outer error for #{feed.url}" }
-          begin
-            channel.send(previous_feed_data)
-          rescue Channel::ClosedError
-          end
-        else
-          begin
-            channel.send(FeedFetcher.instance.build_error_feed(feed, "Error: #{ex.class}"))
-          rescue Channel::ClosedError
-          end
-        end
-      ensure
-        RefreshHealthMonitor.feed_fetch_completed
-        # Ensure semaphore slot is always returned, even on exceptions
-        begin
-          release_semaphore
-        rescue ex
-          Log.for("quickheadlines.feed").error(exception: ex) { "Failed to release semaphore for #{feed.url}" }
-        end
-      end
+      fetch_single_feed_in_background(feed, config, previous_feed_data, channel, current_index)
     end
     Fiber.yield
   end
@@ -559,22 +563,13 @@ private def sleep_between_cycles(state : RefreshLoopState) : Nil
   sleep_duration = state.refresh_interval_seconds.seconds
   outer_sleep_timeout = state.sleep_timeout_seconds.seconds
 
-  sleep_done = Channel(Nil).new(1)
-  spawn do
-    begin
-      sleep sleep_duration
-      sleep_done.send(nil)
-    rescue ex
-      Log.for("quickheadlines.feed").error(exception: ex) { "Sleep timer fiber error" }
-    end
-  end
-
+  # Use single timeout as watchdog — no extra fiber needed
   select
-  when sleep_done.receive
+  when timeout(sleep_duration)
+    # Normal completion
   when timeout(outer_sleep_timeout)
     Log.for("quickheadlines.feed").error { "refresh loop sleep timed out after #{outer_sleep_timeout.total_seconds.round}s" }
   end
-  sleep_done.close unless sleep_done.closed?
 end
 
 # Log heartbeat info every N cycles.
@@ -594,17 +589,9 @@ private def start_health_reporter : Nil
   spawn(name: "health_monitor_reporter") do
     loop do
       begin
-        health_check_done = Channel(Nil).new(1)
-        spawn do
-          begin
-            ::sleep(5.minutes)
-            health_check_done.send(nil)
-          rescue ex
-            Log.for("quickheadlines.feed").error(exception: ex) { "Health check timer failed" }
-          end
-        end
+        # Direct sleep instead of spawning a helper fiber each iteration
         select
-        when health_check_done.receive
+        when timeout(5.minutes)
           break if QuickHeadlines.shutting_down?
           status = RefreshHealthMonitor.status
           if status[:failures] > 0 || status[:last_complete] == 0
@@ -613,7 +600,8 @@ private def start_health_reporter : Nil
             end
           end
         when timeout(30.seconds)
-          Log.for("quickheadlines.feed").warn { "Health reporter check timed out, continuing" }
+          # Periodic shutdown check
+          break if QuickHeadlines.shutting_down?
         end
       rescue ex
         Log.for("quickheadlines.feed").error(exception: ex) { "Health monitor reporter error" }
@@ -662,18 +650,9 @@ def start_refresh_loop(config_path : String, cache : FeedCache, db_service : Dat
         if state.first_run?
           state.mark_first_run_done
           run_initial_refresh(state, cache, db_service)
-          # Wait for initial refresh with timeout protection
-          initial_wait_done = Channel(Nil).new(1)
-          spawn do
-            begin
-              ::sleep(state.refresh_interval_seconds.seconds)
-              initial_wait_done.send(nil)
-            rescue ex
-              Log.for("quickheadlines.feed").error(exception: ex) { "Initial refresh wait timer failed" }
-            end
-          end
+          # Wait for initial refresh with timeout protection — no extra fiber needed
           select
-          when initial_wait_done.receive
+          when timeout(state.refresh_interval_seconds.seconds)
             # Normal completion
           when timeout(state.outer_timeout_seconds.seconds)
             Log.for("quickheadlines.feed").warn { "Initial refresh wait timed out after #{state.outer_timeout_seconds}s" }
@@ -696,18 +675,9 @@ def start_refresh_loop(config_path : String, cache : FeedCache, db_service : Dat
         StateStore.refreshing = false
         RefreshHealthMonitor.record_failure
         state.reset_cycle_count
-        # Timeout-protected sleep before restart
-        restart_done = Channel(Nil).new(1)
-        spawn do
-          begin
-            ::sleep(60.seconds)
-            restart_done.send(nil)
-          rescue ex
-            Log.for("quickheadlines.feed").error(exception: ex) { "Restart delay timer failed" }
-          end
-        end
+        # Timeout-protected delay before restart — no extra fiber needed
         select
-        when restart_done.receive
+        when timeout(60.seconds)
           # Normal restart delay
         when timeout(state.outer_timeout_seconds.seconds)
           Log.for("quickheadlines.feed").warn { "Restart delay timed out, continuing immediately" }
