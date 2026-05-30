@@ -117,6 +117,9 @@ private def fetch_single_feed_with_timeout(feed : Feed, config : Config, previou
     channel_result = value
   when timeout(timeout_seconds.seconds)
     timed_out = true
+    # Close channel so inner fiber's send raises ClosedError, allowing it to terminate
+    # instead of lingering with references to feed, config, previous_feed_data
+    result_channel.close
   end
 
   if timed_out
