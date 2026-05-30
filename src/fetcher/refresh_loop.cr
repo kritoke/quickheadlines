@@ -34,6 +34,14 @@ module GCCollector
       Log.for("quickheadlines.gc").debug { "Triggered GC.collect to release memory" }
     end
   end
+
+  # Force immediate GC collection — use after refresh cycles when
+  # large amounts of temporary data become eligible for collection
+  def self.collect_now : Nil
+    GC.collect
+    @@last_gc_collect = Time.utc
+    Log.for("quickheadlines.gc").debug { "Forced GC.collect after refresh cycle" }
+  end
 end
 
 private def log_duration_warning(refresh_duration, active_config)
@@ -380,6 +388,10 @@ def refresh_all(config : Config, cache : FeedCache, db_service : DatabaseService
 
   EventBroadcaster.notify_feed_update(StateStore.updated_at.to_unix_ms)
   RefreshHealthMonitor.record_cycle_complete
+
+  # Collect garbage immediately after refresh cycle - this is when the most
+  # temporary data (old FeedData, fetch results) becomes eligible for GC
+  GCCollector.collect_now
 
   if config.debug?
     Log.for("quickheadlines.feed").debug { "refresh_all: complete - StateStore.feeds=#{new_feeds.size}, StateStore.tabs=#{new_tabs.size}" }
