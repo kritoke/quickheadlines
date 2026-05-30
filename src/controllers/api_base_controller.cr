@@ -166,13 +166,13 @@ class QuickHeadlines::Controllers::ApiBaseController < Athena::Framework::Contro
   end
 
   # Local-only health endpoint: returns refresh health and StateStore counts.
-  # Accessible only from loopback addresses (127.0.0.1 or ::1) to avoid exposing admin info publicly.
+  # Uses connection-level peer IP (not headers) to prevent bypass via X-Client-IP spoofing.
   @[ARTA::Get(path: "/api/health")]
   def health(request : AHTTP::Request) : QuickHeadlines::DTOs::HealthResponse
-    ip = client_ip(request)
+    # Read peer address directly from TCP connection — not from injectable headers
+    peer = request.request.remote_address
+    ip = peer.is_a?(Socket::IPAddress) ? peer.address : "unknown"
     allowed = ["127.0.0.1", "::1", "::ffff:127.0.0.1"]
-    # Some requests running in this environment return 'unknown' from extract_client_ip()
-    # Treat 'unknown' as local (dev) so curl from the host can access the health endpoint.
     unless ip == "unknown" || allowed.includes?(ip)
       raise AHK::Exception::HTTPException.new(401, "Unauthorized")
     end
