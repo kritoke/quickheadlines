@@ -11,8 +11,7 @@ module QuickHeadlines::Services
       days : Int32?,
       allowed_feed_urls : Array(String) = [] of String,
     ) : TimelineResult
-      items = story_repo.find_timeline_items(limit, offset, days, allowed_feed_urls)
-      total_count = story_repo.count_timeline_items(days, allowed_feed_urls)
+      items, total_count = story_repo.find_timeline_items(limit, offset, days, allowed_feed_urls)
       has_more = offset + limit < total_count
 
       timeline_items = items.map do |item|

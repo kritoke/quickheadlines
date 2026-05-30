@@ -38,8 +38,9 @@ module QuickHeadlines::Repositories
         SQL
     end
 
-    def find_timeline_items(limit : Int32, offset : Int32, days_back : Int32?, allowed_feed_urls : Array(String) = [] of String) : Array(TimelineEntry)
+    def find_timeline_items(limit : Int32, offset : Int32, days_back : Int32?, allowed_feed_urls : Array(String) = [] of String) : {Array(TimelineEntry), Int32}
       items = [] of TimelineEntry
+      total_count = 0
 
       feed_filter_clause = build_feed_filter(allowed_feed_urls)
       feed_filter_values = feed_filter_values(allowed_feed_urls)
@@ -64,7 +65,8 @@ module QuickHeadlines::Repositories
           CASE WHEN i.cluster_id IS NULL OR i.id = ci.representative_id THEN 1 ELSE 0 END as is_representative,
           COALESCE(ci.cluster_size, 0) as cluster_size,
           i.comment_url,
-          i.commentary_url
+          i.commentary_url,
+          COUNT(*) OVER() as total_count
         FROM items i
         JOIN feeds f ON i.feed_id = f.id
         LEFT JOIN cluster_info ci ON i.cluster_id = ci.cluster_id
@@ -96,6 +98,7 @@ module QuickHeadlines::Repositories
           cluster_size = rows.read(Int32)
           comment_url = rows.read(String?)
           commentary_url = rows.read(String?)
+          total_count = rows.read(Int64).to_i
 
           pub_date = parse_db_time(pub_date_str)
 
@@ -120,7 +123,7 @@ module QuickHeadlines::Repositories
         end
       end
 
-      items
+      {items, total_count}
     end
 
     def count_timeline_items(days_back : Int32?, allowed_feed_urls : Array(String) = [] of String) : Int32
