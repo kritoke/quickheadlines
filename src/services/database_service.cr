@@ -42,7 +42,7 @@ class DatabaseService
     # Using a non-blocking close ensures senders don't get ClosedError.
 
     @db.close
-  rescue DB::Error | IO::Error
-    # Already closed or connection lost — safe to ignore
+  rescue ex : DB::Error | IO::Error
+    Log.for("quickheadlines.db").warn { "Database close error: #{ex.message}" }
   end
 end
