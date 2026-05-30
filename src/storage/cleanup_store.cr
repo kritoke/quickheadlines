@@ -143,7 +143,7 @@ module QuickHeadlines::Storage
       else
         0_i64
       end
-    rescue
+    rescue File::Error | IO::Error
       0_i64
     end
 

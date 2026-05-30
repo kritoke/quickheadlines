@@ -210,7 +210,7 @@ class SocketManager
     @connections.reject! do |conn|
       dead = begin
         conn.websocket.closed?
-      rescue
+      rescue IO::Error
         true
       end
 

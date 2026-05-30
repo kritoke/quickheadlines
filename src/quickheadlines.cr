@@ -139,9 +139,8 @@ begin
       origin_host = begin
         uri = URI.parse(origin)
         uri.host.try(&.downcase)
-      rescue
+      rescue URI::Error
         # Fallback: strip scheme and extract host, ignoring port
-        # Only accept if it looks like a valid hostname (no IP with special formats)
         cleaned = origin.sub(/^https?:\/\//, "").split("/").first.split(":").first
         cleaned unless cleaned.empty?
       end

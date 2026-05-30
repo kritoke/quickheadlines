@@ -129,7 +129,8 @@ module FetcherResponse
 
     begin
       content_service = QuickHeadlines::Services::ContentService.instance
-    rescue
+    rescue ex
+      Log.for("quickheadlines.fetcher").debug { "ContentService unavailable: #{ex.message}" }
       return
     end
 
