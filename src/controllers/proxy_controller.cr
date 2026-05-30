@@ -31,49 +31,42 @@ class QuickHeadlines::Controllers::ProxyController < QuickHeadlines::Controllers
     client = create_pinned_client(uri, resolved_ip)
 
     begin
-      response = client.get(uri.request_target)
+      # Follow redirects manually with validation + DNS pinning
+      target_uri = uri
+      response_headers = follow_redirects(client, target_uri, resolved_ip)
 
-      # Handle redirect manually with validation + DNS pinning
-      while response.status_code >= 300 && response.status_code < 400
-        redirect_location = response.headers["Location"]?
-        unless redirect_location
-          raise AHK::Exception::HTTPException.new(502, "Bad Gateway")
-        end
-
-        # Validate redirect URL and get pinned IP
-        redirect_valid, redirect_ip = validate_proxy_url_with_ip(redirect_location)
-        unless redirect_valid
-          Log.for("quickheadlines.proxy").warn { "Redirect to unvalidated URL blocked: #{redirect_location}" }
-          raise AHK::Exception::HTTPException.new(403, "Disallowed redirect domain")
-        end
-
-        redirect_uri = URI.parse(redirect_location)
-        client.close
-        client = create_pinned_client(redirect_uri, redirect_ip)
-        response = client.get(redirect_uri.request_target)
-      end
-
-      if response.status_code >= 400
-        raise AHK::Exception::HTTPException.new(502, "Bad Gateway")
-      end
-
-      content_type = (response.headers["content-type"]? || "application/octet-stream").split(";").first
-
+      # Validate content type before streaming body
+      content_type = (response_headers["content-type"]? || "application/octet-stream").split(";").first
       unless content_type.starts_with?("image/")
         raise AHK::Exception::HTTPException.new(415, "Not an image")
       end
 
-      content_length_header = response.headers["Content-Length"]?
+      content_length_header = response_headers["Content-Length"]?
       if content_length_header && (content_length = content_length_header.to_i64?) && content_length > max_bytes
         raise AHK::Exception::HTTPException.new(413, "Image too large")
       end
 
-      body = response.body
-      if body.bytesize > max_bytes
-        raise AHK::Exception::HTTPException.new(413, "Image too large")
+      # Final GET with streaming body read to enforce size limit
+      body_bytes = Bytes.empty
+      client.get(target_uri.request_target) do |response|
+        if response.status_code >= 400
+          raise AHK::Exception::HTTPException.new(502, "Bad Gateway")
+        end
+
+        body = IO::Memory.new
+        buf = Bytes.new(8192)
+        loop do
+          bytes_read = response.body_io.read(buf)
+          break if bytes_read == 0
+          body.write(buf[0, bytes_read])
+          if body.bytesize > max_bytes
+            raise AHK::Exception::HTTPException.new(413, "Image too large")
+          end
+        end
+        body_bytes = body.to_slice
       end
 
-      AHTTP::Response.new(body, 200, HTTP::Headers{
+      AHTTP::Response.new(String.new(body_bytes), 200, HTTP::Headers{
         "content-type"           => content_type,
         "cache-control"          => "public, max-age=86400",
         "x-content-type-options" => "nosniff",
@@ -86,6 +79,36 @@ class QuickHeadlines::Controllers::ProxyController < QuickHeadlines::Controllers
     ensure
       client.close
     end
+  end
+
+  # Follow redirects with validation + DNS pinning. Mutates client and returns final response headers.
+  private def follow_redirects(client : HTTP::Client, target_uri : URI, resolved_ip : String?) : HTTP::Headers
+    response = client.get(target_uri.request_target)
+
+    while response.status_code >= 300 && response.status_code < 400
+      redirect_location = response.headers["Location"]?
+      unless redirect_location
+        raise AHK::Exception::HTTPException.new(502, "Bad Gateway")
+      end
+
+      redirect_valid, redirect_ip = validate_proxy_url_with_ip(redirect_location)
+      unless redirect_valid
+        Log.for("quickheadlines.proxy").warn { "Redirect to unvalidated URL blocked: #{redirect_location}" }
+        raise AHK::Exception::HTTPException.new(403, "Disallowed redirect domain")
+      end
+
+      redirect_uri = URI.parse(redirect_location)
+      client.close
+      client = create_pinned_client(redirect_uri, redirect_ip)
+      target_uri = redirect_uri
+      response = client.get(redirect_uri.request_target)
+    end
+
+    if response.status_code >= 400
+      raise AHK::Exception::HTTPException.new(502, "Bad Gateway")
+    end
+
+    response.headers
   end
 
   @[ARTA::Get(path: "/favicons/{hash}.{ext}")]
