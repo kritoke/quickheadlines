@@ -9,7 +9,28 @@ class SocketManager
   @@instance : SocketManager?
   @@mutex = Mutex.new(:unchecked)
 
-  record Connection, websocket : HTTP::WebSocket, ip : String, outgoing : Channel(String), created_at : Time, unregistered : Bool = false
+  # Mutable class with Atomic(Bool) so unregistered flag is shared across all
+  # references to the same connection. Prevents double-decrement race between
+  # unregister(), writer_fiber, and cleanup_dead_connections.
+  class Connection
+    getter websocket : HTTP::WebSocket
+    getter ip : String
+    getter outgoing : Channel(String)
+    getter created_at : Time
+    getter unregistered : Atomic(Bool)
+
+    def initialize(@websocket, @ip, @outgoing, @created_at, @unregistered = Atomic(Bool).new(false))
+    end
+
+    def unregistered? : Bool
+      @unregistered.get
+    end
+
+    # Atomically mark as unregistered. Returns true if THIS call performed the transition.
+    def mark_unregistered : Bool
+      @unregistered.swap(true) == false
+    end
+  end
 
   @connections : Array(Connection)
   @mutex : Mutex
@@ -108,18 +129,20 @@ class SocketManager
 
   private def unregister_connection(connection : Connection) : Nil
     @mutex.synchronize do
-      if connection.unregistered
-        Log.for("quickheadlines.websocket").debug { "unregister_connection: connection already unregistered by unregister(), skipping" }
+      if connection.unregistered?
+        Log.for("quickheadlines.websocket").debug { "unregister_connection: connection already unregistered, skipping" }
         @last_activity.delete(connection.websocket)
         return
       end
 
+      # Mark atomically — only one path can claim the decrement
+      connection.mark_unregistered
       was_present = @connections.includes?(connection)
       @connections.delete(connection)
       @last_activity.delete(connection.websocket)
       if was_present
         decrement_ip_count_locked(connection.ip)
-        Log.for("quickheadlines.websocket").debug { "unregister_connection: janitor cleanup, decremented IP count for #{connection.ip}" }
+        Log.for("quickheadlines.websocket").debug { "unregister_connection: cleanup, decremented IP count for #{connection.ip}" }
       end
     end
     begin
@@ -163,13 +186,13 @@ class SocketManager
       return unless idx
 
       connection_to_cleanup = @connections[idx]
-      # Mark as unregistered BEFORE removing to prevent race with writer_fiber
-      # This flag tells unregister_connection that unregister() already handled cleanup
-      @connections[idx] = connection_to_cleanup.copy_with(unregistered: true)
+      # Mark as unregistered BEFORE removing to prevent race with writer_fiber.
+      # Uses Atomic CAS so only one path can claim the decrement.
+      already_unregistered = connection_to_cleanup.not_nil!.mark_unregistered
       @connections.delete_at(idx)
-      @last_activity.delete(connection_to_cleanup.websocket)
-      # Decrement IP count here within the mutex to ensure single decrement
-      decrement_ip_count_locked(connection_to_cleanup.ip)
+      @last_activity.delete(connection_to_cleanup.not_nil!.websocket)
+      # Decrement IP count here within the mutex — only if we won the CAS race
+      decrement_ip_count_locked(connection_to_cleanup.not_nil!.ip) unless already_unregistered
     end
 
     # Close channel OUTSIDE the mutex to avoid holding mutex while doing I/O
@@ -252,26 +275,20 @@ class SocketManager
     @mutex.synchronize do
       @connections.each do |conn|
         begin
-          # Check if websocket is closed
           if conn.websocket.closed?
-            # Mark as unregistered BEFORE adding to dead array to prevent
-            # double-decrement if unregister() is called concurrently.
-            # unregister() creates a new Connection object with unregistered=true,
-            # so we'll have two different Connection objects pointing to the same socket.
-            dead << conn.copy_with(unregistered: true)
+            dead << conn
             next
           end
 
-          # Check if connection is stale (no activity for QuickHeadlines::Constants::STALE_CONNECTION_AGE seconds)
           last_active = @last_activity[conn.websocket]?
           if last_active && (now - last_active).total_seconds > QuickHeadlines::Constants::STALE_CONNECTION_AGE
             Log.for("quickheadlines.websocket").debug { "Stale connection detected: #{conn.ip} (inactive for #{((now - last_active).total_seconds).round(0)}s)" }
-            dead << conn.copy_with(unregistered: true)
+            dead << conn
           end
         rescue IO::EOFError
-          # Normal connection closure, not a dead connection
+          # Normal connection closure
         rescue IO::Error
-          dead << conn.copy_with(unregistered: true)
+          dead << conn
         end
       end
     end
@@ -280,9 +297,11 @@ class SocketManager
 
     removed = 0
     dead.each do |conn|
-      # unregister_connection will see unregistered=true and skip the decrement
-      # since we already removed the connection from @connections above
-      unregister_connection(conn)
+      # Mark unregistered atomically — only one path can claim the decrement
+      already_unregistered = conn.mark_unregistered
+      unless already_unregistered
+        unregister_connection(conn)
+      end
       removed += 1
     end
 
