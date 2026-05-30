@@ -66,9 +66,11 @@ module StateStore
   # NOTE: Uses :unchecked mutex to avoid Boehm GC mutex initialization
   # deadlocks on FreeBSD. See AGENTS.md for details.
   @@mutex = Mutex.new(:unchecked)
+  # Separate mutex for admin/cluster metadata to reduce contention on hot-path get/update
+  @@metadata_mutex = Mutex.new(:unchecked)
   @@clustering_start_time : Time?
 
-  # Background task tracking
+  # Background task tracking — protected by @@metadata_mutex only
   @@last_cluster_run : Time?
   @@last_cluster_duration_ms : Int64 = 0_i64
   @@last_cluster_status : String = "idle"
@@ -113,15 +115,12 @@ module StateStore
   end
 
   def self.clustering=(value : Bool)
-    update do |state|
-      if value
-        @@clustering_start_time = Time.utc
-        state.copy_with(clustering: true)
-      else
-        @@clustering_start_time = nil
-        state.copy_with(clustering: false)
-      end
+    if value
+      @@metadata_mutex.synchronize { @@clustering_start_time = Time.utc }
+    else
+      @@metadata_mutex.synchronize { @@clustering_start_time = nil }
     end
+    update(&.copy_with(clustering: value))
   end
 
   def self.start_clustering_if_idle : Bool
@@ -130,29 +129,29 @@ module StateStore
         return false
       end
       @@current = @@current.copy_with(clustering: true)
-      @@clustering_start_time = Time.utc
+      @@metadata_mutex.synchronize { @@clustering_start_time = Time.utc }
       true
     end
   end
 
   def self.clustering_start_time : Time?
-    @@mutex.synchronize { @@clustering_start_time }
+    @@metadata_mutex.synchronize { @@clustering_start_time }
   end
 
   def self.last_cluster_run : Time?
-    @@mutex.synchronize { @@last_cluster_run }
+    @@metadata_mutex.synchronize { @@last_cluster_run }
   end
 
   def self.last_cluster_duration_ms : Int64
-    @@mutex.synchronize { @@last_cluster_duration_ms }
+    @@metadata_mutex.synchronize { @@last_cluster_duration_ms }
   end
 
   def self.last_cluster_status : String
-    @@mutex.synchronize { @@last_cluster_status }
+    @@metadata_mutex.synchronize { @@last_cluster_status }
   end
 
   def self.set_cluster_completed(duration_ms : Int64, status : String) : Nil
-    @@mutex.synchronize do
+    @@metadata_mutex.synchronize do
       @@last_cluster_run = Time.utc
       @@last_cluster_duration_ms = duration_ms
       @@last_cluster_status = status
@@ -160,23 +159,23 @@ module StateStore
   end
 
   def self.last_admin_action : String?
-    @@mutex.synchronize { @@last_admin_action }
+    @@metadata_mutex.synchronize { @@last_admin_action }
   end
 
   def self.last_admin_run : Time?
-    @@mutex.synchronize { @@last_admin_run }
+    @@metadata_mutex.synchronize { @@last_admin_run }
   end
 
   def self.last_admin_duration_ms : Int64
-    @@mutex.synchronize { @@last_admin_duration_ms }
+    @@metadata_mutex.synchronize { @@last_admin_duration_ms }
   end
 
   def self.last_admin_status : String
-    @@mutex.synchronize { @@last_admin_status }
+    @@metadata_mutex.synchronize { @@last_admin_status }
   end
 
   def self.set_admin_completed(action : String, duration_ms : Int64, status : String) : Nil
-    @@mutex.synchronize do
+    @@metadata_mutex.synchronize do
       @@last_admin_action = action
       @@last_admin_run = Time.utc
       @@last_admin_duration_ms = duration_ms
