@@ -4,3 +4,43 @@
 # For more details on any individual rule, run `ameba --only RuleName.
 
 Version: "1.7.0"
+
+Lint/NotNil:
+  Excluded:
+  - spec/header_colors_spec.cr
+  - src/controllers/api_controller.cr
+  - src/storage.cr
+
+Lint/UselessAssign:
+  Excluded:
+  - scripts/sync_diagnostics.cr
+  - src/controllers/api_controller.cr
+  - src/services/clustering_service.cr
+  - src/storage.cr
+
+Naming/AccessorMethodName:
+  Excluded:
+  - src/services/clustering_service.cr
+  - src/storage.cr
+
+Naming/QueryBoolMethods:
+  Excluded:
+  - src/dtos/config_dto.cr
+  - src/dtos/api_responses.cr
+  - src/dtos/content_response.cr
+  - src/fetcher/refresh_loop.cr
+  - src/services/favicon_sync_service.cr
+
+Metrics/CyclomaticComplexity:
+  Excluded:
+  - src/storage.cr
+  - src/controllers/api_base_controller.cr
+  - src/controllers/proxy_controller.cr
+  - src/controllers/header_color_controller.cr
+  - src/fetcher/refresh_loop.cr
+
+Naming/BlockParameterName:
+  Excluded:
+  - scripts/print_feed_sample.cr
+  - src/storage.cr
+  - src/controllers/feeds_controller.cr

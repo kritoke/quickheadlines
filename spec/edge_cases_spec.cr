@@ -26,7 +26,7 @@ describe "Config Hot-Reload Safety" do
           enabled: true
           threshold: 0.35
         server_port: 8080
-      YAML
+        YAML
 
       # Verify config values are set correctly
       initial_config.cache_retention_hours.should eq(168)
@@ -42,7 +42,7 @@ describe "Config Hot-Reload Safety" do
         cache_retention_hours: 168
         max_cache_size_mb: 100
         server_port: 8080
-      YAML
+        YAML
 
       # Simulate what the refresh loop does
       config_snapshot = config_a

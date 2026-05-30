@@ -62,7 +62,17 @@ module FaviconStorage
     ext = extension_from_content_type(content_type)
     filename = favicon_filename(hash, ext)
     filepath = File.join(favicon_dir, filename)
+    is_tiny = image_data.size < FAVICON_ABSOLUTE_MIN || (ext == "ico" && image_data.size < FAVICON_MIN_SIZE)
 
+    # Fetch Google fallback OUTSIDE mutex (network I/O, may call save_favicon)
+    google_saved : String? = nil
+    if is_tiny
+      Log.for("quickheadlines.storage").debug { "Tiny favicon (#{image_data.size} bytes) for #{url}, trying Google fallback" }
+      google_saved = fetch_google_favicon(url)
+    end
+
+    # Single mutex covers file write + cleanup of tiny favicon.
+    # Cannot call fetch_and_save here (would deadlock via save_favicon re-entry).
     @@mutex.synchronize do
       unless File.exists?(filepath)
         begin
@@ -72,24 +82,53 @@ module FaviconStorage
           return
         end
       end
-    end
 
-    # If the saved favicon is too small, try Google favicon as fallback
-    # This handles tiny ICOs (16x16 2-color) AND 1x1 placeholder PNGs
-    if image_data.size < FAVICON_ABSOLUTE_MIN || (ext == "ico" && image_data.size < FAVICON_MIN_SIZE)
-      Log.for("quickheadlines.storage").debug { "Tiny favicon (#{image_data.size} bytes) for #{url}, trying Google fallback" }
-      if domain = extract_domain_from_url(url)
-        google_url = "https://www.google.com/s2/favicons?domain=#{domain}&sz=128"
-        if google_saved = fetch_and_save(google_url)
-          Log.for("quickheadlines.storage").debug { "Google fallback saved: #{google_saved}" }
-          # Delete the tiny favicon to save space
-          File.delete(filepath) if File.exists?(filepath)
-          return google_saved
-        end
+      if google_saved
+        Log.for("quickheadlines.storage").debug { "Google fallback saved: #{google_saved}" }
+        File.delete(filepath) if File.exists?(filepath)
+        return google_saved
       end
     end
 
     "/favicons/#{filename}"
+  end
+
+  # Fetch Google favicon and save directly, bypassing save_favicon to avoid
+  # mutex re-entry (save_favicon holds mutex when calling this indirectly).
+  private def self.fetch_google_favicon(url : String) : String?
+    return nil unless domain = extract_domain_from_url(url)
+    google_url = "https://www.google.com/s2/favicons?domain=#{domain}&sz=128"
+
+    uri = URI.parse(google_url)
+    host = uri.host
+    return nil unless host
+
+    client = HTTP::Client.new(host, port: uri.port, tls: true)
+    apply_default_timeouts(client)
+
+    begin
+      headers = HTTP::Headers{"User-Agent" => "Mozilla/5.0 (compatible; QuickHeadlines/1.0)"}
+      response = client.get(uri.request_target, headers: headers)
+      return nil unless response.status.success?
+
+      image_data = response.body.to_slice
+      return nil if image_data.size > QuickHeadlines::Constants::FAVICON_MAX_SIZE
+      return nil unless valid_image_data?(image_data)
+
+      content_type = response.content_type || "image/png"
+      ext = extension_from_content_type(content_type)
+      hash = favicon_hash_for_url(google_url)
+      filename = favicon_filename(hash, ext)
+      filepath = File.join(favicon_dir, filename)
+
+      File.write(filepath, image_data) unless File.exists?(filepath)
+      "/favicons/#{filename}"
+    rescue ex
+      Log.for("quickheadlines.storage").error(exception: ex) { "Failed to fetch Google favicon for #{url}" }
+      nil
+    ensure
+      client.close
+    end
   end
 
   private def self.extract_domain_from_url(url : String) : String?

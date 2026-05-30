@@ -21,8 +21,8 @@ describe QuickHeadlines::RateLimiter do
       limiter.allowed?("client-a").should be_true
       limiter.allowed?("client-a").should be_true
       limiter.allowed?("client-a").should be_true
-      limiter.allowed?("client-a").should be_true  # 5th request hits limit
-      limiter.allowed?("client-b").should be_true  # client-b still has quota
+      limiter.allowed?("client-a").should be_true # 5th request hits limit
+      limiter.allowed?("client-b").should be_true # client-b still has quota
 
       # client-a should be blocked, client-b allowed
       limiter.allowed?("client-a").should be_false
