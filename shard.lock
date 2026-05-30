@@ -62,11 +62,11 @@ shards:
 
   azurite:
     git: https://github.com/kritoke/azurite.cr.git
-    version: 0.1.0+git.commit.fc1ba26ad3cfdae69abc0cf4c48d877665b9204a
+    version: 0.1.0+git.commit.1bce90ffcca7e09eb4a73346e933b3c860e9a963
 
   baked_file_system:
     git: https://github.com/schovi/baked_file_system.git
-    version: 0.13.0
+    version: 0.14.0
 
   cookie_jar:
     git: https://github.com/mamantoha/http-cookie_jar.git
@@ -90,7 +90,7 @@ shards:
 
   fetcher:
     git: https://github.com/kritoke/fetcher.cr.git
-    version: 0.9.20+git.commit.07e823d2ed9b37cb969acbbbbdcb6505e2b6ba60
+    version: 0.9.20+git.commit.5250f1ff6b98dc0e3fd54fdacbb4fa861aab8400
 
   html5:
     git: https://github.com/naqvis/crystal-html5.git
@@ -110,7 +110,7 @@ shards:
 
   prismatiq:
     git: https://github.com/kritoke/prismatiq.git
-    version: 0.7.1
+    version: 0.7.1+git.commit.dbade0275402cf600436342a44d06a6b3d080ada
 
   sanitize:
     git: https://github.com/straight-shoota/sanitize.git
