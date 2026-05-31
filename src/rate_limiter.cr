@@ -7,6 +7,7 @@ module QuickHeadlines
     @@instances_lock = Mutex.new
     @@cleanup_lock = Mutex.new
     @@cleanup_fiber : Fiber?
+    @@shutdown_ch : Channel(Nil)? = nil
     @@last_cleanup = Time.utc
 
     property max_requests : Int32
@@ -23,14 +24,19 @@ module QuickHeadlines
     def self.start_cleanup_fiber
       @@cleanup_lock.synchronize do
         return if @@cleanup_fiber
+        shutdown_ch = Channel(Nil).new
+        @@shutdown_ch = shutdown_ch
         @@cleanup_fiber = spawn do
           loop do
-            sleep QuickHeadlines::Constants::RATE_LIMITER_CLEANUP_INTERVAL.seconds
-            break if QuickHeadlines.shutting_down?
-            begin
-              cleanup_stale_instances
-            rescue ex
-              Log.for("quickheadlines.ratelimiter").error(exception: ex) { "Cleanup error" }
+            select
+            when shutdown_ch.receive?
+              break
+            when timeout(QuickHeadlines::Constants::RATE_LIMITER_CLEANUP_INTERVAL.seconds)
+              begin
+                cleanup_stale_instances
+              rescue ex
+                Log.for("quickheadlines.ratelimiter").error(exception: ex) { "Cleanup error" }
+              end
             end
           end
         end
@@ -56,13 +62,17 @@ module QuickHeadlines
     end
 
     def self.shutdown : Nil
-      # Clean up rate limiter resources on shutdown.
       Log.for("quickheadlines.ratelimiter").debug { "Shutting down rate limiter cleanup fiber" }
+      # Signal cleanup fiber to exit via channel
+      if ch = @@shutdown_ch
+        ch.close rescue Channel::ClosedError
+      end
       @@instances_lock.synchronize do
         @@instances.clear
       end
       @@cleanup_lock.synchronize do
         @@cleanup_fiber = nil
+        @@shutdown_ch = nil
       end
       Log.for("quickheadlines.ratelimiter").debug { "Rate limiter shutdown complete" }
     end
