@@ -4,26 +4,63 @@ require "base64"
 require "http/client"
 require "./utils"
 require "./storage/cache_utils"
+require "./infrastructure/actor"
 
-# FaviconStorage manages saving and serving favicons as static files
-# instead of embedding them as base64 data URIs in HTML.
+# FaviconActor — manages saving and serving favicons as static files.
 #
-# IMPORTANT: Mutex scope is minimized to prevent GC-triggered deadlocks.
-# All heavy allocations (OpenSSL hashing, string interpolation) happen
-# OUTSIDE the mutex. Only the atomic file check-and-write is protected.
-# This avoids Boehm GC mutex initialization conflicts on FreeBSD.
-module FaviconStorage
+# All file I/O is serialized through the actor mailbox. This eliminates
+# race conditions where concurrent save_favicon calls could write to
+# the same file simultaneously (e.g., Google fallback for tiny favicons).
+#
+class FaviconActor < Actor
   POSSIBLE_EXTENSIONS = {"png", "jpg", "jpeg", "ico", "svg", "webp"}
 
-  # NOTE: Uses :unchecked mutex to avoid Boehm GC mutex initialization
-  # deadlocks on FreeBSD. See AGENTS.md for details.
-  @@mutex = Mutex.new(:unchecked)
-  @@favicon_dir : String? = nil
-  @@initialized = false
+  # Minimum size threshold for favicons to avoid tiny 16x16 2-color icons.
+  FAVICON_MIN_SIZE = 800
+  # Absolute minimum - any file smaller than this gets Google fallback
+  FAVICON_ABSOLUTE_MIN = 200
+
+  # =========================================================================
+  # Messages
+  # =========================================================================
+
+  # Call messages (request-reply)
+  def_call save_favicon(url : String, image_data : Bytes, content_type : String), String?
+  def_call fetch_and_save(url : String), String?
+  def_call get_or_fetch(url : String), String?
+
+  # Cast messages (fire-and-forget)
+  def_cast init_storage
+
+  # =========================================================================
+  # Actor state
+  # =========================================================================
+
+  @favicon_dir : String
+  @initialized : Bool = false
+
+  def initialize(@name : String = "FaviconActor")
+    super(@name, mailbox_size: 100)
+    @favicon_dir = compute_favicon_dir
+  end
+
+  private def compute_favicon_dir : String
+    File.join(get_cache_dir(nil), "favicons")
+  end
+
+  # Singleton access
+  @@instance : FaviconActor?
+
+  def self.instance : FaviconActor
+    @@instance ||= FaviconActor.new.tap(&.start)
+  end
+
+  # =========================================================================
+  # Pure functions — no state, can be called directly
+  # =========================================================================
 
   def self.favicon_dir : String
-    @@favicon_dir ||= compute_favicon_dir
-    @@favicon_dir.as(String)
+    instance.@favicon_dir
   end
 
   def self.disk_path(db_path : String) : String?
@@ -32,65 +69,75 @@ module FaviconStorage
     File.join(favicon_dir, filename)
   end
 
-  def self.compute_favicon_dir : String
-    File.join(get_cache_dir(nil), "favicons")
-  end
-
-  def self.init : Nil
-    return if @@initialized
-    dir = favicon_dir
-    FileUtils.mkdir_p(dir) unless Dir.exists?(dir)
-    @@initialized = true
-  end
-
   def self.favicon_hash_for_url(url : String) : String
     hash_input = url.size > QuickHeadlines::Constants::MAX_FAVICON_HASH ? url[0..QuickHeadlines::Constants::MAX_FAVICON_HASH] : url
     OpenSSL::Digest.new("SHA256").update(hash_input).final.hexstring
   end
 
-  # Minimum size threshold for favicons to avoid tiny 16x16 2-color icons.
-  # Favicons smaller than this will trigger a Google favicon fallback.
-  FAVICON_MIN_SIZE = 800
-  # Absolute minimum - any file smaller than this (like 1x1 placeholders) gets Google fallback
-  FAVICON_ABSOLUTE_MIN = 200
+  def self.favicon_filename(hash : String, ext : String) : String
+    "#{hash[0...QuickHeadlines::Constants::FAVICON_HASH_PREFIX_LENGTH]}.#{ext}"
+  end
 
-  def self.save_favicon(url : String, image_data : Bytes, content_type : String) : String?
-    return if image_data.size > QuickHeadlines::Constants::FAVICON_MAX_SIZE
-    return unless valid_image_data?(image_data)
+  def self.valid_image_data?(data : Bytes) : Bool
+    return false if data.size < 4
+    str_start = String.new(data[0..Math.min(data.size - 1, 100)]).downcase
+    if str_start.starts_with?("<?xml") || str_start.starts_with?("<html") || str_start.starts_with?("<!doctype")
+      return false unless String.new(data).downcase.includes?("<svg")
+    end
+    true
+  end
 
-    hash = favicon_hash_for_url(url)
+  # =========================================================================
+  # Dispatch — routes messages to handlers
+  # =========================================================================
+
+  def dispatch(message : Message) : Nil
+    case message
+    when CallSaveFavicon    then message.deliver_reply(handle_save_favicon(message.url, message.image_data, message.content_type))
+    when CallFetchAndSave   then message.deliver_reply(handle_fetch_and_save(message.url))
+    when CallGetOrFetch     then message.deliver_reply(handle_get_or_fetch(message.url))
+    when CastInitStorage    then handle_init_storage
+    else raise "Unknown message: #{message.class.name}"
+    end
+  end
+
+  # =========================================================================
+  # Handlers — all file I/O happens here, single-threaded
+  # =========================================================================
+
+  private def handle_init_storage : Nil
+    return if @initialized
+    FileUtils.mkdir_p(@favicon_dir) unless Dir.exists?(@favicon_dir)
+    @initialized = true
+  end
+
+  private def handle_save_favicon(url : String, image_data : Bytes, content_type : String) : String?
+    return nil if image_data.size > QuickHeadlines::Constants::FAVICON_MAX_SIZE
+    return nil unless FaviconActor.valid_image_data?(image_data)
+
+    hash = FaviconActor.favicon_hash_for_url(url)
     ext = extension_from_content_type(content_type)
-    filename = favicon_filename(hash, ext)
-    filepath = File.join(favicon_dir, filename)
+    filename = FaviconActor.favicon_filename(hash, ext)
+    filepath = File.join(@favicon_dir, filename)
     is_tiny = image_data.size < FAVICON_ABSOLUTE_MIN || (ext == "ico" && image_data.size < FAVICON_MIN_SIZE)
 
-    # Fetch Google fallback OUTSIDE mutex (network I/O, may call save_favicon)
-    google_saved : String? = nil
-    if is_tiny
-      Log.for("quickheadlines.storage").debug { "Tiny favicon (#{image_data.size} bytes) for #{url}, trying Google fallback" }
-      google_saved = fetch_google_favicon(url)
+    # Write original favicon
+    unless File.exists?(filepath)
+      begin
+        temp_path = filepath + ".tmp"
+        File.write(temp_path, image_data)
+        File.rename(temp_path, filepath)
+      rescue ex
+        Log.for("quickheadlines.storage").error(exception: ex) { "Error saving favicon" }
+        File.delete(filepath + ".tmp") if File.exists?(filepath + ".tmp")
+        return nil
+      end
     end
 
-    # Single mutex covers file write + cleanup of tiny favicon.
-    # Cannot call fetch_and_save here (would deadlock via save_favicon re-entry).
-    # Use temp file + atomic rename to minimize time under mutex.
-    @@mutex.synchronize do
-      unless File.exists?(filepath)
-        begin
-          # Write to temp file first (outside critical section would be ideal,
-          # but we need the mutex to prevent duplicate writes)
-          temp_path = filepath + ".tmp"
-          File.write(temp_path, image_data)
-          File.rename(temp_path, filepath)
-        rescue ex
-          Log.for("quickheadlines.storage").error(exception: ex) { "Error saving favicon" }
-          # Clean up temp file on failure
-          File.delete(filepath + ".tmp") if File.exists?(filepath + ".tmp")
-          return
-        end
-      end
-
-      if google_saved
+    # If tiny, try Google fallback (network I/O happens inside actor)
+    if is_tiny
+      Log.for("quickheadlines.storage").debug { "Tiny favicon (#{image_data.size} bytes) for #{url}, trying Google fallback" }
+      if google_saved = do_fetch_google_favicon(url)
         Log.for("quickheadlines.storage").debug { "Google fallback saved: #{google_saved}" }
         File.delete(filepath) if File.exists?(filepath)
         return google_saved
@@ -100,9 +147,73 @@ module FaviconStorage
     "/favicons/#{filename}"
   end
 
-  # Fetch Google favicon and save directly, bypassing save_favicon to avoid
-  # mutex re-entry (save_favicon holds mutex when calling this indirectly).
-  private def self.fetch_google_favicon(url : String) : String?
+  private def handle_fetch_and_save(url : String) : String?
+    return nil unless url.starts_with?("http")
+
+    uri = URI.parse(url)
+    host = uri.host
+    return nil unless host
+    return nil if reject_private_host?(host, url)
+
+    client = HTTP::Client.new(host, port: uri.port, tls: uri.scheme == "https")
+    apply_default_timeouts(client)
+
+    redirect_client : HTTP::Client? = nil
+
+    begin
+      headers = HTTP::Headers{"User-Agent" => "Mozilla/5.0 (compatible; QuickHeadlines/1.0)"}
+      response = client.get(uri.request_target, headers: headers)
+
+      if response.status.redirection?
+        redirect_url = response.headers["Location"]?
+        if redirect_url
+          redirected_uri = uri.resolve(redirect_url)
+          redirect_host = redirected_uri.host
+          if redirect_host
+            return nil if reject_private_host?(redirect_host, url)
+            redirect_client = HTTP::Client.new(redirect_host, port: redirected_uri.port, tls: redirected_uri.scheme == "https")
+            apply_default_timeouts(redirect_client)
+            response = redirect_client.get(redirected_uri.request_target, headers: headers)
+          end
+        end
+      end
+
+      unless response.status.success?
+        Log.for("quickheadlines.storage").debug { "HTTP #{response.status.code} for #{url}" }
+        return nil
+      end
+
+      content_type = response.content_type || "image/png"
+      body = response.body
+
+      # Call handle_save_favicon directly (we're already in the actor fiber)
+      handle_save_favicon(url, body.to_slice, content_type)
+    rescue ex
+      Log.for("quickheadlines.storage").error(exception: ex) { "Failed to fetch #{url}" }
+      nil
+    ensure
+      redirect_client.try(&.close)
+      client.close
+    end
+  end
+
+  private def handle_get_or_fetch(url : String) : String?
+    hash = FaviconActor.favicon_hash_for_url(url)
+
+    POSSIBLE_EXTENSIONS.each do |ext|
+      filename = FaviconActor.favicon_filename(hash, ext)
+      filepath = File.join(@favicon_dir, filename)
+      return "/favicons/#{filename}" if File.exists?(filepath)
+    end
+
+    nil
+  end
+
+  # =========================================================================
+  # Private helpers — called from within actor fiber
+  # =========================================================================
+
+  private def do_fetch_google_favicon(url : String) : String?
     return nil unless domain = extract_domain_from_url(url)
     google_url = "https://www.google.com/s2/favicons?domain=#{domain}&sz=128"
 
@@ -120,15 +231,19 @@ module FaviconStorage
 
       image_data = response.body.to_slice
       return nil if image_data.size > QuickHeadlines::Constants::FAVICON_MAX_SIZE
-      return nil unless valid_image_data?(image_data)
+      return nil unless FaviconActor.valid_image_data?(image_data)
 
       content_type = response.content_type || "image/png"
       ext = extension_from_content_type(content_type)
-      hash = favicon_hash_for_url(google_url)
-      filename = favicon_filename(hash, ext)
-      filepath = File.join(favicon_dir, filename)
+      hash = FaviconActor.favicon_hash_for_url(google_url)
+      filename = FaviconActor.favicon_filename(hash, ext)
+      filepath = File.join(@favicon_dir, filename)
 
-      File.write(filepath, image_data) unless File.exists?(filepath)
+      unless File.exists?(filepath)
+        temp_path = filepath + ".tmp"
+        File.write(temp_path, image_data)
+        File.rename(temp_path, filepath)
+      end
       "/favicons/#{filename}"
     rescue ex
       Log.for("quickheadlines.storage").error(exception: ex) { "Failed to fetch Google favicon for #{url}" }
@@ -138,88 +253,14 @@ module FaviconStorage
     end
   end
 
-  private def self.extract_domain_from_url(url : String) : String?
+  private def extract_domain_from_url(url : String) : String?
     uri = URI.parse(url)
     uri.host
   rescue
     nil
   end
 
-  def self.valid_image_data?(data : Bytes) : Bool
-    return false if data.size < 4
-    str_start = String.new(data[0..Math.min(data.size - 1, 100)]).downcase
-    if str_start.starts_with?("<?xml") || str_start.starts_with?("<html") || str_start.starts_with?("<!doctype")
-      return false unless String.new(data).downcase.includes?("<svg")
-    end
-    true
-  end
-
-  def self.fetch_and_save(url : String) : String?
-    return unless url.starts_with?("http")
-
-    uri = URI.parse(url)
-    host = uri.host
-    return unless host
-    return if reject_private_host?(host, url)
-
-    client = HTTP::Client.new(host, port: uri.port, tls: uri.scheme == "https")
-    apply_default_timeouts(client)
-
-    redirect_client : HTTP::Client? = nil
-
-    begin
-      headers = HTTP::Headers{
-        "User-Agent" => "Mozilla/5.0 (compatible; QuickHeadlines/1.0)",
-      }
-
-      response = client.get(uri.request_target, headers: headers)
-      if response.status.redirection?
-        redirect_url = response.headers["Location"]?
-        if redirect_url
-          redirected_uri = uri.resolve(redirect_url)
-          redirect_host = redirected_uri.host
-          if redirect_host
-            return if reject_private_host?(redirect_host, url)
-            redirect_client = HTTP::Client.new(redirect_host, port: redirected_uri.port, tls: redirected_uri.scheme == "https")
-            apply_default_timeouts(redirect_client)
-            response = redirect_client.get(redirected_uri.request_target, headers: headers)
-          end
-        end
-      end
-      unless response.status.success?
-        Log.for("quickheadlines.storage").debug { "HTTP #{response.status.code} for #{url}" }
-        return
-      end
-
-      content_type = response.content_type || "image/png"
-      body = response.body
-
-      save_favicon(url, body.to_slice, content_type)
-    rescue ex
-      Log.for("quickheadlines.storage").error(exception: ex) { "Failed to fetch #{url}" }
-      nil
-    ensure
-      redirect_client.try(&.close)
-      client.close
-    end
-  end
-
-  def self.get_or_fetch(url : String) : String?
-    hash = favicon_hash_for_url(url)
-    dir = favicon_dir
-
-    @@mutex.synchronize do
-      POSSIBLE_EXTENSIONS.each do |ext|
-        filename = favicon_filename(hash, ext)
-        filepath = File.join(dir, filename)
-        return "/favicons/#{filename}" if File.exists?(filepath)
-      end
-    end
-
-    nil
-  end
-
-  private def self.extension_from_content_type(content_type : String) : String
+  private def extension_from_content_type(content_type : String) : String
     case content_type.downcase
     when "image/png"                then "png"
     when "image/jpeg"               then "jpg"
@@ -232,21 +273,57 @@ module FaviconStorage
     end
   end
 
-  def self.favicon_filename(hash : String, ext : String) : String
-    "#{hash[0...QuickHeadlines::Constants::FAVICON_HASH_PREFIX_LENGTH]}.#{ext}"
-  end
-
-  private def self.apply_default_timeouts(client : HTTP::Client) : Nil
+  private def apply_default_timeouts(client : HTTP::Client) : Nil
     client.read_timeout = QuickHeadlines::Constants::HTTP_READ_TIMEOUT.seconds
     client.write_timeout = QuickHeadlines::Constants::HTTP_WRITE_TIMEOUT.seconds
     client.connect_timeout = QuickHeadlines::Constants::HTTP_CONNECT_TIMEOUT.seconds
   end
 
-  private def self.reject_private_host?(host : String, url : String) : Bool
+  private def reject_private_host?(host : String, url : String) : Bool
     if Utils.private_host?(host)
       Log.for("quickheadlines.storage").debug { "SSRF blocked: private host #{host} in #{url}" }
       return true
     end
     false
+  end
+end
+
+# Backward-compatible module API — delegates to FaviconActor
+module FaviconStorage
+  POSSIBLE_EXTENSIONS = FaviconActor::POSSIBLE_EXTENSIONS
+  def self.favicon_dir : String
+    FaviconActor.favicon_dir
+  end
+
+  def self.disk_path(db_path : String) : String?
+    FaviconActor.disk_path(db_path)
+  end
+
+  def self.favicon_hash_for_url(url : String) : String
+    FaviconActor.favicon_hash_for_url(url)
+  end
+
+  def self.favicon_filename(hash : String, ext : String) : String
+    FaviconActor.favicon_filename(hash, ext)
+  end
+
+  def self.valid_image_data?(data : Bytes) : Bool
+    FaviconActor.valid_image_data?(data)
+  end
+
+  def self.init : Nil
+    FaviconActor.instance.init_storage
+  end
+
+  def self.save_favicon(url : String, image_data : Bytes, content_type : String) : String?
+    FaviconActor.instance.save_favicon(url, image_data, content_type)
+  end
+
+  def self.fetch_and_save(url : String) : String?
+    FaviconActor.instance.fetch_and_save(url)
+  end
+
+  def self.get_or_fetch(url : String) : String?
+    FaviconActor.instance.get_or_fetch(url)
   end
 end
