@@ -90,7 +90,7 @@ shards:
 
   fetcher:
     git: https://github.com/kritoke/fetcher.cr.git
-    version: 0.9.20+git.commit.78175f9dca6d73c14db4c2c219577a0b46cf8d8b
+    version: 0.9.20+git.commit.3a038c66085e1926ecc715df2275f50a4e7be36d
 
   html5:
     git: https://github.com/naqvis/crystal-html5.git
@@ -110,7 +110,7 @@ shards:
 
   prismatiq:
     git: https://github.com/kritoke/prismatiq.git
-    version: 0.7.1+git.commit.dbade0275402cf600436342a44d06a6b3d080ada
+    version: 0.7.2+git.commit.1f0965006f193d7990b54e25a43db95dce856489
 
   sanitize:
     git: https://github.com/straight-shoota/sanitize.git
@@ -122,7 +122,7 @@ shards:
 
   vug:
     git: https://github.com/kritoke/vug.cr.git
-    version: 0.5.7+git.commit.8c2fa44ec884643e959c9788b26053ab7a2077e7
+    version: 0.5.7+git.commit.aea167aa3b280f84a82cb1b8c4a1c14816f618a8
 
   xpath2:
     git: https://github.com/naqvis/crystal-xpath2.git

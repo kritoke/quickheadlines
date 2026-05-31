@@ -20,16 +20,16 @@ dependencies:
     version: "~> 0.5.0"
   prismatiq:
     github: kritoke/prismatiq
-    commit: dbade0275402cf600436342a44d06a6b3d080ada
+    commit: 1f0965006f193d7990b54e25a43db95dce856489
   baked_file_system:
     github: schovi/baked_file_system
     version: ~> 0.14.0
   fetcher:
     github: kritoke/fetcher.cr
-    commit: 78175f9dca6d73c14db4c2c219577a0b46cf8d8b
+    commit: 3a038c66085e1926ecc715df2275f50a4e7be36d
   vug:
     github: kritoke/vug.cr
-    commit: 8c2fa44ec884643e959c9788b26053ab7a2077e7
+    commit: aea167aa3b280f84a82cb1b8c4a1c14816f618a8
   azurite:
     github: kritoke/azurite.cr
     commit: 9e0547a976865543186ebdbfbb99f95bc816dfe5
