@@ -1,143 +1,158 @@
 require "time"
-require "mutex"
+require "./infrastructure/actor"
+require "./constants"
 
+# ThrottlerActor — rate limiting with actor-based serialization.
+#
+# All rate limit state is owned by a single actor fiber. No mutexes needed.
+# Cleanup runs on a timer inside the actor loop.
+#
 module QuickHeadlines
-  class RateLimiter
-    @@instances = {} of String => RateLimiter
-    @@instances_lock = Mutex.new
-    @@cleanup_lock = Mutex.new
-    @@cleanup_fiber : Fiber?
-    @@shutdown_ch : Channel(Nil)? = nil
-    @@last_cleanup = Time.utc
+  class ThrottlerActor < Actor
+    # =========================================================================
+    # Per-key rate limiter state (plain data, no mutex needed)
+    # =========================================================================
 
-    property max_requests : Int32
-    property window_seconds : Int32
-    property requests : Hash(String, Array(Int64))
-    property last_accessed : Int64
+    class LimiterState
+      property requests : Array(Int64)
+      property last_accessed : Int64
 
-    def initialize(@max_requests : Int32 = 60, @window_seconds : Int32 = 60)
-      @requests = Hash(String, Array(Int64)).new
-      @mutex = Mutex.new
-      @last_accessed = Time.utc.to_unix
-    end
+      def initialize(@max_requests : Int32, @window_seconds : Int32)
+        @requests = [] of Int64
+        @last_accessed = Time.utc.to_unix
+      end
 
-    def self.start_cleanup_fiber
-      @@cleanup_lock.synchronize do
-        return if @@cleanup_fiber
-        shutdown_ch = Channel(Nil).new
-        @@shutdown_ch = shutdown_ch
-        @@cleanup_fiber = spawn do
-          loop do
-            select
-            when shutdown_ch.receive?
-              break
-            when timeout(QuickHeadlines::Constants::RATE_LIMITER_CLEANUP_INTERVAL.seconds)
-              begin
-                cleanup_stale_instances
-              rescue ex
-                Log.for("quickheadlines.ratelimiter").error(exception: ex) { "Cleanup error" }
-              end
-            end
-          end
+      def allowed?(now : Int64) : Bool
+        cutoff = now - @window_seconds
+        @requests.reject! { |t| t < cutoff }
+
+        if @requests.size >= @max_requests
+          false
+        else
+          @requests << now
+          @last_accessed = now
+          true
         end
       end
-    end
 
-    # NOTE on lock ordering:
-    # cleanup_stale_instances acquires @@cleanup_lock first, then @@instances_lock.
-    # get_or_create calls start_cleanup_fiber (which uses @@cleanup_lock) BEFORE
-    # acquiring @@instances_lock. This consistent ordering prevents deadlocks.
-    # The cleanup fiber is started only once (guarded by @@cleanup_lock), so after
-    # initial startup, start_cleanup_fiber returns immediately without blocking.
-    def self.get_or_create(key : String, max_requests : Int32 = 1, window_seconds : Int32 = 60) : RateLimiter
-      start_cleanup_fiber
-      @@instances_lock.synchronize do
-        unless @@instances[key]?
-          @@instances[key] = RateLimiter.new(max_requests, window_seconds)
-        end
-        instance = @@instances[key]
-        instance.last_accessed = Time.utc.to_unix
-        instance
-      end
-    end
+      def retry_after(now : Int64) : Int32
+        return @window_seconds if @requests.empty?
 
-    def self.shutdown : Nil
-      Log.for("quickheadlines.ratelimiter").debug { "Shutting down rate limiter cleanup fiber" }
-      # Signal cleanup fiber to exit via channel
-      if ch = @@shutdown_ch
-        ch.close rescue Channel::ClosedError
-      end
-      @@instances_lock.synchronize do
-        @@instances.clear
-      end
-      @@cleanup_lock.synchronize do
-        @@cleanup_fiber = nil
-        @@shutdown_ch = nil
-      end
-      Log.for("quickheadlines.ratelimiter").debug { "Rate limiter shutdown complete" }
-    end
+        cutoff = now - @window_seconds
+        @requests.reject! { |t| t < cutoff }
+        return @window_seconds if @requests.empty?
 
-    def self.cleanup_stale_instances
-      @@cleanup_lock.synchronize do
-        # Quick check without holding instances lock
-        now = Time.utc
-        return if (now - @@last_cleanup).total_seconds < QuickHeadlines::Constants::RATE_LIMITER_CLEANUP_INTERVAL
-
-        # Only hold instances lock briefly for the actual cleanup
-        cutoff = now.to_unix - QuickHeadlines::Constants::RATE_LIMITER_INSTANCE_TTL
-        removed = 0
-        @@instances_lock.synchronize do
-          removed = @@instances.size
-          @@instances.reject! do |_, limiter|
-            limiter.last_accessed < cutoff
-          end
-          removed -= @@instances.size
-        end
-        Log.for("quickheadlines.ratelimiter").debug { "Cleaned up #{removed} stale rate limiter instances" } if removed > 0
-        @@last_cleanup = now
-      end
-    end
-
-    def cleanup
-      @mutex.synchronize do
-        cutoff = Time.utc.to_unix - @window_seconds
-        @requests.each do |key, times|
-          @requests[key] = times.select { |_t| _t > cutoff }
-        end
-        @requests.reject! { |_, _times| _times.empty? }
-      end
-    end
-
-    def allowed?(identifier : String) : Bool
-      now = Time.utc.to_unix
-      cutoff = now - @window_seconds
-
-      @mutex.synchronize do
-        times = @requests[identifier]? || [] of Int64
-        times = times.select { |_t| _t > cutoff }
-
-        if times.size >= @max_requests
-          return false
-        end
-
-        times << now
-        @requests[identifier] = times
-        true
-      end
-    end
-
-    def retry_after(identifier : String) : Int32
-      @mutex.synchronize do
-        times = @requests[identifier]?
-        return @window_seconds if times.nil? || times.empty?
-
-        oldest = times.min
-        now = Time.utc.to_unix
+        oldest = @requests.min
         elapsed = now - oldest
-        # Ensure minimum retry_after of 1 second for valid identifier with requests
         retry_seconds = @window_seconds - elapsed
         retry_seconds < 1 ? 1 : retry_seconds
       end
+    end
+
+    # =========================================================================
+    # Messages
+    # =========================================================================
+
+    # Call messages (request-reply)
+    def_call allowed(key : String, max_requests : Int32, window_seconds : Int32), Bool
+    def_call retry_after(key : String, window_seconds : Int32), Int32
+
+    # Cast messages (fire-and-forget)
+    def_cast shutdown_throttler
+
+    # =========================================================================
+    # Actor state
+    # =========================================================================
+
+    @instances : Hash(String, LimiterState)
+    @last_cleanup : Int64
+    @cleanup_interval : Int64
+    @instance_ttl : Int64
+
+    def initialize(@name : String = "ThrottlerActor")
+      super(@name, mailbox_size: 500)
+      @instances = {} of String => LimiterState
+      @last_cleanup = Time.utc.to_unix
+      @cleanup_interval = QuickHeadlines::Constants::RATE_LIMITER_CLEANUP_INTERVAL.to_i64
+      @instance_ttl = QuickHeadlines::Constants::RATE_LIMITER_INSTANCE_TTL.to_i64
+    end
+
+    # Singleton access
+    @@instance : ThrottlerActor?
+
+    def self.instance : ThrottlerActor
+      @@instance ||= ThrottlerActor.new.tap(&.start)
+    end
+
+    # =========================================================================
+    # Dispatch
+    # =========================================================================
+
+    def dispatch(message : Message) : Nil
+      case message
+      when CallAllowed          then message.deliver_reply(handle_allowed(message.key, message.max_requests, message.window_seconds))
+      when CallRetryAfter       then message.deliver_reply(handle_retry_after(message.key, message.window_seconds))
+      when CastShutdownThrottler then handle_shutdown
+      else raise "Unknown message: #{message.class.name}"
+      end
+    end
+
+    # =========================================================================
+    # Handlers
+    # =========================================================================
+
+    private def handle_allowed(key : String, max_requests : Int32, window_seconds : Int32) : Bool
+      maybe_cleanup
+      now = Time.utc.to_unix
+
+      unless @instances[key]?
+        @instances[key] = LimiterState.new(max_requests, window_seconds)
+      end
+
+      @instances[key].allowed?(now)
+    end
+
+    private def handle_retry_after(key : String, window_seconds : Int32) : Int32
+      now = Time.utc.to_unix
+      return window_seconds unless state = @instances[key]?
+      state.retry_after(now)
+    end
+
+    private def handle_shutdown : Nil
+      @instances.clear
+      Log.for("quickheadlines.ratelimiter").debug { "ThrottlerActor shutdown complete" }
+    end
+
+    # =========================================================================
+    # Cleanup — runs inside actor loop, no timer fiber needed
+    # =========================================================================
+
+    private def maybe_cleanup : Nil
+      now = Time.utc.to_unix
+      return if (now - @last_cleanup) < @cleanup_interval
+
+      cutoff = now - @instance_ttl
+      removed = @instances.size
+      @instances.reject! { |_, state| state.last_accessed < cutoff }
+      removed -= @instances.size
+
+      Log.for("quickheadlines.ratelimiter").debug { "Cleaned up #{removed} stale rate limiter instances" } if removed > 0
+      @last_cleanup = now
+    end
+  end
+
+  # Backward-compatible API — delegates to ThrottlerActor
+  class RateLimiter
+    def self.allowed?(key : String, max_requests : Int32 = 60, window_seconds : Int32 = 60) : Bool
+      ThrottlerActor.instance.allowed(key, max_requests, window_seconds)
+    end
+
+    def self.retry_after(key : String, window_seconds : Int32 = 60) : Int32
+      ThrottlerActor.instance.retry_after(key, window_seconds)
+    end
+
+    def self.shutdown : Nil
+      ThrottlerActor.instance.shutdown_throttler
     end
   end
 end

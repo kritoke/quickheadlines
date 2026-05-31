@@ -62,9 +62,9 @@ class QuickHeadlines::Controllers::ApiBaseController < Athena::Framework::Contro
 
   private def check_rate_limit!(request : AHTTP::Request, key : String, max_requests : Int32, window_seconds : Int32) : Nil
     ip = client_ip(request)
-    limiter = RateLimiter.get_or_create("#{key}:#{ip}", max_requests, window_seconds)
-    return if limiter.allowed?(ip)
-    retry_after = limiter.retry_after(ip)
+    limiter_key = "#{key}:#{ip}"
+    return if RateLimiter.allowed?(limiter_key, max_requests, window_seconds)
+    retry_after = RateLimiter.retry_after(limiter_key, window_seconds)
     headers = HTTP::Headers{"Retry-After" => retry_after.to_s}
     raise AHK::Exception::HTTPException.new(429, "Rate limit exceeded", nil, headers)
   end
