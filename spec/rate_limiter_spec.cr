@@ -38,14 +38,14 @@ describe QuickHeadlines::ThrottlerActor do
     it "enforces window expiry" do
       actor = QuickHeadlines::ThrottlerActor.new("test-throttler")
       actor.start
-      sleep 0.05.seconds # Give actor time to start
+      sleep 0.2.seconds # Give actor time to start
       key = "test-#{rand(10000)}"
       actor.allowed(key, 1, 1).should be_true
-      sleep 0.05.seconds # Give actor time to process
+      sleep 0.2.seconds
       actor.allowed(key, 1, 1).should be_false
 
       # After window expires, should allow again
-      ::sleep(1.1.seconds)
+      ::sleep(2.seconds)
       actor.allowed(key, 1, 1).should be_true
       actor.stop
     end

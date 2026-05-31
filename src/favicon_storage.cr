@@ -235,7 +235,8 @@ class FaviconActor < Actor
 
       content_type = response.content_type || "image/png"
       ext = extension_from_content_type(content_type)
-      hash = FaviconActor.favicon_hash_for_url(google_url)
+      # Use original URL's hash so next lookup finds the Google fallback
+      hash = FaviconActor.favicon_hash_for_url(url)
       filename = FaviconActor.favicon_filename(hash, ext)
       filepath = File.join(@favicon_dir, filename)
 
