@@ -73,12 +73,19 @@ module FaviconStorage
 
     # Single mutex covers file write + cleanup of tiny favicon.
     # Cannot call fetch_and_save here (would deadlock via save_favicon re-entry).
+    # Use temp file + atomic rename to minimize time under mutex.
     @@mutex.synchronize do
       unless File.exists?(filepath)
         begin
-          File.write(filepath, image_data)
+          # Write to temp file first (outside critical section would be ideal,
+          # but we need the mutex to prevent duplicate writes)
+          temp_path = filepath + ".tmp"
+          File.write(temp_path, image_data)
+          File.rename(temp_path, filepath)
         rescue ex
           Log.for("quickheadlines.storage").error(exception: ex) { "Error saving favicon" }
+          # Clean up temp file on failure
+          File.delete(filepath + ".tmp") if File.exists?(filepath + ".tmp")
           return
         end
       end
