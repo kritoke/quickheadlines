@@ -186,7 +186,7 @@ module QuickHeadlines::Storage
         items = [] of ClusteringItemRow
 
         query = <<-SQL
-          SELECT i.id, i.title, i.link, i.pub_date, f.url as feed_url, f.title as feed_title, f.site_link as feed_link, f.favicon, NULL as favicon_data, f.header_color, f.header_text_color, i.comment_url, i.commentary_url
+          SELECT i.id, i.title, i.link, i.pub_date, f.url as feed_url, f.title as feed_title, f.site_link as feed_link, f.favicon, f.favicon_data, f.header_color, f.header_text_color, i.comment_url, i.commentary_url
           FROM items i
           JOIN feeds f ON i.feed_id = f.id
           WHERE i.cluster_id = ?

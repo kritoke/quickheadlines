@@ -21,8 +21,6 @@ class DatabaseService
 
     @db = DB.open("sqlite3://#{@db_path}?busy_timeout=#{QuickHeadlines::Constants::SQLITE_BUSY_TIMEOUT_MS}&max_pool_size=#{QuickHeadlines::Constants::DB_MAX_POOL_SIZE}")
     ::create_schema(@db, @db_path)
-
-    Log.for("quickheadlines.storage").info { "DatabaseService initialized: #{@db_path}" }
   end
 
   def self.instance : DatabaseService

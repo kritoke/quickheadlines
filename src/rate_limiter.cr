@@ -79,9 +79,12 @@ module QuickHeadlines
 
     # Singleton access
     @@instance : ThrottlerActor?
+    @@instance_mutex = Mutex.new
 
     def self.instance : ThrottlerActor
-      @@instance ||= ThrottlerActor.new.tap(&.start)
+      @@instance_mutex.synchronize do
+            @@instance ||= ThrottlerActor.new.tap(&.start)
+      end
     end
 
     # =========================================================================

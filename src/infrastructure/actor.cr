@@ -40,6 +40,10 @@ require "log"
 #   actor.stop
 #
 
+# Default timeout for def_call request-reply to prevent callers from hanging
+# forever if the actor is deadlocked, crashed, or the mailbox is full.
+ACTOR_CALL_TIMEOUT_SECONDS = 30_i64
+
 abstract class Actor
   abstract struct Message
   end
@@ -50,6 +54,7 @@ abstract class Actor
 
   abstract struct CallMessage(R) < Message
     abstract def deliver_reply(value : R) : Nil
+    abstract def deliver_error(message : String) : Nil
   end
 
   @mailbox : Channel(Message)
@@ -93,8 +98,6 @@ abstract class Actor
           @messages_failed.add(1)
           Log.for("actor.#{@name}").error(exception: ex) { "Error processing #{message.class.name}" }
         end
-
-        maybe_gc_collect
       rescue Channel::ClosedError
         break
       rescue ex
@@ -108,13 +111,15 @@ abstract class Actor
 
   abstract def dispatch(message : Message)
 
-  GC_COLLECT_THRESHOLD = 100_i64
-
-  private def maybe_gc_collect : Nil
-    count = @messages_processed.get
-    if count > 0 && count % GC_COLLECT_THRESHOLD == 0
-      GC.collect
+  protected def _actor_call_with_timeout(reply_ch : Channel(T), timeout_seconds : Int64) : T forall T
+    select
+    when value = reply_ch.receive
+      value
+    when timeout(timeout_seconds.seconds)
+      raise CallTimeoutError.new("Actor call timed out after #{timeout_seconds}s")
     end
+  rescue Channel::ClosedError
+    raise CallTimeoutError.new("Actor call failed: mailbox closed")
   end
 
   def stats : {processed: Int64, failed: Int64, running: Bool}
@@ -217,12 +222,17 @@ macro def_call(call, return_type = nil)
         @reply.send(value)
       rescue Channel::ClosedError
       end
+
+      def deliver_error(message : String) : Nil
+        # No-op: caller already received CallTimeoutError from _actor_call_with_timeout.
+        # This exists only to satisfy the CallMessage interface.
+      end
     end
 
     def {{method_name.id}} : {{return_type}}
       reply_ch = Channel({{return_type}}).new(1)
       send_message({{struct_name}}.new(reply_ch))
-      reply_ch.receive
+      _actor_call_with_timeout(reply_ch, ACTOR_CALL_TIMEOUT_SECONDS)
     end
   {% else %}
     # With-args form: def_call register(ws : WebSocket, ip : String), Bool
@@ -256,12 +266,22 @@ macro def_call(call, return_type = nil)
         @reply.send(value)
       rescue Channel::ClosedError
       end
+
+      def deliver_error(message : String) : Nil
+        # No-op: caller already received CallTimeoutError from _actor_call_with_timeout.
+        # This exists only to satisfy the CallMessage interface.
+      end
     end
 
     def {{method_name.id}}({% for arg, i in args %}{{arg.var.id}} : {{arg.type}}{% if i < args.size - 1 %}, {% end %}{% end %}) : {{return_type}}
       reply_ch = Channel({{return_type}}).new(1)
       send_message({{struct_name}}.new({% for arg, i in args %}{{arg.var.id}}, {% end %}reply_ch))
-      reply_ch.receive
+      _actor_call_with_timeout(reply_ch, ACTOR_CALL_TIMEOUT_SECONDS)
     end
   {% end %}
+end
+
+# Raised when a def_call message does not receive a reply within the timeout.
+# Indicates the actor is stuck, crashed, or the mailbox is saturated.
+class CallTimeoutError < Exception
 end

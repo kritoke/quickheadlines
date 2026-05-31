@@ -194,13 +194,13 @@ module QuickHeadlines::Repositories
           normalized = QuickHeadlines::Utils::UrlNormalizer.normalize(item.link)
           [feed_id, item.title, item.link, normalized, pub_date_str, item.version, item.comment_url, item.commentary_url]
         end
-        db.exec("INSERT OR REPLACE INTO items (feed_id, title, link, normalized_link, pub_date, version, comment_url, commentary_url) VALUES #{values_clause}", args: args)
+        db.exec("INSERT INTO items (feed_id, title, link, normalized_link, pub_date, version, comment_url, commentary_url) VALUES #{values_clause} ON CONFLICT(feed_id, normalized_link) DO UPDATE SET title=excluded.title, link=excluded.link, pub_date=excluded.pub_date, version=excluded.version, comment_url=excluded.comment_url, commentary_url=excluded.commentary_url", args: args)
       end
     end
 
     def find_with_items(url : String) : FeedData?
       feed_result = db.query_one?(
-        "SELECT id, title, url, site_link, header_color, header_text_color, header_theme_colors, etag, last_modified, favicon, NULL as favicon_data FROM feeds WHERE url = ?",
+        "SELECT id, title, url, site_link, header_color, header_text_color, header_theme_colors, etag, last_modified, favicon, favicon_data FROM feeds WHERE url = ?",
         url
       ) do |row|
         feed_id = row.read(Int64)

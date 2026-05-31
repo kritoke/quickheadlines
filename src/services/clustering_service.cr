@@ -37,14 +37,19 @@ class QuickHeadlines::Services::ClusteringActor < Actor
 
   # Singleton access — lazily initialized with explicit db_service
   @@instance : ClusteringActor?
+  @@instance_mutex = Mutex.new
 
   def self.instance : ClusteringActor
-    @@instance ||= ClusteringActor.new(DatabaseService.instance).tap(&.start)
+    @@instance_mutex.synchronize do
+      @@instance ||= ClusteringActor.new(DatabaseService.instance).tap(&.start)
+    end
   end
 
   # Create or get instance with explicit db_service (for tests)
   def self.instance(db_service : DatabaseService) : ClusteringActor
-    @@instance ||= ClusteringActor.new(db_service).tap(&.start)
+    @@instance_mutex.synchronize do
+      @@instance ||= ClusteringActor.new(db_service).tap(&.start)
+    end
   end
 
   def self.reset : Nil
@@ -115,7 +120,7 @@ class QuickHeadlines::Services::ClusteringService
 
   def initialize(@db_service : DatabaseService, @cluster_repository : QuickHeadlines::Repositories::ClusterRepository? = nil)
     @db = @db_service.db
-    @actor = ClusteringActor.new(@db_service).tap(&.start)
+    @actor = ClusteringActor.instance(@db_service)
   end
 
   private def cluster_repository : QuickHeadlines::Repositories::ClusterRepository

@@ -50,9 +50,12 @@ class FaviconActor < Actor
 
   # Singleton access
   @@instance : FaviconActor?
+  @@instance_mutex = Mutex.new
 
   def self.instance : FaviconActor
-    @@instance ||= FaviconActor.new.tap(&.start)
+    @@instance_mutex.synchronize do
+      @@instance ||= FaviconActor.new.tap(&.start)
+    end
   end
 
   # =========================================================================
