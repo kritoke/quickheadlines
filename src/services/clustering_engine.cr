@@ -68,7 +68,13 @@ module QuickHeadlines::Services
         uri = URI.parse(url)
         host = uri.host || ""
         return "" if host.empty?
-        host.downcase
+        host = host.downcase
+        # Strip common feed/newsletter prefixes that don't change the site identity
+        host = host.lchop("feeds.")
+        host = host.lchop("rss.")
+        host = host.lchop("feed.")
+        host = host.lchop("www.")
+        host
       rescue URI::Error
         ""
       end
