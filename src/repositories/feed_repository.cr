@@ -119,11 +119,12 @@ module QuickHeadlines::Repositories
     end
 
     private def update_feed(feed_id : Int64, feed_data : FeedData) : Int64
-      existing = db.query_one?("SELECT header_color, header_text_color, header_theme_colors FROM feeds WHERE id = ?", feed_id) do |row|
+      existing = db.query_one?("SELECT header_color, header_text_color, header_theme_colors, site_link FROM feeds WHERE id = ?", feed_id) do |row|
         {
           color:      row.read(String?),
           text_color: row.read(String?),
           theme:      row.read(String?),
+          site_link:  row.read(String?),
         }
       end
 
@@ -131,10 +132,19 @@ module QuickHeadlines::Repositories
       header_text_color_to_save = feed_data.header_text_color.nil? ? existing.try(&.[:text_color]) : feed_data.header_text_color
       header_theme_to_save = feed_data.header_theme_colors.nil? ? existing.try(&.[:theme]) : feed_data.header_theme_colors
 
+      # Preserve existing site_link if the new one is just the feed URL
+      # (indicates the RSS parser didn't find a proper site link)
+      existing_site_link = existing.try(&.[:site_link])
+      site_link_to_save = if feed_data.site_link == feed_data.url && existing_site_link && existing_site_link != feed_data.url
+                            existing_site_link
+                          else
+                            feed_data.site_link
+                          end
+
       db.exec(
         "UPDATE feeds SET title = ?, site_link = ?, header_color = ?, header_text_color = ?, header_theme_colors = ?, etag = ?, last_modified = ?, favicon = ?, favicon_data = ?, last_fetched = ? WHERE id = ?",
         feed_data.title,
-        feed_data.site_link,
+        site_link_to_save,
         header_color_to_save,
         header_text_color_to_save,
         header_theme_to_save,
