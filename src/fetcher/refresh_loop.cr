@@ -113,7 +113,11 @@ private def fetch_single_feed_with_timeout(feed : Feed, config : Config, previou
       fetch_result = FeedFetcher.instance.fetch(feed, config.item_limit, config.db_fetch_limit, previous_feed_data)
       result_channel.send(fetch_result)
     rescue ex : Exception
-      result_channel.send(ex)
+      begin
+        result_channel.send(ex)
+      rescue Channel::ClosedError
+        # Channel closed by timeout — inner fiber can exit
+      end
     end
   end
 
