@@ -144,6 +144,12 @@ module QuickHeadlines::Services
       candidate_pairs = index.find_similar_pairs(threshold)
       verified_pairs = [] of Tuple(Int64, Int64, Float64)
 
+      # Pre-compute word sets to avoid redundant computation for items in multiple pairs
+      word_sets = {} of Int64 => Set(String)
+      items_map.each do |id, item|
+        word_sets[id] = word_set(item.title)
+      end
+
       candidate_pairs.each_with_index do |pair, idx|
         a = pair[0].to_i64
         b = pair[1].to_i64
@@ -152,9 +158,7 @@ module QuickHeadlines::Services
         next if items_map[a].feed_id == items_map[b].feed_id
         next if same_base_domain?(items_map[a].feed_url, items_map[b].feed_url)
 
-        set_a = word_set(items_map[a].title)
-        set_b = word_set(items_map[b].title)
-        sim = overlap_coefficient(set_a, set_b)
+        sim = overlap_coefficient(word_sets[a], word_sets[b])
 
         if sim >= threshold
           verified_pairs << {a, b, sim}
