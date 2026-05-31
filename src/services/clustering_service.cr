@@ -5,14 +5,117 @@ require "../repositories/cluster_repository"
 require "../dtos/cluster_dto"
 require "../dtos/api_responses"
 require "./clustering_engine"
+require "../infrastructure/actor"
 
-class QuickHeadlines::Services::ClusteringService
+# ClusteringActor — serializes heavy LSH clustering operations.
+#
+# All clustering mutations go through the actor mailbox. Read-only queries
+# can still go direct to the database.
+#
+class QuickHeadlines::Services::ClusteringActor < Actor
+  # =========================================================================
+  # Messages
+  # =========================================================================
+
+  # Call messages (request-reply) — blocks until clustering completes
+  def_call recluster(cache : FeedCache, limit : Int32, threshold : Float64, bands : Int32), Int32
+  def_call is_clustering, Bool
+
+  # =========================================================================
+  # Actor state
+  # =========================================================================
+
+  @clustering : Bool = false
   @db_service : DatabaseService
   @db : DB::Database
   @cluster_repository : QuickHeadlines::Repositories::ClusterRepository?
 
+  def initialize(@db_service : DatabaseService, @name : String = "ClusteringActor")
+    super(@name, mailbox_size: 10)
+    @db = @db_service.db
+  end
+
+  # Singleton access — lazily initialized with explicit db_service
+  @@instance : ClusteringActor?
+
+  def self.instance : ClusteringActor
+    @@instance ||= ClusteringActor.new(DatabaseService.instance).tap(&.start)
+  end
+
+  # Create or get instance with explicit db_service (for tests)
+  def self.instance(db_service : DatabaseService) : ClusteringActor
+    @@instance ||= ClusteringActor.new(db_service).tap(&.start)
+  end
+
+  def self.reset : Nil
+    if inst = @@instance
+      inst.stop rescue nil
+    end
+    @@instance = nil
+  end
+
+  # =========================================================================
+  # Dispatch
+  # =========================================================================
+
+  def dispatch(message : Message) : Nil
+    case message
+    when CallRecluster then message.deliver_reply(handle_recluster(message.cache, message.limit, message.threshold, message.bands))
+    when CallIsClustering then message.deliver_reply(@clustering)
+    else raise "Unknown message: #{message.class.name}"
+    end
+  end
+
+  # =========================================================================
+  # Handlers
+  # =========================================================================
+
+  private def handle_recluster(cache : FeedCache, limit : Int32, threshold : Float64, bands : Int32) : Int32
+    if @clustering
+      Log.for("quickheadlines.clustering").info { "Clustering already in progress, skipping" }
+      return 0
+    end
+
+    @clustering = true
+
+    begin
+      items = [] of ClusteringItem
+      @db.query("SELECT i.id, i.title, i.feed_id, f.url FROM items i JOIN feeds f ON i.feed_id = f.id WHERE i.pub_date IS NULL OR i.pub_date <= datetime('now', '+1 day') ORDER BY i.pub_date DESC LIMIT ?", limit) do |rows|
+        rows.each do
+          id = rows.read(Int64)
+          title = rows.read(String)
+          feed_id = rows.read(Int64)
+          feed_url = rows.read(String)
+          items << ClusteringItem.new(id: id, title: title, feed_id: feed_id, feed_url: feed_url)
+        end
+      end
+
+      Log.for("quickheadlines.clustering").info { "Found #{items.size} items to re-cluster with LSH (threshold: #{threshold}, bands: #{bands})" }
+
+      rep_map = ClusteringEngine.cluster_items(items, threshold, bands)
+      cache.assign_clusters_bulk(rep_map)
+      processed = items.count { |i| ClusteringEngine.can_cluster?(i.title) }
+      Log.for("quickheadlines.clustering").info { "Re-clustering with LSH complete: #{processed} items clustered into #{rep_map.size} groups" }
+      processed
+    rescue ex
+      Log.for("quickheadlines.clustering").error(exception: ex) { "Clustering failed" }
+      0
+    ensure
+      @clustering = false
+    end
+  end
+end
+
+# Backward-compatible ClusteringService — delegates to ClusteringActor for mutations
+class QuickHeadlines::Services::ClusteringService
+  @db_service : DatabaseService
+  @db : DB::Database
+  @cluster_repository : QuickHeadlines::Repositories::ClusterRepository?
+  @actor : ClusteringActor
+
   def initialize(@db_service : DatabaseService, @cluster_repository : QuickHeadlines::Repositories::ClusterRepository? = nil)
     @db = @db_service.db
+    @actor = ClusteringActor.new(@db_service).tap(&.start)
   end
 
   private def cluster_repository : QuickHeadlines::Repositories::ClusterRepository
@@ -51,7 +154,6 @@ class QuickHeadlines::Services::ClusteringService
     ClusterMatchResult.new(best_match, best_similarity, best_title, best_feed_id)
   end
 
-  # Result of finding the best cluster match for an item
   private struct ClusterMatchResult
     getter match_id : Int64?
     getter similarity : Float64
@@ -146,35 +248,9 @@ class QuickHeadlines::Services::ClusteringService
     )
   end
 
+  # Delegate recluster_with_lsh to ClusteringActor (synchronous — blocks until complete)
   def recluster_with_lsh(cache : FeedCache, limit : Int32 = 5000, threshold : Float64 = 0.35, bands : Int32 = 20) : Int32
-    unless StateStore.start_clustering_if_idle
-      Log.for("quickheadlines.clustering").info { "Clustering already in progress, skipping recluster_with_lsh" }
-      return 0
-    end
-
-    items = [] of ClusteringItem
-    @db.query("SELECT i.id, i.title, i.feed_id, f.url FROM items i JOIN feeds f ON i.feed_id = f.id WHERE i.pub_date IS NULL OR i.pub_date <= datetime('now', '+1 day') ORDER BY i.pub_date DESC LIMIT ?", limit) do |rows|
-      rows.each do
-        id = rows.read(Int64)
-        title = rows.read(String)
-        feed_id = rows.read(Int64)
-        feed_url = rows.read(String)
-        items << ClusteringItem.new(id: id, title: title, feed_id: feed_id, feed_url: feed_url)
-      end
-    end
-
-    Log.for("quickheadlines.clustering").info { "Found #{items.size} items to re-cluster with LSH (threshold: #{threshold}, bands: #{bands})" }
-
-    begin
-      rep_map = ClusteringEngine.cluster_items(items, threshold, bands)
-      cache.assign_clusters_bulk(rep_map)
-      processed = items.count { |i| ClusteringEngine.can_cluster?(i.title) }
-      Log.for("quickheadlines.clustering").info { "Re-clustering with LSH complete: #{processed} items clustered into #{rep_map.size} groups" }
-    ensure
-      StateStore.clustering = false
-    end
-
-    processed
+    @actor.recluster(cache, limit, threshold, bands)
   end
 
   def recluster_with_lsh(limit : Int32 = 5000, threshold : Float64 = 0.35, bands : Int32 = 20) : Int32

@@ -1,4 +1,5 @@
 require "json"
+require "./story_dto"
 
 class QuickHeadlines::DTOs::ClusterResponse
   include JSON::Serializable

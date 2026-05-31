@@ -209,13 +209,7 @@ class AppBootstrap
         begin
           sleep(@clustering_interval)
           break if QuickHeadlines.shutting_down?
-          if start_time = StateStore.clustering_start_time
-            if Time.utc - start_time > QuickHeadlines::Constants::STUCK_CLUSTER_THRESHOLD
-              Log.for("quickheadlines.app").warn { "Clustering stuck for >4 hours, resetting state" }
-              StateStore.clustering = false
-            end
-          end
-          next if StateStore.clustering?
+          # ClusteringActor handles "already in progress" check internally
           threshold = StateStore.config.try(&.clustering).try(&.threshold) || 0.35
           QuickHeadlines::Services::ClusteringService.new(@db_service).recluster_with_lsh(@feed_cache, @config.db_fetch_limit, threshold)
         rescue ex
