@@ -59,7 +59,7 @@ module FetcherResponse
       result_etag,
       result_last_modified,
       favicon_path,
-      nil
+      favicon_path
     )
 
     feed_data = feed_data.with_theme_colors(preserved_theme) if preserved_theme
