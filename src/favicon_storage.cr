@@ -227,6 +227,22 @@ class FaviconActor < Actor
     begin
       headers = HTTP::Headers{"User-Agent" => "Mozilla/5.0 (compatible; QuickHeadlines/1.0)"}
       response = client.get(uri.request_target, headers: headers)
+
+      # Follow redirects (Google API returns 301)
+      if response.status.redirection?
+        redirect_url = response.headers["Location"]?
+        if redirect_url
+          redirect_uri = uri.resolve(redirect_url)
+          redirect_host = redirect_uri.host
+          if redirect_host
+            client.close
+            client = HTTP::Client.new(redirect_host, port: redirect_uri.port, tls: redirect_uri.scheme == "https")
+            apply_default_timeouts(client)
+            response = client.get(redirect_uri.request_target, headers: headers)
+          end
+        end
+      end
+
       return nil unless response.status.success?
 
       image_data = response.body.to_slice
