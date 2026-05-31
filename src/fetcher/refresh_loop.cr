@@ -577,12 +577,20 @@ end
 private def sleep_between_cycles(state : RefreshLoopState) : Nil
   sleep_duration = state.refresh_interval_seconds.seconds
   outer_sleep_timeout = state.sleep_timeout_seconds.seconds
+  elapsed = Time::Span.zero
+  check_interval = 30.seconds
 
-  # Use single timeout as watchdog — no extra fiber needed
-  select
-  when timeout(sleep_duration)
-    # Normal completion
-  when timeout(outer_sleep_timeout)
+  # Check shutdown every 30 seconds instead of blocking for full sleep duration
+  while elapsed < sleep_duration && elapsed < outer_sleep_timeout
+    break if QuickHeadlines.shutting_down?
+    remaining = {check_interval, sleep_duration - elapsed, outer_sleep_timeout - elapsed}.min
+    select
+    when timeout(remaining)
+      elapsed += remaining
+    end
+  end
+
+  if elapsed >= outer_sleep_timeout && !QuickHeadlines.shutting_down?
     Log.for("quickheadlines.feed").error { "refresh loop sleep timed out after #{outer_sleep_timeout.total_seconds.round}s" }
   end
 end
@@ -604,19 +612,25 @@ private def start_health_reporter : Nil
   spawn(name: "health_monitor_reporter") do
     loop do
       begin
-        # Direct sleep instead of spawning a helper fiber each iteration
-        select
-        when timeout(5.minutes)
+        break if QuickHeadlines.shutting_down?
+
+        # Single timeout with shutdown check every 30s
+        elapsed = Time::Span.zero
+        while elapsed < 5.minutes
           break if QuickHeadlines.shutting_down?
-          status = RefreshHealthMonitor.status
-          if status[:failures] > 0 || status[:last_complete] == 0
-            Log.for("quickheadlines.feed").warn do
-              "Refresh health: cycles=#{status[:cycles]}, failures=#{status[:failures]}, last_complete=#{status[:last_complete]}"
-            end
+          check = {30.seconds, 5.minutes - elapsed}.min
+          select
+          when timeout(check)
+            elapsed += check
           end
-        when timeout(30.seconds)
-          # Periodic shutdown check
-          break if QuickHeadlines.shutting_down?
+        end
+
+        break if QuickHeadlines.shutting_down?
+        status = RefreshHealthMonitor.status
+        if status[:failures] > 0 || status[:last_complete] == 0
+          Log.for("quickheadlines.feed").warn do
+            "Refresh health: cycles=#{status[:cycles]}, failures=#{status[:failures]}, last_complete=#{status[:last_complete]}"
+          end
         end
       rescue ex
         Log.for("quickheadlines.feed").error(exception: ex) { "Health monitor reporter error" }
@@ -665,12 +679,15 @@ def start_refresh_loop(config_path : String, cache : FeedCache, db_service : Dat
         if state.first_run?
           state.mark_first_run_done
           run_initial_refresh(state, cache, db_service)
-          # Wait for initial refresh with timeout protection — no extra fiber needed
-          select
-          when timeout(state.refresh_interval_seconds.seconds)
-            # Normal completion
-          when timeout(state.outer_timeout_seconds.seconds)
-            Log.for("quickheadlines.feed").warn { "Initial refresh wait timed out after #{state.outer_timeout_seconds}s" }
+          # Wait for initial refresh with shutdown check every 30s
+          elapsed = Time::Span.zero
+          while elapsed < state.refresh_interval_seconds.seconds
+            break if QuickHeadlines.shutting_down?
+            check = {30.seconds, state.refresh_interval_seconds.seconds - elapsed}.min
+            select
+            when timeout(check)
+              elapsed += check
+            end
           end
           break if QuickHeadlines.shutting_down?
           next
@@ -690,12 +707,15 @@ def start_refresh_loop(config_path : String, cache : FeedCache, db_service : Dat
         StateStore.refreshing = false
         RefreshHealthMonitor.record_failure
         state.reset_cycle_count
-        # Timeout-protected delay before restart — no extra fiber needed
-        select
-        when timeout(60.seconds)
-          # Normal restart delay
-        when timeout(state.outer_timeout_seconds.seconds)
-          Log.for("quickheadlines.feed").warn { "Restart delay timed out, continuing immediately" }
+        # Delay before restart with shutdown check every 30s
+        elapsed = Time::Span.zero
+        while elapsed < 60.seconds
+          break if QuickHeadlines.shutting_down?
+          check = {30.seconds, 60.seconds - elapsed}.min
+          select
+          when timeout(check)
+            elapsed += check
+          end
         end
         break if QuickHeadlines.shutting_down?
       end

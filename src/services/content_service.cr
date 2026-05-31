@@ -3,13 +3,16 @@ require "azurite"
 module QuickHeadlines::Services
   class ContentService
     @@instance : ContentService?
+    @@instance_mutex = Mutex.new(:unchecked)
 
     def self.instance : ContentService
-      @@instance || raise "ContentService: Not initialized. AppBootstrap must create ContentService before accessing instance."
+      @@instance_mutex.synchronize do
+        @@instance || raise "ContentService: Not initialized. AppBootstrap must create ContentService before accessing instance."
+      end
     end
 
     def self.instance=(service : ContentService)
-      @@instance = service
+      @@instance_mutex.synchronize { @@instance = service }
     end
 
     @store : Azurite::Store

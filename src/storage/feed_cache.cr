@@ -16,13 +16,16 @@ require "../repositories/feed_repository"
 
 class FeedCache
   @@instance : FeedCache?
+  @@instance_mutex = Mutex.new(:unchecked)
 
   def self.instance : FeedCache
-    @@instance || raise "FeedCache: Not initialized. AppBootstrap must create FeedCache before accessing instance."
+    @@instance_mutex.synchronize do
+      @@instance || raise "FeedCache: Not initialized. AppBootstrap must create FeedCache before accessing instance."
+    end
   end
 
   def self.instance=(cache : FeedCache)
-    @@instance = cache
+    @@instance_mutex.synchronize { @@instance = cache }
   end
 
   @mutex : Mutex
