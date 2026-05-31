@@ -49,7 +49,6 @@
 	let feedGridClass = $derived(getFeedGridClass(layoutState.feedColumns));
 
 	async function handleTabChange(tab: string) {
-		await loadFeeds(tab);
 		await NavigationService.navigateToFeeds(tab);
 		window.scrollTo({ top: 0, behavior: 'smooth' });
 	}
