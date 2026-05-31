@@ -126,12 +126,11 @@ end
 # def_cast — fire-and-forget message (tell semantics)
 # ============================================================================
 #
-# Generates message struct and public send method.
-# Subclass must implement: private def handle_NAME(args...) : Nil
+# Two forms:
+#   def_cast reset                            # no-arg (TypeDeclaration)
+#   def_cast increment(amount : Int32)        # with-args (Call)
 #
-# Usage:
-#   def_cast increment(amount : Int32)
-#   def_cast reset
+# Subclass must implement: private def handle_NAME(args...) : Nil
 #
 macro def_cast(call)
   {% if call.is_a?(TypeDeclaration) %}
@@ -187,14 +186,17 @@ end
 # def_call — synchronous request-reply (ask semantics)
 # ============================================================================
 #
-# Generates message struct with reply channel and public call method.
+# Two forms:
+#   def_call get_count : Int32                            # no-arg (TypeDeclaration)
+#   def_call register(ws : WebSocket, ip : String), Bool  # with-args (Call, ReturnType)
+#
+# With-args form passes return type as second macro argument because
+# Crystal parses `method(args) : Type` as a return type annotation on the
+# call, which is not valid syntax for macro arguments.
+#
 # Subclass must implement: private def handle_NAME(args...) : ReturnType
 #
-# Usage:
-#   def_call get_count : Int32
-#   def_call fetch(url : String) : String
-#
-macro def_call(call)
+macro def_call(call, return_type = nil)
   {% if call.is_a?(TypeDeclaration) %}
     # No-arg form: def_call get_count : Int32
     {% method_name = call.var.stringify %}
@@ -223,11 +225,10 @@ macro def_call(call)
       reply_ch.receive
     end
   {% else %}
-    # With-args form: def_call fetch(url : String) : String
+    # With-args form: def_call register(ws : WebSocket, ip : String), Bool
     {% method_name = call.name.stringify %}
-    {% return_type = call.return_type %}
-    {% struct_name = ("Call" + method_name.camelcase).id %}
     {% args = call.args %}
+    {% struct_name = ("Call" + method_name.camelcase).id %}
 
     struct {{struct_name}} < CallMessage({{return_type}})
       {% for arg in args %}
@@ -235,7 +236,7 @@ macro def_call(call)
       {% end %}
       @reply : Channel({{return_type}})
 
-      def initialize({% for arg, i in args %}{{arg.var.id}} : {{arg.type}}, {% end %}@reply : Channel({{return_type}}})
+      def initialize({% for arg, i in args %}{{arg.var.id}} : {{arg.type}}, {% end %}@reply : Channel({{return_type}}))
         {% for arg in args %}
           @{{arg.var.id}} = {{arg.var.id}}
         {% end %}

@@ -229,7 +229,7 @@ class QuickHeadlines::Controllers::AdminController < QuickHeadlines::Controllers
   def status(request : AHTTP::Request) : QuickHeadlines::DTOs::AdminStatusResponse
     raise AHK::Exception::HTTPException.new(401, "Unauthorized") unless check_admin_auth(request)
 
-    ws_stats = WebSocketStats.from_hash(@socket_manager.stats)
+    ws_stats = WebSocketStats.from_hash(@socket_manager.connection_stats)
     broadcaster_stats = BroadcasterStats.from_hash(EventBroadcaster.stats)
 
     refresh_status = begin

@@ -275,7 +275,7 @@ class AppBootstrap
         break if QuickHeadlines.shutting_down?
         begin
           removed = SocketManager.instance.cleanup_dead_connections
-          stats = SocketManager.instance.stats
+          stats = SocketManager.instance.connection_stats
           Log.for("quickheadlines.websocket").debug do
             "Janitor: #{stats["connections"]} active, #{removed} removed, " \
             "#{stats["messages_sent"]} sent, #{stats["messages_dropped"]} dropped, " \
