@@ -193,17 +193,26 @@ class FaviconSyncService
   end
 
   private def categorize_backfill(row : FeedFaviconRow, backfills : BackfillLists) : Nil
-    return unless row.header_theme_colors.nil?
-
     fav = row.favicon
     if !fav
       if row.site_link && !row.site_link.empty?
         backfills.missing << {row.feed_id, row.url, row.site_link}
       end
     elsif fav.starts_with?("/favicons/")
-      backfills.local << {row.feed_id, row.url, fav}
+      # Check if the file actually exists on disk
+      disk_path = FaviconStorage.disk_path(fav)
+      if disk_path && File.exists?(disk_path)
+        # Only backfill header colors if we haven't already
+        backfills.local << {row.feed_id, row.url, fav} if row.header_theme_colors.nil?
+      else
+        # File missing — always re-fetch regardless of header_theme_colors
+        Log.for("quickheadlines.cache").debug { "Favicon file missing on disk for #{row.url}, will re-fetch" }
+        if row.site_link && !row.site_link.empty?
+          backfills.missing << {row.feed_id, row.url, row.site_link}
+        end
+      end
     elsif fav.starts_with?("http") && fav.includes?("google.com/s2/favicons")
-      backfills.google << {row.feed_id, row.url, fav}
+      backfills.google << {row.feed_id, row.url, fav} if row.header_theme_colors.nil?
     end
   end
 
