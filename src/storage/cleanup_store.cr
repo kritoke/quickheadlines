@@ -136,17 +136,6 @@ module QuickHeadlines::Storage
       perform_wal_checkpoint(truncate: false)
     end
 
-    private def actual_wal_file_size : Int64
-      wal_path = "#{@db_path}-wal"
-      if File.exists?(wal_path)
-        File.size(wal_path)
-      else
-        0_i64
-      end
-    rescue File::Error | IO::Error
-      0_i64
-    end
-
     private def wal_file_size : Int64
       wal_path = "#{@db_path}-wal"
       File.exists?(wal_path) ? File.size(wal_path) : 0_i64

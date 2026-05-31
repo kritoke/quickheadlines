@@ -7,6 +7,7 @@ class EventBroadcaster
   SHUTDOWN_CHANNEL = Channel(Nil).new(1)
   DROPPED_EVENTS   = Atomic(Int64).new(0)
   PROCESSED_EVENTS = Atomic(Int64).new(0)
+  SENT_EVENTS      = Atomic(Int64).new(0)
 
   def self.start : Nil
     spawn do
@@ -17,6 +18,7 @@ class EventBroadcaster
             begin
               json = event.to_json
               SocketManager.instance.broadcast(json)
+              SENT_EVENTS.add(1)
               PROCESSED_EVENTS.add(1)
             rescue ex
               Log.for("quickheadlines.websocket").error(exception: ex) { "EventBroadcaster to_json/broadcast error, dropping event" }
@@ -25,6 +27,7 @@ class EventBroadcaster
             begin
               json = HeartbeatEvent.new.to_json
               SocketManager.instance.broadcast(json)
+              SENT_EVENTS.add(1)
             rescue ex
               Log.for("quickheadlines.websocket").error(exception: ex) { "EventBroadcaster heartbeat error" }
             end
@@ -61,8 +64,9 @@ class EventBroadcaster
 
   def self.stats
     {
-      "dropped"   => DROPPED_EVENTS.get,
-      "processed" => PROCESSED_EVENTS.get,
+      "sent"       => SENT_EVENTS.get,
+      "dropped"    => DROPPED_EVENTS.get,
+      "processed"  => PROCESSED_EVENTS.get,
     }
   end
 

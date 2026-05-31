@@ -194,7 +194,10 @@ module RefreshHealthMonitor
   end
 
   def self.feed_fetch_completed : Nil
-    @@feeds_in_progress.add(-1)
+    current = @@feeds_in_progress.get
+    if current > 0
+      @@feeds_in_progress.sub(1)
+    end
   end
 
   def self.status : {last_start: Int64, last_complete: Int64, cycles: Int32, failures: Int32, feeds_in_progress: Int32}

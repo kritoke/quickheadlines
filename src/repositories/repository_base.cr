@@ -15,7 +15,8 @@ module QuickHeadlines::Repositories
 
     def self.parse_db_time(str : String?) : Time?
       str.try { |time_str| Time.parse(time_str, QuickHeadlines::Constants::DB_TIME_FORMAT, Time::Location::UTC) }
-    rescue Time::Format::Error
+    rescue ex : Time::Format::Error
+      Log.for("quickheadlines.db").warn { "Failed to parse time: #{str.inspect} — #{ex.message}" }
       nil
     end
 
