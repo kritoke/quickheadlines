@@ -74,7 +74,12 @@ abstract class Actor
     spawn(name: "actor-#{@name}") { run_loop }
   end
 
-  def stop : Nil
+  # Graceful shutdown: stops accepting new messages, waits for in-flight work to
+  # complete, then exits the message loop cleanly.
+  #
+  # Actors that do blocking work (HTTP I/O, LSH computation) should override
+  # `graceful_shutdown_timeout` to allow enough time for cleanup.
+  def shutdown : Nil
     @running = false
     @mailbox.close rescue Channel::ClosedError
   end
@@ -107,6 +112,13 @@ abstract class Actor
     end
 
     Log.for("actor.#{@name}").debug { "Stopped (processed=#{@messages_processed.get}, failed=#{@messages_failed.get})" }
+  end
+
+  # Subclasses can override this to allow more time for graceful shutdown
+  # (e.g., FaviconActor or ClusteringActor that do blocking work).
+  # Returns the timeout in seconds before the actor is force-killed.
+  protected def graceful_shutdown_timeout : Int64
+    5_i64
   end
 
   abstract def dispatch(message : Message)

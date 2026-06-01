@@ -54,7 +54,7 @@ class QuickHeadlines::Services::ClusteringActor < Actor
 
   def self.reset : Nil
     if inst = @@instance
-      inst.stop rescue nil
+      inst.shutdown rescue nil
     end
     @@instance = nil
   end
