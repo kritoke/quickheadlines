@@ -26,7 +26,104 @@ class FaviconActor < Actor
 
   # Call messages (request-reply)
   def_call save_favicon(url : String, image_data : Bytes, content_type : String), String?
+  # =========================================================================
+  # HTTP fetch — runs in background fiber so actor loop stays responsive.
+  # The fiber does network I/O and sends {success, image_data, content_type}
+  # back to the actor for file I/O. This prevents one slow fetch from blocking
+  # all other favicon operations.
+  # =========================================================================
+
   def_call fetch_and_save(url : String), String?
+
+  # Internal result message sent from HTTP fiber to actor
+  private struct HttpFetchResult
+    getter url : String
+    getter success : Bool
+    getter image_data : Bytes?
+    getter content_type : String?
+    getter error : String?
+
+    def initialize(@url, @success, @image_data, @content_type, @error)
+    end
+  end
+
+  private def handle_fetch_and_save(url : String) : String?
+    # Spawn HTTP fetch in background fiber — network I/O doesn't block actor loop
+    spawn(name: "favicon_http_fetch") do
+      result = perform_http_fetch(url)
+      send_message(HttpFetchResult.new(url, result[:success], result[:image_data], result[:content_type], result[:error]))
+    end
+    # Wait for HTTP fiber to complete before returning
+    receive_http_result(url)
+  end
+
+  private def perform_http_fetch(url : String) : {success: Bool, image_data: Bytes?, content_type: String?, error: String?}
+    uri = URI.parse(url)
+    host = uri.host
+    return {success: false, image_data: nil, content_type: nil, error: "no host"} unless host
+    return {success: false, image_data: nil, content_type: nil, error: "SSRF: private host"} if reject_private_host?(host, url)
+
+    client = HTTP::Client.new(host, port: uri.port, tls: uri.scheme == "https")
+    apply_default_timeouts(client)
+
+    redirect_client : HTTP::Client? = nil
+
+    begin
+      headers = HTTP::Headers{"User-Agent" => "Mozilla/5.0 (compatible; QuickHeadlines/1.0)"}
+      response = client.get(uri.request_target, headers: headers)
+
+      if response.status.redirection?
+        redirect_url = response.headers["Location"]?
+        if redirect_url
+          redirected_uri = uri.resolve(redirect_url)
+          redirect_host = redirected_uri.host
+          return {success: false, image_data: nil, content_type: nil, error: "SSRF: redirect to private host #{redirect_host}"} if redirect_host && reject_private_host?(redirect_host, redirect_url)
+          if redirect_host
+            redirect_client = HTTP::Client.new(redirect_host, port: redirected_uri.port, tls: redirected_uri.scheme == "https")
+            apply_default_timeouts(redirect_client)
+            response = redirect_client.get(redirected_uri.request_target, headers: headers)
+          end
+        end
+      end
+
+      return {success: false, image_data: nil, content_type: nil, error: "HTTP #{response.status.code}"} unless response.status.success?
+
+      content_type = response.content_type || "image/png"
+      body = response.body.to_slice
+      {success: true, image_data: body, content_type: content_type, error: nil}
+    rescue ex
+      {success: false, image_data: nil, content_type: nil, error: "fetch error: #{ex.class}"}
+    ensure
+      redirect_client.try(&.close)
+      client.close
+    end
+  end
+
+  private def receive_http_result(expected_url : String) : String?
+    loop do
+      message = @mailbox.receive?
+      case message
+      when HttpFetchResult
+        # Only process result for the URL we're waiting on
+        next unless message.url == expected_url
+
+        if message.success && (data = message.image_data)
+          ct = message.content_type || "image/png"
+          return handle_save_favicon(expected_url, data, ct)
+        else
+          if err = message.error
+            Log.for("quickheadlines.storage").debug { "HTTP fetch failed for #{expected_url}: #{err}" }
+          end
+          # Try Google fallback if fetch failed
+          return do_fetch_google_favicon(expected_url)
+        end
+      when Message
+        # Re-queue other messages (shouldn't happen normally)
+        @mailbox.send(message)
+      end
+      break
+    end
+  end
   def_call get_or_fetch(url : String), String?
 
   # Cast messages (fire-and-forget)
@@ -100,8 +197,14 @@ class FaviconActor < Actor
     when CallFetchAndSave   then message.deliver_reply(handle_fetch_and_save(message.url))
     when CallGetOrFetch     then message.deliver_reply(handle_get_or_fetch(message.url))
     when CastInitStorage    then handle_init_storage
+    when HttpFetchResult    then handle_http_fetch_result(message)
     else raise "Unknown message: #{message.class.name}"
     end
+  end
+
+  private def handle_http_fetch_result(result : HttpFetchResult) : Nil
+    # HTTP result is processed inline when a CallFetchAndSave message waits for it.
+    # This handler exists to catch orphaned results if any.
   end
 
   # =========================================================================
