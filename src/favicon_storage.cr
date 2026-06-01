@@ -172,11 +172,17 @@ class FaviconActor < Actor
         if redirect_url
           redirected_uri = uri.resolve(redirect_url)
           redirect_host = redirected_uri.host
+          # Block SSRF: validate redirect target before following
+          if redirect_host && reject_private_host?(redirect_host, redirect_url)
+            Log.for("quickheadlines.storage").debug { "SSRF blocked: redirect to #{redirect_host} from #{url}" }
+            return nil
+          end
           if redirect_host
-            return nil if reject_private_host?(redirect_host, url)
             redirect_client = HTTP::Client.new(redirect_host, port: redirected_uri.port, tls: redirected_uri.scheme == "https")
             apply_default_timeouts(redirect_client)
             response = redirect_client.get(redirected_uri.request_target, headers: headers)
+          else
+            return nil
           end
         end
       end
