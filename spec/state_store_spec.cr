@@ -33,18 +33,18 @@ describe "StateStore" do
     end
 
     it "updates clustering atomically" do
-      StateStore.update(&.copy_with(clustering: true))
+      StateStore.clustering = true
       StateStore.clustering?.should be_true
 
-      StateStore.update(&.copy_with(clustering: false))
+      StateStore.clustering = false
       StateStore.clustering?.should be_false
     end
 
     it "updates refreshing atomically" do
-      StateStore.update(&.copy_with(refreshing: true))
+      StateStore.refreshing = true
       StateStore.refreshing?.should be_true
 
-      StateStore.update(&.copy_with(refreshing: false))
+      StateStore.refreshing = false
       StateStore.refreshing?.should be_false
     end
   end

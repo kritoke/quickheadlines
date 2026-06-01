@@ -70,6 +70,12 @@ module StateStore
   @@metadata_mutex = Mutex.new(:unchecked)
   @@clustering_start_time : Time?
 
+  # Fast-path atomics for frequently-read boolean flags.
+  # These avoid mutex acquisition for the hot read path (API status checks).
+  # Writers use atomic set, so readers get a consistent value without locking.
+  @@refreshing = Atomic(Bool).new(false)
+  @@clustering = Atomic(Bool).new(false)
+
   # Background task tracking — protected by @@metadata_mutex only
   @@last_cluster_run : Time?
   @@last_cluster_duration_ms : Int64 = 0_i64
@@ -111,26 +117,30 @@ module StateStore
   end
 
   def self.clustering?
-    get.clustering
+    @@clustering.get
   end
 
   def self.clustering=(value : Bool)
+    @@clustering.set(value)
     if value
       @@metadata_mutex.synchronize { @@clustering_start_time = Time.utc }
     else
       @@metadata_mutex.synchronize { @@clustering_start_time = nil }
     end
+    # Also sync to snapshot for backward-compatible API consumers
     update(&.copy_with(clustering: value))
   end
 
   def self.start_clustering_if_idle : Bool
-    @@mutex.synchronize do
-      if @@current.clustering
-        return false
-      end
-      @@current = @@current.copy_with(clustering: true)
+    # Use CAS to atomically check-and-set without holding @@mutex for the check.
+    # This prevents contention when many fibers are checking clustering status.
+    expected = false
+    if @@clustering.compare_and_set(expected, true)
       @@metadata_mutex.synchronize { @@clustering_start_time = Time.utc }
+      update(&.copy_with(clustering: true))
       true
+    else
+      false
     end
   end
 
@@ -184,10 +194,12 @@ module StateStore
   end
 
   def self.refreshing?
-    get.refreshing
+    @@refreshing.get
   end
 
   def self.refreshing=(value : Bool)
+    @@refreshing.set(value)
+    # Also sync to snapshot for backward-compatible API consumers
     update(&.copy_with(refreshing: value))
   end
 
@@ -197,6 +209,8 @@ module StateStore
 
   def self.clear : Nil
     @@mutex.synchronize do
+      @@refreshing.set(false)
+      @@clustering.set(false)
       @@current = AppStateSnapshot.new(
         feeds: [] of FeedData,
         tabs: [] of Tab,
