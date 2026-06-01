@@ -179,8 +179,8 @@ class QuickHeadlines::Controllers::ApiBaseController < Athena::Framework::Contro
 
     status = begin
       RefreshHealthMonitor.status
-    rescue ex
-      Log.for("quickheadlines.health").warn { "Health status error: #{ex.message}" }
+    rescue ex : NilAssertionError | TypeCastError
+      Log.for("quickheadlines.health").warn { "Health status error: #{ex.class} #{ex.message}" }
       {last_start: 0_i64, last_complete: 0_i64, cycles: 0_i32, failures: 0_i32}
     end
 

@@ -159,7 +159,7 @@ begin
 
       host_host = begin
         host.split(":").first
-      rescue
+      rescue ArgumentError | NilAssertionError
         host
       end
 
