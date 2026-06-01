@@ -110,7 +110,7 @@ shards:
 
   prismatiq:
     git: https://github.com/kritoke/prismatiq.git
-    version: 0.7.2+git.commit.1f0965006f193d7990b54e25a43db95dce856489
+    version: 0.8.0
 
   sanitize:
     git: https://github.com/straight-shoota/sanitize.git
