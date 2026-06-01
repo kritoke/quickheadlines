@@ -108,17 +108,33 @@ module QuickHeadlines
       maybe_cleanup
       now = Time.utc.to_unix
 
-      unless @instances[key]?
-        @instances[key] = LimiterState.new(max_requests, window_seconds)
+      # Include rate limit params in the key so different callers get their own state.
+      # E.g., "proxy:192.168.1.1:30:60" vs "api_feeds:192.168.1.1:600:60" are separate.
+      limiter_key = "#{key}:#{max_requests}:#{window_seconds}"
+
+      unless @instances[limiter_key]?
+        @instances[limiter_key] = LimiterState.new(max_requests, window_seconds)
       end
 
-      @instances[key].allowed?(now)
+      @instances[limiter_key].allowed?(now)
     end
 
     private def handle_retry_after(key : String, window_seconds : Int32) : Int32
       now = Time.utc.to_unix
-      return window_seconds unless state = @instances[key]?
-      state.retry_after(now)
+      # For retry_after we don't know the max_requests, so check all matching prefixes.
+      prefix = "#{key}:"
+      suffix = ":#{window_seconds}"
+      matching = @instances.select do |k, _|
+        k.starts_with?(prefix) && k.ends_with?(suffix)
+      end
+      return window_seconds if matching.empty?
+      # Return the minimum retry_after among all matching entries
+      min_retry = Int32::MAX
+      matching.each_value do |state|
+        retry_val = state.retry_after(now)
+        min_retry = retry_val if retry_val < min_retry
+      end
+      min_retry
     end
 
     private def handle_shutdown : Nil

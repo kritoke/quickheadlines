@@ -56,6 +56,9 @@ def get_cache_db_path(config : Config?) : String
 end
 
 def normalize_feed_url(url : String) : String
+  # Use the feed-specific top-level UrlNormalizer for feed URLs.
+  # This is intentionally different from QuickHeadlines::Utils::UrlNormalizer
+  # which is used for article link deduplication (has different normalization rules).
   UrlNormalizer.normalize(url)
 end
 
