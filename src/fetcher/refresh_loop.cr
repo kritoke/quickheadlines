@@ -25,6 +25,16 @@ module RefreshLoop
   # Semaphore management
   # -------------------------------------------------------------------------
 
+  # NOTE: These are module-level constants that hold mutable state (Channel and
+  # Atomic). This is intentional — the refresh loop is a process-global singleton
+  # that starts once and runs for the lifetime of the process. There is no
+  # module-level teardown, so the Channel and Atomic can live at module scope
+  # rather than as instance variables on a class.
+  #
+  # Trade-off: if RefreshLoop.start is called in a test context, the same
+  # semaphore is shared across all test cases. Call .reset_semaphore after each
+  # test to clean state. This is acceptable since there are no existing specs
+  # for the semaphore — it's tested only via integration tests.
   CONCURRENCY_LIMIT     = 8
   CONCURRENCY_SEMAPHORE = Channel(Nil).new(CONCURRENCY_LIMIT)
   CONCURRENCY_AVAILABLE = Atomic(Int32).new(CONCURRENCY_LIMIT)
@@ -47,6 +57,15 @@ module RefreshLoop
   def self.semaphore_health_status : {available: Int32, expected: Int32}
     available = CONCURRENCY_AVAILABLE.get
     {available: available, expected: CONCURRENCY_LIMIT}
+  end
+
+  # Reset the semaphore to full capacity — use in tests to isolate test cases.
+  # Clears and re-fills the channel, resets the atomic counter.
+  def self.reset_semaphore : Nil
+    until (v = CONCURRENCY_AVAILABLE.get) >= CONCURRENCY_LIMIT
+      CONCURRENCY_AVAILABLE.add(1, :relaxed)
+      CONCURRENCY_SEMAPHORE.send(nil)
+    end
   end
 
   # -------------------------------------------------------------------------

@@ -1,5 +1,7 @@
 require "yaml"
 
+MAX_CONFIG_SIZE = 1 * 1024 * 1024  # 1MB — reasonable upper bound for any YAML config
+
 def load_validated_config(path : String) : ConfigLoadResult
   # Validate the config path to prevent path traversal
   expanded = File.expand_path(path)
@@ -16,7 +18,19 @@ def load_validated_config(path : String) : ConfigLoadResult
       error_column: nil,
       suggestion: "Ensure feeds.yml exists in the working directory"
     )
-  end
+    end
+
+    file_size = File.size(expanded)
+    if file_size > MAX_CONFIG_SIZE
+      return ConfigLoadResult.new(
+        success: false,
+        config: nil,
+        error_message: "Config file too large: #{file_size} bytes (max #{MAX_CONFIG_SIZE})",
+        error_line: nil,
+        error_column: nil,
+        suggestion: "Config file exceeds maximum size of #{MAX_CONFIG_SIZE / 1024}KB"
+      )
+    end
 
   content = File.read(expanded)
 
