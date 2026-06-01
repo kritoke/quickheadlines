@@ -28,6 +28,8 @@ module RefreshLoop
   CONCURRENCY_LIMIT     = 8
   CONCURRENCY_SEMAPHORE = Channel(Nil).new(CONCURRENCY_LIMIT)
   CONCURRENCY_AVAILABLE = Atomic(Int32).new(CONCURRENCY_LIMIT)
+  # Mutex to make repair read-modify-write atomic (see check_semaphore_health)
+  @@repair_mutex = Mutex.new(:unchecked)
 
   CONCURRENCY_LIMIT.times { CONCURRENCY_SEMAPHORE.send(nil) }
 
@@ -463,13 +465,14 @@ module RefreshLoop
   end
 
   private def self.check_semaphore_health : Nil
-    status = semaphore_health_status
-    if status[:available] != status[:expected]
-      missing = status[:expected] - status[:available]
-      Log.for("quickheadlines.feed").warn { "Semaphore health check: #{status[:available]}/#{status[:expected]} slots available, repairing #{missing} missing" }
+    @@repair_mutex.synchronize do
+      available = CONCURRENCY_AVAILABLE.get
+      return if available == CONCURRENCY_LIMIT
+      missing = CONCURRENCY_LIMIT - available
+      Log.for("quickheadlines.feed").warn { "Semaphore health check: #{available}/#{CONCURRENCY_LIMIT} slots available, repairing #{missing} missing" }
       missing.times do
         CONCURRENCY_SEMAPHORE.send(nil)
-        CONCURRENCY_AVAILABLE.add(1, :relaxed)
+        CONCURRENCY_AVAILABLE.add(1)
       end
     end
   end

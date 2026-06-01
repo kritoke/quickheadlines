@@ -4,7 +4,7 @@ require "./cache_utils"
 
 module QuickHeadlines::Storage
   class HeaderColorStore
-    def initialize(@db : DB::Database, @mutex : Mutex = Mutex.new)
+    def initialize(@db : DB::Database, @mutex : Mutex = Mutex.new(:unchecked))
     end
 
     def update_header_colors(feed_url : String, bg_color : String, text_color : String)

@@ -10,7 +10,7 @@ module QuickHeadlines::Storage
 
     MAX_LSH_CANDIDATES = 500
 
-    def initialize(@db : DB::Database, @mutex : Mutex = Mutex.new)
+    def initialize(@db : DB::Database, @mutex : Mutex = Mutex.new(:unchecked))
     end
 
     def assign_cluster(item_id : Int64, cluster_id : Int64?)
