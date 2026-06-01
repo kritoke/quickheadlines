@@ -26,16 +26,10 @@ class FaviconActor < Actor
 
   # Call messages (request-reply)
   def_call save_favicon(url : String, image_data : Bytes, content_type : String), String?
-  # =========================================================================
-  # HTTP fetch — runs in background fiber so actor loop stays responsive.
-  # The fiber does network I/O and sends {success, image_data, content_type}
-  # back to the actor for file I/O. This prevents one slow fetch from blocking
-  # all other favicon operations.
-  # =========================================================================
-
   def_call fetch_and_save(url : String), String?
 
-  # Internal result message sent from HTTP fiber to actor
+  # Maps URL -> reply channel for in-flight HTTP fetches.
+  # Each fetch_and_save gets its own channel, routed by URL.
   private struct HttpFetchResult
     getter url : String
     getter success : Bool
@@ -48,13 +42,15 @@ class FaviconActor < Actor
   end
 
   private def handle_fetch_and_save(url : String) : String?
-    # Spawn HTTP fetch in background fiber — network I/O doesn't block actor loop
-    spawn(name: "favicon_http_fetch") do
+    reply_ch = Channel(String?).new
+    @pending_fetches[url] = reply_ch
+    spawn(name: "favicon_http_fetch_#{url.hash}") do
       result = perform_http_fetch(url)
       send_message(HttpFetchResult.new(url, result[:success], result[:image_data], result[:content_type], result[:error]))
     end
-    # Wait for HTTP fiber to complete before returning
-    receive_http_result(url)
+    result = reply_ch.receive
+    @pending_fetches.delete(url)
+    result
   end
 
   private def perform_http_fetch(url : String) : {success: Bool, image_data: Bytes?, content_type: String?, error: String?}
@@ -99,31 +95,6 @@ class FaviconActor < Actor
     end
   end
 
-  private def receive_http_result(expected_url : String) : String?
-    loop do
-      message = @mailbox.receive?
-      case message
-      when HttpFetchResult
-        # Only process result for the URL we're waiting on
-        next unless message.url == expected_url
-
-        if message.success && (data = message.image_data)
-          ct = message.content_type || "image/png"
-          return handle_save_favicon(expected_url, data, ct)
-        else
-          if err = message.error
-            Log.for("quickheadlines.storage").debug { "HTTP fetch failed for #{expected_url}: #{err}" }
-          end
-          # Try Google fallback if fetch failed
-          return do_fetch_google_favicon(expected_url)
-        end
-      when Message
-        # Re-queue other messages (shouldn't happen normally)
-        @mailbox.send(message)
-      end
-      break
-    end
-  end
   def_call get_or_fetch(url : String), String?
 
   # Cast messages (fire-and-forget)
@@ -135,6 +106,7 @@ class FaviconActor < Actor
 
   @favicon_dir : String
   @initialized : Bool = false
+  @pending_fetches : Hash(String, Channel(String?)) = Hash(String, Channel(String?)).new
 
   def initialize(@name : String = "FaviconActor")
     super(@name, mailbox_size: 100)
@@ -203,8 +175,21 @@ class FaviconActor < Actor
   end
 
   private def handle_http_fetch_result(result : HttpFetchResult) : Nil
-    # HTTP result is processed inline when a CallFetchAndSave message waits for it.
-    # This handler exists to catch orphaned results if any.
+    if ch = @pending_fetches[result.url]?
+      begin
+        if result.success && (data = result.image_data)
+          ct = result.content_type || "image/png"
+          saved_path = handle_save_favicon(result.url, data, ct)
+          ch.send(saved_path)
+        else
+          fallback = do_fetch_google_favicon(result.url)
+          ch.send(fallback)
+        end
+      rescue Channel::ClosedError
+      ensure
+        @pending_fetches.delete(result.url)
+      end
+    end
   end
 
   # =========================================================================
@@ -385,7 +370,8 @@ class FaviconActor < Actor
   private def extract_domain_from_url(url : String) : String?
     uri = URI.parse(url)
     uri.host
-  rescue
+  rescue ex : URI::Error
+    Log.for("quickheadlines.storage").debug { "extract_domain_from_url: failed to parse '#{url}': #{ex.message}" }
     nil
   end
 
