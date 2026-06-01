@@ -24,8 +24,10 @@ export class NavigationService {
    */
   static async navigateToTimeline(tab: string = this.getCurrentTab()): Promise<void> {
     const encodedTab = encodeURIComponent(tab);
-    const url = tab === 'all' ? '/timeline' : `/timeline?tab=${encodedTab}`;
-    await goto(url, { replaceState: true, noScroll: false });
+    const url = `/timeline?tab=${encodedTab}`;
+    // Use pushState to ensure proper history tracking
+    // This ensures the $page effect in timeline page fires correctly
+    await goto(url, { replaceState: false, noScroll: false });
   }
 
   /**
@@ -34,8 +36,9 @@ export class NavigationService {
    */
   static async navigateToFeeds(tab: string = this.getCurrentTab()): Promise<void> {
     const encodedTab = encodeURIComponent(tab);
-    const url = tab === 'all' ? '/' : `/?tab=${encodedTab}`;
-    await goto(url, { replaceState: true, noScroll: false });
+    const url = `/?tab=${encodedTab}`;
+    // Use pushState to ensure proper history tracking
+    await goto(url, { replaceState: false, noScroll: false });
   }
 
   /**

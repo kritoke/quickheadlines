@@ -71,8 +71,12 @@
 	
 	let currentTab = $derived($page.url?.searchParams.get('tab') ?? getStoredTab());
     
+    // Track initialization to prevent double-firing on URL changes during load
+    let initialized = $state(false);
+    
 	onMount(() => {
 		const tab = $page.url?.searchParams.get('tab') ?? getStoredTab();
+        initialized = true;
 		
 		(async () => {
 			await Promise.all([
@@ -93,13 +97,17 @@
 		};
 	});
     
-	$effect(() => {
-		const urlTab = $page.url?.searchParams.get('tab') ?? getStoredTab();
-		if (urlTab !== timelineState.tabName) {
-			logger.log(`[Timeline] Tab changed from ${timelineState.tabName} to ${urlTab}, reloading...`);
-			loadTimeline(false, urlTab);
-		}
-	});
+    // Only react to URL changes AFTER initial load is complete
+    // This prevents race conditions where URL changes while loading trigger duplicate requests
+    $effect(() => {
+        if (!initialized) return;
+        
+        const urlTab = $page.url?.searchParams.get('tab') ?? getStoredTab();
+        if (urlTab !== timelineState.tabName) {
+            logger.log(`[Timeline] Tab changed from ${timelineState.tabName} to ${urlTab}, reloading...`);
+            loadTimeline(false, urlTab);
+        }
+    });
 	
 	async function handleRetry() {
 		const tab = $page.url?.searchParams.get('tab') ?? getStoredTab();

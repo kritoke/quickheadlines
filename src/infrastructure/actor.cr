@@ -84,6 +84,11 @@ abstract class Actor
     @mailbox.close rescue Channel::ClosedError
   end
 
+  # Alias for backward compatibility.
+  def stop : Nil
+    shutdown
+  end
+
   protected def send_message(message : Message) : Nil
     @mailbox.send(message)
   end
