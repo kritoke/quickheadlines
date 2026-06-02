@@ -1,0 +1,14 @@
+{
+  "assignee": "",
+  "blocked_by": [],
+  "blocks": [],
+  "created": "2026-06-02T10:31:11Z",
+  "description": ".tickets/catseye-scan-description.md",
+  "id": "quickhea-wdc",
+  "labels": [],
+  "priority": 2,
+  "status": "open",
+  "title": "Catseye security scan - 20 warnings found",
+  "type": "task",
+  "updated_at": "2026-06-02T10:31:11Z"
+}
