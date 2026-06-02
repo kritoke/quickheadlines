@@ -5,10 +5,13 @@
   "created": "2026-06-02T12:45:32Z",
   "description": "## Memory Observation\n\n**Process:** qh (quickheadlines)\n**Runtime:** ~1h37m\n**Memory:** VIRT=9029M, RES=449M\n**State:** kqread (waiting for I/O)\n\n---\n\n## Investigation Needed\n\n- Is RSS (449M) stable or growing?\n- What is causing high VIRT (9GB)?\n- Is this related to SQLite, actor mailboxes, or something else?\n\n## Actions\n\n1. Monitor RSS over time: `top -pid $(pgrep -f quickheadlines) -d 10`\n2. Check for memory leaks in Crystal code\n3. Review actor mailbox sizes if any unbounded growth\n4. Check SQLite connection pool or cache sizes\n\n## Context\n\nRun after recent changes. May be related to:\n- Feed caching\n- Actor supervision tree\n- StateStore configuration\n- Memory-aware features",
   "id": "quickhea-alz",
-  "labels": [],
+  "labels": [
+    "investigation",
+    "memory"
+  ],
   "priority": 1,
   "status": "open",
   "title": "Memory growth - 9GB VIRT after 1.5h runtime",
   "type": "task",
-  "updated_at": "2026-06-02T12:45:32Z"
+  "updated_at": "2026-06-02T12:45:34Z"
 }
