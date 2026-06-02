@@ -8,6 +8,10 @@ require "./favicon_sync_service"
 require "../websocket"
 require "../fetcher/vug_adapter"
 require "azurite"
+require "./memory_monitor_actor"
+require "./memory_budget_actor"
+require "./cleanup_coordinator_actor"
+require "./memory_event_bus"
 
 class AppBootstrap
   @config : Config
@@ -55,6 +59,13 @@ class AppBootstrap
     content_store.cleanup_old_entries
     QuickHeadlines::Services::FeedService.content_store = content_store
     Log.for("quickheadlines.app").info { "Azurite content store initialized: #{content_db_path} (#{content_store.db_size_mb.round(2)}MB)" }
+
+    # Initialize memory management actors
+    MemoryMonitorActor.instance
+    MemoryBudgetActor.instance
+    CleanupCoordinatorActor.instance
+    MemoryEventBus.instance
+    Log.for("quickheadlines.app").info { "Memory management actors initialized" }
 
     EventBroadcaster.start
 
@@ -241,6 +252,26 @@ class AppBootstrap
         sleep(@cleanup_interval)
         break if QuickHeadlines.shutting_down?
         begin
+          # Check memory pressure and adjust cleanup priority
+          begin
+            memory_status = MemoryMonitorActor.instance.get_memory_status
+            case memory_status.pressure_level
+            when .critical?
+              Log.for("quickheadlines.app").warn { "Running emergency cleanup due to critical memory pressure" }
+              CleanupCoordinatorActor.instance.request_cleanup(CleanupCoordinatorActor::CleanupPriority::Emergency)
+            when .high?
+              Log.for("quickheadlines.app").warn { "Running aggressive cleanup due to high memory pressure" }
+              CleanupCoordinatorActor.instance.request_cleanup(CleanupCoordinatorActor::CleanupPriority::Aggressive)
+            else
+              CleanupCoordinatorActor.instance.request_cleanup(CleanupCoordinatorActor::CleanupPriority::Normal)
+            end
+          rescue ex
+            Log.for("quickheadlines.app").debug { "Memory pressure check failed: #{ex.message}" }
+            # Fallback to normal cleanup
+            CleanupCoordinatorActor.instance.request_cleanup(CleanupCoordinatorActor::CleanupPriority::Normal)
+          end
+
+          # Also run direct cleanup for legacy systems
           VugAdapter.clear_cache
           Log.for("quickheadlines.app").debug { "Cleared Vug cache" }
 

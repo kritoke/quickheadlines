@@ -7,6 +7,9 @@ require "../software_fetcher"
 require "../websocket"
 require "./feed_fetcher"
 require "./software_util"
+require "../services/memory_monitor_actor"
+require "../services/memory_budget_actor"
+require "../services/cleanup_coordinator_actor"
 
 # CancelError is raised when the refresh supervisor signals cancellation
 # during a refresh cycle.
@@ -534,6 +537,21 @@ module RefreshLoop
   end
 
   private def self.run_timed_refresh(state : State, cache : FeedCache, db_service : DatabaseService) : Float64
+    # Check memory pressure before starting refresh
+    begin
+      memory_status = MemoryMonitorActor.instance.get_memory_status
+      case memory_status.pressure_level
+      when .critical?
+        Log.for("quickheadlines.feed").warn { "Skipping refresh due to critical memory pressure (RSS=#{memory_status.rss_mb.round(1)}MB)" }
+        RefreshHealthMonitor.record_failure
+        return 0.0
+      when .high?
+        Log.for("quickheadlines.feed").warn { "Refresh proceeding with high memory pressure (RSS=#{memory_status.rss_mb.round(1)}MB)" }
+      end
+    rescue ex
+      Log.for("quickheadlines.feed").debug { "Memory pressure check failed: #{ex.message}" }
+    end
+
     StateStore.refreshing = true
     refresh_start_time = Time.utc
     outer_timeout = state.outer_timeout_seconds.seconds
@@ -633,6 +651,16 @@ module RefreshLoop
             Log.for("quickheadlines.feed").warn do
               "Refresh health: cycles=#{status[:cycles]}, failures=#{status[:failures]}, last_complete=#{status[:last_complete]}"
             end
+          end
+
+          # Log memory status
+          begin
+            memory_status = MemoryMonitorActor.instance.get_memory_status
+            Log.for("quickheadlines.memory").info do
+              "Memory status: RSS=#{memory_status.rss_mb.round(1)}MB, pressure=#{memory_status.pressure_level}, GC count=#{memory_status.gc_count}"
+            end
+          rescue ex
+            Log.for("quickheadlines.memory").debug { "Failed to get memory status: #{ex.message}" }
           end
         rescue ex
           Log.for("quickheadlines.feed").error(exception: ex) { "Health monitor reporter error" }
