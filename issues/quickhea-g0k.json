@@ -2,13 +2,14 @@
   "assignee": "kritoke",
   "blocked_by": [],
   "blocks": [],
+  "closed_at": "2026-06-03T02:15:33Z",
   "created": "2026-05-29T10:30:04Z",
   "description": "In CleanupStore.cleanup_old_articles and check_size_limit, the condition 'cluster_id = id' is erroneous. This condition checks if an item's cluster_id equals its own id, which is almost never true (items are assigned to clusters, not their own cluster).\n\nThe intended logic appears to be 'don't delete cluster representatives' but the condition fails to achieve this. Items whose cluster_id equals their own id are essentially unclustered, so the condition is a no-op and the code just deletes items where cluster_id IS NULL.\n\nEither fix to 'cluster_id IS NULL' for clarity, or implement proper cluster protection logic.\n\nLocation: src/storage/cleanup_store.cr",
   "id": "quickhea-g0k",
   "labels": [],
   "priority": 2,
-  "status": "in_progress",
+  "status": "closed",
   "title": "Bug: cleanup_old_articles cluster_id condition logic error",
   "type": "bug",
-  "updated_at": "2026-05-29T11:28:53Z"
+  "updated_at": "2026-06-03T02:15:33Z"
 }
