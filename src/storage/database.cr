@@ -113,6 +113,8 @@ def create_schema(db : DB::Database, db_path : String)
   db.exec("PRAGMA wal_autocheckpoint = #{QuickHeadlines::Constants::WAL_AUTOCHECKPOINT_PAGES}")
   db.exec("PRAGMA busy_timeout = #{QuickHeadlines::Constants::SQLITE_BUSY_TIMEOUT_MS}")
   db.exec("PRAGMA temp_store = MEMORY")
+  # Enable mmap for read-heavy workloads to reduce I/O (4GB max, adjust based on available RAM)
+  db.exec("PRAGMA mmap_size = 4294967296")
 
   db.exec(Schema::FEEDS_TABLE)
   db.exec(Schema::ITEMS_TABLE)
