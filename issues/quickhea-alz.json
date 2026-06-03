@@ -9,9 +9,15 @@
     "investigation",
     "memory"
   ],
+  "comments": [
+    {
+      "text": "\"Investigation:",
+      "timestamp": "2026-06-03T02:16:20Z"
+    }
+  ],
   "priority": 1,
   "status": "in_progress",
   "title": "Memory growth - 9GB VIRT after 1.5h runtime",
   "type": "task",
-  "updated_at": "2026-06-03T02:15:39Z"
+  "updated_at": "2026-06-03T02:16:20Z"
 }
