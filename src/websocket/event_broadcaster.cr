@@ -16,6 +16,10 @@ class EventBroadcaster
   PROCESSED_EVENTS   = Atomic(Int64).new(0)
   SENT_EVENTS        = Atomic(Int64).new(0)
 
+  # Track client history for leak diagnosis
+  @@client_history = [] of {time: Time, count: Int32}
+  @@history_max_entries = 1000  # Keep last ~8 hours at 30s intervals
+
   def self.start : Nil
     spawn(name: "event-broadcaster") do
       loop do
@@ -35,6 +39,8 @@ class EventBroadcaster
               json = HeartbeatEvent.new.to_json
               broadcast_json(json)
               SENT_EVENTS.add(1)
+              # Log client count every heartbeat (every 30s)
+              log_client_stats
             rescue ex
               Log.for("quickheadlines.websocket").error(exception: ex) { "EventBroadcaster heartbeat error" }
             end
@@ -50,6 +56,32 @@ class EventBroadcaster
       end
     end
     Log.for("quickheadlines.websocket").info { "EventBroadcaster started" }
+  end
+
+  private def self.log_client_stats : Nil
+    client_count = @@mutex.synchronize { @@clients.size }
+    
+    # Record history
+    @@client_history << {time: Time.utc, count: client_count}
+    @@client_history.shift if @@client_history.size > @@history_max_entries
+    
+    # Log if count is unexpected
+    if client_count > 50
+      Log.for("quickheadlines.websocket").warn { "EventBroadcaster: high client count #{client_count} (possible leak)" }
+    elsif client_count > 100
+      Log.for("quickheadlines.websocket").error { "EventBroadcaster: VERY HIGH client count #{client_count} (LEAK)" }
+    end
+  end
+
+  def self.client_count : Int32
+    @@mutex.synchronize { @@clients.size }
+  end
+
+  def self.client_history_summary : String
+    return "No history" if @@client_history.empty?
+    recent = @@client_history.last(10)
+    counts = recent.map(&.[:count])
+    "min=#{counts.min}, max=#{counts.max}, current=#{counts.last}"
   end
 
   # Broadcast JSON to all active clients and subscribers.

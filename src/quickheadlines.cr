@@ -177,8 +177,11 @@ begin
       next
     end
 
+    EventBroadcaster.add_client(ws)
+
     ws.on_close do
       SocketManager.instance.unregister(ws, ip)
+      EventBroadcaster.remove_client(ws)
     end
   end
   handlers << ws_handler
