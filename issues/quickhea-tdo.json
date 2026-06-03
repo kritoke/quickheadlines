@@ -2,13 +2,14 @@
   "assignee": "kritoke",
   "blocked_by": [],
   "blocks": [],
+  "closed_at": "2026-06-03T02:15:33Z",
   "created": "2026-05-29T10:36:43Z",
   "description": "In SocketManager.cleanup_dead_connections(), there is a race condition that can cause double-decrement of IP counts:\n\n1. cleanup_dead_connections() iterates @connections while holding @mutex\n2. It removes each dead connection from @connections (delete_at)  \n3. It calls unregister_connection(conn) OUTSIDE the mutex\n\nBut unregister() also modifies @connections:\n1. unregister() finds connection, marks as unregistered, removes from @connections\n2. Calls decrement_ip_count_locked(ip) inside mutex\n\nRace scenario:\n1. cleanup_dead_connections() iterates and collects conn with unregistered:false\n2. Before it calls unregister_connection(), unregister() runs\n3. unregister() marks conn as unregistered and removes it from @connections\n4. cleanup_dead_connections() calls unregister_connection() on the collected conn\n5. unregister_connection sees unregistered:false (copied before unregister ran)\n6. Both unregister() AND unregister_connection() decrement IP count\n\nThe unregistered flag protection only works if the flag state is checked AFTER acquiring the mutex. Currently the flag check happens outside the mutex in unregister_connection(), creating the race.\n\nCode location: src/websocket/socket_manager.cr - cleanup_dead_connections and unregister methods",
   "id": "quickhea-tdo",
   "labels": [],
   "priority": 3,
-  "status": "in_progress",
+  "status": "closed",
   "title": "Bug: SocketManager double-decrement in cleanup_dead_connections race",
   "type": "bug",
-  "updated_at": "2026-05-29T11:22:43Z"
+  "updated_at": "2026-06-03T02:15:33Z"
 }
