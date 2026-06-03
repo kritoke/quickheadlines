@@ -3,7 +3,7 @@
   "blocked_by": [],
   "blocks": [],
   "created": "2026-06-02T12:45:32Z",
-  "description": "## Memory Leak Confirmed\n\n**Runtime:** ~18h40m\n**VIRT:** 9GB → 58GB (6.4x growth)\n**RSS:** 449M → 711M (1.6x growth)\n**State:** kqread (I/O wait)\n\n---\n\n## Real Issue\n\nMemory is growing significantly over time. Both VIRT and RSS are increasing.\n\n**VIRT:** From 9GB after 1.5h to 58GB after 2 days\n**RSS:** From 449MB to 711MB\n\nThis confirms a memory leak. Possible causes:\n- Actor mailbox queue growth\n- Feed/item list unbounded growth\n- SQLite connection/query not being released\n- Stale fiber stacks accumulating\n\n## Investigation Steps\n\n1. Monitor RSS growth rate: is it linear or accelerating?\n2. Check actor mailbox sizes\n3. Review if feed cache is unbounded\n4. Check for fiber leak (spawned but not terminated)\n5. Profile heap if possible\n\n## Priority: HIGH\n\nThis will eventually OOM on systems with limited address space or cause problems.",
+  "description": "## Memory Leak Confirmed - Production\n\n**Runtime:** ~42 hours\n**RSS:** 449MB (1.5h) → 766MB (42h) = +317MB\n**VSZ:** 9GB (1.5h) → 60GB (42h) = 6.7x growth\n\n**Growth Rate:** ~7-8 MB/hr RSS\n\n---\n\n## Environment\n- FreeBSD (no pmap/proc)\n- 188 feeds, 14,673 items\n- Cache: 38MB only (tiny)\n- WAL files: 15MB (not the leak)\n\n---\n\n## Diagnosis\n\n**NOT the leak:**\n- ✅ Cache (38MB, bounded)\n- ✅ DB items (14K, bounded)\n- ✅ WAL files (15MB, bounded)\n- ✅ Threads (1 thread only)\n\n**IS the leak:**\n- ❌ RSS growing linearly (~7MB/hr)\n- ❌ VSZ growing (60GB+)\n- Likely: Crystal heap or actor-related\n\n---\n\n## Actions\n\n1. Restart process to clear memory\n2. Add memory profiling to identify leak source:\n   - Log RSS every hour: `ps -o pid,rss,vsz`\n   - Check actor mailbox sizes if exposed\n   - Look for unbounded collections in code\n3. Consider GC tuning or heap profiling\n\n---\n\n## Priority: CRITICAL\n\nWill OOM in ~30-40 more hours at current growth rate.\n\n**Assigned:** kritoke",
   "id": "quickhea-alz",
   "labels": [
     "investigation",
@@ -19,5 +19,5 @@
   "status": "in_progress",
   "title": "Memory growth - 9GB VIRT after 1.5h runtime",
   "type": "task",
-  "updated_at": "2026-06-03T10:48:45Z"
+  "updated_at": "2026-06-03T10:54:56Z"
 }
