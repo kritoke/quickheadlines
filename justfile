@@ -1,13 +1,14 @@
 # Justfile for QuickHeadlines
 # Converted from makefile
 
-set shell := ["bash", "-uc"]
+# Detect shell based on OS
+set shell := ["/bin/sh", "-c"]
 
 # Variables
 NAME := "quickheadlines"
 CRYSTAL_VERSION := "1.18.2"
 BOOTSTRAP_CRYSTAL_VERSION := "1.18.2"
-VERSION := `grep '^version:' shard.yml | awk '{print $2}'`
+VERSION := `grep '^version:' shard.yml | sed 's/version: *//' | tr -d ' '`
 BUILD_REV := "v" + VERSION
 
 # Detect OS
