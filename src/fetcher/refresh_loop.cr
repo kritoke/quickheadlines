@@ -589,7 +589,14 @@ module RefreshLoop
   end
 
   private def self.reload_config_if_changed(config_path : String, state : State) : Nil
-    current_mtime = File.info(config_path).modification_time
+    current_mtime = begin
+      File.info(config_path).modification_time
+    rescue ex : File::NotFoundError
+      if state.active_config.debug?
+        Log.for("quickheadlines.feed").debug { "reload_config_if_changed: #{config_path} not found, skipping reload (#{ex.message})" }
+      end
+      return
+    end
     return unless current_mtime > state.last_mtime
 
     load_result = load_validated_config(config_path)
