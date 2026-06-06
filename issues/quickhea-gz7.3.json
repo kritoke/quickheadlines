@@ -2,14 +2,15 @@
   "assignee": "kritoke",
   "blocked_by": [],
   "blocks": [],
+  "closed_at": "2026-06-06T21:42:55Z",
   "created": "2026-06-06T21:25:58Z",
   "description": "## Problem\nThe atomic write pattern (write to .tmp file → rename to final path) appears in two places:\n1. `handle_save_favicon` (lines 217-224) — with error handling, temp cleanup, logging\n2. `do_fetch_google_favicon` (lines 350-354) — without error handling, no temp cleanup\n\n## Fix\nExtract a `write_atomically(filepath : String, data : Bytes) : Bool` helper that:\n- Writes to `filepath + \".tmp\"`\n- Renames to final path\n- Cleans up .tmp on error\n- Returns true on success, false on failure\n- Logs errors\n\n## File\n`src/favicon_storage.cr`",
   "id": "quickhea-gz7.3",
   "labels": [],
   "parent": "quickhea-gz7",
   "priority": 3,
-  "status": "in_progress",
+  "status": "closed",
   "title": "DRY: extract atomic file write helper",
   "type": "task",
-  "updated_at": "2026-06-06T21:39:34Z"
+  "updated_at": "2026-06-06T21:42:55Z"
 }
