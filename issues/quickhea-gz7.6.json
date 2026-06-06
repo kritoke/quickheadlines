@@ -1,0 +1,15 @@
+{
+  "assignee": "",
+  "blocked_by": [],
+  "blocks": [],
+  "created": "2026-06-06T21:25:58Z",
+  "description": "## Problem\nIn `do_fetch_google_favicon` (line 358), the client pool cleanup on error uses a hardcoded key `\"#{host}:#{uri.port}:true\"` instead of deriving it from the actual pool key pattern used by `pooled_client` (`\"#{host}:#{port}:#{tls}\"`).\n\nThe other two fetch paths (`handle_fetch_and_save` line 287, `perform_http_fetch` line 90) correctly compute the key. The Google path hardcodes `true` because the URL is always HTTPS today, but if it ever changed, this would leak a pooled client.\n\n## Fix\nExtract the pool key into a local variable (or use a helper) so the cleanup path uses the same key as `pooled_client`.\n\n## File\n`src/favicon_storage.cr` — `do_fetch_google_favicon` method, line 358",
+  "id": "quickhea-gz7.6",
+  "labels": [],
+  "parent": "quickhea-gz7",
+  "priority": 2,
+  "status": "open",
+  "title": "Fix: hardcoded pool key in do_fetch_google_favicon error cleanup",
+  "type": "bug",
+  "updated_at": "2026-06-06T21:25:58Z"
+}
