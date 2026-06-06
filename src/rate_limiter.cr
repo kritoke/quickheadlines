@@ -24,7 +24,7 @@ module QuickHeadlines
 
       def allowed?(now : Int64) : Bool
         cutoff = now - @window_seconds
-        @requests.reject! { |t| t < cutoff }
+        @requests.reject! { |timestamp| timestamp < cutoff }
 
         if @requests.size >= @max_requests
           false
@@ -39,7 +39,7 @@ module QuickHeadlines
         return @window_seconds if @requests.empty?
 
         cutoff = now - @window_seconds
-        @requests.reject! { |t| t < cutoff }
+        @requests.reject! { |timestamp| timestamp < cutoff }
         return @window_seconds if @requests.empty?
 
         oldest = @requests.min
