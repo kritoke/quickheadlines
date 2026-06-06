@@ -277,6 +277,14 @@ class MemoryManagerActor < Actor
       end
     end
 
+    # Clear Vug favicon cache to prevent unbounded growth
+    begin
+      VugAdapter.clear_cache
+      Log.for("quickheadlines.cleanup").debug { "Cleared Vug cache" }
+    rescue ex
+      Log.for("quickheadlines.cleanup").warn { "Failed to clear Vug cache: #{ex.message}" }
+    end
+
     GC.collect
     Log.for("quickheadlines.cleanup").debug { "GC.collect triggered after normal cleanup" }
   end

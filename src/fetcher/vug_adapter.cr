@@ -8,7 +8,7 @@ module VugAdapter
   # @@favicon_semaphore = Channel(Nil).new(4)
   # 4.times { @@favicon_semaphore.send(nil) }
 
-  CACHE = Vug::MemoryCache.new
+  CACHE = Vug::MemoryCache.new(size_limit: 2 * 1024 * 1024, entry_ttl: 24.hours)
 
   def self.config : Vug::Config
     Vug::Config.new(
