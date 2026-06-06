@@ -65,9 +65,9 @@ class QuickHeadlines::Services::ClusteringActor < Actor
 
   def dispatch(message : Message) : Nil
     case message
-    when CallRecluster then message.deliver_reply(handle_recluster(message.cache, message.limit, message.threshold, message.bands))
+    when CallRecluster    then message.deliver_reply(handle_recluster(message.cache, message.limit, message.threshold, message.bands))
     when CallIsClustering then message.deliver_reply(@clustering)
-    else raise "Unknown message: #{message.class.name}"
+    else                       raise "Unknown message: #{message.class.name}"
     end
   end
 

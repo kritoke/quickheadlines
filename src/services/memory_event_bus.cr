@@ -18,13 +18,13 @@ class MemoryEventBus < Actor
   # =========================================================================
 
   enum MemoryEvent
-    PressureNormal    # RSS < 500MB
-    PressureMedium    # RSS 500-650MB
-    PressureHigh      # RSS 650-800MB
-    PressureCritical  # RSS > 800MB
-    GCRequested       # Force GC
-    CleanupRequested  # Run cleanup
-    RestartRequested  # Graceful restart
+    PressureNormal   # RSS < 500MB
+    PressureMedium   # RSS 500-650MB
+    PressureHigh     # RSS 650-800MB
+    PressureCritical # RSS > 800MB
+    GCRequested      # Force GC
+    CleanupRequested # Run cleanup
+    RestartRequested # Graceful restart
   end
 
   struct EventRecord
@@ -85,7 +85,7 @@ class MemoryEventBus < Actor
     when CastUnsubscribe         then handle_unsubscribe(message.subscriber, message.event_type)
     when CastPublish             then handle_publish(message.event)
     when CastClearHistory        then handle_clear_history
-    else raise "Unknown message: #{message.class.name}"
+    else                              raise "Unknown message: #{message.class.name}"
     end
   end
 

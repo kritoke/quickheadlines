@@ -29,15 +29,15 @@ class StateStoreActor < Actor
   # Message dispatch — routes messages to handlers
   def dispatch(message : Message) : Nil
     case message
-    when CastSetTitle        then handle_set_title(message.title)
-    when CastSetRefreshing   then handle_set_refreshing(message.val)
-    when CastSetClustering   then handle_set_clustering(message.val)
+    when CastSetTitle         then handle_set_title(message.title)
+    when CastSetRefreshing    then handle_set_refreshing(message.val)
+    when CastSetClustering    then handle_set_clustering(message.val)
     when CastIncrementCounter then handle_increment_counter
     when CallGetTitle         then message.deliver_reply(handle_get_title)
     when CallIsRefreshing     then message.deliver_reply(handle_is_refreshing)
     when CallIsClustering     then message.deliver_reply(handle_is_clustering)
     when CallGetCounter       then message.deliver_reply(handle_get_counter)
-    else raise "Unknown message: #{message.class.name}"
+    else                           raise "Unknown message: #{message.class.name}"
     end
   end
 

@@ -94,14 +94,14 @@ class MemoryMonitorActor < Actor
 
   def dispatch(message : Message) : Nil
     case message
-    when CallGetRssMb        then message.deliver_reply(handle_get_rss_mb)
-    when CallGetMemoryStatus then message.deliver_reply(handle_get_memory_status)
-    when CallCanAllocate     then message.deliver_reply(handle_can_allocate(message.subsystem, message.amount_mb))
-    when CastCheckAndGc      then handle_check_and_gc
-    when CastSetThreshold    then handle_set_threshold(message.max_rss_mb)
+    when CallGetRssMb          then message.deliver_reply(handle_get_rss_mb)
+    when CallGetMemoryStatus   then message.deliver_reply(handle_get_memory_status)
+    when CallCanAllocate       then message.deliver_reply(handle_can_allocate(message.subsystem, message.amount_mb))
+    when CastCheckAndGc        then handle_check_and_gc
+    when CastSetThreshold      then handle_set_threshold(message.max_rss_mb)
     when CastRegisterSubsystem then handle_register_subsystem(message.subsystem, message.budget_mb)
     when CastReleaseSubsystem  then handle_release_subsystem(message.subsystem)
-    else raise "Unknown message: #{message.class.name}"
+    else                            raise "Unknown message: #{message.class.name}"
     end
   end
 

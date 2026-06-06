@@ -10,15 +10,15 @@ class EventBroadcaster
   @@subscribers = [] of SubscribeMessage
   @@clients = [] of HTTP::WebSocket
 
-  UPDATE_CHANNEL    = Channel(FeedUpdateEvent).new(QuickHeadlines::Constants::WEBSOCKET_CHANNEL_SIZE)
-  SHUTDOWN_CHANNEL  = Channel(Nil).new(1)
-  DROPPED_EVENTS    = Atomic(Int64).new(0)
-  PROCESSED_EVENTS   = Atomic(Int64).new(0)
-  SENT_EVENTS        = Atomic(Int64).new(0)
+  UPDATE_CHANNEL   = Channel(FeedUpdateEvent).new(QuickHeadlines::Constants::WEBSOCKET_CHANNEL_SIZE)
+  SHUTDOWN_CHANNEL = Channel(Nil).new(1)
+  DROPPED_EVENTS   = Atomic(Int64).new(0)
+  PROCESSED_EVENTS = Atomic(Int64).new(0)
+  SENT_EVENTS      = Atomic(Int64).new(0)
 
   # Track client history for leak diagnosis
   @@client_history = [] of {time: Time, count: Int32}
-  @@history_max_entries = 1000  # Keep last ~8 hours at 30s intervals
+  @@history_max_entries = 1000 # Keep last ~8 hours at 30s intervals
 
   def self.start : Nil
     spawn(name: "event-broadcaster") do
@@ -60,11 +60,11 @@ class EventBroadcaster
 
   private def self.log_client_stats : Nil
     client_count = @@mutex.synchronize { @@clients.size }
-    
+
     # Record history
     @@client_history << {time: Time.utc, count: client_count}
     @@client_history.shift if @@client_history.size > @@history_max_entries
-    
+
     # Log if count is unexpected
     if client_count > 50
       Log.for("quickheadlines.websocket").warn { "EventBroadcaster: high client count #{client_count} (possible leak)" }
@@ -134,7 +134,7 @@ class EventBroadcaster
         "dropped"     => DROPPED_EVENTS.get.to_i64,
         "processed"   => PROCESSED_EVENTS.get.to_i64,
         "clients"     => @@clients.size.to_i64,
-        "subscribers"  => @@subscribers.size.to_i64,
+        "subscribers" => @@subscribers.size.to_i64,
       }
     end
   end

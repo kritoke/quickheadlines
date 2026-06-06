@@ -83,7 +83,7 @@ module QuickHeadlines
 
     def self.instance : ThrottlerActor
       @@instance_mutex.synchronize do
-            @@instance ||= ThrottlerActor.new.tap(&.start)
+        @@instance ||= ThrottlerActor.new.tap(&.start)
       end
     end
 
@@ -93,10 +93,10 @@ module QuickHeadlines
 
     def dispatch(message : Message) : Nil
       case message
-      when CallAllowed          then message.deliver_reply(handle_allowed(message.key, message.max_requests, message.window_seconds))
-      when CallRetryAfter       then message.deliver_reply(handle_retry_after(message.key, message.window_seconds))
+      when CallAllowed           then message.deliver_reply(handle_allowed(message.key, message.max_requests, message.window_seconds))
+      when CallRetryAfter        then message.deliver_reply(handle_retry_after(message.key, message.window_seconds))
       when CastShutdownThrottler then handle_shutdown
-      else raise "Unknown message: #{message.class.name}"
+      else                            raise "Unknown message: #{message.class.name}"
       end
     end
 

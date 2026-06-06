@@ -165,12 +165,12 @@ class FaviconActor < Actor
 
   def dispatch(message : Message) : Nil
     case message
-    when CallSaveFavicon    then message.deliver_reply(handle_save_favicon(message.url, message.image_data, message.content_type))
-    when CallFetchAndSave   then message.deliver_reply(handle_fetch_and_save(message.url))
-    when CallGetOrFetch     then message.deliver_reply(handle_get_or_fetch(message.url))
-    when CastInitStorage    then handle_init_storage
-    when HttpFetchResult    then handle_http_fetch_result(message)
-    else raise "Unknown message: #{message.class.name}"
+    when CallSaveFavicon  then message.deliver_reply(handle_save_favicon(message.url, message.image_data, message.content_type))
+    when CallFetchAndSave then message.deliver_reply(handle_fetch_and_save(message.url))
+    when CallGetOrFetch   then message.deliver_reply(handle_get_or_fetch(message.url))
+    when CastInitStorage  then handle_init_storage
+    when HttpFetchResult  then handle_http_fetch_result(message)
+    else                       raise "Unknown message: #{message.class.name}"
     end
   end
 
@@ -406,6 +406,7 @@ end
 # Backward-compatible module API — delegates to FaviconActor
 module FaviconStorage
   POSSIBLE_EXTENSIONS = FaviconActor::POSSIBLE_EXTENSIONS
+
   def self.favicon_dir : String
     FaviconActor.favicon_dir
   end

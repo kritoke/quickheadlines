@@ -92,12 +92,12 @@ class MemoryProfilerActor < Actor
 
   def dispatch(message : Message) : Nil
     case message
-    when CallGetProfileResults  then message.deliver_reply(handle_get_profile_results)
-    when CallGetProfileSummary  then message.deliver_reply(handle_get_profile_summary)
-    when CastStartProfile       then handle_start_profile(message.name)
-    when CastEndProfile         then handle_end_profile(message.name)
-    when CastResetProfiles      then handle_reset_profiles
-    else raise "Unknown message: #{message.class.name}"
+    when CallGetProfileResults then message.deliver_reply(handle_get_profile_results)
+    when CallGetProfileSummary then message.deliver_reply(handle_get_profile_summary)
+    when CastStartProfile      then handle_start_profile(message.name)
+    when CastEndProfile        then handle_end_profile(message.name)
+    when CastResetProfiles     then handle_reset_profiles
+    else                            raise "Unknown message: #{message.class.name}"
     end
   end
 

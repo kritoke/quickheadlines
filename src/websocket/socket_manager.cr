@@ -106,17 +106,17 @@ class SocketManager < Actor
 
   def dispatch(message : Message) : Nil
     case message
-    when CastUnregisterConnection  then handle_unregister_connection(message.ws, message.ip)
-    when CastBroadcastMessage      then handle_broadcast_message(message.message)
-    when CastConnectionClosed      then handle_connection_closed(message.ws)
-    when CastConnectionSendError   then handle_connection_send_error(message.ws, message.error_class)
-    when CastConnectionActivity    then handle_connection_activity(message.ws)
-    when CastShutdownAll           then handle_shutdown_all
-    when CallRegisterConnection    then message.deliver_reply(handle_register_connection(message.ws, message.ip))
-    when CallGetConnectionCount    then message.deliver_reply(handle_get_connection_count)
-    when CallGetStats              then message.deliver_reply(handle_get_stats)
-    when CallCleanupDead           then message.deliver_reply(handle_cleanup_dead)
-    else raise "Unknown message: #{message.class.name}"
+    when CastUnregisterConnection then handle_unregister_connection(message.ws, message.ip)
+    when CastBroadcastMessage     then handle_broadcast_message(message.message)
+    when CastConnectionClosed     then handle_connection_closed(message.ws)
+    when CastConnectionSendError  then handle_connection_send_error(message.ws, message.error_class)
+    when CastConnectionActivity   then handle_connection_activity(message.ws)
+    when CastShutdownAll          then handle_shutdown_all
+    when CallRegisterConnection   then message.deliver_reply(handle_register_connection(message.ws, message.ip))
+    when CallGetConnectionCount   then message.deliver_reply(handle_get_connection_count)
+    when CallGetStats             then message.deliver_reply(handle_get_stats)
+    when CallCleanupDead          then message.deliver_reply(handle_cleanup_dead)
+    else                               raise "Unknown message: #{message.class.name}"
     end
   end
 

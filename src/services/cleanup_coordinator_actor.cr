@@ -18,9 +18,9 @@ class CleanupCoordinatorActor < Actor
   # =========================================================================
 
   enum CleanupPriority
-    Normal      # Clean caches, expire old entries
-    Aggressive  # Reduce retention, force GC
-    Emergency   # Drop non-essential data, trigger restart
+    Normal     # Clean caches, expire old entries
+    Aggressive # Reduce retention, force GC
+    Emergency  # Drop non-essential data, trigger restart
   end
 
   struct CleanupStatus
@@ -76,12 +76,12 @@ class CleanupCoordinatorActor < Actor
 
   def dispatch(message : Message) : Nil
     case message
-    when CallGetCleanupStatus      then message.deliver_reply(handle_get_cleanup_status)
-    when CallGetLastCleanupTime    then message.deliver_reply(handle_get_last_cleanup_time)
-    when CastRequestCleanup        then handle_request_cleanup(message.priority)
-    when CastRegisterCleanupHandler then handle_register_cleanup_handler(message.name, message.handler)
+    when CallGetCleanupStatus         then message.deliver_reply(handle_get_cleanup_status)
+    when CallGetLastCleanupTime       then message.deliver_reply(handle_get_last_cleanup_time)
+    when CastRequestCleanup           then handle_request_cleanup(message.priority)
+    when CastRegisterCleanupHandler   then handle_register_cleanup_handler(message.name, message.handler)
     when CastUnregisterCleanupHandler then handle_unregister_cleanup_handler(message.name)
-    else raise "Unknown message: #{message.class.name}"
+    else                                   raise "Unknown message: #{message.class.name}"
     end
   end
 

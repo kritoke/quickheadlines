@@ -66,13 +66,13 @@ class MemoryBudgetActor < Actor
   TOTAL_BUDGET_MB = 750.0
 
   @budgets : Hash(String, Float64) = {
-    "feeds"       => 200.0,  # 27% - Feed data and items
-    "websocket"   => 100.0,  # 13% - WebSocket connections
-    "clustering"  => 150.0,  # 20% - Clustering operations
-    "caches"      => 100.0,  # 13% - In-memory caches
-    "database"    => 50.0,   # 7%  - SQLite overhead
-    "other"       => 50.0,   # 7%  - Other operations
-    "reserve"     => 100.0,  # 13% - Emergency reserve
+    "feeds"      => 200.0, # 27% - Feed data and items
+    "websocket"  => 100.0, # 13% - WebSocket connections
+    "clustering" => 150.0, # 20% - Clustering operations
+    "caches"     => 100.0, # 13% - In-memory caches
+    "database"   => 50.0,  # 7%  - SQLite overhead
+    "other"      => 50.0,  # 7%  - Other operations
+    "reserve"    => 100.0, # 13% - Emergency reserve
   }
 
   @allocated : Hash(String, Float64) = {} of String => Float64
@@ -97,14 +97,14 @@ class MemoryBudgetActor < Actor
 
   def dispatch(message : Message) : Nil
     case message
-    when CallGetBudgetStatus     then message.deliver_reply(handle_get_budget_status)
-    when CallCanAllocate         then message.deliver_reply(handle_can_allocate(message.subsystem, message.amount_mb))
-    when CallGetSubsystemBudget  then message.deliver_reply(handle_get_subsystem_budget(message.subsystem))
-    when CastAllocate            then handle_allocate(message.subsystem, message.amount_mb)
-    when CastRelease             then handle_release(message.subsystem, message.amount_mb)
-    when CastSetBudget           then handle_set_budget(message.subsystem, message.budget_mb)
+    when CallGetBudgetStatus          then message.deliver_reply(handle_get_budget_status)
+    when CallCanAllocate              then message.deliver_reply(handle_can_allocate(message.subsystem, message.amount_mb))
+    when CallGetSubsystemBudget       then message.deliver_reply(handle_get_subsystem_budget(message.subsystem))
+    when CastAllocate                 then handle_allocate(message.subsystem, message.amount_mb)
+    when CastRelease                  then handle_release(message.subsystem, message.amount_mb)
+    when CastSetBudget                then handle_set_budget(message.subsystem, message.budget_mb)
     when CastAdjustBudgetsForPressure then handle_adjust_budgets_for_pressure(message.pressure)
-    else raise "Unknown message: #{message.class.name}"
+    else                                   raise "Unknown message: #{message.class.name}"
     end
   end
 
