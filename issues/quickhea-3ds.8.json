@@ -1,7 +1,9 @@
 {
   "assignee": "",
   "blocked_by": [],
-  "blocks": [],
+  "blocks": [
+    "quickhea-3ds.6"
+  ],
   "created": "2026-06-06T15:15:01Z",
   "description": "## Duplication\n\nThe \"interruptible sleep that checks `QuickHeadlines.shutting_down?` between chunks\" pattern is **duplicated 5 times** across the file. The shape is always:\n\n```crystal\nelapsed = Time::Span.zero\nwhile elapsed \u003c TOTAL\n  break if QuickHeadlines.shutting_down?\n  remaining = {CHUNK, TOTAL - elapsed}.min\n  select\n  when timeout(remaining)\n    elapsed += remaining\n  end\nend\n```\n\nSites:\n\n1. `run_initial_refresh` (lines 622–650) — initial post-spawn sleep\n2. `start` (lines 815–840) — initial post-`first_run` sleep\n3. `start` (lines 825–839) — error recovery 60s sleep\n4. `sleep_between_cycles` (lines 659–677) — main inter-cycle sleep\n5. `start_health_reporter` (lines 692–740) — health reporter 5-minute loop\n\n## Why it matters\n\n- A change to the chunk size (currently 30s) or the shutdown-check semantics must be applied in 5 places.\n- The \"what if we exceeded outer timeout\" log in `sleep_between_cycles` (line 677) is missing from the other 4 sites — they silently exit if `elapsed \u003e= outer_sleep_timeout` because no such log exists there. This is an inconsistency that's hard to spot.\n- Each copy has subtle variations (some use `state.refresh_interval_seconds.seconds`, some hardcode `60.seconds`), making it hard to reason about.\n\n## Fix\n\nExtract a single helper (could live in `QuickHeadlines::Concurrency` or similar):\n\n```crystal\nprivate def self.interruptible_sleep(\n  total : Time::Span,\n  chunk : Time::Span = 30.seconds,\n  context : String? = nil\n) : Time::Span\n  elapsed = Time::Span.zero\n  while elapsed \u003c total \u0026\u0026 !QuickHeadlines.shutting_down?\n    step = {chunk, total - elapsed}.min\n    select\n    when timeout(step)\n      elapsed += step\n    end\n  end\n  if context \u0026\u0026 elapsed \u003e= total \u0026\u0026 !QuickHeadlines.shutting_down?\n    Log.for(\"quickheadlines.feed\").error { \"#{context} sleep timed out after #{total.total_seconds.round}s\" }\n  end\n  elapsed\nend\n```\n\nThen replace the 5 sites with single calls.\n\n## Acceptance\n\n- A single `interruptible_sleep` (or similar) helper exists.\n- `grep -cE \"elapsed\\s*=\\s*Time::Span\\.zero\" src/fetcher/refresh_loop.cr` returns **at most 1** (the helper itself).\n- All 5 sites are replaced with single helper calls.\n- The 60s error-recovery sleep in `start`'s outer rescue handler uses the same helper (with `context: \"refresh loop error recovery\"`).\n- `just nix-build` passes; existing Crystal specs pass.",
   "id": "quickhea-3ds.8",
@@ -11,5 +13,5 @@
   "status": "open",
   "title": "DRY: extract interruptible_sleep helper to remove 5-way duplication",
   "type": "task",
-  "updated_at": "2026-06-06T15:15:01Z"
+  "updated_at": "2026-06-06T15:15:21Z"
 }
