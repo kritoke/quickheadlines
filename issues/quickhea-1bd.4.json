@@ -1,7 +1,6 @@
 {
   "assignee": "",
   "blocked_by": [
-    "quickhea-1bd.1",
     "quickhea-1bd.2",
     "quickhea-1bd.3"
   ],
@@ -18,5 +17,5 @@
   "status": "open",
   "title": "Extract health monitoring into RefreshHealthReporter module",
   "type": "task",
-  "updated_at": "2026-06-06T22:32:06Z"
+  "updated_at": "2026-06-06T22:32:52Z"
 }
