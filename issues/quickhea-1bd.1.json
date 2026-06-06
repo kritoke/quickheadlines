@@ -1,0 +1,15 @@
+{
+  "assignee": "",
+  "blocked_by": [],
+  "blocks": [],
+  "created": "2026-06-06T22:32:00Z",
+  "description": "Lines 340-405 define a private State class that mixes data properties with business logic (timeout calculation methods like outer_timeout_seconds, sleep_timeout_seconds, stuck_threshold_seconds). Extract State into its own file (e.g. src/fetcher/refresh_state.cr) and consider moving the timeout calculation logic into a separate RefreshTiming helper or Config extension, since these are derived values that don't belong in a state holder.",
+  "id": "quickhea-1bd.1",
+  "labels": [],
+  "parent": "quickhea-1bd",
+  "priority": 2,
+  "status": "open",
+  "title": "Extract RefreshLoop::State class and timeout calculations",
+  "type": "task",
+  "updated_at": "2026-06-06T22:32:00Z"
+}
