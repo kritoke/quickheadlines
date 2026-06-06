@@ -65,7 +65,7 @@ module RefreshLoop
   # Reset the semaphore to full capacity — use in tests to isolate test cases.
   # Clears and re-fills the channel, resets the atomic counter.
   def self.reset_semaphore : Nil
-    until (v = CONCURRENCY_AVAILABLE.get) >= CONCURRENCY_LIMIT
+    while CONCURRENCY_AVAILABLE.get < CONCURRENCY_LIMIT
       CONCURRENCY_AVAILABLE.add(1, :relaxed)
       CONCURRENCY_SEMAPHORE.send(nil)
     end
@@ -108,7 +108,7 @@ module RefreshLoop
     tab_config : TabConfig,
     fetched_map : Hash(String, FeedData),
     existing_data : Hash(String, FeedData),
-    item_limit : Int32
+    item_limit : Int32,
   ) : Tab
     tab_feeds = tab_config.feeds.map do |feed|
       best_available_feed(feed, fetched_map[feed.url]?, existing_data[feed.url]?)
@@ -126,7 +126,7 @@ module RefreshLoop
     config : Config,
     previous_feed_data : FeedData?,
     channel : Channel(FeedData?),
-    index : Int32
+    index : Int32,
   ) : Nil
     acquire_semaphore
     begin
@@ -169,7 +169,7 @@ module RefreshLoop
     feed : Feed,
     config : Config,
     previous_feed_data : FeedData?,
-    index : Int32
+    index : Int32,
   ) : FeedData
     timeout_seconds = QuickHeadlines::Constants::FETCH_TIMEOUT_SECONDS
 
@@ -235,7 +235,7 @@ module RefreshLoop
   private def self.fetch_feeds_concurrently(
     all_configs : Hash(String, Feed),
     existing_data : Hash(String, FeedData),
-    config : Config
+    config : Config,
   ) : Hash(String, FeedData)
     channel = Channel(FeedData?).new(all_configs.size)
     feed_index = 0
@@ -308,12 +308,12 @@ module RefreshLoop
         @@last_gc_collect = now
         @@gc_runs += 1
         Log.for("quickheadlines.gc").debug { "Triggered GC.collect (run #{@@gc_runs})" }
-        
+
         # Every 2 hours, run full collection to reclaim memory
         if now - @@last_full_collection >= 2.hours
           Log.for("quickheadlines.gc").info { "Running GC.full collection to defragment memory" }
           GC.collect
-          GC.collect  # Second pass for deeper cleanup
+          GC.collect # Second pass for deeper cleanup
           @@last_full_collection = now
           Log.for("quickheadlines.gc").info { "GC.full collection complete" }
         end
@@ -325,16 +325,16 @@ module RefreshLoop
       @@last_gc_collect = Time.utc
       @@gc_runs += 1
       Log.for("quickheadlines.gc").debug { "Forced GC.collect after refresh cycle (run #{@@gc_runs})" }
-      
+
       # Force full collection every 50 cycles
       if @@gc_runs % 50 == 0
         Log.for("quickheadlines.gc").info { "Running periodic GC.full collection (every 50 cycles)" }
         GC.collect
-        GC.collect  # Second pass
+        GC.collect # Second pass
         @@last_full_collection = Time.utc
       end
     end
-    
+
     def self.stats : String
       "gc_runs=#{@@gc_runs}, last_collect=#{@@last_gc_collect}, last_full_collection=#{@@last_full_collection}"
     end
@@ -343,12 +343,12 @@ module RefreshLoop
   # -------------------------------------------------------------------------
   # Fiber tracking (for leak diagnosis)
   # -------------------------------------------------------------------------
-  
+
   module FiberTracker
     @@active_fibers = Atomic(Int32).new(0)
     @@peak_fibers = Atomic(Int32).new(0)
     @@fiber_spawns = Atomic(Int32).new(0)
-    
+
     # Call this when spawning a fiber
     def self.track_spawn : Nil
       count = @@active_fibers.add(1)
@@ -357,17 +357,17 @@ module RefreshLoop
       current_peak = @@peak_fibers.get
       @@peak_fibers.add(1) if count > current_peak
     end
-    
+
     # Call this when a fiber exits
     def self.track_exit : Nil
       current = @@active_fibers.get
       @@active_fibers.sub(1) if current > 0
     end
-    
+
     def self.stats : String
       "active=#{@@active_fibers.get}, peak=#{@@peak_fibers.get}, spawns=#{@@fiber_spawns.get}"
     end
-    
+
     def self.reset : Nil
       @@peak_fibers.set(@@active_fibers.get)
     end
@@ -695,7 +695,7 @@ module RefreshLoop
       Log.for("quickheadlines.feed").debug(exception: ex) { "memory_growth_rate unavailable" }
       "unavailable"
     end
-    
+
     Log.for("quickheadlines.feed").info do
       "Refresh loop heartbeat: #{state.cycle_count} cycles, " \
       "completed: #{status[:cycles]}, failures: #{status[:failures]}, " \
@@ -730,7 +730,7 @@ module RefreshLoop
           # Log memory status with diagnostics
           begin
             memory_status = MemoryMonitorActor.instance.get_memory_status
-            
+
             # Get diagnostic info
             socket_count = begin
               SocketManager.instance.connection_count
@@ -745,7 +745,7 @@ module RefreshLoop
               0
             end
             fiber_stats = FiberTracker.stats
-            
+
             Log.for("quickheadlines.memory").info do
               "Memory status: RSS=#{memory_status.rss_mb.round(1)}MB, " \
               "pressure=#{memory_status.pressure_level}, GC count=#{memory_status.gc_count}, " \
