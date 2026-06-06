@@ -1,0 +1,14 @@
+{
+  "assignee": "",
+  "blocked_by": [],
+  "blocks": [],
+  "created": "2026-06-06T22:31:45Z",
+  "description": "The largest source file in the codebase (src/fetcher/refresh_loop.cr, 797 lines) violates single responsibility by containing 5+ distinct concerns: semaphore management, state tracking, concurrent feed fetching, supervisor/health monitoring, and backward-compat API shims. This epic tracks extracting these concerns into focused modules, reducing duplication, and improving readability.",
+  "id": "quickhea-1bd",
+  "labels": [],
+  "priority": 2,
+  "status": "open",
+  "title": "Refactor refresh_loop.cr for readability and reliability",
+  "type": "epic",
+  "updated_at": "2026-06-06T22:31:45Z"
+}
