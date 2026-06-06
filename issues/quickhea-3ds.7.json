@@ -1,0 +1,15 @@
+{
+  "assignee": "",
+  "blocked_by": [],
+  "blocks": [],
+  "created": "2026-06-06T15:15:01Z",
+  "description": "## Refactor\n\n`src/fetcher/refresh_loop.cr:450-457`:\n\n```crystal\ndef self.force_stuck!(seconds : Int32 = 600) : Nil\n  now_ms = Time.utc.to_unix_ms\n  @@last_refresh_start.set(now_ms - (seconds * 1000))\n  @@last_refresh_complete.set(0)\n  Log.for(\"quickheadlines.watchdog\").info { \"RefreshHealthMonitor: forced stuck state for testing (#{seconds}s)\" }\nend\n```\n\nThis is a **test helper** — its only purpose is to simulate the \"stuck refresh\" state so other code (e.g., the supervisor's `check_stuck_recovery`, the watchdog logic) can be exercised under test. But it lives on the production class.\n\nThe log line even says `\"forced stuck state for testing\"`.\n\n## Why it matters\n\n- Production binaries ship with a test helper that mutates shared state in unsafe ways (no mutex, no rate limit, no audit trail of who called it).\n- The method is public, so any caller (not just tests) could invoke it accidentally.\n- Future readers will wonder \"is this used in production?\" — the log message answers that, but the API does not enforce it.\n\n## Fix\n\nMove the helper to one of:\n\n- `spec/support/refresh_health_monitor_helpers.cr` — a test-only module that requires the spec environment.\n- A `RefreshHealthMonitor.test_force_stuck!` method guarded by `if QuickHeadlines.env == \"test\"` or similar.\n- A separate `RefreshHealthMonitor::TestHooks` module that is only `require`d in spec files.\n\n**Recommended**: extract to a test-support module so production binaries have zero knowledge of the test helper.\n\n## Acceptance\n\n- `RefreshHealthMonitor.force_stuck!` is removed from the production class.\n- The same functionality is available via a test-support module under `spec/support/` (or equivalent) and is required only by the spec files that use it.\n- All existing specs that exercise the stuck-recovery path continue to pass.\n- A `grep -rn \"force_stuck\" src/` returns 0 results (only spec files reference it).\n- `just nix-build` passes; existing Crystal specs pass.",
+  "id": "quickhea-3ds.7",
+  "labels": [],
+  "parent": "quickhea-3ds",
+  "priority": 3,
+  "status": "open",
+  "title": "Refactor: move RefreshHealthMonitor.force_stuck! out of production class",
+  "type": "chore",
+  "updated_at": "2026-06-06T15:15:01Z"
+}
