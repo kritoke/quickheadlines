@@ -5,7 +5,9 @@
   "created": "2026-06-06T15:35:02Z",
   "description": "## Problem\n\nRunning `nix develop . --command ameba src/` reports **112 failures**\nacross **10+ source files**. The findings are dominated by:\n\n- `Lint/Formatting` / `Layout/TrailingWhitespace` /\n  `Layout/TrailingBlankLines` — auto-correctable by the formatter\n- `Lint/UselessAssign` — small code cleanups\n- `Lint/Syntax` / `Lint/UselessAssign` / `Lint/UnusedVariable` — local\n  cleanups per file\n\nThis is pre-existing technical debt, not introduced by the refresh_loop\nrefactor. Each affected file should be cleaned independently so the\ndiffs are reviewable.\n\n## Scope\n\nAffected files (from `ameba src/`):\n\n```\nsrc/config/loader.cr\nsrc/controllers/proxy_controller.cr\nsrc/examples/state_store_actor.cr\nsrc/favicon_storage.cr\nsrc/fetcher/refresh_loop.cr          # handled by quickhea-3ds.10\nsrc/infrastructure/actor.cr\nsrc/models.cr\nsrc/rate_limiter.cr\nsrc/repositories/feed_repository.cr\nsrc/services/cleanup_coordinator_actor.cr\n... (~10 more)\n```\n\n## Strategy\n\nOpen **one ticket per file** under this parent epic. For each file:\n\n1. Run `crystal tool format \u003cfile\u003e` to auto-fix formatting / whitespace\n2. Manually fix any non-correctable findings (UselessAssign, etc.)\n3. Verify: `ameba \u003cfile\u003e` returns 0; `crystal spec` still passes\n4. Commit + close\n\nThe parent epic itself has no code changes; it tracks the rollout.\n\n## Acceptance\n\n- `nix develop . --command ameba src/` returns 0 findings.\n- `just nix-build` passes; existing Crystal specs pass.\n- Each file landed as a separate commit with a clear, reviewable diff.",
   "id": "quickhea-wv4",
-  "labels": [],
+  "labels": [
+    "lint"
+  ],
   "priority": 3,
   "status": "open",
   "title": "Epic: project-wide ameba cleanup (112 findings across ~10 files)",
