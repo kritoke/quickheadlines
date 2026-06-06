@@ -1,0 +1,15 @@
+{
+  "assignee": "",
+  "blocked_by": [],
+  "blocks": [],
+  "created": "2026-06-06T22:23:01Z",
+  "description": "## File\nsrc/models.cr line ~120\n\n## Problem\nBare rescue (no variable, no type) inside track_memory_usage silently swallows all exceptions. Low risk since its a monitoring helper, but masks real issues.\n\n## Fix\nReplace bare rescue with typed rescue (e.g., rescue ex : Exception) and add debug-level logging.",
+  "id": "quickhea-h2n.2",
+  "labels": [],
+  "parent": "quickhea-h2n",
+  "priority": 3,
+  "status": "open",
+  "title": "Fix bare rescue in models.cr track_memory_usage",
+  "type": "bug",
+  "updated_at": "2026-06-06T22:23:01Z"
+}
