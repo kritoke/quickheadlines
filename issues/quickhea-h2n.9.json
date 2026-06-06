@@ -1,5 +1,5 @@
 {
-  "assignee": "",
+  "assignee": "kritoke",
   "blocked_by": [],
   "blocks": [],
   "created": "2026-06-06T22:23:04Z",
@@ -8,8 +8,8 @@
   "labels": [],
   "parent": "quickhea-h2n",
   "priority": 1,
-  "status": "open",
+  "status": "in_progress",
   "title": "Fix: WebSocket allows no-Origin in development mode",
   "type": "bug",
-  "updated_at": "2026-06-06T22:23:04Z"
+  "updated_at": "2026-06-06T22:24:05Z"
 }
