@@ -2,14 +2,15 @@
   "assignee": "",
   "blocked_by": [],
   "blocks": [],
+  "closed_at": "2026-06-06T22:28:51Z",
   "created": "2026-06-06T22:23:02Z",
   "description": "## File\nsrc/repositories/story_repository.cr\n\n## Problem\nfind_timeline_items already computes total_count via COUNT(*) OVER() window function, making count_timeline_items redundant when called alongside it. The expensive CTE runs twice per timeline page load.\n\n## Fix\nWhen find_timeline_items returns a total_count, skip the separate count_timeline_items call. Or remove count_timeline_items entirely and always use the window function approach.",
   "id": "quickhea-h2n.4",
   "labels": [],
   "parent": "quickhea-h2n",
   "priority": 2,
-  "status": "open",
+  "status": "closed",
   "title": "Remove redundant count_timeline_items CTE call",
   "type": "task",
-  "updated_at": "2026-06-06T22:23:02Z"
+  "updated_at": "2026-06-06T22:28:51Z"
 }
