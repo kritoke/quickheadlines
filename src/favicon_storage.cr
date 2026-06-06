@@ -89,7 +89,20 @@ class FaviconActor < Actor
     if str_start.starts_with?("<?xml") || str_start.starts_with?("<html") || str_start.starts_with?("<!doctype")
       return false unless String.new(data).downcase.includes?("<svg")
     end
-    true
+
+    case data[0]
+    when 0x89
+      data.size >= 8 && data[1] == 0x50 && data[2] == 0x4E && data[3] == 0x47 && data[4] == 0x0D && data[5] == 0x0A && data[6] == 0x1A && data[7] == 0x0A
+    when 0xFF
+      data.size >= 3 && data[1] == 0xD8 && data[2] == 0xFF
+    when 0x00
+      (data.size >= 4 && data[1] == 0x00 && data[2] == 0x01 && data[3] == 0x00) ||
+        (data.size >= 4 && data[1] == 0x00 && data[2] == 0x02 && data[3] == 0x00)
+    when 0x52
+      data.size >= 12 && data[1] == 0x49 && data[2] == 0x46 && data[3] == 0x46 && data[8] == 0x57 && data[9] == 0x45 && data[10] == 0x42 && data[11] == 0x50
+    else
+      str_start.includes?("<svg")
+    end
   end
 
   # =========================================================================
