@@ -2,7 +2,8 @@
   "assignee": "",
   "blocked_by": [
     "quickhea-1bd.1",
-    "quickhea-1bd.2"
+    "quickhea-1bd.2",
+    "quickhea-1bd.3"
   ],
   "blocks": [],
   "created": "2026-06-06T22:32:01Z",
@@ -14,5 +15,5 @@
   "status": "open",
   "title": "Slim down run_timed_refresh and start methods",
   "type": "task",
-  "updated_at": "2026-06-06T22:32:58Z"
+  "updated_at": "2026-06-06T22:32:59Z"
 }
