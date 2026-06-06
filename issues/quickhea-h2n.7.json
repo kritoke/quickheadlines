@@ -2,14 +2,15 @@
   "assignee": "",
   "blocked_by": [],
   "blocks": [],
+  "closed_at": "2026-06-06T22:28:51Z",
   "created": "2026-06-06T22:23:03Z",
   "description": "## File\nsrc/controllers/api_base_controller.cr\n\n## Problem\nFailed admin auth attempts are not individually logged (only the absence of ADMIN_SECRET is logged). No rate-limited logging for brute-force detection.\n\n## Fix\nAdd a warn-level log entry for failed admin auth attempts (without the token value) with rate limiting.",
   "id": "quickhea-h2n.7",
   "labels": [],
   "parent": "quickhea-h2n",
   "priority": 2,
-  "status": "open",
+  "status": "closed",
   "title": "Add failed admin auth attempt logging",
   "type": "task",
-  "updated_at": "2026-06-06T22:23:03Z"
+  "updated_at": "2026-06-06T22:28:51Z"
 }
