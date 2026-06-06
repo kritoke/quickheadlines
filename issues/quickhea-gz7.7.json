@@ -1,7 +1,9 @@
 {
   "assignee": "",
   "blocked_by": [],
-  "blocks": [],
+  "blocks": [
+    "quickhea-gz7.2"
+  ],
   "created": "2026-06-06T21:25:58Z",
   "description": "## Problem\n`FaviconActor.valid_image_data?` (line 152) only rejects HTML/XML content strings. It does not validate actual image format magic bytes:\n- PNG: `\\x89PNG\\r\\n\\x1a\\n`\n- JPEG: `\\xFF\\xD8\\xFF`\n- ICO: `\\x00\\x00\\x01\\x00` (or `\\x00\\x00\\x02\\x00`)\n- SVG: already handled by the HTML/XML check\n- WebP: `RIFF....WEBP`\n\nA corrupt or malicious response with random binary data would pass validation and be saved as a favicon file.\n\n## Fix\nAdd magic byte checks for PNG, JPEG, ICO, and WebP formats. Keep the existing HTML/XML rejection. Return true only if the data matches a known image format header.\n\n## File\n`src/favicon_storage.cr` — `valid_image_data?` class method",
   "id": "quickhea-gz7.7",
@@ -11,5 +13,5 @@
   "status": "open",
   "title": "Improve valid_image_data? with magic byte validation",
   "type": "bug",
-  "updated_at": "2026-06-06T21:25:58Z"
+  "updated_at": "2026-06-06T21:26:01Z"
 }
