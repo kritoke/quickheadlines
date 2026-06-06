@@ -332,6 +332,39 @@ module RefreshLoop
   end
 
   # -------------------------------------------------------------------------
+  # Fiber tracking (for leak diagnosis)
+  # -------------------------------------------------------------------------
+  
+  module FiberTracker
+    @@active_fibers = Atomic(Int32).new(0)
+    @@peak_fibers = Atomic(Int32).new(0)
+    @@fiber_spawns = Atomic(Int32).new(0)
+    
+    # Call this when spawning a fiber
+    def self.track_spawn : Nil
+      count = @@active_fibers.add(1)
+      @@fiber_spawns.add(1)
+      # Update peak
+      current_peak = @@peak_fibers.get
+      @@peak_fibers.add(1) if count > current_peak
+    end
+    
+    # Call this when a fiber exits
+    def self.track_exit : Nil
+      current = @@active_fibers.get
+      @@active_fibers.sub(1) if current > 0
+    end
+    
+    def self.stats : String
+      "active=#{@@active_fibers.get}, peak=#{@@peak_fibers.get}, spawns=#{@@fiber_spawns.get}"
+    end
+    
+    def self.reset : Nil
+      @@peak_fibers.set(@@active_fibers.get)
+    end
+  end
+
+  # -------------------------------------------------------------------------
   # Health monitoring
   # -------------------------------------------------------------------------
 
@@ -680,11 +713,19 @@ module RefreshLoop
             end
           end
 
-          # Log memory status
+          # Log memory status with diagnostics
           begin
             memory_status = MemoryMonitorActor.instance.get_memory_status
+            
+            # Get diagnostic info
+            socket_count = SocketManager.instance.connection_count rescue 0
+            event_clients = EventBroadcaster.client_count rescue 0
+            fiber_stats = FiberTracker.stats
+            
             Log.for("quickheadlines.memory").info do
-              "Memory status: RSS=#{memory_status.rss_mb.round(1)}MB, pressure=#{memory_status.pressure_level}, GC count=#{memory_status.gc_count}"
+              "Memory status: RSS=#{memory_status.rss_mb.round(1)}MB, " \
+              "pressure=#{memory_status.pressure_level}, GC count=#{memory_status.gc_count}, " \
+              "sockets=#{socket_count}, event_clients=#{event_clients}, fibers=#{fiber_stats}"
             end
           rescue ex
             Log.for("quickheadlines.memory").debug { "Failed to get memory status: #{ex.message}" }
