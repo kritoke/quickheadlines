@@ -109,7 +109,6 @@ class FaviconSyncService
     feeds_data
   end
 
-  # ameba:disable Metrics/CyclomaticComplexity
   private def process_feed_favicon(row : FeedFaviconRow) : FaviconUpdateResult
     clear_external = false
     sync_favicon_data = nil

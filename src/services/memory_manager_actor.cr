@@ -56,9 +56,9 @@ class MemoryManagerActor < Actor
   end
 
   enum CleanupPriority
-    Normal      # Clean caches, expire old entries
-    Aggressive  # Reduce retention, force GC
-    Emergency   # Drop non-essential data, trigger restart
+    Normal     # Clean caches, expire old entries
+    Aggressive # Reduce retention, force GC
+    Emergency  # Drop non-essential data, trigger restart
   end
 
   struct CleanupStatus
@@ -147,15 +147,15 @@ class MemoryManagerActor < Actor
 
   def dispatch(message : Message) : Nil
     case message
-    when CallGetRssMb           then message.deliver_reply_json(handle_get_rss_mb.to_json)
-    when CallGetMemoryStatus    then message.deliver_reply_json(handle_get_memory_status.to_json)
-    when CallGetCleanupStatus   then message.deliver_reply_json(handle_get_cleanup_status.to_json)
-    when CastCheckAndGc         then handle_check_and_gc
-    when CastSetThreshold       then handle_set_threshold(message.max_rss_mb)
-    when CastRequestCleanup     then handle_request_cleanup(message.priority)
+    when CallGetRssMb                 then message.deliver_reply_json(handle_get_rss_mb.to_json)
+    when CallGetMemoryStatus          then message.deliver_reply_json(handle_get_memory_status.to_json)
+    when CallGetCleanupStatus         then message.deliver_reply_json(handle_get_cleanup_status.to_json)
+    when CastCheckAndGc               then handle_check_and_gc
+    when CastSetThreshold             then handle_set_threshold(message.max_rss_mb)
+    when CastRequestCleanup           then handle_request_cleanup(message.priority)
     when CastRegisterCleanupHandler   then handle_register_cleanup_handler(message.name, message.handler)
     when CastUnregisterCleanupHandler then handle_unregister_cleanup_handler(message.name)
-    else raise "Unknown message: #{message.class.name}"
+    else                                   raise "Unknown message: #{message.class.name}"
     end
   end
 
@@ -358,22 +358,20 @@ class MemoryManagerActor < Actor
   # =========================================================================
 
   private def read_rss_mb : Float64
-    begin
-      {% if flag?(:freebsd) %}
-        if File.exists?("/proc/curproc/status")
-          status = File.read("/proc/curproc/status")
-          if match = status.match(/VmRSS:\s+(\d+)\s+kB/)
-            return match[1].to_f64 / 1024.0
-          end
+    {% if flag?(:freebsd) %}
+      if File.exists?("/proc/curproc/status")
+        status = File.read("/proc/curproc/status")
+        if match = status.match(/VmRSS:\s+(\d+)\s+kB/)
+          return match[1].to_f64 / 1024.0
         end
-      {% end %}
+      end
+    {% end %}
 
-      gc_stats = GC.stats
-      gc_stats.heap_size.to_f64 / (1024.0 * 1024.0)
-    rescue ex
-      Log.for("quickheadlines.memory").warn { "Failed to read RSS: #{ex.message}" }
-      @last_rss_mb
-    end
+    gc_stats = GC.stats
+    gc_stats.heap_size.to_f64 / (1024.0 * 1024.0)
+  rescue ex
+    Log.for("quickheadlines.memory").warn { "Failed to read RSS: #{ex.message}" }
+    @last_rss_mb
   end
 
   private def calculate_pressure(rss_mb : Float64) : PressureLevel

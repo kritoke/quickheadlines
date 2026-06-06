@@ -82,6 +82,7 @@ abstract class Actor
   # `graceful_shutdown_timeout` to allow enough time for cleanup.
   def shutdown : Nil
     @running = false
+    # ameba:disable Lint/TrailingRescueException
     @mailbox.close rescue Channel::ClosedError
   end
 
@@ -130,7 +131,7 @@ abstract class Actor
   abstract def dispatch(message : Message)
 
   # Single channel type for all call replies — eliminates Channel(T) monomorphization.
-  protected def _actor_call_with_timeout_json(reply_ch : Channel(String), timeout_seconds : Int64, &block : String -> T) : T forall T
+  protected def _actor_call_with_timeout_json(reply_ch : Channel(String), timeout_seconds : Int64, & : String -> T) : T forall T
     select
     when json_str = reply_ch.receive
       yield json_str
@@ -162,7 +163,7 @@ macro def_cast(call)
     {% method_name = call.var.stringify %}
     {% struct_name = ("Cast" + method_name.camelcase).id %}
 
-    struct {{struct_name}} < CastMessage
+    struct {{ struct_name }} < CastMessage
       def initialize
       end
 
@@ -170,8 +171,8 @@ macro def_cast(call)
       end
     end
 
-    def {{method_name.id}} : Nil
-      send_message({{struct_name}}.new)
+    def {{ method_name.id }} : Nil
+      send_message({{ struct_name }}.new)
     end
   {% else %}
     # With-args form: def_cast increment(amount : Int32)
@@ -179,20 +180,20 @@ macro def_cast(call)
     {% struct_name = ("Cast" + method_name.camelcase).id %}
     {% args = call.args %}
 
-    struct {{struct_name}} < CastMessage
+    struct {{ struct_name }} < CastMessage
       {% for arg in args %}
-        @{{arg.var.id}} : {{arg.type}}
+        @{{ arg.var.id }} : {{ arg.type }}
       {% end %}
 
-      def initialize({% for arg, i in args %}{{arg.var.id}} : {{arg.type}}{% if i < args.size - 1 %}, {% end %}{% end %})
+      def initialize({% for arg, i in args %}{{ arg.var.id }} : {{ arg.type }}{% if i < args.size - 1 %}, {% end %}{% end %})
         {% for arg in args %}
-          @{{arg.var.id}} = {{arg.var.id}}
+          @{{ arg.var.id }} = {{ arg.var.id }}
         {% end %}
       end
 
       {% for arg in args %}
-        def {{arg.var.id}}
-          @{{arg.var.id}}
+        def {{ arg.var.id }}
+          @{{ arg.var.id }}
         end
       {% end %}
 
@@ -200,8 +201,8 @@ macro def_cast(call)
       end
     end
 
-    def {{method_name.id}}({% for arg, i in args %}{{arg.var.id}} : {{arg.type}}{% if i < args.size - 1 %}, {% end %}{% end %}) : Nil
-      send_message({{struct_name}}.new({% for arg, i in args %}{{arg.var.id}}{% if i < args.size - 1 %}, {% end %}{% end %}))
+    def {{ method_name.id }}({% for arg, i in args %}{{ arg.var.id }} : {{ arg.type }}{% if i < args.size - 1 %}, {% end %}{% end %}) : Nil
+      send_message({{ struct_name }}.new({% for arg, i in args %}{{ arg.var.id }}{% if i < args.size - 1 %}, {% end %}{% end %}))
     end
   {% end %}
 end
@@ -230,7 +231,7 @@ macro def_call(call, return_type = nil)
     {% return_type = call.type %}
     {% struct_name = ("Call" + method_name.camelcase).id %}
 
-    struct {{struct_name}} < CallMessage
+    struct {{ struct_name }} < CallMessage
       @reply : Channel(String)
 
       def initialize(@reply : Channel(String))
@@ -249,11 +250,11 @@ macro def_call(call, return_type = nil)
       end
     end
 
-    def {{method_name.id}} : {{return_type}}
+    def {{ method_name.id }} : {{ return_type }}
       reply_ch = Channel(String).new(1)
-      send_message({{struct_name}}.new(reply_ch))
+      send_message({{ struct_name }}.new(reply_ch))
       _actor_call_with_timeout_json(reply_ch, ACTOR_CALL_TIMEOUT_SECONDS) do |json_str|
-        {{return_type}}.from_json(json_str)
+        {{ return_type }}.from_json(json_str)
       end
     end
   {% else %}
@@ -262,21 +263,21 @@ macro def_call(call, return_type = nil)
     {% args = call.args %}
     {% struct_name = ("Call" + method_name.camelcase).id %}
 
-    struct {{struct_name}} < CallMessage
+    struct {{ struct_name }} < CallMessage
       {% for arg in args %}
-        @{{arg.var.id}} : {{arg.type}}
+        @{{ arg.var.id }} : {{ arg.type }}
       {% end %}
       @reply : Channel(String)
 
-      def initialize({% for arg, i in args %}{{arg.var.id}} : {{arg.type}}, {% end %}@reply : Channel(String))
+      def initialize({% for arg, i in args %}{{ arg.var.id }} : {{ arg.type }}, {% end %}@reply : Channel(String))
         {% for arg in args %}
-          @{{arg.var.id}} = {{arg.var.id}}
+          @{{ arg.var.id }} = {{ arg.var.id }}
         {% end %}
       end
 
       {% for arg in args %}
-        def {{arg.var.id}}
-          @{{arg.var.id}}
+        def {{ arg.var.id }}
+          @{{ arg.var.id }}
         end
       {% end %}
 
@@ -293,11 +294,11 @@ macro def_call(call, return_type = nil)
       end
     end
 
-    def {{method_name.id}}({% for arg, i in args %}{{arg.var.id}} : {{arg.type}}{% if i < args.size - 1 %}, {% end %}{% end %}) : {{return_type}}
+    def {{ method_name.id }}({% for arg, i in args %}{{ arg.var.id }} : {{ arg.type }}{% if i < args.size - 1 %}, {% end %}{% end %}) : {{ return_type }}
       reply_ch = Channel(String).new(1)
-      send_message({{struct_name}}.new({% for arg, i in args %}{{arg.var.id}}, {% end %}reply_ch))
+      send_message({{ struct_name }}.new({% for arg, i in args %}{{ arg.var.id }}, {% end %}reply_ch))
       _actor_call_with_timeout_json(reply_ch, ACTOR_CALL_TIMEOUT_SECONDS) do |json_str|
-        {{return_type}}.from_json(json_str)
+        {{ return_type }}.from_json(json_str)
       end
     end
   {% end %}

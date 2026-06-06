@@ -14,13 +14,13 @@ module MemoryBudget
   TOTAL_BUDGET_MB = 750.0
 
   BUDGETS = {
-    "feeds"       => 200.0,
-    "websocket"   => 100.0,
-    "clustering"  => 150.0,
-    "caches"      => 100.0,
-    "database"    => 50.0,
-    "other"       => 50.0,
-    "reserve"     => 100.0,
+    "feeds"      => 200.0,
+    "websocket"  => 100.0,
+    "clustering" => 150.0,
+    "caches"     => 100.0,
+    "database"   => 50.0,
+    "other"      => 50.0,
+    "reserve"    => 100.0,
   }
 
   @@allocated : Hash(String, Float64) = {} of String => Float64

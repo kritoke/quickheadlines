@@ -15,7 +15,7 @@ module QuickHeadlines::StringIntern
   # Intern a string: return a shared reference for identical content.
   # Nil-safe: returns nil if input is nil.
   def self.intern(str : String?) : String?
-    return nil if str.nil?
+    return if str.nil?
     return str if str.empty?
 
     @@mutex.synchronize do

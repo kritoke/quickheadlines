@@ -10,6 +10,8 @@ Lint/NotNil:
   - spec/header_colors_spec.cr
   - src/controllers/api_controller.cr
   - src/storage.cr
+  - src/software_fetcher.cr
+  - src/fetcher/fetcher_response.cr
 
 Lint/UselessAssign:
   Excluded:
@@ -38,6 +40,9 @@ Metrics/CyclomaticComplexity:
   - src/controllers/proxy_controller.cr
   - src/controllers/header_color_controller.cr
   - src/fetcher/refresh_loop.cr
+  - src/favicon_storage.cr
+  - src/services/favicon_sync_service.cr
+  - src/services/feed_service.cr
 
 Naming/BlockParameterName:
   Excluded:

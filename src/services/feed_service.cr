@@ -137,11 +137,11 @@ module QuickHeadlines::Services
       # Collect all feed URLs for batch count query
       all_urls = [] of String
       if is_all_tab
-        feeds_snapshot.each { |f| all_urls << f.url unless f.failed? }
-        tabs_snapshot.each { |tab| tab.feeds.each { |f| all_urls << f.url unless f.failed? } }
+        feeds_snapshot.each { |feed| all_urls << feed.url unless feed.failed? }
+        tabs_snapshot.each { |tab| tab.feeds.each { |feed| all_urls << feed.url unless feed.failed? } }
       else
         tab_feeds = tabs_snapshot.find { |tab| tab.name.downcase == active_tab.downcase }
-        tab_feeds.try(&.feeds.each { |f| all_urls << f.url unless f.failed? })
+        tab_feeds.try(&.feeds.each { |feed| all_urls << feed.url unless feed.failed? })
       end
 
       # Single batch query for all item counts

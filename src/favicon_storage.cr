@@ -147,8 +147,8 @@ class FaviconActor < Actor
   end
 
   private def handle_save_favicon(url : String, image_data : Bytes, content_type : String) : String?
-    return nil if image_data.size > QuickHeadlines::Constants::FAVICON_MAX_SIZE
-    return nil unless FaviconActor.valid_image_data?(image_data)
+    return if image_data.size > QuickHeadlines::Constants::FAVICON_MAX_SIZE
+    return unless FaviconActor.valid_image_data?(image_data)
 
     hash = FaviconActor.favicon_hash_for_url(url)
     ext = extension_from_content_type(content_type)
@@ -158,7 +158,7 @@ class FaviconActor < Actor
 
     # Write original favicon
     unless write_atomically(filepath, image_data)
-      return nil
+      return
     end
 
     # If tiny, try Google fallback (network I/O happens inside actor)
@@ -175,11 +175,11 @@ class FaviconActor < Actor
   end
 
   private def handle_fetch_and_save(url : String) : String?
-    return nil unless url.starts_with?("http")
+    return unless url.starts_with?("http")
 
     uri = URI.parse(url)
     response = fetch_http(uri)
-    return nil unless response
+    return unless response
 
     content_type = response.content_type || "image/png"
     handle_save_favicon(url, response.body.to_slice, content_type)
@@ -205,8 +205,8 @@ class FaviconActor < Actor
 
   private def fetch_http(uri : URI, check_ssrf : Bool = true) : HTTP::Client::Response?
     host = uri.host
-    return nil unless host
-    return nil if check_ssrf && reject_private_host?(host, uri.to_s)
+    return unless host
+    return if check_ssrf && reject_private_host?(host, uri.to_s)
 
     pool_key = "#{host}:#{uri.port}:#{uri.scheme == "https"}"
     client = pooled_client(host, uri.port, uri.scheme == "https")
@@ -221,13 +221,13 @@ class FaviconActor < Actor
           redirect_host = redirect_uri.host
           if redirect_host && reject_private_host?(redirect_host, redirect_url)
             Log.for("quickheadlines.storage").debug { "SSRF blocked: redirect to #{redirect_host}" }
-            return nil
+            return
           end
           if redirect_host
             client = pooled_client(redirect_host, redirect_uri.port, redirect_uri.scheme == "https")
             response = client.get(redirect_uri.request_target, headers: FETCH_HEADERS)
           else
-            return nil
+            return
           end
         end
       end
@@ -242,16 +242,16 @@ class FaviconActor < Actor
   end
 
   private def do_fetch_google_favicon(url : String) : String?
-    return nil unless domain = extract_domain_from_url(url)
+    return unless domain = extract_domain_from_url(url)
     google_url = "https://www.google.com/s2/favicons?domain=#{domain}&sz=128"
 
     uri = URI.parse(google_url)
     response = fetch_http(uri, check_ssrf: false)
-    return nil unless response
+    return unless response
 
     image_data = response.body.to_slice
-    return nil if image_data.size > QuickHeadlines::Constants::FAVICON_MAX_SIZE
-    return nil unless FaviconActor.valid_image_data?(image_data)
+    return if image_data.size > QuickHeadlines::Constants::FAVICON_MAX_SIZE
+    return unless FaviconActor.valid_image_data?(image_data)
 
     content_type = response.content_type || "image/png"
     ext = extension_from_content_type(content_type)
