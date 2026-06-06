@@ -50,7 +50,7 @@ class SocketManager < Actor
   # =========================================================================
 
   def initialize(@name : String = "SocketManager")
-    super(@name, mailbox_size: 500)
+    super(@name, mailbox_size: 100)
     @connections = [] of Connection
     @ip_counts = {} of String => Int32
     @last_activity = {} of HTTP::WebSocket => Time

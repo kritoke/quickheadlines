@@ -70,7 +70,7 @@ module QuickHeadlines
     @instance_ttl : Int64
 
     def initialize(@name : String = "ThrottlerActor")
-      super(@name, mailbox_size: 500)
+      super(@name, mailbox_size: 100)
       @instances = {} of String => LimiterState
       @last_cleanup = Time.utc.to_unix
       @cleanup_interval = QuickHeadlines::Constants::RATE_LIMITER_CLEANUP_INTERVAL.to_i64

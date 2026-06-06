@@ -1,5 +1,5 @@
 module QuickHeadlines::Constants
-  CONCURRENCY               =   8
+  CONCURRENCY               =   4
   CACHE_RETENTION_HOURS     = 168
   CACHE_RETENTION_DAYS      = CACHE_RETENTION_HOURS // 24
   DB_SIZE_WARNING_THRESHOLD = 50 * 1024 * 1024
@@ -14,10 +14,10 @@ module QuickHeadlines::Constants
   MAX_REDIRECTS          =   10
   MAX_RETRIES            =    2
   MAX_BACKOFF_SECONDS    =   10
-  MAX_CONNECTIONS        = 1000
+  MAX_CONNECTIONS        = 100
   MAX_CONNECTIONS_PER_IP =   10
   STALE_CONNECTION_AGE   =  120
-  CONNECTION_QUEUE_SIZE  =  100
+  CONNECTION_QUEUE_SIZE  =   50
 
   SECONDS_PER_MINUTE      =  60
   CACHE_FRESHNESS_MINUTES =   5
@@ -43,7 +43,7 @@ module QuickHeadlines::Constants
   COLOR_CACHE_MAX_SIZE    = 1000
   COLOR_CACHE_EXPIRY_DAYS =    7
 
-  WEBSOCKET_CHANNEL_SIZE      = 100
+  WEBSOCKET_CHANNEL_SIZE      = 50
   WEBSOCKET_HEARTBEAT_SECONDS =  30
   WEBSOCKET_SEND_TIMEOUT_MS   =  10
 
@@ -64,7 +64,7 @@ module QuickHeadlines::Constants
 
   NORMALIZE_BATCH_SIZE =  500
   MAX_FEED_ITEMS_LOAD  = 1000
-  DB_MAX_POOL_SIZE     =   12
+  DB_MAX_POOL_SIZE     =    4
   # WAL checkpoint threshold - smaller value = more frequent checkpoints = less WAL growth
   WAL_AUTOCHECKPOINT_PAGES = 1000
 

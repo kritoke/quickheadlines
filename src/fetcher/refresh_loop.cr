@@ -42,7 +42,7 @@ module RefreshLoop
   # semaphore is shared across all test cases. Call .reset_semaphore after each
   # test to clean state. This is acceptable since there are no existing specs
   # for the semaphore — it's tested only via integration tests.
-  CONCURRENCY_LIMIT = 8
+  CONCURRENCY_LIMIT = 4
 
   @@semaphore : Channel(Nil)?
   @@semaphore_counter : Atomic(Int32)?
