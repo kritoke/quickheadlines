@@ -5,7 +5,9 @@
   "created": "2026-06-06T19:07:13Z",
   "description": "## Problem\n\n`ameba src/favicon_storage.cr` reports 16 findings (QueryBoolMethods, RedundantNilInControlExpression, DuplicateMethodSignature — all Correctable).\n\n## Fix\n\nFor Correctable items (`[C]`): run `nix develop . --command ameba --fix src/favicon_storage.cr`. For Warnings (`[W]`): review each finding manually and apply the appropriate change.\n\n## Acceptance\n\n- `nix develop . --command ameba src/favicon_storage.cr` returns 0 findings.\n- `crystal tool format --check` exits clean.\n- `just nix-build` passes; existing Crystal specs pass.\n\n## Out of scope\n\n- Findings in other files (tracked under the parent epic `quickhea-wv4`).",
   "id": "quickhea-wv4.2",
-  "labels": [],
+  "labels": [
+    "lint"
+  ],
   "parent": "quickhea-wv4",
   "priority": 3,
   "status": "open",
