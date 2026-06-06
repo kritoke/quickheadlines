@@ -439,7 +439,7 @@ nix-build:
     @cp frontend/static/logo.svg frontend/dist/ 2>/dev/null || true
     @sed -i 's/# Build:.*/# Build: '$(date -Iseconds)'/' src/web/assets.cr 2>/dev/null || true
     @rm -f bin/quickheadlines
-    nix develop . --command crystal build --release src/quickheadlines.cr -o bin/quickheadlines
+    nix develop . --command crystal build --release --no-debug src/quickheadlines.cr -o bin/quickheadlines
     @echo "✓ Built bin/quickheadlines"
     @ls -lh bin/quickheadlines
 
@@ -450,7 +450,7 @@ nix-build-size:
     @cp frontend/static/logo.svg frontend/dist/ 2>/dev/null || true
     @sed -i 's/# Build:.*/# Build: '$(date -Iseconds)'/' src/web/assets.cr 2>/dev/null || true
     @rm -f bin/quickheadlines
-    nix develop . --command crystal build --release -Os src/quickheadlines.cr -o bin/quickheadlines
+    nix develop . --command crystal build --release --no-debug -Os src/quickheadlines.cr -o bin/quickheadlines
     @echo "✓ Built bin/quickheadlines (size optimized)"
     @ls -lh bin/quickheadlines
 
@@ -461,7 +461,7 @@ nix-build-lto:
     @cp frontend/static/logo.svg frontend/dist/ 2>/dev/null || true
     @sed -i 's/# Build:.*/# Build: '$(date -Iseconds)'/' src/web/assets.cr 2>/dev/null || true
     @rm -f bin/quickheadlines
-    nix develop . --command crystal build --release -Dpreview_lto src/quickheadlines.cr -o bin/quickheadlines
+    nix develop . --command crystal build --release --no-debug -Dpreview_lto src/quickheadlines.cr -o bin/quickheadlines
     @echo "✓ Built bin/quickheadlines (LTO)"
     @ls -lh bin/quickheadlines
 
@@ -472,7 +472,7 @@ nix-build-optimized:
     @cp frontend/static/logo.svg frontend/dist/ 2>/dev/null || true
     @sed -i 's/# Build:.*/# Build: '$(date -Iseconds)'/' src/web/assets.cr 2>/dev/null || true
     @rm -f bin/quickheadlines
-    nix develop . --command crystal build --release -Os -Dpreview_lto src/quickheadlines.cr -o bin/quickheadlines
+    nix develop . --command crystal build --release --no-debug -Os -Dpreview_lto src/quickheadlines.cr -o bin/quickheadlines
     @echo "✓ Built bin/quickheadlines (optimized)"
     @ls -lh bin/quickheadlines
 

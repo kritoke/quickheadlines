@@ -111,7 +111,7 @@ module StateStore
     return if @@memory_history.size % 10 != 0
 
     begin
-      rss_mb = MemoryMonitorActor.instance.get_memory_status.rss_mb
+      rss_mb = MemoryManagerActor.instance.get_memory_status.rss_mb
       feeds_count = @@current.feeds.size
       items_count = @@current.feeds.sum(&.items.size)
 

@@ -51,7 +51,7 @@ CMD sh -c "if [ '${MODE}' = 'dev' ]; then \
         echo '❌ Frontend build failed or missing assets!'; ls -la /tmp/qh/frontend/dist/ 2>/dev/null; exit 1; \
     fi; \
     echo '✓ Frontend assets verified'; \
-    sudo -u qh sh -c 'export HOME=/home/qh && export PATH=/usr/local/bin:/usr/bin:/bin && cd /tmp/qh && shards install && touch src/web/assets.cr && crystal build --release -Os -Dpreview_lto src/quickheadlines.cr -o /tmp/qh/quickheadlines'; \
+    sudo -u qh sh -c 'export HOME=/home/qh && export PATH=/usr/local/bin:/usr/bin:/bin && cd /tmp/qh && shards install && touch src/web/assets.cr && crystal build --release --no-debug -Os -Dpreview_lto src/quickheadlines.cr -o /tmp/qh/quickheadlines'; \
     touch /tmp/skip_download; \
 fi"
 

@@ -24,7 +24,7 @@ module MemoryAware
     # Check if memory budget is available
     private def check_memory_budget(subsystem : String, amount_mb : Float64) : Bool
       begin
-        MemoryBudgetActor.instance.can_allocate?(subsystem, amount_mb)
+        MemoryBudget.can_allocate?(subsystem, amount_mb)
       rescue ex
         Log.for("quickheadlines.memory").warn { "Memory budget check failed: #{ex.message}" }
         true # Allow operation if budget check fails
@@ -32,13 +32,13 @@ module MemoryAware
     end
 
     # Check memory pressure level
-    private def check_memory_pressure : MemoryMonitorActor::PressureLevel
+    private def check_memory_pressure : MemoryManagerActor::PressureLevel
       begin
-        status = MemoryMonitorActor.instance.get_memory_status
+        status = MemoryManagerActor.instance.get_memory_status
         status.pressure_level
       rescue ex
         Log.for("quickheadlines.memory").warn { "Memory pressure check failed: #{ex.message}" }
-        MemoryMonitorActor::PressureLevel::Low
+        MemoryManagerActor::PressureLevel::Low
       end
     end
 
@@ -49,7 +49,7 @@ module MemoryAware
       @@last_memory_check = now
 
       begin
-        MemoryMonitorActor.instance.check_and_gc
+        MemoryManagerActor.instance.check_and_gc
       rescue ex
         Log.for("quickheadlines.memory").debug { "Memory check failed: #{ex.message}" }
       end
@@ -78,7 +78,7 @@ module MemoryAware
     # Log memory usage
     private def log_memory_usage(context : String) : Nil
       begin
-        status = MemoryMonitorActor.instance.get_memory_status
+        status = MemoryManagerActor.instance.get_memory_status
         Log.for("quickheadlines.memory").debug { "#{context}: RSS=#{status.rss_mb.round(1)}MB, pressure=#{status.pressure_level}" }
       rescue ex
         Log.for("quickheadlines.memory").debug { "#{context}: Unable to get memory status" }

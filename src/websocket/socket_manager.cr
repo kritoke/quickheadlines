@@ -112,10 +112,10 @@ class SocketManager < Actor
     when CastConnectionSendError  then handle_connection_send_error(message.ws, message.error_class)
     when CastConnectionActivity   then handle_connection_activity(message.ws)
     when CastShutdownAll          then handle_shutdown_all
-    when CallRegisterConnection   then message.deliver_reply(handle_register_connection(message.ws, message.ip))
-    when CallGetConnectionCount   then message.deliver_reply(handle_get_connection_count)
-    when CallGetStats             then message.deliver_reply(handle_get_stats)
-    when CallCleanupDead          then message.deliver_reply(handle_cleanup_dead)
+    when CallRegisterConnection   then message.deliver_reply_json(handle_register_connection(message.ws, message.ip).to_json)
+    when CallGetConnectionCount   then message.deliver_reply_json(handle_get_connection_count.to_json)
+    when CallGetStats             then message.deliver_reply_json(handle_get_stats.to_json)
+    when CallCleanupDead          then message.deliver_reply_json(handle_cleanup_dead.to_json)
     else                               raise "Unknown message: #{message.class.name}"
     end
   end

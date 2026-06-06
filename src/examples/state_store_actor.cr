@@ -33,10 +33,10 @@ class StateStoreActor < Actor
     when CastSetRefreshing    then handle_set_refreshing(message.val)
     when CastSetClustering    then handle_set_clustering(message.val)
     when CastIncrementCounter then handle_increment_counter
-    when CallGetTitle         then message.deliver_reply(handle_get_title)
-    when CallIsRefreshing     then message.deliver_reply(handle_is_refreshing)
-    when CallIsClustering     then message.deliver_reply(handle_is_clustering)
-    when CallGetCounter       then message.deliver_reply(handle_get_counter)
+    when CallGetTitle         then message.deliver_reply_json(handle_get_title.to_json)
+    when CallIsRefreshing     then message.deliver_reply_json(handle_is_refreshing.to_json)
+    when CallIsClustering     then message.deliver_reply_json(handle_is_clustering.to_json)
+    when CallGetCounter       then message.deliver_reply_json(handle_get_counter.to_json)
     else                           raise "Unknown message: #{message.class.name}"
     end
   end

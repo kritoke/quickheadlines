@@ -165,9 +165,9 @@ class FaviconActor < Actor
 
   def dispatch(message : Message) : Nil
     case message
-    when CallSaveFavicon  then message.deliver_reply(handle_save_favicon(message.url, message.image_data, message.content_type))
-    when CallFetchAndSave then message.deliver_reply(handle_fetch_and_save(message.url))
-    when CallGetOrFetch   then message.deliver_reply(handle_get_or_fetch(message.url))
+    when CallSaveFavicon  then message.deliver_reply_json(handle_save_favicon(message.url, message.image_data, message.content_type).to_json)
+    when CallFetchAndSave then message.deliver_reply_json(handle_fetch_and_save(message.url).to_json)
+    when CallGetOrFetch   then message.deliver_reply_json(handle_get_or_fetch(message.url).to_json)
     when CastInitStorage  then handle_init_storage
     when HttpFetchResult  then handle_http_fetch_result(message)
     else                       raise "Unknown message: #{message.class.name}"

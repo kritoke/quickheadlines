@@ -1,4 +1,5 @@
 require "channel"
+require "json"
 require "log"
 
 # ============================================================================
@@ -52,8 +53,8 @@ abstract class Actor
     abstract def deliver_reply : Nil
   end
 
-  abstract struct CallMessage(R) < Message
-    abstract def deliver_reply(value : R) : Nil
+  abstract struct CallMessage < Message
+    abstract def deliver_reply_json(value : String) : Nil
     abstract def deliver_error(message : String) : Nil
   end
 
@@ -128,10 +129,11 @@ abstract class Actor
 
   abstract def dispatch(message : Message)
 
-  protected def _actor_call_with_timeout(reply_ch : Channel(T), timeout_seconds : Int64) : T forall T
+  # Single channel type for all call replies — eliminates Channel(T) monomorphization.
+  protected def _actor_call_with_timeout_json(reply_ch : Channel(String), timeout_seconds : Int64, &block : String -> T) : T forall T
     select
-    when value = reply_ch.receive
-      value
+    when json_str = reply_ch.receive
+      yield json_str
     when timeout(timeout_seconds.seconds)
       raise CallTimeoutError.new("Actor call timed out after #{timeout_seconds}s")
     end
@@ -218,6 +220,9 @@ end
 #
 # Subclass must implement: private def handle_NAME(args...) : ReturnType
 #
+# NOTE: Uses Channel(String) + JSON serialization for all replies to avoid
+# Channel(T) monomorphization. Return types must be JSON-serializable.
+#
 macro def_call(call, return_type = nil)
   {% if call.is_a?(TypeDeclaration) %}
     # No-arg form: def_call get_count : Int32
@@ -225,31 +230,31 @@ macro def_call(call, return_type = nil)
     {% return_type = call.type %}
     {% struct_name = ("Call" + method_name.camelcase).id %}
 
-    struct {{struct_name}} < CallMessage({{return_type}})
-      @reply : Channel({{return_type}})
+    struct {{struct_name}} < CallMessage
+      @reply : Channel(String)
 
-      def initialize(@reply : Channel({{return_type}}))
+      def initialize(@reply : Channel(String))
       end
 
-      def reply : Channel({{return_type}})
+      def reply : Channel(String)
         @reply
       end
 
-      def deliver_reply(value : {{return_type}}) : Nil
+      def deliver_reply_json(value : String) : Nil
         @reply.send(value)
       rescue Channel::ClosedError
       end
 
       def deliver_error(message : String) : Nil
-        # No-op: caller already received CallTimeoutError from _actor_call_with_timeout.
-        # This exists only to satisfy the CallMessage interface.
       end
     end
 
     def {{method_name.id}} : {{return_type}}
-      reply_ch = Channel({{return_type}}).new(1)
+      reply_ch = Channel(String).new(1)
       send_message({{struct_name}}.new(reply_ch))
-      _actor_call_with_timeout(reply_ch, ACTOR_CALL_TIMEOUT_SECONDS)
+      _actor_call_with_timeout_json(reply_ch, ACTOR_CALL_TIMEOUT_SECONDS) do |json_str|
+        {{return_type}}.from_json(json_str)
+      end
     end
   {% else %}
     # With-args form: def_call register(ws : WebSocket, ip : String), Bool
@@ -257,13 +262,13 @@ macro def_call(call, return_type = nil)
     {% args = call.args %}
     {% struct_name = ("Call" + method_name.camelcase).id %}
 
-    struct {{struct_name}} < CallMessage({{return_type}})
+    struct {{struct_name}} < CallMessage
       {% for arg in args %}
         @{{arg.var.id}} : {{arg.type}}
       {% end %}
-      @reply : Channel({{return_type}})
+      @reply : Channel(String)
 
-      def initialize({% for arg, i in args %}{{arg.var.id}} : {{arg.type}}, {% end %}@reply : Channel({{return_type}}))
+      def initialize({% for arg, i in args %}{{arg.var.id}} : {{arg.type}}, {% end %}@reply : Channel(String))
         {% for arg in args %}
           @{{arg.var.id}} = {{arg.var.id}}
         {% end %}
@@ -275,25 +280,25 @@ macro def_call(call, return_type = nil)
         end
       {% end %}
 
-      def reply : Channel({{return_type}})
+      def reply : Channel(String)
         @reply
       end
 
-      def deliver_reply(value : {{return_type}}) : Nil
+      def deliver_reply_json(value : String) : Nil
         @reply.send(value)
       rescue Channel::ClosedError
       end
 
       def deliver_error(message : String) : Nil
-        # No-op: caller already received CallTimeoutError from _actor_call_with_timeout.
-        # This exists only to satisfy the CallMessage interface.
       end
     end
 
     def {{method_name.id}}({% for arg, i in args %}{{arg.var.id}} : {{arg.type}}{% if i < args.size - 1 %}, {% end %}{% end %}) : {{return_type}}
-      reply_ch = Channel({{return_type}}).new(1)
+      reply_ch = Channel(String).new(1)
       send_message({{struct_name}}.new({% for arg, i in args %}{{arg.var.id}}, {% end %}reply_ch))
-      _actor_call_with_timeout(reply_ch, ACTOR_CALL_TIMEOUT_SECONDS)
+      _actor_call_with_timeout_json(reply_ch, ACTOR_CALL_TIMEOUT_SECONDS) do |json_str|
+        {{return_type}}.from_json(json_str)
+      end
     end
   {% end %}
 end

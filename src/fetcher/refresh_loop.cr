@@ -10,9 +10,7 @@ require "./software_util"
 require "./refresh_health_monitor"
 require "../services/gc_collector"
 require "../services/fiber_tracker"
-require "../services/memory_monitor_actor"
-require "../services/memory_budget_actor"
-require "../services/cleanup_coordinator_actor"
+require "../services/memory_manager_actor"
 
 # CancelError is raised when the refresh supervisor signals cancellation
 # during a refresh cycle.
@@ -114,7 +112,7 @@ module RefreshLoop
   # Helpers
   # -------------------------------------------------------------------------
 
-  private def self.cancel_check(cancel_ch : Channel(Bool)?) : Nil
+  private def self.cancel_check(cancel_ch : Channel(Nil)?) : Nil
     return unless cancel_ch
     select
     when cancel_ch.receive?
@@ -241,17 +239,17 @@ module RefreshLoop
     # Buffered channel (size 1) prevents inner fiber from blocking on send()
     # after timeout. Without buffering, the fiber would block forever waiting
     # for a receiver that already returned.
-    result_channel = Channel(FeedData | Exception).new(1)
+    result_channel = Channel(FeedData?).new(1)
 
     spawn(name: "feed_fetch_inner_#{index}") do
       begin
         fetch_result = FeedFetcher.instance.fetch(feed, config.item_limit, config.db_fetch_limit, previous_feed_data)
         result_channel.send(fetch_result)
       rescue ex : Exception
+        Log.for("quickheadlines.feed").error(exception: ex) { "Fetch failed for #{feed.url}" }
         begin
-          result_channel.send(ex)
+          result_channel.send(nil)
         rescue Channel::ClosedError
-          # Channel closed by timeout — inner fiber can exit
         end
       end
     end
@@ -270,16 +268,10 @@ module RefreshLoop
     if timed_out
       Log.for("quickheadlines.feed").warn { "fetch_single_feed_with_timeout: feed #{feed.url} timed out after #{timeout_seconds}s" }
       fallback_feed(feed, previous_feed_data, "Error: Fetch timeout after #{timeout_seconds}s", "fetch_single_feed_with_timeout")
-    elsif value = channel_result
-      if value.is_a?(Exception)
-        Log.for("quickheadlines.feed").error(exception: value) { "Fetch failed for #{feed.url}" }
-        fallback_feed(feed, previous_feed_data, "Error: #{value.class}", "fetch_single_feed_with_timeout: using cached data after exception")
-      else
-        value
-      end
+    elsif channel_result
+      channel_result
     else
-      Log.for("quickheadlines.feed").error { "fetch_single_feed_with_timeout: unexpected nil result for #{feed.url}" }
-      fallback_feed(feed, previous_feed_data, "Error: Unexpected nil result", "fetch_single_feed_with_timeout: nil result")
+      fallback_feed(feed, previous_feed_data, "Error: Fetch failed or nil", "fetch_single_feed_with_timeout")
     end
   end
 
@@ -354,7 +346,7 @@ module RefreshLoop
     # supervisor sets this when the initial refresh is spawned, and the
     # fiber clears it in its ensure block. The supervisor reads it on
     # shutdown to signal cancellation.
-    property initial_cancel_ch : Channel(Bool)?
+    property initial_cancel_ch : Channel(Nil)?
     getter? first_run : Bool
 
     @first_run : Bool = true
@@ -476,7 +468,7 @@ module RefreshLoop
 
     StateStore.refreshing = true
     config_for_initial = state.active_config
-    cancel_ch = Channel(Bool).new(1)
+    cancel_ch = Channel(Nil).new(1)
     state.initial_cancel_ch = cancel_ch
     spawn(name: "initial_refresh") do
       begin
@@ -501,7 +493,7 @@ module RefreshLoop
   private def self.run_timed_refresh(state : State, cache : FeedCache, db_service : DatabaseService) : Float64
     # Check memory pressure before starting refresh
     begin
-      memory_status = MemoryMonitorActor.instance.get_memory_status
+      memory_status = MemoryManagerActor.instance.get_memory_status
       case memory_status.pressure_level
       when .critical?
         Log.for("quickheadlines.feed").warn { "Skipping refresh due to critical memory pressure (RSS=#{memory_status.rss_mb.round(1)}MB)" }
@@ -520,7 +512,7 @@ module RefreshLoop
     config_snapshot = state.active_config
     refresh_all_start = Time.utc
 
-    cancel_ch = Channel(Bool).new(1)
+    cancel_ch = Channel(Nil).new(1)
     completion_channel = Channel(Nil).new(1)
     spawn(name: "refresh_worker") do
       begin
@@ -551,7 +543,7 @@ module RefreshLoop
       GCCollector.maybe_collect
       refresh_duration
     when timeout(outer_timeout)
-      cancel_ch.send(true)
+      cancel_ch.send(nil)
       StateStore.refreshing = false
       Log.for("quickheadlines.feed").error { "refresh_all timed out after #{outer_timeout.total_seconds.round}s - worker signalled to cancel" }
       RefreshHealthMonitor.record_failure
@@ -606,7 +598,7 @@ module RefreshLoop
 
           # Log memory status with diagnostics
           begin
-            memory_status = MemoryMonitorActor.instance.get_memory_status
+            memory_status = MemoryManagerActor.instance.get_memory_status
 
             # Get diagnostic info
             socket_count = begin
@@ -643,7 +635,7 @@ module RefreshLoop
   # -------------------------------------------------------------------------
 
   # Main refresh function used by the supervisor.
-  def self.refresh_all(config : Config, cache : FeedCache, db_service : DatabaseService, cancel_ch : Channel(Bool)? = nil) : Nil
+  def self.refresh_all(config : Config, cache : FeedCache, db_service : DatabaseService, cancel_ch : Channel(Nil)? = nil) : Nil
     StateStore.update(&.copy_with(config_title: config.page_title, config: config))
     RefreshHealthMonitor.record_cycle_start
 
@@ -750,7 +742,7 @@ module RefreshLoop
               # completion in the background. The worker's ensure block
               # clears state.initial_cancel_ch.
               if cancel_ch = state.initial_cancel_ch
-                cancel_ch.send(true) rescue nil
+                cancel_ch.send(nil) rescue nil
               end
               break
             end
@@ -790,12 +782,12 @@ alias RefreshHealthMonitor = RefreshLoop::RefreshHealthMonitor
 # requiring callers to change.
 
 # Convenience: refresh_all with default services
-def refresh_all(config : Config, cancel_ch : Channel(Bool)? = nil)
+def refresh_all(config : Config, cancel_ch : Channel(Nil)? = nil)
   RefreshLoop.refresh_all(config, FeedCache.instance, DatabaseService.instance, cancel_ch)
 end
 
 # Full refresh_all with injected services
-def refresh_all(config : Config, cache : FeedCache, db_service : DatabaseService, cancel_ch : Channel(Bool)? = nil)
+def refresh_all(config : Config, cache : FeedCache, db_service : DatabaseService, cancel_ch : Channel(Nil)? = nil)
   RefreshLoop.refresh_all(config, cache, db_service, cancel_ch)
 end
 
