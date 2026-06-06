@@ -321,12 +321,15 @@ class FaviconActor < Actor
       headers = HTTP::Headers{"User-Agent" => "Mozilla/5.0 (compatible; QuickHeadlines/1.0)"}
       response = client.get(uri.request_target, headers: headers)
 
-      # Follow redirects (Google API returns 301)
       if response.status.redirection?
         redirect_url = response.headers["Location"]?
         if redirect_url
           redirect_uri = uri.resolve(redirect_url)
           redirect_host = redirect_uri.host
+          if redirect_host && reject_private_host?(redirect_host, redirect_url)
+            Log.for("quickheadlines.storage").debug { "SSRF blocked: Google favicon redirect to private host #{redirect_host}" }
+            return nil
+          end
           if redirect_host
             client = pooled_client(redirect_host, redirect_uri.port, redirect_uri.scheme == "https")
             response = client.get(redirect_uri.request_target, headers: headers)
