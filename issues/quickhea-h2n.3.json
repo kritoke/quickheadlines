@@ -1,0 +1,15 @@
+{
+  "assignee": "",
+  "blocked_by": [],
+  "blocks": [],
+  "created": "2026-06-06T22:23:02Z",
+  "description": "## File\nsrc/services/feed_service.cr lines ~139-171\n\n## Problem\nTwo passes over tabs: URL collection (lines 139-145) then response building (lines 150-171). Structurally necessary because URLs must be collected before the batch count query, but could be combined into a single pass with deferred count lookup.\n\n## Fix\nCombine URL collection and response building into a single pass, using a lazy count lookup or pre-computed URL set. Low priority — the current approach is clear and correct.",
+  "id": "quickhea-h2n.3",
+  "labels": [],
+  "parent": "quickhea-h2n",
+  "priority": 3,
+  "status": "open",
+  "title": "Optimize double tab iteration in feed_service.build_feeds_page",
+  "type": "task",
+  "updated_at": "2026-06-06T22:23:02Z"
+}
