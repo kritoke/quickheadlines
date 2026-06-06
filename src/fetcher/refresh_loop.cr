@@ -145,7 +145,7 @@ module RefreshLoop
       # (e.g. into the per-feed fetch path), this prevents it from being
       # silently converted into a fallback FeedData.
       raise ex
-    rescue ex
+    rescue ex : Exception
       Log.for("quickheadlines.feed").error(exception: ex) { "fetch_feeds_concurrently: error fetching #{feed.url}" }
       if previous_feed_data && !previous_feed_data.failed?
         Log.for("quickheadlines.feed").info { "fetch_feeds_concurrently: using cached data after outer error for #{feed.url}" }
@@ -590,7 +590,7 @@ module RefreshLoop
     spawn(name: "initial_refresh") do
       begin
         refresh_all(config_for_initial, cache, db_service)
-      rescue ex
+      rescue ex : Exception
         Log.for("quickheadlines.feed").error(exception: ex) { "Initial refresh failed" }
         RefreshHealthMonitor.record_failure
       ensure
@@ -615,7 +615,7 @@ module RefreshLoop
       when .high?
         Log.for("quickheadlines.feed").warn { "Refresh proceeding with high memory pressure (RSS=#{memory_status.rss_mb.round(1)}MB)" }
       end
-    rescue ex
+    rescue ex : Exception
       Log.for("quickheadlines.feed").debug { "Memory pressure check failed: #{ex.message}" }
     end
 
@@ -639,7 +639,7 @@ module RefreshLoop
       rescue CancelError
         Log.for("quickheadlines.feed").warn { "Refresh worker cancelled by supervisor" }
         RefreshHealthMonitor.record_failure
-      rescue ex
+      rescue ex : Exception
         Log.for("quickheadlines.feed").error(exception: ex) { "refresh_loop refresh_all failed" }
         RefreshHealthMonitor.record_failure
       end
@@ -689,7 +689,12 @@ module RefreshLoop
     return unless state.heartbeat_due?(state.heartbeat_interval)
 
     status = RefreshHealthMonitor.status
-    memory_growth = StateStore.memory_growth_rate rescue "unavailable"
+    memory_growth = begin
+      StateStore.memory_growth_rate
+    rescue ex : Exception
+      Log.for("quickheadlines.feed").debug(exception: ex) { "memory_growth_rate unavailable" }
+      "unavailable"
+    end
     
     Log.for("quickheadlines.feed").info do
       "Refresh loop heartbeat: #{state.cycle_count} cycles, " \
@@ -727,8 +732,18 @@ module RefreshLoop
             memory_status = MemoryMonitorActor.instance.get_memory_status
             
             # Get diagnostic info
-            socket_count = SocketManager.instance.connection_count rescue 0
-            event_clients = EventBroadcaster.client_count rescue 0
+            socket_count = begin
+              SocketManager.instance.connection_count
+            rescue ex : Exception
+              Log.for("quickheadlines.memory").debug(exception: ex) { "socket_count unavailable" }
+              0
+            end
+            event_clients = begin
+              EventBroadcaster.client_count
+            rescue ex : Exception
+              Log.for("quickheadlines.memory").debug(exception: ex) { "event_clients unavailable" }
+              0
+            end
             fiber_stats = FiberTracker.stats
             
             Log.for("quickheadlines.memory").info do
@@ -736,10 +751,10 @@ module RefreshLoop
               "pressure=#{memory_status.pressure_level}, GC count=#{memory_status.gc_count}, " \
               "sockets=#{socket_count}, event_clients=#{event_clients}, fibers=#{fiber_stats}"
             end
-          rescue ex
+          rescue ex : Exception
             Log.for("quickheadlines.memory").debug { "Failed to get memory status: #{ex.message}" }
           end
-        rescue ex
+        rescue ex : Exception
           Log.for("quickheadlines.feed").error(exception: ex) { "Health monitor reporter error" }
         end
       end
@@ -804,7 +819,7 @@ module RefreshLoop
     if config.debug?
       Log.for("quickheadlines.feed").debug { "refresh_all: complete - StateStore.feeds=#{new_feeds.size}, StateStore.tabs=#{new_tabs.size}" }
     end
-  rescue ex
+  rescue ex : Exception
     RefreshHealthMonitor.record_failure
     RefreshHealthMonitor.record_cycle_complete
     raise ex
@@ -871,7 +886,7 @@ module RefreshLoop
 
           state.increment_cycle
           log_heartbeat(state)
-        rescue ex
+        rescue ex : Exception
           Log.for("quickheadlines.feed").error(exception: ex) { "refresh_loop outer handler: unhandled exception, restarting in 60s" }
           StateStore.refreshing = false
           RefreshHealthMonitor.record_failure
