@@ -169,55 +169,11 @@ class FaviconActor < Actor
     return nil unless url.starts_with?("http")
 
     uri = URI.parse(url)
-    host = uri.host
-    return nil unless host
-    return nil if reject_private_host?(host, url)
+    response = fetch_http(uri)
+    return nil unless response
 
-    pool_key = "#{host}:#{uri.port}:#{uri.scheme == "https"}"
-    client = @client_pool[pool_key]? || begin
-      c = HTTP::Client.new(host, port: uri.port, tls: uri.scheme == "https")
-      apply_default_timeouts(c)
-      @client_pool[pool_key] = c
-      c
-    end
-
-    begin
-      headers = HTTP::Headers{"User-Agent" => "Mozilla/5.0 (compatible; QuickHeadlines/1.0)"}
-      response = client.get(uri.request_target, headers: headers)
-
-      if response.status.redirection?
-        redirect_url = response.headers["Location"]?
-        if redirect_url
-          redirected_uri = uri.resolve(redirect_url)
-          redirect_host = redirected_uri.host
-          if redirect_host && reject_private_host?(redirect_host, redirect_url)
-            Log.for("quickheadlines.storage").debug { "SSRF blocked: redirect to #{redirect_host} from #{url}" }
-            return nil
-          end
-          if redirect_host
-            client = pooled_client(redirect_host, redirected_uri.port, redirected_uri.scheme == "https")
-            response = client.get(redirected_uri.request_target, headers: headers)
-          else
-            return nil
-          end
-        end
-      end
-
-      unless response.status.success?
-        Log.for("quickheadlines.storage").debug { "HTTP #{response.status.code} for #{url}" }
-        return nil
-      end
-
-      content_type = response.content_type || "image/png"
-      body = response.body
-
-      handle_save_favicon(url, body.to_slice, content_type)
-    rescue ex
-      @client_pool.delete(pool_key)
-      client.close rescue nil
-      Log.for("quickheadlines.storage").error(exception: ex) { "Failed to fetch #{url}" }
-      nil
-    end
+    content_type = response.content_type || "image/png"
+    handle_save_favicon(url, response.body.to_slice, content_type)
   end
 
   private def handle_get_or_fetch(url : String) : String?
@@ -236,20 +192,18 @@ class FaviconActor < Actor
   # Private helpers — called from within actor fiber
   # =========================================================================
 
-  private def do_fetch_google_favicon(url : String) : String?
-    return nil unless domain = extract_domain_from_url(url)
-    google_url = "https://www.google.com/s2/favicons?domain=#{domain}&sz=128"
+  FETCH_HEADERS = HTTP::Headers{"User-Agent" => "Mozilla/5.0 (compatible; QuickHeadlines/1.0)"}
 
-    uri = URI.parse(google_url)
+  private def fetch_http(uri : URI, check_ssrf : Bool = true) : HTTP::Client::Response?
     host = uri.host
     return nil unless host
+    return nil if check_ssrf && reject_private_host?(host, uri.to_s)
 
-    pool_key = "#{host}:#{uri.port}:true"
-    client = pooled_client(host, uri.port, true)
+    pool_key = "#{host}:#{uri.port}:#{uri.scheme == "https"}"
+    client = pooled_client(host, uri.port, uri.scheme == "https")
 
     begin
-      headers = HTTP::Headers{"User-Agent" => "Mozilla/5.0 (compatible; QuickHeadlines/1.0)"}
-      response = client.get(uri.request_target, headers: headers)
+      response = client.get(uri.request_target, headers: FETCH_HEADERS)
 
       if response.status.redirection?
         redirect_url = response.headers["Location"]?
@@ -257,40 +211,51 @@ class FaviconActor < Actor
           redirect_uri = uri.resolve(redirect_url)
           redirect_host = redirect_uri.host
           if redirect_host && reject_private_host?(redirect_host, redirect_url)
-            Log.for("quickheadlines.storage").debug { "SSRF blocked: Google favicon redirect to private host #{redirect_host}" }
+            Log.for("quickheadlines.storage").debug { "SSRF blocked: redirect to #{redirect_host}" }
             return nil
           end
           if redirect_host
             client = pooled_client(redirect_host, redirect_uri.port, redirect_uri.scheme == "https")
-            response = client.get(redirect_uri.request_target, headers: headers)
+            response = client.get(redirect_uri.request_target, headers: FETCH_HEADERS)
+          else
+            return nil
           end
         end
       end
 
-      return nil unless response.status.success?
-
-      image_data = response.body.to_slice
-      return nil if image_data.size > QuickHeadlines::Constants::FAVICON_MAX_SIZE
-      return nil unless FaviconActor.valid_image_data?(image_data)
-
-      content_type = response.content_type || "image/png"
-      ext = extension_from_content_type(content_type)
-      hash = FaviconActor.favicon_hash_for_url(url)
-      filename = FaviconActor.favicon_filename(hash, ext)
-      filepath = File.join(@favicon_dir, filename)
-
-      unless File.exists?(filepath)
-        temp_path = filepath + ".tmp"
-        File.write(temp_path, image_data)
-        File.rename(temp_path, filepath)
-      end
-      "/favicons/#{filename}"
+      response.status.success? ? response : nil
     rescue ex
       @client_pool.delete(pool_key)
       client.close rescue nil
-      Log.for("quickheadlines.storage").error(exception: ex) { "Failed to fetch Google favicon for #{url}" }
+      Log.for("quickheadlines.storage").error(exception: ex) { "HTTP fetch failed for #{uri.host}" }
       nil
     end
+  end
+
+  private def do_fetch_google_favicon(url : String) : String?
+    return nil unless domain = extract_domain_from_url(url)
+    google_url = "https://www.google.com/s2/favicons?domain=#{domain}&sz=128"
+
+    uri = URI.parse(google_url)
+    response = fetch_http(uri, check_ssrf: false)
+    return nil unless response
+
+    image_data = response.body.to_slice
+    return nil if image_data.size > QuickHeadlines::Constants::FAVICON_MAX_SIZE
+    return nil unless FaviconActor.valid_image_data?(image_data)
+
+    content_type = response.content_type || "image/png"
+    ext = extension_from_content_type(content_type)
+    hash = FaviconActor.favicon_hash_for_url(url)
+    filename = FaviconActor.favicon_filename(hash, ext)
+    filepath = File.join(@favicon_dir, filename)
+
+    unless File.exists?(filepath)
+      temp_path = filepath + ".tmp"
+      File.write(temp_path, image_data)
+      File.rename(temp_path, filepath)
+    end
+    "/favicons/#{filename}"
   end
 
   private def extract_domain_from_url(url : String) : String?
