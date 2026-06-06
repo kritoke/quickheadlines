@@ -4,6 +4,7 @@
   "blocks": [
     "quickhea-3ds.6"
   ],
+  "closed_at": "2026-06-06T15:24:02Z",
   "created": "2026-06-06T15:15:00Z",
   "description": "## Bug\n\n`src/fetcher/refresh_loop.cr:124-156` — `fetch_single_feed_in_background` has a broad `rescue ex` at the method level. The method is called from a fiber spawned by `run_timed_refresh` and passed a `cancel_ch` (via `refresh_all`) so the supervisor can signal cancellation mid-fetch.\n\nWhen the supervisor sends `cancel_ch.send(true)`, `CancelError` is raised inside `refresh_all`'s worker fiber. But **any exception raised in `fetch_single_feed_in_background` is caught and treated as a normal fetch failure** — it logs the exception, then either:\n\n- Sends `previous_feed_data` to the channel (if available and not failed), OR\n- Sends a `build_error_feed(feed, \"Error: #{ex.class}\")` to the channel.\n\nThen `release_semaphore` runs in `ensure` and the fiber exits normally. **The `CancelError` is never re-raised, so the cancel signal is silently converted to \"fetch error\" and the supervisor's `record_failure` + `CancelError` handling never fires.**\n\n## Why it matters\n\n- The supervisor's `CancelError` rescue path logs `\"Refresh worker cancelled by supervisor\"` and calls `RefreshHealthMonitor.record_failure` distinctly from a generic crash.\n- By swallowing `CancelError`, we lose this distinction and contaminate logs with misleading \"fetch error\" lines.\n- The worker will eventually finish the (now cancelled) fetch and push stale data into the channel — `refresh_all` will then commit a partial update even though cancellation was requested.\n\n## Repro (sketch)\n\n1. Set up a slow feed (e.g., `sleep 30` injected into a stub).\n2. Trigger refresh.\n3. While refresh is running, force supervisor timeout path (`refresh_loop.cr:654`).\n4. Observe: log shows `\"fetch_feeds_concurrently: error fetching \u003curl\u003e\"` and `\"using cached data after outer error\"` instead of `\"Refresh worker cancelled by supervisor\"`.\n\n## Fix\n\nEither:\n\n- (a) **Re-raise `CancelError` after the fallback logic:** `rescue ex : CancelError; raise ex; rescue ex` so the protocol is preserved, OR\n- (b) **Move the `CancelError` re-raise before the broad rescue:** `rescue ex : RefreshLoop::CancelError; raise; rescue ex : Exception` (more explicit), OR\n- (c) **Don't catch `CancelError` at all in this method** — let it propagate, since `refresh_all`'s outer rescue handles it. The semaphore release still happens via `ensure`.\n\nOption (c) is cleanest. Verify `ensure` is sufficient to release the semaphore on `CancelError` propagation.\n\n## Acceptance\n\n- A test (or manual repro) demonstrates that a `CancelError` raised during `fetch_single_feed_in_background` is **not** logged as a fetch error and **does not** push a fallback `FeedData` to the channel.\n- The `CancelError` propagates to `refresh_all`'s outer rescue, which logs the cancellation message and calls `record_failure`.\n- `just nix-build` passes; existing Crystal specs pass.",
   "id": "quickhea-3ds.1",
@@ -12,8 +13,8 @@
   ],
   "parent": "quickhea-3ds",
   "priority": 1,
-  "status": "in_progress",
+  "status": "closed",
   "title": "Fix: fetch_single_feed_in_background swallows CancelError in broad rescue",
   "type": "bug",
-  "updated_at": "2026-06-06T15:18:12Z"
+  "updated_at": "2026-06-06T15:24:02Z"
 }
