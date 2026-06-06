@@ -2,13 +2,14 @@
   "assignee": "",
   "blocked_by": [],
   "blocks": [],
+  "closed_at": "2026-06-06T22:28:51Z",
   "created": "2026-06-06T22:22:50Z",
   "description": "Post-refactoring re-verification of original 25 Catseye findings. 16/25 are now fixed (Actor pattern resolved most P0/P1 concurrency issues). This epic tracks the 4 still-applies and 5 partially-fixed items.\n\n## Still Applies (4)\n- WebSocket dev-mode Origin bypass (P1)\n- Bare rescue in models.cr (P3)\n- URL normalizer strips query strings (P3, intentional)\n- STOP_WORDS duplicates (P3)\n\n## Partially Fixed (5)\n- SSRF DNS rebinding narrow fallback gap (P1)\n- Admin auth logging incomplete (P2)\n- Double tab iteration in feed_service (P3)\n- Redundant count_timeline_items CTE (P2)\n- Bare rescue in cleanup_store.cr (P3)",
   "id": "quickhea-h2n",
   "labels": [],
   "priority": 2,
-  "status": "open",
+  "status": "closed",
   "title": "[EPIC] Resolve remaining Catseye findings after refactoring",
   "type": "epic",
-  "updated_at": "2026-06-06T22:22:50Z"
+  "updated_at": "2026-06-06T22:28:51Z"
 }
