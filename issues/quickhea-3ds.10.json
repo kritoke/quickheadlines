@@ -1,5 +1,5 @@
 {
-  "assignee": "",
+  "assignee": "kritoke",
   "blocked_by": [],
   "blocks": [
     "quickhea-3ds.6"
@@ -12,8 +12,8 @@
   ],
   "parent": "quickhea-3ds",
   "priority": 3,
-  "status": "open",
+  "status": "in_progress",
   "title": "Chore: ameba cleanup for refresh_loop.cr (14 findings)",
   "type": "chore",
-  "updated_at": "2026-06-06T15:35:02Z"
+  "updated_at": "2026-06-06T15:35:11Z"
 }
