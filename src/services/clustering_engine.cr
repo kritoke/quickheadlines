@@ -54,10 +54,10 @@ module QuickHeadlines::Services
       "this", "that", "these", "those", "it",
       "time", "times", "day", "days", "week", "weeks", "month", "months",
       "year", "years",
-      "says", "said", "just", "now", "how", "what", "when", "where", "why",
-      "building", "built", "build", "building", "using", "via", "get", "got",
+      "says", "said", "just", "now", "how", "what", "when", "why",
+      "building", "built", "build", "using", "via", "get", "got",
       "new", "make", "making", "way", "use", "youre", "your",
-      "works", "work", "working", "today", "where",
+      "works", "work", "working", "today",
     ])
 
     MIN_WORDS_FOR_CLUSTERING = 4

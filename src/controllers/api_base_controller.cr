@@ -51,7 +51,12 @@ class QuickHeadlines::Controllers::ApiBaseController < Athena::Framework::Contro
     end
 
     token = auth_header[7..-1]
-    timing_safe_compare(secret, token)
+    if timing_safe_compare(secret, token)
+      true
+    else
+      Log.for("quickheadlines.auth").warn { "Failed admin auth attempt from #{client_ip(request)}" }
+      false
+    end
   rescue ArgumentError
     false
   end
@@ -100,11 +105,10 @@ class QuickHeadlines::Controllers::ApiBaseController < Athena::Framework::Contro
         return {true, ip_address}
       end
     rescue ex : Socket::Error | IO::Error
-      Log.for("quickheadlines.proxy").debug { "DNS resolution failed for #{host}: #{ex.message}" }
+      Log.for("quickheadlines.proxy").warn { "DNS resolution failed for allowed domain #{host}: #{ex.message} — refusing request to prevent DNS rebinding" }
     end
 
-    # DNS failed but domain is in allowlist — allow with nil IP (will resolve normally)
-    {true, nil}
+    {false, nil}
   rescue URI::Error
     {false, nil}
   end

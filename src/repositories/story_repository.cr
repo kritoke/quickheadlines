@@ -126,28 +126,6 @@ module QuickHeadlines::Repositories
       {items, total_count}
     end
 
-    def count_timeline_items(days_back : Int32?, allowed_feed_urls : Array(String) = [] of String) : Int32
-      cutoff_value = days_back ? Time.utc - days_back.days : nil
-      feed_filter_clause = build_feed_filter(allowed_feed_urls)
-      feed_filter_values = feed_filter_values(allowed_feed_urls)
-
-      query = <<-SQL
-        #{cluster_info_cte}
-        SELECT COUNT(*)
-        FROM items i
-        JOIN feeds f ON i.feed_id = f.id
-        LEFT JOIN cluster_info ci ON i.cluster_id = ci.cluster_id
-        WHERE (i.pub_date IS NULL OR i.pub_date <= datetime('now', '+1 day'))
-        AND (i.cluster_id IS NULL OR i.id = ci.representative_id)
-        AND i.pub_date >= ?
-        #{feed_filter_clause}
-        SQL
-
-      query_args = [cutoff_value, cutoff_value, *feed_filter_values]
-
-      db.query_one(query, args: query_args, as: Int64).to_i
-    end
-
     private def build_feed_filter(allowed_feed_urls : Array(String)) : String
       return "" if allowed_feed_urls.empty?
 

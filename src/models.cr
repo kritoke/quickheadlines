@@ -117,8 +117,8 @@ module StateStore
 
       @@memory_history << {time: Time.utc, rss_mb: rss_mb, feeds_count: feeds_count, items_count: items_count}
       @@memory_history.shift if @@memory_history.size > @@memory_history_max_entries
-    rescue
-      # Ignore errors - memory monitoring should not crash the app
+    rescue ex : Exception
+      Log.for("quickheadlines.memory").debug { "Memory tracking error: #{ex.message}" }
     end
   end
 
