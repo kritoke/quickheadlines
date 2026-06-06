@@ -28,71 +28,6 @@ class FaviconActor < Actor
   def_call save_favicon(url : String, image_data : Bytes, content_type : String), String?
   def_call fetch_and_save(url : String), String?
 
-  # Maps URL -> reply channel for in-flight HTTP fetches.
-  # Each fetch_and_save gets its own channel, routed by URL.
-  private struct HttpFetchResult
-    getter url : String
-    getter success : Bool
-    getter image_data : Bytes?
-    getter content_type : String?
-    getter error : String?
-
-    def initialize(@url, @success, @image_data, @content_type, @error)
-    end
-  end
-
-  private def handle_fetch_and_save(url : String) : String?
-    reply_ch = Channel(String?).new
-    @pending_fetches[url] = reply_ch
-    spawn(name: "favicon_http_fetch_#{url.hash}") do
-      result = perform_http_fetch(url)
-      send_message(HttpFetchResult.new(url, result[:success], result[:image_data], result[:content_type], result[:error]))
-    end
-    result = reply_ch.receive
-    @pending_fetches.delete(url)
-    result
-  end
-
-  private def perform_http_fetch(url : String) : {success: Bool, image_data: Bytes?, content_type: String?, error: String?}
-    uri = URI.parse(url)
-    host = uri.host
-    return {success: false, image_data: nil, content_type: nil, error: "no host"} unless host
-    return {success: false, image_data: nil, content_type: nil, error: "SSRF: private host"} if reject_private_host?(host, url)
-
-    client = pooled_client(host, uri.port, uri.scheme == "https")
-
-    redirect_client : HTTP::Client? = nil
-
-    begin
-      headers = HTTP::Headers{"User-Agent" => "Mozilla/5.0 (compatible; QuickHeadlines/1.0)"}
-      response = client.get(uri.request_target, headers: headers)
-
-      if response.status.redirection?
-        redirect_url = response.headers["Location"]?
-        if redirect_url
-          redirected_uri = uri.resolve(redirect_url)
-          redirect_host = redirected_uri.host
-          return {success: false, image_data: nil, content_type: nil, error: "SSRF: redirect to private host #{redirect_host}"} if redirect_host && reject_private_host?(redirect_host, redirect_url)
-          if redirect_host
-            redirect_client = pooled_client(redirect_host, redirected_uri.port, redirected_uri.scheme == "https")
-            response = redirect_client.get(redirected_uri.request_target, headers: headers)
-          end
-        end
-      end
-
-      return {success: false, image_data: nil, content_type: nil, error: "HTTP #{response.status.code}"} unless response.status.success?
-
-      content_type = response.content_type || "image/png"
-      body = response.body.to_slice
-      {success: true, image_data: body, content_type: content_type, error: nil}
-    rescue ex
-      # On error, close and remove the client from pool so it gets recreated
-      @client_pool.delete("#{host}:#{uri.port}:#{uri.scheme == "https"}")
-      client.close rescue nil
-      {success: false, image_data: nil, content_type: nil, error: "fetch error: #{ex.class}"}
-    end
-  end
-
   def_call get_or_fetch(url : String), String?
 
   # Cast messages (fire-and-forget)
@@ -104,7 +39,6 @@ class FaviconActor < Actor
 
   @favicon_dir : String
   @initialized : Bool = false
-  @pending_fetches : Hash(String, Channel(String?)) = Hash(String, Channel(String?)).new
   @client_pool : Hash(String, HTTP::Client) = {} of String => HTTP::Client
 
   def initialize(@name : String = "FaviconActor")
@@ -168,26 +102,7 @@ class FaviconActor < Actor
     when CallFetchAndSave then message.deliver_reply_json(handle_fetch_and_save(message.url).to_json)
     when CallGetOrFetch   then message.deliver_reply_json(handle_get_or_fetch(message.url).to_json)
     when CastInitStorage  then handle_init_storage
-    when HttpFetchResult  then handle_http_fetch_result(message)
     else                       raise "Unknown message: #{message.class.name}"
-    end
-  end
-
-  private def handle_http_fetch_result(result : HttpFetchResult) : Nil
-    if ch = @pending_fetches[result.url]?
-      begin
-        if result.success && (data = result.image_data)
-          ct = result.content_type || "image/png"
-          saved_path = handle_save_favicon(result.url, data, ct)
-          ch.send(saved_path)
-        else
-          fallback = do_fetch_google_favicon(result.url)
-          ch.send(fallback)
-        end
-      rescue Channel::ClosedError
-      ensure
-        @pending_fetches.delete(result.url)
-      end
     end
   end
 
