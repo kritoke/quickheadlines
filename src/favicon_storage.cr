@@ -59,8 +59,7 @@ class FaviconActor < Actor
     return {success: false, image_data: nil, content_type: nil, error: "no host"} unless host
     return {success: false, image_data: nil, content_type: nil, error: "SSRF: private host"} if reject_private_host?(host, url)
 
-    client = HTTP::Client.new(host, port: uri.port, tls: uri.scheme == "https")
-    apply_default_timeouts(client)
+    client = pooled_client(host, uri.port, uri.scheme == "https")
 
     redirect_client : HTTP::Client? = nil
 
@@ -75,8 +74,7 @@ class FaviconActor < Actor
           redirect_host = redirected_uri.host
           return {success: false, image_data: nil, content_type: nil, error: "SSRF: redirect to private host #{redirect_host}"} if redirect_host && reject_private_host?(redirect_host, redirect_url)
           if redirect_host
-            redirect_client = HTTP::Client.new(redirect_host, port: redirected_uri.port, tls: redirected_uri.scheme == "https")
-            apply_default_timeouts(redirect_client)
+            redirect_client = pooled_client(redirect_host, redirected_uri.port, redirected_uri.scheme == "https")
             response = redirect_client.get(redirected_uri.request_target, headers: headers)
           end
         end
@@ -88,10 +86,10 @@ class FaviconActor < Actor
       body = response.body.to_slice
       {success: true, image_data: body, content_type: content_type, error: nil}
     rescue ex
+      # On error, close and remove the client from pool so it gets recreated
+      @client_pool.delete("#{host}:#{uri.port}:#{uri.scheme == "https"}")
+      client.close rescue nil
       {success: false, image_data: nil, content_type: nil, error: "fetch error: #{ex.class}"}
-    ensure
-      redirect_client.try(&.close)
-      client.close
     end
   end
 
@@ -107,6 +105,7 @@ class FaviconActor < Actor
   @favicon_dir : String
   @initialized : Bool = false
   @pending_fetches : Hash(String, Channel(String?)) = Hash(String, Channel(String?)).new
+  @client_pool : Hash(String, HTTP::Client) = {} of String => HTTP::Client
 
   def initialize(@name : String = "FaviconActor")
     super(@name, mailbox_size: 100)
@@ -246,8 +245,7 @@ class FaviconActor < Actor
     return nil unless host
     return nil if reject_private_host?(host, url)
 
-    client = HTTP::Client.new(host, port: uri.port, tls: uri.scheme == "https")
-    apply_default_timeouts(client)
+    client = pooled_client(host, uri.port, uri.scheme == "https")
 
     redirect_client : HTTP::Client? = nil
 
@@ -266,8 +264,7 @@ class FaviconActor < Actor
             return nil
           end
           if redirect_host
-            redirect_client = HTTP::Client.new(redirect_host, port: redirected_uri.port, tls: redirected_uri.scheme == "https")
-            apply_default_timeouts(redirect_client)
+            redirect_client = pooled_client(redirect_host, redirected_uri.port, redirected_uri.scheme == "https")
             response = redirect_client.get(redirected_uri.request_target, headers: headers)
           else
             return nil
@@ -286,11 +283,11 @@ class FaviconActor < Actor
       # Call handle_save_favicon directly (we're already in the actor fiber)
       handle_save_favicon(url, body.to_slice, content_type)
     rescue ex
+      # On error, close and remove the client from pool
+      @client_pool.delete("#{host}:#{uri.port}:#{uri.scheme == "https"}")
+      client.close rescue nil
       Log.for("quickheadlines.storage").error(exception: ex) { "Failed to fetch #{url}" }
       nil
-    ensure
-      redirect_client.try(&.close)
-      client.close
     end
   end
 
@@ -318,8 +315,7 @@ class FaviconActor < Actor
     host = uri.host
     return nil unless host
 
-    client = HTTP::Client.new(host, port: uri.port, tls: true)
-    apply_default_timeouts(client)
+    client = pooled_client(host, uri.port, true)
 
     begin
       headers = HTTP::Headers{"User-Agent" => "Mozilla/5.0 (compatible; QuickHeadlines/1.0)"}
@@ -332,9 +328,7 @@ class FaviconActor < Actor
           redirect_uri = uri.resolve(redirect_url)
           redirect_host = redirect_uri.host
           if redirect_host
-            client.close
-            client = HTTP::Client.new(redirect_host, port: redirect_uri.port, tls: redirect_uri.scheme == "https")
-            apply_default_timeouts(client)
+            client = pooled_client(redirect_host, redirect_uri.port, redirect_uri.scheme == "https")
             response = client.get(redirect_uri.request_target, headers: headers)
           end
         end
@@ -360,10 +354,11 @@ class FaviconActor < Actor
       end
       "/favicons/#{filename}"
     rescue ex
+      # On error, close and remove the client from pool
+      @client_pool.delete("#{host}:#{uri.port}:true")
+      client.close rescue nil
       Log.for("quickheadlines.storage").error(exception: ex) { "Failed to fetch Google favicon for #{url}" }
       nil
-    ensure
-      client.close
     end
   end
 
@@ -392,6 +387,27 @@ class FaviconActor < Actor
     client.read_timeout = QuickHeadlines::Constants::HTTP_READ_TIMEOUT.seconds
     client.write_timeout = QuickHeadlines::Constants::HTTP_WRITE_TIMEOUT.seconds
     client.connect_timeout = QuickHeadlines::Constants::HTTP_CONNECT_TIMEOUT.seconds
+  end
+
+  # Get or create a pooled HTTP client for the given host.
+  # Reuses existing connections to avoid TCP/TLS handshake overhead.
+  private def pooled_client(host : String, port : Int32?, tls : Bool) : HTTP::Client
+    pool_key = "#{host}:#{port}:#{tls}"
+    if client = @client_pool[pool_key]?
+      return client
+    end
+    client = HTTP::Client.new(host, port: port, tls: tls)
+    apply_default_timeouts(client)
+    @client_pool[pool_key] = client
+    client
+  end
+
+  # Close idle pooled clients (called during cleanup).
+  def close_pooled_clients : Nil
+    @client_pool.each_value do |client|
+      client.close rescue nil
+    end
+    @client_pool.clear
   end
 
   private def reject_private_host?(host : String, url : String) : Bool

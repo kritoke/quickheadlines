@@ -10,7 +10,7 @@ require "signal"
 require "time"
 
 Log.setup do |builder|
-  builder.bind "*", Log::Severity::Info, Log::IOBackend.new
+  builder.bind "*", Log::Severity::Info, Log::IOBackend.new(dispatcher: Log::DirectDispatcher)
 end
 
 module QuickHeadlines

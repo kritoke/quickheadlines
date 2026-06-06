@@ -80,7 +80,7 @@ class QuickHeadlines::Controllers::AdminController < QuickHeadlines::Controllers
   end
 
   private def cluster_config_limit : Int32
-    StateStore.config.try(&.clustering).try(&.max_items) || StateStore.config.try(&.db_fetch_limit) || 5000
+    StateStore.config.try(&.clustering).try(&.max_items) || StateStore.config.try(&.db_fetch_limit) || 2000
   end
 
   private def cluster_config_threshold : Float64

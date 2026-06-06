@@ -254,11 +254,11 @@ class QuickHeadlines::Services::ClusteringService
   end
 
   # Delegate recluster_with_lsh to ClusteringActor (synchronous — blocks until complete)
-  def recluster_with_lsh(cache : FeedCache, limit : Int32 = 5000, threshold : Float64 = 0.35, bands : Int32 = 20) : Int32
+  def recluster_with_lsh(cache : FeedCache, limit : Int32 = 2000, threshold : Float64 = 0.35, bands : Int32 = 20) : Int32
     @actor.recluster(cache, limit, threshold, bands)
   end
 
-  def recluster_with_lsh(limit : Int32 = 5000, threshold : Float64 = 0.35, bands : Int32 = 20) : Int32
+  def recluster_with_lsh(limit : Int32 = 2000, threshold : Float64 = 0.35, bands : Int32 = 20) : Int32
     recluster_with_lsh(FeedCache.instance, limit, threshold, bands)
   end
 end
