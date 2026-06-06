@@ -2,6 +2,7 @@
   "assignee": "",
   "blocked_by": [],
   "blocks": [],
+  "closed_at": "2026-06-06T22:14:47Z",
   "created": "2026-06-06T19:07:13Z",
   "description": "## Problem\n\n`ameba src/infrastructure_actor.cr` reports 49 findings (TrailingRescueException, WhitespaceAroundMacroExpression — most Correctable).\n\n## Fix\n\nFor Correctable items (`[C]`): run `nix develop . --command ameba --fix src/infrastructure_actor.cr`. For Warnings (`[W]`): review each finding manually and apply the appropriate change.\n\n## Acceptance\n\n- `nix develop . --command ameba src/infrastructure_actor.cr` returns 0 findings.\n- `crystal tool format --check` exits clean.\n- `just nix-build` passes; existing Crystal specs pass.\n\n## Out of scope\n\n- Findings in other files (tracked under the parent epic `quickhea-wv4`).",
   "id": "quickhea-wv4.3",
@@ -10,8 +11,8 @@
   ],
   "parent": "quickhea-wv4",
   "priority": 3,
-  "status": "open",
+  "status": "closed",
   "title": "49 ameba findings in src/infrastructure/actor.cr",
   "type": "chore",
-  "updated_at": "2026-06-06T19:07:13Z"
+  "updated_at": "2026-06-06T22:14:47Z"
 }
