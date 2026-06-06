@@ -1,0 +1,15 @@
+{
+  "assignee": "",
+  "blocked_by": [],
+  "blocks": [],
+  "created": "2026-06-06T22:23:03Z",
+  "description": "## File\nsrc/storage/cleanup_store.cr\n\n## Problem\nSome rescues may still be bare (without variable). Needs verification after recent refactoring.\n\n## Fix\nEnsure all rescues have typed exception variables. Log at appropriate level.",
+  "id": "quickhea-h2n.6",
+  "labels": [],
+  "parent": "quickhea-h2n",
+  "priority": 3,
+  "status": "open",
+  "title": "Fix bare rescue in cleanup_store.cr",
+  "type": "bug",
+  "updated_at": "2026-06-06T22:23:03Z"
+}
