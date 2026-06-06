@@ -468,11 +468,16 @@ module RefreshLoop
       true
     end
 
-    def self.force_stuck!(seconds : Int32 = 600) : Nil
-      now_ms = Time.utc.to_unix_ms
-      @@last_refresh_start.set(now_ms - (seconds * 1000))
-      @@last_refresh_complete.set(0)
-      Log.for("quickheadlines.watchdog").info { "RefreshHealthMonitor: forced stuck state for testing (#{seconds}s)" }
+    # Public accessors for dev tooling. The simulation lives in
+    # `src/dev_tools/refresh_simulator.cr` (see QuickHeadlines::DevRefreshSimulator)
+    # which is the only intended caller. These setters are explicit
+    # about their dev intent so they are easy to grep for and audit.
+    def self.last_refresh_start_for_testing=(ms : Int64) : Nil
+      @@last_refresh_start.set(ms)
+    end
+
+    def self.last_refresh_complete_for_testing=(ms : Int64) : Nil
+      @@last_refresh_complete.set(ms)
     end
   end
 

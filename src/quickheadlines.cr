@@ -1,6 +1,7 @@
 require "./application"
 require "./websocket"
 require "./services/clustering_service"
+require "./dev_tools/refresh_simulator"
 
 require "http"
 require "log"

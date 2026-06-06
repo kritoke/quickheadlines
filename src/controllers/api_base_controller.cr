@@ -226,7 +226,7 @@ class QuickHeadlines::Controllers::ApiBaseController < Athena::Framework::Contro
       end
     end
 
-    RefreshHealthMonitor.force_stuck!(seconds)
+    QuickHeadlines::DevRefreshSimulator.force_stuck!(seconds)
 
     status = RefreshHealthMonitor.status
     QuickHeadlines::DTOs::HealthResponse.new(
