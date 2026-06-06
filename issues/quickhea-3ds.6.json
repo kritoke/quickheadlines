@@ -1,5 +1,5 @@
 {
-  "assignee": "",
+  "assignee": "kritoke",
   "blocked_by": [
     "quickhea-3ds.1",
     "quickhea-3ds.10",
@@ -20,8 +20,8 @@
   ],
   "parent": "quickhea-3ds",
   "priority": 3,
-  "status": "open",
+  "status": "in_progress",
   "title": "Refactor: split refresh_loop.cr into 5 focused files (semaphore, health, GC, fiber, loop)",
   "type": "task",
-  "updated_at": "2026-06-06T15:35:02Z"
+  "updated_at": "2026-06-06T16:24:32Z"
 }
