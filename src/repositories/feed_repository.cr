@@ -88,7 +88,7 @@ module QuickHeadlines::Repositories
       placeholders = urls.map { '?' }.join(',')
       db.query(
         "SELECT feeds.url, COUNT(*) FROM items JOIN feeds ON items.feed_id = feeds.id WHERE feeds.url IN (#{placeholders}) GROUP BY feeds.url",
-        args: urls.map { |u| u.as(::DB::Any) }
+        args: urls.map { |url| url.as(::DB::Any) }
       ) do |rows|
         rows.each do
           url = rows.read(String)
