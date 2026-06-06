@@ -1,7 +1,9 @@
 {
   "assignee": "",
   "blocked_by": [],
-  "blocks": [],
+  "blocks": [
+    "quickhea-gz7.2"
+  ],
   "created": "2026-06-06T21:25:58Z",
   "description": "## Problem\nThe original async fetch implementation was replaced by a synchronous-in-actor approach, but the old code was never removed. Crystal resolves the duplicate `handle_fetch_and_save` name by overwriting (line 240 replaces line 44), making the old path unreachable dead code.\n\n## Dead code to remove\n1. `HttpFetchResult` struct (lines 33-42)\n2. `handle_fetch_and_save` at line 44 (async version with `@pending_fetches` channel)\n3. `perform_http_fetch` method (lines 56-94)\n4. `handle_http_fetch_result` method (lines 176-192)\n5. `@pending_fetches` instance variable (line 107)\n6. `@pending_fetches` initialization in constructor\n\n## Verification\n- `just nix-build` passes\n- `nix develop . --command crystal spec` passes\n- Grep confirms no remaining references to `HttpFetchResult` or `@pending_fetches`\n\n## File\n`src/favicon_storage.cr`",
   "id": "quickhea-gz7.5",
@@ -11,5 +13,5 @@
   "status": "open",
   "title": "Remove dead async fetch code (~100 LOC)",
   "type": "task",
-  "updated_at": "2026-06-06T21:25:58Z"
+  "updated_at": "2026-06-06T21:26:01Z"
 }
