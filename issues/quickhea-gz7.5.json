@@ -1,5 +1,5 @@
 {
-  "assignee": "",
+  "assignee": "kritoke",
   "blocked_by": [],
   "blocks": [
     "quickhea-gz7.2"
@@ -10,8 +10,8 @@
   "labels": [],
   "parent": "quickhea-gz7",
   "priority": 2,
-  "status": "open",
+  "status": "in_progress",
   "title": "Remove dead async fetch code (~100 LOC)",
   "type": "task",
-  "updated_at": "2026-06-06T21:26:01Z"
+  "updated_at": "2026-06-06T21:27:29Z"
 }
