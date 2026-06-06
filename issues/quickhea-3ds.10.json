@@ -4,6 +4,7 @@
   "blocks": [
     "quickhea-3ds.6"
   ],
+  "closed_at": "2026-06-06T15:37:29Z",
   "created": "2026-06-06T15:35:02Z",
   "description": "## Problem\n\n`src/fetcher/refresh_loop.cr` has 14 pre-existing ameba findings that the\nformatter / linter can resolve (or that are minor code cleanups). All\n14 are unrelated to the reliability/DRY refactor tracked under the\nparent epic, but they were uncovered while running ameba during\n`quickhea-3ds.9`.\n\n## Findings\n\n```\nsrc/fetcher/refresh_loop.cr:1:1   [C] Lint/Formatting                  (formatter)\nsrc/fetcher/refresh_loop.cr:68:12 [W] Lint/UselessAssign              (code fix)\nsrc/fetcher/refresh_loop.cr:311:1 [C] Layout/TrailingWhitespace       (formatter)\nsrc/fetcher/refresh_loop.cr:328:1 [C] Layout/TrailingWhitespace       (formatter)\nsrc/fetcher/refresh_loop.cr:337:1 [C] Layout/TrailingWhitespace       (formatter)\nsrc/fetcher/refresh_loop.cr:346:1 [C] Layout/TrailingWhitespace       (formatter)\nsrc/fetcher/refresh_loop.cr:351:1 [C] Layout/TrailingWhitespace       (formatter)\nsrc/fetcher/refresh_loop.cr:360:1 [C] Layout/TrailingWhitespace       (formatter)\nsrc/fetcher/refresh_loop.cr:366:1 [C] Layout/TrailingWhitespace       (formatter)\nsrc/fetcher/refresh_loop.cr:370:1 [C] Layout/TrailingWhitespace       (formatter)\nsrc/fetcher/refresh_loop.cr:697:1 [C] Layout/TrailingWhitespace       (formatter, post .9)\nsrc/fetcher/refresh_loop.cr:732:1 [C] Layout/TrailingWhitespace       (formatter, post .9)\nsrc/fetcher/refresh_loop.cr:737:1 [C] Layout/TrailingWhitespace       (formatter, post .9)\nsrc/fetcher/refresh_loop.cr:918:1 [C] Layout/TrailingBlankLines       (formatter)\n```\n\n## Fix\n\nTwo parts:\n\n1. **Run `crystal tool format src/fetcher/refresh_loop.cr`** to auto-fix\n   13 of the 14 findings (formatting + trailing whitespace + missing\n   trailing newline). The formatter will touch unrelated lines (pre-\n   existing whitespace drift), which is acceptable as a one-time cleanup\n   for the file.\n\n2. **Fix `Lint/UselessAssign` at line 68** manually. The pattern is:\n\n   ```crystal\n   until (v = CONCURRENCY_AVAILABLE.get) \u003e= CONCURRENCY_LIMIT\n     CONCURRENCY_AVAILABLE.add(1, :relaxed)\n     CONCURRENCY_SEMAPHORE.send(nil)\n   end\n   ```\n\n   `v` is bound but never used. Replace with:\n\n   ```crystal\n   while CONCURRENCY_AVAILABLE.get \u003c CONCURRENCY_LIMIT\n     CONCURRENCY_AVAILABLE.add(1, :relaxed)\n     CONCURRENCY_SEMAPHORE.send(nil)\n   end\n   ```\n\n## Acceptance\n\n- `nix develop . --command ameba src/fetcher/refresh_loop.cr` returns 0 findings.\n- `crystal tool format --check src/fetcher/refresh_loop.cr` exits 0.\n- `just nix-build` passes; existing Crystal specs pass.\n- Diff is focused on `src/fetcher/refresh_loop.cr` only.\n\n## Out of scope\n\n- The remaining ~98 ameba findings in other files\n  (`src/config/loader.cr`, `src/controllers/proxy_controller.cr`,\n  `src/favicon_storage.cr`, etc.). Those belong to a separate project-\n  wide cleanup effort and should be tracked under a new ticket/parent.",
   "id": "quickhea-3ds.10",
@@ -12,8 +13,8 @@
   ],
   "parent": "quickhea-3ds",
   "priority": 3,
-  "status": "in_progress",
+  "status": "closed",
   "title": "Chore: ameba cleanup for refresh_loop.cr (14 findings)",
   "type": "chore",
-  "updated_at": "2026-06-06T15:35:11Z"
+  "updated_at": "2026-06-06T15:37:29Z"
 }
