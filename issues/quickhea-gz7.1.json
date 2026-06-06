@@ -1,0 +1,15 @@
+{
+  "assignee": "",
+  "blocked_by": [],
+  "blocks": [],
+  "created": "2026-06-06T21:25:57Z",
+  "description": "## Problem\n`do_fetch_google_favicon` (line 310) follows HTTP redirects without checking if the redirect target is a private host. Both other fetch paths (`perform_http_fetch` line 75, `handle_fetch_and_save` line 262) call `reject_private_host?` on redirects, but the Google fallback path does not.\n\n## Impact\nSSRF vulnerability: an attacker-controlled favicon URL could redirect Google's favicon service to an internal endpoint, bypassing the SSRF guard.\n\n## Fix\nAdd `reject_private_host?` check to the redirect-following block in `do_fetch_google_favicon` (around lines 329-334), matching the pattern used in `handle_fetch_and_save` (lines 262-265).\n\n## File\n`src/favicon_storage.cr` — method `do_fetch_google_favicon`",
+  "id": "quickhea-gz7.1",
+  "labels": [],
+  "parent": "quickhea-gz7",
+  "priority": 1,
+  "status": "open",
+  "title": "Fix: do_fetch_google_favicon missing SSRF redirect check",
+  "type": "bug",
+  "updated_at": "2026-06-06T21:25:57Z"
+}
