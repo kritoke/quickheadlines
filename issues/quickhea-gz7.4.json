@@ -1,6 +1,8 @@
 {
   "assignee": "",
-  "blocked_by": [],
+  "blocked_by": [
+    "quickhea-gz7.2"
+  ],
   "blocks": [],
   "created": "2026-06-06T21:25:58Z",
   "description": "## Problem\nThe `FaviconStorage` module (lines 422-461) is a pure delegation wrapper with 9 methods, each a one-liner calling `FaviconActor`. It exists only for backward compatibility with callers that have not been updated to use `FaviconActor` directly.\n\nThis is 40 lines of dead weight that adds indirection without value.\n\n## Steps\n1. Find all callers of `FaviconStorage.*` across the codebase\n2. Update each caller to use `FaviconActor.*` instead (e.g., `FaviconStorage.save_favicon(...)` → `FaviconActor.instance.save_favicon(...)`)\n3. Remove the `FaviconStorage` module entirely\n4. Remove `alias` or `require` references if any\n\n## Depends on\n- DRY1 (extract HTTP fetch helper) — do structural cleanup last\n\n## Verification\n- `grep -r \"FaviconStorage\" src/` returns 0 results\n- `just nix-build` passes\n\n## File\n`src/favicon_storage.cr` (lines 422-461) and all caller files",
@@ -11,5 +13,5 @@
   "status": "open",
   "title": "Remove FaviconStorage backward-compat wrapper module",
   "type": "task",
-  "updated_at": "2026-06-06T21:25:58Z"
+  "updated_at": "2026-06-06T21:26:01Z"
 }
