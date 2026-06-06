@@ -1,0 +1,15 @@
+{
+  "assignee": "",
+  "blocked_by": [],
+  "blocks": [],
+  "created": "2026-06-06T21:25:57Z",
+  "description": "## Problem\nThe HTTP fetch pattern (get pooled client → set headers → GET → follow redirect with SSRF check → check status → return body) is duplicated across:\n1. `handle_fetch_and_save` (lines 240-292) — the live synchronous version\n2. `do_fetch_google_favicon` (lines 310-363) — Google fallback\n\nAfter removing the dead `perform_http_fetch` (ticket DEAD1), these two are the remaining duplicates. Both share:\n- Pool key construction\n- User-Agent header\n- Redirect following with Location header parsing and URI resolution\n- Status code checking\n- Error cleanup (delete from pool, close client)\n\n## Fix\nExtract a `fetch_http(url : String, follow_redirects : Bool = true) : {status_code: Int32, content_type: String?, body: Bytes?, error: String?}` helper that handles pooling, redirects, SSRF checks, and error cleanup. Both callers use this helper.\n\n## Depends on\n- DEAD1 (remove dead async fetch code) — simplifies the extraction since only 2 paths remain\n\n## File\n`src/favicon_storage.cr`",
+  "id": "quickhea-gz7.2",
+  "labels": [],
+  "parent": "quickhea-gz7",
+  "priority": 2,
+  "status": "open",
+  "title": "DRY: extract shared HTTP fetch-with-redirect helper",
+  "type": "task",
+  "updated_at": "2026-06-06T21:25:57Z"
+}
