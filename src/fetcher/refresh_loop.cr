@@ -100,6 +100,19 @@ module RefreshLoop
     fetched || existing || FeedFetcher.instance.build_error_feed(feed, "Failed to fetch")
   end
 
+  # Returns previous FeedData if it exists and is not a failed feed,
+  # otherwise builds a synthetic error feed. Used by all per-feed
+  # fallback paths (timeout, exception, nil result, outer error) so the
+  # "use cached, else build error" policy lives in exactly one place.
+  private def self.fallback_feed(feed : Feed, previous : FeedData?, error_message : String, context : String) : FeedData
+    if previous && !previous.failed?
+      Log.for("quickheadlines.feed").info { "#{context}: using cached data for #{feed.url}" }
+      previous
+    else
+      FeedFetcher.instance.build_error_feed(feed, error_message)
+    end
+  end
+
   private def self.build_software_releases(software_config : SoftwareConfig?, item_limit : Int32) : Array(FeedData)
     QuickHeadlines::SoftwareUtil.build_software_releases(software_config, item_limit)
   end
@@ -147,17 +160,10 @@ module RefreshLoop
       raise ex
     rescue ex : Exception
       Log.for("quickheadlines.feed").error(exception: ex) { "fetch_feeds_concurrently: error fetching #{feed.url}" }
-      if previous_feed_data && !previous_feed_data.failed?
-        Log.for("quickheadlines.feed").info { "fetch_feeds_concurrently: using cached data after outer error for #{feed.url}" }
-        begin
-          channel.send(previous_feed_data)
-        rescue Channel::ClosedError
-        end
-      else
-        begin
-          channel.send(FeedFetcher.instance.build_error_feed(feed, "Error: #{ex.class}"))
-        rescue Channel::ClosedError
-        end
+      fallback = fallback_feed(feed, previous_feed_data, "Error: #{ex.class}", "fetch_feeds_concurrently: using cached data after outer error")
+      begin
+        channel.send(fallback)
+      rescue Channel::ClosedError
       end
     ensure
       RefreshHealthMonitor.feed_fetch_completed
@@ -204,31 +210,17 @@ module RefreshLoop
 
     if timed_out
       Log.for("quickheadlines.feed").warn { "fetch_single_feed_with_timeout: feed #{feed.url} timed out after #{timeout_seconds}s" }
-      if previous_feed_data && !previous_feed_data.failed?
-        Log.for("quickheadlines.feed").info { "fetch_single_feed_with_timeout: using cached data for #{feed.url}" }
-        previous_feed_data
-      else
-        FeedFetcher.instance.build_error_feed(feed, "Error: Fetch timeout after #{timeout_seconds}s")
-      end
+      fallback_feed(feed, previous_feed_data, "Error: Fetch timeout after #{timeout_seconds}s", "fetch_single_feed_with_timeout")
     elsif value = channel_result
       if value.is_a?(Exception)
         Log.for("quickheadlines.feed").error(exception: value) { "Fetch failed for #{feed.url}" }
-        if previous_feed_data && !previous_feed_data.failed?
-          Log.for("quickheadlines.feed").info { "fetch_single_feed_with_timeout: using cached data after exception for #{feed.url}" }
-          previous_feed_data
-        else
-          FeedFetcher.instance.build_error_feed(feed, "Error: #{value.class}")
-        end
+        fallback_feed(feed, previous_feed_data, "Error: #{value.class}", "fetch_single_feed_with_timeout: using cached data after exception")
       else
         value
       end
     else
       Log.for("quickheadlines.feed").error { "fetch_single_feed_with_timeout: unexpected nil result for #{feed.url}" }
-      if previous_feed_data && !previous_feed_data.failed?
-        previous_feed_data
-      else
-        FeedFetcher.instance.build_error_feed(feed, "Error: Unexpected nil result")
-      end
+      fallback_feed(feed, previous_feed_data, "Error: Unexpected nil result", "fetch_single_feed_with_timeout: nil result")
     end
   end
 
