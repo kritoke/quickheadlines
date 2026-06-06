@@ -473,6 +473,11 @@ module RefreshLoop
     property last_mtime : Time
     property cycle_count : Int32
     property consecutive_skips : Int32
+    # Cancel channel for the in-flight initial refresh fiber, if any. The
+    # supervisor sets this when the initial refresh is spawned, and the
+    # fiber clears it in its ensure block. The supervisor reads it on
+    # shutdown to signal cancellation.
+    property initial_cancel_ch : Channel(Bool)?
     getter? first_run : Bool
 
     @first_run : Bool = true
@@ -587,14 +592,20 @@ module RefreshLoop
 
     StateStore.refreshing = true
     config_for_initial = state.active_config
+    cancel_ch = Channel(Bool).new(1)
+    state.initial_cancel_ch = cancel_ch
     spawn(name: "initial_refresh") do
       begin
-        refresh_all(config_for_initial, cache, db_service)
+        refresh_all(config_for_initial, cache, db_service, cancel_ch)
+      rescue CancelError
+        Log.for("quickheadlines.feed").warn { "Initial refresh cancelled by supervisor" }
+        RefreshHealthMonitor.record_failure
       rescue ex : Exception
         Log.for("quickheadlines.feed").error(exception: ex) { "Initial refresh failed" }
         RefreshHealthMonitor.record_failure
       ensure
         StateStore.refreshing = false
+        state.initial_cancel_ch = nil
       end
     end
 
@@ -866,7 +877,16 @@ module RefreshLoop
             run_initial_refresh(state, cache, db_service)
             elapsed = Time::Span.zero
             while elapsed < state.refresh_interval_seconds.seconds
-              break if QuickHeadlines.shutting_down?
+              if QuickHeadlines.shutting_down?
+                # Signal cancellation to the in-flight initial refresh so
+                # the worker can exit cleanly instead of running to
+                # completion in the background. The worker's ensure block
+                # clears state.initial_cancel_ch.
+                if cancel_ch = state.initial_cancel_ch
+                  cancel_ch.send(true) rescue nil
+                end
+                break
+              end
               check = {30.seconds, state.refresh_interval_seconds.seconds - elapsed}.min
               select
               when timeout(check)
