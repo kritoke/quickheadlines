@@ -1,0 +1,14 @@
+{
+  "assignee": "",
+  "blocked_by": [],
+  "blocks": [],
+  "created": "2026-06-06T21:49:40Z",
+  "description": "## Breakdown\n- 38 Lint/WhitespaceAroundMacroExpression (auto-fix)\n- 16 Lint/NotNil (manual — intentional SIP.intern usage)\n- 14 Style/RedundantNilInControlExpression (auto-fix)\n- 3 Lint/Formatting (auto-fix)\n- 3 Metrics/CyclomaticComplexity (manual — may suppress)\n- 3 Naming/BlockParameterName (manual)\n- 1 Lint/TrailingRescueException (manual)\n- 1 Lint/UnusedBlockArgument (manual)\n- 1 Style/RedundantBegin (auto-fix)\n\n## Strategy\n1. Auto-fix ~56 findings with ameba --fix + crystal format\n2. Manually fix remaining ~24\n3. Suppress complexity warnings if splitting methods is out of scope",
+  "id": "quickhea-tpx",
+  "labels": [],
+  "priority": 2,
+  "status": "open",
+  "title": "[EPIC] Fix 80 ameba findings across 10 files",
+  "type": "epic",
+  "updated_at": "2026-06-06T21:49:40Z"
+}
