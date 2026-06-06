@@ -1,5 +1,4 @@
 require "./api_base_controller"
-require "../fetcher/refresh_loop"
 
 # Helper struct to bundle WebSocket statistics
 private struct WebSocketStats

@@ -12,6 +12,7 @@ require "../repositories/story_repository"
 require "../repositories/cluster_repository"
 require "../websocket"
 require "../rate_limiter"
+require "../fetcher/refresh_loop"
 
 class QuickHeadlines::Controllers::ApiBaseController < Athena::Framework::Controller
   @db_service : DatabaseService

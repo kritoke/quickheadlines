@@ -1,5 +1,4 @@
 require "./api_base_controller"
-require "../fetcher/refresh_loop"
 
 class QuickHeadlines::Controllers::FeedPaginationController < QuickHeadlines::Controllers::ApiBaseController
   @[ARTA::Get(path: "/api/feed_more")]
