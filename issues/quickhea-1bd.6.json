@@ -1,6 +1,8 @@
 {
   "assignee": "",
-  "blocked_by": [],
+  "blocked_by": [
+    "quickhea-1bd.1"
+  ],
   "blocks": [],
   "created": "2026-06-06T22:32:01Z",
   "description": "run_timed_refresh (lines 493-553, 60 lines) does too many things: memory pressure check, StateStore update, spawn worker, measure duration, handle timeout, save cache, run GC. start (lines 698-773, 75 lines) orchestrates the entire supervisor loop with stuck recovery, skip detection, semaphore check, initial refresh, config reload, timed refresh, sleep, and heartbeat. Both should be broken into smaller, named helper methods for readability. run_timed_refresh could delegate cache save and GC to a post_refresh_cleanup method; start could extract the per-cycle logic into a run_cycle method.",
@@ -11,5 +13,5 @@
   "status": "open",
   "title": "Slim down run_timed_refresh and start methods",
   "type": "task",
-  "updated_at": "2026-06-06T22:32:55Z"
+  "updated_at": "2026-06-06T22:32:58Z"
 }
