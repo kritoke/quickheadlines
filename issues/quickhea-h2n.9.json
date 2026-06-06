@@ -1,0 +1,15 @@
+{
+  "assignee": "",
+  "blocked_by": [],
+  "blocks": [],
+  "created": "2026-06-06T22:23:04Z",
+  "description": "## File\nsrc/quickheadlines.cr line ~138\n\n## Problem\nMissing Origin header is allowed when APP_ENV=development. If production is accidentally set to development mode (or APP_ENV unset), CSRF protection on WebSockets is disabled with no warning in logs.\n\n## Fix\nAlways require the Origin header. In development, log a warning but still validate. Or use a separate explicit flag rather than tying to APP_ENV.",
+  "id": "quickhea-h2n.9",
+  "labels": [],
+  "parent": "quickhea-h2n",
+  "priority": 1,
+  "status": "open",
+  "title": "Fix: WebSocket allows no-Origin in development mode",
+  "type": "bug",
+  "updated_at": "2026-06-06T22:23:04Z"
+}
