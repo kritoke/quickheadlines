@@ -160,9 +160,13 @@ class FaviconActor < Actor
     return nil unless host
     return nil if reject_private_host?(host, url)
 
-    client = pooled_client(host, uri.port, uri.scheme == "https")
-
-    redirect_client : HTTP::Client? = nil
+    pool_key = "#{host}:#{uri.port}:#{uri.scheme == "https"}"
+    client = @client_pool[pool_key]? || begin
+      c = HTTP::Client.new(host, port: uri.port, tls: uri.scheme == "https")
+      apply_default_timeouts(c)
+      @client_pool[pool_key] = c
+      c
+    end
 
     begin
       headers = HTTP::Headers{"User-Agent" => "Mozilla/5.0 (compatible; QuickHeadlines/1.0)"}
@@ -173,14 +177,13 @@ class FaviconActor < Actor
         if redirect_url
           redirected_uri = uri.resolve(redirect_url)
           redirect_host = redirected_uri.host
-          # Block SSRF: validate redirect target before following
           if redirect_host && reject_private_host?(redirect_host, redirect_url)
             Log.for("quickheadlines.storage").debug { "SSRF blocked: redirect to #{redirect_host} from #{url}" }
             return nil
           end
           if redirect_host
-            redirect_client = pooled_client(redirect_host, redirected_uri.port, redirected_uri.scheme == "https")
-            response = redirect_client.get(redirected_uri.request_target, headers: headers)
+            client = pooled_client(redirect_host, redirected_uri.port, redirected_uri.scheme == "https")
+            response = client.get(redirected_uri.request_target, headers: headers)
           else
             return nil
           end
@@ -195,11 +198,9 @@ class FaviconActor < Actor
       content_type = response.content_type || "image/png"
       body = response.body
 
-      # Call handle_save_favicon directly (we're already in the actor fiber)
       handle_save_favicon(url, body.to_slice, content_type)
     rescue ex
-      # On error, close and remove the client from pool
-      @client_pool.delete("#{host}:#{uri.port}:#{uri.scheme == "https"}")
+      @client_pool.delete(pool_key)
       client.close rescue nil
       Log.for("quickheadlines.storage").error(exception: ex) { "Failed to fetch #{url}" }
       nil
@@ -230,6 +231,7 @@ class FaviconActor < Actor
     host = uri.host
     return nil unless host
 
+    pool_key = "#{host}:#{uri.port}:true"
     client = pooled_client(host, uri.port, true)
 
     begin
@@ -260,7 +262,6 @@ class FaviconActor < Actor
 
       content_type = response.content_type || "image/png"
       ext = extension_from_content_type(content_type)
-      # Use original URL's hash so next lookup finds the Google fallback
       hash = FaviconActor.favicon_hash_for_url(url)
       filename = FaviconActor.favicon_filename(hash, ext)
       filepath = File.join(@favicon_dir, filename)
@@ -272,8 +273,7 @@ class FaviconActor < Actor
       end
       "/favicons/#{filename}"
     rescue ex
-      # On error, close and remove the client from pool
-      @client_pool.delete("#{host}:#{uri.port}:true")
+      @client_pool.delete(pool_key)
       client.close rescue nil
       Log.for("quickheadlines.storage").error(exception: ex) { "Failed to fetch Google favicon for #{url}" }
       nil
