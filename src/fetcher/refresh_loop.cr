@@ -113,6 +113,26 @@ module RefreshLoop
     end
   end
 
+  # Sleep for up to `total` duration, broken into `chunk`-sized
+  # timeouts that check QuickHeadlines.shutting_down? between each.
+  # Returns the actual elapsed time (which is < total if shutdown was
+  # signaled, or == total on natural completion). Optional `outer_cap`
+  # adds a hard ceiling: if non-nil, the loop exits when elapsed >=
+  # outer_cap even if `total` has not been reached. Default chunk is 30s
+  # which gives a responsive shutdown signal without burning CPU.
+  private def self.interruptible_sleep(total : Time::Span, outer_cap : Time::Span? = nil, chunk : Time::Span = 30.seconds) : Time::Span
+    cap = outer_cap || total
+    elapsed = Time::Span.zero
+    while elapsed < total && elapsed < cap && !QuickHeadlines.shutting_down?
+      step = {chunk, total - elapsed, cap - elapsed}.min
+      select
+      when timeout(step)
+        elapsed += step
+      end
+    end
+    elapsed
+  end
+
   private def self.build_software_releases(software_config : SoftwareConfig?, item_limit : Int32) : Array(FeedData)
     QuickHeadlines::SoftwareUtil.build_software_releases(software_config, item_limit)
   end
@@ -671,17 +691,7 @@ module RefreshLoop
   private def self.sleep_between_cycles(state : State) : Nil
     sleep_duration = state.refresh_interval_seconds.seconds
     outer_sleep_timeout = state.sleep_timeout_seconds.seconds
-    elapsed = Time::Span.zero
-    check_interval = 30.seconds
-
-    while elapsed < sleep_duration && elapsed < outer_sleep_timeout
-      break if QuickHeadlines.shutting_down?
-      remaining = {check_interval, sleep_duration - elapsed, outer_sleep_timeout - elapsed}.min
-      select
-      when timeout(remaining)
-        elapsed += remaining
-      end
-    end
+    elapsed = interruptible_sleep(sleep_duration, outer_sleep_timeout)
 
     if elapsed >= outer_sleep_timeout && !QuickHeadlines.shutting_down?
       Log.for("quickheadlines.feed").error { "refresh loop sleep timed out after #{outer_sleep_timeout.total_seconds.round}s" }
@@ -712,15 +722,7 @@ module RefreshLoop
         begin
           break if QuickHeadlines.shutting_down?
 
-          elapsed = Time::Span.zero
-          while elapsed < 5.minutes
-            break if QuickHeadlines.shutting_down?
-            check = {30.seconds, 5.minutes - elapsed}.min
-            select
-            when timeout(check)
-              elapsed += check
-            end
-          end
+          interruptible_sleep(5.minutes)
 
           break if QuickHeadlines.shutting_down?
           status = RefreshHealthMonitor.status
@@ -867,25 +869,17 @@ module RefreshLoop
           if state.first_run?
             state.mark_first_run_done
             run_initial_refresh(state, cache, db_service)
-            elapsed = Time::Span.zero
-            while elapsed < state.refresh_interval_seconds.seconds
-              if QuickHeadlines.shutting_down?
-                # Signal cancellation to the in-flight initial refresh so
-                # the worker can exit cleanly instead of running to
-                # completion in the background. The worker's ensure block
-                # clears state.initial_cancel_ch.
-                if cancel_ch = state.initial_cancel_ch
-                  cancel_ch.send(true) rescue nil
-                end
-                break
+            interruptible_sleep(state.refresh_interval_seconds.seconds)
+            if QuickHeadlines.shutting_down?
+              # Signal cancellation to the in-flight initial refresh so
+              # the worker can exit cleanly instead of running to
+              # completion in the background. The worker's ensure block
+              # clears state.initial_cancel_ch.
+              if cancel_ch = state.initial_cancel_ch
+                cancel_ch.send(true) rescue nil
               end
-              check = {30.seconds, state.refresh_interval_seconds.seconds - elapsed}.min
-              select
-              when timeout(check)
-                elapsed += check
-              end
+              break
             end
-            break if QuickHeadlines.shutting_down?
             next
           end
 
@@ -903,15 +897,7 @@ module RefreshLoop
           StateStore.refreshing = false
           RefreshHealthMonitor.record_failure
           state.reset_cycle_count
-          elapsed = Time::Span.zero
-          while elapsed < 60.seconds
-            break if QuickHeadlines.shutting_down?
-            check = {30.seconds, 60.seconds - elapsed}.min
-            select
-            when timeout(check)
-              elapsed += check
-            end
-          end
+          interruptible_sleep(60.seconds)
           break if QuickHeadlines.shutting_down?
         end
       end
