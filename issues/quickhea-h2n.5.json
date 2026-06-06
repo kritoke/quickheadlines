@@ -1,0 +1,15 @@
+{
+  "assignee": "",
+  "blocked_by": [],
+  "blocks": [],
+  "created": "2026-06-06T22:23:03Z",
+  "description": "## File\nsrc/services/clustering_engine.cr lines ~57-60\n\n## Problem\n\"building\" appears twice and \"where\" appears twice in the STOP_WORDS Set constructor. Since Set ignores duplicates, no functional bug, but the entries are confusing dead code.\n\n## Fix\nRemove duplicate entries from the literal array.",
+  "id": "quickhea-h2n.5",
+  "labels": [],
+  "parent": "quickhea-h2n",
+  "priority": 3,
+  "status": "open",
+  "title": "Remove duplicate entries from ClusteringEngine STOP_WORDS",
+  "type": "chore",
+  "updated_at": "2026-06-06T22:23:03Z"
+}
