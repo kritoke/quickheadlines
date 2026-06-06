@@ -100,7 +100,6 @@ class QuickHeadlines::Controllers::ProxyController < QuickHeadlines::Controllers
       redirect_uri = URI.parse(redirect_location)
       client.close
       client = create_pinned_client(redirect_uri, redirect_ip)
-      target_uri = redirect_uri
       response = client.get(redirect_uri.request_target)
     end
 
