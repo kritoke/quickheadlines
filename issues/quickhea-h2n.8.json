@@ -1,0 +1,15 @@
+{
+  "assignee": "",
+  "blocked_by": [],
+  "blocks": [],
+  "created": "2026-06-06T22:23:04Z",
+  "description": "## File\nsrc/controllers/api_base_controller.cr lines ~106-107\n\n## Problem\nWhen DNS resolution fails for an allowlisted domain, validate_proxy_url_with_ip returns {true, nil}, falling back to normal DNS resolution without IP pinning. An attacker-controlled DNS server could return public IP on first resolution (validation) and private IP on second (actual fetch).\n\n## Fix\nWhen validation returns {true, nil} (DNS failed for allowlisted domain), refuse the request rather than falling back to unpinned resolution. Or retry DNS resolution with a timeout.",
+  "id": "quickhea-h2n.8",
+  "labels": [],
+  "parent": "quickhea-h2n",
+  "priority": 1,
+  "status": "open",
+  "title": "Fix: SSRF DNS rebinding fallback gap in proxy validation",
+  "type": "bug",
+  "updated_at": "2026-06-06T22:23:04Z"
+}
