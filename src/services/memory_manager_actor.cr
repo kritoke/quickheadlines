@@ -312,7 +312,8 @@ class MemoryManagerActor < Actor
       Fetcher::URLValidator.clear_validated
       Fetcher::CircuitBreaker::Registry.store.clear_expired
       ColorExtractor.sweep_cache
-      Log.for("quickheadlines.cleanup").debug { "Cleared expired caches" }
+      QuickHeadlines::StringIntern.clear
+      Log.for("quickheadlines.cleanup").debug { "Cleared expired caches and string pool" }
     rescue ex
       Log.for("quickheadlines.cleanup").warn { "Failed to clear expired caches: #{ex.message}" }
     end

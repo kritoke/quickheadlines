@@ -1,6 +1,10 @@
 require "fetcher"
 require "./models"
 require "./fetcher/feed_fetcher"
+require "./utils/string_pool"
+
+# Alias for brevity
+private alias SIP = QuickHeadlines::StringIntern
 
 CODE_ICON = "internal:code_icon"
 
@@ -19,13 +23,13 @@ def fetch_sw_with_config(sw_config : SoftwareConfig, item_limit : Int32) : FeedD
   items.sort_by! { |i| i.pub_date || Time.unix(0) }.reverse!
 
   FeedData.new(
-    title: sw_config.title,
-    url: "software://releases",
-    site_link: "https://github.com",
-    header_color: sw_config.header_color || "#24292e",
-    header_text_color: sw_config.header_text_color,
+    title: SIP.intern(sw_config.title).not_nil!,
+    url: SIP.intern("software://releases").not_nil!,
+    site_link: SIP.intern("https://github.com").not_nil!,
+    header_color: SIP.intern(sw_config.header_color || "#24292e"),
+    header_text_color: SIP.intern(sw_config.header_text_color),
     items: items,
-    favicon_data: CODE_ICON
+    favicon_data: SIP.intern(CODE_ICON).not_nil!
   )
 end
 
@@ -48,10 +52,10 @@ private def fetch_repo_release(repo_entry : String, item_limit : Int32) : Array(
     fixed_title = fix_software_title(entry.title, repo_entry)
 
     Item.new(
-      title: fixed_title,
-      link: entry.url,
+      title: SIP.intern(fixed_title).not_nil!,
+      link: SIP.intern(entry.url).not_nil!,
       pub_date: entry.published_at,
-      version: entry.version,
+      version: SIP.intern(entry.version),
       comment_url: nil,
       commentary_url: nil
     )

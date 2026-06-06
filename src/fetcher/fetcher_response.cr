@@ -3,6 +3,10 @@ require "../models"
 require "../color_extractor"
 require "./theme_helper"
 require "./software_util"
+require "../utils/string_pool"
+
+# Alias for brevity
+private alias SIP = QuickHeadlines::StringIntern
 
 # Response handling logic extracted from FeedFetcher.
 # Converts raw fetch results into FeedData, handles success/error paths,
@@ -50,16 +54,16 @@ module FetcherResponse
     preserved_theme = header_theme_json || previous_data.try(&.header_theme_colors)
 
     feed_data = FeedData.new(
-      feed.title,
-      feed.url,
-      site_link,
-      preserved_header_color,
-      preserved_text_color,
+      SIP.intern(feed.title).not_nil!,
+      SIP.intern(feed.url).not_nil!,
+      SIP.intern(site_link).not_nil!,
+      SIP.intern(preserved_header_color),
+      SIP.intern(preserved_text_color),
       items,
-      result_etag,
-      result_last_modified,
-      favicon_path,
-      favicon_path
+      SIP.intern(result_etag),
+      SIP.intern(result_last_modified),
+      SIP.intern(favicon_path),
+      SIP.intern(favicon_path)
     )
 
     feed_data = feed_data.with_theme_colors(preserved_theme) if preserved_theme
@@ -95,17 +99,17 @@ module FetcherResponse
     header_color, header_text_color = extract_header_colors(feed, favicon_data)
 
     FeedData.new(
-      title: feed.title,
-      url: feed.url,
-      site_link: site_link,
-      header_color: header_color,
-      header_text_color: header_text_color,
-      items: [Item.new(message, feed.url, nil, nil, nil, nil)],
+      title: SIP.intern(feed.title).not_nil!,
+      url: SIP.intern(feed.url).not_nil!,
+      site_link: SIP.intern(site_link).not_nil!,
+      header_color: SIP.intern(header_color),
+      header_text_color: SIP.intern(header_text_color),
+      items: [Item.new(SIP.intern(message).not_nil!, SIP.intern(feed.url).not_nil!, nil, nil, nil, nil)],
       etag: nil,
       last_modified: nil,
-      favicon: favicon,
-      favicon_data: favicon_data,
-      error_message: message,
+      favicon: SIP.intern(favicon),
+      favicon_data: SIP.intern(favicon_data),
+      error_message: SIP.intern(message),
       header_theme_colors: nil,
     )
   end
@@ -116,7 +120,15 @@ module FetcherResponse
   private def entries_to_items(entries : Array(Fetcher::Entry), strip_content : Bool = false) : Array(Item)
     entries.map do |entry|
       comment_url = entry.comment_url || (entry.is_discussion_url ? entry.url : nil)
-      Item.new(entry.title, entry.url, entry.published_at, strip_content ? nil : entry.content, nil, comment_url, entry.commentary_url)
+      Item.new(
+        SIP.intern(entry.title).not_nil!,
+        SIP.intern(entry.url).not_nil!,
+        entry.published_at,
+        strip_content ? nil : SIP.intern(entry.content),
+        nil,
+        SIP.intern(comment_url),
+        SIP.intern(entry.commentary_url)
+      )
     end.sort_by! { |item| item.pub_date || Time.unix(0) }.reverse!
   end
 
