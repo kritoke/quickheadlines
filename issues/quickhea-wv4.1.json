@@ -1,0 +1,15 @@
+{
+  "assignee": "",
+  "blocked_by": [],
+  "blocks": [],
+  "created": "2026-06-06T19:07:12Z",
+  "description": "## Problem\n\n`ameba src/proxy_controller.cr` reports 1 finding (Lint/UselessAssign — a real code fix, not auto-fixable).\n\n## Fix\n\nFor Correctable items (`[C]`): run `nix develop . --command ameba --fix src/proxy_controller.cr`. For Warnings (`[W]`): review each finding manually and apply the appropriate change.\n\n## Acceptance\n\n- `nix develop . --command ameba src/proxy_controller.cr` returns 0 findings.\n- `crystal tool format --check` exits clean.\n- `just nix-build` passes; existing Crystal specs pass.\n\n## Out of scope\n\n- Findings in other files (tracked under the parent epic `quickhea-wv4`).",
+  "id": "quickhea-wv4.1",
+  "labels": [],
+  "parent": "quickhea-wv4",
+  "priority": 3,
+  "status": "open",
+  "title": "UselessAssign in src/controllers/proxy_controller.cr",
+  "type": "chore",
+  "updated_at": "2026-06-06T19:07:12Z"
+}
