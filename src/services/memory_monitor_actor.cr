@@ -203,25 +203,23 @@ class MemoryMonitorActor < Actor
   private def read_rss_mb : Float64
     # Read RSS from /proc/curproc/status on FreeBSD
     # Falls back to reading from process info if available
-    begin
-      {% if flag?(:freebsd) %}
-        # FreeBSD: Read from /proc/curproc/status
-        if File.exists?("/proc/curproc/status")
-          status = File.read("/proc/curproc/status")
-          if match = status.match(/VmRSS:\s+(\d+)\s+kB/)
-            return match[1].to_f64 / 1024.0
-          end
+    {% if flag?(:freebsd) %}
+      # FreeBSD: Read from /proc/curproc/status
+      if File.exists?("/proc/curproc/status")
+        status = File.read("/proc/curproc/status")
+        if match = status.match(/VmRSS:\s+(\d+)\s+kB/)
+          return match[1].to_f64 / 1024.0
         end
-      {% end %}
+      end
+    {% end %}
 
-      # Fallback: Use Crystal's GC statistics
-      # This is less accurate but works on all platforms
-      gc_stats = GC.stats
-      gc_stats.heap_size.to_f64 / (1024.0 * 1024.0)
-    rescue ex
-      Log.for("quickheadlines.memory").warn { "Failed to read RSS: #{ex.message}" }
-      @last_rss_mb
-    end
+    # Fallback: Use Crystal's GC statistics
+    # This is less accurate but works on all platforms
+    gc_stats = GC.stats
+    gc_stats.heap_size.to_f64 / (1024.0 * 1024.0)
+  rescue ex : Exception
+    Log.for("quickheadlines.memory").warn { "Failed to read RSS: #{ex.message}" }
+    @last_rss_mb
   end
 
   private def calculate_pressure(rss_mb : Float64) : PressureLevel
