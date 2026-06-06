@@ -129,6 +129,23 @@ class FaviconActor < Actor
     @initialized = true
   end
 
+  private def write_atomically(filepath : String, data : Bytes) : Bool
+    return true if File.exists?(filepath)
+    temp_path = "#{filepath}.tmp"
+    begin
+      File.write(temp_path, data)
+      File.rename(temp_path, filepath)
+      true
+    rescue ex
+      Log.for("quickheadlines.storage").error(exception: ex) { "Error writing file atomically: #{filepath}" }
+      begin
+        File.delete(temp_path)
+      rescue
+      end
+      false
+    end
+  end
+
   private def handle_save_favicon(url : String, image_data : Bytes, content_type : String) : String?
     return nil if image_data.size > QuickHeadlines::Constants::FAVICON_MAX_SIZE
     return nil unless FaviconActor.valid_image_data?(image_data)
@@ -140,16 +157,8 @@ class FaviconActor < Actor
     is_tiny = image_data.size < FAVICON_ABSOLUTE_MIN || (ext == "ico" && image_data.size < FAVICON_MIN_SIZE)
 
     # Write original favicon
-    unless File.exists?(filepath)
-      begin
-        temp_path = filepath + ".tmp"
-        File.write(temp_path, image_data)
-        File.rename(temp_path, filepath)
-      rescue ex
-        Log.for("quickheadlines.storage").error(exception: ex) { "Error saving favicon" }
-        File.delete(filepath + ".tmp") if File.exists?(filepath + ".tmp")
-        return nil
-      end
+    unless write_atomically(filepath, image_data)
+      return nil
     end
 
     # If tiny, try Google fallback (network I/O happens inside actor)
@@ -250,12 +259,7 @@ class FaviconActor < Actor
     filename = FaviconActor.favicon_filename(hash, ext)
     filepath = File.join(@favicon_dir, filename)
 
-    unless File.exists?(filepath)
-      temp_path = filepath + ".tmp"
-      File.write(temp_path, image_data)
-      File.rename(temp_path, filepath)
-    end
-    "/favicons/#{filename}"
+    write_atomically(filepath, image_data) ? "/favicons/#{filename}" : nil
   end
 
   private def extract_domain_from_url(url : String) : String?
