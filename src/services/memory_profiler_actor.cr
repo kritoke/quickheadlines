@@ -165,20 +165,19 @@ class MemoryProfilerActor < Actor
   end
 
   private def read_rss_mb : Float64
-    begin
-      {% if flag?(:freebsd) %}
-        if File.exists?("/proc/curproc/status")
-          status = File.read("/proc/curproc/status")
-          if match = status.match(/VmRSS:\s+(\d+)\s+kB/)
-            return match[1].to_f64 / 1024.0
-          end
+    {% if flag?(:freebsd) %}
+      if File.exists?("/proc/curproc/status")
+        status = File.read("/proc/curproc/status")
+        if match = status.match(/VmRSS:\s+(\d+)\s+kB/)
+          return match[1].to_f64 / 1024.0
         end
-      {% end %}
+      end
+    {% end %}
 
-      gc_stats = GC.stats
-      gc_stats.heap_size.to_f64 / (1024.0 * 1024.0)
-    rescue ex
-      0.0
-    end
+    gc_stats = GC.stats
+    gc_stats.heap_size.to_f64 / (1024.0 * 1024.0)
+  rescue ex : Exception
+    Log.for("quickheadlines.memory").debug(exception: ex) { "memory_profiler read_rss_mb failed, returning 0.0" }
+    0.0
   end
 end
