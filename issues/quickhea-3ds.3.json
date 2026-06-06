@@ -4,6 +4,7 @@
   "blocks": [
     "quickhea-3ds.6"
   ],
+  "closed_at": "2026-06-06T16:16:30Z",
   "created": "2026-06-06T15:15:01Z",
   "description": "## Bug\n\n`src/fetcher/refresh_loop.cr:560-572` — `reload_config_if_changed`:\n\n```crystal\nprivate def self.reload_config_if_changed(config_path : String, state : State) : Nil\n  current_mtime = File.info(config_path).modification_time\n  return unless current_mtime \u003e state.last_mtime\n  ...\nend\n```\n\n`File.info` raises `File::NotFoundError` (or `Errno`) if `config_path` does not exist. There is no `begin/rescue` around it.\n\n## Why it matters\n\n- The supervisor calls `reload_config_if_changed` every cycle (line 822: `reload_config_if_changed(config_path, state)`).\n- If the operator (or a deployment script) temporarily renames or moves `feeds.yml` between cycles, **the entire supervisor loop crashes** with an unhandled exception. The outer `rescue ex` in the supervisor (line 825) catches it, but only after logging an error and sleeping 60s. This means a missing config file effectively takes the refresh loop offline until the file is restored.\n- This is fragile: a routine config-management operation (atomic rename, blue/green deploy) becomes a refresh-loop outage.\n\n## Fix\n\nWrap the `File.info` call in a typed rescue:\n\n```crystal\nprivate def self.reload_config_if_changed(config_path : String, state : State) : Nil\n  current_mtime = begin\n    File.info(config_path).modification_time\n  rescue ex : File::NotFoundError\n    if state.active_config.debug?\n      Log.for(\"quickheadlines.feed\").debug { \"reload_config_if_changed: #{config_path} not found, skipping\" }\n    end\n    return\n  end\n  return unless current_mtime \u003e state.last_mtime\n  ...\nend\n```\n\nOptionally, also handle `File::AccessDeniedError` separately to log a different message.\n\n## Acceptance\n\n- A test (or manual repro) demonstrates that deleting `feeds.yml` while the supervisor is running does **not** crash the supervisor loop; the loop logs a debug-level \"not found, skipping\" and continues to the next cycle.\n- Restoring the file (touching it / recreating it) resumes normal config-reload behavior.\n- `just nix-build` passes; existing Crystal specs pass.",
   "id": "quickhea-3ds.3",
@@ -12,8 +13,8 @@
   ],
   "parent": "quickhea-3ds",
   "priority": 2,
-  "status": "in_progress",
+  "status": "closed",
   "title": "Fix: reload_config_if_changed crashes supervisor on missing feeds.yml",
   "type": "bug",
-  "updated_at": "2026-06-06T16:11:34Z"
+  "updated_at": "2026-06-06T16:16:30Z"
 }
