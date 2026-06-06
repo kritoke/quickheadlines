@@ -5,7 +5,9 @@
   "created": "2026-06-06T19:07:14Z",
   "description": "## Problem\n\n`ameba src/memory_monitor_actor.cr` reports 1 finding (Style/RedundantBegin — Correctable).\n\n## Fix\n\nFor Correctable items (`[C]`): run `nix develop . --command ameba --fix src/memory_monitor_actor.cr`. For Warnings (`[W]`): review each finding manually and apply the appropriate change.\n\n## Acceptance\n\n- `nix develop . --command ameba src/memory_monitor_actor.cr` returns 0 findings.\n- `crystal tool format --check` exits clean.\n- `just nix-build` passes; existing Crystal specs pass.\n\n## Out of scope\n\n- Findings in other files (tracked under the parent epic `quickhea-wv4`).",
   "id": "quickhea-wv4.8",
-  "labels": [],
+  "labels": [
+    "lint"
+  ],
   "parent": "quickhea-wv4",
   "priority": 3,
   "status": "open",
