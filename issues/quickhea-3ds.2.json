@@ -1,0 +1,15 @@
+{
+  "assignee": "",
+  "blocked_by": [],
+  "blocks": [],
+  "created": "2026-06-06T15:15:00Z",
+  "description": "## Bug\n\n`src/fetcher/refresh_loop.cr:574-595` — `run_initial_refresh` calls:\n\n```crystal\nspawn(name: \"initial_refresh\") do\n  begin\n    refresh_all(config_for_initial, cache, db_service)   # no cancel_ch\n  rescue ex\n    ...\n  ensure\n    StateStore.refreshing = false\n  end\nend\n```\n\nBut `run_timed_refresh` calls `refresh_all(config_snapshot, cache, db_service, cancel_ch)` with a `cancel_ch`. The initial refresh path is **missing the `cancel_ch` argument entirely**, so the first refresh cycle cannot be cancelled by the supervisor.\n\n## Why it matters\n\n- On first startup, if the user has a slow feed, the initial refresh can run for a long time.\n- If the user triggers a shutdown during that initial fetch, the initial refresh worker keeps running until the feeds complete or the outer process exits non-gracefully.\n- After the initial refresh returns, the supervisor immediately starts the next cycle. Without cancellation support, there is no way to interrupt the first cycle cleanly.\n\n## Fix\n\n1. Create a `cancel_ch` in `run_initial_refresh` (matching the `run_timed_refresh` pattern: `Channel(Bool).new(1)`).\n2. Pass it to `refresh_all`.\n3. Store the channel on `State` (or in a module variable) so the supervisor can signal cancellation.\n4. When the supervisor transitions out of the initial-refresh sleep, close the cancel channel (or send `true` to it) and join the worker with a timeout.\n5. Alternatively, make `run_initial_refresh` use `run_timed_refresh` directly so the cancel path is shared.\n\n## Acceptance\n\n- `run_initial_refresh` accepts a `cancel_ch` (either created internally and exposed, or passed in) and threads it into `refresh_all`.\n- A test demonstrates that triggering shutdown during the initial refresh causes the worker to log `\"Refresh worker cancelled by supervisor\"` and exit within `state.outer_timeout_seconds`.\n- The supervisor does **not** start a second refresh cycle on top of a still-running initial cycle.\n- `just nix-build` passes; existing Crystal specs pass.",
+  "id": "quickhea-3ds.2",
+  "labels": [],
+  "parent": "quickhea-3ds",
+  "priority": 2,
+  "status": "open",
+  "title": "Fix: run_initial_refresh does not thread cancel_ch",
+  "type": "bug",
+  "updated_at": "2026-06-06T15:15:00Z"
+}
