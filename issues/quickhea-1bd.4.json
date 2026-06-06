@@ -1,6 +1,8 @@
 {
   "assignee": "",
-  "blocked_by": [],
+  "blocked_by": [
+    "quickhea-1bd.1"
+  ],
   "blocks": [],
   "created": "2026-06-06T22:32:00Z",
   "description": "Lines 411-441 (check_stuck_recovery, check_semaphore_health) and 565-631 (log_heartbeat, start_health_reporter) are health monitoring/reporting concerns. Extract into a dedicated module (e.g. src/fetcher/refresh_health_reporter.cr). The start_health_reporter method (50 lines) especially is a standalone periodic reporting loop that accesses memory status, socket counts, event clients, and fiber stats - clearly a different responsibility than refresh cycle orchestration.",
@@ -11,5 +13,5 @@
   "status": "open",
   "title": "Extract health monitoring into RefreshHealthReporter module",
   "type": "task",
-  "updated_at": "2026-06-06T22:32:00Z"
+  "updated_at": "2026-06-06T22:32:04Z"
 }
