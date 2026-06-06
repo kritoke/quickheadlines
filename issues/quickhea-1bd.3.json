@@ -1,0 +1,15 @@
+{
+  "assignee": "",
+  "blocked_by": [],
+  "blocks": [],
+  "created": "2026-06-06T22:32:00Z",
+  "description": "Multiple repeated patterns in refresh_loop.cr: (1) cancel_ch.send(nil) rescue nil appears 4 times; (2) begin channel.send(X) rescue Channel::ClosedError end appears 3 times (lines 206-208, 222-224, 251-253); (3) rescue CancelError / rescue ex : Exception / ensure blocks repeat in run_initial_refresh, run_timed_refresh, fetch_single_feed_in_background, and start; (4) the debug? logging guard is repeated ~10 times. Introduce helper methods like safe_channel_send(channel, value) and safe_cancel(cancel_ch) to eliminate duplication.",
+  "id": "quickhea-1bd.3",
+  "labels": [],
+  "parent": "quickhea-1bd",
+  "priority": 3,
+  "status": "open",
+  "title": "DRY up repeated cancel/exception handling patterns",
+  "type": "task",
+  "updated_at": "2026-06-06T22:32:00Z"
+}
