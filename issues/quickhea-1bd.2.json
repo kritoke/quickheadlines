@@ -4,14 +4,15 @@
   "blocks": [
     "quickhea-1bd.6"
   ],
+  "closed_at": "2026-06-06T22:45:07Z",
   "created": "2026-06-06T22:32:00Z",
   "description": "Lines 776-797 contain backward-compatible top-level functions and an alias: RefreshHealthMonitor alias, two overloads of refresh_all, and start_refresh_loop. The two refresh_all overloads are confusing (one uses default services, one takes injected services) and create ambiguity. Consider: (1) migrating callers to use RefreshLoop.refresh_all directly, (2) keeping only the convenience overload if needed, (3) moving the alias to the caller files (admin_controller, api_base_controller) so they import RefreshLoop::RefreshHealthMonitor explicitly.",
   "id": "quickhea-1bd.2",
   "labels": [],
   "parent": "quickhea-1bd",
   "priority": 4,
-  "status": "open",
+  "status": "closed",
   "title": "Clean up backward-compat API shims at file bottom",
   "type": "task",
-  "updated_at": "2026-06-06T22:32:58Z"
+  "updated_at": "2026-06-06T22:45:07Z"
 }
