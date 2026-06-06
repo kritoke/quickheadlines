@@ -1,5 +1,5 @@
 {
-  "assignee": "",
+  "assignee": "kritoke",
   "blocked_by": [],
   "blocks": [
     "quickhea-1bd.6"
@@ -10,8 +10,8 @@
   "labels": [],
   "parent": "quickhea-1bd",
   "priority": 2,
-  "status": "open",
+  "status": "in_progress",
   "title": "Extract RefreshLoop::State class and timeout calculations",
   "type": "task",
-  "updated_at": "2026-06-06T22:32:58Z"
+  "updated_at": "2026-06-06T22:33:07Z"
 }
