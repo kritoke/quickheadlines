@@ -9,9 +9,15 @@
   "id": "quickhea-gz7.5",
   "labels": [],
   "parent": "quickhea-gz7",
+  "comments": [
+    {
+      "text": "Removed HttpFetchResult struct, async handle_fetch_and_save, perform_http_fetch, handle_http_fetch_result, @pending_fetches ivar, and dispatch case",
+      "timestamp": "2026-06-06T21:27:53Z"
+    }
+  ],
   "priority": 2,
   "status": "in_progress",
   "title": "Remove dead async fetch code (~100 LOC)",
   "type": "task",
-  "updated_at": "2026-06-06T21:27:29Z"
+  "updated_at": "2026-06-06T21:27:53Z"
 }
