@@ -8,7 +8,7 @@ require "../src/favicon_storage"
 require "uri"
 require "http/client"
 
-FaviconStorage.init
+FaviconActor.instance.init_storage
 
 def update_feed_theme_colors_db(feed_url : String, theme_json : String)
   db_path = get_cache_db_path(nil)
@@ -67,7 +67,7 @@ def try_google_favicon_fallback(feed_data : FeedData, processed : Int32, total :
           mem = IO::Memory.new
           IO.copy(response.body_io, mem)
           if mem.size > 0
-            saved = FaviconStorage.save_favicon(google_url, mem.to_slice, "image/png")
+            saved = FaviconActor.instance.save_favicon(google_url, mem.to_slice, "image/png")
             if saved
               puts "(#{processed}/#{total}) Saved Google favicon to #{saved}"
               saved

@@ -18,7 +18,7 @@ module FetcherFavicon
       domain = extract_domain_for_favicon(site_link, feed.url)
       if domain
         google_url = VugAdapter.google_favicon_url(domain)
-        if saved = FaviconStorage.fetch_and_save(google_url)
+        if saved = FaviconActor.instance.fetch_and_save(google_url)
           favicon = saved
           favicon_data = saved
         end

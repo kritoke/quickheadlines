@@ -36,7 +36,7 @@ class AppBootstrap
     FeedCache.instance = @feed_cache
     Log.for("quickheadlines.app").info { "Loaded #{@feed_cache.size} feeds from cache" }
 
-    FaviconStorage.init
+    FaviconActor.instance.init_storage
     VugAdapter.clear_cache
 
     cleanup_stale_feeds

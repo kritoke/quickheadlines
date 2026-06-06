@@ -28,7 +28,7 @@ module ColorExtractor
     cached = cached_theme_colors(favicon_path)
     return cached if cached
 
-    full_path = File.join(FaviconStorage.favicon_dir, File.basename(favicon_path))
+    full_path = File.join(FaviconActor.favicon_dir, File.basename(favicon_path))
     return unless File.exists?(full_path)
 
     result = theme_extractor.extract(full_path)

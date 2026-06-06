@@ -30,7 +30,7 @@ module FetcherCache
   # Checks that on-disk favicon files exist; falls back to URL-only favicon if missing.
   private def build_cached_feed(cached : FeedData, previous_data : FeedData?) : FeedData?
     if previous_data && (prev_favicon_data = previous_data.favicon_data)
-      favicon_path = FaviconStorage.disk_path(prev_favicon_data)
+      favicon_path = FaviconActor.disk_path(prev_favicon_data)
       if favicon_path && File.exists?(favicon_path)
         favicon = prev_favicon_data.starts_with?("/favicons/") ? prev_favicon_data : cached.favicon
         return build_feed_data_with_favicon(cached, favicon, prev_favicon_data)
@@ -39,7 +39,7 @@ module FetcherCache
 
     cached_favicon = cached.favicon_data
     if cached_favicon.is_a?(String) && cached_favicon.starts_with?("/favicons/")
-      favicon_path = FaviconStorage.disk_path(cached_favicon)
+      favicon_path = FaviconActor.disk_path(cached_favicon)
       unless favicon_path && File.exists?(favicon_path)
         return build_feed_data_with_favicon(cached, cached.favicon, nil)
       end

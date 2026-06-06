@@ -12,7 +12,7 @@ class QuickHeadlines::Controllers::AssetController < QuickHeadlines::Controllers
 
     normalized_url = normalize_feed_url(url)
 
-    if favicon_path = FaviconStorage.get_or_fetch(normalized_url)
+    if favicon_path = FaviconActor.instance.get_or_fetch(normalized_url)
       if File.exists?(favicon_path)
         content = File.read(favicon_path)
         return AHTTP::Response.new(content, 200, HTTP::Headers{"content-type" => mime_type_from_path(favicon_path)})

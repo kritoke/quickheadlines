@@ -16,11 +16,11 @@ module VugAdapter
       connect_timeout: 3.seconds,
       on_save: ->(url : String, data : Bytes, content_type : String) do
         return if url.nil? || url.starts_with?("placeholder:") || url.includes?("#placeholder")
-        FaviconStorage.save_favicon(url, data, content_type)
+        FaviconActor.instance.save_favicon(url, data, content_type)
       end,
       on_load: ->(url : String) do
         return if url.nil? || url.starts_with?("placeholder:") || url.includes?("#placeholder")
-        FaviconStorage.get_or_fetch(url)
+        FaviconActor.instance.get_or_fetch(url)
       end,
       on_debug: ->(msg : String) do
         Log.for("quickheadlines.vug").debug { msg }
@@ -52,7 +52,7 @@ module VugAdapter
 
   def self.get_favicon(site_url : String, parsed_favicon : String? = nil, previous_favicon : String? = nil, previous_favicon_data : String? = nil) : {String?, String?}
     if previous_favicon_data && previous_favicon_data.starts_with?("/favicons/")
-      favicon_path = FaviconStorage.disk_path(previous_favicon_data)
+      favicon_path = FaviconActor.disk_path(previous_favicon_data)
       if favicon_path && File.exists?(favicon_path) && !previous_favicon_data.includes?("placeholder")
         return {previous_favicon_data, previous_favicon_data}
       end

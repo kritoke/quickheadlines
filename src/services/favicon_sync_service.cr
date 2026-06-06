@@ -125,7 +125,7 @@ class FaviconSyncService
     end
 
     if favicon_data && favicon_data.starts_with?("/favicons/")
-      favicon_path = FaviconStorage.disk_path(favicon_data)
+      favicon_path = FaviconActor.disk_path(favicon_data)
       unless favicon_path && File.exists?(favicon_path)
         Log.for("quickheadlines.cache").debug { "Missing favicon file on disk for #{row.url}" }
         favicon_data = nil
@@ -159,10 +159,10 @@ class FaviconSyncService
   end
 
   private def find_local_favicon(favicon : String) : Tuple(Bool, String?)
-    hash = FaviconStorage.favicon_hash_for_url(favicon)
-    FaviconStorage::POSSIBLE_EXTENSIONS.each do |ext|
-      filename = FaviconStorage.favicon_filename(hash, ext)
-      filepath = File.join(FaviconStorage.favicon_dir, filename)
+    hash = FaviconActor.favicon_hash_for_url(favicon)
+    FaviconActor::POSSIBLE_EXTENSIONS.each do |ext|
+      filename = FaviconActor.favicon_filename(hash, ext)
+      filepath = File.join(FaviconActor.favicon_dir, filename)
       if File.exists?(filepath)
         return {true, "/favicons/#{filename}"}
       end
@@ -200,7 +200,7 @@ class FaviconSyncService
       end
     elsif fav.starts_with?("/favicons/")
       # Check if the file actually exists on disk
-      disk_path = FaviconStorage.disk_path(fav)
+      disk_path = FaviconActor.disk_path(fav)
       if disk_path && File.exists?(disk_path)
         # Only backfill header colors if we haven't already
         backfills.local << {row.feed_id, row.url, fav} if row.header_theme_colors.nil?
@@ -222,7 +222,7 @@ class FaviconSyncService
       url_to_fetch = fix_google_favicon_url(google_url, url, feed_id)
       next unless url_to_fetch
 
-      local_path = FaviconStorage.fetch_and_save(url_to_fetch)
+      local_path = FaviconActor.instance.fetch_and_save(url_to_fetch)
       Log.for("quickheadlines.cache").debug { "fetch_and_save returned: #{local_path.inspect}" }
       if local_path
         @mutex.synchronize do
@@ -262,7 +262,7 @@ class FaviconSyncService
         host = uri.host
         if host && !host.includes?("#") && host.includes?(".")
           google_url = "https://www.google.com/s2/favicons?domain=#{host}&sz=256"
-          local_path = FaviconStorage.fetch_and_save(google_url)
+          local_path = FaviconActor.instance.fetch_and_save(google_url)
           if local_path
             @mutex.synchronize do
               @db.exec("UPDATE feeds SET favicon = ?, favicon_data = ? WHERE id = ?", local_path, local_path, feed_id)
