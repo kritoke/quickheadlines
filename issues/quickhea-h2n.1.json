@@ -1,0 +1,15 @@
+{
+  "assignee": "",
+  "blocked_by": [],
+  "blocks": [],
+  "created": "2026-06-06T22:23:00Z",
+  "description": "## File\nsrc/utils.cr lines ~139-141\n\n## Problem\nUrlNormalizer.normalize strips all query parameters, causing feeds with same base URL but different query params to collide. This appears intentional for deduplication but is undocumented.\n\n## Fix\nAdd a comment documenting this as intentional deduplication behavior. Optionally add a configurable allowlist of query parameters to preserve.",
+  "id": "quickhea-h2n.1",
+  "labels": [],
+  "parent": "quickhea-h2n",
+  "priority": 3,
+  "status": "open",
+  "title": "Document URL normalizer query string stripping behavior",
+  "type": "chore",
+  "updated_at": "2026-06-06T22:23:00Z"
+}
