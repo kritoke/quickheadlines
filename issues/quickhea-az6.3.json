@@ -1,7 +1,6 @@
 {
   "assignee": "",
   "blocked_by": [
-    "quickhea-az6.1",
     "quickhea-az6.2"
   ],
   "blocks": [
@@ -16,5 +15,5 @@
   "status": "open",
   "title": "Extract periodic health/memory reporter into src/fetcher/refresh_health_reporter.cr",
   "type": "task",
-  "updated_at": "2026-06-07T13:50:09Z"
+  "updated_at": "2026-06-07T13:51:00Z"
 }
