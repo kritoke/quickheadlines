@@ -6,6 +6,7 @@ require "../storage"
 require "../software_fetcher"
 require "../websocket"
 require "./feed_fetcher"
+require "./semaphore_pool"
 require "./software_util"
 require "./refresh_health_monitor"
 require "../services/gc_collector"
@@ -29,82 +30,17 @@ module RefreshLoop
   # Semaphore management
   # -------------------------------------------------------------------------
 
-  # NOTE: The semaphore channel, atomic counter, and repair mutex are
-  # lazily initialized on first use. The previous design allocated them
-  # at file-load time, which meant any code that `require`d this file
-  # (intentionally or transitively) ended up with a live Channel and
-  # Mutex even if RefreshLoop.start was never called. The lazy version
-  # creates them on demand, guarded by @@init_mutex for thread safety,
-  # and `RefreshLoop.start` triggers initialization explicitly via
-  # `ensure_semaphore_initialized!`.
-  #
-  # Trade-off: if RefreshLoop.start is called in a test context, the same
-  # semaphore is shared across all test cases. Call .reset_semaphore after each
-  # test to clean state. This is acceptable since there are no existing specs
-  # for the semaphore — it's tested only via integration tests.
-  CONCURRENCY_LIMIT = 4
+  # NOTE: The concurrency primitives (channel, atomic counter, repair
+  # mutex) now live in `RefreshLoop::SemaphorePool` (see
+  # `src/fetcher/semaphore_pool.cr`). A single process-wide instance is
+  # created lazily on first use; tests that need to isolate state
+  # should call `RefreshLoop.pool.reset_for_testing` between cases.
+  @@pool : SemaphorePool?
+  @@pool_mutex = Mutex.new(:unchecked)
 
-  @@semaphore : Channel(Nil)?
-  @@semaphore_counter : Atomic(Int32)?
-  @@repair_mutex : Mutex?
-  # Eagerly created (cheap, no state) and used to guard the lazy
-  # initialization of the other three.
-  @@init_mutex = Mutex.new(:unchecked)
-
-  # Triggers lazy initialization of the semaphore channel, counter, and
-  # repair mutex. Called by RefreshLoop.start so the init happens at a
-  # well-known point in the process lifecycle rather than at file load.
-  def self.ensure_semaphore_initialized! : Nil
-    semaphore
-    semaphore_counter
-    repair_mutex
-    nil
-  end
-
-  def self.semaphore : Channel(Nil)
-    @@init_mutex.synchronize do
-      @@semaphore ||= begin
-        ch = Channel(Nil).new(CONCURRENCY_LIMIT)
-        CONCURRENCY_LIMIT.times { ch.send(nil) }
-        ch
-      end
-    end
-  end
-
-  def self.semaphore_counter : Atomic(Int32)
-    @@init_mutex.synchronize do
-      @@semaphore_counter ||= Atomic(Int32).new(CONCURRENCY_LIMIT)
-    end
-  end
-
-  def self.repair_mutex : Mutex
-    @@init_mutex.synchronize do
-      @@repair_mutex ||= Mutex.new(:unchecked)
-    end
-  end
-
-  private def self.acquire_semaphore : Nil
-    semaphore.receive
-    semaphore_counter.add(-1, :relaxed)
-  end
-
-  private def self.release_semaphore : Nil
-    semaphore_counter.add(1, :relaxed)
-    semaphore.send(nil)
-  rescue Channel::ClosedError
-  end
-
-  def self.semaphore_health_status : {available: Int32, expected: Int32}
-    available = semaphore_counter.get
-    {available: available, expected: CONCURRENCY_LIMIT}
-  end
-
-  # Reset the semaphore to full capacity — use in tests to isolate test cases.
-  # Clears and re-fills the channel, resets the atomic counter.
-  def self.reset_semaphore : Nil
-    while semaphore_counter.get < CONCURRENCY_LIMIT
-      semaphore_counter.add(1, :relaxed)
-      semaphore.send(nil)
+  def self.pool : SemaphorePool
+    @@pool_mutex.synchronize do
+      @@pool ||= SemaphorePool.new
     end
   end
 
@@ -198,7 +134,7 @@ module RefreshLoop
     channel : Channel(FeedData?),
     index : Int32,
   ) : Nil
-    acquire_semaphore
+    pool.acquire
     begin
       RefreshHealthMonitor.feed_fetch_started
       result = fetch_single_feed_with_timeout(feed, config, previous_feed_data, index)
@@ -224,7 +160,7 @@ module RefreshLoop
       end
     ensure
       RefreshHealthMonitor.feed_fetch_completed
-      release_semaphore
+      pool.release
     end
   end
 
@@ -428,15 +364,10 @@ module RefreshLoop
   end
 
   private def self.check_semaphore_health : Nil
-    repair_mutex.synchronize do
-      available = semaphore_counter.get
-      return if available == CONCURRENCY_LIMIT
-      missing = CONCURRENCY_LIMIT - available
-      Log.for("quickheadlines.feed").warn { "Semaphore health check: #{available}/#{CONCURRENCY_LIMIT} slots available, repairing #{missing} missing" }
-      missing.times do
-        semaphore.send(nil)
-        semaphore_counter.add(1)
-      end
+    before = pool.health_status[:available]
+    missing = pool.repair
+    if missing > 0
+      Log.for("quickheadlines.feed").warn { "Semaphore health check: #{before}/#{pool.limit} slots available, repairing #{missing} missing" }
     end
   end
 
@@ -696,7 +627,9 @@ module RefreshLoop
 
   # Start the refresh loop supervisor.
   def self.start(config_path : String, cache : FeedCache, db_service : DatabaseService) : Nil
-    ensure_semaphore_initialized!
+    # Touch the pool accessor so the SemaphorePool is built before any
+    # fibers are spawned below. The accessor is idempotent and cheap.
+    pool
 
     load_result = load_validated_config(config_path)
     unless load_result.success && (initial_config = load_result.config)
