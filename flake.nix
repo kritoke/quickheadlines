@@ -14,7 +14,6 @@
       # 💎 Use nixpkgs Crystal 1.18.2
       crystal_1_18 = pkgs.crystal;
 
-
       # Read a local flake.private.nix if present. We wrap it in a guard so
       # Nix evaluation doesn't error when the file is missing.
       private_hook = builtins.tryEval (if builtins.pathExists ./flake.private.nix then builtins.readFile ./flake.private.nix else "");
@@ -48,7 +47,6 @@
             # Ensure the openspec package's bin directory is first on PATH so the
             # binary is resolvable in all subsequent shell commands.
             export PATH="${openspec.packages.${system}.default}/bin:$HOME/.local/bin:$PWD/bin:$PATH"
-
 
             export APP_ENV=development
             echo "🚀 Quickheadlines Loaded with Crystal & Svelte 5"
