@@ -1,7 +1,9 @@
 {
   "assignee": "",
   "blocked_by": [],
-  "blocks": [],
+  "blocks": [
+    "quickhea-az6.2"
+  ],
   "created": "2026-06-07T13:48:26Z",
   "description": "## Goal\n\nMove the lazy-initialized semaphore channel, atomic counter, and repair mutex out of `src/fetcher/refresh_loop.cr` and into a dedicated `src/fetcher/semaphore_pool.cr`. Replace the module-level `@@` state with a proper instance class so the state is testable, resettable, and isolated.\n\n## Source: src/fetcher/refresh_loop.cr (current location)\n\nLines ~33-110 contain:\n- `CONCURRENCY_LIMIT = 4` constant\n- `@@semaphore : Channel(Nil)?`\n- `@@semaphore_counter : Atomic(Int32)?`\n- `@@repair_mutex : Mutex?`\n- `@@init_mutex = Mutex.new(:unchecked)`\n- `self.ensure_semaphore_initialized!`\n- `self.semaphore`, `self.semaphore_counter`, `self.repair_mutex`\n- `private self.acquire_semaphore`, `private self.release_semaphore`\n- `self.semaphore_health_status`\n- `self.reset_semaphore` (test-only)\n\n## Target: src/fetcher/semaphore_pool.cr\n\nDesign a small class, e.g.:\n\n```crystal\nclass RefreshLoop::SemaphorePool\n  DEFAULT_LIMIT = 4\n\n  getter limit : Int32\n  @channel : Channel(Nil)\n  @counter : Atomic(Int32)\n  @repair_mutex : Mutex\n\n  def initialize(@limit : Int32 = DEFAULT_LIMIT)\n    @channel = Channel(Nil).new(@limit)\n    @limit.times { @channel.send(nil) }\n    @counter = Atomic(Int32).new(@limit)\n    @repair_mutex = Mutex.new(:unchecked)\n  end\n\n  def acquire : Nil\n    @channel.receive\n    @counter.add(-1, :relaxed)\n  end\n\n  def release : Nil\n    @counter.add(1, :relaxed)\n    @channel.send(nil)\n  rescue Channel::ClosedError\n  end\n\n  def health_status : NamedTuple(available: Int32, expected: Int32)\n    {available: @counter.get, expected: @limit}\n  end\n\n  def repair : Int32\n    @repair_mutex.synchronize do\n      available = @counter.get\n      return 0 if available == @limit\n      missing = @limit - available\n      missing.times do\n        @channel.send(nil)\n        @counter.add(1)\n      end\n      missing\n    end\n  end\n\n  def reset_for_testing : Nil\n    while @counter.get \u003c @limit\n      @counter.add(1, :relaxed)\n      @channel.send(nil)\n    end\n  end\nend\n```\n\nExpose a singleton accessor (or a property on the supervisor) so the rest of the code uses one shared instance.\n\n## Acceptance\n\n- `src/fetcher/semaphore_pool.cr` exists with the new class.\n- `src/fetcher/refresh_loop.cr` no longer contains `@@semaphore`, `@@semaphore_counter`, `@@repair_mutex`, `@@init_mutex`, `CONCURRENCY_LIMIT`, or the related class methods.\n- All call sites (`acquire_semaphore`, `release_semaphore`, `check_semaphore_health`, `semaphore_health_status`, `reset_semaphore`) are updated to use the new class.\n- `ensure_semaphore_initialized!` is removed (no longer needed; constructor does it).\n- `just nix-build` succeeds.\n- `nix develop . --command crystal spec` passes.\n\n## Notes\n\n- Keep the `:unchecked` mutex mode for performance parity.\n- Do NOT change `CONCURRENCY_LIMIT` value (4) — it's a tuned number.\n- Do NOT introduce new dependencies.",
   "id": "quickhea-az6.1",
@@ -11,5 +13,5 @@
   "status": "open",
   "title": "Extract semaphore/concurrency primitives into src/fetcher/semaphore_pool.cr",
   "type": "task",
-  "updated_at": "2026-06-07T13:48:26Z"
+  "updated_at": "2026-06-07T13:50:09Z"
 }
