@@ -1,5 +1,5 @@
 {
-  "assignee": "",
+  "assignee": "kritoke",
   "blocked_by": [],
   "blocks": [],
   "created": "2026-06-07T19:00:46Z",
@@ -7,8 +7,8 @@
   "id": "quickhea-vwc",
   "labels": [],
   "priority": 3,
-  "status": "open",
+  "status": "in_progress",
   "title": "Add spec/refresh_health_reporter_spec.cr",
   "type": "task",
-  "updated_at": "2026-06-07T19:00:46Z"
+  "updated_at": "2026-06-07T19:17:19Z"
 }
