@@ -11,6 +11,7 @@ require "./semaphore_pool"
 require "./software_util"
 require "./refresh_health_monitor"
 require "./refresh_health_reporter"
+require "./refresh_supervisor"
 require "../services/gc_collector"
 require "../services/fiber_tracker"
 require "../services/memory_manager_actor"
@@ -59,34 +60,6 @@ module RefreshLoop
     end
   end
 
-  private def self.log_duration_warning(refresh_duration, active_config)
-    expected_seconds = active_config.refresh_minutes * QuickHeadlines::Constants::SECONDS_PER_MINUTE
-    hang_threshold = expected_seconds * 2
-    if refresh_duration > hang_threshold
-      Log.for("quickheadlines.feed").warn { "Refresh took #{refresh_duration.round(2)}s (expected #{expected_seconds}s) - possible hang detected" }
-    end
-  end
-
-  # Sleep for up to `total` duration, broken into `chunk`-sized
-  # timeouts that check QuickHeadlines.shutting_down? between each.
-  # Returns the actual elapsed time (which is < total if shutdown was
-  # signaled, or == total on natural completion). Optional `outer_cap`
-  # adds a hard ceiling: if non-nil, the loop exits when elapsed >=
-  # outer_cap even if `total` has not been reached. Default chunk is 30s
-  # which gives a responsive shutdown signal without burning CPU.
-  private def self.interruptible_sleep(total : Time::Span, outer_cap : Time::Span? = nil, chunk : Time::Span = 30.seconds) : Time::Span
-    cap = outer_cap || total
-    elapsed = Time::Span.zero
-    while elapsed < total && elapsed < cap && !QuickHeadlines.shutting_down?
-      step = {chunk, total - elapsed, cap - elapsed}.min
-      select
-      when timeout(step)
-        elapsed += step
-      end
-    end
-    elapsed
-  end
-
   private def self.build_software_releases(software_config : SoftwareConfig?, item_limit : Int32) : Array(FeedData)
     QuickHeadlines::SoftwareUtil.build_software_releases(software_config, item_limit)
   end
@@ -113,246 +86,6 @@ module RefreshLoop
     config.feeds.each { |feed| all_configs[feed.url] = feed }
     config.tabs.each { |tab| tab.feeds.each { |feed| all_configs[feed.url] = feed } }
     all_configs
-  end
-
-  # -------------------------------------------------------------------------
-
-  private class State
-    property active_config : Config
-    property last_mtime : Time
-    property cycle_count : Int32
-    property consecutive_skips : Int32
-    # Cancel channel for the in-flight initial refresh fiber, if any. The
-    # supervisor sets this when the initial refresh is spawned, and the
-    # fiber clears it in its ensure block. The supervisor reads it on
-    # shutdown to signal cancellation.
-    property initial_cancel_ch : Channel(Nil)?
-    getter? first_run : Bool
-
-    @first_run : Bool = true
-
-    def initialize(@active_config : Config, @last_mtime : Time)
-      @cycle_count = 0
-      @consecutive_skips = 0
-    end
-
-    def mark_first_run_done : Nil
-      @first_run = false
-    end
-
-    def heartbeat_due?(interval : Int32) : Bool
-      @cycle_count > 0 && @cycle_count % interval == 0
-    end
-
-    def reset_cycle_count : Nil
-      @cycle_count = 0
-    end
-
-    def increment_cycle : Nil
-      @cycle_count += 1
-    end
-
-    def reset_skips : Nil
-      @consecutive_skips = 0
-    end
-
-    def increment_skips : Int32
-      @consecutive_skips += 1
-      @consecutive_skips
-    end
-
-    def refresh_interval_seconds : Int32
-      active_config.refresh_minutes * QuickHeadlines::Constants::SECONDS_PER_MINUTE
-    end
-
-    def outer_timeout_seconds : Int32
-      refresh_interval_seconds * 3 // 2
-    end
-
-    def sleep_timeout_seconds : Int32
-      refresh_interval_seconds * 3 // 2
-    end
-
-    def stuck_threshold_seconds : Int32
-      refresh_interval_seconds * 3
-    end
-
-    def heartbeat_interval : Int32
-      10
-    end
-
-    MAX_CONSECUTIVE_SKIPS = 3
-  end
-
-  # -------------------------------------------------------------------------
-  # Supervisor helpers
-  # -------------------------------------------------------------------------
-
-  private def self.check_stuck_recovery(stuck_threshold : Int32) : Nil
-    return unless RefreshHealthMonitor.stuck?(stuck_threshold)
-
-    status = RefreshHealthMonitor.status
-    Log.for("quickheadlines.feed").error do
-      "REFRESH STUCK: last cycle started at #{status[:last_start]}, " \
-      "cycles completed: #{status[:cycles]}, failures: #{status[:failures]}"
-    end
-    Log.for("quickheadlines.feed").error { "Attempting to recover stuck refresh..." }
-
-    if RefreshHealthMonitor.attempt_recovery
-      StateStore.update(&.copy_with(refreshing: false))
-      RefreshHealthMonitor.reset_failures
-      Log.for("quickheadlines.feed").info { "Recovery complete, will retry on next cycle" }
-    else
-      Log.for("quickheadlines.feed").info { "Recovery was already performed by another fiber" }
-    end
-  end
-
-  private def self.check_semaphore_health : Nil
-    before = pool.health_status[:available]
-    missing = pool.repair
-    if missing > 0
-      Log.for("quickheadlines.feed").warn { "Semaphore health check: #{before}/#{pool.limit} slots available, repairing #{missing} missing" }
-    end
-  end
-
-  private def self.reload_config_if_changed(config_path : String, state : State) : Nil
-    current_mtime = begin
-      File.info(config_path).modification_time
-    rescue ex : File::NotFoundError
-      if state.active_config.debug?
-        Log.for("quickheadlines.feed").debug { "reload_config_if_changed: #{config_path} not found, skipping reload (#{ex.message})" }
-      end
-      return
-    end
-    return unless current_mtime > state.last_mtime
-
-    load_result = load_validated_config(config_path)
-    if load_result.success && (new_config = load_result.config)
-      state.active_config = new_config
-      state.last_mtime = current_mtime
-      if state.active_config.debug?
-        Log.for("quickheadlines.feed").debug { "Config change detected. Reloaded feeds.yml" }
-      end
-    end
-  end
-
-  private def self.run_initial_refresh(state : State, cache : FeedCache, db_service : DatabaseService) : Nil
-    if state.active_config.debug?
-      Log.for("quickheadlines.feed").debug { "Running initial refresh to fetch feeds" }
-    end
-
-    StateStore.refreshing = true
-    config_for_initial = state.active_config
-    cancel_ch = Channel(Nil).new(1)
-    state.initial_cancel_ch = cancel_ch
-    spawn(name: "initial_refresh") do
-      begin
-        refresh_all(config_for_initial, cache, db_service, cancel_ch)
-      rescue CancelError
-        Log.for("quickheadlines.feed").warn { "Initial refresh cancelled by supervisor" }
-        RefreshHealthMonitor.record_failure
-      rescue ex : Exception
-        Log.for("quickheadlines.feed").error(exception: ex) { "Initial refresh failed" }
-        RefreshHealthMonitor.record_failure
-      ensure
-        StateStore.refreshing = false
-        state.initial_cancel_ch = nil
-      end
-    end
-
-    if state.active_config.debug?
-      Log.for("quickheadlines.feed").debug { "Initial refresh started in background" }
-    end
-  end
-
-  private def self.run_timed_refresh(state : State, cache : FeedCache, db_service : DatabaseService) : Float64
-    # Check memory pressure before starting refresh
-    begin
-      memory_status = MemoryManagerActor.instance.get_memory_status
-      case memory_status.pressure_level
-      when .critical?
-        Log.for("quickheadlines.feed").warn { "Skipping refresh due to critical memory pressure (RSS=#{memory_status.rss_mb.round(1)}MB)" }
-        RefreshHealthMonitor.record_failure
-        return 0.0
-      when .high?
-        Log.for("quickheadlines.feed").warn { "Refresh proceeding with high memory pressure (RSS=#{memory_status.rss_mb.round(1)}MB)" }
-      end
-    rescue ex : Exception
-      Log.for("quickheadlines.feed").debug { "Memory pressure check failed: #{ex.message}" }
-    end
-
-    StateStore.refreshing = true
-    refresh_start_time = Time.utc
-    outer_timeout = state.outer_timeout_seconds.seconds
-    config_snapshot = state.active_config
-    refresh_all_start = Time.utc
-
-    cancel_ch = Channel(Nil).new(1)
-    completion_channel = Channel(Nil).new(1)
-    spawn(name: "refresh_worker") do
-      begin
-        refresh_all(config_snapshot, cache, db_service, cancel_ch)
-        refresh_all_duration = (Time.utc - refresh_all_start).total_seconds
-        if config_snapshot.debug?
-          Log.for("quickheadlines.feed").debug { "Refreshed feeds in #{refresh_all_duration.round(2)}s" }
-        elsif refresh_all_duration > 120
-          Log.for("quickheadlines.feed").warn { "refresh_all took #{refresh_all_duration.round(2)}s - long duration" }
-        end
-      rescue CancelError
-        Log.for("quickheadlines.feed").warn { "Refresh worker cancelled by supervisor" }
-        RefreshHealthMonitor.record_failure
-      rescue ex : Exception
-        Log.for("quickheadlines.feed").error(exception: ex) { "refresh_loop refresh_all failed" }
-        RefreshHealthMonitor.record_failure
-      end
-      completion_channel.send(nil)
-    end
-
-    select
-    when completion_channel.receive?
-      StateStore.refreshing = false
-      refresh_duration = (Time.utc - refresh_start_time).total_seconds
-      Log.for("quickheadlines.feed").debug { "Starting save_feed_cache..." }
-      cache.save(config_snapshot.cache_retention_hours, config_snapshot.max_cache_size_mb)
-      Log.for("quickheadlines.feed").debug { "save_feed_cache complete" }
-      GCCollector.maybe_collect
-      refresh_duration
-    when timeout(outer_timeout)
-      cancel_ch.send(nil)
-      StateStore.refreshing = false
-      Log.for("quickheadlines.feed").error { "refresh_all timed out after #{outer_timeout.total_seconds.round}s - worker signalled to cancel" }
-      RefreshHealthMonitor.record_failure
-      GCCollector.maybe_collect
-      (Time.utc - refresh_start_time).total_seconds
-    end
-  end
-
-  private def self.sleep_between_cycles(state : State) : Nil
-    sleep_duration = state.refresh_interval_seconds.seconds
-    outer_sleep_timeout = state.sleep_timeout_seconds.seconds
-    elapsed = interruptible_sleep(sleep_duration, outer_sleep_timeout)
-
-    if elapsed >= outer_sleep_timeout && !QuickHeadlines.shutting_down?
-      Log.for("quickheadlines.feed").error { "refresh loop sleep timed out after #{outer_sleep_timeout.total_seconds.round}s" }
-    end
-  end
-
-  private def self.log_heartbeat(state : State) : Nil
-    return unless state.heartbeat_due?(state.heartbeat_interval)
-
-    status = RefreshHealthMonitor.status
-    memory_growth = begin
-      StateStore.memory_growth_rate
-    rescue ex : Exception
-      Log.for("quickheadlines.feed").debug(exception: ex) { "memory_growth_rate unavailable" }
-      "unavailable"
-    end
-
-    Log.for("quickheadlines.feed").info do
-      "Refresh loop heartbeat: #{state.cycle_count} cycles, " \
-      "completed: #{status[:cycles]}, failures: #{status[:failures]}, " \
-      "memory_growth: #{memory_growth}"
-    end
   end
 
   # -------------------------------------------------------------------------
@@ -424,79 +157,75 @@ module RefreshLoop
     # Touch the pool accessor so the SemaphorePool is built before any
     # fibers are spawned below. The accessor is idempotent and cheap.
     pool
+    RefreshLoop::Supervisor.start(config_path, cache, db_service, RefreshLoop.pool)
+    start_health_reporter
+  end
 
-    load_result = load_validated_config(config_path)
-    unless load_result.success && (initial_config = load_result.config)
-      Log.for("quickheadlines.feed").error { "Failed to load config: #{load_result.error_message}" }
-      return
-    end
+  # -------------------------------------------------------------------------
+  # Health reporter
+  # -------------------------------------------------------------------------
 
-    state = State.new(initial_config, File.info(config_path).modification_time)
-    cache.save(state.active_config.cache_retention_hours, state.active_config.max_cache_size_mb)
-
-    spawn(name: "refresh_supervisor") do
+  # Periodic health and memory reporter. Spawns a long-lived fiber
+  # that wakes every 5 minutes and logs refresh-cycle health plus
+  # memory status with diagnostic counts (sockets, event clients,
+  # fibers). Kept inline here for now; extraction to
+  # `refresh_health_reporter.cr` is a separate concern (ticket
+  # `quickhea-az6.3`).
+  private def self.start_health_reporter : Nil
+    spawn(name: "health_monitor_reporter") do
       loop do
         begin
           break if QuickHeadlines.shutting_down?
 
-          check_stuck_recovery(state.stuck_threshold_seconds)
-
-          if StateStore.refreshing?
-            skip_count = state.increment_skips
-            if skip_count >= State::MAX_CONSECUTIVE_SKIPS
-              Log.for("quickheadlines.feed").error { "Force-resetting refreshing flag after #{skip_count} consecutive skips - previous refresh may be stuck" }
-              StateStore.refreshing = false
-              state.reset_skips
-            else
-              Log.for("quickheadlines.feed").warn { "Refresh already in progress, skipping (#{skip_count}/#{State::MAX_CONSECUTIVE_SKIPS})" }
-              sleep state.refresh_interval_seconds.seconds
-              break if QuickHeadlines.shutting_down?
-              next
+          # Sleep in 30-second chunks for responsive shutdown.
+          elapsed = Time::Span.zero
+          while elapsed < 5.minutes && !QuickHeadlines.shutting_down?
+            step = {30.seconds, 5.minutes - elapsed}.min
+            select
+            when timeout(step)
+              elapsed += step
             end
-          else
-            state.reset_skips
           end
 
-          check_semaphore_health
-
-          if state.first_run?
-            state.mark_first_run_done
-            run_initial_refresh(state, cache, db_service)
-            interruptible_sleep(state.refresh_interval_seconds.seconds)
-            if QuickHeadlines.shutting_down?
-              # Signal cancellation to the in-flight initial refresh so
-              # the worker can exit cleanly instead of running to
-              # completion in the background. The worker's ensure block
-              # clears state.initial_cancel_ch.
-              if cancel_ch = state.initial_cancel_ch
-                cancel_ch.send(nil) rescue nil
-              end
-              break
-            end
-            next
-          end
-
-          reload_config_if_changed(config_path, state)
-          refresh_duration = run_timed_refresh(state, cache, db_service)
-          log_duration_warning(refresh_duration, state.active_config)
-
-          sleep_between_cycles(state)
           break if QuickHeadlines.shutting_down?
+          status = RefreshHealthMonitor.status
+          if status[:failures] > 0 || status[:last_complete] == 0
+            Log.for("quickheadlines.feed").warn do
+              "Refresh health: cycles=#{status[:cycles]}, failures=#{status[:failures]}, last_complete=#{status[:last_complete]}"
+            end
+          end
 
-          state.increment_cycle
-          log_heartbeat(state)
+          # Log memory status with diagnostics
+          begin
+            memory_status = MemoryManagerActor.instance.get_memory_status
+
+            socket_count = begin
+              SocketManager.instance.connection_count
+            rescue ex : Exception
+              Log.for("quickheadlines.memory").debug(exception: ex) { "socket_count unavailable" }
+              0
+            end
+            event_clients = begin
+              EventBroadcaster.client_count
+            rescue ex : Exception
+              Log.for("quickheadlines.memory").debug(exception: ex) { "event_clients unavailable" }
+              0
+            end
+            fiber_stats = FiberTracker.stats
+
+            Log.for("quickheadlines.memory").info do
+              "Memory status: RSS=#{memory_status.rss_mb.round(1)}MB, " \
+              "pressure=#{memory_status.pressure_level}, GC count=#{memory_status.gc_count}, " \
+              "sockets=#{socket_count}, event_clients=#{event_clients}, fibers=#{fiber_stats}"
+            end
+          rescue ex : Exception
+            Log.for("quickheadlines.memory").debug { "Failed to get memory status: #{ex.message}" }
+          end
         rescue ex : Exception
-          Log.for("quickheadlines.feed").error(exception: ex) { "refresh_loop outer handler: unhandled exception, restarting in 60s" }
-          StateStore.refreshing = false
-          RefreshHealthMonitor.record_failure
-          state.reset_cycle_count
-          interruptible_sleep(60.seconds)
-          break if QuickHeadlines.shutting_down?
+          Log.for("quickheadlines.feed").error(exception: ex) { "Health monitor reporter error" }
         end
       end
     end
-
-    RefreshLoop::HealthReporter.start
   end
 end
 
