@@ -2,13 +2,14 @@
   "assignee": "kritoke",
   "blocked_by": [],
   "blocks": [],
+  "closed_at": "2026-06-07T18:35:05Z",
   "created": "2026-06-07T18:30:02Z",
   "description": "## Goal\n\nRemove the top-level `acquire_semaphore` / `release_semaphore` /\n`semaphore_health_status` helpers and the `CONCURRENCY_SEMAPHORE` /\n`CONCURRENCY_AVAILABLE` globals from `src/utils.cr`. These are\nduplicates of the equivalent (now-proper) logic in\n`RefreshLoop::SemaphorePool` (`src/fetcher/semaphore_pool.cr`,\nticket quickhea-az6.1) and are never called.\n\n## Confirmed dead\n\nrg confirms there are no callers anywhere in `src/`, `spec/`, or\nexternal scripts. The only references to these names outside\n`utils.cr` are:\n- A doc comment in `src/fetcher/semaphore_pool.cr` that mentions\n  the old names as historical context — that comment can be\n  updated or removed.\n\n## Source: src/utils.cr (lines 1-25, the head of the file)\n\n```crystal\nrequire \"http/client\"\nrequire \"uri\"\nrequire \"./constants\"\n\nCONCURRENCY_SEMAPHORE = Channel(Nil).new(QuickHeadlines::Constants::CONCURRENCY).tap { |channel| QuickHeadlines::Constants::CONCURRENCY.times { channel.send(nil) } }\n\n# Atomic counter to track available semaphore slots without draining the channel.\n# Updated on every acquire/release; read by health check for zero-side-effect inspection.\nCONCURRENCY_AVAILABLE = Atomic(Int32).new(QuickHeadlines::Constants::CONCURRENCY)\n\n# Thread-safe semaphore helpers: update both channel and atomic counter together.\ndef acquire_semaphore : Nil\n  CONCURRENCY_SEMAPHORE.receive\n  CONCURRENCY_AVAILABLE.sub(1, :relaxed)\nend\n\ndef release_semaphore : Nil\n  CONCURRENCY_SEMAPHORE.send(nil)\n  CONCURRENCY_AVAILABLE.add(1, :relaxed)\nend\n\ndef semaphore_health_status : NamedTuple(available: Int32, expected: Int32)\n  {available: CONCURRENCY_AVAILABLE.get(:relaxed), expected: QuickHeadlines::Constants::CONCURRENCY}\nend\n```\n\n## Acceptance\n\n- `src/utils.cr` no longer contains `CONCURRENCY_SEMAPHORE`,\n  `CONCURRENCY_AVAILABLE`, `acquire_semaphore`, `release_semaphore`,\n  or `semaphore_health_status`.\n- The historical-context comment in `semaphore_pool.cr` is updated\n  or removed (it currently references the old top-level names).\n- `just nix-build` succeeds.\n- `nix develop . --command crystal spec` passes (180 examples).\n- A boot smoke test confirms the server still starts and reports\n  212 feeds.\n\n## Out of scope\n\n- The `QuickHeadlines::Constants::CONCURRENCY = 4` constant in\n  `src/constants.cr` is used by both the old utils.cr code (about\n  to be removed) and the new `SemaphorePool::DEFAULT_LIMIT`. Leave\n  the constant in place — it's still authoritative.",
   "id": "quickhea-u4f",
   "labels": [],
   "priority": 3,
-  "status": "in_progress",
+  "status": "closed",
   "title": "Remove dead semaphore helpers from src/utils.cr",
   "type": "task",
-  "updated_at": "2026-06-07T18:30:10Z"
+  "updated_at": "2026-06-07T18:35:05Z"
 }
