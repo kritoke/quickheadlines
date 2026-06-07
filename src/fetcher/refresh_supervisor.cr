@@ -29,8 +29,10 @@ require "./semaphore_pool"
 # supervisor-related code moved out of `refresh_loop.cr`).
 module RefreshLoop
   class Supervisor
-    RESTART_DELAY_AFTER_ERROR = 60.seconds
-    HEARTBEAT_INTERVAL        = 10
+    RESTART_DELAY_AFTER_ERROR  = 60.seconds
+    HEARTBEAT_INTERVAL         = 10
+    DEFAULT_SLEEP_CHUNK        = 30.seconds
+    LONG_REFRESH_DURATION_WARN = 120.seconds
 
     def self.start(config_path : String, cache : FeedCache, db_service : DatabaseService, semaphore : SemaphorePool) : Nil
       load_result = load_validated_config(config_path)
@@ -140,7 +142,7 @@ module RefreshLoop
     # adds a hard ceiling: if non-nil, the loop exits when elapsed >=
     # outer_cap even if `total` has not been reached. Default chunk is
     # 30s which gives a responsive shutdown signal without burning CPU.
-    private def interruptible_sleep(total : Time::Span, outer_cap : Time::Span? = nil, chunk : Time::Span = 30.seconds) : Time::Span
+    private def interruptible_sleep(total : Time::Span, outer_cap : Time::Span? = nil, chunk : Time::Span = DEFAULT_SLEEP_CHUNK) : Time::Span
       cap = outer_cap || total
       elapsed = Time::Span.zero
       while elapsed < total && elapsed < cap && !QuickHeadlines.shutting_down?
@@ -260,7 +262,7 @@ module RefreshLoop
           refresh_all_duration = (Time.utc - refresh_all_start).total_seconds
           if config_snapshot.debug?
             Log.for("quickheadlines.feed").debug { "Refreshed feeds in #{refresh_all_duration.round(2)}s" }
-          elsif refresh_all_duration > 120
+          elsif refresh_all_duration > LONG_REFRESH_DURATION_WARN.total_seconds
             Log.for("quickheadlines.feed").warn { "refresh_all took #{refresh_all_duration.round(2)}s - long duration" }
           end
         rescue CancelError
@@ -381,15 +383,15 @@ module RefreshLoop
       end
 
       def outer_timeout_seconds : Int32
-        refresh_interval_seconds * 3 // 2
+        refresh_interval_seconds * QuickHeadlines::Constants::OUTER_TIMEOUT_SECONDS // 2
       end
 
       def sleep_timeout_seconds : Int32
-        refresh_interval_seconds * 3 // 2
+        refresh_interval_seconds * QuickHeadlines::Constants::SLEEP_TIMEOUT_SECONDS // 2
       end
 
       def stuck_threshold_seconds : Int32
-        refresh_interval_seconds * 3
+        refresh_interval_seconds * QuickHeadlines::Constants::STUCK_THRESHOLD_SECONDS
       end
 
       MAX_CONSECUTIVE_SKIPS = 3
