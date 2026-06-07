@@ -1,0 +1,14 @@
+{
+  "assignee": "",
+  "blocked_by": [],
+  "blocks": [],
+  "created": "2026-06-07T19:00:46Z",
+  "description": "## Goal\n\nAdd `spec/refresh_health_reporter_spec.cr` covering the\n`RefreshLoop::HealthReporter` module.\n\n## Coverage\n\n- `REPORT_INTERVAL` and `SHUTDOWN_CHUNK` constants\n- `#start` spawns a fiber with the name \"health_monitor_reporter\"\n- `#start` is safe to call multiple times (each call spawns an\n  additional fiber; document the intent or guard against it if\n  the design says one reporter is enough)\n\n## What is NOT covered\n\n- The long-lived `report_status` body reads from\n  `RefreshHealthMonitor`, `MemoryManagerActor`, `SocketManager`,\n  `EventBroadcaster`, and `FiberTracker`. Stubbing all of them\n  to test the full body in isolation is significant scaffolding.\n  Defer that to a follow-up if a real bug surfaces in the\n  reporter. The structure of the spawn loop is the testable\n  part for now.\n- The `interruptible_sleep` chunking is duplicated in this file\n  (intentionally, per the ticket comment about it not being\n  reachable from a sub-module). Not testing the duplicate\n  separately; the real test lives in `Supervisor#interruptible_sleep`\n  (which is also private and not yet exercised — same trade-off).\n\n## Acceptance\n\n- Spec file exists and follows existing conventions\n- `crystal spec spec/refresh_health_reporter_spec.cr` passes\n- Full suite still passes\n- `ameba` clean\n- `just nix-build` succeeds",
+  "id": "quickhea-vwc",
+  "labels": [],
+  "priority": 3,
+  "status": "open",
+  "title": "Add spec/refresh_health_reporter_spec.cr",
+  "type": "task",
+  "updated_at": "2026-06-07T19:00:46Z"
+}
