@@ -1,5 +1,5 @@
 {
-  "assignee": "",
+  "assignee": "kritoke",
   "blocked_by": [],
   "blocks": [
     "quickhea-az6.7"
@@ -10,8 +10,8 @@
   "labels": [],
   "parent": "quickhea-az6",
   "priority": 2,
-  "status": "open",
+  "status": "in_progress",
   "title": "Extract periodic health/memory reporter into src/fetcher/refresh_health_reporter.cr",
   "type": "task",
-  "updated_at": "2026-06-07T13:51:01Z"
+  "updated_at": "2026-06-07T15:50:12Z"
 }
