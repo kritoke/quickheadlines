@@ -2,7 +2,6 @@
   "assignee": "",
   "blocked_by": [
     "quickhea-az6.2",
-    "quickhea-az6.3",
     "quickhea-az6.4"
   ],
   "blocks": [
@@ -18,5 +17,5 @@
   "status": "open",
   "title": "Slim src/fetcher/refresh_loop.cr to a thin public-API module",
   "type": "task",
-  "updated_at": "2026-06-07T13:50:10Z"
+  "updated_at": "2026-06-07T13:51:00Z"
 }
