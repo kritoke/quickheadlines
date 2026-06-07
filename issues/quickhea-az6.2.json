@@ -1,5 +1,5 @@
 {
-  "assignee": "",
+  "assignee": "kritoke",
   "blocked_by": [
     "quickhea-az6.1"
   ],
@@ -13,8 +13,8 @@
   "labels": [],
   "parent": "quickhea-az6",
   "priority": 2,
-  "status": "open",
+  "status": "in_progress",
   "title": "Extract per-feed concurrent fetch into src/fetcher/feed_fetcher_concurrent.cr",
   "type": "task",
-  "updated_at": "2026-06-07T13:51:01Z"
+  "updated_at": "2026-06-07T15:57:54Z"
 }
