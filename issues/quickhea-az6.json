@@ -2,6 +2,7 @@
   "assignee": "",
   "blocked_by": [],
   "blocks": [],
+  "closed_at": "2026-06-07T18:29:18Z",
   "created": "2026-06-07T13:47:53Z",
   "description": "## Context\n\n`src/fetcher/refresh_loop.cr` is the **largest source file** in the project at **797 lines** and mixes **at least 5 distinct concerns** in a single module:\n\n1. Lazy-initialized semaphore / counter / repair mutex (lines ~33-110) — global concurrency primitives\n2. Generic helpers: `cancel_check`, `log_duration_warning`, `best_available_feed`, `fallback_feed`, `interruptible_sleep`, `build_software_releases`, `build_tab_feeds` (lines ~112-180)\n3. Per-feed concurrent fetch with timeout + fallback (lines ~180-300)\n4. Refresh loop supervisor: `State` class + `check_stuck_recovery`, `check_semaphore_health`, `reload_config_if_changed`, `run_initial_refresh`, `run_timed_refresh`, `sleep_between_cycles`, `log_heartbeat`, `start` (lines ~310-720)\n5. Periodic memory/health reporter `start_health_reporter` (lines ~480-520)\n6. Backward-compat top-level method shims and alias (lines ~770-797)\n\nIt also contains **two `defensive` code paths whose own comments admit they cover code that does not exist**, **magic timeout numbers scattered through the file**, and a **duplicated `refresh_all` top-level definition** at the bottom.\n\n## Why now\n\n- This file is on the suspect list for the in-flight P0 memory-growth ticket `quickhea-alz` (manages fibers, channels, @@class state, and a long-lived `spawn`-loop).\n- Readability: a 70-line `start` method with three levels of nested branching is hard to reason about and hard to test.\n- Reliability: lazy-initialized class-level `@@` state is hard to test and reset; a stuck state can only be cleaned by reaching into internals.\n- Cohesion: the existing convention in `src/fetcher/` is small focused files (`feed_fetcher.cr`, `fetcher_cache.cr`, `fetcher_favicon.cr`, `fetcher_response.cr`, `fetcher_retry.cr`, `vug_adapter.cr`, `refresh_health_monitor.cr`). `refresh_loop.cr` violates this convention.\n\n## Non-goals\n\n- No behavior change. The supervisor must still be invoked as `RefreshLoop.start(config_path, cache, db_service)`. The public API (`refresh_all`, `start`, `CancelError`, the `RefreshHealthMonitor` alias) must remain backward-compatible.\n- Do NOT touch `quickhea-alz` (P0 memory growth) as part of this epic. If the refactor uncovers new evidence, file a follow-up ticket.\n\n## Refactor strategy (split into child tickets)\n\n1. `semaphore_pool.cr` — encapsulate concurrency primitives\n2. `feed_fetcher_concurrent.cr` — extract per-feed concurrent fetch\n3. `refresh_supervisor.cr` — extract `State` + orchestration helpers + `start`\n4. `refresh_health_reporter.cr` — extract periodic memory/health reporter\n5. Slim `refresh_loop.cr` down to public API + re-exports\n6. Replace magic timeouts with named module constants\n7. Remove dead \"defense-in-depth\" CancelError rescue + duplicate top-level `refresh_all` definitions\n\n## Verification (must pass before closing the epic)\n\n- `just nix-build` succeeds (frontend assets + Crystal binary)\n- `nix develop . --command crystal spec` — all existing specs pass\n- `cd frontend \u0026\u0026 npm run test` — frontend tests pass\n- `bin/quickheadlines` boots; a refresh cycle runs end-to-end; `GET /api/health` returns healthy\n- Manual smoke: kill an in-flight fetch, verify cancel path still works",
   "id": "quickhea-az6",
@@ -13,8 +14,8 @@
     }
   ],
   "priority": 2,
-  "status": "open",
+  "status": "closed",
   "title": "Refactor src/fetcher/refresh_loop.cr (797 lines) — SRP, readability, reliability",
   "type": "epic",
-  "updated_at": "2026-06-07T13:52:16Z"
+  "updated_at": "2026-06-07T18:29:18Z"
 }
