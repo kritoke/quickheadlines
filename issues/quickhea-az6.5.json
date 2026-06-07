@@ -4,14 +4,15 @@
     "quickhea-az6.7"
   ],
   "blocks": [],
+  "closed_at": "2026-06-07T18:02:11Z",
   "created": "2026-06-07T13:49:52Z",
   "description": "## Goal\n\nThe refresh loop and its extracted siblings use **scattered magic timeouts** that are hard to tune, document, and reason about. Group them as named module constants in a single place.\n\n## Magic numbers found in src/fetcher/refresh_loop.cr\n\n| Magic value            | Current location                                                | Suggested name                       |\n| ---------------------- | --------------------------------------------------------------- | ------------------------------------ |\n| `10.minutes`           | `fetch_feeds_concurrently` — `overall_timeout`                  | `OVERALL_FETCH_TIMEOUT`              |\n| `5.minutes`            | `start_health_reporter` — health reporter interval              | `HEALTH_REPORT_INTERVAL`             |\n| `60.seconds`           | `start` rescue — restart delay after unhandled exception        | `RESTART_DELAY_AFTER_ERROR`          |\n| `30.seconds`           | `interruptible_sleep` — default chunk                           | `DEFAULT_SLEEP_CHUNK`                |\n| `QuickHeadlines::Constants::FETCH_TIMEOUT_SECONDS` | `fetch_single_feed_with_timeout` | already named, OK as is |\n| `state.outer_timeout_seconds * 3 // 2` | `state.outer_timeout_seconds`         | OK, computed from refresh_minutes    |\n| `state.sleep_timeout_seconds * 3 // 2` | `state.sleep_timeout_seconds`         | OK, computed from refresh_minutes    |\n| `state.stuck_threshold_seconds * 3`   | `state.stuck_threshold_seconds`       | OK, computed from refresh_minutes    |\n| `state.heartbeat_interval = 10`       | `state.heartbeat_interval`            | OK as a member, but should be a const |\n\n## Where they should live\n\nAdd a top section to each new file (semaphore_pool, feed_fetcher_concurrent, refresh_supervisor, refresh_health_reporter) with the constants it owns. For values that span multiple files, put them on `RefreshLoop::Constants` (the existing module referenced as `QuickHeadlines::Constants`).\n\n## Acceptance\n\n- No raw `10.minutes`, `5.minutes`, `60.seconds`, `30.seconds` literals in the extracted files (unless wrapped in a constant of the same name).\n- A new `RefreshLoop::Constants` module (or extension of an existing one) lists each timeout with a one-line doc comment.\n- `just nix-build` succeeds.\n- `nix develop . --command crystal spec` passes.\n\n## Notes\n\n- Behavior must not change — these are pure renames.\n- If `QuickHeadlines::Constants` already exists and is the right home, prefer extending it over creating a parallel `RefreshLoop::Constants`.\n- Do NOT touch `state.heartbeat_interval = 10` if the value is data-derived (it might be a future knob).",
   "id": "quickhea-az6.5",
   "labels": [],
   "parent": "quickhea-az6",
   "priority": 3,
-  "status": "in_progress",
+  "status": "closed",
   "title": "Replace magic timeout constants in refresh_loop with named module constants",
   "type": "task",
-  "updated_at": "2026-06-07T17:47:11Z"
+  "updated_at": "2026-06-07T18:02:11Z"
 }
