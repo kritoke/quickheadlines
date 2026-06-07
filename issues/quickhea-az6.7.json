@@ -1,7 +1,8 @@
 {
   "assignee": "",
   "blocked_by": [
-    "quickhea-az6.2"
+    "quickhea-az6.2",
+    "quickhea-az6.3"
   ],
   "blocks": [],
   "created": "2026-06-07T13:49:53Z",
