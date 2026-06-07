@@ -98,15 +98,6 @@ module RefreshLoop
           channel.send(result)
         rescue Channel::ClosedError
         end
-      rescue ex : CancelError
-        # Re-raise so the supervisor's CancelError rescue fires and the
-        # cancellation is logged distinctly from a fetch error. `ensure` still
-        # runs, releasing the semaphore and decrementing the in-progress count.
-        # This is defense-in-depth: today CancelError is only raised in
-        # refresh_all's cancel_check, but if cancel_check is ever pushed deeper
-        # (e.g. into the per-feed fetch path), this prevents it from being
-        # silently converted into a fallback FeedData.
-        raise ex
       rescue ex : Exception
         Log.for("quickheadlines.feed").error(exception: ex) { "fetch_one: error fetching #{feed.url}" }
         fallback = fallback_feed(feed, previous_feed_data, "Error: #{ex.class}", "fetch_one: using cached data after outer error")
