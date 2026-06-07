@@ -1,9 +1,7 @@
 {
   "assignee": "",
   "blocked_by": [],
-  "blocks": [
-    "quickhea-az6.7"
-  ],
+  "blocks": [],
   "created": "2026-06-07T13:49:00Z",
   "description": "## Goal\n\nMove the refresh loop supervisor out of `src/fetcher/refresh_loop.cr` into a dedicated `src/fetcher/refresh_supervisor.cr`. This includes the `State` inner class and all the orchestration helpers that drive the per-cycle loop. After this ticket, `refresh_loop.cr` should hold only the public API.\n\n## Source: src/fetcher/refresh_loop.cr (current location)\n\nMove:\n- `private class State` (lines ~312-360) — the supervisor's lifecycle state\n- `check_stuck_recovery(stuck_threshold)` (~lines 370-388)\n- `check_semaphore_health` (~lines 390-405)\n- `reload_config_if_changed(config_path, state)` (~lines 407-428)\n- `run_initial_refresh(state, cache, db_service)` (~lines 430-460)\n- `run_timed_refresh(state, cache, db_service)` (~lines 462-525)\n- `sleep_between_cycles(state)` (~lines 527-535)\n- `log_heartbeat(state)` (~lines 537-557)\n- `def self.start(config_path, cache, db_service)` (~lines 651-720)\n\n## Target: src/fetcher/refresh_supervisor.cr\n\nDesign the supervisor as a class that takes its dependencies (config_path, cache, db_service, semaphore) in the constructor and exposes a `run` method. Move `State` to either the top of the new file or its own small class.\n\n```crystal\nmodule RefreshLoop::Supervisor\n  def self.start(config_path, cache, db_service, semaphore) : Nil\n    # current `self.start` body\n  end\n\n  # Or, if converted to a class:\n  # class RefreshLoop::Supervisor\n  #   def initialize(@config_path, @cache, @db_service, @semaphore)\n  #   def run : Nil\n  #   def run_one_cycle(state) : Nil\n  # end\nend\n```\n\n## Acceptance\n\n- `src/fetcher/refresh_supervisor.cr` exists with the moved code.\n- `State` is no longer nested inside `RefreshLoop` module at the original location; it's either at the top of `refresh_supervisor.cr` or in its own file.\n- `src/fetcher/refresh_loop.cr` no longer contains these helpers, but still exposes `def self.start` as a thin delegate (or callers are updated to call `RefreshLoop::Supervisor.start` directly).\n- `just nix-build` succeeds.\n- `nix develop . --command crystal spec` passes.\n\n## Notes\n\n- The 70-line `start` method has deeply nested `if state.first_run? ... reload_config_if_changed ... run_timed_refresh ... log_heartbeat` logic. Consider breaking it into named steps (`run_first_cycle`, `run_regular_cycle`, `handle_stuck_state`) for readability. Keep it optional — extraction is the priority; restructuring is a follow-up if it complicates the diff.\n- `start_health_reporter` is moved in a separate ticket (az6.4) and called from `Supervisor.start` after spawning the supervisor loop.\n- This ticket depends on `quickhea-az6.1` (semaphore pool) — the supervisor needs to take the `SemaphorePool` instance as a parameter.",
   "id": "quickhea-az6.4",
@@ -13,5 +11,5 @@
   "status": "open",
   "title": "Extract refresh supervisor (State + orchestration) into src/fetcher/refresh_supervisor.cr",
   "type": "task",
-  "updated_at": "2026-06-07T13:50:09Z"
+  "updated_at": "2026-06-07T13:51:00Z"
 }
