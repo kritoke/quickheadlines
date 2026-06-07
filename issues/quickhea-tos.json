@@ -1,0 +1,14 @@
+{
+  "assignee": "",
+  "blocked_by": [],
+  "blocks": [],
+  "created": "2026-06-07T19:00:46Z",
+  "description": "## Goal\n\nAdd `spec/feed_fetcher_concurrent_spec.cr` covering the public\n`RefreshLoop::FeedFetcherConcurrent` API.\n\n## Coverage\n\n- `OVERALL_FETCH_TIMEOUT` constant value\n- `#best_available_feed` priority logic (the 4 cases):\n  fresh-good \u003e stale-good \u003e fresh-bad \u003e stale-bad \u003e synthetic error\n- `#fetch_all` with empty input (returns empty hash, no fibers\n  spawned)\n- `#fetch_all` with one feed and a working semaphore (the\n  end-to-end path uses `FeedFetcher.instance.fetch` which makes\n  a real HTTP request — may not be hermetic, so make this an\n  opt-in test guarded by an env var or a class-level skip\n  flag; or document the limitation)\n\n## Out of scope\n\nThe private helpers `fetch_one`, `fetch_one_with_timeout`,\n`fallback_feed` are not directly testable without mocking\n`FeedFetcher.instance` and the `SemaphorePool`. Adding that\nplumbing is a bigger change; if needed, ticket can be expanded\nlater.\n\n## Acceptance\n\n- Spec file exists and follows existing conventions\n- `crystal spec spec/feed_fetcher_concurrent_spec.cr` passes\n- Full suite still passes (180 + 15 from semaphore_pool + new)\n- `ameba` clean\n- `just nix-build` succeeds",
+  "id": "quickhea-tos",
+  "labels": [],
+  "priority": 3,
+  "status": "open",
+  "title": "Add spec/feed_fetcher_concurrent_spec.cr",
+  "type": "task",
+  "updated_at": "2026-06-07T19:00:46Z"
+}
