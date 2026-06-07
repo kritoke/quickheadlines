@@ -1,0 +1,14 @@
+{
+  "assignee": "",
+  "blocked_by": [],
+  "blocks": [],
+  "created": "2026-06-07T18:40:40Z",
+  "description": "## Goal\n\nAdd a Crystal spec for `RefreshLoop::SemaphorePool`\n(`src/fetcher/semaphore_pool.cr`) that documents the class\ncontract and exercises `reset_for_testing` for the first time.\n\n## Why now\n\n- The class is the single owner of the concurrency primitives\n  that used to live as module-level `@@` state in\n  `refresh_loop.cr` (refactor ticket `quickhea-az6.1`).\n- It has a `reset_for_testing` hook specifically for spec use.\n  No spec has been written to exercise it yet.\n- A spec gives the supervisor and the per-feed fetcher a\n  reference for what the pool promises (limit, repair,\n  concurrent acquire/release).\n- The `quickhea-alz` P0 memory-growth investigation may need to\n  instrument the pool; a spec gives that work a safe place to\n  assert invariants.\n\n## Coverage\n\n- `#initialize` — default limit, custom limit, the channel is\n  pre-filled to capacity\n- `#acquire` / `#release` — single-threaded counter behavior\n- `#acquire` blocks when at capacity (with timeout in a fiber)\n- `#health_status` — reports available/expected correctly\n- `#repair` — returns 0 at capacity, refills missing slots\n- `#reset_for_testing` — refills to full capacity (this is the\n  spec's raison d'être; document the expected behavior)\n- `#release` is safe after a `Channel::ClosedError` (defensive\n  rescue)\n\n## Acceptance\n\n- `spec/semaphore_pool_spec.cr` exists and follows the existing\n  spec conventions (see `spec/minhash_spec.cr` for style).\n- `nix develop . --command crystal spec spec/semaphore_pool_spec.cr`\n  passes (all examples green).\n- `nix develop . --command crystal spec` (full suite) still\n  passes 180 examples.\n- `nix develop . --command ameba spec/semaphore_pool_spec.cr`\n  is clean.",
+  "id": "quickhea-k6r",
+  "labels": [],
+  "priority": 3,
+  "status": "open",
+  "title": "Add spec/semaphore_pool_spec.cr for SemaphorePool",
+  "type": "task",
+  "updated_at": "2026-06-07T18:40:40Z"
+}
