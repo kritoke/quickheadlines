@@ -2,27 +2,6 @@ require "http/client"
 require "uri"
 require "./constants"
 
-CONCURRENCY_SEMAPHORE = Channel(Nil).new(QuickHeadlines::Constants::CONCURRENCY).tap { |channel| QuickHeadlines::Constants::CONCURRENCY.times { channel.send(nil) } }
-
-# Atomic counter to track available semaphore slots without draining the channel.
-# Updated on every acquire/release; read by health check for zero-side-effect inspection.
-CONCURRENCY_AVAILABLE = Atomic(Int32).new(QuickHeadlines::Constants::CONCURRENCY)
-
-# Thread-safe semaphore helpers: update both channel and atomic counter together.
-def acquire_semaphore : Nil
-  CONCURRENCY_SEMAPHORE.receive
-  CONCURRENCY_AVAILABLE.sub(1, :relaxed)
-end
-
-def release_semaphore : Nil
-  CONCURRENCY_SEMAPHORE.send(nil)
-  CONCURRENCY_AVAILABLE.add(1, :relaxed)
-end
-
-def semaphore_health_status : NamedTuple(available: Int32, expected: Int32)
-  {available: CONCURRENCY_AVAILABLE.get(:relaxed), expected: QuickHeadlines::Constants::CONCURRENCY}
-end
-
 module Utils
   MIME_TYPES = {
     "html"  => "text/html; charset=utf-8",
