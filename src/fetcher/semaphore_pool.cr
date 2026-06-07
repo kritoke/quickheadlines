@@ -15,9 +15,8 @@ require "../constants"
 #
 # The previous design used module-level `@@` state lazily initialized
 # under a Mutex inside `RefreshLoop`. That made the state hard to test
-# and reset, and forced the rest of the codebase to reach into the
-# module to call `acquire_semaphore` / `release_semaphore`. This class
-# is the single owner of that state and exposes a narrow, testable API.
+# and reset. This class is the single owner of that state and exposes
+# a narrow, testable API.
 module RefreshLoop
   class SemaphorePool
     DEFAULT_LIMIT = QuickHeadlines::Constants::CONCURRENCY
