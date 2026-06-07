@@ -4,7 +4,6 @@
     "quickhea-az6.1"
   ],
   "blocks": [
-    "quickhea-az6.3",
     "quickhea-az6.7"
   ],
   "created": "2026-06-07T13:48:26Z",
@@ -16,5 +15,5 @@
   "status": "open",
   "title": "Extract per-feed concurrent fetch into src/fetcher/feed_fetcher_concurrent.cr",
   "type": "task",
-  "updated_at": "2026-06-07T13:50:09Z"
+  "updated_at": "2026-06-07T13:51:00Z"
 }
