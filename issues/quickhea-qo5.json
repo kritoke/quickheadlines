@@ -1,0 +1,14 @@
+{
+  "assignee": "",
+  "blocked_by": [],
+  "blocks": [],
+  "created": "2026-06-08T10:39:09Z",
+  "description": "## Goal\n\nFix the misleading priority comment in\n`RefreshLoop::FeedFetcherConcurrent.best_available_feed`\n(`src/fetcher/feed_fetcher_concurrent.cr`).\n\n## Why\n\nThe current comment says:\n\n    # Priority: fresh-good \u003e stale-good \u003e fresh-bad \u003e stale-bad\n\nBut the actual code:\n\n    return fetched if fetched \u0026\u0026 !fetched.failed?\n    return existing if existing \u0026\u0026 !existing.failed?\n    fetched || existing || FeedFetcher.instance.build_error_feed(feed, \"Failed to fetch\")\n\nreturns `existing_good` when both `fetched_bad` and\n`existing_good` are present. The spec written in\n`quickhea-tos` documents the actual behavior with a\n\"the actual implementation returns existing_good in this\ncase\" comment, but the source-level comment is still wrong\nand will mislead future readers.\n\n## Fix\n\nUpdate the source comment to match the actual behavior:\n\n    # Resolve the best available data for a feed.\n    # Priority: any good (fetched first, then existing) \u003e any bad\n    # (fetched first, then existing) \u003e synthetic error.\n    # In other words: prefer a known-good value; if neither is\n    # good, take whatever we have; build an error only when both\n    # fetched and existing are nil.\n\n## Acceptance\n\n- The comment in `feed_fetcher_concurrent.cr` is updated\n- The implementation is unchanged\n- `quickhea-tos` spec still passes (the test on line ~36\n  asserts the actual behavior; it should still pass)\n- Full suite still passes\n- `just nix-build` succeeds",
+  "id": "quickhea-qo5",
+  "labels": [],
+  "priority": 4,
+  "status": "open",
+  "title": "Fix misleading priority comment in best_available_feed",
+  "type": "task",
+  "updated_at": "2026-06-08T10:39:09Z"
+}
