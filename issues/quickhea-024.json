@@ -1,0 +1,14 @@
+{
+  "assignee": "",
+  "blocked_by": [],
+  "blocks": [],
+  "created": "2026-06-08T18:04:25Z",
+  "description": "## Goal\n\nThree small cleanups in `src/fetcher/monitoring.cr` that the\ncode review flagged as nits:\n\n1. **Rename or document `Monitoring.start`** (nit 6).\n   After the merge, `Monitoring` has 13 other public methods;\n   calling `.start` on it could plausibly mean \"start the\n   whole monitoring subsystem\" rather than \"spawn the\n   periodic reporter fiber.\" Consider renaming to\n   `Monitoring.start_reporter`, or add a doc comment on\n   `start` clarifying the scope. Pre-existing (the old\n   `HealthReporter.start` had the same ambiguity) but worth\n   fixing now while we're already in the file.\n\n2. **Document the redundant `if QuickHeadlines.shutting_down?`\n   in the reporter loop** (nit 8). The reporter loop has:\n   ```crystal\n   loop do\n     break if QuickHeadlines.shutting_down?  # before sleep\n     RefreshLoop::InterruptibleSleep.sleep(REPORT_INTERVAL)\n     break if QuickHeadlines.shutting_down?  # after sleep\n     report_status\n   ```\n   The second check is defense-in-depth (only meaningful if\n   `shutting_down?` becomes true between the sleep returning\n   and `report_status` running). Leaving it doesn't hurt, but\n   a comment would make the intent clear. Pre-existing.\n\n3. **`REPORT_INTERVAL` constant in the spec** (nit 9). Will\n   be covered by the parallel `quickhea-X1` ticket for the\n   `Monitoring` spec. Mentioned here for visibility; do not\n   duplicate.\n\n## Why\n\nThe renaming is the only one with real readability value.\nThe other two are doc-only. Cheap to do in a single small\nPR.\n\n## Acceptance\n\n- `Monitoring.start` either has a doc comment explaining\n  its scope, or is renamed to `Monitoring.start_reporter`.\n  If renamed, the single call site in `refresh_loop.cr` is\n  updated.\n- The second `break if QuickHeadlines.shutting_down?` in\n  the reporter loop has a one-line comment explaining why\n  it's there.\n- Full suite passes\n- `just nix-build` succeeds",
+  "id": "quickhea-024",
+  "labels": [],
+  "priority": 4,
+  "status": "open",
+  "title": "Small cleanups in src/fetcher/monitoring.cr",
+  "type": "task",
+  "updated_at": "2026-06-08T18:04:25Z"
+}
