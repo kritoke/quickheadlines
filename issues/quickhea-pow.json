@@ -2,13 +2,14 @@
   "assignee": "kritoke",
   "blocked_by": [],
   "blocks": [],
+  "closed_at": "2026-06-08T11:41:12Z",
   "created": "2026-06-08T10:39:09Z",
   "description": "## Goal\n\nConsider whether `RefreshLoop::RefreshHealthMonitor` and\n`RefreshLoop::HealthReporter` should be merged, and act on\nthe decision.\n\n## Why now\n\n- They share the same `Log.for(\"quickheadlines.feed\")`\n  namespace\n- They both read/write the same status data\n  (`RefreshHealthMonitor.status` is read by `HealthReporter`)\n- The reporter is essentially a periodic log of the\n  monitor's status\n- Both have test coverage now (the monitor through\n  Supervisor's spec; the reporter through its own spec)\n- Both are tiny (the monitor is ~60 lines, the reporter is\n  ~95 lines)\n\n## Two valid options\n\n**A. Merge into `HealthReporter`** — the monitor's lifecycle\nmethods (`record_cycle_start`, `record_cycle_complete`,\n`record_failure`, `feed_fetch_started`,\n`feed_fetch_completed`, `reset_failures`, `stuck?`,\n`attempt_recovery`, `status`) all move into HealthReporter.\nThe reporter's `start` method stays as-is.\n\nPro: one module owns the entire health-and-memory\nmonitoring concern. Clear cohesion.\n\nCon: HealthReporter grows. The supervisor's\n`record_cycle_start` / `record_cycle_complete` /\n`record_failure` calls are currently direct; merging means\nthey become `HealthReporter.record_cycle_start` etc., which\nis a long name. Consider renaming the merged module to\n`Health` or `Monitoring` to avoid the awkwardness.\n\n**B. Keep separate, but tighten the relationship** — add a\ndoc comment on HealthReporter pointing at the monitor, and\nvice versa. The reporter already calls\n`RefreshHealthMonitor.status`, so the relationship is\ndocumented at the call site.\n\nPro: low risk, no API churn. `RefreshHealthMonitor` is\nre-exported at the top level for backward compat (the\nadmin_controller and api_base_controller use it).\n\nCon: the duplication concern remains unaddressed.\n\n## Decision needed from the user\n\nThis is a real design call. The ticket captures the\ntradeoff but does NOT pick a side — the implementing agent\nshould ask the user which option they prefer before\ncommitting to either path.\n\n## Acceptance\n\n- The decision is recorded in a comment on the epic\n  (or on a follow-up ticket)\n- If A: the merge is implemented, the new module is\n  named, the admin_controller / api_base_controller call\n  sites are updated, the spec for the merged module\n  replaces the two separate specs, the alias is removed\n  if all callers are updated\n- If B: a comment in each module points at the other\n- Full suite passes\n- `just nix-build` succeeds",
   "id": "quickhea-pow",
   "labels": [],
   "priority": 3,
-  "status": "in_progress",
+  "status": "closed",
   "title": "Merge RefreshHealthMonitor into HealthReporter",
   "type": "task",
-  "updated_at": "2026-06-08T11:10:57Z"
+  "updated_at": "2026-06-08T11:41:12Z"
 }
