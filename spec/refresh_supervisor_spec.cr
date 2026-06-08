@@ -19,8 +19,8 @@ require "../src/fetcher/refresh_supervisor"
 #   globals. Unit-testing the full body requires substantial
 #   mocks; defer until a real bug surfaces.
 # - The private `interruptible_sleep` instance method is not
-#   exercised directly. The class-constant `DEFAULT_SLEEP_CHUNK`
-#   is.
+#   exercised directly. The chunked-sleep primitive now lives in
+#   RefreshLoop::InterruptibleSleep and has its own spec.
 describe RefreshLoop::Supervisor do
   describe "class constants" do
     it "RESTART_DELAY_AFTER_ERROR is 60.seconds" do
@@ -29,10 +29,6 @@ describe RefreshLoop::Supervisor do
 
     it "HEARTBEAT_INTERVAL is 10" do
       RefreshLoop::Supervisor::HEARTBEAT_INTERVAL.should eq(10)
-    end
-
-    it "DEFAULT_SLEEP_CHUNK is 30.seconds" do
-      RefreshLoop::Supervisor::DEFAULT_SLEEP_CHUNK.should eq(30.seconds)
     end
 
     it "LONG_REFRESH_DURATION_WARN is 120.seconds" do

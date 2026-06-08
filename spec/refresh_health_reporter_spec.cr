@@ -26,10 +26,11 @@ describe RefreshLoop::HealthReporter do
     end
   end
 
-  describe "SHUTDOWN_CHUNK" do
-    it "is 30 seconds" do
-      RefreshLoop::HealthReporter::SHUTDOWN_CHUNK.should eq(30.seconds)
-    end
+  describe "REPORT_INTERVAL" do
+    # The single REPORT_INTERVAL constant is now the only knob
+    # the reporter exposes; the SHUTDOWN_CHUNK constant it used to
+    # carry was moved to RefreshLoop::InterruptibleSleep::DEFAULT_CHUNK
+    # in quickhea-aiu.
   end
 
   describe "#start" do
