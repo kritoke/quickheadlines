@@ -1,0 +1,14 @@
+{
+  "assignee": "",
+  "blocked_by": [],
+  "blocks": [],
+  "created": "2026-06-08T18:04:25Z",
+  "description": "## Goal\n\n`Monitoring.report_status` (private, in\n`src/fetcher/monitoring.cr`) is the body of the periodic\nreporter. It reads from four actors:\n\n- `MemoryManagerActor.instance.get_memory_status`\n- `SocketManager.instance.connection_count`\n- `EventBroadcaster.client_count`\n- `FiberTracker.stats`\n\nThe method is heavily defensive — each diagnostic counter is\nwrapped in its own `begin / rescue`, and the outer body is\nalso wrapped. The comment at lines 184-186 of the file says\n\"each diagnostic counter is best-effort: a failure in one\nshould not silence the others or kill the reporter loop.\"\n\nThis is a real correctness invariant that is not exercised\nby any spec. The reporter only runs in production (every\n5 minutes via `REPORT_INTERVAL`), so a regression here would\nsilently degrade observability for the P0 memory-growth\ninvestigation (`quickhea-alz`).\n\n## Why now\n\nThe reporter is on the suspect list for `quickhea-alz` — if\nthe reporter is silently failing in production, we can't\ntrust the memory-status logs. Having a test that asserts\n\"if one actor fails, the others still log\" gives us a\nregression guard for the most important correctness\ninvariant of the reporter.\n\n## Design\n\nThe cleanest approach is a small test seam: extract a\nprivate method that takes the four dependencies as\nparameters, and have the public path call it with the\nsingleton values. Then the spec can call the private\nmethod with mocks/stubs:\n\n```crystal\nprivate def self.report_status : Nil\n  memory_status = read_memory_status\n  socket_count = read_socket_count\n  event_clients = read_event_clients\n  fiber_stats = read_fiber_stats\n  log_memory_status(memory_status, socket_count, event_clients, fiber_stats)\nend\n\nprivate def self.read_memory_status\n  MemoryManagerActor.instance.get_memory_status\nend\n\nprivate def self.read_socket_count\n  SocketManager.instance.connection_count\nrescue ex : Exception\n  Log.for(\"quickheadlines.memory\").debug(exception: ex) { \"socket_count unavailable\" }\n  0\nend\n\n# ... etc\n```\n\nThen the spec can replace the `read_*` methods via a\nmodule-level hook (e.g., a class variable that defaults to\nthe method but can be overridden in tests), or by directly\ncalling the lower-level helpers.\n\nA simpler alternative: the test can stub the `SocketManager`\nsingleton to raise, call `Monitoring.start`, and verify the\nfiber does not die. This requires less plumbing.\n\n## Acceptance\n\n- The invariant \"one failing counter does not silence the\n  others\" has a regression test\n- Full suite passes\n- `just nix-build` succeeds",
+  "id": "quickhea-5aq",
+  "labels": [],
+  "priority": 3,
+  "status": "open",
+  "title": "Improve testability of Monitoring.report_status",
+  "type": "task",
+  "updated_at": "2026-06-08T18:04:25Z"
+}
