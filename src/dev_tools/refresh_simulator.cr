@@ -11,11 +11,11 @@ module QuickHeadlines::DevRefreshSimulator
   # Simulate the "stuck refresh" state for supervisor recovery testing.
   # Sets the last-refresh-start timestamp to N seconds in the past and
   # zeroes last-refresh-complete, which causes
-  # `RefreshHealthMonitor.stuck?` to return true.
+  # `RefreshLoop::Monitoring.stuck?` to return true.
   def self.force_stuck!(seconds : Int32 = 600) : Nil
     now_ms = Time.utc.to_unix_ms
-    RefreshLoop::RefreshHealthMonitor.last_refresh_start_for_testing = now_ms - (seconds * 1000)
-    RefreshLoop::RefreshHealthMonitor.last_refresh_complete_for_testing = 0_i64
+    RefreshLoop::Monitoring.last_refresh_start_for_testing = now_ms - (seconds * 1000)
+    RefreshLoop::Monitoring.last_refresh_complete_for_testing = 0_i64
     Log.for("quickheadlines.dev").info { "DevRefreshSimulator: simulated stuck state for #{seconds}s" }
   end
 end

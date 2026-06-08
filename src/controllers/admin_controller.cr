@@ -233,11 +233,11 @@ class QuickHeadlines::Controllers::AdminController < QuickHeadlines::Controllers
     broadcaster_stats = BroadcasterStats.from_hash(EventBroadcaster.stats)
 
     refresh_status = begin
-      RefreshHealthMonitor.status
+      RefreshLoop::Monitoring.status
     rescue ex : Exception
       # Always return a valid status — this is an admin monitoring endpoint.
       # We intentionally catch all to ensure the admin page never crashes.
-      Log.for("quickheadlines.admin").warn { "Failed to get RefreshHealthMonitor status: #{ex.class} #{ex.message}" }
+      Log.for("quickheadlines.admin").warn { "Failed to get RefreshLoop::Monitoring status: #{ex.class} #{ex.message}" }
       {last_start: 0_i64, last_complete: 0_i64, cycles: 0_i32, failures: 0_i32}
     end
 

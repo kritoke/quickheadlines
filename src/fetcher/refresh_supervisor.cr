@@ -9,7 +9,7 @@ require "../services/memory_manager_actor"
 require "../websocket"
 require "./feed_fetcher_concurrent"
 require "./interruptible_sleep"
-require "./refresh_health_monitor"
+require "./monitoring"
 require "./semaphore_pool"
 
 # Long-lived refresh loop supervisor.
@@ -134,7 +134,7 @@ module RefreshLoop
     private def handle_outer_error(ex : Exception) : Nil
       Log.for("quickheadlines.feed").error(exception: ex) { "refresh_loop outer handler: unhandled exception, restarting in #{RESTART_DELAY_AFTER_ERROR.total_seconds.round}s" }
       StateStore.refreshing = false
-      RefreshHealthMonitor.record_failure
+      RefreshLoop::Monitoring.record_failure
       @state.reset_cycle_count
       RefreshLoop::InterruptibleSleep.sleep(RESTART_DELAY_AFTER_ERROR)
     end
@@ -147,18 +147,18 @@ module RefreshLoop
     # outer_cap even if `total` has not been reached. Default chunk is
     # 30s which gives a responsive shutdown signal without burning CPU.
     private def check_stuck_recovery : Nil
-      return unless RefreshHealthMonitor.stuck?(@state.stuck_threshold_seconds)
+      return unless RefreshLoop::Monitoring.stuck?(@state.stuck_threshold_seconds)
 
-      status = RefreshHealthMonitor.status
+      status = RefreshLoop::Monitoring.status
       Log.for("quickheadlines.feed").error do
         "REFRESH STUCK: last cycle started at #{status[:last_start]}, " \
         "cycles completed: #{status[:cycles]}, failures: #{status[:failures]}"
       end
       Log.for("quickheadlines.feed").error { "Attempting to recover stuck refresh..." }
 
-      if RefreshHealthMonitor.attempt_recovery
+      if RefreshLoop::Monitoring.attempt_recovery
         StateStore.update(&.copy_with(refreshing: false))
-        RefreshHealthMonitor.reset_failures
+        RefreshLoop::Monitoring.reset_failures
         Log.for("quickheadlines.feed").info { "Recovery complete, will retry on next cycle" }
       else
         Log.for("quickheadlines.feed").info { "Recovery was already performed by another fiber" }
@@ -208,10 +208,10 @@ module RefreshLoop
           refresh_all(config_for_initial, @cache, @db_service, cancel_ch)
         rescue CancelError
           Log.for("quickheadlines.feed").warn { "Initial refresh cancelled by supervisor" }
-          RefreshHealthMonitor.record_failure
+          RefreshLoop::Monitoring.record_failure
         rescue ex : Exception
           Log.for("quickheadlines.feed").error(exception: ex) { "Initial refresh failed" }
-          RefreshHealthMonitor.record_failure
+          RefreshLoop::Monitoring.record_failure
         ensure
           StateStore.refreshing = false
           @state.initial_cancel_ch = nil
@@ -230,7 +230,7 @@ module RefreshLoop
         case memory_status.pressure_level
         when .critical?
           Log.for("quickheadlines.feed").warn { "Skipping refresh due to critical memory pressure (RSS=#{memory_status.rss_mb.round(1)}MB)" }
-          RefreshHealthMonitor.record_failure
+          RefreshLoop::Monitoring.record_failure
           return 0.0
         when .high?
           Log.for("quickheadlines.feed").warn { "Refresh proceeding with high memory pressure (RSS=#{memory_status.rss_mb.round(1)}MB)" }
@@ -258,10 +258,10 @@ module RefreshLoop
           end
         rescue CancelError
           Log.for("quickheadlines.feed").warn { "Refresh worker cancelled by supervisor" }
-          RefreshHealthMonitor.record_failure
+          RefreshLoop::Monitoring.record_failure
         rescue ex : Exception
           Log.for("quickheadlines.feed").error(exception: ex) { "refresh_loop refresh_all failed" }
-          RefreshHealthMonitor.record_failure
+          RefreshLoop::Monitoring.record_failure
         end
         completion_channel.send(nil)
       end
@@ -279,7 +279,7 @@ module RefreshLoop
         cancel_ch.send(nil)
         StateStore.refreshing = false
         Log.for("quickheadlines.feed").error { "refresh_all timed out after #{outer_timeout.total_seconds.round}s - worker signalled to cancel" }
-        RefreshHealthMonitor.record_failure
+        RefreshLoop::Monitoring.record_failure
         GCCollector.maybe_collect
         (Time.utc - refresh_start_time).total_seconds
       end
@@ -298,7 +298,7 @@ module RefreshLoop
     private def log_heartbeat : Nil
       return unless @state.heartbeat_due?(HEARTBEAT_INTERVAL)
 
-      status = RefreshHealthMonitor.status
+      status = RefreshLoop::Monitoring.status
       memory_growth = begin
         StateStore.memory_growth_rate
       rescue ex : Exception

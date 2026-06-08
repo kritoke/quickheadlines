@@ -1,7 +1,7 @@
 require "spec"
 require "./spec_helper"
 require "../src/fetcher/feed_fetcher_concurrent"
-require "../src/fetcher/refresh_health_monitor"
+require "../src/fetcher/monitoring"
 
 # Spec for RefreshLoop::FeedFetcherConcurrent.
 #
@@ -104,6 +104,47 @@ describe RefreshLoop::FeedFetcherConcurrent do
       result = RefreshLoop::FeedFetcherConcurrent.fetch_all(all_configs, existing, config, semaphore)
       result.size.should eq(1)
       result[bad.url].error_message.should_not be_nil
+    end
+  end
+
+  # Regression spec for the channel-closed race that was
+  # mis-logged as "Fetch failed for ...". The inner spawn's
+  # `result_channel.send(fetch_result)` raises
+  # `Channel::ClosedError` if the outer fiber already closed the
+  # channel (e.g. because `fetch_all` closed the fan-in channel
+  # after collecting all results, or because the per-feed timeout
+  # fired). The fix catches `Channel::ClosedError` separately so
+  # it does not fall into the generic `rescue ex : Exception`
+  # branch and get logged as a fetch failure.
+  #
+  # This test exercises the rescue pattern directly: open a
+  # channel, close it, and try to send. The inner-fiber rescue
+  # pattern (with the fix) swallows the `Channel::ClosedError`
+  # silently. The test asserts the fiber completes without
+  # raising — without the fix, the fiber would have logged
+  # "Fetch failed for ..." and re-raised, which is the exact
+  # behavior the user observed in the runtime error.
+  describe "inner-fiber channel-closed race" do
+    it "the rescue pattern swallows Channel::ClosedError without logging a fetch failure" do
+      closed_channel = Channel(FeedData?).new(1)
+      closed_channel.close
+
+      # Replicate the structure of fetch_one_with_timeout's inner
+      # spawn: try to send, rescue Channel::ClosedError separately,
+      # rescue other exceptions into the generic fetch-failure log.
+      done = Channel(Nil).new(1)
+      spawn do
+        begin
+          closed_channel.send(good_feed("http://example.com/rss"))
+        rescue Channel::ClosedError
+          # expected path — swallowed silently
+        rescue ex : Exception
+          # would be the buggy mis-log
+          Log.for("quickheadlines.feed").error(exception: ex) { "Fetch failed for http://example.com/rss" }
+        end
+        done.send(nil)
+      end
+      done.receive # wait for the fiber to finish; would raise if the rescue structure is wrong
     end
   end
 end

@@ -182,7 +182,7 @@ class QuickHeadlines::Controllers::ApiBaseController < Athena::Framework::Contro
     end
 
     status = begin
-      RefreshHealthMonitor.status
+      RefreshLoop::Monitoring.status
     rescue ex : NilAssertionError | TypeCastError
       Log.for("quickheadlines.health").warn { "Health status error: #{ex.class} #{ex.message}" }
       {last_start: 0_i64, last_complete: 0_i64, cycles: 0_i32, failures: 0_i32}
@@ -232,7 +232,7 @@ class QuickHeadlines::Controllers::ApiBaseController < Athena::Framework::Contro
 
     QuickHeadlines::DevRefreshSimulator.force_stuck!(seconds)
 
-    status = RefreshHealthMonitor.status
+    status = RefreshLoop::Monitoring.status
     QuickHeadlines::DTOs::HealthResponse.new(
       status[:last_start],
       status[:last_complete],
