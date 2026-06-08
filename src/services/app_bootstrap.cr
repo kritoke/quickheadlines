@@ -100,7 +100,7 @@ class AppBootstrap
           config = StateStore.config
           stuck_threshold = stuck_threshold_seconds(config)
 
-          unless RefreshHealthMonitor.stuck?(stuck_threshold)
+          unless RefreshLoop::Monitoring.stuck?(stuck_threshold)
             consecutive = 0
             next
           end
@@ -125,7 +125,7 @@ class AppBootstrap
   private def watchdog_recover(config : Config?, consecutive : Int32) : Int32
     Log.for("quickheadlines.watchdog").info { "Watchdog: attempting recovery (attempting atomic recovery)" }
 
-    if RefreshHealthMonitor.attempt_recovery
+    if RefreshLoop::Monitoring.attempt_recovery
       Log.for("quickheadlines.watchdog").info { "Watchdog: atomic recovery succeeded, repopulating StateStore from cache" }
       if config && FeedFetcher.load_feeds_from_cache(config)
         Log.for("quickheadlines.watchdog").info { "Watchdog: successfully repopulated StateStore from cache" }

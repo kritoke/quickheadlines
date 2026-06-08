@@ -3,6 +3,7 @@ require "../config"
 require "../models"
 require "../constants"
 require "./feed_fetcher"
+require "./monitoring"
 require "./semaphore_pool"
 
 # Per-feed concurrent fetch logic used by the refresh loop.
@@ -98,7 +99,7 @@ module RefreshLoop
     ) : Nil
       semaphore.acquire
       begin
-        RefreshHealthMonitor.feed_fetch_started
+        RefreshLoop::Monitoring.feed_fetch_started
         result = fetch_one_with_timeout(feed, config, previous_feed_data, index)
         begin
           channel.send(result)
@@ -112,7 +113,7 @@ module RefreshLoop
         rescue Channel::ClosedError
         end
       ensure
-        RefreshHealthMonitor.feed_fetch_completed
+        RefreshLoop::Monitoring.feed_fetch_completed
         semaphore.release
       end
     end
@@ -134,6 +135,14 @@ module RefreshLoop
         begin
           fetch_result = FeedFetcher.instance.fetch(feed, config.item_limit, config.db_fetch_limit, previous_feed_data)
           result_channel.send(fetch_result)
+        rescue Channel::ClosedError
+          # The outer fiber already closed the channel — either
+          # because the per-feed timeout fired, or because
+          # `fetch_all` closed the fan-in channel after collecting
+          # all results. The fetch itself may have completed or
+          # failed; either way the result is no longer wanted.
+          # This is not a fetch failure, so it must NOT be logged
+          # as one.
         rescue ex : Exception
           Log.for("quickheadlines.feed").error(exception: ex) { "Fetch failed for #{feed.url}" }
           begin

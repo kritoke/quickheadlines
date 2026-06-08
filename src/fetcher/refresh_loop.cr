@@ -9,8 +9,7 @@ require "./feed_fetcher"
 require "./feed_fetcher_concurrent"
 require "./semaphore_pool"
 require "./software_util"
-require "./refresh_health_monitor"
-require "./refresh_health_reporter"
+require "./monitoring"
 require "./refresh_supervisor"
 require "../services/gc_collector"
 require "../services/fiber_tracker"
@@ -58,7 +57,7 @@ module RefreshLoop
   # before pushing the result into `StateStore`.
   def self.refresh_all(config : Config, cache : FeedCache, db_service : DatabaseService, cancel_ch : Channel(Nil)? = nil) : Nil
     StateStore.update(&.copy_with(config_title: config.page_title, config: config))
-    RefreshHealthMonitor.record_cycle_start
+    RefreshLoop::Monitoring.record_cycle_start
 
     # Inlined from old `collect_feed_configs` — union of top-level
     # feeds and the feeds inside each tab, keyed by URL.
@@ -127,7 +126,7 @@ module RefreshLoop
     fetched_map = nil
 
     EventBroadcaster.notify_feed_update(StateStore.updated_at.to_unix_ms)
-    RefreshHealthMonitor.record_cycle_complete
+    RefreshLoop::Monitoring.record_cycle_complete
 
     GCCollector.collect_now
 
@@ -135,8 +134,8 @@ module RefreshLoop
       Log.for("quickheadlines.feed").debug { "refresh_all: complete - StateStore.feeds=#{new_feeds.size}, StateStore.tabs=#{new_tabs.size}" }
     end
   rescue ex : Exception
-    RefreshHealthMonitor.record_failure
-    RefreshHealthMonitor.record_cycle_complete
+    RefreshLoop::Monitoring.record_failure
+    RefreshLoop::Monitoring.record_cycle_complete
     raise ex
   end
 
@@ -149,13 +148,9 @@ module RefreshLoop
     # fibers are spawned below. The accessor is idempotent and cheap.
     pool
     RefreshLoop::Supervisor.start(config_path, cache, db_service, RefreshLoop.pool)
-    RefreshLoop::HealthReporter.start
+    RefreshLoop::Monitoring.start
   end
 end
-
-# Expose RefreshHealthMonitor at top level for existing callers (e.g., admin_controller, api_base_controller).
-# The module is now nested inside RefreshLoop but we re-export it for API compatibility.
-alias RefreshHealthMonitor = RefreshLoop::RefreshHealthMonitor
 
 # Public API — backward-compatible top-level entry points that delegate to
 # RefreshLoop module. This preserves the existing require/use surface without
