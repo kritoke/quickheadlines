@@ -4,6 +4,7 @@ require "../websocket"
 require "../services/memory_manager_actor"
 require "../services/fiber_tracker"
 require "./refresh_health_monitor"
+require "./interruptible_sleep"
 
 # Periodic health and memory reporter.
 #
@@ -18,37 +19,24 @@ require "./refresh_health_monitor"
 # Follows the convention already established by
 # `src/fetcher/refresh_health_monitor.cr` (one file, one concern,
 # public class-level methods on a `RefreshLoop::*` sub-module).
+#
+# The chunked-sleep primitive used to live here as a private
+# `interruptible_sleep`; it now lives in
+# `RefreshLoop::InterruptibleSleep` and is shared with the
+# supervisor.
 module RefreshLoop
   module HealthReporter
     REPORT_INTERVAL = 5.minutes
-    SHUTDOWN_CHUNK  = 30.seconds
 
     def self.start : Nil
       spawn(name: "health_monitor_reporter") do
         loop do
           break if QuickHeadlines.shutting_down?
-          interruptible_sleep(REPORT_INTERVAL)
+          RefreshLoop::InterruptibleSleep.sleep(REPORT_INTERVAL)
           break if QuickHeadlines.shutting_down?
           report_status
         rescue ex : Exception
           Log.for("quickheadlines.feed").error(exception: ex) { "Health monitor reporter error" }
-        end
-      end
-    end
-
-    # Sleeps for `total`, broken into SHUTDOWN_CHUNK-sized waits that
-    # check `QuickHeadlines.shutting_down?` between each. Kept local
-    # because the parent module's `interruptible_sleep` is private to
-    # `RefreshLoop` and not reachable from a sub-module. If a shared
-    # sleep utility is extracted later (ticket `quickhea-az6.5` /
-    # `quickhea-az6.7`), this can be replaced with that helper.
-    private def self.interruptible_sleep(total : Time::Span) : Nil
-      elapsed = Time::Span.zero
-      while elapsed < total && !QuickHeadlines.shutting_down?
-        step = {SHUTDOWN_CHUNK, total - elapsed}.min
-        select
-        when timeout(step)
-          elapsed += step
         end
       end
     end

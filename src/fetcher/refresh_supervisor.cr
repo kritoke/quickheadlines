@@ -8,6 +8,7 @@ require "../services/gc_collector"
 require "../services/memory_manager_actor"
 require "../websocket"
 require "./feed_fetcher_concurrent"
+require "./interruptible_sleep"
 require "./refresh_health_monitor"
 require "./semaphore_pool"
 
@@ -18,6 +19,10 @@ require "./semaphore_pool"
 # - The main supervisor loop (stuck-recovery, semaphore health, first-run
 #   vs. regular cycle, sleep between cycles, heartbeat)
 # - Configuration reload and validation
+#
+# The Supervisor used to own a private `interruptible_sleep` helper;
+# that primitive now lives in `RefreshLoop::InterruptibleSleep` and
+# is shared with the health reporter.
 # - The periodic health/memory reporter kick-off
 #
 # Public API: `Supervisor.start(config_path, cache, db_service, semaphore)`
@@ -31,7 +36,6 @@ module RefreshLoop
   class Supervisor
     RESTART_DELAY_AFTER_ERROR  = 60.seconds
     HEARTBEAT_INTERVAL         = 10
-    DEFAULT_SLEEP_CHUNK        = 30.seconds
     LONG_REFRESH_DURATION_WARN = 120.seconds
 
     def self.start(config_path : String, cache : FeedCache, db_service : DatabaseService, semaphore : SemaphorePool) : Nil
@@ -105,7 +109,7 @@ module RefreshLoop
     private def run_first_cycle : Nil
       @state.mark_first_run_done
       run_initial_refresh
-      interruptible_sleep(@state.refresh_interval_seconds.seconds)
+      RefreshLoop::InterruptibleSleep.sleep(@state.refresh_interval_seconds.seconds)
       if QuickHeadlines.shutting_down?
         # Signal cancellation to the in-flight initial refresh so the
         # worker can exit cleanly instead of running to completion in
@@ -132,7 +136,7 @@ module RefreshLoop
       StateStore.refreshing = false
       RefreshHealthMonitor.record_failure
       @state.reset_cycle_count
-      interruptible_sleep(RESTART_DELAY_AFTER_ERROR)
+      RefreshLoop::InterruptibleSleep.sleep(RESTART_DELAY_AFTER_ERROR)
     end
 
     # Sleep for up to `total` duration, broken into `chunk`-sized
@@ -142,19 +146,6 @@ module RefreshLoop
     # adds a hard ceiling: if non-nil, the loop exits when elapsed >=
     # outer_cap even if `total` has not been reached. Default chunk is
     # 30s which gives a responsive shutdown signal without burning CPU.
-    private def interruptible_sleep(total : Time::Span, outer_cap : Time::Span? = nil, chunk : Time::Span = DEFAULT_SLEEP_CHUNK) : Time::Span
-      cap = outer_cap || total
-      elapsed = Time::Span.zero
-      while elapsed < total && elapsed < cap && !QuickHeadlines.shutting_down?
-        step = {chunk, total - elapsed, cap - elapsed}.min
-        select
-        when timeout(step)
-          elapsed += step
-        end
-      end
-      elapsed
-    end
-
     private def check_stuck_recovery : Nil
       return unless RefreshHealthMonitor.stuck?(@state.stuck_threshold_seconds)
 
@@ -297,7 +288,7 @@ module RefreshLoop
     private def sleep_between_cycles : Nil
       sleep_duration = @state.refresh_interval_seconds.seconds
       outer_sleep_timeout = @state.sleep_timeout_seconds.seconds
-      elapsed = interruptible_sleep(sleep_duration, outer_sleep_timeout)
+      elapsed = RefreshLoop::InterruptibleSleep.sleep(sleep_duration, outer_cap: outer_sleep_timeout)
 
       if elapsed >= outer_sleep_timeout && !QuickHeadlines.shutting_down?
         Log.for("quickheadlines.feed").error { "refresh loop sleep timed out after #{outer_sleep_timeout.total_seconds.round}s" }
