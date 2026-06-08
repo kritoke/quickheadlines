@@ -75,7 +75,13 @@ module RefreshLoop
     end
 
     # Resolve the best available data for a feed.
-    # Priority: fresh-good > stale-good > fresh-bad > stale-bad > synthetic error
+    # Priority: any good value (fetched first, then existing) >
+    # any bad value (fetched first, then existing) > synthetic
+    # error. In other words: prefer a known-good value; if
+    # neither is good, take whatever we have; build an error only
+    # when both fetched and existing are nil. Freshness does not
+    # matter — the order is "fetched before existing" within each
+    # tier because fetched carries the most recent signal.
     def self.best_available_feed(feed : Feed, fetched : FeedData?, existing : FeedData?) : FeedData
       return fetched if fetched && !fetched.failed?
       return existing if existing && !existing.failed?
