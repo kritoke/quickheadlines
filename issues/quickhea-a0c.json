@@ -1,0 +1,14 @@
+{
+  "assignee": "",
+  "blocked_by": [],
+  "blocks": [],
+  "created": "2026-06-08T18:04:25Z",
+  "description": "## Goal\n\nTwo small cleanups in `src/fetcher/monitoring.cr` that the code\nreview flagged as \"should-fix\":\n\n1. `Monitoring.stuck?(max_age_seconds)` currently returns\n   `false` when the supervisor has NEVER run a cycle\n   (`@@last_refresh_start == 0`). The contract is\n   \"false = healthy, true = stuck\", and \"never started\" is\n   actually a third state. Currently safe because\n   `app_bootstrap.cr:103` only calls `stuck?` after at least\n   one refresh attempt, but the implicit contract is fragile.\n\n2. `Monitoring.attempt_recovery` has a redundant check at\n   the end: `old_value = @@last_refresh_start.get; return false\n   if old_value == 0` — the top of the method already returned\n   for `start_time == 0`, and `start_time` and `old_value` were\n   read from the same atomic. Pre-existing (carried over from\n   the original `RefreshHealthMonitor.attempt_recovery`), but\n   it's a 1-line cleanup while we're in the file.\n\n## Why now\n\nBoth are in the same file and the same method cluster. Cheap\nto fix together. The cleanup also makes the contract more\nexplicit, which helps anyone who later calls these methods\nfrom a different entry point (e.g. a future health-check\nendpoint).\n\n## Design\n\nFor the `stuck?` never-started case, the safest fix is to keep\nthe current behavior (return `false`) but document it\nexplicitly:\n\n```crystal\ndef self.stuck?(max_age_seconds : Int32) : Bool\n  start_time = @@last_refresh_start.get\n  # Never-started is treated as \"not stuck\" — there is no\n  # cycle to time out. Callers that need a tri-state\n  # distinction can check `Monitoring.status[:last_start] != 0`\n  # before calling `stuck?`.\n  return false if start_time == 0\n  ...\nend\n```\n\nThe `attempt_recovery` cleanup:\n\n```crystal\ndef self.attempt_recovery : Bool\n  start_time = @@last_refresh_start.get\n  return false if start_time == 0\n  last_complete = @@last_refresh_complete.get\n  return false if last_complete \u003e start_time\n  @@last_refresh_start.set(0)\n  Log.for(\"quickheadlines.feed\").info { \"Monitoring: atomic recovery performed\" }\n  true\nend\n```\n\n## Acceptance\n\n- The comment on `stuck?` explains the never-started case\n- The redundant `old_value` line is removed from\n  `attempt_recovery`\n- The merged-module spec (added by the parallel\n  quickhea-X1 ticket) covers both behaviors\n- Full suite passes\n- `just nix-build` succeeds",
+  "id": "quickhea-a0c",
+  "labels": [],
+  "priority": 3,
+  "status": "open",
+  "title": "Clarify Monitoring.stuck? semantics and clean up attempt_recovery",
+  "type": "task",
+  "updated_at": "2026-06-08T18:04:25Z"
+}
