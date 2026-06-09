@@ -101,6 +101,12 @@ class MemoryManagerActor < Actor
   def_call get_rss_mb, Float64
   def_call get_memory_status, MemoryStatus
   def_call get_cleanup_status, CleanupStatus
+  # Capture a process memory snapshot to a directory under /tmp and
+  # return the directory path. If `deep` is true, also runs `gcore`
+  # to write a full process core dump (multi-GB, invasive). See
+  # ticket quickhea-qm4 - this is the cheapest diagnostic for the
+  # 4 GB / 22h leak we observed.
+  def_call dump_heap(deep : Bool), String
 
   # Cast messages (fire-and-forget)
   def_cast check_and_gc
@@ -150,6 +156,7 @@ class MemoryManagerActor < Actor
     when CallGetRssMb                 then message.deliver_reply_json(handle_get_rss_mb.to_json)
     when CallGetMemoryStatus          then message.deliver_reply_json(handle_get_memory_status.to_json)
     when CallGetCleanupStatus         then message.deliver_reply_json(handle_get_cleanup_status.to_json)
+    when CallDumpHeap                 then message.deliver_reply_json(handle_dump_heap(message.deep).to_json)
     when CastCheckAndGc               then handle_check_and_gc
     when CastSetThreshold             then handle_set_threshold(message.max_rss_mb)
     when CastRequestCleanup           then handle_request_cleanup(message.priority)
@@ -171,6 +178,80 @@ class MemoryManagerActor < Actor
     rss = read_rss_mb
     pressure = calculate_pressure(rss)
     MemoryStatus.new(rss, pressure, @last_gc_time, @gc_count)
+  end
+
+  # Captures a process memory snapshot for offline analysis.
+  #
+  # Crystal's GC module (Boehm) does not expose a `dump_heap_to`
+  # function, so we cannot write a full heap dump from inside the
+  # process. Instead, we capture what we CAN get from /proc/<pid>:
+  #
+  # - /proc/<pid>/{maps,smaps,smaps_rollup,status,cmdline,stat,statm,io,limits}
+  # - Crystal's GC.stats (heap_size, free_bytes, total_bytes)
+  # - Crystal's current fiber name (1.18 has no Fiber.list)
+  # - The current MemoryStatus as JSON
+  #
+  # These tell us:
+  # - Whether the heap grew (GC.stats.heap_size vs VmData)
+  # - How many live fibers we have (via FiberTracker once wired)
+  # - Where the RSS lives (anonymous heap pages vs file-backed mmap)
+  # - Which VMAs are biggest (might catch a runaway mmap)
+  #
+  # If `deep` is true, also runs `gcore` to write a full process
+  # core dump. That file is multi-GB and invasive (brief pause)
+  # but is the gold-standard for offline heap analysis with gdb.
+  private def handle_dump_heap(deep : Bool) : String
+    timestamp = Time.utc.to_s("%Y%m%dT%H%M%S")
+    dir = "/tmp/qh-snap-#{timestamp}"
+    Dir.mkdir_p(dir)
+    pid = Process.pid
+
+    safe_proc_read(pid, "maps",         "#{dir}/proc-maps.txt")
+    safe_proc_read(pid, "smaps",        "#{dir}/proc-smaps.txt")
+    safe_proc_read(pid, "smaps_rollup", "#{dir}/proc-smaps-rollup.txt")
+    safe_proc_read(pid, "status",       "#{dir}/proc-status.txt")
+    safe_proc_read(pid, "cmdline",      "#{dir}/proc-cmdline.txt")
+    safe_proc_read(pid, "stat",         "#{dir}/proc-stat.txt")
+    safe_proc_read(pid, "statm",        "#{dir}/proc-statm.txt")
+    safe_proc_read(pid, "io",           "#{dir}/proc-io.txt")
+    safe_proc_read(pid, "limits",       "#{dir}/proc-limits.txt")
+
+    File.write("#{dir}/crystal-gc-stats.txt", GC.stats.inspect)
+    # Crystal 1.18 does not expose Fiber.list. The fiber wiring work
+    # (ticket quickhea-hc7) will add visibility through
+    # RefreshLoop::FiberTracker. For now we record the current
+    # fiber name as a sanity check.
+    File.write("#{dir}/crystal-current-fiber.txt", Fiber.current.name || "(unnamed)")
+    File.write("#{dir}/crystal-memory-status.txt", handle_get_memory_status.to_json)
+
+    if deep
+      core_path = "#{dir}/core"
+      Log.for("quickheadlines.memory").warn do
+        "Deep heap dump requested: gcore will pause the process briefly"
+      end
+      Process.run("gcore", ["#{pid}", core_path])
+      if File.exists?(core_path)
+        size_mb = File.info(core_path).size.to_f64 / 1024 / 1024
+        Log.for("quickheadlines.memory").info do
+          "Core dump written: #{core_path} (#{size_mb.round(1)}MB)"
+        end
+      end
+    end
+
+    dir
+  end
+
+  # Best-effort /proc read: copies `<proc>/<file>` to `dest`. Errors
+  # are logged but don't fail the dump.
+  private def safe_proc_read(pid : Int64, file : String, dest : String) : Nil
+    content = File.read("/proc/#{pid}/#{file}")
+    File.write(dest, content)
+  rescue ex : Exception
+    # /proc fields are not always readable (e.g., /proc/<pid>/io
+    # requires CAP_SYS_PTRACE on some kernels). Log and continue.
+    Log.for("quickheadlines.memory").debug do
+      "Could not read /proc/#{pid}/#{file}: #{ex.message}"
+    end
   end
 
   private def handle_check_and_gc : Nil

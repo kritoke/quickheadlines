@@ -184,7 +184,9 @@ class QuickHeadlines::Controllers::AdminController < QuickHeadlines::Controllers
     content_service = QuickHeadlines::Services::ContentService.instance
     min_length = 200 # Only store articles with substantial content
     deleted = content_service.cleanup_low_quality_content(min_length)
-    Log.for("quickheadlines.admin").info { "Low-quality content cleanup deleted #{deleted} articles" }
+    Log.for("quickheadlines.admin").info do
+      "Low-quality content cleanup deleted #{deleted} articles"
+    end
   end
 
   private def collect_config_feed_urls : Set(String)
@@ -272,5 +274,38 @@ class QuickHeadlines::Controllers::AdminController < QuickHeadlines::Controllers
       updated_at: StateStore.updated_at.to_unix_ms,
       clustering: StateStore.clustering?,
     )
+  end
+
+  # Capture a process memory snapshot to a directory under /tmp
+  # and return the path. Pass `?deep=1` to also run `gcore` for a
+  # full core dump (multi-GB, invasive). The file(s) can be
+  # tar'd and scp'd off the box for offline analysis.
+  #
+  # What's captured by default:
+  # - /proc/<pid>/{maps,smaps,smaps_rollup,status,cmdline,stat,statm,io,limits}
+  # - Crystal's GC.stats (heap_size, free_bytes, etc.)
+  # - Crystal's live fiber names (one per line)
+  # - The current MemoryStatus as JSON
+  #
+  # With `?deep=1`, also adds:
+  # - /tmp/qh-snap-<ts>/core (full process core via gcore)
+  @[ARTA::Get(path: "/api/admin/heap_dump")]
+  def heap_dump(request : AHTTP::Request) : Hash(String, String)
+    raise AHK::Exception::HTTPException.new(401, "Unauthorized") unless check_admin_auth(request)
+
+    deep = request.query_params["deep"]? == "1"
+    path = MemoryManagerActor.instance.dump_heap(deep)
+    rss_mb = MemoryManagerActor.instance.get_rss_mb
+
+    Log.for("quickheadlines.admin").info do
+      "Memory snapshot requested: path=#{path}, deep=#{deep}, rss=#{rss_mb.round(1)}MB, by=#{client_ip(request)}"
+    end
+
+    {
+      "path"       => path,
+      "deep"       => deep.to_s,
+      "rss_mb"     => rss_mb.round(2).to_s,
+      "created_at" => Time.utc.to_s("%Y-%m-%dT%H:%M:%SZ"),
+    }
   end
 end
