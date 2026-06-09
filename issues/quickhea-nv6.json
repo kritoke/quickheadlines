@@ -1,0 +1,14 @@
+{
+  "assignee": "",
+  "blocked_by": [],
+  "blocks": [],
+  "created": "2026-06-09T10:46:51Z",
+  "description": "## Goal\n\nThree long-lived periodic fibers in `src/services/app_bootstrap.cr`\nuse plain `sleep` instead of the shared `InterruptibleSleep`\nhelper that was extracted in `quickhea-aiu`:\n\n- `start_watchdog` (line 93): `sleep(QuickHeadlines::Constants::WATCHDOG_INTERVAL_SECONDS)`\n- `start_cleanup_scheduler` (line 245): `sleep(@cleanup_interval)`\n- `start_ws_janitor` (line 292): `sleep(@ws_janitor_interval)`\n\nThe shutdown sequence in `src/quickheadlines.cr` (lines 58, 79, 83)\nalso uses plain `sleep(5.seconds)`, `sleep(10.seconds)`,\n`sleep(30.seconds)`.\n\n## Why\n\nPlain `sleep` blocks for the full duration regardless of\n`QuickHeadlines.shutting_down?`. The `InterruptibleSleep.sleep`\nhelper chunks the wait into smaller intervals and checks the\nshutdown flag between each. The watchdog, cleanup, and janitor\nfibers can each delay shutdown by their full sleep interval\n(typically 30s-1h) even when a shutdown signal is pending.\n\n## Why this is part of the memory review\n\nThe shutdown path is not the leak itself, but it is the\n\"could be a leak\" path: if a long-lived fiber captures a\nlarge object in its closure, the plain `sleep` keeps the\nfiber alive, the fiber keeps the closure alive, and the closure\nkeeps the object alive. Switching to `InterruptibleSleep.sleep`\ngives the GC a chance to reclaim those objects when the\nfiber exits at shutdown.\n\n## Acceptance\n\n- All four `sleep` sites above use `InterruptibleSleep.sleep`\n- Build + spec + ameba clean\n- Boot smoke test: send SIGINT, server shuts down within 30s\n  (currently can take up to 30+1h)",
+  "id": "quickhea-nv6",
+  "labels": [],
+  "priority": 2,
+  "status": "open",
+  "title": "Replace plain sleep with InterruptibleSleep in long-lived periodic fibers",
+  "type": "task",
+  "updated_at": "2026-06-09T10:46:51Z"
+}
