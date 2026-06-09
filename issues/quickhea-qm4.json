@@ -2,13 +2,14 @@
   "assignee": "kritoke",
   "blocked_by": [],
   "blocks": [],
+  "closed_at": "2026-06-09T12:45:39Z",
   "created": "2026-06-09T10:46:51Z",
   "description": "## Goal\n\nAdd a way for an admin to dump the Crystal GC heap to a file\non demand, so we can see what's actually accumulating in\nmemory (the 4.3 GB / 80 GB VIRT after 22h).\n\n## Why\n\nWe have a real memory leak — 50 KB/sec sustained over 22h.\nThe candidates I've identified in the code review are all\nplausible, but without a heap dump we can't tell which is the\nreal culprit. The cheapest way to find out is to dump the\nheap, then `strings` + `sort | uniq -c | sort -rn | head` to\nsee what's most prevalent.\n\n## Design\n\nAdd a `def_call` to `MemoryManagerActor` that runs inside the\nactor (so the heap dump captures a consistent snapshot):\n\n```crystal\ndef_call dump_heap, String  # returns the path\n```\n\nImplementation: writes to `/tmp/qh-heap-\u003ctimestamp\u003e.dump` and\nreturns the path.\n\nAdd a `QuickHeadlines::Controllers::AdminController#heap_dump`\nendpoint at `GET /api/admin/heap_dump` (auth required) that\ncalls this and returns the path. The user can then `scp` the\nfile off the box and analyze it.\n\n## Acceptance\n\n- `GET /api/admin/heap_dump` (with admin auth) returns\n  `{\"path\": \"/tmp/qh-heap-...dump\"}` and the file exists\n- The dump file is parseable by Crystal tools (`strings | sort | uniq -c | sort -rn` shows the most common strings)\n- Build + spec + ameba clean\n- Boot smoke test: hitting the endpoint doesn't crash the\n  server",
   "id": "quickhea-qm4",
   "labels": [],
   "priority": 1,
-  "status": "in_progress",
+  "status": "closed",
   "title": "Add admin endpoint to dump Crystal GC heap",
   "type": "task",
-  "updated_at": "2026-06-09T10:47:09Z"
+  "updated_at": "2026-06-09T12:45:39Z"
 }
