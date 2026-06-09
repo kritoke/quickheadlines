@@ -1,5 +1,5 @@
 {
-  "assignee": "",
+  "assignee": "kritoke",
   "blocked_by": [],
   "blocks": [],
   "created": "2026-06-09T13:00:51Z",
@@ -7,8 +7,8 @@
   "id": "quickhea-a6t",
   "labels": [],
   "priority": 2,
-  "status": "open",
+  "status": "in_progress",
   "title": "Update fetcher.cr to latest upstream commit",
   "type": "chore",
-  "updated_at": "2026-06-09T13:00:51Z"
+  "updated_at": "2026-06-09T13:01:07Z"
 }
