@@ -1,0 +1,14 @@
+{
+  "assignee": "",
+  "blocked_by": [],
+  "blocks": [],
+  "created": "2026-06-09T10:46:51Z",
+  "description": "## Goal\n\nThe Crystal GC runs minor collections automatically, but full\ncollections (which defragment the heap) only happen rarely. In\nthe 22h uptime we observed, the heap grew to 80 GB VIRT with\n4.3 GB committed — full GC may not have run in a long time.\n\n`GCCollector.maybe_collect` (src/fetcher/gc_collector.cr) does\ntrigger a GC every 5 minutes, but only if called. The\nsupervisor calls it after each refresh cycle, so if the\nrefresh interval is 30 min, GC runs every 30 min. That's\nfine for normal operation but may not be enough if a memory\nleak is happening between cycles.\n\n## Design\n\nAdd a periodic full GC trigger in `MemoryManagerActor`:\n- Every 30 min, run `GC.collect` twice (Crystal's recommended\n  pattern for full collection)\n- Log the heap size before/after so we can see the effect\n- Don't force a GC on the hot path; only via a timer fiber\n\nOr, more conservative: just lower the threshold in\n`GCCollector` from 5 min to 1 min so it runs more often. The\nsupervisor already calls `maybe_collect` after each cycle, so\nthe new timer just provides a backstop.\n\n## Why this might help\n\nIf the leak is \"objects are kept alive\", forcing GC won't help.\nIf the leak is \"GC isn't running often enough to keep up\",\nforcing GC will reveal the rate of allocation. Either way,\nit gives us data.\n\n## Acceptance\n\n- A timer triggers a forced GC at a configurable interval\n- The reporter logs the heap size before/after each forced GC\n- Build + spec + ameba clean",
+  "id": "quickhea-hwp",
+  "labels": [],
+  "priority": 3,
+  "status": "open",
+  "title": "Add periodic forced full GC to MemoryManagerActor",
+  "type": "task",
+  "updated_at": "2026-06-09T10:46:51Z"
+}
