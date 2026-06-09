@@ -1,0 +1,14 @@
+{
+  "assignee": "",
+  "blocked_by": [],
+  "blocks": [],
+  "created": "2026-06-09T10:46:51Z",
+  "description": "## Goal\n\n`RefreshLoop::FiberTracker` exists with `track_spawn` /\n`track_exit` / `stats` methods, but **no spawn site calls them**.\nThe counters never increment, so the periodic reporter\n(`Monitoring.report_status`) reports `active=0, peak=0, spawns=0`\neven on a long-running server with dozens of long-lived fibers.\n\n## Why\n\nThe fiber spawn sites live in:\n- src/services/app_bootstrap.cr (7 sites)\n- src/services/memory_manager_actor.cr (1 site)\n- src/infrastructure/actor.cr (1 site — the run_loop)\n- src/controllers/admin_controller.cr (2 sites)\n- src/quickheadlines.cr (4 sites)\n- src/websocket/event_broadcaster.cr (1 site)\n- src/websocket/socket_manager.cr (1 site — spawn_writer_fiber)\n- src/fetcher/monitoring.cr (1 site)\n- src/fetcher/feed_fetcher_concurrent.cr (2 sites)\n- src/fetcher/refresh_supervisor.cr (3 sites)\n\nThat's ~23 spawn sites. Without wiring, we have **no visibility\ninto fiber accumulation** — if a spawn pattern leaks (e.g., the\nper-connection writer fiber in `socket_manager.cr`), we won't\nsee it.\n\n## Design\n\nOption A (minimal): add `track_spawn` before each `spawn do` and\n`track_exit` in an `ensure` block at the end of the spawned\nblock. ~46 line changes.\n\nOption B (cleaner): introduce a helper\n`RefreshLoop::FiberTracker.tracked_spawn(name, \u0026block)` that does\nthe wiring in one place, then change each `spawn do` to use it.\n\nRecommendation: **Option B**. One helper, then 23 call-site\nchanges (each is a one-line change to use the helper).\n\n## Acceptance\n\n- Every `spawn` in src/ uses `FiberTracker.tracked_spawn`\n- After running the app for an hour, `Monitoring.report_status`\n  reports non-zero `active` and `peak` (currently always 0)\n- Build + spec + ameba clean\n- Boot smoke test: server starts, fiber count \u003e 0 in the\n  reporter log",
+  "id": "quickhea-hc7",
+  "labels": [],
+  "priority": 2,
+  "status": "open",
+  "title": "Wire FiberTracker into the actual spawn sites",
+  "type": "task",
+  "updated_at": "2026-06-09T10:46:51Z"
+}
