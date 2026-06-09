@@ -1,0 +1,14 @@
+{
+  "assignee": "",
+  "blocked_by": [],
+  "blocks": [],
+  "created": "2026-06-09T13:00:51Z",
+  "description": "## Goal\n\nThe `fetcher` shard is pinned to `3a038c66085e1926ecc715df2275f50a4e7be36d`.\nThe upstream `kritoke/fetcher.cr` is at `283326b` with 13 new\ncommits, including:\n- DNS cache extraction (better SSRF/memory profile)\n- Reddit OAuth (bypass datacenter IP blocks)\n- Various SSRF and thread-safety fixes\n- Code-quality refactors\n\nUpdate to the latest.\n\n## Why\n\n- The P0 memory investigation (quickhea-alz) is ongoing; the\n  DNS cache extraction in the upstream is a candidate for\n  improving the memory profile.\n- We are 13 commits behind on security fixes (SSRF, IPv6\n  detection) and stability improvements (semaphore race,\n  fiber error handling).\n\n## How\n\n\\`\\`\\`\nnix develop . --command shards update fetcher\n\\`\\`\\`\n\nThis will:\n1. Fetch the latest commit from `kritoke/fetcher.cr`\n2. Update `shard.lock` and `lib/fetcher/` vendored copy\n3. Re-resolve the transitive dependency graph\n\n## Acceptance\n\n- `shard.yml` and `shard.lock` point to the new commit\n- `lib/fetcher/` is updated\n- `just nix-build` succeeds\n- `nix develop . --command crystal spec` still passes (231+ examples)\n- `nix develop . --command ameba` clean\n- Boot smoke test: server starts, refresh cycle runs, feeds are fetched without error",
+  "id": "quickhea-a6t",
+  "labels": [],
+  "priority": 2,
+  "status": "open",
+  "title": "Update fetcher.cr to latest upstream commit",
+  "type": "chore",
+  "updated_at": "2026-06-09T13:00:51Z"
+}
