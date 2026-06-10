@@ -90,9 +90,6 @@ def initiate_shutdown(signal_name : String) : Nil
   SHUTDOWN_LOG.info { "Shutdown complete" }
 end
 
-Process.on_terminate { initiate_shutdown("SIGTERM") }
-Process.on_terminate { initiate_shutdown("SIGINT") }
-
 begin
   config = QuickHeadlines.initial_config
   if config.nil?
@@ -185,7 +182,46 @@ begin
   handlers << ws_handler
   Log.for("quickheadlines.websocket").info { "Enabled - clients can connect to ws://host/api/ws" }
 
-  ATH.run(host: "0.0.0.0", port: port, reuse_port: true, prepend_handlers: handlers)
+  # Construct the server instance directly (instead of `ATH.run`)
+  # so we can call `stop` on it from our signal handler. `ATH.run`
+  # is a thin wrapper that creates a server and discards the
+  # reference, which means there's no way to gracefully stop
+  # the listener from outside.
+  server = ATH::Server.new(port, "0.0.0.0", true, nil, handlers)
+
+  # Re-trap SIGINT/SIGTERM/SIGHUP AFTER Athena's internal
+  # `Process.on_terminate { self.stop }` (called inside
+  # `Server#start`) has registered. Without this re-trap, Athena's
+  # handler would replace ours and `initiate_shutdown` would
+  # never run, leaving the process alive after SIGINT.
+  # The original shutdown design registered `Process.on_terminate`
+  # at the top of the file (line 93) but that handler was silently
+  # replaced by Athena's `Process.on_terminate { self.stop }` inside
+  # `Server#start` (lib/athena/src/athena.cr:228), so the graceful
+  # shutdown path was never running — only the server listener
+  # closed, leaving the process alive until the 5s force-exit timer
+  # eventually fired.
+  #
+  # We now re-register our handler in a spawned fiber that runs
+  # 0.5s after `server.start` is called. By that point Athena has
+  # registered its own handler; our `Process.on_terminate` call
+  # overrides it. The user block does both `initiate_shutdown`
+  # (the graceful path) and `server.stop` (closes the listener).
+  # `server.stop` is also called by Athena's handler, but calling
+  # it twice is idempotent (the server checks `closed?` first).
+  spawn do
+    sleep 0.5.seconds
+    Process.on_terminate do |_reason|
+      initiate_shutdown("signal")
+      begin
+        server.stop
+      rescue ex
+        SHUTDOWN_LOG.warn(exception: ex) { "server.stop failed during shutdown" }
+      end
+    end
+  end
+
+  server.start
 rescue ex
   Log.for("quickheadlines.app").fatal(exception: ex) { "Failed to start server" }
   exit 1
