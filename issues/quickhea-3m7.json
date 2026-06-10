@@ -1,0 +1,14 @@
+{
+  "assignee": "",
+  "blocked_by": [],
+  "blocks": [],
+  "created": "2026-06-10T10:23:55Z",
+  "description": "fetcher.cr HEAD moved from 283326b4 to fab9dff5 since the last update (quickhea-a6t). Single commit refactor: moves with_cache body from CrestHttpClient shim into HeaderBuilder.with_cache, reduces CrestHttpClient.with_cache to a thin delegate. Public API unchanged. Test by running crystal spec and just nix-build, then merge.",
+  "id": "quickhea-3m7",
+  "labels": [],
+  "priority": 2,
+  "status": "open",
+  "title": "Update fetcher.cr to upstream fab9dff5 (HeaderBuilder.with_cache refactor)",
+  "type": "chore",
+  "updated_at": "2026-06-10T10:23:55Z"
+}
