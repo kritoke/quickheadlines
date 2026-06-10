@@ -200,27 +200,15 @@ body::-webkit-scrollbar-thumb:hover {
 	scrollbar-color: var(--color-surface-300, #e2e8f0) transparent;
 }
 
-/* iOS momentum scrolling */
-.ios-scroll {
-	-webkit-overflow-scrolling: touch;
-}
-
-/* iOS scroll bounce fix - prevents scroll issues when switching views */
-html.ios-device, html.ios-device body {
-	height: 100%;
-	overflow: hidden;
-}
-
-html.ios-device #app {
-	height: 100%;
-	overflow-y: auto;
-	overflow-x: hidden;
-	-webkit-overflow-scrolling: touch;
-}
-
-/* Prevent overscroll bounce on iOS */
+/* iOS scroll bounce fix - prevent overscroll on the root element */
 html.ios-device {
 	overscroll-behavior: none;
+}
+
+/* Let the body scroll naturally on iOS — no need for #app to be the scroll
+   container. This avoids the fixed header overlapping the scrollbar. */
+html.ios-device body {
+	-webkit-overflow-scrolling: touch;
 }
 
 /* iOS touch action - enables smooth scrolling */
