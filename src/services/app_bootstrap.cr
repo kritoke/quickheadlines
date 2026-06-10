@@ -11,6 +11,7 @@ require "azurite"
 require "./memory_manager_actor"
 require "./memory_budget"
 require "../services/fiber_tracker"
+require "../fetcher/interruptible_sleep"
 
 class AppBootstrap
   @config : Config
@@ -96,7 +97,7 @@ class AppBootstrap
       loop do
         begin
           break if QuickHeadlines.shutting_down?
-          sleep(QuickHeadlines::Constants::WATCHDOG_INTERVAL_SECONDS)
+          RefreshLoop::InterruptibleSleep.sleep(QuickHeadlines::Constants::WATCHDOG_INTERVAL_SECONDS)
 
           config = StateStore.config
           stuck_threshold = stuck_threshold_seconds(config)
@@ -150,7 +151,7 @@ class AppBootstrap
         success = true
         break
       end
-      sleep(QuickHeadlines::Constants::WATCHDOG_RETRY_INTERVAL_SECONDS)
+      RefreshLoop::InterruptibleSleep.sleep(QuickHeadlines::Constants::WATCHDOG_RETRY_INTERVAL_SECONDS)
     end
 
     if success
@@ -214,7 +215,7 @@ class AppBootstrap
     RefreshLoop::FiberTracker.tracked_spawn do
       loop do
         begin
-          sleep(@clustering_interval)
+          RefreshLoop::InterruptibleSleep.sleep(@clustering_interval)
           break if QuickHeadlines.shutting_down?
           # ClusteringActor handles "already in progress" check internally
           threshold = StateStore.config.try(&.clustering).try(&.threshold) || 0.35
@@ -230,7 +231,7 @@ class AppBootstrap
     run_on_startup = @config.clustering.try(&.run_on_startup?)
     if run_on_startup != false
       RefreshLoop::FiberTracker.tracked_spawn do
-        sleep(QuickHeadlines::Constants::INITIAL_CLUSTER_DELAY)
+        RefreshLoop::InterruptibleSleep.sleep(QuickHeadlines::Constants::INITIAL_CLUSTER_DELAY)
         begin
           Log.for("quickheadlines.app").info { "Running initial clustering on startup..." }
           threshold = @config.clustering.try(&.threshold) || 0.35
@@ -245,7 +246,7 @@ class AppBootstrap
   private def start_cleanup_scheduler
     RefreshLoop::FiberTracker.tracked_spawn do
       loop do
-        sleep(@cleanup_interval)
+        RefreshLoop::InterruptibleSleep.sleep(@cleanup_interval)
         break if QuickHeadlines.shutting_down?
         begin
           # Check memory pressure and adjust cleanup priority
@@ -292,7 +293,7 @@ class AppBootstrap
   private def start_ws_janitor
     RefreshLoop::FiberTracker.tracked_spawn do
       loop do
-        sleep(@ws_janitor_interval)
+        RefreshLoop::InterruptibleSleep.sleep(@ws_janitor_interval)
         break if QuickHeadlines.shutting_down?
         begin
           removed = SocketManager.instance.cleanup_dead_connections

@@ -102,7 +102,7 @@ module RefreshLoop
         false
       else
         Log.for("quickheadlines.feed").warn { "Refresh already in progress, skipping (#{skip_count}/#{State::MAX_CONSECUTIVE_SKIPS})" }
-        sleep @state.refresh_interval_seconds.seconds
+        RefreshLoop::InterruptibleSleep.sleep(@state.refresh_interval_seconds.seconds)
         true
       end
     end
