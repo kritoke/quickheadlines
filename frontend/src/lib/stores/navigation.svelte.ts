@@ -18,7 +18,7 @@ export function saveScroll(path: string): void {
 	if (typeof window === 'undefined') return;
 	try {
 		const container = getScrollContainer();
-		const top = container === window ? getScrollTop(window) : container.scrollTop || 0;
+		const top = container === window ? getScrollTop(window) : (container as HTMLElement).scrollTop || 0;
 		state.scrollPositions.set(path, top);
 	} catch {
 		state.scrollPositions.set(path, getScrollTop(window));

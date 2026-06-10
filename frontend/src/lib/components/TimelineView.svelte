@@ -292,7 +292,7 @@
 		margin: 0;
 		padding: var(--spacing-sm, 0.5rem) 0;
 		position: sticky;
-		top: 3.5rem;
+		top: 0;
 		background-color: var(--color-surface-50, #f9fafb);
 		z-index: 10;
 	}
@@ -304,7 +304,7 @@
 
 	@media (min-width: 640px) {
 		.date-header {
-			top: 4rem;
+			top: 0;
 			font-size: 1.125rem;
 		}
 	}

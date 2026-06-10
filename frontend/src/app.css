@@ -160,9 +160,11 @@ body::-webkit-scrollbar-thumb:hover {
 
 #app {
 	width: 100vw;
-	min-height: 100vh;
-	min-height: 100dvh;
-	overflow-x: hidden;
+	height: 100vh;
+	height: 100dvh;
+	display: flex;
+	flex-direction: column;
+	overflow: hidden;
 }
 
 .auto-hide-scroll {

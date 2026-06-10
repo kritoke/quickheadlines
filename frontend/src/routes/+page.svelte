@@ -2,13 +2,11 @@
 	import FeedBox from '$lib/components/FeedBox.svelte';
 	import AppHeader from '$lib/components/AppHeader.svelte';
 	import TabSelector from '$lib/components/TabSelector.svelte';
-	import BitsSearchModal from '$lib/components/BitsSearchModal.svelte';
 	import LayoutPicker from '$lib/components/LayoutPicker.svelte';
 	import type { FeedResponse } from '$lib/types';
-	import { themeState, toggleEffects } from '$lib/stores/theme.svelte';
 	import { NavigationService } from '$lib/services/navigationService';
 	import { createFeedEffects } from '$lib/stores/effects.svelte';
-	import { logger, initDebug, setDebugEnabled } from '$lib/utils/debug';
+	import { logger, initDebug } from '$lib/utils/debug';
 	import { page } from '$app/stores';
 	import { onMount } from 'svelte';
 	import {
@@ -23,7 +21,7 @@
 		getError
 	} from '$lib/stores/feedStore.svelte';
 	import { layoutState, getFeedGridClass } from '$lib/stores/layout.svelte';
-	import { searchState, setSearchQuery, toggleSearch, closeSearch } from '$lib/stores/search.svelte';
+	import { searchState, toggleSearch } from '$lib/stores/search.svelte';
 	import { createLazyLoader } from '$lib/utils/lazyComponent';
 	import { getStoredTab } from '$lib/stores/tabStore.svelte';
 
@@ -37,14 +35,8 @@
 
 	let filteredFeeds = $derived(getFilteredFeeds(searchState.query));
 
-	let lastUpdated = $derived(
-		feedState.lastUpdated ? new Date(feedState.lastUpdated) : null
-	);
-
 	let loading = $derived(isLoading(feedState) || isRefreshing(feedState));
 	let error = $derived(isError(feedState) ? getError(feedState) : null);
-	let currentTab = $derived(feedState.activeTab);
-	let timelineLink = $derived('/timeline?tab=' + currentTab);
 
 	let feedGridClass = $derived(getFeedGridClass(layoutState.feedColumns));
 
@@ -127,7 +119,7 @@
 	</AppHeader>
 
 	{#if feedState.tabs.length > 0}
-		<div class="md:hidden fixed top-14 left-0 right-0 z-40 bg-surface-50 dark:bg-surface-950 border-b border-surface-200 dark:border-surface-700">
+		<div class="md:hidden sticky top-0 z-40 bg-surface-50 dark:bg-surface-950 border-b border-surface-200 dark:border-surface-700">
 			<TabSelector 
 				tabs={feedState.tabs}
 				activeTab={feedState.activeTab}
@@ -145,8 +137,8 @@
 		{/await}
 	{/if}
 
-	<main class="max-w-[1400px] mx-auto px-4 md:px-6 py-3 sm:py-5" style="padding-top: calc(var(--header-height, 3.5rem) + 0.25rem);">
-		<div class="h-8 md:hidden"></div>
+	<main class="flex-1 overflow-y-auto max-w-[1400px] mx-auto px-4 md:px-6 py-3 sm:py-5 w-full">
+
 		
 		{#if loading && feedState.feeds.length === 0}
 			<div class="flex items-center justify-center py-24 gap-3">
@@ -165,7 +157,7 @@
 			</div>
 		{:else}
 			{#if loading}
-				<div class="sticky top-[var(--header-height,3.5rem)] z-20 bg-surface-50 dark:bg-surface-950/90 backdrop-blur-sm py-3 flex items-center justify-center gap-2 border-b border-surface-200 dark:border-surface-700">
+				<div class="sticky top-0 z-20 bg-surface-50 dark:bg-surface-950/90 backdrop-blur-sm py-3 flex items-center justify-center gap-2 border-b border-surface-200 dark:border-surface-700">
 					<div class="w-4 h-4 border-2 border-primary-500 border-t-transparent rounded-full animate-spin"></div>
 					<span class="text-sm text-surface-700 dark:text-surface-300">Loading feeds...</span>
 				</div>
