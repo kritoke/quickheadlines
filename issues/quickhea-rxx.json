@@ -1,5 +1,5 @@
 {
-  "assignee": "",
+  "assignee": "kritoke",
   "blocked_by": [],
   "blocks": [],
   "created": "2026-06-10T00:50:46Z",
@@ -7,8 +7,8 @@
   "id": "quickhea-rxx",
   "labels": [],
   "priority": 2,
-  "status": "open",
+  "status": "in_progress",
   "title": "Update vug.cr to latest upstream commit",
   "type": "chore",
-  "updated_at": "2026-06-10T00:50:46Z"
+  "updated_at": "2026-06-10T00:51:27Z"
 }
