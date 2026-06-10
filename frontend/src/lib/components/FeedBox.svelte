@@ -3,9 +3,11 @@
 	import { formatTimestamp } from '$lib/api';
 	import { readModeState } from '$lib/stores/readMode.svelte';
 	import { breakpointState } from '$lib/utils/breakpoint.svelte';
-	import { getFaviconSrc } from '$lib/utils/feedItem';
+	import { getFaviconSrc, getHeaderStyle as getSharedHeaderStyle, getFaviconBgStyle as getSharedFaviconBgStyle } from '$lib/utils/feedItem';
 	import { feedState } from '$lib/stores/feedStore.svelte';
-	import { sanitizeUrl, sanitizeCssColor } from '$lib/utils/validation';
+	import { sanitizeUrl } from '$lib/utils/validation';
+	import CommentIcon from './icons/CommentIcon.svelte';
+	import DiscussionIcon from './icons/DiscussionIcon.svelte';
 	import { goto } from '$app/navigation';
 	import { cn } from '$lib/utils';
 
@@ -24,32 +26,9 @@
 		favicon_data: feed.favicon_data
 	}));
 
-	function resolveThemeColors(): { bg?: string; text?: string } | null {
-		if (!feed.header_theme_colors) return null;
-		const colors = document.documentElement.classList.contains('dark') ? feed.header_theme_colors.dark : feed.header_theme_colors.light;
-		if (!colors) return null;
-		return { bg: sanitizeCssColor(colors.bg), text: sanitizeCssColor(colors.text) };
-	}
-
-	function getHeaderStyle(): string {
-		const themeColors = resolveThemeColors();
-		if (themeColors) {
-			return `background-color: ${sanitizeCssColor(themeColors.bg!, '#64748b')}; color: ${sanitizeCssColor(themeColors.text!, '#ffffff')};`;
-		}
-		const bgColor = sanitizeCssColor(feed.header_color || '#64748b', '#64748b');
-		const textColor = sanitizeCssColor(feed.header_text_color || '#ffffff', '#ffffff');
-		return `background-color: ${bgColor}; color: ${textColor};`;
-	}
-
-	function getFaviconBgStyle(): string {
-		const themeColors = resolveThemeColors();
-		if (themeColors?.text) {
-			return `background-color: ${sanitizeCssColor(themeColors.text, '#ffffff')}20; border-color: ${sanitizeCssColor(themeColors.text, '#ffffff')}40`;
-		}
-		// Use a neutral background so white/transparent favicons are visible
-		// In dark mode, Tailwind handles the dark: variants
-		return 'background-color: #e2e8f0; border-color: #cbd5e1';
-	}
+	let isDark = $derived(document.documentElement.classList.contains('dark'));
+	let headerStyle = $derived(getSharedHeaderStyle(feed, isDark));
+	let faviconBgStyle = $derived(getSharedFaviconBgStyle(feed, isDark));
 
 	let feedLoading = $derived(feedState.status === 'loading' || feedState.status === 'refreshing');
 </script>
@@ -63,10 +42,10 @@
 		target="_blank"
 		rel="noopener noreferrer"
 		class="flex items-center gap-2 px-3 py-2 font-semibold text-sm hover:opacity-90 transition-opacity"
-		style={getHeaderStyle()}
+		style={headerStyle}
 	>
 		{#if feed.favicon || feed.favicon_data || faviconSrc}
-			<div class="w-5 h-5 rounded p-0.5 flex items-center justify-center shadow-sm shrink-0" style={getFaviconBgStyle()}>
+			<div class="w-5 h-5 rounded p-0.5 flex items-center justify-center shadow-sm shrink-0" style={faviconBgStyle}>
 				<img
 					src={faviconSrc}
 					alt="{feed.title} favicon"
@@ -127,9 +106,7 @@
 									title="Comments"
 									class="p-1 hover:opacity-80 transition-opacity"
 								>
-									<svg class="w-4 h-4 text-surface-700 dark:text-surface-300" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-										<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
-									</svg>
+									<CommentIcon class="w-4 h-4 text-surface-700 dark:text-surface-300" />
 								</a>
 							{/if}
 							{#if item.commentary_url && item.commentary_url !== item.comment_url}
@@ -140,9 +117,7 @@
 									title="Discussion"
 									class="p-1 hover:opacity-80 transition-opacity"
 								>
-									<svg class="w-4 h-4 text-surface-700 dark:text-surface-300" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-										<path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path>
-									</svg>
+									<DiscussionIcon class="w-4 h-4 text-surface-700 dark:text-surface-300" />
 								</a>
 							{/if}
 						</div>

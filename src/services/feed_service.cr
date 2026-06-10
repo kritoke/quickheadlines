@@ -106,6 +106,23 @@ module QuickHeadlines::Services
       trimmed_items = feed.items[offset...Math.min(offset + limit, feed.items.size)]
       items_response = map_items_to_responses(trimmed_items, cache)
 
+      # Resolve header colors with fallback to cache
+      header_color = feed.header_color
+      header_text_color = feed.header_text_color
+      if header_color.nil? || header_text_color.nil?
+        colors = cache.get_header_colors(feed.url)
+        header_color ||= colors[:bg_color]
+        header_text_color ||= colors[:text_color]
+      end
+
+      header_theme_colors_json = nil.as(String?)
+      begin
+        theme_json = cache.load_theme(feed.url)
+        header_theme_colors_json = theme_json if theme_json && !theme_json.empty?
+      rescue DB::Error | JSON::ParseException
+        header_theme_colors_json = nil
+      end
+
       QuickHeadlines::DTOs::FeedResponse.new(
         tab: tab_name,
         url: feed.url,
@@ -114,10 +131,45 @@ module QuickHeadlines::Services
         display_link: feed.display_link,
         favicon: feed.favicon,
         favicon_data: feed.favicon_data,
-        header_color: feed.header_color,
+        header_color: header_color,
+        header_text_color: header_text_color,
+        header_theme_colors: parse_theme_colors(header_theme_colors_json),
         items: items_response,
         total_item_count: item_count,
       )
+    end
+
+    # Collect {feed, tab_name} pairs for the active tab (or all tabs).
+    private def self.collect_feed_pairs(
+      feeds_snapshot : Array(FeedData),
+      tabs_snapshot : Array(Tab),
+      active_tab : String,
+    ) : Array({feed: FeedData, tab_name: String})
+      is_all = active_tab.to_s.downcase == "all"
+      pairs = [] of {feed: FeedData, tab_name: String}
+
+      if is_all
+        feeds_snapshot.each { |feed| pairs << {feed: feed, tab_name: ""} unless feed.failed? }
+        tabs_snapshot.each do |tab|
+          tab.feeds.each { |feed| pairs << {feed: feed, tab_name: tab.name} unless feed.failed? }
+        end
+      else
+        matched_tab = tabs_snapshot.find { |tab| tab.name.downcase == active_tab.downcase }
+        matched_tab.try(&.feeds.each { |feed| pairs << {feed: feed, tab_name: active_tab} unless feed.failed? })
+      end
+
+      pairs
+    end
+
+    # Collect software release feeds for the active tab.
+    private def self.collect_software_releases(
+      tabs_snapshot : Array(Tab),
+      active_tab : String,
+    ) : Array(FeedData)
+      return [] of FeedData if active_tab.to_s.downcase == "all"
+
+      matched_tab = tabs_snapshot.find { |tab| tab.name.downcase == active_tab.downcase }
+      matched_tab.try(&.software_releases) || [] of FeedData
     end
 
     def self.build_feeds_page(
@@ -128,60 +180,20 @@ module QuickHeadlines::Services
       cache : FeedCache,
       item_limit : Int32,
     ) : QuickHeadlines::DTOs::FeedsPageResponse
-      tabs_response = tabs_snapshot.map do |tab|
-        QuickHeadlines::DTOs::TabResponse.new(name: tab.name)
-      end
+      tabs_response = tabs_snapshot.map { |tab| QuickHeadlines::DTOs::TabResponse.new(name: tab.name) }
 
-      is_all_tab = active_tab.to_s.downcase == "all"
-
-      # Collect all feed URLs for batch count query
-      all_urls = [] of String
-      if is_all_tab
-        feeds_snapshot.each { |feed| all_urls << feed.url unless feed.failed? }
-        tabs_snapshot.each { |tab| tab.feeds.each { |feed| all_urls << feed.url unless feed.failed? } }
-      else
-        tab_feeds = tabs_snapshot.find { |tab| tab.name.downcase == active_tab.downcase }
-        tab_feeds.try(&.feeds.each { |feed| all_urls << feed.url unless feed.failed? })
-      end
-
-      # Single batch query for all item counts
+      feed_pairs = collect_feed_pairs(feeds_snapshot, tabs_snapshot, active_tab)
+      all_urls = feed_pairs.map { |pair| pair[:feed].url }
       item_counts = cache.item_counts(all_urls)
 
-      feeds_response = if is_all_tab
-                         feed_tab_pairs = [] of {feed: FeedData, tab_name: String}
+      feeds_response = feed_pairs.map do |entry|
+        build_feed_response(entry[:feed], cache, tab_name: entry[:tab_name], total_count: item_counts[entry[:feed].url]? || 0, display_item_limit: item_limit)
+      end
 
-                         feeds_snapshot.each do |feed|
-                           feed_tab_pairs << {feed: feed, tab_name: ""} unless feed.failed?
-                         end
-
-                         tabs_snapshot.each do |tab|
-                           tab.feeds.each do |feed|
-                             feed_tab_pairs << {feed: feed, tab_name: tab.name} unless feed.failed?
-                           end
-                         end
-
-                         feed_tab_pairs.map { |entry| build_feed_response(entry[:feed], cache, tab_name: entry[:tab_name], total_count: item_counts[entry[:feed].url]? || 0, display_item_limit: item_limit) }
-                       else
-                         tab_feeds = tabs_snapshot.find { |tab| tab.name.downcase == active_tab.downcase }
-                         if tab_feeds
-                           tab_feeds.feeds.select { |feed| !feed.failed? }.map { |feed| build_feed_response(feed, cache, tab_name: active_tab, total_count: item_counts[feed.url]? || 0, display_item_limit: item_limit) }
-                         else
-                           [] of QuickHeadlines::DTOs::FeedResponse
-                         end
-                       end
-
-      software_releases_response = if is_all_tab
-                                     [] of QuickHeadlines::DTOs::FeedResponse
-                                   else
-                                     tab_with_sr = tabs_snapshot.find { |tab| tab.name.downcase == active_tab.downcase }
-                                     if tab_with_sr && tab_with_sr.software_releases.present?
-                                       tab_with_sr.software_releases.map do |feed|
-                                         build_feed_response(feed, cache, tab_name: active_tab, total_count: item_counts[feed.url]? || 0, display_item_limit: item_limit)
-                                       end
-                                     else
-                                       [] of QuickHeadlines::DTOs::FeedResponse
-                                     end
-                                   end
+      software_releases = collect_software_releases(tabs_snapshot, active_tab)
+      software_releases_response = software_releases.map do |feed|
+        build_feed_response(feed, cache, tab_name: active_tab, total_count: item_counts[feed.url]? || 0, display_item_limit: item_limit)
+      end
 
       QuickHeadlines::DTOs::FeedsPageResponse.new(
         tabs: tabs_response,

@@ -1,10 +1,17 @@
-import { fetchFeeds, fetchMoreFeedItems, fetchConfig } from '$lib/api';
-import { deepClone } from '$lib/utils/clone';
-import { isIdle, isLoading, isRefreshing, isError, getError } from '$lib/utils/storeTypes';
-import type { LoadStatus } from '$lib/utils/storeTypes';
-import type { FeedResponse, FeedsPageResponse } from '$lib/types';
-import { toastStore } from './toast.svelte';
-import { saveTab } from './tabStore.svelte';
+import { fetchFeeds, fetchMoreFeedItems } from "$lib/api";
+import { loadConfigForStore } from "$lib/utils/storeConfig";
+import { deepClone } from "$lib/utils/clone";
+import {
+	isIdle,
+	isLoading,
+	isRefreshing,
+	isError,
+	getError,
+} from "$lib/utils/storeTypes";
+import type { LoadStatus } from "$lib/utils/storeTypes";
+import type { FeedResponse, FeedsPageResponse } from "$lib/types";
+import { toastStore } from "./toast.svelte";
+import { saveTab } from "./tabStore.svelte";
 
 export type { LoadStatus };
 
@@ -18,12 +25,16 @@ type BaseFeedState = {
 	refreshMinutes: number;
 };
 
-export type FeedStateIdle = BaseFeedState & { status: 'idle' };
-export type FeedStateLoading = BaseFeedState & { status: 'loading' };
-export type FeedStateRefreshing = BaseFeedState & { status: 'refreshing' };
-export type FeedStateError = BaseFeedState & { status: 'error'; error: string };
+export type FeedStateIdle = BaseFeedState & { status: "idle" };
+export type FeedStateLoading = BaseFeedState & { status: "loading" };
+export type FeedStateRefreshing = BaseFeedState & { status: "refreshing" };
+export type FeedStateError = BaseFeedState & { status: "error"; error: string };
 
-export type FeedState = FeedStateIdle | FeedStateLoading | FeedStateRefreshing | FeedStateError;
+export type FeedState =
+	| FeedStateIdle
+	| FeedStateLoading
+	| FeedStateRefreshing
+	| FeedStateError;
 
 export { isIdle, isLoading, isRefreshing, isError, getError };
 
@@ -33,110 +44,128 @@ let feedRequestId = 0;
 const initialBaseState: BaseFeedState = {
 	feeds: [],
 	tabs: [],
-	activeTab: 'all',
+	activeTab: "all",
 	lastUpdated: null,
 	loadingFeeds: {},
 	tabCache: {},
-	refreshMinutes: 10
+	refreshMinutes: 10,
 };
 
 const initialState: FeedStateIdle = {
 	...initialBaseState,
-	status: 'idle'
+	status: "idle",
 };
 
 export const feedState = $state<FeedState>({ ...initialState });
 
-export function setLoading(state: FeedState, tab: string): FeedStateLoading | FeedStateRefreshing {
+export function setLoading(
+	state: FeedState,
+	tab: string,
+): FeedStateLoading | FeedStateRefreshing {
 	const base: BaseFeedState = {
 		...state,
 		loadingFeeds: state.loadingFeeds,
-		tabCache: state.tabCache
+		tabCache: state.tabCache,
 	};
-	
+
 	if (state.tabCache[tab]?.loaded) {
-		return { ...base, status: 'refreshing' };
+		return { ...base, status: "refreshing" };
 	}
-	return { ...base, status: 'loading' };
+	return { ...base, status: "loading" };
 }
 
-export function setFeedsData(state: FeedState, response: FeedsPageResponse, tab: string): FeedStateIdle {
+export function setFeedsData(
+	state: FeedState,
+	response: FeedsPageResponse,
+	tab: string,
+): FeedStateIdle {
 	const swReleases = response.software_releases || [];
 	const newFeeds = [...swReleases, ...(response.feeds || [])];
-	
+
 	// Only update feeds if the response has data, OR if we don't have existing feeds
 	// This prevents overwriting valid cached feeds with empty responses
-	const feedsToUse = newFeeds.length > 0 ? newFeeds : (state.feeds.length > 0 ? state.feeds : []);
-	
+	const feedsToUse =
+		newFeeds.length > 0 ? newFeeds : state.feeds.length > 0 ? state.feeds : [];
+
 	// Only mark cache as loaded if we got actual new data from API
 	// Don't cache empty results - they should NOT mark cache as loaded
 	// so next refresh will try again
-	const updatedCache = newFeeds.length > 0 ? {
-		...state.tabCache,
-		[tab]: { feeds: deepClone(newFeeds), loaded: true }
-	} : state.tabCache;
-	
+	const updatedCache =
+		newFeeds.length > 0
+			? {
+					...state.tabCache,
+					[tab]: { feeds: deepClone(newFeeds), loaded: true },
+				}
+			: state.tabCache;
+
 	return {
 		...state,
 		feeds: feedsToUse,
 		tabs: response.tabs || [],
 		activeTab: tab,
-		status: 'idle',
+		status: "idle",
 		lastUpdated: response.updated_at || Date.now(),
-		tabCache: updatedCache
+		tabCache: updatedCache,
 	};
 }
 
 export function setError(state: FeedState, error: string): FeedStateError {
 	return {
 		...state,
-		status: 'error',
-		error
+		status: "error",
+		error,
 	};
 }
 
-export function setFeedLoading(state: FeedState, feedUrl: string, isLoading: boolean): FeedState {
+export function setFeedLoading(
+	state: FeedState,
+	feedUrl: string,
+	isLoading: boolean,
+): FeedState {
 	return {
 		...state,
 		loadingFeeds: {
 			...state.loadingFeeds,
-			[feedUrl]: isLoading
-		}
+			[feedUrl]: isLoading,
+		},
 	};
 }
 
 export function appendFeedItems(
-	state: FeedState, 
-	feedUrl: string, 
-	newItems: FeedResponse['items'],
-	totalCount: number
+	state: FeedState,
+	feedUrl: string,
+	newItems: FeedResponse["items"],
+	totalCount: number,
 ): FeedState {
-	const feedIndex = state.feeds.findIndex(f => f.url === feedUrl);
+	const feedIndex = state.feeds.findIndex((f) => f.url === feedUrl);
 	if (feedIndex === -1) return state;
-	
+
 	const updatedFeeds = state.feeds.map((feed, i) => {
 		if (i !== feedIndex) return feed;
 		return {
 			...feed,
 			items: [...feed.items, ...newItems],
-			total_item_count: totalCount
+			total_item_count: totalCount,
 		};
 	});
-	
+
 	return {
 		...state,
 		feeds: updatedFeeds,
 		tabCache: {
 			...state.tabCache,
-			[state.activeTab]: { feeds: deepClone(updatedFeeds), loaded: true }
-		}
+			[state.activeTab]: { feeds: deepClone(updatedFeeds), loaded: true },
+		},
 	};
 }
 
-export function setRefreshMinutes(state: FeedState, minutes: number): FeedState {
+export function setRefreshMinutes(
+	state: FeedState,
+	minutes: number,
+): FeedState {
 	return {
 		...state,
-		refreshMinutes: minutes
+		refreshMinutes: minutes,
 	};
 }
 
@@ -144,7 +173,7 @@ export function setActiveTab(state: FeedState, tab: string): FeedState {
 	saveTab(tab);
 	return {
 		...state,
-		activeTab: tab
+		activeTab: tab,
 	};
 }
 
@@ -153,16 +182,19 @@ export function resetFeedStore(): void {
 	Object.assign(feedState, { ...initialState });
 }
 
-export async function loadFeeds(tab: string, force: boolean = false): Promise<void> {
+export async function loadFeeds(
+	tab: string,
+	force: boolean = false,
+): Promise<void> {
 	const requestId = ++feedRequestId;
 	const currentFeeds = feedState.feeds;
 	const currentTabs = feedState.tabs;
-	
+
 	Object.assign(feedState, setActiveTab(feedState, tab));
-	
+
 	// Determine what feeds we should show while loading
 	let feedsToShowWhileLoading = currentFeeds;
-	
+
 	if (!force && feedState.tabCache[tab]?.loaded) {
 		// Use cached feeds if available
 		if (feedState.tabCache[tab].feeds.length > 0) {
@@ -176,7 +208,7 @@ export async function loadFeeds(tab: string, force: boolean = false): Promise<vo
 			const response = await fetchFeeds(tab, { force });
 			// Ignore stale responses from previous tab switches
 			if (requestId !== feedRequestId) return;
-			
+
 			const newState = setFeedsData(feedState, response, tab);
 			// Preserve feeds if the response is empty but we have existing data
 			if (newState.feeds.length === 0 && currentFeeds.length > 0) {
@@ -187,22 +219,22 @@ export async function loadFeeds(tab: string, force: boolean = false): Promise<vo
 		} catch (e) {
 			// Ignore errors from stale requests
 			if (requestId !== feedRequestId) return;
-			
+
 			// On error, preserve the feeds we were showing (cache or existing)
 			feedState.feeds = feedsToShowWhileLoading;
 			feedState.tabs = currentTabs;
-			feedState.status = 'idle';
+			feedState.status = "idle";
 		}
 		return;
 	}
 
 	Object.assign(feedState, setLoading(feedState, tab));
-	
+
 	try {
 		const response = await fetchFeeds(tab, { force });
 		// Ignore stale responses from previous tab switches
 		if (requestId !== feedRequestId) return;
-		
+
 		const newState = setFeedsData(feedState, response, tab);
 		// Preserve feeds if the response is empty but we have existing data
 		if (newState.feeds.length === 0 && currentFeeds.length > 0) {
@@ -213,67 +245,65 @@ export async function loadFeeds(tab: string, force: boolean = false): Promise<vo
 	} catch (e) {
 		// Ignore errors from stale requests
 		if (requestId !== feedRequestId) return;
-		
+
 		// On error, preserve existing feeds
 		feedState.feeds = currentFeeds;
 		feedState.tabs = currentTabs;
-		feedState.status = 'idle';
+		feedState.status = "idle";
 	}
 }
 
 export async function loadMoreFeedItems(feed: FeedResponse): Promise<void> {
 	const feedUrl = feed.url;
 	const currentOffset = feed.items.length;
-	
+
 	Object.assign(feedState, setFeedLoading(feedState, feedUrl, true));
-	
+
 	try {
 		const response = await fetchMoreFeedItems(feedUrl, 10, currentOffset);
-		
-		const updatedFeeds = feedState.feeds.map(f => {
+
+		const updatedFeeds = feedState.feeds.map((f) => {
 			if (f.url === feedUrl) {
 				return {
 					...f,
 					items: [...f.items, ...response.items],
-					total_item_count: response.total_item_count ?? f.total_item_count
+					total_item_count: response.total_item_count ?? f.total_item_count,
 				};
 			}
 			return f;
 		});
-		
+
 		Object.assign(feedState, { feeds: updatedFeeds });
 	} catch (e) {
-		toastStore.error(`Failed to load more items from ${feed.title}`, 'Feeds');
-		Object.assign(feedState, setError(feedState, e instanceof Error ? e.message : 'Failed to load more items'));
+		toastStore.error(`Failed to load more items from ${feed.title}`, "Feeds");
+		Object.assign(
+			feedState,
+			setError(
+				feedState,
+				e instanceof Error ? e.message : "Failed to load more items",
+			),
+		);
 	} finally {
 		Object.assign(feedState, setFeedLoading(feedState, feedUrl, false));
 	}
 }
 
 export async function loadFeedConfig(): Promise<number> {
-	try {
-		const config = await fetchConfig();
-		const minutes = config.refresh_minutes || 10;
-		Object.assign(feedState, setRefreshMinutes(feedState, minutes));
-		return minutes;
-	} catch {
-		return 10;
-	}
+	return loadConfigForStore(feedState, setRefreshMinutes);
 }
-
-
 
 export function getFilteredFeeds(query: string): FeedResponse[] {
 	if (!query.trim()) return feedState.feeds;
-	
+
 	const lowerQuery = query.toLowerCase();
 	return feedState.feeds
-		.map(feed => ({
+		.map((feed) => ({
 			...feed,
-			items: feed.items.filter(item => 
-				item.title.toLowerCase().includes(lowerQuery) ||
-				feed.title.toLowerCase().includes(lowerQuery)
-			)
+			items: feed.items.filter(
+				(item) =>
+					item.title.toLowerCase().includes(lowerQuery) ||
+					feed.title.toLowerCase().includes(lowerQuery),
+			),
 		}))
-		.filter(feed => feed.items.length > 0);
+		.filter((feed) => feed.items.length > 0);
 }

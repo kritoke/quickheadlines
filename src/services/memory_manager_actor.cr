@@ -350,43 +350,54 @@ class MemoryManagerActor < Actor
   # =========================================================================
 
   private def run_normal_cleanup : Nil
-    @cleanup_handlers.each do |name, handler|
-      begin
-        handler.call
-        Log.for("quickheadlines.cleanup").debug { "Normal cleanup: #{name} completed" }
-      rescue ex
-        Log.for("quickheadlines.cleanup").error(exception: ex) { "Normal cleanup: #{name} failed" }
-      end
-    end
-
-    # Clear Vug favicon cache to prevent unbounded growth
-    begin
-      VugAdapter.clear_cache
-      Log.for("quickheadlines.cleanup").debug { "Cleared Vug cache" }
-    rescue ex
-      Log.for("quickheadlines.cleanup").warn { "Failed to clear Vug cache: #{ex.message}" }
-    end
-
+    run_registered_handlers("normal")
+    clear_system_caches(:normal)
     GC.collect
     Log.for("quickheadlines.cleanup").debug { "GC.collect triggered after normal cleanup" }
   end
 
   private def run_aggressive_cleanup : Nil
+    run_registered_handlers("aggressive")
+    clear_system_caches(:aggressive)
+    GC.collect
+    Log.for("quickheadlines.cleanup").debug { "GC.collect triggered after aggressive cleanup" }
+  end
+
+  private def run_emergency_cleanup : Nil
+    Log.for("quickheadlines.cleanup").error { "Emergency cleanup initiated" }
+    run_registered_handlers("emergency")
+    clear_system_caches(:emergency)
+    3.times do
+      GC.collect
+      sleep(100.milliseconds)
+    end
+    Log.for("quickheadlines.cleanup").debug { "Forced GC.collect 3 times after emergency cleanup" }
+  end
+
+  # Iterate all registered cleanup handlers, logging and swallowing per-handler errors.
+  private def run_registered_handlers(level : String) : Nil
     @cleanup_handlers.each do |name, handler|
       begin
         handler.call
-        Log.for("quickheadlines.cleanup").debug { "Aggressive cleanup: #{name} completed" }
+        Log.for("quickheadlines.cleanup").debug { "#{level.capitalize} cleanup: #{name} completed" }
       rescue ex
-        Log.for("quickheadlines.cleanup").error(exception: ex) { "Aggressive cleanup: #{name} failed" }
+        Log.for("quickheadlines.cleanup").error(exception: ex) { "#{level.capitalize} cleanup: #{name} failed" }
       end
     end
+  end
 
+  # Clear system-level caches based on cleanup severity.
+  # Normal: only Vug favicon cache.
+  # Aggressive/Emergency: all HTTP, DNS, rate limiter, circuit breaker, color, and string caches.
+  def clear_system_caches(level : Symbol) : Nil
     begin
       VugAdapter.clear_cache
       Log.for("quickheadlines.cleanup").debug { "Cleared Vug cache" }
     rescue ex
       Log.for("quickheadlines.cleanup").warn { "Failed to clear Vug cache: #{ex.message}" }
     end
+
+    return if level == :normal
 
     begin
       Fetcher::CrestHttpClient.clear_expired_dns
@@ -395,44 +406,10 @@ class MemoryManagerActor < Actor
       Fetcher::CircuitBreaker::Registry.store.clear_expired
       ColorExtractor.sweep_cache
       QuickHeadlines::StringIntern.clear
-      Log.for("quickheadlines.cleanup").debug { "Cleared expired caches and string pool" }
+      Log.for("quickheadlines.cleanup").debug { "Cleared all system caches" }
     rescue ex
-      Log.for("quickheadlines.cleanup").warn { "Failed to clear expired caches: #{ex.message}" }
+      Log.for("quickheadlines.cleanup").warn { "Failed to clear system caches: #{ex.message}" }
     end
-
-    GC.collect
-    Log.for("quickheadlines.cleanup").debug { "GC.collect triggered after aggressive cleanup" }
-  end
-
-  private def run_emergency_cleanup : Nil
-    Log.for("quickheadlines.cleanup").error { "Emergency cleanup initiated" }
-
-    @cleanup_handlers.each do |name, handler|
-      begin
-        handler.call
-        Log.for("quickheadlines.cleanup").debug { "Emergency cleanup: #{name} completed" }
-      rescue ex
-        Log.for("quickheadlines.cleanup").error(exception: ex) { "Emergency cleanup: #{name} failed" }
-      end
-    end
-
-    begin
-      VugAdapter.clear_cache
-      Fetcher::CrestHttpClient.clear_expired_dns
-      Fetcher::CrestHttpClient.clear_rate_limiters
-      Fetcher::URLValidator.clear_validated
-      Fetcher::CircuitBreaker::Registry.store.clear_expired
-      ColorExtractor.sweep_cache
-      Log.for("quickheadlines.cleanup").debug { "Cleared all caches" }
-    rescue ex
-      Log.for("quickheadlines.cleanup").warn { "Failed to clear all caches: #{ex.message}" }
-    end
-
-    3.times do
-      GC.collect
-      sleep(100.milliseconds)
-    end
-    Log.for("quickheadlines.cleanup").debug { "Forced GC.collect 3 times after emergency cleanup" }
   end
 
   # =========================================================================

@@ -2,13 +2,15 @@
 	import type { TimelineItemResponse, ClusterItemsResponse } from '$lib/types';
 	import { fetchClusterItems as defaultFetchClusterItems, formatTimestamp } from '$lib/api';
 	import ClusterExpansion from './ClusterExpansion.svelte';
-	import { themeState, isDarkTheme } from '$lib/stores/theme.svelte';
+	import { isDarkTheme } from '$lib/stores/theme.svelte';
 	import { readModeState } from '$lib/stores/readMode.svelte';
 	import { layoutState } from '$lib/stores/layout.svelte';
 	import { goto } from '$app/navigation';
 	import { getFaviconSrc, getHeaderStyle } from '$lib/utils/feedItem';
 	import { sanitizeUrl } from '$lib/utils/validation';
 	import { getGridClass } from '$lib/tokens';
+	import CommentIcon from './icons/CommentIcon.svelte';
+	import DiscussionIcon from './icons/DiscussionIcon.svelte';
 
 	/**
 	 * TimelineView Props
@@ -35,7 +37,6 @@
 		fetchClusterItems = defaultFetchClusterItems 
 	}: Props = $props();
 	
-	let resolvedTheme = $derived(themeState.theme);
 	let isDark = $derived(isDarkTheme());
 
 	// Cluster expansion state
@@ -134,28 +135,18 @@
 
 	let groupedItems = $derived(groupByDate(items));
 	let groupIndex = $derived(Array.from(groupedItems.entries()));
-
-	function getGroupStartIndex(groupIdx: number): number {
-		let idx = 0;
-		for (let i = 0; i < groupIdx; i++) {
-			idx += groupIndex[i]?.[1]?.length ?? 0;
-		}
-		return idx;
-	}
 </script>
 
 <div class="timeline-view" data-name="timeline-view">
-	{#each groupIndex as [date, dateItems], groupIdx (date)}
-		{@const groupStartIndex = getGroupStartIndex(groupIdx)}
+	{#each groupIndex as [date, dateItems] (date)}
 		<div class="day-group">
 			<h2 class="date-header">
 				{date}
 			</h2>
 			
 			<div class="items-grid {gridClass}">
-				{#each dateItems as item, i (`${date}-${item.id}`)}
-					{@const globalIndex = groupStartIndex + i}
-					<div 
+				{#each dateItems as item (`${date}-${item.id}`)}
+					<div
 						class="timeline-item"
 					>
 						<!-- Item Header with Feed Info -->
@@ -234,9 +225,7 @@
 										title="Comments"
 										class="icon-link"
 									>
-										<svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-											<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
-										</svg>
+										<CommentIcon class="w-4 h-4" />
 									</a>
 								{/if}
 								{#if item.commentary_url && item.commentary_url !== item.comment_url}
@@ -247,9 +236,7 @@
 										title="Discussion"
 										class="icon-link"
 									>
-										<svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-											<path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path>
-										</svg>
+										<DiscussionIcon class="w-4 h-4" />
 									</a>
 								{/if}
 							</div>
@@ -483,10 +470,7 @@
 		opacity: 0.8;
 	}
 
-	.icon {
-		width: 1rem;
-		height: 1rem;
-	}
+
 
 	.load-more {
 		display: flex;

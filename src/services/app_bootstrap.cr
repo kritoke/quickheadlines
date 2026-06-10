@@ -249,7 +249,7 @@ class AppBootstrap
         RefreshLoop::InterruptibleSleep.sleep(@cleanup_interval)
         break if QuickHeadlines.shutting_down?
         begin
-          # Check memory pressure and adjust cleanup priority
+          # Determine cleanup priority based on memory pressure
           begin
             memory_status = MemoryManagerActor.instance.get_memory_status
             case memory_status.pressure_level
@@ -264,21 +264,10 @@ class AppBootstrap
             end
           rescue ex
             Log.for("quickheadlines.app").debug { "Memory pressure check failed: #{ex.message}" }
-            # Fallback to normal cleanup
             MemoryManagerActor.instance.request_cleanup(MemoryManagerActor::CleanupPriority::Normal)
           end
 
-          # Also run direct cleanup for legacy systems
-          VugAdapter.clear_cache
-          Log.for("quickheadlines.app").debug { "Cleared Vug cache" }
-
-          # Clear expired DNS cache and rate limiters to prevent memory/resource leaks
-          Fetcher::CrestHttpClient.clear_expired_dns
-          Fetcher::CrestHttpClient.clear_rate_limiters
-          Fetcher::URLValidator.clear_validated
-          Fetcher::CircuitBreaker::Registry.store.clear_expired
-          ColorExtractor.sweep_cache
-
+          # DB-level cleanup (not handled by MemoryManagerActor)
           @feed_cache.cleanup_old_articles(QuickHeadlines::Constants::CACHE_RETENTION_DAYS)
           @feed_cache.cleanup_old_entries(@config.cache_retention_hours || QuickHeadlines::Constants::CACHE_RETENTION_HOURS)
           QuickHeadlines::Services::ContentService.instance.check_size_and_cleanup

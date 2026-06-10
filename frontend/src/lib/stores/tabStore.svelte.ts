@@ -1,23 +1,24 @@
 /**
  * Tab Persistence Store
- * 
+ *
  * Manages the active tab selection with localStorage persistence.
  * This ensures the selected tab persists across page navigations and browser refreshes.
  */
 
-const TAB_STORAGE_KEY = 'quickheadlines-active-tab';
+import {
+	getStoredValue,
+	setStoredValue,
+	removeStoredValue,
+} from "$lib/utils/storage";
+
+const TAB_STORAGE_KEY = "quickheadlines-active-tab";
 
 /**
  * Get the stored tab from localStorage.
  * Falls back to 'all' if no tab is stored or localStorage is unavailable.
  */
 export function getStoredTab(): string {
-	if (typeof window === 'undefined') return 'all';
-	try {
-		return localStorage.getItem(TAB_STORAGE_KEY) || 'all';
-	} catch {
-		return 'all';
-	}
+	return getStoredValue(TAB_STORAGE_KEY, "all");
 }
 
 /**
@@ -25,12 +26,7 @@ export function getStoredTab(): string {
  * Silently fails if localStorage is unavailable (e.g., private browsing).
  */
 export function saveTab(tab: string): void {
-	if (typeof window === 'undefined') return;
-	try {
-		localStorage.setItem(TAB_STORAGE_KEY, tab);
-	} catch {
-		// localStorage not available
-	}
+	setStoredValue(TAB_STORAGE_KEY, tab);
 }
 
 /**
@@ -45,10 +41,5 @@ export function initTabState(): string {
  * Clear the stored tab (resets to 'all').
  */
 export function clearStoredTab(): void {
-	if (typeof window === 'undefined') return;
-	try {
-		localStorage.removeItem(TAB_STORAGE_KEY);
-	} catch {
-		// localStorage not available
-	}
+	removeStoredValue(TAB_STORAGE_KEY);
 }

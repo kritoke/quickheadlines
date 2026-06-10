@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { Dialog, Portal } from '@skeletonlabs/skeleton-svelte';
 	import { searchState, closeSearch, setSearchQuery } from '$lib/stores/search.svelte';
-	import SkeletonLoader from './SkeletonLoader.svelte';
+	import CloseIcon from './icons/CloseIcon.svelte';
 
 	interface Props {
 		placeholder: string;
@@ -70,9 +70,7 @@
 									class="clear-button"
 									aria-label="Clear search"
 								>
-									<svg xmlns="http://www.w3.org/2000/svg" class="clear-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-										<path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-									</svg>
+									<CloseIcon class="w-5 h-5" />
 								</button>
 							{/if}
 						</div>
@@ -82,9 +80,7 @@
 							class="close-button"
 							aria-label="Close search"
 						>
-							<svg xmlns="http://www.w3.org/2000/svg" class="close-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-								<path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-							</svg>
+							<CloseIcon class="w-6 h-6" />
 						</button>
 					</div>
 				</div>
@@ -155,7 +151,7 @@
 
 	.search-input {
 		width: 100%;
-		padding: var(--spacing-sm, 0.5rem) var(--spacing-md, 1rem);
+		padding: var(--spacing-sm, 0.5rem) var(--spacing-2xl, 3rem) var(--spacing-sm, 0.5rem) var(--spacing-md, 1rem);
 		font-size: 1rem;
 		line-height: 1.5;
 		background-color: var(--color-surface-200, #e5e7eb);
@@ -200,10 +196,7 @@
 		color: var(--color-surface-300, #d1d5db);
 	}
 
-	.clear-icon {
-		width: 1.25rem;
-		height: 1.25rem;
-	}
+
 
 	.close-button {
 		padding: 0.5rem;
@@ -227,8 +220,5 @@
 		background-color: var(--color-surface-800, #1f2937);
 	}
 
-	.close-icon {
-		width: 1.5rem;
-		height: 1.5rem;
-	}
+
 </style>

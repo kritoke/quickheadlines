@@ -1,11 +1,18 @@
-import { fetchTimeline, fetchConfig, RateLimitError } from '$lib/api';
-import { deepClone } from '$lib/utils/clone';
-import { isIdle, isLoading, isRefreshing, isError, getError } from '$lib/utils/storeTypes';
-import type { LoadStatus } from '$lib/utils/storeTypes';
-import type { TimelineItemResponse } from '$lib/types';
-import { SvelteSet } from 'svelte/reactivity';
-import { toastStore } from './toast.svelte';
-import { saveTab } from './tabStore.svelte';
+import { fetchTimeline, RateLimitError } from "$lib/api";
+import { loadConfigForStore } from "$lib/utils/storeConfig";
+import { deepClone } from "$lib/utils/clone";
+import {
+	isIdle,
+	isLoading,
+	isRefreshing,
+	isError,
+	getError,
+} from "$lib/utils/storeTypes";
+import type { LoadStatus } from "$lib/utils/storeTypes";
+import type { TimelineItemResponse } from "$lib/types";
+import { SvelteSet } from "svelte/reactivity";
+import { toastStore } from "./toast.svelte";
+import { saveTab } from "./tabStore.svelte";
 
 export type { LoadStatus };
 
@@ -21,12 +28,21 @@ type BaseTimelineState = {
 	retryAfterMs: number;
 };
 
-export type TimelineStateIdle = BaseTimelineState & { status: 'idle' };
-export type TimelineStateLoading = BaseTimelineState & { status: 'loading' };
-export type TimelineStateRefreshing = BaseTimelineState & { status: 'refreshing' };
-export type TimelineStateError = BaseTimelineState & { status: 'error'; error: string };
+export type TimelineStateIdle = BaseTimelineState & { status: "idle" };
+export type TimelineStateLoading = BaseTimelineState & { status: "loading" };
+export type TimelineStateRefreshing = BaseTimelineState & {
+	status: "refreshing";
+};
+export type TimelineStateError = BaseTimelineState & {
+	status: "error";
+	error: string;
+};
 
-export type TimelineState = TimelineStateIdle | TimelineStateLoading | TimelineStateRefreshing | TimelineStateError;
+export type TimelineState =
+	| TimelineStateIdle
+	| TimelineStateLoading
+	| TimelineStateRefreshing
+	| TimelineStateError;
 
 export { isIdle, isLoading, isRefreshing, isError, getError };
 
@@ -38,21 +54,24 @@ const initialBaseState: BaseTimelineState = {
 	loadingMore: false,
 	isClustering: false,
 	refreshMinutes: 10,
-	tabName: 'all',
-	retryAfterMs: 0
+	tabName: "all",
+	retryAfterMs: 0,
 };
 
 const initialState: TimelineStateIdle = {
 	...initialBaseState,
-	status: 'idle'
+	status: "idle",
 };
 
 export const timelineState = $state<TimelineState>({
 	...initialState,
-	itemIds: new SvelteSet<string>()
+	itemIds: new SvelteSet<string>(),
 });
 
-export function setLoading(state: TimelineState, isAppend: boolean): TimelineState {
+export function setLoading(
+	state: TimelineState,
+	isAppend: boolean,
+): TimelineState {
 	if (isAppend) {
 		return { ...state, loadingMore: true };
 	}
@@ -61,19 +80,22 @@ export function setLoading(state: TimelineState, isAppend: boolean): TimelineSta
 	}
 	// Optimistic UI: keep existing items visible when tab changes
 	// Only show loading indicator, don't clear items until new data arrives
-	return { ...state, status: 'loading', loadingMore: false };
+	return { ...state, status: "loading", loadingMore: false };
 }
 
 export function setTimelineData(
-	state: TimelineState, 
-	items: TimelineItemResponse[], 
+	state: TimelineState,
+	items: TimelineItemResponse[],
 	hasMore: boolean,
-	isAppend: boolean
+	isAppend: boolean,
 ): TimelineStateIdle {
 	if (isAppend) {
-		const newItems = items.filter(item => !state.itemIds.has(item.id));
-		const newItemIds = new SvelteSet([...state.itemIds, ...newItems.map(item => item.id)]);
-		
+		const newItems = items.filter((item) => !state.itemIds.has(item.id));
+		const newItemIds = new SvelteSet([
+			...state.itemIds,
+			...newItems.map((item) => item.id),
+		]);
+
 		return {
 			...state,
 			items: [...state.items, ...newItems],
@@ -81,41 +103,50 @@ export function setTimelineData(
 			hasMore,
 			offset: state.offset + newItems.length,
 			loadingMore: false,
-			status: 'idle'
+			status: "idle",
 		};
 	}
-	
+
 	return {
 		...state,
 		items,
-		itemIds: new SvelteSet(items.map(item => item.id)),
+		itemIds: new SvelteSet(items.map((item) => item.id)),
 		hasMore,
 		offset: items.length,
 		loadingMore: false,
-		status: 'idle'
+		status: "idle",
 	};
 }
 
-export function setError(state: TimelineState, error: string): TimelineStateError {
+export function setError(
+	state: TimelineState,
+	error: string,
+): TimelineStateError {
 	return {
 		...state,
-		status: 'error',
+		status: "error",
 		loadingMore: false,
-		error
+		error,
 	};
 }
 
-export function setClustering(state: TimelineState, isClustering: boolean): TimelineState {
+export function setClustering(
+	state: TimelineState,
+	isClustering: boolean,
+): TimelineState {
 	return {
 		...state,
-		isClustering
+		isClustering,
 	};
 }
 
-export function setRefreshMinutes(state: TimelineState, minutes: number): TimelineState {
+export function setRefreshMinutes(
+	state: TimelineState,
+	minutes: number,
+): TimelineState {
 	return {
 		...state,
-		refreshMinutes: minutes
+		refreshMinutes: minutes,
 	};
 }
 
@@ -123,7 +154,7 @@ export function setTabName(state: TimelineState, tab: string): TimelineState {
 	saveTab(tab);
 	return {
 		...state,
-		tabName: tab
+		tabName: tab,
 	};
 }
 
@@ -131,7 +162,7 @@ export function resetTimelineStore(): void {
 	cancelAllRetries();
 	Object.assign(timelineState, {
 		...deepClone(initialBaseState),
-		itemIds: new SvelteSet<string>()
+		itemIds: new SvelteSet<string>(),
 	});
 }
 
@@ -139,7 +170,8 @@ let timelineRequestId = 0;
 let retryTimerId: ReturnType<typeof setTimeout> | null = null;
 // Track the request ID that a pending retry is for
 let pendingRetryRequestId: number | null = null;
-let pendingRetryParams: { append: boolean; tab: string | undefined } | null = null;
+let pendingRetryParams: { append: boolean; tab: string | undefined } | null =
+	null;
 
 export function cancelRetry(): void {
 	if (retryTimerId) {
@@ -155,45 +187,54 @@ export function cancelAllRetries(): void {
 	cancelRetry();
 }
 
-export async function loadTimeline(append: boolean = false, tab?: string): Promise<void> {
+export async function loadTimeline(
+	append: boolean = false,
+	tab?: string,
+): Promise<void> {
 	const requestId = ++timelineRequestId;
 	tab ??= timelineState.tabName;
-	
-	
-	
+
 	if (!append) {
 		if (isRefreshing(timelineState) || isLoading(timelineState)) return;
-		
+
 		const isTabChange = tab !== timelineState.tabName;
 		const hasExistingData = timelineState.items.length > 0;
-		
+
 		if (isTabChange || !hasExistingData) {
 			Object.assign(timelineState, {
 				...initialBaseState,
 				itemIds: new SvelteSet<string>(),
 				tabName: tab,
-				status: 'loading' as const
+				status: "loading" as const,
 			});
 		} else {
 			Object.assign(timelineState, {
-				status: 'refreshing' as const,
-				tabName: tab
+				status: "refreshing" as const,
+				tabName: tab,
 			});
 		}
 	}
-	
+
 	try {
-		const response = await fetchTimeline(500, append ? timelineState.offset : 0, 30, tab === 'all' ? undefined : tab);
+		const response = await fetchTimeline(
+			500,
+			append ? timelineState.offset : 0,
+			30,
+			tab === "all" ? undefined : tab,
+		);
 		if (requestId !== timelineRequestId) return;
 		cancelRetry();
-		Object.assign(timelineState, setTimelineData(timelineState, response.items, response.has_more, append));
+		Object.assign(
+			timelineState,
+			setTimelineData(timelineState, response.items, response.has_more, append),
+		);
 	} catch (e) {
 		if (requestId !== timelineRequestId) return;
 
 		if (e instanceof RateLimitError) {
 			Object.assign(timelineState, {
-				...setError(timelineState, 'Rate limited'),
-				retryAfterMs: e.retryAfterMs
+				...setError(timelineState, "Rate limited"),
+				retryAfterMs: e.retryAfterMs,
 			});
 			cancelRetry();
 			// Store the request ID and params for the retry callback to use
@@ -215,29 +256,29 @@ export async function loadTimeline(append: boolean = false, tab?: string): Promi
 			return;
 		}
 
-		toastStore.error('Failed to load timeline', 'Timeline');
-		Object.assign(timelineState, setError(timelineState, e instanceof Error ? e.message : 'Failed to load timeline'));
+		toastStore.error("Failed to load timeline", "Timeline");
+		Object.assign(
+			timelineState,
+			setError(
+				timelineState,
+				e instanceof Error ? e.message : "Failed to load timeline",
+			),
+		);
 	}
 }
 
 export async function loadTimelineConfig(): Promise<number> {
-	try {
-		const config = await fetchConfig();
-		const minutes = config.refresh_minutes || 10;
-		Object.assign(timelineState, setRefreshMinutes(timelineState, minutes));
-		return minutes;
-	} catch {
-		return 10;
-	}
+	return loadConfigForStore(timelineState, setRefreshMinutes);
 }
 
 export function getFilteredItems(query: string): TimelineItemResponse[] {
 	if (!query.trim()) return [...timelineState.items];
-	
+
 	const lowerQuery = query.toLowerCase();
-	return timelineState.items.filter(item => 
-		item.title.toLowerCase().includes(lowerQuery) ||
-		item.feed_title.toLowerCase().includes(lowerQuery)
+	return timelineState.items.filter(
+		(item) =>
+			item.title.toLowerCase().includes(lowerQuery) ||
+			item.feed_title.toLowerCase().includes(lowerQuery),
 	);
 }
 
