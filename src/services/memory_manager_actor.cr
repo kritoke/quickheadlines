@@ -206,15 +206,15 @@ class MemoryManagerActor < Actor
     Dir.mkdir_p(dir)
     pid = Process.pid
 
-    safe_proc_read(pid, "maps",         "#{dir}/proc-maps.txt")
-    safe_proc_read(pid, "smaps",        "#{dir}/proc-smaps.txt")
+    safe_proc_read(pid, "maps", "#{dir}/proc-maps.txt")
+    safe_proc_read(pid, "smaps", "#{dir}/proc-smaps.txt")
     safe_proc_read(pid, "smaps_rollup", "#{dir}/proc-smaps-rollup.txt")
-    safe_proc_read(pid, "status",       "#{dir}/proc-status.txt")
-    safe_proc_read(pid, "cmdline",      "#{dir}/proc-cmdline.txt")
-    safe_proc_read(pid, "stat",         "#{dir}/proc-stat.txt")
-    safe_proc_read(pid, "statm",        "#{dir}/proc-statm.txt")
-    safe_proc_read(pid, "io",           "#{dir}/proc-io.txt")
-    safe_proc_read(pid, "limits",       "#{dir}/proc-limits.txt")
+    safe_proc_read(pid, "status", "#{dir}/proc-status.txt")
+    safe_proc_read(pid, "cmdline", "#{dir}/proc-cmdline.txt")
+    safe_proc_read(pid, "stat", "#{dir}/proc-stat.txt")
+    safe_proc_read(pid, "statm", "#{dir}/proc-statm.txt")
+    safe_proc_read(pid, "io", "#{dir}/proc-io.txt")
+    safe_proc_read(pid, "limits", "#{dir}/proc-limits.txt")
 
     File.write("#{dir}/crystal-gc-stats.txt", GC.stats.inspect)
     # Crystal 1.18 does not expose Fiber.list. The fiber wiring work

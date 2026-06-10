@@ -26,7 +26,7 @@ dependencies:
     version: ~> 0.14.0
   fetcher:
     github: kritoke/fetcher.cr
-    commit: 3a038c66085e1926ecc715df2275f50a4e7be36d
+    commit: 283326b41567d50bbfedecbf14159718edd5357a
   vug:
     github: kritoke/vug.cr
     commit: ad4ef8cf7428aa9aa422fc26c48e7f6bc2ed9441
