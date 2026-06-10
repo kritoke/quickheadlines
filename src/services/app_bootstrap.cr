@@ -10,6 +10,7 @@ require "../fetcher/vug_adapter"
 require "azurite"
 require "./memory_manager_actor"
 require "./memory_budget"
+require "../services/fiber_tracker"
 
 class AppBootstrap
   @config : Config
@@ -90,7 +91,7 @@ class AppBootstrap
 
   # Watchdog fiber to detect stuck refresh loops and attempt recovery.
   private def start_watchdog : Nil
-    spawn do
+    RefreshLoop::FiberTracker.tracked_spawn do
       consecutive = 0
       loop do
         begin
@@ -175,7 +176,7 @@ class AppBootstrap
   end
 
   private def run_startup_maintenance
-    spawn do
+    RefreshLoop::FiberTracker.tracked_spawn do
       begin
         @feed_cache.normalize_pub_dates
       rescue ex
@@ -200,7 +201,7 @@ class AppBootstrap
   end
 
   private def start_feed_refresh
-    spawn do
+    RefreshLoop::FiberTracker.tracked_spawn do
       begin
         start_refresh_loop("feeds.yml", @feed_cache, @db_service)
       rescue ex
@@ -210,7 +211,7 @@ class AppBootstrap
   end
 
   private def start_clustering_scheduler
-    spawn do
+    RefreshLoop::FiberTracker.tracked_spawn do
       loop do
         begin
           sleep(@clustering_interval)
@@ -228,7 +229,7 @@ class AppBootstrap
   private def run_initial_clustering
     run_on_startup = @config.clustering.try(&.run_on_startup?)
     if run_on_startup != false
-      spawn do
+      RefreshLoop::FiberTracker.tracked_spawn do
         sleep(QuickHeadlines::Constants::INITIAL_CLUSTER_DELAY)
         begin
           Log.for("quickheadlines.app").info { "Running initial clustering on startup..." }
@@ -242,7 +243,7 @@ class AppBootstrap
   end
 
   private def start_cleanup_scheduler
-    spawn do
+    RefreshLoop::FiberTracker.tracked_spawn do
       loop do
         sleep(@cleanup_interval)
         break if QuickHeadlines.shutting_down?
@@ -289,7 +290,7 @@ class AppBootstrap
   end
 
   private def start_ws_janitor
-    spawn do
+    RefreshLoop::FiberTracker.tracked_spawn do
       loop do
         sleep(@ws_janitor_interval)
         break if QuickHeadlines.shutting_down?

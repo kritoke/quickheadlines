@@ -1,5 +1,6 @@
 require "./api_base_controller"
 require "../fetcher/refresh_loop"
+require "../services/fiber_tracker"
 
 # Helper struct to bundle WebSocket statistics
 private struct WebSocketStats
@@ -59,7 +60,7 @@ class QuickHeadlines::Controllers::AdminController < QuickHeadlines::Controllers
   end
 
   private def spawn_clustering_task : Nil
-    spawn do
+    RefreshLoop::FiberTracker.tracked_spawn do
       start_time = Time.utc
       begin
         run_clustering
@@ -120,7 +121,7 @@ class QuickHeadlines::Controllers::AdminController < QuickHeadlines::Controllers
   end
 
   private def spawn_admin_action(action : String) : Nil
-    spawn do
+    RefreshLoop::FiberTracker.tracked_spawn do
       start_time = Time.utc
       begin
         execute_admin_action(action)

@@ -1,4 +1,5 @@
 require "../infrastructure/actor"
+require "../services/fiber_tracker"
 
 # MemoryManagerActor - Consolidated memory monitoring, GC coordination, and cleanup
 #
@@ -278,7 +279,7 @@ class MemoryManagerActor < Actor
 
       if @consecutive_high >= 5
         Log.for("quickheadlines.memory").error { "Sustained critical memory pressure, considering restart" }
-        spawn do
+        RefreshLoop::FiberTracker.tracked_spawn do
           sleep(5.seconds)
           unless QuickHeadlines.shutting_down?
             Log.for("quickheadlines.memory").warn { "Initiating graceful restart due to memory pressure" }

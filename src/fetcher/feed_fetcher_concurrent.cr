@@ -5,6 +5,7 @@ require "../constants"
 require "./feed_fetcher"
 require "./monitoring"
 require "./semaphore_pool"
+require "../services/fiber_tracker"
 
 # Per-feed concurrent fetch logic used by the refresh loop.
 #
@@ -38,7 +39,7 @@ module RefreshLoop
         current_index = feed_index
         feed_index += 1
         previous_feed_data = existing_data[feed.url]?
-        spawn(name: "feed_fetch_outer_#{current_index}") do
+        RefreshLoop::FiberTracker.tracked_spawn("feed_fetch_outer_#{current_index}") do
           fetch_one(feed, config, previous_feed_data, channel, current_index, semaphore)
         end
         Fiber.yield
@@ -131,7 +132,7 @@ module RefreshLoop
       # for a receiver that already returned.
       result_channel = Channel(FeedData?).new(1)
 
-      spawn(name: "feed_fetch_inner_#{index}") do
+      RefreshLoop::FiberTracker.tracked_spawn("feed_fetch_inner_#{index}") do
         begin
           fetch_result = FeedFetcher.instance.fetch(feed, config.item_limit, config.db_fetch_limit, previous_feed_data)
           result_channel.send(fetch_result)

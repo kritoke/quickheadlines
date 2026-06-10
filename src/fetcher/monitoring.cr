@@ -146,7 +146,7 @@ module RefreshLoop::Monitoring
   # memory status with diagnostic counts (sockets, event clients,
   # fibers).
   def self.start : Nil
-    spawn(name: "health_monitor_reporter") do
+    RefreshLoop::FiberTracker.tracked_spawn("health_monitor_reporter") do
       loop do
         break if QuickHeadlines.shutting_down?
         RefreshLoop::InterruptibleSleep.sleep(REPORT_INTERVAL)

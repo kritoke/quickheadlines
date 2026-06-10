@@ -1,6 +1,7 @@
 require "channel"
 require "json"
 require "log"
+require "../services/fiber_tracker"
 
 # ============================================================================
 # Actor Model Framework for Crystal
@@ -72,7 +73,9 @@ abstract class Actor
   def start : Nil
     return if @running
     @running = true
-    spawn(name: "actor-#{@name}") { run_loop }
+    RefreshLoop::FiberTracker.tracked_spawn("actor-#{@name}") do
+      run_loop
+    end
   end
 
   # Graceful shutdown: stops accepting new messages, waits for in-flight work to

@@ -1,6 +1,7 @@
 require "channel"
 require "json"
 require "./socket_manager"
+require "../services/fiber_tracker"
 
 class EventBroadcaster
   # All shared state accessed only through the broadcaster fiber loop.
@@ -21,7 +22,7 @@ class EventBroadcaster
   @@history_max_entries = 1000 # Keep last ~8 hours at 30s intervals
 
   def self.start : Nil
-    spawn(name: "event-broadcaster") do
+    RefreshLoop::FiberTracker.tracked_spawn("event-broadcaster") do
       loop do
         begin
           select
