@@ -11,6 +11,7 @@ require "./feed_fetcher_concurrent"
 require "./interruptible_sleep"
 require "./monitoring"
 require "./semaphore_pool"
+require "../services/fiber_tracker"
 
 # Long-lived refresh loop supervisor.
 #
@@ -60,7 +61,7 @@ module RefreshLoop
 
     def run : Nil
       @cache.save(@state.active_config.cache_retention_hours, @state.active_config.max_cache_size_mb)
-      spawn(name: "refresh_supervisor") do
+      RefreshLoop::FiberTracker.tracked_spawn("refresh_supervisor") do
         loop do
           break if QuickHeadlines.shutting_down?
           run_one_iteration
@@ -203,7 +204,7 @@ module RefreshLoop
       config_for_initial = @state.active_config
       cancel_ch = Channel(Nil).new(1)
       @state.initial_cancel_ch = cancel_ch
-      spawn(name: "initial_refresh") do
+      RefreshLoop::FiberTracker.tracked_spawn("initial_refresh") do
         begin
           refresh_all(config_for_initial, @cache, @db_service, cancel_ch)
         rescue CancelError
@@ -247,7 +248,7 @@ module RefreshLoop
 
       cancel_ch = Channel(Nil).new(1)
       completion_channel = Channel(Nil).new(1)
-      spawn(name: "refresh_worker") do
+      RefreshLoop::FiberTracker.tracked_spawn("refresh_worker") do
         begin
           refresh_all(config_snapshot, @cache, @db_service, cancel_ch)
           refresh_all_duration = (Time.utc - refresh_all_start).total_seconds

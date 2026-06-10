@@ -2,6 +2,7 @@ require "http"
 require "channel"
 require "../constants"
 require "../infrastructure/actor"
+require "../services/fiber_tracker"
 
 # SocketManager — Actor-based WebSocket connection lifecycle manager.
 #
@@ -330,7 +331,7 @@ class SocketManager < Actor
   # Writer fiber — per-connection IO worker.
   # Reports back to actor via messages. Does NOT mutate actor state directly.
   private def spawn_writer_fiber(connection : Connection) : Nil
-    spawn(name: "ws-writer-#{connection.ip}") do
+    RefreshLoop::FiberTracker.tracked_spawn("ws-writer-#{connection.ip}") do
       loop do
         begin
           message = connection.outgoing.receive?
