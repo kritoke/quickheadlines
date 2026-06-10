@@ -2,13 +2,14 @@
   "assignee": "",
   "blocked_by": [],
   "blocks": [],
+  "closed_at": "2026-06-10T10:21:02Z",
   "created": "2026-06-09T10:46:51Z",
   "description": "## Goal\n\nEvery API request goes through `check_rate_limit!` which makes\n**two `def_call`s** to `ThrottlerActor` (`RateLimiter.allowed?`\n+ `RateLimiter.retry_after`). Each `def_call` allocates:\n- A `Call{MethodName}` struct\n- A `Channel(String).new(1)` reply channel\n- JSON strings for args + reply\n- A `LimiterState` on cache miss\n\nThe state inside `LimiterState` is bounded, but the per-call\nallocations accumulate. If the API is hit 1×/sec, that's 12\nallocations/sec that need to be collected. If the GC can't keep\nup, they accumulate.\n\n## Why this is the suspect\n\nThe rate limiter is hit on every API request. The actor\nround-trip is ~1ms. The 30 req/60s limit means the answer is\n\"true\" for almost every request. We're paying a round-trip\ncost (with allocations) just to get \"true\" 99% of the time.\n\n## Design\n\nCache the \"allowed\" decision in the controller, keyed by the\nsame `(ip, key)` pair. A simple in-memory cache with a 1-2\nsecond TTL would short-circuit the common case (allowed = true)\nwithout going through the actor.\n\nA minimal implementation:\n```crystal\n# In api_base_controller.cr\n@@rate_limit_cache = {} of String =\u003e {allowed: Bool, expires_at: Time}\n\ndef check_rate_limit!(...)\n  # In-memory cache check\n  cached = @@rate_limit_cache[limiter_key]?\n  if cached \u0026\u0026 cached[:expires_at] \u003e Time.utc\n    return if cached[:allowed]\n    raise ... # 429\n  end\n\n  # Fall through to actor\n  allowed = RateLimiter.allowed?(...)\n  @@rate_limit_cache[limiter_key] = {allowed: allowed, expires_at: Time.utc + 1.second}\n  ...\nend\n```\n\nWith a 1-second TTL, the actor is called at most 1×/sec per\nkey (per IP, per endpoint). At steady state, that's a 99%\nreduction in def_call allocations.\n\nThe cache should be bounded (LRU) to prevent it from growing\nunbounded for diverse IPs.\n\n## Acceptance\n\n- A controller-level cache short-circuits the common \"allowed\"\n  case for ~1s\n- Build + spec + ameba clean\n- A rough metric: actor mailbox size for ThrottlerActor\n  should be near 0 in steady state (was previously spiking\n  on every API call)",
   "id": "quickhea-mcn",
   "labels": [],
   "priority": 3,
-  "status": "open",
+  "status": "closed",
   "title": "Cache RateLimiter result to avoid per-request def_call JSON allocation",
   "type": "task",
-  "updated_at": "2026-06-09T10:46:51Z"
+  "updated_at": "2026-06-10T10:21:02Z"
 }
