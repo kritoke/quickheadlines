@@ -2,13 +2,14 @@
   "assignee": "kritoke",
   "blocked_by": [],
   "blocks": [],
+  "closed_at": "2026-06-10T00:55:55Z",
   "created": "2026-06-10T00:50:46Z",
   "description": "## Goal\n\nThe `vug` shard is pinned to `ad4ef8cf7428aa9aa422fc26c48e7f6bc2ed9441`.\nUpstream `kritoke/vug.cr` is at `b44a0e025c43e4935f097181ca49212cc92840eb`\nwith 10 new commits. Update to the latest.\n\n## Why\n\n- Keeps the dependency current (vug is used by fetcher for\n  HTTP fetching)\n- Picks up SRP/DRY refactors on src/vug/fetcher.cr\n- Includes `.worktrees/` in .gitignore\n- Drops the legacy ticket system in nix\n- Ameba and format fixes\n\n## How\n\n\\`\\`\\`\nnix develop . --command shards install\n\\`\\`\\`\n\nAfter updating shard.yml commit.\n\n## Acceptance\n\n- shard.yml + shard.lock point to the new commit\n- just nix-build succeeds\n- crystal spec still passes\n- ameba clean\n- Boot smoke test: server starts, fetcher is functional",
   "id": "quickhea-rxx",
   "labels": [],
   "priority": 2,
-  "status": "in_progress",
+  "status": "closed",
   "title": "Update vug.cr to latest upstream commit",
   "type": "chore",
-  "updated_at": "2026-06-10T00:51:27Z"
+  "updated_at": "2026-06-10T00:55:55Z"
 }
