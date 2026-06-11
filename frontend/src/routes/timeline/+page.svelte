@@ -2,8 +2,7 @@
 	import AppHeader from '$lib/components/AppHeader.svelte';
 	import TabSelector from '$lib/components/TabSelector.svelte';
 	import LayoutPicker from '$lib/components/LayoutPicker.svelte';
-	import BitsSearchModal from '$lib/components/BitsSearchModal.svelte';
-	import { fetchFeeds, fetchTabs } from '$lib/api';
+	import { fetchTabs } from '$lib/api';
 	import type { TabResponse } from '$lib/types';
 	import {
 		createTimelineEffects,
@@ -24,7 +23,7 @@
 		loadAllRemainingItems,
 		isSearchLoadingAll
 	} from '$lib/stores/timelineStore.svelte';
-	import { searchState, setSearchQuery, toggleSearch } from '$lib/stores/search.svelte';
+	import { searchState, toggleSearch } from '$lib/stores/search.svelte';
 	import { createLazyLoader } from '$lib/utils/lazyComponent';
 	import { onMount } from 'svelte';
 	import { getStoredTab } from '$lib/stores/tabStore.svelte';
@@ -69,8 +68,6 @@
 		return () => observer.disconnect();
 	});
 	
-	let currentTab = $derived($page.url?.searchParams.get('tab') ?? getStoredTab());
-    
     // Track initialization to prevent double-firing on URL changes during load
     let initialized = $state(false);
     
@@ -175,7 +172,7 @@
 		{/await}
 	{/if}
 
-	<main class="flex-1 overflow-y-auto max-w-[1400px] mx-auto px-4 md:px-6 py-3 sm:py-5 w-full">
+	<main class="max-w-[1400px] mx-auto px-4 md:px-6 py-3 sm:py-5 w-full">
 
 		
 		{#if loading && timelineState.items.length === 0}
@@ -249,7 +246,7 @@
 			{#if timelineState.loadingMore}
 				<!-- Optimistic UI: Show placeholder items while loading more -->
 				<div class="space-y-3 py-6 animate-pulse">
-					{#each Array(5) as _, i}
+					{#each Array(5) as _}
 						<div class="flex gap-3 p-3 rounded-xl bg-surface-100/50 dark:bg-surface-800/50">
 							<div class="w-12 h-12 rounded-lg bg-surface-200 dark:bg-surface-700 flex-shrink-0"></div>
 							<div class="flex-1 space-y-2">
