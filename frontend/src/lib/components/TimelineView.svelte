@@ -282,7 +282,7 @@
 	.day-group {
 		display: flex;
 		flex-direction: column;
-		gap: var(--spacing-md, 1rem);
+		gap: var(--spacing-xs, 0.25rem);
 	}
 
 	.date-header {
@@ -290,16 +290,19 @@
 		font-weight: 600;
 		color: var(--color-surface-700, #374151);
 		margin: 0;
-		padding: var(--spacing-sm, 0.5rem) 0;
+		padding: 0.25rem 0;
 		position: sticky;
 		top: var(--header-height, 3.5rem);
-		background-color: var(--color-surface-50, #f9fafb);
+		background-color: rgb(249 250 251 / 0.85);
+		backdrop-filter: blur(8px);
 		z-index: 10;
+		line-height: 1.5;
 	}
 
 	:global(.dark) .date-header {
 		color: var(--color-surface-300, #d1d5db);
-		background-color: var(--color-surface-950, #030712);
+		background-color: rgb(3 7 18 / 0.85);
+		backdrop-filter: blur(8px);
 	}
 
 	@media (min-width: 640px) {
