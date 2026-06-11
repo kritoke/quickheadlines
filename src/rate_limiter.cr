@@ -78,14 +78,7 @@ module QuickHeadlines
     end
 
     # Singleton access
-    @@instance : ThrottlerActor?
-    @@instance_mutex = Mutex.new
-
-    def self.instance : ThrottlerActor
-      @@instance_mutex.synchronize do
-        @@instance ||= ThrottlerActor.new.tap(&.start)
-      end
-    end
+    def_singleton_auto
 
     # =========================================================================
     # Dispatch

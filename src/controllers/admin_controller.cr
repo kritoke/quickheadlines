@@ -1,6 +1,7 @@
 require "./api_base_controller"
 require "../fetcher/refresh_loop"
 require "../services/fiber_tracker"
+require "../services/task_metadata"
 
 # Helper struct to bundle WebSocket statistics
 private struct WebSocketStats
@@ -94,12 +95,12 @@ class QuickHeadlines::Controllers::AdminController < QuickHeadlines::Controllers
 
   private def record_cluster_success(start_time : Time) : Nil
     duration_ms = duration_ms_since(start_time)
-    StateStore.set_cluster_completed(duration_ms, "success")
+    TaskMetadata.set_cluster_completed(duration_ms, "success")
   end
 
   private def record_cluster_failure(ex : Exception, start_time : Time) : Nil
     duration_ms = duration_ms_since(start_time)
-    StateStore.set_cluster_completed(duration_ms, "failed: #{ex.message}")
+    TaskMetadata.set_cluster_completed(duration_ms, "failed: #{ex.message}")
     Log.for("quickheadlines.clustering").error(exception: ex) { "Clustering error" }
   end
 
@@ -142,12 +143,12 @@ class QuickHeadlines::Controllers::AdminController < QuickHeadlines::Controllers
 
   private def record_admin_success(action : String, start_time : Time) : Nil
     duration_ms = duration_ms_since(start_time)
-    StateStore.set_admin_completed(action, duration_ms, "success")
+    TaskMetadata.set_admin_completed(action, duration_ms, "success")
   end
 
   private def record_admin_failure(action : String, ex : Exception, start_time : Time) : Nil
     duration_ms = duration_ms_since(start_time)
-    StateStore.set_admin_completed(action, duration_ms, "failed: #{ex.message}")
+    TaskMetadata.set_admin_completed(action, duration_ms, "failed: #{ex.message}")
     Log.for("quickheadlines.app").error(exception: ex) { "Admin action error" }
   end
 
@@ -253,13 +254,13 @@ class QuickHeadlines::Controllers::AdminController < QuickHeadlines::Controllers
       websocket_send_errors: ws_stats.send_errors,
       websocket_connections_closed: ws_stats.closed_total,
       broadcaster_processed: broadcaster_stats.processed,
-      last_cluster_run: StateStore.last_cluster_run.try(&.to_unix_ms),
-      last_cluster_duration_ms: StateStore.last_cluster_duration_ms,
-      last_cluster_status: StateStore.last_cluster_status,
-      last_admin_action: StateStore.last_admin_action,
-      last_admin_run: StateStore.last_admin_run.try(&.to_unix_ms),
-      last_admin_duration_ms: StateStore.last_admin_duration_ms,
-      last_admin_status: StateStore.last_admin_status,
+      last_cluster_run: TaskMetadata.last_cluster_run.try(&.to_unix_ms),
+      last_cluster_duration_ms: TaskMetadata.last_cluster_duration_ms,
+      last_cluster_status: TaskMetadata.last_cluster_status,
+      last_admin_action: TaskMetadata.last_admin_action,
+      last_admin_run: TaskMetadata.last_admin_run.try(&.to_unix_ms),
+      last_admin_duration_ms: TaskMetadata.last_admin_duration_ms,
+      last_admin_status: TaskMetadata.last_admin_status,
       last_refresh_start: refresh_status[:last_start],
       last_refresh_complete: refresh_status[:last_complete],
       refresh_cycles: refresh_status[:cycles],

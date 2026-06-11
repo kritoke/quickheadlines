@@ -51,14 +51,7 @@ class FaviconActor < Actor
   end
 
   # Singleton access
-  @@instance : FaviconActor?
-  @@instance_mutex = Mutex.new
-
-  def self.instance : FaviconActor
-    @@instance_mutex.synchronize do
-      @@instance ||= FaviconActor.new.tap(&.start)
-    end
-  end
+  def_singleton_auto
 
   # =========================================================================
   # Pure functions — no state, can be called directly

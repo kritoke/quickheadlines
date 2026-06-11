@@ -15,18 +15,7 @@ require "./cleanup_store"
 require "../repositories/feed_repository"
 
 class FeedCache
-  @@instance : FeedCache?
-  @@instance_mutex = Mutex.new(:unchecked)
-
-  def self.instance : FeedCache
-    @@instance_mutex.synchronize do
-      @@instance || raise "FeedCache: Not initialized. AppBootstrap must create FeedCache before accessing instance."
-    end
-  end
-
-  def self.instance=(cache : FeedCache)
-    @@instance_mutex.synchronize { @@instance = cache }
-  end
+  def_singleton_manual("FeedCache: Not initialized. AppBootstrap must create FeedCache before accessing instance.")
 
   @mutex : Mutex
   @db_service : DatabaseService

@@ -5,10 +5,10 @@ require "../config"
 require "../storage/schema"
 require "../storage/cache_utils"
 require "../storage/database"
+require "../infrastructure/singleton"
 
 class DatabaseService
-  @@instance : DatabaseService?
-  @@instance_mutex = Mutex.new
+  def_singleton_manual("DatabaseService: Not initialized. AppBootstrap must create DatabaseService before accessing instance.")
 
   getter db_path : String
   getter db : DB::Database
@@ -21,18 +21,6 @@ class DatabaseService
 
     @db = DB.open("sqlite3://#{@db_path}?busy_timeout=#{QuickHeadlines::Constants::SQLITE_BUSY_TIMEOUT_MS}&max_pool_size=#{QuickHeadlines::Constants::DB_MAX_POOL_SIZE}")
     Database.create_schema(@db, @db_path)
-  end
-
-  def self.instance : DatabaseService
-    @@instance_mutex.synchronize do
-      @@instance ||= begin
-        raise "DatabaseService: Not initialized. AppBootstrap must create DatabaseService before accessing instance."
-      end
-    end
-  end
-
-  def self.instance=(service : DatabaseService)
-    @@instance_mutex.synchronize { @@instance = service }
   end
 
   def close

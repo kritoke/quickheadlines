@@ -38,20 +38,7 @@ class FeedFetcher
   end
 
   # Singleton accessor
-  @@instance : FeedFetcher?
-  @@instance_mutex = Mutex.new
-
-  def self.instance : FeedFetcher
-    @@instance_mutex.synchronize do
-      instance = @@instance
-      raise "FeedFetcher not initialized. Call FeedFetcher.instance=(fetcher) first." unless instance
-      instance
-    end
-  end
-
-  def self.instance=(fetcher : FeedFetcher)
-    @@instance_mutex.synchronize { @@instance = fetcher }
-  end
+  def_singleton_manual("FeedFetcher not initialized. Call FeedFetcher.instance=(fetcher) first.")
 
   # Main entry point — fetch a feed with caching and retry logic.
   # Timeout control is handled at the caller level (fetch_single_feed_with_timeout).

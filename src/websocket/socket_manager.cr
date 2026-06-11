@@ -62,14 +62,7 @@ class SocketManager < Actor
   end
 
   # Singleton access
-  @@instance : SocketManager?
-  @@instance_mutex = Mutex.new
-
-  def self.instance : SocketManager
-    @@instance_mutex.synchronize do
-      @@instance ||= SocketManager.new.tap(&.start)
-    end
-  end
+  def_singleton_auto
 
   # Convenience aliases for backward compatibility
   def broadcast(message : String) : Nil

@@ -139,14 +139,7 @@ class MemoryManagerActor < Actor
   end
 
   # Singleton access
-  @@instance : MemoryManagerActor?
-  @@instance_mutex = Mutex.new
-
-  def self.instance : MemoryManagerActor
-    @@instance_mutex.synchronize do
-      @@instance ||= MemoryManagerActor.new.tap(&.start)
-    end
-  end
+  def_singleton_auto
 
   # =========================================================================
   # Dispatch
