@@ -26,7 +26,7 @@ class StaticController < Athena::Framework::Controller
   private def serve_asset(path : String) : AHTTP::Response
     file = FrontendAssets.get(path)
     content = file.gets_to_end
-    mime = mime_type_from_path(path)
+    mime = ::Utils.mime_type_from_path(path)
 
     response = AHTTP::Response.new(content)
     response.headers["content-type"] = mime

@@ -213,7 +213,7 @@ class QuickHeadlines::Controllers::AdminController < QuickHeadlines::Controllers
   private def parse_admin_action(body_io : IO?) : String?
     return unless body_io
 
-    body_content = read_body_safe(body_io)
+    body_content = ::Utils.read_body_safe(body_io)
     if body_content.empty?
       Log.for("quickheadlines.app").debug { "Admin action: empty request body" }
       return

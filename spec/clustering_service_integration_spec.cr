@@ -49,13 +49,13 @@ describe QuickHeadlines::Services::ClusteringService do
 
       processed.should eq(5)
 
-      cluster_1 = cache.get_cluster_items(1_i64)
+      cluster_1 = cache.clustering_store.get_cluster_items(1_i64)
       cluster_1.size.should eq(3)
 
-      cluster_10 = cache.get_cluster_items(10_i64)
+      cluster_10 = cache.clustering_store.get_cluster_items(10_i64)
       cluster_10.size.should eq(1)
 
-      cluster_11 = cache.get_cluster_items(11_i64)
+      cluster_11 = cache.clustering_store.get_cluster_items(11_i64)
       cluster_11.size.should eq(1)
     end
 
@@ -120,7 +120,7 @@ describe QuickHeadlines::Services::ClusteringService do
 
       processed.should eq(2)
 
-      cluster_1 = cache.get_cluster_items(1_i64)
+      cluster_1 = cache.clustering_store.get_cluster_items(1_i64)
       cluster_1.size.should eq(2)
     end
   end

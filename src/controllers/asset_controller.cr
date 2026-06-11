@@ -10,12 +10,12 @@ class QuickHeadlines::Controllers::AssetController < QuickHeadlines::Controllers
 
     raise AHK::Exception::BadRequest.new("Missing 'url' parameter") if url.nil? || url.strip.empty?
 
-    normalized_url = normalize_feed_url(url)
+    normalized_url = QuickHeadlines::CacheUtils.normalize_feed_url(url)
 
     if favicon_path = FaviconActor.instance.get_or_fetch(normalized_url)
       if File.exists?(favicon_path)
         content = File.read(favicon_path)
-        return AHTTP::Response.new(content, 200, HTTP::Headers{"content-type" => mime_type_from_path(favicon_path)})
+        return AHTTP::Response.new(content, 200, HTTP::Headers{"content-type" => ::Utils.mime_type_from_path(favicon_path)})
       end
     end
 

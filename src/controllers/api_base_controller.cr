@@ -51,7 +51,7 @@ class QuickHeadlines::Controllers::ApiBaseController < Athena::Framework::Contro
     end
 
     token = auth_header[7..-1]
-    if timing_safe_compare(secret, token)
+    if ::Utils.timing_safe_compare(secret, token)
       true
     else
       Log.for("quickheadlines.auth").warn { "Failed admin auth attempt from #{client_ip(request)}" }
@@ -75,7 +75,7 @@ class QuickHeadlines::Controllers::ApiBaseController < Athena::Framework::Contro
   end
 
   private def client_ip(request : AHTTP::Request) : String
-    extract_client_ip(request)
+    ::Utils.extract_client_ip(request)
   end
 
   # Validate proxy URL and return resolved IP to prevent DNS rebinding.
@@ -217,7 +217,7 @@ class QuickHeadlines::Controllers::ApiBaseController < Athena::Framework::Contro
     body = request.body
     seconds = QuickHeadlines::Constants::API_CACHE_TTL_SECONDS
     if body
-      content = read_body_safe(body)
+      content = ::Utils.read_body_safe(body)
       begin
         parsed = JSON.parse(content)
         if val = parsed["seconds"]?
@@ -264,7 +264,7 @@ class QuickHeadlines::Controllers::ApiBaseController < Athena::Framework::Contro
 
     cached_tabs = config.tabs.map do |tab_config|
       tab_feeds = tab_config.feeds.compact_map do |feed_config|
-        cached = cache.get(feed_config.url) || cache.get(normalize_feed_url(feed_config.url))
+        cached = cache.get(feed_config.url) || cache.get(QuickHeadlines::CacheUtils.normalize_feed_url(feed_config.url))
         unless cached
           Log.for("quickheadlines.cache").debug { "Fallback: feed not in cache, dropping: #{feed_config.url}" }
         end

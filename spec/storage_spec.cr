@@ -7,14 +7,14 @@ require "./spec_helper"
 describe "Storage" do
   describe "format_bytes" do
     it "formats bytes correctly" do
-      format_bytes(0).should eq("0 B")
-      format_bytes(1023).should eq("1023 B")
-      format_bytes(1024).should eq("1 KB")
-      format_bytes(1536).should eq("1.5 KB")
-      format_bytes(1024 * 1024).should eq("1 MB")
-      format_bytes(50 * 1024 * 1024).should eq("50 MB")
-      format_bytes(100 * 1024 * 1024).should eq("100 MB")
-      format_bytes(1024 * 1024 * 1024).should eq("1 GB")
+      QuickHeadlines::CacheUtils.format_bytes(0).should eq("0 B")
+      QuickHeadlines::CacheUtils.format_bytes(1023).should eq("1023 B")
+      QuickHeadlines::CacheUtils.format_bytes(1024).should eq("1 KB")
+      QuickHeadlines::CacheUtils.format_bytes(1536).should eq("1.5 KB")
+      QuickHeadlines::CacheUtils.format_bytes(1024 * 1024).should eq("1 MB")
+      QuickHeadlines::CacheUtils.format_bytes(50 * 1024 * 1024).should eq("50 MB")
+      QuickHeadlines::CacheUtils.format_bytes(100 * 1024 * 1024).should eq("100 MB")
+      QuickHeadlines::CacheUtils.format_bytes(1024 * 1024 * 1024).should eq("1 GB")
     end
   end
 
@@ -65,7 +65,7 @@ describe "Storage" do
   describe "FeedCache#check_size_limit" do
     it "does not raise when database is empty" do
       cache = create_test_feed_cache
-      cache.check_size_limit(100).should be_nil
+      cache.cleanup_store.check_size_limit(100).should be_nil
     end
   end
 end

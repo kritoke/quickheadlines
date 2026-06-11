@@ -22,7 +22,7 @@ describe "Header Colors" do
         cache.add(test_feed)
 
         # Update colors
-        cache.update_header_colors("https://test.com/feed.xml", "rgb(200,200,200)", "#ffffff")
+        cache.header_color_store.update_header_colors("https://test.com/feed.xml", "rgb(200,200,200)", "#ffffff")
 
         # Verify via get
         feed = cache.get("https://test.com/feed.xml")

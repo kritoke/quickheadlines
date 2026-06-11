@@ -46,7 +46,7 @@ class AppBootstrap
     FeedFetcher.instance = FeedFetcher.new(@feed_cache)
     FeedFetcher.load_feeds_from_cache(@config)
 
-    content_db_path = File.join(get_cache_dir(@config), "content.db")
+    content_db_path = File.join(QuickHeadlines::CacheUtils.get_cache_dir(@config), "content.db")
     content_store = Azurite::Builder.new
       .db_path(content_db_path)
       .retention_days(Azurite::RETENTION_DAYS_DEFAULT)
@@ -179,15 +179,15 @@ class AppBootstrap
   private def run_startup_maintenance
     RefreshLoop::FiberTracker.tracked_spawn do
       begin
-        @feed_cache.normalize_pub_dates
+        @feed_cache.cleanup_store.normalize_pub_dates
       rescue ex
         Log.for("quickheadlines.app").warn(exception: ex) { "normalize_pub_dates failed on startup" }
       end
 
-      db_size = get_db_size(@feed_cache.db_path)
+      db_size = QuickHeadlines::CacheUtils.get_db_size(@feed_cache.db_path)
       if db_size > QuickHeadlines::Constants::DB_VACUUM_THRESHOLD
         begin
-          @feed_cache.vacuum
+          @feed_cache.cleanup_store.vacuum
         rescue ex
           Log.for("quickheadlines.app").warn(exception: ex) { "startup vacuum failed" }
         end
@@ -268,8 +268,8 @@ class AppBootstrap
           end
 
           # DB-level cleanup (not handled by MemoryManagerActor)
-          @feed_cache.cleanup_old_articles(QuickHeadlines::Constants::CACHE_RETENTION_DAYS)
-          @feed_cache.cleanup_old_entries(@config.cache_retention_hours || QuickHeadlines::Constants::CACHE_RETENTION_HOURS)
+          @feed_cache.cleanup_store.cleanup_old_articles(QuickHeadlines::Constants::CACHE_RETENTION_DAYS)
+          @feed_cache.cleanup_store.cleanup_old_entries(@config.cache_retention_hours || QuickHeadlines::Constants::CACHE_RETENTION_HOURS)
           QuickHeadlines::Services::ContentService.instance.check_size_and_cleanup
           Log.for("quickheadlines.app").debug { "Scheduled cleanup completed" }
         rescue ex
@@ -301,7 +301,7 @@ class AppBootstrap
 
   private def cleanup_stale_feeds
     config_urls = @config.all_feed_urls
-    @feed_cache.remove_stale_feeds(config_urls)
+    @feed_cache.cleanup_store.remove_stale_feeds(config_urls)
   rescue ex
     Log.for("quickheadlines.app").warn(exception: ex) { "cleanup_stale_feeds failed on startup" }
   end

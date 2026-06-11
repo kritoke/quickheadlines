@@ -59,7 +59,7 @@ module QuickHeadlines::Storage
 
     def load_theme(feed_url : String) : String?
       @mutex.synchronize do
-        normalized_url = normalize_feed_url(feed_url)
+        normalized_url = QuickHeadlines::CacheUtils.normalize_feed_url(feed_url)
         result = @db.query_one?("SELECT header_theme_colors FROM feeds WHERE url = ?", normalized_url, as: {String?})
 
         if result.nil?
@@ -88,7 +88,7 @@ module QuickHeadlines::Storage
     end
 
     private def find_feed_colors(feed_url : String) : {header_color: String?, header_text_color: String?}?
-      normalized_url = normalize_feed_url(feed_url)
+      normalized_url = QuickHeadlines::CacheUtils.normalize_feed_url(feed_url)
 
       existing = @db.query_one?("SELECT header_color, header_text_color FROM feeds WHERE url = ?", normalized_url) do |row|
         {header_color: row.read(String?), header_text_color: row.read(String?)}

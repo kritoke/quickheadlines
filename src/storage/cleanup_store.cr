@@ -16,7 +16,7 @@ module QuickHeadlines::Storage
 
     def cleanup_old_entries(retention_hours : Int32 = QuickHeadlines::Constants::CACHE_RETENTION_HOURS, config_urls : Array(String)? = nil)
       @mutex.synchronize do
-        log_db_size(@db_path, "before cleanup")
+        QuickHeadlines::CacheUtils.log_db_size(@db_path, "before cleanup")
 
         cutoff = (Time.utc - retention_hours.hours).to_s(QuickHeadlines::Constants::DB_TIME_FORMAT)
 
@@ -30,7 +30,7 @@ module QuickHeadlines::Storage
         deleted_count = result.rows_affected
         Log.for("quickheadlines.storage").debug { "Cleaned up #{deleted_count} old feeds (older than #{retention_hours}h)" } if deleted_count > 0
 
-        log_db_size(@db_path, "after cleanup")
+        QuickHeadlines::CacheUtils.log_db_size(@db_path, "after cleanup")
       end
     end
 

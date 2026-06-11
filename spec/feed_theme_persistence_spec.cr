@@ -21,7 +21,7 @@ describe "Feed Theme Persistence" do
     # Insert
     cache.add(fd)
 
-    saved = cache.load_theme("https://theme.example.com/feed.xml")
+    saved = cache.header_color_store.load_theme("https://theme.example.com/feed.xml")
     saved.should_not be_nil
     saved.should eq(theme_json)
 
@@ -36,7 +36,7 @@ describe "Feed Theme Persistence" do
       raise "FeedData missing after insert"
     end
 
-    updated = cache.load_theme("https://theme.example.com/feed.xml")
+    updated = cache.header_color_store.load_theme("https://theme.example.com/feed.xml")
     updated.should eq(new_theme)
   end
 end

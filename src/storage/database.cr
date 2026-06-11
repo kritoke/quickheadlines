@@ -182,7 +182,7 @@ rescue ex : Exception
 end
 
 def repair_database(config : Config?, backup_path : String? = nil) : DbRepairResult
-  db_path = get_cache_db_path(config)
+  db_path = QuickHeadlines::CacheUtils.get_cache_db_path(config)
   repair_time = Time.utc
 
   Log.for("quickheadlines.storage").warn { "Attempting to repair corrupted database..." }
@@ -230,9 +230,9 @@ def repair_database(config : Config?, backup_path : String? = nil) : DbRepairRes
 end
 
 def init_db(config : Config?)
-  cache_dir = get_cache_dir(config)
-  ensure_cache_dir(cache_dir)
-  db_path = get_cache_db_path(config)
+  cache_dir = QuickHeadlines::CacheUtils.get_cache_dir(config)
+  QuickHeadlines::CacheUtils.ensure_cache_dir(cache_dir)
+  db_path = QuickHeadlines::CacheUtils.get_cache_db_path(config)
 
   DB.open("sqlite3://#{db_path}") do |database|
     create_schema(database, db_path)

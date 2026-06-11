@@ -124,7 +124,7 @@ class QuickHeadlines::Controllers::ProxyController < QuickHeadlines::Controllers
     cached = FaviconCache.get(cache_key)
     if cached
       AHTTP::Response.new(cached, 200, HTTP::Headers{
-        "content-type"           => mime_type_from_ext(ext),
+        "content-type"           => ::Utils.mime_type_from_ext(ext),
         "cache-control"          => "public, max-age=604800, immutable",
         "x-content-type-options" => "nosniff",
       })
@@ -133,10 +133,10 @@ class QuickHeadlines::Controllers::ProxyController < QuickHeadlines::Controllers
 
       # Read favicon as binary to avoid UTF-8 corruption of ICO files.
       # File.read decodes as UTF-8, replacing invalid byte sequences with U+FFFD.
-      content = read_binary_file(favicon_path)
+      content = ::Utils.read_binary_file(favicon_path)
       FaviconCache.put(cache_key, content)
       AHTTP::Response.new(content, 200, HTTP::Headers{
-        "content-type"           => mime_type_from_ext(ext),
+        "content-type"           => ::Utils.mime_type_from_ext(ext),
         "cache-control"          => "public, max-age=604800, immutable",
         "x-content-type-options" => "nosniff",
       })

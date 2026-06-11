@@ -9,7 +9,7 @@ class QuickHeadlines::Controllers::HeaderColorController < QuickHeadlines::Contr
     raise AHK::Exception::BadRequest.new("Missing request body") if body_io.nil?
 
     begin
-      body = JSON.parse(read_body_safe(body_io))
+      body = JSON.parse(::Utils.read_body_safe(body_io))
     rescue JSON::ParseException
       raise AHK::Exception::BadRequest.new("Invalid JSON in request body")
     end
@@ -26,9 +26,9 @@ class QuickHeadlines::Controllers::HeaderColorController < QuickHeadlines::Contr
 
     normalized_url = feed_url.strip.rstrip('/').gsub(/\/rss(\.xml)?$/i, "")
     cache = @feed_cache
-    db_url = cache.find_url_by_pattern(normalized_url) || feed_url
+    db_url = cache.header_color_store.find_url_by_pattern(normalized_url) || feed_url
 
-    cache.update_header_colors(db_url, color, text_color)
+    cache.header_color_store.update_header_colors(db_url, color, text_color)
     QuickHeadlines::DTOs::HeaderColorResponse.new(status: "ok")
   rescue ex : AHK::Exception::HTTPException
     raise ex

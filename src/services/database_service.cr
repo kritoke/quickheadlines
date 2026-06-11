@@ -14,10 +14,10 @@ class DatabaseService
   getter db : DB::Database
 
   def initialize(config : Config)
-    cache_dir = get_cache_dir(config)
-    ensure_cache_dir(cache_dir)
+    cache_dir = QuickHeadlines::CacheUtils.get_cache_dir(config)
+    QuickHeadlines::CacheUtils.ensure_cache_dir(cache_dir)
 
-    @db_path = get_cache_db_path(config).as(String)
+    @db_path = QuickHeadlines::CacheUtils.get_cache_db_path(config).as(String)
 
     @db = DB.open("sqlite3://#{@db_path}?busy_timeout=#{QuickHeadlines::Constants::SQLITE_BUSY_TIMEOUT_MS}&max_pool_size=#{QuickHeadlines::Constants::DB_MAX_POOL_SIZE}")
     ::create_schema(@db, @db_path)

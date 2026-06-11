@@ -67,34 +67,80 @@ module Utils
     second = parts[1].to_i?(strict: true)
     !second.nil? && second >= min && second <= max
   end
-end
 
-def read_body_safe(io : IO, max_size : Int32 = QuickHeadlines::Constants::MAX_REQUEST_BODY_SIZE) : String
-  # Use growing buffer instead of fixed max-size allocation
-  buffer = IO::Memory.new
-  buffer_bytes = Bytes.new(QuickHeadlines::Constants::BUFFER_SIZE) # 8KB chunk
-  bytes_copied = 0
+  def self.read_body_safe(io : IO, max_size : Int32 = QuickHeadlines::Constants::MAX_REQUEST_BODY_SIZE) : String
+    # Use growing buffer instead of fixed max-size allocation
+    buffer = IO::Memory.new
+    buffer_bytes = Bytes.new(QuickHeadlines::Constants::BUFFER_SIZE) # 8KB chunk
+    bytes_copied = 0
 
-  while bytes_copied < max_size
-    bytes_read = io.read(buffer_bytes)
-    break if bytes_read == 0
-    buffer.write(buffer_bytes[0, bytes_read])
-    bytes_copied += bytes_read
+    while bytes_copied < max_size
+      bytes_read = io.read(buffer_bytes)
+      break if bytes_read == 0
+      buffer.write(buffer_bytes[0, bytes_read])
+      bytes_copied += bytes_read
+    end
+
+    if bytes_copied >= max_size && io.read_byte
+      raise IO::EOFError.new("Request body exceeds #{max_size} bytes")
+    end
+
+    buffer.to_s
   end
 
-  if bytes_copied >= max_size && io.read_byte
-    raise IO::EOFError.new("Request body exceeds #{max_size} bytes")
+  # Read a file as binary data, preserving raw bytes without UTF-8 decoding.
+  # Use this for image files (ICO, PNG, etc.) where File.read would corrupt
+  # non-UTF-8 byte sequences by replacing them with U+FFFD.
+  def self.read_binary_file(path : String) : String
+    bytes = File.open(path, "rb", &.getb_to_end)
+    String.new(bytes)
   end
 
-  buffer.to_s
-end
+  def self.mime_type_from_path(path : String) : String
+    ext = File.extname(path).lchop('.')
+    mime_type_from_ext(ext)
+  end
 
-# Read a file as binary data, preserving raw bytes without UTF-8 decoding.
-# Use this for image files (ICO, PNG, etc.) where File.read would corrupt
-# non-UTF-8 byte sequences by replacing them with U+FFFD.
-def read_binary_file(path : String) : String
-  bytes = File.open(path, "rb", &.getb_to_end)
-  String.new(bytes)
+  def self.mime_type_from_ext(ext : String) : String
+    MIME_TYPES[ext.downcase]? || "application/octet-stream"
+  end
+
+  def self.extract_client_ip(request) : String
+    if ENV["TRUSTED_PROXY"]?
+      # SECURITY NOTE: This trusts X-Forwarded-For from any client.
+      # Only enable if your deployment ensures only trusted proxies can reach this server
+      # (e.g., firewall rules, VPN, or direct server access is blocked).
+      # For safer behavior, use X-Client-IP from your reverse proxy instead.
+      Log.for("quickheadlines.utils").warn { "TRUSTED_PROXY enabled - ensure only trusted proxies can reach this server" } if ENV["APP_ENV"]? && ENV["APP_ENV"] == "development"
+      if xff = request.headers["X-Forwarded-For"]?
+        if first_ip = xff.split(",").first?.try(&.strip)
+          # Additional validation: only trust X-Forwarded-For if it appears to be from an internal/proxy source
+          # (loopback, private range, or internal network). This prevents direct client IP spoofing.
+          if private_host?(first_ip) || first_ip == "localhost" || first_ip.starts_with?("127.") || first_ip.starts_with?("[::1")
+            Log.for("quickheadlines.utils").debug { "TRUSTED_PROXY: using X-Forwarded-For IP #{first_ip}" }
+            return first_ip
+          end
+          # For non-internal IPs, log and fall through to X-Client-IP
+          Log.for("quickheadlines.utils").debug { "TRUSTED_PROXY: X-Forwarded-For #{first_ip} not from internal range, using X-Client-IP" }
+        end
+      end
+    end
+    request.headers["X-Client-IP"]?.try(&.strip) || "unknown"
+  end
+
+  # Timing-safe string comparison to prevent timing attacks on auth tokens.
+  def self.timing_safe_compare(a : String, b : String) : Bool
+    a_bytes = a.bytes
+    b_bytes = b.bytes
+    max_len = {a_bytes.size, b_bytes.size}.max
+    result = 0
+    max_len.times do |i|
+      a_byte = i < a_bytes.size ? a_bytes[i] : 0
+      b_byte = i < b_bytes.size ? b_bytes[i] : 0
+      result |= a_byte ^ b_byte
+    end
+    result == 0
+  end
 end
 
 module UrlNormalizer
@@ -124,50 +170,4 @@ module UrlNormalizer
 
     normalized
   end
-end
-
-def mime_type_from_path(path : String) : String
-  ext = File.extname(path).lchop('.')
-  mime_type_from_ext(ext)
-end
-
-def mime_type_from_ext(ext : String) : String
-  Utils::MIME_TYPES[ext.downcase]? || "application/octet-stream"
-end
-
-def extract_client_ip(request) : String
-  if ENV["TRUSTED_PROXY"]?
-    # SECURITY NOTE: This trusts X-Forwarded-For from any client.
-    # Only enable if your deployment ensures only trusted proxies can reach this server
-    # (e.g., firewall rules, VPN, or direct server access is blocked).
-    # For safer behavior, use X-Client-IP from your reverse proxy instead.
-    Log.for("quickheadlines.utils").warn { "TRUSTED_PROXY enabled - ensure only trusted proxies can reach this server" } if ENV["APP_ENV"]? && ENV["APP_ENV"] == "development"
-    if xff = request.headers["X-Forwarded-For"]?
-      if first_ip = xff.split(",").first?.try(&.strip)
-        # Additional validation: only trust X-Forwarded-For if it appears to be from an internal/proxy source
-        # (loopback, private range, or internal network). This prevents direct client IP spoofing.
-        if Utils.private_host?(first_ip) || first_ip == "localhost" || first_ip.starts_with?("127.") || first_ip.starts_with?("[::1")
-          Log.for("quickheadlines.utils").debug { "TRUSTED_PROXY: using X-Forwarded-For IP #{first_ip}" }
-          return first_ip
-        end
-        # For non-internal IPs, log and fall through to X-Client-IP
-        Log.for("quickheadlines.utils").debug { "TRUSTED_PROXY: X-Forwarded-For #{first_ip} not from internal range, using X-Client-IP" }
-      end
-    end
-  end
-  request.headers["X-Client-IP"]?.try(&.strip) || "unknown"
-end
-
-# Timing-safe string comparison to prevent timing attacks on auth tokens.
-def timing_safe_compare(a : String, b : String) : Bool
-  a_bytes = a.bytes
-  b_bytes = b.bytes
-  max_len = {a_bytes.size, b_bytes.size}.max
-  result = 0
-  max_len.times do |i|
-    a_byte = i < a_bytes.size ? a_bytes[i] : 0
-    b_byte = i < b_bytes.size ? b_bytes[i] : 0
-    result |= a_byte ^ b_byte
-  end
-  result == 0
 end

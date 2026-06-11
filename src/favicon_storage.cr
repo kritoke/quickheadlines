@@ -47,7 +47,7 @@ class FaviconActor < Actor
   end
 
   private def compute_favicon_dir : String
-    File.join(get_cache_dir(nil), "favicons")
+    File.join(QuickHeadlines::CacheUtils.get_cache_dir(nil), "favicons")
   end
 
   # Singleton access

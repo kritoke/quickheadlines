@@ -98,7 +98,7 @@ class QuickHeadlines::Services::ClusteringActor < Actor
       Log.for("quickheadlines.clustering").info { "Found #{items.size} items to re-cluster with LSH (threshold: #{threshold}, bands: #{bands})" }
 
       rep_map = ClusteringEngine.cluster_items(items, threshold, bands)
-      cache.assign_clusters_bulk(rep_map)
+      cache.clustering_store.assign_clusters_bulk(rep_map)
       processed = items.count { |i| ClusteringEngine.can_cluster?(i.title) }
       Log.for("quickheadlines.clustering").info { "Re-clustering with LSH complete: #{processed} items clustered into #{rep_map.size} groups" }
       processed
@@ -136,13 +136,13 @@ class QuickHeadlines::Services::ClusteringService
     candidates.each do |candidate_id|
       next if candidate_id == item_id
 
-      candidate_signature = cache.get_item_signature(candidate_id)
+      candidate_signature = cache.clustering_store.get_item_signature(candidate_id)
       next unless candidate_signature
 
-      candidate_feed_id = cache.get_item_feed_id(candidate_id)
+      candidate_feed_id = cache.clustering_store.get_item_feed_id(candidate_id)
       next if item_feed_id && candidate_feed_id == item_feed_id
 
-      candidate_title = cache.get_item_title(candidate_id)
+      candidate_title = cache.clustering_store.get_item_title(candidate_id)
       next unless candidate_title
 
       candidate_set = ClusteringEngine.word_set(candidate_title)
@@ -171,13 +171,13 @@ class QuickHeadlines::Services::ClusteringService
 
   private def assign_cluster_item(item_id : Int64, match : ClusterMatchResult, threshold : Float64, title : String, cache : FeedCache) : Int64
     if match.match_id && match.similarity >= threshold
-      cluster_items = cache.get_cluster_items(match.match_id)
+      cluster_items = cache.clustering_store.get_cluster_items(match.match_id)
       cluster_id = cluster_items.any? { |id| id != match.match_id } ? cluster_items.first : match.match_id
-      cache.assign_cluster(item_id, cluster_id)
+      cache.clustering_store.assign_cluster(item_id, cluster_id)
       Log.for("quickheadlines.clustering").debug { "Clustered '#{title[0...QuickHeadlines::Constants::CLUSTER_TITLE_TRUNCATE_LENGTH]}...' with '#{match.match_title[0...QuickHeadlines::Constants::CLUSTER_TITLE_TRUNCATE_LENGTH]}...'" } if ENV["DEBUG_CLUSTERING"]?
       cluster_id
     else
-      cache.assign_cluster(item_id, item_id)
+      cache.clustering_store.assign_cluster(item_id, item_id)
       Log.for("quickheadlines.clustering").debug { "Created new cluster for '#{title[0...QuickHeadlines::Constants::CLUSTER_TITLE_TRUNCATE_LENGTH]}...'" } if ENV["DEBUG_CLUSTERING"]?
       item_id
     end
@@ -189,16 +189,16 @@ class QuickHeadlines::Services::ClusteringService
     title_set = ClusteringEngine.word_set(title)
     signature = ClusteringEngine.compute_minhash_signature(title)
 
-    cache.store_item_signature(item_id, signature)
+    cache.clustering_store.store_item_signature(item_id, signature)
 
     bands = LexisMinhash::Engine.generate_bands(signature)
     band_hashes = bands.map { |band| band[1] }
-    cache.store_lsh_bands(item_id, band_hashes)
+    cache.clustering_store.store_lsh_bands(item_id, band_hashes)
 
-    candidates = cache.find_lsh_candidates(signature)
+    candidates = cache.clustering_store.find_lsh_candidates(signature)
 
     if candidates.empty?
-      cache.assign_cluster(item_id, item_id)
+      cache.clustering_store.assign_cluster(item_id, item_id)
       return item_id
     end
 
@@ -234,7 +234,7 @@ class QuickHeadlines::Services::ClusteringService
     end
 
     db_items = begin
-      feed_cache.get_cluster_items_full(parsed_id)
+      feed_cache.clustering_store.get_cluster_items_full(parsed_id)
     rescue ex
       Log.for("quickheadlines.clustering").error(exception: ex) { "Failed to fetch cluster items for cluster #{cluster_id}" }
       return QuickHeadlines::DTOs::ClusterItemsResponse.new(

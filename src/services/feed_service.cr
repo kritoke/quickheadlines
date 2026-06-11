@@ -2,6 +2,7 @@ require "json"
 require "../models"
 require "../dtos/api_responses"
 require "../storage/feed_cache"
+require "../color_extractor"
 require "azurite"
 
 module QuickHeadlines::Services
@@ -23,23 +24,7 @@ module QuickHeadlines::Services
       total_count : Int32? = nil,
       display_item_limit : Int32? = nil,
     ) : QuickHeadlines::DTOs::FeedResponse
-      header_color = feed.header_color
-      header_text_color = feed.header_text_color
-
-      header_theme_colors_json = nil.as(String?)
-      if header_color.nil? || header_text_color.nil?
-        colors = cache.get_header_colors(feed.url)
-        header_color ||= colors[:bg_color]
-        header_text_color ||= colors[:text_color]
-      end
-
-      begin
-        theme_json = cache.load_theme(feed.url)
-        header_theme_colors_json = theme_json if theme_json && !theme_json.empty?
-      rescue DB::Error | JSON::ParseException
-        header_theme_colors_json = nil
-      end
-
+      header_color, header_text_color, header_theme_colors_json = resolve_header_colors(feed, cache)
       build_response_for_feed(feed, cache, tab_name, total_count, display_item_limit, header_color, header_text_color, header_theme_colors_json)
     end
 
@@ -89,6 +74,81 @@ module QuickHeadlines::Services
       end
     end
 
+    # Resolve header colors from feed data with fallback to cache.
+    # Returns {header_color, header_text_color, header_theme_colors_json}.
+    private def self.resolve_header_colors(feed : FeedData, cache : FeedCache) : {String?, String?, String?}
+      header_color = feed.header_color
+      header_text_color = feed.header_text_color
+
+      # 1. Fill missing colors from DB cache
+      if header_color.nil? || header_text_color.nil?
+        colors = cache.header_color_store.get_header_colors(feed.url)
+        header_color ||= colors[:bg_color]
+        header_text_color ||= colors[:text_color]
+      end
+
+      # 2. Load theme JSON from DB
+      header_theme_colors_json = nil.as(String?)
+      begin
+        theme_json = cache.header_color_store.load_theme(feed.url)
+        header_theme_colors_json = theme_json if theme_json && !theme_json.empty?
+      rescue DB::Error | JSON::ParseException
+        header_theme_colors_json = nil
+      end
+
+      # 3. If still missing colors, try PrismatIQ extraction from favicon on disk
+      if header_color.nil? || header_text_color.nil? || header_theme_colors_json.nil?
+        extract_from_favicon(feed, cache).try do |extracted|
+          header_color ||= extracted[:bg]
+          header_text_color ||= extracted[:text]
+          header_theme_colors_json ||= extracted[:theme_json]
+        end
+      end
+
+      {header_color, header_text_color, header_theme_colors_json}
+    end
+
+    # Use PrismatIQ (via ColorExtractor) to extract colors from favicon file on disk.
+    # Returns nil if extraction fails or favicon file doesn't exist.
+    private def self.extract_from_favicon(feed : FeedData, cache : FeedCache) : {bg: String?, text: String?, theme_json: String?}?
+      favicon_path = feed.favicon_data || feed.favicon
+      return unless favicon_path
+
+      # ColorExtractor.extract_theme_colors expects a path starting with /favicons/
+      extracted = ColorExtractor.extract_theme_colors(favicon_path, feed.url, feed.header_color)
+      return unless extracted.is_a?(Hash) && extracted.has_key?("text")
+
+      text_val = extracted["text"]
+      parsed_text = text_val.is_a?(Hash) ? text_val : begin
+        tmp = JSON.parse(text_val.to_s).as_h
+        normalized = {} of String => String
+        tmp.each { |k, v| normalized[k.to_s] = v.to_s }
+        normalized
+      rescue JSON::ParseException | TypeCastError
+        {"light" => text_val.to_s, "dark" => text_val.to_s}
+      end
+
+      bg_val = extracted["bg"]?.try(&.to_s)
+      legacy_text = parsed_text["light"]? || parsed_text["dark"]?
+
+      theme_payload = {"bg" => bg_val, "text" => parsed_text, "source" => "auto"}
+      theme_json = theme_payload.to_json
+
+      # Persist to DB so we don't re-extract next time
+      if bg_val && legacy_text
+        begin
+          cache.header_color_store.update_header_colors(feed.url, bg_val, legacy_text)
+        rescue ex
+          Log.for("quickheadlines.feed").debug { "Failed to persist extracted colors for #{feed.url}: #{ex.message}" }
+        end
+      end
+
+      {bg: bg_val, text: legacy_text, theme_json: theme_json}
+    rescue ex
+      Log.for("quickheadlines.feed").debug { "PrismatIQ extraction failed for #{feed.url}: #{ex.message}" }
+      nil
+    end
+
     private def self.parse_theme_colors(json : String?) : JSON::Any?
       return unless json
       JSON.parse(json)
@@ -105,23 +165,7 @@ module QuickHeadlines::Services
     ) : QuickHeadlines::DTOs::FeedResponse
       trimmed_items = feed.items[offset...Math.min(offset + limit, feed.items.size)]
       items_response = map_items_to_responses(trimmed_items, cache)
-
-      # Resolve header colors with fallback to cache
-      header_color = feed.header_color
-      header_text_color = feed.header_text_color
-      if header_color.nil? || header_text_color.nil?
-        colors = cache.get_header_colors(feed.url)
-        header_color ||= colors[:bg_color]
-        header_text_color ||= colors[:text_color]
-      end
-
-      header_theme_colors_json = nil.as(String?)
-      begin
-        theme_json = cache.load_theme(feed.url)
-        header_theme_colors_json = theme_json if theme_json && !theme_json.empty?
-      rescue DB::Error | JSON::ParseException
-        header_theme_colors_json = nil
-      end
+      header_color, header_text_color, header_theme_colors_json = resolve_header_colors(feed, cache)
 
       QuickHeadlines::DTOs::FeedResponse.new(
         tab: tab_name,

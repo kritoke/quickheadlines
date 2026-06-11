@@ -22,7 +22,7 @@ class ClientIPHandler
   include HTTP::Handler
 
   def call(context : HTTP::Server::Context)
-    context.request.headers["X-Client-IP"] = extract_client_ip(context.request)
+    context.request.headers["X-Client-IP"] = ::Utils.extract_client_ip(context.request)
     call_next(context)
   end
 end
@@ -165,7 +165,7 @@ begin
       end
     end
 
-    ip = extract_client_ip(ctx.request)
+    ip = ::Utils.extract_client_ip(ctx.request)
 
     unless SocketManager.instance.register(ws, ip)
       ws.close
