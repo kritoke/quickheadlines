@@ -40,7 +40,7 @@ module RefreshLoop
     LONG_REFRESH_DURATION_WARN = 120.seconds
 
     def self.start(config_path : String, cache : FeedCache, db_service : DatabaseService, semaphore : SemaphorePool) : Nil
-      load_result = load_validated_config(config_path)
+      load_result = ConfigLoader.load_validated_config(config_path)
       unless load_result.success && (initial_config = load_result.config)
         Log.for("quickheadlines.feed").error { "Failed to load config: #{load_result.error_message}" }
         return
@@ -185,7 +185,7 @@ module RefreshLoop
       end
       return unless current_mtime > @state.last_mtime
 
-      load_result = load_validated_config(@config_path)
+      load_result = ConfigLoader.load_validated_config(@config_path)
       if load_result.success && (new_config = load_result.config)
         @state.active_config = new_config
         @state.last_mtime = current_mtime
@@ -206,7 +206,7 @@ module RefreshLoop
       @state.initial_cancel_ch = cancel_ch
       RefreshLoop::FiberTracker.tracked_spawn("initial_refresh") do
         begin
-          refresh_all(config_for_initial, @cache, @db_service, cancel_ch)
+          RefreshLoop.refresh_all(config_for_initial, @cache, @db_service, cancel_ch)
         rescue CancelError
           Log.for("quickheadlines.feed").warn { "Initial refresh cancelled by supervisor" }
           RefreshLoop::Monitoring.record_failure
@@ -250,7 +250,7 @@ module RefreshLoop
       completion_channel = Channel(Nil).new(1)
       RefreshLoop::FiberTracker.tracked_spawn("refresh_worker") do
         begin
-          refresh_all(config_snapshot, @cache, @db_service, cancel_ch)
+          RefreshLoop.refresh_all(config_snapshot, @cache, @db_service, cancel_ch)
           refresh_all_duration = (Time.utc - refresh_all_start).total_seconds
           if config_snapshot.debug?
             Log.for("quickheadlines.feed").debug { "Refreshed feeds in #{refresh_all_duration.round(2)}s" }

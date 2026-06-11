@@ -151,19 +151,3 @@ module RefreshLoop
     RefreshLoop::Monitoring.start
   end
 end
-
-# Public API — backward-compatible top-level entry points that delegate to
-# RefreshLoop module. This preserves the existing require/use surface without
-# requiring callers to change.
-
-# Full refresh_all with injected services. Callers who want the
-# convenience of the default services can call `RefreshLoop.refresh_all`
-# directly with `FeedCache.instance` and `DatabaseService.instance`.
-def refresh_all(config : Config, cache : FeedCache, db_service : DatabaseService, cancel_ch : Channel(Nil)? = nil)
-  RefreshLoop.refresh_all(config, cache, db_service, cancel_ch)
-end
-
-# Start the refresh loop
-def start_refresh_loop(config_path : String, cache : FeedCache, db_service : DatabaseService)
-  RefreshLoop.start(config_path, cache, db_service)
-end

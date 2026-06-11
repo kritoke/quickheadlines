@@ -132,7 +132,7 @@ describe "validate_feed_urls!" do
           url: "https://example.com/feed.xml"
       YAML
     config = Config.from_yaml(yaml)
-    validate_feed_urls!(config)
+    ConfigValidator.validate_feed_urls!(config)
   end
 
   it "raises for invalid URL scheme" do
@@ -142,7 +142,7 @@ describe "validate_feed_urls!" do
           url: "ftp://example.com/feed.xml"
       YAML
     config = Config.from_yaml(yaml)
-    expect_raises(QuickHeadlines::ConfigValidationError) { validate_feed_urls!(config) }
+    expect_raises(QuickHeadlines::ConfigValidationError) { ConfigValidator.validate_feed_urls!(config) }
   end
 
   it "raises for empty URL" do
@@ -152,7 +152,7 @@ describe "validate_feed_urls!" do
           url: ""
       YAML
     config = Config.from_yaml(yaml)
-    expect_raises(QuickHeadlines::ConfigValidationError) { validate_feed_urls!(config) }
+    expect_raises(QuickHeadlines::ConfigValidationError) { ConfigValidator.validate_feed_urls!(config) }
   end
 
   it "raises for malformed URL" do
@@ -162,7 +162,7 @@ describe "validate_feed_urls!" do
           url: "not a url"
       YAML
     config = Config.from_yaml(yaml)
-    expect_raises(QuickHeadlines::ConfigValidationError) { validate_feed_urls!(config) }
+    expect_raises(QuickHeadlines::ConfigValidationError) { ConfigValidator.validate_feed_urls!(config) }
   end
 
   it "raises for invalid feed in tabs" do
@@ -174,7 +174,7 @@ describe "validate_feed_urls!" do
               url: "ftp://bad.com"
       YAML
     config = Config.from_yaml(yaml)
-    expect_raises(QuickHeadlines::ConfigValidationError) { validate_feed_urls!(config) }
+    expect_raises(QuickHeadlines::ConfigValidationError) { ConfigValidator.validate_feed_urls!(config) }
   end
 
   it "raises with all invalid feeds listed" do
@@ -187,7 +187,7 @@ describe "validate_feed_urls!" do
       YAML
     config = Config.from_yaml(yaml)
     begin
-      validate_feed_urls!(config)
+      ConfigValidator.validate_feed_urls!(config)
       fail("Expected ConfigValidationError to be raised")
     rescue ex : QuickHeadlines::ConfigValidationError
       ex.message.should contain("Bad1")

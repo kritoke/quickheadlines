@@ -17,37 +17,40 @@ class QuickHeadlines::ConfigValidationError < Exception
   end
 end
 
-def validate_feed_urls!(config : Config) : Nil
-  invalid_feeds = [] of {String, String, String}
+module ConfigValidator
+  extend self
 
-  config.feeds.each do |feed|
-    reason = invalid_url_reason(feed.url)
-    invalid_feeds << {feed.title, feed.url, reason} if reason
-  end
+  def validate_feed_urls!(config : Config) : Nil
+    invalid_feeds = [] of {String, String, String}
 
-  config.tabs.each do |tab|
-    tab.feeds.each do |feed|
+    config.feeds.each do |feed|
       reason = invalid_url_reason(feed.url)
       invalid_feeds << {feed.title, feed.url, reason} if reason
     end
+
+    config.tabs.each do |tab|
+      tab.feeds.each do |feed|
+        reason = invalid_url_reason(feed.url)
+        invalid_feeds << {feed.title, feed.url, reason} if reason
+      end
+    end
+
+    return if invalid_feeds.empty?
+
+    raise QuickHeadlines::ConfigValidationError.new(invalid_feeds)
   end
 
-  return if invalid_feeds.empty?
+  private def invalid_url_reason(url : String) : String?
+    return "URL is empty" if url.nil? || url.strip.empty?
 
-  raise QuickHeadlines::ConfigValidationError.new(invalid_feeds)
-end
-
-private def invalid_url_reason(url : String) : String?
-  # Check for nil or empty URL - explicit nil check for defensive programming
-  return "URL is empty" if url.nil? || url.strip.empty?
-
-  begin
-    uri = URI.parse(url.strip)
-    return "URL must have http or https scheme" unless uri.scheme
-    return "URL must have http or https scheme" unless uri.scheme.in?("http", "https")
-    return "URL must have a host" if !uri.host.is_a?(String) || uri.host.to_s.empty?
-    nil
-  rescue ex
-    "URL is malformed: #{ex.message}"
+    begin
+      uri = URI.parse(url.strip)
+      return "URL must have http or https scheme" unless uri.scheme
+      return "URL must have http or https scheme" unless uri.scheme.in?("http", "https")
+      return "URL must have a host" if !uri.host.is_a?(String) || uri.host.to_s.empty?
+      nil
+    rescue ex
+      "URL is malformed: #{ex.message}"
+    end
   end
 end

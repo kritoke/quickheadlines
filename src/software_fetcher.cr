@@ -6,93 +6,91 @@ require "./utils/string_pool"
 # Alias for brevity
 private alias SIP = QuickHeadlines::StringIntern
 
-CODE_ICON = "internal:code_icon"
+module SoftwareFetcher
+  extend self
 
-def fetch_sw_with_config(sw_config : SoftwareConfig, item_limit : Int32) : FeedData?
-  latest_by_repo = Hash(String, Item).new
-  sw_config.repos.each do |repo_entry|
-    if releases = fetch_repo_release(repo_entry, item_limit)
-      next if releases.empty?
-      latest_by_repo[repo_entry] = releases.first
+  CODE_ICON = "internal:code_icon"
+
+  def fetch_sw_with_config(sw_config : SoftwareConfig, item_limit : Int32) : FeedData?
+    latest_by_repo = Hash(String, Item).new
+    sw_config.repos.each do |repo_entry|
+      if releases = fetch_repo_release(repo_entry, item_limit)
+        next if releases.empty?
+        latest_by_repo[repo_entry] = releases.first
+      end
+    end
+
+    return if latest_by_repo.empty?
+
+    items = latest_by_repo.values.to_a
+    items.sort_by! { |i| i.pub_date || Time.unix(0) }.reverse!
+
+    FeedData.new(
+      title: SIP.intern(sw_config.title).not_nil!,
+      url: SIP.intern("software://releases").not_nil!,
+      site_link: SIP.intern("https://github.com").not_nil!,
+      header_color: SIP.intern(sw_config.header_color || "#24292e"),
+      header_text_color: SIP.intern(sw_config.header_text_color),
+      items: items,
+      favicon_data: SIP.intern(CODE_ICON).not_nil!
+    )
+  end
+
+  private def fetch_repo_release(repo_entry : String, item_limit : Int32) : Array(Item)?
+    url = repo_entry_to_url(repo_entry)
+    return unless url
+
+    result = Fetcher.pull_software(url, HTTP::Headers.new, item_limit, FeedFetcher.fetcher_config)
+
+    if error = result.error_message
+      Log.for("quickheadlines.feed").warn { "Error fetching software releases for #{repo_entry}: #{error}" }
+      return
+    end
+
+    return if result.entries.empty?
+
+    result.entries.map do |entry|
+      fixed_title = fix_software_title(entry.title, repo_entry)
+
+      Item.new(
+        title: SIP.intern(fixed_title).not_nil!,
+        link: SIP.intern(entry.url).not_nil!,
+        pub_date: entry.published_at,
+        version: SIP.intern(entry.version),
+        comment_url: nil,
+        commentary_url: nil
+      )
+    end
+  rescue ex
+    Log.for("quickheadlines.feed").error(exception: ex) { "Error fetching software releases for #{repo_entry}" }
+    nil
+  end
+
+  private def fix_software_title(title : String, repo_entry : String) : String
+    if repo_entry.includes?(":cb") || repo_entry.ends_with?("/codeberg")
+      repo_name = repo_entry.split('/').last
+      repo_name = repo_name.split(':').first
+      title.sub(/^[^\/]+\/#{repo_name}/, repo_name)
+    else
+      title
     end
   end
 
-  return if latest_by_repo.empty?
+  private def repo_entry_to_url(repo_entry : String) : String?
+    parts = repo_entry.split(':')
+    repo_path = parts[0]
+    provider = parts[1]? || "gh"
 
-  items = latest_by_repo.values.to_a
-  items.sort_by! { |i| i.pub_date || Time.unix(0) }.reverse!
-
-  FeedData.new(
-    title: SIP.intern(sw_config.title).not_nil!,
-    url: SIP.intern("software://releases").not_nil!,
-    site_link: SIP.intern("https://github.com").not_nil!,
-    header_color: SIP.intern(sw_config.header_color || "#24292e"),
-    header_text_color: SIP.intern(sw_config.header_text_color),
-    items: items,
-    favicon_data: SIP.intern(CODE_ICON).not_nil!
-  )
-end
-
-private def fetch_repo_release(repo_entry : String, item_limit : Int32) : Array(Item)?
-  url = repo_entry_to_url(repo_entry)
-  return unless url
-
-  result = Fetcher.pull_software(url, HTTP::Headers.new, item_limit, FeedFetcher.fetcher_config)
-
-  if error = result.error_message
-    Log.for("quickheadlines.feed").warn { "Error fetching software releases for #{repo_entry}: #{error}" }
-    return
-  end
-
-  return if result.entries.empty?
-
-  result.entries.map do |entry|
-    # Fix: Extract just repo name from "org/repo" for Codeberg releases
-    # Codeberg UI shows "repo v1.0" not "org/repo v1.0"
-    fixed_title = fix_software_title(entry.title, repo_entry)
-
-    Item.new(
-      title: SIP.intern(fixed_title).not_nil!,
-      link: SIP.intern(entry.url).not_nil!,
-      pub_date: entry.published_at,
-      version: SIP.intern(entry.version),
-      comment_url: nil,
-      commentary_url: nil
-    )
-  end
-rescue ex
-  Log.for("quickheadlines.feed").error(exception: ex) { "Error fetching software releases for #{repo_entry}" }
-  nil
-end
-
-private def fix_software_title(title : String, repo_entry : String) : String
-  # Codeberg releases show "org/repo v1.0" but should show just "repo v1.0"
-  # Other providers already show just the repo name
-  if repo_entry.includes?(":cb") || repo_entry.ends_with?("/codeberg")
-    # Extract just the repo name (last part after /) from the org/repo
-    repo_name = repo_entry.split('/').last
-    repo_name = repo_name.split(':').first # Handle "org:cb/repo:cb"
-    # Replace "org/repo" with just "repo" in the title
-    title.sub(/^[^\/]+\/#{repo_name}/, repo_name)
-  else
-    title
-  end
-end
-
-private def repo_entry_to_url(repo_entry : String) : String?
-  parts = repo_entry.split(':')
-  repo_path = parts[0]
-  provider = parts[1]? || "gh"
-
-  case provider
-  when "gh"
-    "https://github.com/#{repo_path}/releases"
-  when "gl"
-    "https://gitlab.com/#{repo_path}/-/releases"
-  when "cb"
-    "https://codeberg.org/#{repo_path}/releases"
-  else
-    Log.for("quickheadlines.feed").warn { "Unknown provider '#{provider}' for repo #{repo_path}" }
-    nil
+    case provider
+    when "gh"
+      "https://github.com/#{repo_path}/releases"
+    when "gl"
+      "https://gitlab.com/#{repo_path}/-/releases"
+    when "cb"
+      "https://codeberg.org/#{repo_path}/releases"
+    else
+      Log.for("quickheadlines.feed").warn { "Unknown provider '#{provider}' for repo #{repo_path}" }
+      nil
+    end
   end
 end

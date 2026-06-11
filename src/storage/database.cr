@@ -13,228 +13,228 @@ struct DatabaseMigration
   end
 end
 
-private def column_exists?(db : DB::Database, table : String, column : String) : Bool
-  db.query_one?("SELECT 1 FROM pragma_table_info(?) WHERE name = ?", table, column, as: Bool) || false
-rescue ex
-  Log.for("quickheadlines.storage").warn { "column_exists? check failed for #{table}.#{column}: #{ex.message}" }
-  false
-end
+module Database
+  extend self
 
-private def ensure_column(db : DB::Database, table : String, column : String, type : String) : Nil
-  return if column_exists?(db, table, column)
-  db.exec("ALTER TABLE #{table} ADD COLUMN #{column} #{type}")
-end
-
-MIGRATIONS = [
-  DatabaseMigration.new(version: 1, name: "add_favicon_data_column") do |db|
-    ensure_column(db, "feeds", "favicon_data", "TEXT")
-  end,
-  DatabaseMigration.new(version: 2, name: "add_header_text_color_column") do |db|
-    ensure_column(db, "feeds", "header_text_color", "TEXT")
-  end,
-  DatabaseMigration.new(version: 3, name: "add_header_theme_colors_column") do |db|
-    ensure_column(db, "feeds", "header_theme_colors", "TEXT")
-  end,
-  DatabaseMigration.new(version: 4, name: "add_minhash_signature_column") do |db|
-    ensure_column(db, "items", "minhash_signature", "BLOB")
-  end,
-  DatabaseMigration.new(version: 5, name: "add_cluster_id_column") do |db|
-    ensure_column(db, "items", "cluster_id", "INTEGER REFERENCES items(id)")
-  end,
-  DatabaseMigration.new(version: 6, name: "migrate_lsh_bands_to_text") do |db|
-    raw_value = db.query_one?("SELECT band_hash FROM lsh_bands LIMIT 1", as: {String?})
-    if raw_value && raw_value.to_i64?
-      db.exec("DROP TABLE lsh_bands")
-    end
-  end,
-  DatabaseMigration.new(version: 7, name: "add_comment_url_and_commentary_url_columns") do |db|
-    ensure_column(db, "items", "comment_url", "TEXT")
-    ensure_column(db, "items", "commentary_url", "TEXT")
-  end,
-  DatabaseMigration.new(version: 8, name: "drop_position_column") do |db|
-    if column_exists?(db, "items", "position")
-      db.exec("ALTER TABLE items DROP COLUMN position")
-    end
-  end,
-  DatabaseMigration.new(version: 9, name: "add_date_normalized_column") do |db|
-    ensure_column(db, "items", "date_normalized", "INTEGER NOT NULL DEFAULT 0")
-  end,
-  DatabaseMigration.new(version: 10, name: "add_normalized_link_column") do |db|
-    ensure_column(db, "items", "normalized_link", "TEXT NOT NULL DEFAULT ''")
-    # Populate normalized_link from existing link values
-    db.exec("UPDATE items SET normalized_link = link")
-    # Create the new unique index
-    db.exec("DROP INDEX IF EXISTS idx_items_unique_feed_link")
-    db.exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_items_unique_feed_link ON items(feed_id, normalized_link)")
-  end,
-]
-
-private def ensure_schema_info_table(db : DB::Database) : Nil
-  db.exec("CREATE TABLE IF NOT EXISTS schema_info (version INTEGER PRIMARY KEY)")
-  current = db.query_one?("SELECT version FROM schema_info LIMIT 1", as: {Int32?})
-  unless current
-    db.exec("INSERT INTO schema_info (version) VALUES (0)")
-  end
-end
-
-private def get_schema_version(db : DB::Database) : Int32
-  db.query_one("SELECT version FROM schema_info LIMIT 1", as: {Int32})
-end
-
-private def set_schema_version(db : DB::Database, version : Int32) : Nil
-  db.exec("UPDATE schema_info SET version = ?", version)
-end
-
-def run_migrations(db : DB::Database) : Nil
-  ensure_schema_info_table(db)
-  current_version = get_schema_version(db)
-
-  MIGRATIONS.each do |migration|
-    next if migration.version <= current_version
-
-    Log.for("quickheadlines.storage").info { "Running migration #{migration.version}: #{migration.name}" }
-    begin
-      migration.up.call(db)
-    rescue ex : Exception
-      Log.for("quickheadlines.storage").error(exception: ex) { "Migration #{migration.version} (#{migration.name}) failed" }
-      raise ex
-    end
-    set_schema_version(db, migration.version)
-    Log.for("quickheadlines.storage").debug { "Migration #{migration.version} applied (new version: #{migration.version})" }
-  end
-end
-
-def create_schema(db : DB::Database, db_path : String)
-  db.exec("PRAGMA journal_mode = WAL")
-  db.exec("PRAGMA synchronous = NORMAL")
-  db.exec("PRAGMA cache_size = -16000")
-  db.exec("PRAGMA foreign_keys = ON")
-  db.exec("PRAGMA mmap_size = 0")
-  db.exec("PRAGMA wal_autocheckpoint = #{QuickHeadlines::Constants::WAL_AUTOCHECKPOINT_PAGES}")
-  db.exec("PRAGMA busy_timeout = #{QuickHeadlines::Constants::SQLITE_BUSY_TIMEOUT_MS}")
-  db.exec("PRAGMA temp_store = MEMORY")
-  # Enable mmap for read-heavy workloads to reduce I/O (4GB max, adjust based on available RAM)
-  db.exec("PRAGMA mmap_size = 4294967296")
-
-  db.exec(Schema::FEEDS_TABLE)
-  db.exec(Schema::ITEMS_TABLE)
-  db.exec(Schema::LSH_BANDS_TABLE)
-  db.exec(Schema::INDEXES)
-
-  run_migrations(db)
-
-  # Wrap duplicate cleanup in a transaction for atomicity
-  db.transaction do
-    cleanup_result = db.exec(<<-SQL
-      DELETE FROM items
-      WHERE id NOT IN (
-        SELECT MAX(id)
-        FROM items
-        GROUP BY feed_id, normalized_link
-      )
-      SQL
-    )
-
-    if cleanup_result.rows_affected > 0
-      Log.for("quickheadlines.storage").info { "Cleaned up #{cleanup_result.rows_affected} duplicate items from database" }
-    end
-  end
-end
-
-def check_db_health(db_path : String) : DbHealthStatus
-  unless File.exists?(db_path)
-    return DbHealthStatus::NeedsRepopulation
+  private def column_exists?(db : DB::Database, table : String, column : String) : Bool
+    db.query_one?("SELECT 1 FROM pragma_table_info(?) WHERE name = ?", table, column, as: Bool) || false
+  rescue ex
+    Log.for("quickheadlines.storage").warn { "column_exists? check failed for #{table}.#{column}: #{ex.message}" }
+    false
   end
 
-  if File.size(db_path) < QuickHeadlines::Constants::MIN_DB_SIZE_BYTES
-    Log.for("quickheadlines.storage").warn { "Database file is too small (#{File.size(db_path)} bytes), may be empty" }
-    return DbHealthStatus::NeedsRepopulation
+  private def ensure_column(db : DB::Database, table : String, column : String, type : String) : Nil
+    return if column_exists?(db, table, column)
+    db.exec("ALTER TABLE #{table} ADD COLUMN #{column} #{type}")
   end
 
-  DB.open("sqlite3://#{db_path}?busy_timeout=#{QuickHeadlines::Constants::SQLITE_BUSY_TIMEOUT_MS}") do |database|
-    integrity_result = database.query_one("PRAGMA integrity_check", as: {String})
-    if integrity_result != "ok"
-      Log.for("quickheadlines.storage").error { "Database integrity check failed: #{integrity_result}" }
-      return DbHealthStatus::Corrupted
-    end
-
-    begin
-      fk_result = database.query_one("PRAGMA foreign_key_check", as: Array(Array(Int64)))
-      if fk_result && !fk_result.empty?
-        Log.for("quickheadlines.storage").warn { "Database has #{fk_result.size} foreign key violations" }
+  MIGRATIONS = [
+    DatabaseMigration.new(version: 1, name: "add_favicon_data_column") do |db|
+      ensure_column(db, "feeds", "favicon_data", "TEXT")
+    end,
+    DatabaseMigration.new(version: 2, name: "add_header_text_color_column") do |db|
+      ensure_column(db, "feeds", "header_text_color", "TEXT")
+    end,
+    DatabaseMigration.new(version: 3, name: "add_header_theme_colors_column") do |db|
+      ensure_column(db, "feeds", "header_theme_colors", "TEXT")
+    end,
+    DatabaseMigration.new(version: 4, name: "add_minhash_signature_column") do |db|
+      ensure_column(db, "items", "minhash_signature", "BLOB")
+    end,
+    DatabaseMigration.new(version: 5, name: "add_cluster_id_column") do |db|
+      ensure_column(db, "items", "cluster_id", "INTEGER REFERENCES items(id)")
+    end,
+    DatabaseMigration.new(version: 6, name: "migrate_lsh_bands_to_text") do |db|
+      raw_value = db.query_one?("SELECT band_hash FROM lsh_bands LIMIT 1", as: {String?})
+      if raw_value && raw_value.to_i64?
+        db.exec("DROP TABLE lsh_bands")
       end
-    rescue DB::Error
-      Log.for("quickheadlines.storage").debug { "Could not check foreign keys (may indicate older SQLite)" }
-    end
+    end,
+    DatabaseMigration.new(version: 7, name: "add_comment_url_and_commentary_url_columns") do |db|
+      ensure_column(db, "items", "comment_url", "TEXT")
+      ensure_column(db, "items", "commentary_url", "TEXT")
+    end,
+    DatabaseMigration.new(version: 8, name: "drop_position_column") do |db|
+      if column_exists?(db, "items", "position")
+        db.exec("ALTER TABLE items DROP COLUMN position")
+      end
+    end,
+    DatabaseMigration.new(version: 9, name: "add_date_normalized_column") do |db|
+      ensure_column(db, "items", "date_normalized", "INTEGER NOT NULL DEFAULT 0")
+    end,
+    DatabaseMigration.new(version: 10, name: "add_normalized_link_column") do |db|
+      ensure_column(db, "items", "normalized_link", "TEXT NOT NULL DEFAULT ''")
+      db.exec("UPDATE items SET normalized_link = link")
+      db.exec("DROP INDEX IF EXISTS idx_items_unique_feed_link")
+      db.exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_items_unique_feed_link ON items(feed_id, normalized_link)")
+    end,
+  ]
 
-    feed_count = database.query_one("SELECT COUNT(*) FROM feeds", as: {Int64})
-    if feed_count == 0
-      Log.for("quickheadlines.storage").warn { "Database has no feeds, needs repopulation" }
+  private def ensure_schema_info_table(db : DB::Database) : Nil
+    db.exec("CREATE TABLE IF NOT EXISTS schema_info (version INTEGER PRIMARY KEY)")
+    current = db.query_one?("SELECT version FROM schema_info LIMIT 1", as: {Int32?})
+    unless current
+      db.exec("INSERT INTO schema_info (version) VALUES (0)")
+    end
+  end
+
+  private def get_schema_version(db : DB::Database) : Int32
+    db.query_one("SELECT version FROM schema_info LIMIT 1", as: {Int32})
+  end
+
+  private def set_schema_version(db : DB::Database, version : Int32) : Nil
+    db.exec("UPDATE schema_info SET version = ?", version)
+  end
+
+  def run_migrations(db : DB::Database) : Nil
+    ensure_schema_info_table(db)
+    current_version = get_schema_version(db)
+
+    MIGRATIONS.each do |migration|
+      next if migration.version <= current_version
+
+      Log.for("quickheadlines.storage").info { "Running migration #{migration.version}: #{migration.name}" }
+      begin
+        migration.up.call(db)
+      rescue ex : Exception
+        Log.for("quickheadlines.storage").error(exception: ex) { "Migration #{migration.version} (#{migration.name}) failed" }
+        raise ex
+      end
+      set_schema_version(db, migration.version)
+      Log.for("quickheadlines.storage").debug { "Migration #{migration.version} applied (new version: #{migration.version})" }
+    end
+  end
+
+  def create_schema(db : DB::Database, db_path : String)
+    db.exec("PRAGMA journal_mode = WAL")
+    db.exec("PRAGMA synchronous = NORMAL")
+    db.exec("PRAGMA cache_size = -16000")
+    db.exec("PRAGMA foreign_keys = ON")
+    db.exec("PRAGMA mmap_size = 0")
+    db.exec("PRAGMA wal_autocheckpoint = #{QuickHeadlines::Constants::WAL_AUTOCHECKPOINT_PAGES}")
+    db.exec("PRAGMA busy_timeout = #{QuickHeadlines::Constants::SQLITE_BUSY_TIMEOUT_MS}")
+    db.exec("PRAGMA temp_store = MEMORY")
+    db.exec("PRAGMA mmap_size = 4294967296")
+
+    db.exec(Schema::FEEDS_TABLE)
+    db.exec(Schema::ITEMS_TABLE)
+    db.exec(Schema::LSH_BANDS_TABLE)
+    db.exec(Schema::INDEXES)
+
+    run_migrations(db)
+
+    db.transaction do
+      cleanup_result = db.exec(<<-SQL
+        DELETE FROM items
+        WHERE id NOT IN (
+          SELECT MAX(id)
+          FROM items
+          GROUP BY feed_id, normalized_link
+        )
+        SQL
+      )
+
+      if cleanup_result.rows_affected > 0
+        Log.for("quickheadlines.storage").info { "Cleaned up #{cleanup_result.rows_affected} duplicate items from database" }
+      end
+    end
+  end
+
+  def check_db_health(db_path : String) : DbHealthStatus
+    unless File.exists?(db_path)
       return DbHealthStatus::NeedsRepopulation
     end
 
-    Log.for("quickheadlines.storage").debug { "Database health check passed (#{feed_count} feeds)" }
-    DbHealthStatus::Healthy
+    if File.size(db_path) < QuickHeadlines::Constants::MIN_DB_SIZE_BYTES
+      Log.for("quickheadlines.storage").warn { "Database file is too small (#{File.size(db_path)} bytes), may be empty" }
+      return DbHealthStatus::NeedsRepopulation
+    end
+
+    DB.open("sqlite3://#{db_path}?busy_timeout=#{QuickHeadlines::Constants::SQLITE_BUSY_TIMEOUT_MS}") do |database|
+      integrity_result = database.query_one("PRAGMA integrity_check", as: {String})
+      if integrity_result != "ok"
+        Log.for("quickheadlines.storage").error { "Database integrity check failed: #{integrity_result}" }
+        return DbHealthStatus::Corrupted
+      end
+
+      begin
+        fk_result = database.query_one("PRAGMA foreign_key_check", as: Array(Array(Int64)))
+        if fk_result && !fk_result.empty?
+          Log.for("quickheadlines.storage").warn { "Database has #{fk_result.size} foreign key violations" }
+        end
+      rescue DB::Error
+        Log.for("quickheadlines.storage").debug { "Could not check foreign keys (may indicate older SQLite)" }
+      end
+
+      feed_count = database.query_one("SELECT COUNT(*) FROM feeds", as: {Int64})
+      if feed_count == 0
+        Log.for("quickheadlines.storage").warn { "Database has no feeds, needs repopulation" }
+        return DbHealthStatus::NeedsRepopulation
+      end
+
+      Log.for("quickheadlines.storage").debug { "Database health check passed (#{feed_count} feeds)" }
+      DbHealthStatus::Healthy
+    end
+  rescue ex : Exception
+    Log.for("quickheadlines.storage").error(exception: ex) { "Database health check failed" }
+    DbHealthStatus::Corrupted
   end
-rescue ex : Exception
-  Log.for("quickheadlines.storage").error(exception: ex) { "Database health check failed" }
-  DbHealthStatus::Corrupted
-end
 
-def repair_database(config : Config?, backup_path : String? = nil) : DbRepairResult
-  db_path = QuickHeadlines::CacheUtils.get_cache_db_path(config)
-  repair_time = Time.utc
+  def repair_database(config : Config?, backup_path : String? = nil) : DbRepairResult
+    db_path = QuickHeadlines::CacheUtils.get_cache_db_path(config)
+    repair_time = Time.utc
 
-  Log.for("quickheadlines.storage").warn { "Attempting to repair corrupted database..." }
+    Log.for("quickheadlines.storage").warn { "Attempting to repair corrupted database..." }
 
-  actual_backup_path = backup_path || "#{db_path}.corrupted.#{repair_time.to_s("%Y%m%d%H%M%S")}"
+    actual_backup_path = backup_path || "#{db_path}.corrupted.#{repair_time.to_s("%Y%m%d%H%M%S")}"
 
-  unless File.exists?(actual_backup_path)
+    unless File.exists?(actual_backup_path)
+      begin
+        File.rename(db_path, actual_backup_path) if File.exists?(db_path)
+        File.delete("#{db_path}-wal") if File.exists?("#{db_path}-wal")
+        File.delete("#{db_path}-shm") if File.exists?("#{db_path}-shm")
+        Log.for("quickheadlines.storage").info { "Backed up corrupted database to: #{actual_backup_path}" }
+      rescue ex : Exception
+        Log.for("quickheadlines.storage").error(exception: ex) { "Failed to backup corrupted database" }
+        return DbRepairResult.new(
+          status: DbHealthStatus::Corrupted,
+          backup_path: nil,
+          repair_time: repair_time,
+        )
+      end
+    end
+
     begin
-      File.rename(db_path, actual_backup_path) if File.exists?(db_path)
-      File.delete("#{db_path}-wal") if File.exists?("#{db_path}-wal")
-      File.delete("#{db_path}-shm") if File.exists?("#{db_path}-shm")
-      Log.for("quickheadlines.storage").info { "Backed up corrupted database to: #{actual_backup_path}" }
+      init_db(config)
+      Log.for("quickheadlines.storage").info { "Successfully repaired database (created new one)" }
+      DbRepairResult.new(
+        status: DbHealthStatus::Repaired,
+        backup_path: actual_backup_path,
+        repair_time: repair_time,
+      )
     rescue ex : Exception
-      Log.for("quickheadlines.storage").error(exception: ex) { "Failed to backup corrupted database" }
-      return DbRepairResult.new(
+      Log.for("quickheadlines.storage").error(exception: ex) { "Failed to create new database" }
+      begin
+        File.rename(actual_backup_path, db_path) if File.exists?(actual_backup_path)
+        Log.for("quickheadlines.storage").info { "Restored backup database" }
+      rescue ex : File::Error
+        Log.for("quickheadlines.storage").error(exception: ex) { "Failed to restore backup database" }
+      end
+      DbRepairResult.new(
         status: DbHealthStatus::Corrupted,
-        backup_path: nil,
+        backup_path: actual_backup_path,
         repair_time: repair_time,
       )
     end
   end
 
-  begin
-    init_db(config)
-    Log.for("quickheadlines.storage").info { "Successfully repaired database (created new one)" }
-    DbRepairResult.new(
-      status: DbHealthStatus::Repaired,
-      backup_path: actual_backup_path,
-      repair_time: repair_time,
-    )
-  rescue ex : Exception
-    Log.for("quickheadlines.storage").error(exception: ex) { "Failed to create new database" }
-    begin
-      File.rename(actual_backup_path, db_path) if File.exists?(actual_backup_path)
-      Log.for("quickheadlines.storage").info { "Restored backup database" }
-    rescue ex : File::Error
-      Log.for("quickheadlines.storage").error(exception: ex) { "Failed to restore backup database" }
+  def init_db(config : Config?)
+    cache_dir = QuickHeadlines::CacheUtils.get_cache_dir(config)
+    QuickHeadlines::CacheUtils.ensure_cache_dir(cache_dir)
+    db_path = QuickHeadlines::CacheUtils.get_cache_db_path(config)
+
+    DB.open("sqlite3://#{db_path}") do |database|
+      create_schema(database, db_path)
     end
-    DbRepairResult.new(
-      status: DbHealthStatus::Corrupted,
-      backup_path: actual_backup_path,
-      repair_time: repair_time,
-    )
-  end
-end
-
-def init_db(config : Config?)
-  cache_dir = QuickHeadlines::CacheUtils.get_cache_dir(config)
-  QuickHeadlines::CacheUtils.ensure_cache_dir(cache_dir)
-  db_path = QuickHeadlines::CacheUtils.get_cache_db_path(config)
-
-  DB.open("sqlite3://#{db_path}") do |database|
-    create_schema(database, db_path)
   end
 end

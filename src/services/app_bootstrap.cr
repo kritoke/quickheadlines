@@ -204,7 +204,7 @@ class AppBootstrap
   private def start_feed_refresh
     RefreshLoop::FiberTracker.tracked_spawn do
       begin
-        start_refresh_loop("feeds.yml", @feed_cache, @db_service)
+        RefreshLoop.start("feeds.yml", @feed_cache, @db_service)
       rescue ex
         Log.for("quickheadlines.app").error(exception: ex) { "start_feed_refresh failed" }
       end

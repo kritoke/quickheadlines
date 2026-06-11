@@ -20,7 +20,7 @@ class DatabaseService
     @db_path = QuickHeadlines::CacheUtils.get_cache_db_path(config).as(String)
 
     @db = DB.open("sqlite3://#{@db_path}?busy_timeout=#{QuickHeadlines::Constants::SQLITE_BUSY_TIMEOUT_MS}&max_pool_size=#{QuickHeadlines::Constants::DB_MAX_POOL_SIZE}")
-    ::create_schema(@db, @db_path)
+    Database.create_schema(@db, @db_path)
   end
 
   def self.instance : DatabaseService

@@ -120,16 +120,16 @@ class FeedCache
     QuickHeadlines::CacheUtils.ensure_cache_dir(cache_dir)
     db_path : String = QuickHeadlines::CacheUtils.get_cache_db_path(config)
 
-    init_db(config) unless File.exists?(db_path)
+    Database.init_db(config) unless File.exists?(db_path)
 
     health_status = DbHealthStatus::Healthy
     if File.exists?(db_path)
-      health_status = check_db_health(db_path)
+      health_status = Database.check_db_health(db_path)
 
       case health_status
       when DbHealthStatus::Corrupted
         Log.for("quickheadlines.storage").error { "Database corruption detected, attempting repair..." }
-        repair_result = repair_database(config)
+        repair_result = Database.repair_database(config)
 
         if repair_result.status == DbHealthStatus::Repaired
           Log.for("quickheadlines.storage").info { "Database was previously repaired" }
