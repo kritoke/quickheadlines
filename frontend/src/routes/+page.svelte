@@ -119,7 +119,7 @@
 	</AppHeader>
 
 	{#if feedState.tabs.length > 0}
-		<div class="md:hidden sticky top-0 z-40 bg-surface-50 dark:bg-surface-950 border-b border-surface-200 dark:border-surface-700">
+		<div class="md:hidden sticky top-[var(--header-height,3.5rem)] z-40 bg-surface-50 dark:bg-surface-950 border-b border-surface-200 dark:border-surface-700">
 			<TabSelector 
 				tabs={feedState.tabs}
 				activeTab={feedState.activeTab}
@@ -137,7 +137,7 @@
 		{/await}
 	{/if}
 
-	<main class="flex-1 overflow-y-auto max-w-[1400px] mx-auto px-4 md:px-6 py-3 sm:py-5 w-full">
+	<main class="max-w-[1400px] mx-auto px-4 md:px-6 py-3 sm:py-5 w-full">
 
 		
 		{#if loading && feedState.feeds.length === 0}
@@ -157,7 +157,7 @@
 			</div>
 		{:else}
 			{#if loading}
-				<div class="sticky top-0 z-20 bg-surface-50 dark:bg-surface-950/90 backdrop-blur-sm py-3 flex items-center justify-center gap-2 border-b border-surface-200 dark:border-surface-700">
+				<div class="sticky top-[var(--header-height,3.5rem)] z-20 bg-surface-50 dark:bg-surface-950/90 backdrop-blur-sm py-3 flex items-center justify-center gap-2 border-b border-surface-200 dark:border-surface-700">
 					<div class="w-4 h-4 border-2 border-primary-500 border-t-transparent rounded-full animate-spin"></div>
 					<span class="text-sm text-surface-700 dark:text-surface-300">Loading feeds...</span>
 				</div>

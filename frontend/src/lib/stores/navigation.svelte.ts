@@ -1,6 +1,10 @@
-import { SvelteSet } from 'svelte/reactivity';
-import { getScrollContainer, getScrollTop, scrollToPosition as doScrollToPosition } from '$lib/utils/scroll';
-import type { ScrollTarget } from '$lib/utils/scroll';
+import { SvelteSet } from "svelte/reactivity";
+import {
+	getScrollContainer,
+	getScrollTop,
+	scrollToPosition as doScrollToPosition,
+} from "$lib/utils/scroll";
+import type { ScrollTarget } from "$lib/utils/scroll";
 
 type NavigationState = {
 	scrollPositions: Map<string, number>;
@@ -11,14 +15,17 @@ type NavigationState = {
 const state = $state<NavigationState>({
 	scrollPositions: new Map(),
 	visitedRoutes: new SvelteSet<string>(),
-	currentPath: ''
+	currentPath: "",
 });
 
 export function saveScroll(path: string): void {
-	if (typeof window === 'undefined') return;
+	if (typeof window === "undefined") return;
 	try {
 		const container = getScrollContainer();
-		const top = container === window ? getScrollTop(window) : (container as HTMLElement).scrollTop || 0;
+		const top =
+			container === window
+				? getScrollTop(window)
+				: (container as HTMLElement).scrollTop || 0;
 		state.scrollPositions.set(path, top);
 	} catch {
 		state.scrollPositions.set(path, getScrollTop(window));

@@ -157,7 +157,7 @@
 	</AppHeader>
 
 	{#if tabs.length > 0}
-		<div class="md:hidden sticky top-0 z-40 bg-surface-50 dark:bg-surface-950 border-b border-surface-200 dark:border-surface-700">
+		<div class="md:hidden sticky top-[var(--header-height,3.5rem)] z-40 bg-surface-50 dark:bg-surface-950 border-b border-surface-200 dark:border-surface-700">
 			<TabSelector 
 				tabs={tabs}
 				activeTab={timelineState.tabName}
@@ -202,20 +202,20 @@
 			{/if}
 		{:else}
 			{#if loading && timelineState.items.length > 0}
-				<div class="sticky top-0 z-20 bg-surface-50/80 dark:bg-surface-950/80 backdrop-blur-sm py-2 flex items-center justify-center gap-2 border-b border-surface-200 dark:border-surface-700">
+				<div class="sticky top-[var(--header-height,3.5rem)] z-20 bg-surface-50/80 dark:bg-surface-950/80 backdrop-blur-sm py-2 flex items-center justify-center gap-2 border-b border-surface-200 dark:border-surface-700">
 					<div class="w-4 h-4 border-2 border-primary-500 border-t-transparent rounded-full animate-spin"></div>
 					<span class="text-sm text-surface-700 dark:text-surface-300">Refreshing...</span>
 				</div>
 			{:else if loading}
 				<!-- Optimistic UI: show subtle indicator while keeping current content visible -->
-				<div class="sticky top-0 z-20 bg-surface-50/80 dark:bg-surface-950/80 backdrop-blur-sm py-2 flex items-center justify-center gap-2">
+				<div class="sticky top-[var(--header-height,3.5rem)] z-20 bg-surface-50/80 dark:bg-surface-950/80 backdrop-blur-sm py-2 flex items-center justify-center gap-2">
 					<div class="w-4 h-4 border-2 border-primary-500 border-t-transparent rounded-full animate-spin"></div>
 					<span class="text-sm text-surface-700 dark:text-surface-300">Switching to {timelineState.tabName}...</span>
 				</div>
 			{/if}
 
 			{#if timelineState.isClustering}
-				<div class="sticky top-0 z-10 bg-amber-50 dark:bg-amber-900/20 py-2.5 flex items-center justify-center gap-2 mt-4 rounded-xl">
+				<div class="sticky top-[var(--header-height,3.5rem)] z-10 bg-amber-50 dark:bg-amber-900/20 py-2.5 flex items-center justify-center gap-2 mt-4 rounded-xl">
 					<div class="w-4 h-4 border-2 border-amber-500 border-t-transparent rounded-full animate-spin"></div>
 					<span class="text-sm text-amber-700 dark:text-amber-400 font-medium">Grouping similar articles...</span>
 				</div>

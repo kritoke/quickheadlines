@@ -183,7 +183,7 @@
 	{/if}
 </AppHeader>
 
-<main class="flex-1 overflow-y-auto px-4 md:px-6 max-w-[1400px] mx-auto w-full">
+<main class="px-4 md:px-6 max-w-[1400px] mx-auto w-full">
 	{#if loading}
 		<div class="flex items-center justify-center py-20">
 			<div class="w-8 h-8 border-4 border-primary-500 border-t-transparent rounded-full animate-spin"></div>
