@@ -67,10 +67,10 @@ class EventBroadcaster
     @@client_history.shift if @@client_history.size > @@history_max_entries
 
     # Log if count is unexpected
-    if client_count > 50
-      Log.for("quickheadlines.websocket").warn { "EventBroadcaster: high client count #{client_count} (possible leak)" }
-    elsif client_count > 100
+    if client_count > 100
       Log.for("quickheadlines.websocket").error { "EventBroadcaster: VERY HIGH client count #{client_count} (LEAK)" }
+    elsif client_count > 50
+      Log.for("quickheadlines.websocket").warn { "EventBroadcaster: high client count #{client_count} (possible leak)" }
     end
   end
 
@@ -91,22 +91,27 @@ class EventBroadcaster
   # broadcaster fiber modifies the arrays.
   private def self.broadcast_json(json : String) : Nil
     @@mutex.synchronize do
-      # Send to WebSocket clients
+      # Send to WebSocket clients — collect failures, delete after iteration
+      failed_clients = [] of HTTP::WebSocket
       @@clients.each do |client|
         begin
           client.send(json)
         rescue IO::Error | Channel::ClosedError
-          @@clients.delete(client)
+          failed_clients << client
         end
       end
-      # Notify subscriber channels
+      failed_clients.each { |c| @@clients.delete(c) }
+
+      # Notify subscriber channels — collect failures, delete after iteration
+      failed_subs = [] of SubscribeMessage
       @@subscribers.each do |sub|
         begin
           sub.channel.send(json)
         rescue Channel::ClosedError
-          @@subscribers.delete(sub)
+          failed_subs << sub
         end
       end
+      failed_subs.each { |s| @@subscribers.delete(s) }
     end
   end
 
