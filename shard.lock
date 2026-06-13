@@ -2,7 +2,7 @@ version: 2.0
 shards:
   ameba:
     git: https://github.com/crystal-ameba/ameba.git
-    version: 1.7.0-dev+git.commit.9f217cd4cb673145be81135b763da3b79de083a4
+    version: 1.7.0-dev+git.commit.8033ebf8e3cbd4045ccc49292ba5446fcb0ba323
 
   athena:
     git: https://github.com/athena-framework/framework.git
@@ -78,7 +78,7 @@ shards:
 
   crimage:
     git: https://github.com/naqvis/crimage.git
-    version: 1.0.5+git.commit.2b3abbcdca426a2a13a39b986326f9a2f7f65bc6
+    version: 1.0.5+git.commit.7d3244a3850646e3d398cef071f7c3e3f52c7518
 
   crtemp:
     git: https://github.com/kritoke/crtemp.git
@@ -90,7 +90,7 @@ shards:
 
   fetcher:
     git: https://github.com/kritoke/fetcher.cr.git
-    version: 0.9.20+git.commit.fab9dff55e8b4fd02fd26c1ee95932a01317bafa
+    version: 0.9.20+git.commit.fac22738182e2f8b2f4f0d6b6b89493a2d543e74
 
   html5:
     git: https://github.com/naqvis/crystal-html5.git
@@ -110,7 +110,7 @@ shards:
 
   prismatiq:
     git: https://github.com/kritoke/prismatiq.git
-    version: 0.1.0+git.commit.1f0965006f193d7990b54e25a43db95dce856489
+    version: 0.7.2+git.commit.0b48d704742857ec8bb25989729bcbb47fa58952
 
   sanitize:
     git: https://github.com/straight-shoota/sanitize.git
@@ -122,7 +122,7 @@ shards:
 
   vug:
     git: https://github.com/kritoke/vug.cr.git
-    version: 0.5.7+git.commit.b44a0e025c43e4935f097181ca49212cc92840eb
+    version: 0.5.7+git.commit.75be79b2e963911104215a57d9943c54118a9808
 
   xpath2:
     git: https://github.com/naqvis/crystal-xpath2.git

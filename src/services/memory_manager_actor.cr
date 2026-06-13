@@ -393,7 +393,7 @@ class MemoryManagerActor < Actor
     return if level == :normal
 
     begin
-      Fetcher::CrestHttpClient.clear_expired_dns
+      Fetcher::DnsCache.clear_expired
       Fetcher::CrestHttpClient.clear_rate_limiters
       Fetcher::URLValidator.clear_validated
       Fetcher::CircuitBreaker::Registry.store.clear_expired
