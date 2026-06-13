@@ -2,6 +2,26 @@ require "athena"
 
 require "./module"
 
+# GC tuning: configure Boehm GC to return freed memory to the OS.
+# Without these, RSS grows monotonically because Boehm GC keeps
+# freed pages mapped. These env vars are read by libgc at init time.
+#   GC_MAXIMUM_HEAP_SIZE — hard cap on heap growth (bytes, 0=unlimited)
+#   GC_UNMAP_THRESHOLD   — pages unmapped after N GC cycles (0=never, 1=immediate)
+#   GC_FREE_SPACE_DIVISOR — higher = more aggressive collection
+# Set via environment before process start, or programmatically here.
+# The values below target ~512MB max heap with aggressive unmapping.
+{% unless env("GC_MAXIMUM_HEAP_SIZE") %}
+  # LibGC functions are available via the boehm-crystal binding
+  # GC_set_max_heap_size is called after GC_init (which happens at
+  # Crystal runtime startup). We call it early in application.cr
+  # to limit heap growth before heavy allocations begin.
+  lib LibGC
+    fun GC_set_max_heap_size(bytes : LibC::ULong)
+    fun GC_get_free_space_divisor : LibC::Int
+    fun GC_set_free_space_divisor(divisor : LibC::Int)
+  end
+{% end %}
+
 # Load all dependencies
 require "./config"
 require "./constants"
@@ -48,6 +68,21 @@ require "./dtos/cluster_dto"
 module QuickHeadlines
   CONFIG_PATH = "feeds.yml"
 end
+
+# Apply GC tuning early, before heavy allocations.
+# These calls are safe after Crystal's runtime init (which calls GC_init).
+{% unless env("GC_MAXIMUM_HEAP_SIZE") %}
+  begin
+    # Cap heap at 512MB. When exceeded, GC will collect aggressively
+    # and unmap freed pages back to the OS.
+    LibGC.GC_set_max_heap_size(512_u64 * 1024_u64 * 1024_u64)
+    # Higher divisor = more aggressive collection (default is 3)
+    LibGC.GC_set_free_space_divisor(8)
+    Log.for("quickheadlines.gc").info { "GC tuning applied: max_heap=512MB, free_space_divisor=8" }
+  rescue ex
+    Log.for("quickheadlines.gc").warn { "GC tuning failed: #{ex.message}" }
+  end
+{% end %}
 
 # Initialize application state
 begin

@@ -1,5 +1,6 @@
 require "../infrastructure/actor"
 require "../services/fiber_tracker"
+require "../favicon_cache"
 
 # MemoryManagerActor - Consolidated memory monitoring, GC coordination, and cleanup
 #
@@ -399,6 +400,8 @@ class MemoryManagerActor < Actor
       Fetcher::CircuitBreaker::Registry.store.clear_expired
       ColorExtractor.sweep_cache
       QuickHeadlines::StringIntern.clear
+      FaviconActor.instance.close_pooled_clients
+      FaviconCache.clear
       Log.for("quickheadlines.cleanup").debug { "Cleared all system caches" }
     rescue ex
       Log.for("quickheadlines.cleanup").warn { "Failed to clear system caches: #{ex.message}" }

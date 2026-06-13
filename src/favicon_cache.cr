@@ -35,6 +35,17 @@ module FaviconCache
     end
   end
 
+  def self.size : Int32
+    @@mutex.synchronize { @@cache.size }
+  end
+
+  def self.clear : Nil
+    @@mutex.synchronize do
+      @@cache.clear
+      @@access_order.clear
+    end
+  end
+
   private def self.evict
     return if @@access_order.empty?
     oldest = @@access_order.shift
