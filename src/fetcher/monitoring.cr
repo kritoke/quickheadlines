@@ -186,10 +186,21 @@ module RefreshLoop::Monitoring
       end
       fiber_stats = FiberTracker.stats
 
+      gc = GC.stats
+      feed_count = StateStore.feeds.size
+      item_count = StateStore.feeds.sum(&.items.size)
+      tab_count = StateStore.tabs.size
+      tab_item_count = StateStore.tabs.sum(&.feeds.sum(&.items.size))
+      string_pool_size = QuickHeadlines::StringIntern.size
+
       Log.for("quickheadlines.memory").info do
         "Memory status: RSS=#{memory_status.rss_mb.round(1)}MB, " \
         "pressure=#{memory_status.pressure_level}, GC count=#{memory_status.gc_count}, " \
-        "sockets=#{socket_count}, event_clients=#{event_clients}, fibers=#{fiber_stats}"
+        "sockets=#{socket_count}, event_clients=#{event_clients}, fibers=#{fiber_stats}\n" \
+        "GC stats: heap=#{(gc.heap_size / 1024 / 1024).round(1)}MB, free=#{(gc.free_bytes / 1024 / 1024).round(1)}MB, " \
+        "unmapped=#{(gc.unmapped_bytes / 1024 / 1024).round(1)}MB, total=#{(gc.total_bytes / 1024 / 1024).round(1)}MB\n" \
+        "StateStore: feeds=#{feed_count}, items=#{item_count}, tabs=#{tab_count}, tab_items=#{tab_item_count}\n" \
+        "StringIntern pool: #{string_pool_size} entries"
       end
     rescue ex : Exception
       Log.for("quickheadlines.memory").debug { "Failed to get memory status: #{ex.message}" }

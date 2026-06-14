@@ -84,6 +84,14 @@ end
   end
 {% end %}
 
+# Log GC unmap status for diagnostics
+unmap_threshold = ENV["GC_UNMAP_THRESHOLD"]?
+if unmap_threshold
+  Log.for("quickheadlines.gc").info { "GC_UNMAP_THRESHOLD=#{unmap_threshold} (freed pages will be returned to OS)" }
+else
+  Log.for("quickheadlines.gc").warn { "GC_UNMAP_THRESHOLD not set — RSS will grow monotonically. Set GC_UNMAP_THRESHOLD=1 before starting the process." }
+end
+
 # Initialize application state
 begin
   config_result = ConfigLoader.load_validated_config(QuickHeadlines::CONFIG_PATH)
