@@ -49,9 +49,6 @@
             export PATH="${openspec.packages.${system}.default}/bin:$HOME/.local/bin:$PWD/bin:$PATH"
 
             export APP_ENV=development
-            # Boehm GC tuning: force unmapping freed pages back to OS.
-            # Must be set before process start (read by GC_init).
-            export GC_UNMAP_THRESHOLD=1
             echo "🚀 Quickheadlines Loaded with Crystal & Svelte 5"
 
             # Avoid creating aliases that interfere with command lookup; rely on PATH

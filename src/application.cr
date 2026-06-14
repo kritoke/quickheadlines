@@ -4,23 +4,15 @@ require "./module"
 
 # GC tuning: configure Boehm GC to return freed memory to the OS.
 # Without these, RSS grows monotonically because Boehm GC keeps
-# freed pages mapped. These env vars are read by libgc at init time.
-#   GC_MAXIMUM_HEAP_SIZE — hard cap on heap growth (bytes, 0=unlimited)
-#   GC_UNMAP_THRESHOLD   — pages unmapped after N GC cycles (0=never, 1=immediate)
-#   GC_FREE_SPACE_DIVISOR — higher = more aggressive collection
-# Set via environment before process start, or programmatically here.
-# The values below target ~512MB max heap with aggressive unmapping.
-{% unless env("GC_MAXIMUM_HEAP_SIZE") %}
-  # LibGC functions are available via the boehm-crystal binding
-  # GC_set_max_heap_size is called after GC_init (which happens at
-  # Crystal runtime startup). We call it early in application.cr
-  # to limit heap growth before heavy allocations begin.
-  lib LibGC
-    fun GC_set_max_heap_size(bytes : LibC::ULong)
-    fun GC_get_free_space_divisor : LibC::Int
-    fun GC_set_free_space_divisor(divisor : LibC::Int)
-  end
-{% end %}
+# freed pages mapped.
+lib LibGC
+  fun GC_set_max_heap_size(bytes : LibC::ULong)
+  fun GC_set_free_space_divisor(divisor : LibC::Int)
+  # Force unmapping freed pages on every GC collect.
+  # This is the critical setting — without it, Boehm GC never
+  # returns memory to the OS and RSS grows monotonically.
+  fun GC_set_force_unmap_on_gcollect(value : LibC::Int)
+end
 
 # Load all dependencies
 require "./config"
@@ -70,26 +62,28 @@ module QuickHeadlines
 end
 
 # Apply GC tuning early, before heavy allocations.
-# These calls are safe after Crystal's runtime init (which calls GC_init).
-{% unless env("GC_MAXIMUM_HEAP_SIZE") %}
-  begin
-    # Cap heap at 512MB. When exceeded, GC will collect aggressively
-    # and unmap freed pages back to the OS.
-    LibGC.GC_set_max_heap_size(512_u64 * 1024_u64 * 1024_u64)
-    # Higher divisor = more aggressive collection (default is 3)
-    LibGC.GC_set_free_space_divisor(8)
-    Log.for("quickheadlines.gc").info { "GC tuning applied: max_heap=512MB, free_space_divisor=8" }
-  rescue ex
-    Log.for("quickheadlines.gc").warn { "GC tuning failed: #{ex.message}" }
-  end
-{% end %}
+begin
+  # Force unmapping freed pages on every GC collect.
+  # Without this, Boehm GC never returns memory to the OS and RSS grows
+  # monotonically. Verified on FreeBSD: with this enabled, unmapped_bytes
+  # grows after each GC cycle and RSS stabilizes.
+  LibGC.GC_set_force_unmap_on_gcollect(1)
 
-# Log GC unmap status for diagnostics
-unmap_threshold = ENV["GC_UNMAP_THRESHOLD"]?
-if unmap_threshold
-  Log.for("quickheadlines.gc").info { "GC_UNMAP_THRESHOLD=#{unmap_threshold} (freed pages will be returned to OS)" }
-else
-  Log.for("quickheadlines.gc").warn { "GC_UNMAP_THRESHOLD not set — RSS will grow monotonically. Set GC_UNMAP_THRESHOLD=1 before starting the process." }
+  # Cap heap at 512MB. When exceeded, GC will collect aggressively.
+  LibGC.GC_set_max_heap_size(512_u64 * 1024_u64 * 1024_u64)
+
+  # Higher divisor = more aggressive collection (default is 3)
+  LibGC.GC_set_free_space_divisor(8)
+
+  stats = GC.stats
+  Log.for("quickheadlines.gc").info do
+    "GC tuning applied: force_unmap=1, max_heap=512MB, free_space_divisor=8, " \
+    "heap=#{(stats.heap_size / 1024 / 1024).round(1)}MB, " \
+    "free=#{(stats.free_bytes / 1024 / 1024).round(1)}MB, " \
+    "unmapped=#{(stats.unmapped_bytes / 1024 / 1024).round(1)}MB"
+  end
+rescue ex
+  Log.for("quickheadlines.gc").warn { "GC tuning failed: #{ex.message}" }
 end
 
 # Initialize application state
