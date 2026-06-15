@@ -130,6 +130,23 @@ module RefreshLoop
 
     GCCollector.collect_now
 
+    # Memory diagnostics after every refresh cycle
+    gc = GC.stats
+    feed_count = StateStore.feeds.size
+    item_count = StateStore.feeds.sum(&.items.size)
+    tab_feed_count = StateStore.tabs.sum(&.feeds.size)
+    tab_item_count = StateStore.tabs.sum(&.feeds.sum(&.items.size))
+    string_pool = QuickHeadlines::StringIntern.size
+    Log.for("quickheadlines.memory").info do
+      "Post-refresh memory: " \
+      "heap=#{(gc.heap_size / 1024 / 1024).round(1)}MB, " \
+      "free=#{(gc.free_bytes / 1024 / 1024).round(1)}MB, " \
+      "unmapped=#{(gc.unmapped_bytes / 1024 / 1024).round(1)}MB, " \
+      "feeds=#{feed_count}, items=#{item_count}, " \
+      "tab_feeds=#{tab_feed_count}, tab_items=#{tab_item_count}, " \
+      "string_pool=#{string_pool}"
+    end
+
     if config.debug?
       Log.for("quickheadlines.feed").debug { "refresh_all: complete - StateStore.feeds=#{new_feeds.size}, StateStore.tabs=#{new_tabs.size}" }
     end
