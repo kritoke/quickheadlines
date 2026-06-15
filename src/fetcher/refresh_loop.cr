@@ -137,14 +137,32 @@ module RefreshLoop
     tab_feed_count = StateStore.tabs.sum(&.feeds.size)
     tab_item_count = StateStore.tabs.sum(&.feeds.sum(&.items.size))
     string_pool = QuickHeadlines::StringIntern.size
+
+    # Estimate data size: sum of title + link string bytes across all items
+    data_bytes = 0_i64
+    StateStore.feeds.each do |feed|
+      feed.items.each do |item|
+        data_bytes += item.title.bytesize + item.link.bytesize
+      end
+    end
+    StateStore.tabs.each do |tab|
+      tab.feeds.each do |feed|
+        feed.items.each do |item|
+          data_bytes += item.title.bytesize + item.link.bytesize
+        end
+      end
+    end
+
     Log.for("quickheadlines.memory").info do
       "Post-refresh memory: " \
       "heap=#{(gc.heap_size / 1024 / 1024).round(1)}MB, " \
       "free=#{(gc.free_bytes / 1024 / 1024).round(1)}MB, " \
       "unmapped=#{(gc.unmapped_bytes / 1024 / 1024).round(1)}MB, " \
+      "total=#{(gc.total_bytes / 1024 / 1024).round(1)}MB, " \
       "feeds=#{feed_count}, items=#{item_count}, " \
       "tab_feeds=#{tab_feed_count}, tab_items=#{tab_item_count}, " \
-      "string_pool=#{string_pool}"
+      "string_pool=#{string_pool}, " \
+      "data_bytes=#{(data_bytes / 1024).round(1)}KB"
     end
 
     if config.debug?
