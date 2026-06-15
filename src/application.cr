@@ -2,17 +2,11 @@ require "athena"
 
 require "./module"
 
+require "./services/gc_collector"
+
 # GC tuning: configure Boehm GC to return freed memory to the OS.
 # Without these, RSS grows monotonically because Boehm GC keeps
 # freed pages mapped.
-lib LibGC
-  fun GC_set_max_heap_size(bytes : LibC::ULong)
-  fun GC_set_free_space_divisor(divisor : LibC::Int)
-  # Force unmapping freed pages on every GC collect.
-  # This is the critical setting — without it, Boehm GC never
-  # returns memory to the OS and RSS grows monotonically.
-  fun GC_set_force_unmap_on_gcollect(value : LibC::Int)
-end
 
 # Load all dependencies
 require "./config"
@@ -64,16 +58,13 @@ end
 # Apply GC tuning early, before heavy allocations.
 begin
   # Force unmapping freed pages on every GC collect.
-  # Without this, Boehm GC never returns memory to the OS and RSS grows
-  # monotonically. Verified on FreeBSD: with this enabled, unmapped_bytes
-  # grows after each GC cycle and RSS stabilizes.
-  LibGC.GC_set_force_unmap_on_gcollect(1)
+  RefreshLoop::GCCollector.enable_force_unmap
 
   # Cap heap at 512MB. When exceeded, GC will collect aggressively.
-  LibGC.GC_set_max_heap_size(512_u64 * 1024_u64 * 1024_u64)
+  LibGC.set_max_heap_size(512_u64 * 1024_u64 * 1024_u64)
 
   # Higher divisor = more aggressive collection (default is 3)
-  LibGC.GC_set_free_space_divisor(8)
+  RefreshLoop::GCCollector.set_free_space_divisor(8)
 
   stats = GC.stats
   Log.for("quickheadlines.gc").info do
