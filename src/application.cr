@@ -60,8 +60,8 @@ begin
   # Force unmapping freed pages on every GC collect.
   RefreshLoop::GCCollector.enable_force_unmap
 
-  # Cap heap at 512MB. When exceeded, GC will collect aggressively.
-  LibGC.set_max_heap_size(512_u64 * 1024_u64 * 1024_u64)
+  # No heap cap — compaction handles RSS growth.
+  # A cap causes OOM during concurrent fetch (214 feeds × fibers).
 
   # Higher divisor = more aggressive collection (default is 3)
   RefreshLoop::GCCollector.set_free_space_divisor(8)
