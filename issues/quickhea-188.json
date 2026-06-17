@@ -2,13 +2,14 @@
   "assignee": "",
   "blocked_by": [],
   "blocks": [],
+  "closed_at": "2026-06-17T01:21:52Z",
   "created": "2026-06-17T01:17:45Z",
   "description": "",
   "id": "quickhea-188",
   "labels": [],
   "priority": 1,
-  "status": "open",
+  "status": "closed",
   "title": "Architecture layer violations",
   "type": "epic",
-  "updated_at": "2026-06-17T01:17:45Z"
+  "updated_at": "2026-06-17T01:21:52Z"
 }
