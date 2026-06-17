@@ -18,15 +18,31 @@ class QuickHeadlines::Controllers::ApiBaseController < Athena::Framework::Contro
   @feed_cache : FeedCache
   @socket_manager : SocketManager
   @clustering_service : QuickHeadlines::Services::ClusteringService?
+  @favicon_actor : FaviconActor
+  @content_service : QuickHeadlines::Services::ContentService
+  @memory_manager : MemoryManagerActor
+  @feed_fetcher : FeedFetcher
 
   def self.new : self
     db = DatabaseService.instance
     cache = FeedCache.instance
     sm = SocketManager.instance
-    new(db, cache, sm)
+    favicon = FaviconActor.instance
+    content = QuickHeadlines::Services::ContentService.instance
+    memory = MemoryManagerActor.instance
+    fetcher = FeedFetcher.instance
+    new(db, cache, sm, favicon, content, memory, fetcher)
   end
 
-  def initialize(@db_service : DatabaseService, @feed_cache : FeedCache, @socket_manager : SocketManager)
+  def initialize(
+    @db_service : DatabaseService,
+    @feed_cache : FeedCache,
+    @socket_manager : SocketManager,
+    @favicon_actor : FaviconActor,
+    @content_service : QuickHeadlines::Services::ContentService,
+    @memory_manager : MemoryManagerActor,
+    @feed_fetcher : FeedFetcher,
+  )
   end
 
   private def check_admin_auth(request : AHTTP::Request) : Bool

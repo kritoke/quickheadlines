@@ -11,8 +11,7 @@ class QuickHeadlines::Controllers::ContentController < QuickHeadlines::Controlle
       return QuickHeadlines::DTOs::ContentResponse.new(error: "Missing link parameter")
     end
 
-    content_service = QuickHeadlines::Services::ContentService.instance
-    article = content_service.get_article(item_link)
+    article = @content_service.get_article(item_link)
 
     unless article
       return QuickHeadlines::DTOs::ContentResponse.new(

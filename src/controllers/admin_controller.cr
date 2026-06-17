@@ -183,9 +183,8 @@ class QuickHeadlines::Controllers::AdminController < QuickHeadlines::Controllers
   end
 
   private def handle_cleanup_low_quality : Nil
-    content_service = QuickHeadlines::Services::ContentService.instance
     min_length = 200 # Only store articles with substantial content
-    deleted = content_service.cleanup_low_quality_content(min_length)
+    deleted = @content_service.cleanup_low_quality_content(min_length)
     Log.for("quickheadlines.admin").info do
       "Low-quality content cleanup deleted #{deleted} articles"
     end
@@ -296,8 +295,8 @@ class QuickHeadlines::Controllers::AdminController < QuickHeadlines::Controllers
     raise AHK::Exception::HTTPException.new(401, "Unauthorized") unless check_admin_auth(request)
 
     deep = request.query_params["deep"]? == "1"
-    path = MemoryManagerActor.instance.dump_heap(deep)
-    rss_mb = MemoryManagerActor.instance.get_rss_mb
+    path = @memory_manager.dump_heap(deep)
+    rss_mb = @memory_manager.get_rss_mb
 
     Log.for("quickheadlines.admin").info do
       "Memory snapshot requested: path=#{path}, deep=#{deep}, rss=#{rss_mb.round(1)}MB, by=#{client_ip(request)}"
