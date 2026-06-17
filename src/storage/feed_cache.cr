@@ -67,11 +67,14 @@ class FeedCache
   getter :db_path
 
   def add(feed_data : FeedData)
+    Log.for("quickheadlines.storage").debug { "add(url=#{feed_data.url}, items=#{feed_data.items.size})" }
     feed_repository.upsert_with_items(feed_data)
   end
 
   def get(url : String) : FeedData?
-    feed_repository.find_with_items(url)
+    result = feed_repository.find_with_items(url)
+    Log.for("quickheadlines.storage").debug { "get(url=#{url}) -> #{result ? "found" : "nil"}" }
+    result
   end
 
   def get_fetched_time(url : String) : Time?

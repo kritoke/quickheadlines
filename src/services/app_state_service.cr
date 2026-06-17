@@ -40,6 +40,7 @@ module QuickHeadlines::Services
     end
 
     def update(&transform : AppStateSnapshot -> AppStateSnapshot) : AppStateSnapshot
+      Log.for("quickheadlines.state").debug { "update" }
       @mutex.synchronize do
         @current = transform.call(@current)
 
