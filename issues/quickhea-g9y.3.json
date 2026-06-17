@@ -2,7 +2,8 @@
   "assignee": "",
   "blocked_by": [],
   "blocks": [
-    "quickhea-g9y.6"
+    "quickhea-g9y.6",
+    "quickhea-g9y.7"
   ],
   "created": "2026-06-17T01:31:54Z",
   "description": "Wrap external dependencies behind clean interfaces so they can be swapped. Current direct usage: SQLite (storage/database.cr), HTTP::Client (fetcher/), filesystem (favicon_storage.cr), color extraction (color_extractor.cr), crypto/hashing. Architecture doc: 'Wrapper layers - wrap external dependencies instead of using them directly.' Each wrapper should define an interface (module/abstract class) with at least two implementations (real + mock) to prove replaceability.",
@@ -13,5 +14,5 @@
   "status": "open",
   "title": "Add wrapper interfaces for external dependencies",
   "type": "task",
-  "updated_at": "2026-06-17T01:32:36Z"
+  "updated_at": "2026-06-17T01:32:37Z"
 }
