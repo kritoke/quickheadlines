@@ -1,0 +1,15 @@
+{
+  "assignee": "",
+  "blocked_by": [],
+  "blocks": [],
+  "created": "2026-06-17T01:31:38Z",
+  "description": "Replace all @@instance/Singleton class variables with dependency injection. Files affected: models.cr (30 hits), event_broadcaster (29), monitoring (29), task_metadata (28), favicon_cache (22), memory_budget (15), singleton.cr (15), fiber_tracker (14), rate_limiter (14), color_extractor (14), gc_collector (13), clustering_service (12). Architecture doc: 'Global state - shared mutable state between modules' is a red flag. This causes race conditions and makes modules untestable in isolation.",
+  "id": "quickhea-g9y.1",
+  "labels": [],
+  "parent": "quickhea-g9y",
+  "priority": 1,
+  "status": "open",
+  "title": "Eliminate global state and singletons",
+  "type": "task",
+  "updated_at": "2026-06-17T01:31:38Z"
+}
