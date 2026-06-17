@@ -61,8 +61,23 @@ class SocketManager < Actor
     @closed_total = 0_i64
   end
 
-  # Singleton access
-  def_singleton_auto
+  # Class-level accessor — instance must be created and wired by AppBootstrap.
+  @@instance : SocketManager?
+
+  def self.instance : SocketManager
+    @@instance || raise "SocketManager not initialized. AppBootstrap must create and set SocketManager.instance=."
+  end
+
+  def self.instance=(value : SocketManager)
+    @@instance = value
+  end
+
+  def self.reset : Nil
+    if inst = @@instance
+      inst.shutdown rescue nil
+    end
+    @@instance = nil
+  end
 
   # Convenience aliases for backward compatibility
   def broadcast(message : String) : Nil

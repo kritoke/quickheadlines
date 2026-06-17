@@ -27,7 +27,7 @@ require "./task_scheduler"
 #   - FeedCache: needs Config and DatabaseService
 #   - FeedFetcher: needs FeedCache
 #   - ContentService: needs Azurite store config
-# - Singleton-legacy services: still use .instance (to be migrated)
+# - Explicitly-wired actors: created here, set via .instance= accessor
 #   - FaviconActor, ClusteringActor, MemoryManagerActor, SocketManager
 class AppBootstrap
   @config : Config
@@ -55,7 +55,11 @@ class AppBootstrap
     FeedCache.instance = @feed_cache
     Log.for("quickheadlines.app").info { "Loaded #{@feed_cache.size} feeds from cache" }
 
+    FaviconActor.instance = FaviconActor.new
+    FaviconActor.instance.start
     FaviconActor.instance.init_storage
+    Log.for("quickheadlines.app").info { "FaviconActor initialized" }
+
     VugAdapter.clear_cache
 
     cleanup_stale_feeds
@@ -77,8 +81,17 @@ class AppBootstrap
     QuickHeadlines::Services::FeedService.content_store = content_store
     Log.for("quickheadlines.app").info { "Azurite content store initialized: #{content_db_path} (#{content_store.db_size_mb.round(2)}MB)" }
 
-    MemoryManagerActor.instance
+    MemoryManagerActor.instance = MemoryManagerActor.new
+    MemoryManagerActor.instance.start
     Log.for("quickheadlines.app").info { "Memory management actor initialized" }
+
+    SocketManager.instance = SocketManager.new
+    SocketManager.instance.start
+    Log.for("quickheadlines.app").info { "SocketManager initialized" }
+
+    QuickHeadlines::Services::ClusteringActor.instance = QuickHeadlines::Services::ClusteringActor.new(@db_service)
+    QuickHeadlines::Services::ClusteringActor.instance.start
+    Log.for("quickheadlines.app").info { "ClusteringActor initialized" }
 
     EventBroadcaster.start
 

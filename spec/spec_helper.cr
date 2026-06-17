@@ -19,5 +19,14 @@ end
 def create_test_feed_cache : FeedCache
   config = Config.from_yaml("cache_dir: #{File.join(Dir.tempdir, "qh_test_#{Process.pid}_#{Random.rand(10000)}")}")
   db_service = DatabaseService.new(config)
+  DatabaseService.instance = db_service
+
+  # Set up ClusteringActor for tests that use ClusteringService
+  unless QuickHeadlines::Services::ClusteringActor.instance?
+    actor = QuickHeadlines::Services::ClusteringActor.new(db_service)
+    actor.start
+    QuickHeadlines::Services::ClusteringActor.instance = actor
+  end
+
   FeedCache.new(config, db_service)
 end

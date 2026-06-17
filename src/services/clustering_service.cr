@@ -35,21 +35,19 @@ class QuickHeadlines::Services::ClusteringActor < Actor
     @db = @db_service.db
   end
 
-  # Singleton access — lazily initialized with explicit db_service
+  # Class-level accessor — instance must be created and wired by AppBootstrap.
   @@instance : ClusteringActor?
-  @@instance_mutex = Mutex.new
 
   def self.instance : ClusteringActor
-    @@instance_mutex.synchronize do
-      @@instance ||= ClusteringActor.new(DatabaseService.instance).tap(&.start)
-    end
+    @@instance || raise "ClusteringActor not initialized. AppBootstrap must create and set ClusteringActor.instance=."
   end
 
-  # Create or get instance with explicit db_service (for tests)
-  def self.instance(db_service : DatabaseService) : ClusteringActor
-    @@instance_mutex.synchronize do
-      @@instance ||= ClusteringActor.new(db_service).tap(&.start)
-    end
+  def self.instance? : ClusteringActor?
+    @@instance
+  end
+
+  def self.instance=(value : ClusteringActor)
+    @@instance = value
   end
 
   def self.reset : Nil
@@ -120,7 +118,7 @@ class QuickHeadlines::Services::ClusteringService
 
   def initialize(@db_service : DatabaseService, @cluster_repository : QuickHeadlines::Repositories::ClusterRepository? = nil)
     @db = @db_service.db
-    @actor = ClusteringActor.instance(@db_service)
+    @actor = ClusteringActor.instance
   end
 
   private def cluster_repository : QuickHeadlines::Repositories::ClusterRepository

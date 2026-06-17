@@ -140,8 +140,23 @@ class MemoryManagerActor < Actor
     super(@name, mailbox_size: 100)
   end
 
-  # Singleton access
-  def_singleton_auto
+  # Class-level accessor — instance must be created and wired by AppBootstrap.
+  @@instance : MemoryManagerActor?
+
+  def self.instance : MemoryManagerActor
+    @@instance || raise "MemoryManagerActor not initialized. AppBootstrap must create and set MemoryManagerActor.instance=."
+  end
+
+  def self.instance=(value : MemoryManagerActor)
+    @@instance = value
+  end
+
+  def self.reset : Nil
+    if inst = @@instance
+      inst.shutdown rescue nil
+    end
+    @@instance = nil
+  end
 
   # =========================================================================
   # Dispatch

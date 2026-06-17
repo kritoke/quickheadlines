@@ -37,8 +37,16 @@ class FeedFetcher
     @cache
   end
 
-  # Singleton accessor
-  def_singleton_manual("FeedFetcher not initialized. Call FeedFetcher.instance=(fetcher) first.")
+  # Class-level accessor wired by AppBootstrap at startup.
+  @@instance : FeedFetcher?
+
+  def self.instance : FeedFetcher
+    @@instance || raise "FeedFetcher not initialized. AppBootstrap must call FeedFetcher.instance= first."
+  end
+
+  def self.instance=(value : FeedFetcher)
+    @@instance = value
+  end
 
   # Main entry point — fetch a feed with caching and retry logic.
   # Timeout control is handled at the caller level (fetch_single_feed_with_timeout).

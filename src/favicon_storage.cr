@@ -50,8 +50,23 @@ class FaviconActor < Actor
     File.join(QuickHeadlines::CacheUtils.get_cache_dir(nil), "favicons")
   end
 
-  # Singleton access
-  def_singleton_auto
+  # Class-level accessor — instance must be created and wired by AppBootstrap.
+  @@instance : FaviconActor?
+
+  def self.instance : FaviconActor
+    @@instance || raise "FaviconActor not initialized. AppBootstrap must create and set FaviconActor.instance=."
+  end
+
+  def self.instance=(value : FaviconActor)
+    @@instance = value
+  end
+
+  def self.reset : Nil
+    if inst = @@instance
+      inst.shutdown rescue nil
+    end
+    @@instance = nil
+  end
 
   # =========================================================================
   # Pure functions — no state, can be called directly
