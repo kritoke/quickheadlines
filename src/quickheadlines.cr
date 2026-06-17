@@ -14,6 +14,12 @@ Log.setup do |builder|
   builder.bind "*", Log::Severity::Info, Log::IOBackend.new(dispatcher: Log::DirectDispatcher)
 end
 
+# Ignore SIGPIPE to prevent process termination when clients disconnect
+# during write operations. On FreeBSD, the default SIGPIPE behavior is
+# to terminate the process. This is especially important for WebSocket
+# connections where clients may disconnect at any time.
+Signal::PIPE.ignore
+
 module QuickHeadlines
   Log = ::Log.for("quickheadlines")
 end
