@@ -3,7 +3,9 @@
   "blocked_by": [
     "quickhea-g9y.1.2"
   ],
-  "blocks": [],
+  "blocks": [
+    "quickhea-g9y.1.5"
+  ],
   "created": "2026-06-17T01:36:42Z",
   "description": "Migrate FaviconActor, ClusteringActor, MemoryManagerActor, EventBroadcaster from def_singleton_auto to ADI::Register. Update all .instance callers in quickheadlines.cr, fetcher/, controllers/. Remove singleton macros.",
   "id": "quickhea-g9y.1.4",
@@ -13,5 +15,5 @@
   "status": "open",
   "title": "Phase 4: Actor layer DI migration",
   "type": "task",
-  "updated_at": "2026-06-17T01:36:54Z"
+  "updated_at": "2026-06-17T01:36:55Z"
 }
