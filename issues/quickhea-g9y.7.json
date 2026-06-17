@@ -1,0 +1,15 @@
+{
+  "assignee": "",
+  "blocked_by": [],
+  "blocks": [],
+  "created": "2026-06-17T01:32:18Z",
+  "description": "Add logging at module boundaries (inputs/outputs) for debugging. Architecture doc: 'Logging at boundaries - log inputs/outputs of each module.' Use Crystal's built-in Log. Log at entry/exit of each module's public methods with structured context (module name, method, key params). This enables 'identify the module boundary' debugging step.",
+  "id": "quickhea-g9y.7",
+  "labels": [],
+  "parent": "quickhea-g9y",
+  "priority": 3,
+  "status": "open",
+  "title": "Add boundary logging for debugging",
+  "type": "task",
+  "updated_at": "2026-06-17T01:32:18Z"
+}
