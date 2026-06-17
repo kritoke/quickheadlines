@@ -1,7 +1,7 @@
 require "db"
 require "mutex"
 require "time"
-require "../services/clustering_service"
+require "../models"
 require "../repositories/repository_base"
 
 module QuickHeadlines::Storage
