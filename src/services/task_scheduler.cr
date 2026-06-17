@@ -155,8 +155,8 @@ class TaskScheduler
         begin
           RefreshLoop::InterruptibleSleep.sleep(@clustering_interval)
           break if QuickHeadlines.shutting_down?
-          threshold = StateStore.config.try(&.clustering).try(&.threshold) || 0.35
-          QuickHeadlines::Services::ClusteringService.new(@db_service).recluster_with_lsh(@feed_cache, @config.db_fetch_limit, threshold)
+          threshold = @config.clustering.try(&.threshold) || 0.35
+          QuickHeadlines::Services::ClusteringService.new(@db_service, nil, @config.clustering).recluster_with_lsh(@feed_cache, @config.db_fetch_limit, threshold)
         rescue ex
           Log.for("quickheadlines.app").error(exception: ex) { "Clustering scheduler iteration failed" }
         end
@@ -172,7 +172,7 @@ class TaskScheduler
         begin
           Log.for("quickheadlines.app").info { "Running initial clustering on startup..." }
           threshold = @config.clustering.try(&.threshold) || 0.35
-          QuickHeadlines::Services::ClusteringService.new(@db_service).recluster_with_lsh(@feed_cache, @config.db_fetch_limit, threshold)
+          QuickHeadlines::Services::ClusteringService.new(@db_service, nil, @config.clustering).recluster_with_lsh(@feed_cache, @config.db_fetch_limit, threshold)
         rescue ex
           Log.for("quickheadlines.app").error(exception: ex) { "Initial clustering failed" }
         end

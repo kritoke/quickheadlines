@@ -263,7 +263,8 @@ class QuickHeadlines::Controllers::ApiBaseController < Athena::Framework::Contro
   private def clustering_service : QuickHeadlines::Services::ClusteringService
     @clustering_service ||= QuickHeadlines::Services::ClusteringService.new(
       @db_service,
-      QuickHeadlines::Repositories::ClusterRepository.new(@db_service)
+      QuickHeadlines::Repositories::ClusterRepository.new(@db_service),
+      StateStore.config.try(&.clustering)
     )
   end
 

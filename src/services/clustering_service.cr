@@ -115,8 +115,9 @@ class QuickHeadlines::Services::ClusteringService
   @db : DB::Database
   @cluster_repository : QuickHeadlines::Repositories::ClusterRepository?
   @actor : ClusteringActor
+  @clustering_config : ClusteringConfig?
 
-  def initialize(@db_service : DatabaseService, @cluster_repository : QuickHeadlines::Repositories::ClusterRepository? = nil)
+  def initialize(@db_service : DatabaseService, @cluster_repository : QuickHeadlines::Repositories::ClusterRepository? = nil, @clustering_config : ClusteringConfig? = nil)
     @db = @db_service.db
     @actor = ClusteringActor.instance
   end
@@ -208,7 +209,7 @@ class QuickHeadlines::Services::ClusteringService
   end
 
   def all_clusters_from_db : Array(QuickHeadlines::Entities::Cluster)
-    fetch_limit = StateStore.config.try(&.clustering).try(&.max_fetch_items) || 1000
+    fetch_limit = @clustering_config.try(&.max_fetch_items) || 1000
     cluster_repository.find_all(fetch_limit)
   end
 
