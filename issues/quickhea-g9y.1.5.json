@@ -7,14 +7,15 @@
   "blocks": [
     "quickhea-g9y.1.6"
   ],
+  "closed_at": "2026-06-17T10:43:05Z",
   "created": "2026-06-17T01:36:43Z",
   "description": "Migrate controllers to receive services via ADI injection instead of .instance calls. Update api_base_controller.cr, admin_controller.cr, content_controller.cr, asset_controller.cr, feed_pagination_controller.cr.",
   "id": "quickhea-g9y.1.5",
   "labels": [],
   "parent": "quickhea-g9y.1",
   "priority": 2,
-  "status": "in_progress",
+  "status": "closed",
   "title": "Phase 5: Controller layer DI migration",
   "type": "task",
-  "updated_at": "2026-06-17T10:38:46Z"
+  "updated_at": "2026-06-17T10:43:05Z"
 }
