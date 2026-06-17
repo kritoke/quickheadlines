@@ -90,6 +90,7 @@ end
 describe "Graceful Shutdown" do
   describe "shutdown sequence" do
     it "has shutdown method on RateLimiter" do
+      ensure_throttler_actor
       # Verify the shutdown method exists by calling it
       # It should not raise an error
       QuickHeadlines::RateLimiter.shutdown

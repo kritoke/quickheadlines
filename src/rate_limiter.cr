@@ -77,8 +77,27 @@ module QuickHeadlines
       @instance_ttl = QuickHeadlines::Constants::RATE_LIMITER_INSTANCE_TTL.to_i64
     end
 
-    # Singleton access
-    def_singleton_auto
+    # Class-level accessor — instance must be created and wired by AppBootstrap.
+    @@instance : ThrottlerActor?
+
+    def self.instance : ThrottlerActor
+      @@instance || raise "ThrottlerActor not initialized. AppBootstrap must create and set ThrottlerActor.instance=."
+    end
+
+    def self.instance? : ThrottlerActor?
+      @@instance
+    end
+
+    def self.instance=(value : ThrottlerActor)
+      @@instance = value
+    end
+
+    def self.reset : Nil
+      if inst = @@instance
+        inst.shutdown rescue nil
+      end
+      @@instance = nil
+    end
 
     # =========================================================================
     # Dispatch

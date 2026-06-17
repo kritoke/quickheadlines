@@ -1,9 +1,17 @@
 require "azurite"
-require "../infrastructure/singleton"
 
 module QuickHeadlines::Services
   class ContentService
-    def_singleton_manual("ContentService: Not initialized. AppBootstrap must create ContentService before accessing instance.")
+    # Class-level accessor wired by AppBootstrap at startup.
+    @@instance : ContentService?
+
+    def self.instance : ContentService
+      @@instance || raise "ContentService not initialized. AppBootstrap must call ContentService.instance= first."
+    end
+
+    def self.instance=(value : ContentService)
+      @@instance = value
+    end
 
     @store : Azurite::Store
 

@@ -13,6 +13,7 @@ require "azurite"
 require "./memory_manager_actor"
 require "./memory_budget"
 require "./task_scheduler"
+require "../rate_limiter"
 
 # AppBootstrap is the composition root that wires up all application services.
 # It creates and initializes services, sets up dependencies, and registers
@@ -88,6 +89,10 @@ class AppBootstrap
     SocketManager.instance = SocketManager.new
     SocketManager.instance.start
     Log.for("quickheadlines.app").info { "SocketManager initialized" }
+
+    QuickHeadlines::ThrottlerActor.instance = QuickHeadlines::ThrottlerActor.new
+    QuickHeadlines::ThrottlerActor.instance.start
+    Log.for("quickheadlines.app").info { "ThrottlerActor initialized" }
 
     QuickHeadlines::Services::ClusteringActor.instance = QuickHeadlines::Services::ClusteringActor.new(@db_service)
     QuickHeadlines::Services::ClusteringActor.instance.start

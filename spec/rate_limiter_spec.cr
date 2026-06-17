@@ -75,6 +75,10 @@ describe QuickHeadlines::ThrottlerActor do
 end
 
 describe QuickHeadlines::RateLimiter do
+  before_each do
+    ensure_throttler_actor
+  end
+
   describe ".allowed?" do
     it "delegates to ThrottlerActor" do
       key = "test-#{rand(10000)}"
@@ -109,6 +113,7 @@ describe QuickHeadlines::RateLimiter, "cache layer" do
   Spec.before_each do
     # Reset the cache between tests so each test sees a known state.
     QuickHeadlines::RateLimiter.clear_cache
+    ensure_throttler_actor
   end
 
   it "caches positive results to avoid repeated actor calls" do

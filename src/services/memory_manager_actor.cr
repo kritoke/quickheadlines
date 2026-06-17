@@ -1,5 +1,4 @@
 require "../infrastructure/actor"
-require "../infrastructure/singleton"
 require "../services/fiber_tracker"
 require "../favicon_cache"
 
