@@ -1,0 +1,15 @@
+{
+  "assignee": "",
+  "blocked_by": [],
+  "blocks": [],
+  "created": "2026-06-17T01:32:07Z",
+  "description": "Ensure module behavior is controlled through constructor parameters and method arguments, not by reading global config or environment variables directly. Architecture doc: 'Configuration isolation - module behavior controlled through parameters, not globals.' Audit for: direct ENV access, Config singleton reads, hardcoded paths/magic numbers. Each module should receive its config at construction time.",
+  "id": "quickhea-g9y.5",
+  "labels": [],
+  "parent": "quickhea-g9y",
+  "priority": 2,
+  "status": "open",
+  "title": "Configuration isolation - behavior via params not globals",
+  "type": "task",
+  "updated_at": "2026-06-17T01:32:07Z"
+}
