@@ -1,0 +1,15 @@
+{
+  "assignee": "",
+  "blocked_by": [],
+  "blocks": [],
+  "created": "2026-06-17T01:36:29Z",
+  "description": "Set up ADI::Register annotations on core services. Extract AppState from models.cr class vars (@@current, @@mutex, @@refreshing, @@clustering, @@memory_history) to a proper injectable AppStateService. Update AppBootstrap to use ADI.container. Update quickheadlines.cr and application.cr to use injected services.",
+  "id": "quickhea-g9y.1.1",
+  "labels": [],
+  "parent": "quickhea-g9y.1",
+  "priority": 1,
+  "status": "open",
+  "title": "Phase 1: ADI container setup + AppState service extraction",
+  "type": "task",
+  "updated_at": "2026-06-17T01:36:29Z"
+}
