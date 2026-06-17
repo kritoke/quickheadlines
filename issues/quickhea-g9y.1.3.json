@@ -3,7 +3,9 @@
   "blocked_by": [
     "quickhea-g9y.1.2"
   ],
-  "blocks": [],
+  "blocks": [
+    "quickhea-g9y.1.5"
+  ],
   "created": "2026-06-17T01:36:42Z",
   "description": "Migrate FeedFetcher from def_singleton_manual to ADI::Register. Update feed_fetcher_concurrent.cr, monitoring.cr, vug_adapter.cr, fetcher_favicon.cr, fetcher_response.cr to use injected FeedFetcher. Remove singleton macro.",
   "id": "quickhea-g9y.1.3",
@@ -13,5 +15,5 @@
   "status": "open",
   "title": "Phase 3: FeedFetcher + fetcher layer DI migration",
   "type": "task",
-  "updated_at": "2026-06-17T01:36:53Z"
+  "updated_at": "2026-06-17T01:36:54Z"
 }
