@@ -1,4 +1,5 @@
 require "azurite"
+require "../infrastructure/singleton"
 
 module QuickHeadlines::Services
   class ContentService

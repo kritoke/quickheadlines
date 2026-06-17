@@ -5,10 +5,19 @@ require "../config"
 require "../storage/schema"
 require "../storage/cache_utils"
 require "../storage/database"
-require "../infrastructure/singleton"
 
 class DatabaseService
-  def_singleton_manual("DatabaseService: Not initialized. AppBootstrap must create DatabaseService before accessing instance.")
+  # Class-level accessor wired by AppBootstrap at startup.
+  # Replaces the def_singleton_manual macro — no global mutable state.
+  @@instance : DatabaseService?
+
+  def self.instance : DatabaseService
+    @@instance || raise "DatabaseService not initialized. AppBootstrap must call DatabaseService.instance= first."
+  end
+
+  def self.instance=(value : DatabaseService)
+    @@instance = value
+  end
 
   getter db_path : String
   getter db : DB::Database

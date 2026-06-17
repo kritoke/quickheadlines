@@ -15,7 +15,17 @@ require "./cleanup_store"
 require "../repositories/feed_repository"
 
 class FeedCache
-  def_singleton_manual("FeedCache: Not initialized. AppBootstrap must create FeedCache before accessing instance.")
+  # Class-level accessor wired by AppBootstrap at startup.
+  # Replaces the def_singleton_manual macro — no global mutable state.
+  @@instance : FeedCache?
+
+  def self.instance : FeedCache
+    @@instance || raise "FeedCache not initialized. AppBootstrap must call FeedCache.instance= first."
+  end
+
+  def self.instance=(value : FeedCache)
+    @@instance = value
+  end
 
   @mutex : Mutex
   @db_service : DatabaseService
