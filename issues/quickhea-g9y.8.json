@@ -1,6 +1,8 @@
 {
   "assignee": "",
-  "blocked_by": [],
+  "blocked_by": [
+    "quickhea-g9y.4"
+  ],
   "blocks": [],
   "created": "2026-06-17T01:32:24Z",
   "description": "Document each module's public API so usage is obvious without reading implementation. Architecture doc: 'Document interfaces - make usage obvious to other developers' and 'Interface clarity - can someone use this without reading the implementation?' Add crystal-doc comments to all public methods/types. Generate API docs. Create module-level README comments explaining purpose and usage.",
@@ -11,5 +13,5 @@
   "status": "open",
   "title": "Document module public APIs",
   "type": "task",
-  "updated_at": "2026-06-17T01:32:24Z"
+  "updated_at": "2026-06-17T01:32:37Z"
 }
