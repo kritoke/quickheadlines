@@ -1,0 +1,14 @@
+{
+  "assignee": "",
+  "blocked_by": [],
+  "blocks": [],
+  "created": "2026-06-17T01:12:33Z",
+  "description": "",
+  "id": "quickhea-h7l",
+  "labels": [],
+  "priority": 2,
+  "status": "open",
+  "title": "PRAGMA mmap_size set to 0 then 4GB in database.cr",
+  "type": "bug",
+  "updated_at": "2026-06-17T01:12:33Z"
+}
