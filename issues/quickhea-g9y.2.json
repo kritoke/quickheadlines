@@ -1,0 +1,15 @@
+{
+  "assignee": "",
+  "blocked_by": [],
+  "blocks": [],
+  "created": "2026-06-17T01:31:46Z",
+  "description": "Break down files exceeding 250 lines into focused modules with single responsibility. Top candidates: memory_manager_actor.cr (451), refresh_supervisor.cr (392), socket_manager.cr (355), favicon_sync_service.cr (316), api_responses.cr (316), admin_controller.cr (313), rate_limiter.cr (271), clustering_service.cr (264), feed_service.cr (252), database.cr (240). Architecture doc: 'Single responsibility - each module/class/function has one clear job.'",
+  "id": "quickhea-g9y.2",
+  "labels": [],
+  "parent": "quickhea-g9y",
+  "priority": 2,
+  "status": "open",
+  "title": "Decompose monolithic files into focused modules",
+  "type": "task",
+  "updated_at": "2026-06-17T01:31:46Z"
+}
