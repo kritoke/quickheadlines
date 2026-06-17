@@ -2,13 +2,14 @@
   "assignee": "",
   "blocked_by": [],
   "blocks": [],
+  "closed_at": "2026-06-17T01:21:51Z",
   "created": "2026-06-17T01:17:31Z",
   "description": "",
   "id": "quickhea-y3d",
   "labels": [],
   "priority": 1,
-  "status": "open",
+  "status": "closed",
   "title": "Epic: Fix dependency layer violations",
   "type": "epic",
-  "updated_at": "2026-06-17T01:17:31Z"
+  "updated_at": "2026-06-17T01:21:51Z"
 }
