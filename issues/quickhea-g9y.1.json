@@ -11,9 +11,15 @@
   "id": "quickhea-g9y.1",
   "labels": [],
   "parent": "quickhea-g9y",
+  "comments": [
+    {
+      "text": "## Migration Plan\n\n### Current State\n- AppBootstrap (src/services/app_bootstrap.cr) is the composition root\n- It creates services and manually sets Service.instance = ...\n- 22 files call .instance on singletons\n- models.cr has @@current/@@mutex/@@refreshing/@@clustering class vars\n- infrastructure/singleton.cr defines def_singleton_manual/def_singleton_auto macros\n- ADI (Athena DI) exists but only used by error_renderer.cr\n\n### Approach: Incremental DI Migration\n\nPhase 1: Foundation\n- Register all services with ADI::Register annotations\n- Make AppBootstrap use ADI.container for resolution\n- Keep backward-compatible .instance during transition\n\nPhase 2: Core Services (this ticket)\n- Migrate DatabaseService, FeedCache, FeedFetcher to DI\n- Migrate AppState (models.cr) from class vars to injected service\n- Update AppBootstrap to inject rather than set-singleton\n\nPhase 3: Actors\n- Migrate FaviconActor, ClusteringActor, MemoryManagerActor to DI\n- Update all .instance callers to receive injected deps\n\nPhase 4: Cleanup\n- Remove def_singleton_manual/def_singleton_auto macros\n- Remove infrastructure/singleton.cr\n- Remove all @@instance class variables\n\n### Sub-tasks needed\nThe 22-file scope is too large for one pass. Break into:\n1. ADI container setup + AppState service extraction\n2. DatabaseService + FeedCache DI migration\n3. FeedFetcher + fetcher layer DI migration\n4. Actor layer DI migration\n5. Controller layer DI migration\n6. Singleton macro removal",
+      "timestamp": "2026-06-17T01:35:42Z"
+    }
+  ],
   "priority": 1,
   "status": "in_progress",
   "title": "Eliminate global state and singletons",
   "type": "task",
-  "updated_at": "2026-06-17T01:34:09Z"
+  "updated_at": "2026-06-17T01:35:42Z"
 }
