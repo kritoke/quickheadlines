@@ -1,0 +1,14 @@
+{
+  "assignee": "",
+  "blocked_by": [],
+  "blocks": [],
+  "created": "2026-06-17T01:00:24Z",
+  "description": "",
+  "id": "quickhea-r0a",
+  "labels": [],
+  "priority": 2,
+  "status": "open",
+  "title": "stale-max_heap-in-gc-log",
+  "type": "bug",
+  "updated_at": "2026-06-17T01:00:24Z"
+}
