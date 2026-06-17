@@ -43,11 +43,16 @@ module RefreshLoop::GCCollector
     @@gc_runs += 1
     Log.for("quickheadlines.gc").debug { "Forced GC.collect after refresh cycle (run #{@@gc_runs})" }
 
-    # Compaction: every 10 cycles (~5 hours at 30min intervals), force the
+    # Compaction: every 3 cycles (~1.5 hours at 30min intervals), force the
     # GC to relocate live objects to fewer pages and unmap the rest.
     # Without this, Boehm GC keeps freed pages mapped because live objects
     # are scattered across them (fragmentation).
-    if @@gc_runs % 10 == 0
+    # Also compact if heap is large (>2GB) or fragmented (>50% free).
+    stats = GC.stats
+    heap_mb = stats.heap_size / (1024 * 1024)
+    free_pct = stats.heap_size > 0 ? (stats.free_bytes.to_f / stats.heap_size * 100) : 0
+    if @@gc_runs % 3 == 0 || heap_mb > 2048 || free_pct > 50
+      Log.for("quickheadlines.gc").info { "Compaction triggered: heap=#{heap_mb}MB, free=#{free_pct.round(1)}%, runs=#{@@gc_runs}" }
       compact_heap
     end
   end
@@ -63,7 +68,7 @@ module RefreshLoop::GCCollector
     end
 
     # Expand heap to give GC room to relocate live objects
-    LibGC.GC_expand_hp(128_u64 * 1024_u64 * 1024_u64)
+    LibGC.GC_expand_hp(64_u64 * 1024_u64 * 1024_u64)
 
     # Multiple collection passes to fully relocate
     3.times { GC.collect }
