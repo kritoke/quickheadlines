@@ -1,0 +1,15 @@
+{
+  "assignee": "",
+  "blocked_by": [],
+  "blocks": [],
+  "created": "2026-06-17T01:32:01Z",
+  "description": "Systematic audit and enforcement of module layer boundaries. Architecture doc: 'No cross-dependencies - modules communicate through defined interfaces only.' Layers: storage/ (DB access), repositories/ (data access abstraction), services/ (business logic), fetcher/ (RSS fetching), controllers/ (HTTP), websocket/ (real-time). Verify no layer skips its adjacent layer. Supersedes empty epic quickhea-v6m.",
+  "id": "quickhea-g9y.4",
+  "labels": [],
+  "parent": "quickhea-g9y",
+  "priority": 2,
+  "status": "open",
+  "title": "Enforce layer boundaries and remove cross-dependencies",
+  "type": "task",
+  "updated_at": "2026-06-17T01:32:01Z"
+}
