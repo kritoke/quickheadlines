@@ -1,3 +1,4 @@
+require "athena"
 require "../config"
 require "../constants"
 require "../storage"
@@ -5,6 +6,7 @@ require "../color_extractor"
 require "./database_service"
 require "./content_service"
 require "./favicon_sync_service"
+require "./app_state_service"
 require "../websocket"
 require "../fetcher/vug_adapter"
 require "azurite"
@@ -12,6 +14,21 @@ require "./memory_manager_actor"
 require "./memory_budget"
 require "./task_scheduler"
 
+# AppBootstrap is the composition root that wires up all application services.
+# It creates and initializes services, sets up dependencies, and registers
+# shutdown handlers.
+#
+# Dependency Injection Strategy:
+# - Constructor-injected services: created here, passed via constructor args
+#   - AppStateService: manages application state (wired to StateStore)
+#   - TaskScheduler: receives config, feed_cache, db_service
+# - Manually-wired services: need constructor args or runtime config
+#   - DatabaseService: needs Config for DB path
+#   - FeedCache: needs Config and DatabaseService
+#   - FeedFetcher: needs FeedCache
+#   - ContentService: needs Azurite store config
+# - Singleton-legacy services: still use .instance (to be migrated)
+#   - FaviconActor, ClusteringActor, MemoryManagerActor, SocketManager
 class AppBootstrap
   @config : Config
   @db_service : DatabaseService
@@ -27,6 +44,10 @@ class AppBootstrap
     @cleanup_interval = QuickHeadlines::Constants::CLEANUP_INTERVAL,
     @ws_janitor_interval = QuickHeadlines::Constants::WS_JANITOR_INTERVAL,
   )
+    # Initialize AppStateService and wire to StateStore facade
+    StateStore.service = QuickHeadlines::Services::AppStateService.new
+    Log.for("quickheadlines.app").info { "AppStateService initialized" }
+
     @db_service = DatabaseService.new(@config)
     DatabaseService.instance = @db_service
 

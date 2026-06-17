@@ -1,8 +1,14 @@
 require "spec"
+require "../src/module"
 require "../src/models"
 require "../src/config"
+require "../src/services/app_state_service"
 
 describe "Models" do
+  # Wire AppStateService before tests (normally done by AppBootstrap)
+  before_all do
+    StateStore.service = QuickHeadlines::Services::AppStateService.new
+  end
   describe Item do
     it "creates with title and link" do
       item = Item.new("Test Title", "https://example.com/article", nil)

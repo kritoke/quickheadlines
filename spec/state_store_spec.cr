@@ -1,8 +1,15 @@
 require "spec"
+require "../src/module"
 require "../src/models"
 require "../src/config"
+require "../src/services/app_state_service"
 
 describe "StateStore" do
+  # Wire AppStateService before tests (normally done by AppBootstrap)
+  before_all do
+    StateStore.service = QuickHeadlines::Services::AppStateService.new
+  end
+
   describe "initialization" do
     it "starts with empty state" do
       state = StateStore.get

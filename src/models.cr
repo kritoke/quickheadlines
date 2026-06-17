@@ -1,3 +1,4 @@
+require "athena"
 require "mutex"
 require "./services/task_metadata"
 
@@ -53,157 +54,82 @@ record AppStateSnapshot,
   clustering : Bool,
   refreshing : Bool
 
-# Thread-safe state store with atomic updates
+# Thread-safe state store facade that delegates to AppStateService.
+# Backward-compatible API: callers continue using StateStore.feeds, StateStore.tabs, etc.
+# State is managed by AppStateService, wired by AppBootstrap at startup.
 module StateStore
-  # Memory history tracking for leak diagnosis
-  # Format: Array of {timestamp, rss_mb, state_snapshot_size}
-  @@memory_history = [] of {time: Time, rss_mb: Float64, feeds_count: Int32, items_count: Int32}
-  @@memory_history_max_entries = 500 # ~4 hours at 30s intervals
+  @@service : QuickHeadlines::Services::AppStateService?
 
-  @@current = AppStateSnapshot.new(
-    feeds: [] of FeedData,
-    tabs: [] of Tab,
-    updated_at: Time.utc,
-    config_title: "Quick Headlines",
-    config: nil,
-    clustering: false,
-    refreshing: false
-  )
-  # NOTE: Uses :unchecked mutex to avoid Boehm GC mutex initialization
-  # deadlocks on FreeBSD. See AGENTS.md for details.
-  @@mutex = Mutex.new(:unchecked)
+  # Set by AppBootstrap during initialization
+  def self.service=(value : QuickHeadlines::Services::AppStateService)
+    @@service = value
+  end
 
-  # Fast-path atomics for frequently-read boolean flags.
-  # These avoid mutex acquisition for the hot read path (API status checks).
-  # Writers use atomic set, so readers get a consistent value without locking.
-  @@refreshing = Atomic(Bool).new(false)
-  @@clustering = Atomic(Bool).new(false)
+  private def self.service : QuickHeadlines::Services::AppStateService
+    @@service || raise "AppStateService not initialized. AppBootstrap must call StateStore.service= first."
+  end
 
   def self.get : AppStateSnapshot
-    @@mutex.synchronize { @@current }
+    service.get
   end
 
   def self.update(&transform : AppStateSnapshot -> AppStateSnapshot) : AppStateSnapshot
-    @@mutex.synchronize do
-      @@current = transform.call(@@current)
-
-      # Track memory growth after state updates
-      track_memory_usage
-
-      @@current
-    end
-  end
-
-  # Track memory usage for leak diagnosis
-  private def self.track_memory_usage : Nil
-    # Only track every 10 updates to reduce overhead
-    return if @@memory_history.size % 10 != 0
-
-    begin
-      rss_mb = MemoryManagerActor.instance.get_memory_status.rss_mb
-      feeds_count = @@current.feeds.size
-      items_count = @@current.feeds.sum(&.items.size)
-
-      @@memory_history << {time: Time.utc, rss_mb: rss_mb, feeds_count: feeds_count, items_count: items_count}
-      @@memory_history.shift if @@memory_history.size > @@memory_history_max_entries
-    rescue ex : Exception
-      Log.for("quickheadlines.memory").debug { "Memory tracking error: #{ex.message}" }
-    end
+    service.update(&transform)
   end
 
   def self.memory_history_summary : String
-    return "No history" if @@memory_history.empty?
-    recent = @@memory_history.last(20)
-    rss_values = recent.map(&.[:rss_mb])
-    "min_rss=#{rss_values.min.round(1)}MB, max_rss=#{rss_values.max.round(1)}MB, current=#{rss_values.last.round(1)}MB, samples=#{recent.size}"
+    service.memory_history_summary
   end
 
   def self.memory_growth_rate : String
-    return "No history" if @@memory_history.size < 10
-    recent = @@memory_history.last(10)
-    time_span_hrs = (recent.last[:time] - recent.first[:time]).total_hours
-    return "No history" if time_span_hrs < 0.01
-
-    rss_diff = recent.last[:rss_mb] - recent.first[:rss_mb]
-    rate = rss_diff / time_span_hrs
-    "#{rate.round(2)}MB/hr (#{rss_diff.round(1)}MB over #{time_span_hrs.round(1)}hrs)"
+    service.memory_growth_rate
   end
 
   def self.feeds
-    get.feeds
+    service.feeds
   end
 
   def self.tabs
-    get.tabs
+    service.tabs
   end
 
   def self.updated_at
-    get.updated_at
+    service.updated_at
   end
 
   def self.config
-    get.config
+    service.config
   end
 
   def self.config_title
-    get.config_title
+    service.config_title
   end
 
-  def self.clustering?
-    @@clustering.get
+  def self.clustering? : Bool
+    service.clustering?
   end
 
   def self.clustering=(value : Bool)
-    @@clustering.set(value)
-    if value
-      TaskMetadata.set_clustering_started
-    else
-      TaskMetadata.set_clustering_stopped
-    end
-    # Also sync to snapshot for backward-compatible API consumers
-    update(&.copy_with(clustering: value))
+    service.set_clustering(value)
   end
 
   def self.start_clustering_if_idle : Bool
-    # Use CAS to atomically check-and-set without holding @@mutex for the check.
-    # This prevents contention when many fibers are checking clustering status.
-    expected = false
-    if @@clustering.compare_and_set(expected, true)
-      TaskMetadata.set_clustering_started
-      update(&.copy_with(clustering: true))
-      true
-    else
-      false
-    end
+    service.start_clustering_if_idle
   end
 
-  def self.refreshing?
-    @@refreshing.get
+  def self.refreshing? : Bool
+    service.refreshing?
   end
 
   def self.refreshing=(value : Bool)
-    @@refreshing.set(value)
-    # Also sync to snapshot for backward-compatible API consumers
-    update(&.copy_with(refreshing: value))
+    service.set_refreshing(value)
   end
 
   def self.config_title=(value : String)
-    update(&.copy_with(config_title: value))
+    service.set_config_title(value)
   end
 
   def self.clear : Nil
-    @@mutex.synchronize do
-      @@refreshing.set(false)
-      @@clustering.set(false)
-      @@current = AppStateSnapshot.new(
-        feeds: [] of FeedData,
-        tabs: [] of Tab,
-        updated_at: Time.utc,
-        config_title: "Quick Headlines",
-        config: nil,
-        clustering: false,
-        refreshing: false
-      )
-    end
+    service.clear
   end
 end
