@@ -1,6 +1,8 @@
 {
   "assignee": "",
-  "blocked_by": [],
+  "blocked_by": [
+    "quickhea-g9y.1"
+  ],
   "blocks": [],
   "created": "2026-06-17T01:32:12Z",
   "description": "Add tests that verify module interfaces work correctly and modules can be swapped. Architecture doc: 'Interface testing - test the public API, not internal implementation' and 'Replacement tests - would tests still pass if you rewrote the implementation?' Create spec files that test each module's public interface with real and mock implementations. Start with storage, fetcher, and services layers.",
@@ -11,5 +13,5 @@
   "status": "open",
   "title": "Add boundary testing and module swap tests",
   "type": "task",
-  "updated_at": "2026-06-17T01:32:12Z"
+  "updated_at": "2026-06-17T01:32:36Z"
 }
