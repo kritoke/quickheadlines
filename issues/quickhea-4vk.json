@@ -1,0 +1,14 @@
+{
+  "assignee": "",
+  "blocked_by": [],
+  "blocks": [],
+  "created": "2026-06-17T01:00:25Z",
+  "description": "",
+  "id": "quickhea-4vk",
+  "labels": [],
+  "priority": 2,
+  "status": "open",
+  "title": "FeedCache-duplicate-getter",
+  "type": "bug",
+  "updated_at": "2026-06-17T01:00:25Z"
+}
