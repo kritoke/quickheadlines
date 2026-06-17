@@ -12,9 +12,15 @@
   "id": "quickhea-g9y.3",
   "labels": [],
   "parent": "quickhea-g9y",
+  "comments": [
+    {
+      "text": "## Wrapper Interface Assessment\n\n### Current Wrapper Status\n\n| External Dependency | Wrapper | Clean Interface? | Mock Possible? |\n|---|---|---|---|\n| SQLite | DatabaseService + FeedCache | Partial — exposes DB::Database | Yes (in-memory DB) |\n| HTTP fetching | Fetcher shard | Yes — abstract interface | Yes (mock responses) |\n| HTTP client (favicons) | FaviconActor | No — HTTP::Client hardcoded | No (needs wrapper) |\n| Filesystem | FaviconActor | No — File.* hardcoded | No (needs wrapper) |\n| Color extraction | ColorExtractor | No — class methods, no interface | No (needs wrapper) |\n| Content storage | Azurite shard | Yes — abstract store | Yes (mock store) |\n\n### Priority Wrappers Needed\n\n1. **HTTP client for favicons** — FaviconActor uses HTTP::Client directly with pooled connections. Needs an HttpClient interface.\n\n2. **Color extraction** — ColorExtractor is used in 3+ places with class methods. Needs an interface with real + mock implementations.\n\n3. **Filesystem** — FaviconActor uses File.* directly. Needs a FileSystem interface.\n\n### Recommendation\n\nFull wrapper implementation is a large refactoring (100+ lines per wrapper). For this epic, focus on:\n- Documenting the current state (done above)\n- Creating one wrapper as an example (HTTP client)\n- Leaving remaining wrappers for a future change\n\nThe most impactful wrapper is the HTTP client for favicons — it's the only external network dependency that's directly hardcoded.",
+      "timestamp": "2026-06-17T12:16:52Z"
+    }
+  ],
   "priority": 2,
   "status": "in_progress",
   "title": "Add wrapper interfaces for external dependencies",
   "type": "task",
-  "updated_at": "2026-06-17T12:15:48Z"
+  "updated_at": "2026-06-17T12:16:52Z"
 }
