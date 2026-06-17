@@ -10,9 +10,15 @@
   "id": "quickhea-g9y.8",
   "labels": [],
   "parent": "quickhea-g9y",
+  "comments": [
+    {
+      "text": "Deferred until after new version release. Documentation can wait.",
+      "timestamp": "2026-06-17T12:44:00Z"
+    }
+  ],
   "priority": 4,
   "status": "open",
   "title": "Document module public APIs",
   "type": "task",
-  "updated_at": "2026-06-17T01:32:38Z"
+  "updated_at": "2026-06-17T12:44:00Z"
 }
