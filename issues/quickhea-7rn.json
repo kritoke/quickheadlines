@@ -2,13 +2,14 @@
   "assignee": "",
   "blocked_by": [],
   "blocks": [],
+  "closed_at": "2026-06-17T01:21:45Z",
   "created": "2026-06-17T01:16:41Z",
   "description": "",
   "id": "quickhea-7rn",
   "labels": [],
   "priority": 1,
-  "status": "open",
+  "status": "closed",
   "title": "Epic Fix dependency layer violations",
   "type": "epic",
-  "updated_at": "2026-06-17T01:16:41Z"
+  "updated_at": "2026-06-17T01:21:45Z"
 }
