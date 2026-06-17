@@ -1,0 +1,14 @@
+{
+  "assignee": "",
+  "blocked_by": [],
+  "blocks": [],
+  "created": "2026-06-17T01:12:20Z",
+  "description": "",
+  "id": "quickhea-470",
+  "labels": [],
+  "priority": 2,
+  "status": "open",
+  "title": "\"mmap_size-set-twice\"",
+  "type": "bug",
+  "updated_at": "2026-06-17T01:12:20Z"
+}
