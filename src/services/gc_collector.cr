@@ -36,12 +36,17 @@ module RefreshLoop::GCCollector
     end
   end
 
-  # Called after every refresh cycle. Runs normal GC + periodic compaction.
+  # Called after every refresh cycle. Runs GC + unmap to return freed pages to OS.
   def self.collect_now : Nil
     GC.collect
+    # Explicitly call gcollect_and_unmap to return freed pages to OS.
+    # force_unmap flag doesn't seem to work on FreeBSD's Boehm GC.
+    LibGC.GC_gcollect_and_unmap
     @@last_gc_collect = Time.utc
     @@gc_runs += 1
-    Log.for("quickheadlines.gc").debug { "Forced GC.collect after refresh cycle (run #{@@gc_runs})" }
+    stats = GC.stats
+    unmapped_mb = stats.unmapped_bytes / (1024 * 1024)
+    Log.for("quickheadlines.gc").debug { "GC + unmap after refresh (run #{@@gc_runs}): unmapped=#{unmapped_mb.round(1)}MB" }
 
     # Compaction: every 3 cycles (~1.5 hours at 30min intervals), force the
     # GC to relocate live objects to fewer pages and unmap the rest.
