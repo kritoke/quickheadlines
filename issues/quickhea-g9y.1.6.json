@@ -1,5 +1,5 @@
 {
-  "assignee": "",
+  "assignee": "kritoke",
   "blocked_by": [
     "quickhea-g9y.1.5"
   ],
@@ -10,8 +10,8 @@
   "labels": [],
   "parent": "quickhea-g9y.1",
   "priority": 3,
-  "status": "open",
+  "status": "in_progress",
   "title": "Phase 6: Singleton macro removal + cleanup",
   "type": "task",
-  "updated_at": "2026-06-17T01:36:55Z"
+  "updated_at": "2026-06-17T10:44:27Z"
 }
