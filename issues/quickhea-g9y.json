@@ -1,0 +1,14 @@
+{
+  "assignee": "",
+  "blocked_by": [],
+  "blocks": [],
+  "created": "2026-06-17T01:31:28Z",
+  "description": "Founding architecture document mandates black-box modular design (Eskil Steenberg methodology). Audit of src/ reveals widespread violations: global state in 15+ files, monolithic files \u003e250 lines, missing wrapper layers for external deps, no boundary testing, config via globals. This epic tracks full compliance.",
+  "id": "quickhea-g9y",
+  "labels": [],
+  "priority": 1,
+  "status": "open",
+  "title": "Black-box architecture compliance per planning/architecture.md",
+  "type": "epic",
+  "updated_at": "2026-06-17T01:31:28Z"
+}
