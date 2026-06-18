@@ -1,5 +1,5 @@
 {
-  "assignee": "",
+  "assignee": "kritoke",
   "blocked_by": [
     "quickhea-vnk.6"
   ],
@@ -12,8 +12,8 @@
   "labels": [],
   "parent": "quickhea-vnk",
   "priority": 1,
-  "status": "open",
+  "status": "in_progress",
   "title": "Implement quickhea-hwp: periodic forced full GC backstop",
   "type": "task",
-  "updated_at": "2026-06-18T01:22:52Z"
+  "updated_at": "2026-06-18T10:44:17Z"
 }
