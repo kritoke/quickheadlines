@@ -15,10 +15,11 @@ require "./infrastructure/actor"
 class FaviconActor < Actor
   POSSIBLE_EXTENSIONS = {"png", "jpg", "jpeg", "ico", "svg", "webp"}
 
-  # Minimum size threshold for favicons to avoid tiny 16x16 2-color icons.
-  FAVICON_MIN_SIZE = 800
-  # Absolute minimum - any file smaller than this gets Google fallback
-  FAVICON_ABSOLUTE_MIN = 200
+  # Absolute minimum size for any favicon. Files smaller than this are
+  # almost certainly broken/empty responses (a valid ICO header is at
+  # least 22 bytes, a valid PNG signature is 8 bytes, etc.). Below this
+  # threshold we still fall back to Google.
+  FAVICON_ABSOLUTE_MIN = 100
 
   # =========================================================================
   # Messages
@@ -125,6 +126,65 @@ class FaviconActor < Actor
     end
   end
 
+  # Parse ICO header to extract frame count and the largest dimension.
+  # Returns nil if the data isn't a valid ICO file. Used to validate that
+  # a real .ico favicon (e.g. 318-byte single-frame 16x16) shouldn't be
+  # treated as a "tiny placeholder" by the Google fallback heuristic.
+  #
+  # ICO header layout (per Microsoft spec):
+  #   bytes 0-1: reserved (0x0000)
+  #   bytes 2-3: type (0x0001 for icon, 0x0002 for cursor)
+  #   bytes 4-5: number of images (little-endian)
+  #   bytes 6+:  16-byte directory entries, each with width (byte 6),
+  #              height (byte 7) at the start
+  def self.parse_ico_info(data : Bytes) : {Int32, Int32}?
+    return if data.size < 6
+    return unless data[0] == 0x00 && data[1] == 0x00
+    return unless (data[2] == 0x01 || data[2] == 0x02) && data[3] == 0x00
+
+    frame_count = data[4].to_i + (data[5].to_i << 8)
+    return if frame_count == 0
+
+    # Header is 6 bytes + 16 bytes per directory entry. Need at least
+    # the first entry's directory to validate.
+    return if data.size < 6 + 16
+
+    largest_dim = 0
+    frame_count.times do |i|
+      entry_offset = 6 + (i * 16)
+      break if entry_offset + 2 > data.size
+      # Width/height are 0x00 in the entry → 256 in the icon
+      w_raw = data[entry_offset].to_i
+      h_raw = data[entry_offset + 1].to_i
+      w = w_raw == 0 ? 256 : w_raw
+      h = h_raw == 0 ? 256 : h_raw
+      max_dim = {w, h}.max
+      largest_dim = max_dim if max_dim > largest_dim
+    end
+
+    {frame_count, largest_dim}
+  end
+
+  # Determine whether a freshly-saved favicon warrants a Google fallback
+  # attempt. Replaces the old size-based heuristic that mis-classified
+  # real 16x16 single-frame ICOs (typically 318-1500 bytes) as "tiny".
+  #
+  # A favicon is treated as broken/tiny only when:
+  #   - it is smaller than FAVICON_ABSOLUTE_MIN bytes (broken/empty response)
+  #   - OR it's an ICO with an invalid header / zero frames (corrupt)
+  # Real 16x16 single-frame ICOs are valid even at ~318 bytes, so we no
+  # longer trigger Google fallback for them.
+  def self.needs_fallback?(image_data : Bytes, ext : String) : Bool
+    return true if image_data.size < FAVICON_ABSOLUTE_MIN
+
+    if ext == "ico"
+      info = parse_ico_info(image_data)
+      return true if info.nil? || info[0] == 0
+    end
+
+    false
+  end
+
   # =========================================================================
   # Dispatch — routes messages to handlers
   # =========================================================================
@@ -174,18 +234,24 @@ class FaviconActor < Actor
     ext = extension_from_content_type(content_type)
     filename = FaviconActor.favicon_filename(hash, ext)
     filepath = File.join(@favicon_dir, filename)
-    is_tiny = image_data.size < FAVICON_ABSOLUTE_MIN || (ext == "ico" && image_data.size < FAVICON_MIN_SIZE)
+    needs_fallback = FaviconActor.needs_fallback?(image_data, ext)
 
     # Write original favicon
     unless write_atomically(filepath, image_data)
       return
     end
 
-    # If tiny, try Google fallback (network I/O happens inside actor)
-    if is_tiny
+    # Only attempt Google fallback when the original is genuinely broken.
+    # When the fallback succeeds, only swap to its result if it's strictly
+    # larger than the original — never delete a real favicon in favor of
+    # a smaller one (which is what produces the "gray block" symptom when
+    # Google's stub-PNG replaces a valid 16x16 ICO).
+    if needs_fallback
       Log.for("quickheadlines.storage").debug { "Tiny favicon (#{image_data.size} bytes) for #{url}, trying Google fallback" }
-      if google_saved = do_fetch_google_favicon(url)
+      if google_saved = do_fetch_google_favicon(url, image_data.size)
         Log.for("quickheadlines.storage").debug { "Google fallback saved: #{google_saved}" }
+        # do_fetch_google_favicon has already validated that the
+        # replacement is strictly better than the original.
         File.delete(filepath) if File.exists?(filepath)
         return google_saved
       end
@@ -261,7 +327,7 @@ class FaviconActor < Actor
     end
   end
 
-  private def do_fetch_google_favicon(url : String) : String?
+  private def do_fetch_google_favicon(url : String, original_size : Int32 = 0) : String?
     return unless domain = extract_domain_from_url(url)
     google_url = "https://www.google.com/s2/favicons?domain=#{domain}&sz=128"
 
@@ -272,6 +338,15 @@ class FaviconActor < Actor
     image_data = response.body.to_slice
     return if image_data.size > QuickHeadlines::Constants::FAVICON_MAX_SIZE
     return unless FaviconActor.valid_image_data?(image_data)
+
+    # Don't replace a real favicon with a smaller or equal-sized response.
+    # Google's s2/favicons often returns a small stub PNG (~100-300 bytes)
+    # when no real icon is available. Swapping to a smaller file is what
+    # produces the "gray block" symptom for sites with valid small ICOs.
+    if original_size > 0 && image_data.size <= original_size
+      Log.for("quickheadlines.storage").debug { "Google fallback (#{image_data.size}B) not better than original (#{original_size}B), keeping original" }
+      return
+    end
 
     content_type = response.content_type || "image/png"
     ext = extension_from_content_type(content_type)
