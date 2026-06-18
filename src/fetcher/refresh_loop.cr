@@ -1,6 +1,12 @@
 require "gc"
 require "time"
 require "../config"
+
+module RefreshLoop
+  lib LibGC
+    fun GC_gcollect_and_unmap : Void
+  end
+end
 require "../models"
 require "../storage"
 require "../software_fetcher"
@@ -87,6 +93,10 @@ module RefreshLoop
     else
       Log.for("quickheadlines.feed").debug { "refresh_all: fetched #{fetched_count}/#{all_configs.size} feeds successfully" }
     end
+
+    # Reclaim memory from temporary feed data before building new state
+    GC.collect
+    2.times { LibGC.GC_gcollect_and_unmap }
 
     new_feeds = config.feeds.map do |feed|
       FeedFetcherConcurrent.best_available_feed(feed, fetched_map[feed.url]?, existing_data[feed.url]?)

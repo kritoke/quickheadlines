@@ -1,5 +1,5 @@
 module QuickHeadlines::Constants
-  CONCURRENCY               =   4
+  CONCURRENCY               =   2
   CACHE_RETENTION_HOURS     = 168
   CACHE_RETENTION_DAYS      = CACHE_RETENTION_HOURS // 24
   DB_SIZE_WARNING_THRESHOLD = 50 * 1024 * 1024
