@@ -2,14 +2,16 @@
   "assignee": "",
   "blocked_by": [],
   "blocks": [],
+  "closed_at": "2026-06-18T01:27:44Z",
+  "close_reason": "Duplicate of original child task",
   "created": "2026-06-18T01:27:08Z",
   "description": "## Goal\n\nsrc/infrastructure/actor.cr allocates a fresh\nChannel(String).new(1) for every def_call (lines ~245 and ~300).\nA def_call also allocates a Call{Method} struct and a JSON\nreply string. On 30s timeout the channel + struct linger for\n30s; on caller-raises-after-send they linger until GC.\n\nUnder a busy server (hundreds of API requests / min) this\nallocates and frees thousands of channels / hour. The Crystal GC\nhandles this fine in steady state, but the JSON-string boxing\nand struct churn add overhead and obscure the true heap\nresidents.\n\n## Approach\n\n1. Pool reply channels per-fiber using a thread-local stack\n   (FIFO push/pop). Each fiber maintains up to N idle channels\n   and reuses them across def_call invocations. This eliminates\n   ~all channel allocations on the hot path.\n2. On timeout, the channel is returned to the pool with its\n   buffer cleared.\n3. The macro-generated Call{Method} structs are still\n   allocated per call — those are small and the polymorphic\n   dispatch requires it. Focus on the channel allocation only.\n4. Add a counter for \"reply channels allocated\" vs \"reply\n   channels reused\" so we can verify the optimization in the\n   memory log (cf. task 1).\n\n## Acceptance\n\n- Reply channel allocations per minute drops by \u003e90% on a\n  representative API workload (verify with the new counter).\n- No behavior change visible to callers; existing spec suite\n  passes unchanged.\n- Build + ameba clean.",
   "id": "quickhea-vnk.11",
   "labels": [],
   "parent": "quickhea-vnk",
   "priority": 1,
-  "status": "open",
+  "status": "closed",
   "title": "Reduce per-def_call Channel allocations in Actor framework",
   "type": "task",
-  "updated_at": "2026-06-18T01:27:08Z"
+  "updated_at": "2026-06-18T01:27:44Z"
 }
