@@ -1,6 +1,8 @@
 {
   "assignee": "",
-  "blocked_by": [],
+  "blocked_by": [
+    "quickhea-vnk.6"
+  ],
   "blocks": [],
   "created": "2026-06-18T01:21:10Z",
   "description": "## Goal\n\nsrc/fetcher/gc_collector.cr only triggers GC if\nSupervisor.run_timed_refresh completes a cycle. If the refresh\ncycle is skipped (memory pressure) or runs \u003e 30 min, no GC\nhappens for that entire window. On FreeBSD, Boehm GC fragmentation\ncan let RSS climb even when no real leak exists.\n\nThis task is the implementation of the existing design ticket\nquickhea-hwp.\n\n## Approach\n\n1. In MemoryManagerActor (src/services/memory_manager_actor.cr),\n   add a periodic timer fiber that wakes every 30 min and:\n     a. Calls GC.collect twice\n     b. Calls LibGC.GC_gcollect_and_unmap once\n     c. Logs before/after RSS + heap_size + unmapped_bytes\n2. Make the interval configurable via a constant or actor\n   message (default 30 min, easy to override for tests).\n3. Skip the forced GC if a refresh cycle is in progress\n   (refreshing? == true) to avoid clashing with the cycle's\n   own GC. On the next tick, run as normal.\n4. Wire it up in the same place where Monitoring.start is\n   called (refresh_loop.cr:start).\n\n## Acceptance\n\n- Forced GC runs every 30 min even when refresh is skipped.\n- Before/after heap stats are logged with a recognizable\n  message.\n- The new code does not deadlock on FreeBSD (use :unchecked\n  mutex pattern as documented in AGENTS.md).\n- Build + spec + ameba clean.\n- Closes quickhea-hwp on completion.",
@@ -11,5 +13,5 @@
   "status": "open",
   "title": "Implement quickhea-hwp: periodic forced full GC backstop",
   "type": "task",
-  "updated_at": "2026-06-18T01:21:10Z"
+  "updated_at": "2026-06-18T01:22:51Z"
 }

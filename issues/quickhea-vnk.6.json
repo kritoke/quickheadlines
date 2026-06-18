@@ -6,7 +6,8 @@
   "blocks": [
     "quickhea-vnk.2",
     "quickhea-vnk.3",
-    "quickhea-vnk.4"
+    "quickhea-vnk.4",
+    "quickhea-vnk.5"
   ],
   "created": "2026-06-18T01:21:10Z",
   "description": "## Goal\n\nProduce a written audit of every Hash/Array/Channel in code paths\nthat run for the lifetime of the process. For each, document:\n- The cap (if any)\n- The eviction strategy\n- What happens when the cap is hit\n- Whether retention is measured in the memory log\n\n## Scope\n\n- All @@class_vars and @instance_vars in src/websocket/,\n  src/services/, src/fetcher/, src/infrastructure/.\n- All Hash/Array/Channel literals in those files.\n- Skip short-lived locals and request-scoped state.\n\n## Output\n\nA new file at docs/memory-audit.md (or a long comment in\nsrc/infrastructure/actor.cr if docs/ is not the right place)\nwith a table of structure | cap | eviction | measured? |\naction-needed?.\n\nThe audit should also call out:\n- AppStateService.@memory_history (cap 500, OK)\n- AppStateService.@current (one snapshot, OK but verify\n  copy_with does not retain old arrays)\n- EventBroadcaster.@@client_history (cap 1000, OK)\n- RateLimiter.@@allowed_cache (cap 256, OK)\n- FaviconCache.@@cache + @@access_order (cap 200, OK)\n- FaviconActor.@client_pool (uncapped — task 2)\n- SocketManager.@connections (capped by MAX_CONNECTIONS, OK\n  but cleanup gap is task 3)\n- StringIntern.@@pool (cap 10000, see task on retention)\n\n## Acceptance\n\n- docs/memory-audit.md exists with the table.\n- Each row links to the source file and line range.\n- Each \"action-needed\" row links to the child task that\n  addresses it.",
