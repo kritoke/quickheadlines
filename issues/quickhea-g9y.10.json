@@ -1,0 +1,15 @@
+{
+  "assignee": "",
+  "blocked_by": [],
+  "blocks": [],
+  "created": "2026-06-18T10:31:35Z",
+  "description": "**File**: `src/rate_limiter.cr`\n\n**Severity**: P3 (architecture.md §2 \"Single responsibility\")\n\n`RateLimiter.allowed?` does two unrelated things in one method:\n1. Reads/writes the in-process `@@allowed_cache` (a Hash with TTL)\n2. Calls `ThrottlerActor.instance.allowed` (delegates to actor)\n\nThe class-level state (`@@cache_mutex`, `@@allowed_cache`) leaks\nthrough `cache_size` and `clear_cache`. Callers have to reason about\nboth layers even though they should be separable.\n\n**Fix sketch**:\n1. Extract `RateLimiterCache` module (Hash + TTL + cap)\n2. Keep `RateLimiter` as a thin wrapper that consults the cache\n   then falls through to the actor\n3. Or: move the cache INSIDE ThrottlerActor (closer to its\n   authoritative state)\n\nRelated: `quickhea-mcn` (cache to avoid per-request def_call) is\nalready closed. This ticket addresses the structure of the\nwrapper, not the caching itself.\n\nFound during code review 2026-06-18, see\n`planning/code-review-2026-06-18.md` §3.1.",
+  "id": "quickhea-g9y.10",
+  "labels": [],
+  "parent": "quickhea-g9y",
+  "priority": 3,
+  "status": "open",
+  "title": "RateLimiter mixes cache + delegate in one class (single responsibility)",
+  "type": "refactor",
+  "updated_at": "2026-06-18T10:31:35Z"
+}
