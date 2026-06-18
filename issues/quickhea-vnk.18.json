@@ -1,0 +1,15 @@
+{
+  "assignee": "",
+  "blocked_by": [],
+  "blocks": [],
+  "created": "2026-06-18T10:31:12Z",
+  "description": "**File**: `src/services/app_state_service.cr:43-58`\n\n**Severity**: P2 (mutex contention + GC pressure)\n\n`AppStateService.update` runs `track_memory_usage` inside\n`@mutex.synchronize`. `track_memory_usage` calls\n`MemoryManagerActor.instance.get_memory_status`, which is a\n`def_call` — every call allocates a `Channel(String).new(1)`, a\n`CallGetMemoryStatus` struct, and round-trips a JSON reply (see\n`infrastructure/actor.cr:_actor_call_with_timeout_json`).\n\nThe mutex is held across this round-trip, so every concurrent\nstate update (every refresh cycle, every websocket update) blocks\nbehind every other update's actor call. For a system that\nupdates state every few seconds, this serializes the slow path.\n\n**Fix sketch**:\n1. Snapshot `@current` into a local before releasing the mutex\n2. Run `track_memory_usage` outside the mutex\n3. Acquire the mutex only briefly to push the history entry\n\nThe throttling (every 10 updates) already limits this, but the\nmutex-held region is still wider than necessary.\n\nFound during code review 2026-06-18, see\n`planning/code-review-2026-06-18.md` §5.1.",
+  "id": "quickhea-vnk.18",
+  "labels": [],
+  "parent": "quickhea-vnk",
+  "priority": 2,
+  "status": "open",
+  "title": "AppStateService.update holds @mutex across actor call (track_memory_usage)",
+  "type": "bug",
+  "updated_at": "2026-06-18T10:31:12Z"
+}
