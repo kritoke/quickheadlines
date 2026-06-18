@@ -1,0 +1,14 @@
+{
+  "assignee": "",
+  "blocked_by": [],
+  "blocks": [],
+  "created": "2026-06-18T10:31:59Z",
+  "description": "**File**: `src/services/fiber_tracker.cr:30`\n\n**Severity**: P4 (documented race, fixable)\n\n```crystal\ncurrent_peak = @@peak_fibers.get\n@@peak_fibers.add(1) if count \u003e current_peak\n```\n\nThe comment explicitly says \"The small race ... is acceptable for\npeak tracking\" — it is documented and intentional. A CAS loop would\nfix it cheaply.\n\n**Fix sketch**:\n\n```crystal\nloop do\n  p = @@peak_fibers.get\n  break if count \u003c= p\n  break if @@peak_fibers.compare_and_set(p, count)\nend\n```\n\nThis is a chore, not a bug — the existing behavior is correct\n(peak is monotonic, only the exact value can be off by 1-N). But\nthe fix is small and would eliminate the documentation burden.\n\nFound during code review 2026-06-18, see\n`planning/code-review-2026-06-18.md` §5.2.",
+  "id": "quickhea-klw",
+  "labels": [],
+  "priority": 4,
+  "status": "open",
+  "title": "FiberTracker.peak_fibers has documented race (use CAS loop)",
+  "type": "chore",
+  "updated_at": "2026-06-18T10:31:59Z"
+}
