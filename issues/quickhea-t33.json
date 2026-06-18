@@ -1,7 +1,9 @@
 {
   "assignee": "",
   "blocked_by": [],
-  "blocks": [],
+  "blocks": [
+    "quickhea-vnk.7"
+  ],
   "created": "2026-06-18T10:31:12Z",
   "description": "**File**: `src/fetcher/refresh_supervisor.cr:251`\n\n**Severity**: P2 (config retention + memory leak after reload)\n\n`run_timed_refresh` captures `config_snapshot = @state.active_config`\ninto the closure of a `tracked_spawn(\"refresh_worker\")` block. The\nworker fiber then runs `RefreshLoop.refresh_all(config_snapshot, ...)`\nholding the entire `Config` struct (with clustering settings,\nfeeds.yml content, theme configs, etc.) by closure capture until it\nexits.\n\nIf the config is reloaded mid-cycle (via `reload_config_if_changed`),\nthe worker fiber still holds the OLD config. Worse: the closure\nprevents the GC from reclaiming the old config until the worker\nfiber exits, which can be up to `FETCH_TIMEOUT_SECONDS × retries`\nlater.\n\n**Fix sketch**:\n1. Pass `config_snapshot` to `refresh_all` as an explicit parameter\n   (already does — `RefreshLoop.refresh_all(config_snapshot, ...)`)\n2. The closure then only captures references that are already\n   declared as method-local variables, not the entire Config\n3. Or: extract just the fields the worker actually needs and pass\n   those\n\nFound during code review 2026-06-18, see\n`planning/code-review-2026-06-18.md` §2.3.",
   "id": "quickhea-t33",
@@ -10,5 +12,5 @@
   "status": "open",
   "title": "Worker fiber captures config_snapshot by closure in run_timed_refresh",
   "type": "bug",
-  "updated_at": "2026-06-18T10:31:12Z"
+  "updated_at": "2026-06-18T10:32:31Z"
 }

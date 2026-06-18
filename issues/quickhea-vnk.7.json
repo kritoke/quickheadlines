@@ -4,6 +4,7 @@
     "quickhea-9i6",
     "quickhea-gxm",
     "quickhea-qo4",
+    "quickhea-t33",
     "quickhea-ule",
     "quickhea-vnk.1",
     "quickhea-vnk.15",
@@ -24,5 +25,5 @@
   "status": "open",
   "title": "Long-running FreeBSD 48h soak test with RSS assertions",
   "type": "task",
-  "updated_at": "2026-06-18T10:32:29Z"
+  "updated_at": "2026-06-18T10:32:31Z"
 }
