@@ -84,7 +84,8 @@ class AppBootstrap
 
     MemoryManagerActor.instance = MemoryManagerActor.new
     MemoryManagerActor.instance.start
-    Log.for("quickheadlines.app").info { "Memory management actor initialized" }
+    MemoryManagerActor.instance.start_periodic_gc
+    Log.for("quickheadlines.app").info { "Memory management actor initialized (with periodic GC timer)" }
 
     SocketManager.instance = SocketManager.new
     SocketManager.instance.start

@@ -1,6 +1,13 @@
 require "../infrastructure/actor"
 require "../services/fiber_tracker"
 require "../favicon_cache"
+require "../fetcher/interruptible_sleep"
+
+module QuickHeadlines
+  lib LibGC
+    fun GC_gcollect_and_unmap : Void
+  end
+end
 
 # MemoryManagerActor - Consolidated memory monitoring, GC coordination, and cleanup
 #
@@ -135,6 +142,8 @@ class MemoryManagerActor < Actor
   @last_priority : CleanupPriority? = nil
   @is_cleaning_up : Bool = false
 
+  FORCED_GC_INTERVAL = 30.minutes
+
   def initialize(@name : String = "MemoryManager")
     super(@name, mailbox_size: 100)
   end
@@ -155,6 +164,34 @@ class MemoryManagerActor < Actor
       inst.shutdown rescue nil
     end
     @@instance = nil
+  end
+
+  # Start periodic forced GC timer (call after actor is created)
+  def start_periodic_gc : Nil
+    RefreshLoop::FiberTracker.tracked_spawn("memory-manager-gc-timer") do
+      loop do
+        RefreshLoop::InterruptibleSleep.sleep(FORCED_GC_INTERVAL)
+        break if QuickHeadlines.shutting_down?
+
+        # Skip if refresh is in progress to avoid clashing
+        next if StateStore.refreshing?
+
+        before = GC.stats
+        GC.collect
+        GC.collect
+        QuickHeadlines::LibGC.GC_gcollect_and_unmap
+        after = GC.stats
+
+        before_mb = before.heap_size / (1024 * 1024)
+        after_mb = after.heap_size / (1024 * 1024)
+        unmapped_mb = after.unmapped_bytes / (1024 * 1024)
+        freed = before_mb - after_mb
+
+        Log.for("quickheadlines.gc").info do
+          "Periodic GC: heap #{before_mb.round(1)}MB -> #{after_mb.round(1)}MB (freed #{freed.round(1)}MB), unmapped=#{unmapped_mb.round(1)}MB"
+        end
+      end
+    end
   end
 
   # =========================================================================
