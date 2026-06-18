@@ -57,6 +57,10 @@ class FaviconActor < Actor
     @@instance || raise "FaviconActor not initialized. AppBootstrap must create and set FaviconActor.instance=."
   end
 
+  def self.instance? : FaviconActor?
+    @@instance
+  end
+
   def self.instance=(value : FaviconActor)
     @@instance = value
   end
@@ -66,6 +70,11 @@ class FaviconActor < Actor
       inst.shutdown rescue nil
     end
     @@instance = nil
+  end
+
+  # HTTP client pool size for diagnostics
+  def client_pool_size : Int32
+    @client_pool.size
   end
 
   # =========================================================================

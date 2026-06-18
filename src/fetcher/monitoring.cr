@@ -5,6 +5,9 @@ require "../websocket"
 require "../services/memory_manager_actor"
 require "../services/fiber_tracker"
 require "./interruptible_sleep"
+require "../favicon_storage"
+require "../rate_limiter"
+require "../utils/string_pool"
 
 # Refresh loop monitoring.
 #
@@ -44,6 +47,11 @@ module RefreshLoop::Monitoring
   @@refresh_cycles_completed : Atomic(Int32) = Atomic(Int32).new(0)
   @@refresh_failures : Atomic(Int32) = Atomic(Int32).new(0)
   @@feeds_in_progress : Atomic(Int32) = Atomic(Int32).new(0)
+
+  # RSS delta tracking
+  @@startup_rss_mb : Float64 = 0.0
+  @@last_rss_mb : Float64 = 0.0
+  @@last_report_time : Time = Time.utc
 
   # ---------------------------------------------------------------------
   # State tracking
@@ -87,6 +95,18 @@ module RefreshLoop::Monitoring
       failures:          @@refresh_failures.get,
       feeds_in_progress: @@feeds_in_progress.get,
     }
+  end
+
+  # Initialize RSS tracking (call once at startup)
+  def self.init_rss_tracking : Nil
+    begin
+      @@startup_rss_mb = MemoryManagerActor.instance.get_memory_status.rss_mb
+      @@last_rss_mb = @@startup_rss_mb
+      @@last_report_time = Time.utc
+      Log.for("quickheadlines.memory").info { "RSS tracking initialized: #{@@startup_rss_mb.round(1)}MB" }
+    rescue ex
+      Log.for("quickheadlines.memory").warn { "Failed to init RSS tracking: #{ex.message}" }
+    end
   end
 
   # ---------------------------------------------------------------------
@@ -193,14 +213,27 @@ module RefreshLoop::Monitoring
       tab_item_count = StateStore.tabs.sum(&.feeds.sum(&.items.size))
       string_pool_size = QuickHeadlines::StringIntern.size
 
+      # Calculate RSS deltas
+      now = Time.utc
+      current_rss = memory_status.rss_mb
+      delta_since_startup = current_rss - @@startup_rss_mb
+      delta_since_last = current_rss - @@last_rss_mb
+      time_since_last = (now - @@last_report_time).total_seconds
+      @@last_rss_mb = current_rss
+      @@last_report_time = now
+
+      # Additional diagnostics
+      rate_limiter_cache = QuickHeadlines::RateLimiter.cache_size rescue 0
+      favicon_pool = FaviconActor.instance?.try(&.client_pool_size) || 0 rescue 0
+
       Log.for("quickheadlines.memory").info do
-        "Memory status: RSS=#{memory_status.rss_mb.round(1)}MB, " \
-        "pressure=#{memory_status.pressure_level}, GC count=#{memory_status.gc_count}, " \
-        "sockets=#{socket_count}, event_clients=#{event_clients}, fibers=#{fiber_stats}\n" \
-        "GC stats: heap=#{(gc.heap_size / 1024 / 1024).round(1)}MB, free=#{(gc.free_bytes / 1024 / 1024).round(1)}MB, " \
+        "Memory: RSS=#{current_rss.round(1)}MB (#{delta_since_startup >= 0 ? "+" : ""}#{delta_since_startup.round(1)} since startup, #{delta_since_last >= 0 ? "+" : ""}#{delta_since_last.round(1)} in #{time_since_last.round(0)}s), " \
+        "pressure=#{memory_status.pressure_level}, GC=#{memory_status.gc_count}\n" \
+        "Diag: sockets=#{socket_count}, event_clients=#{event_clients}, fibers=#{fiber_stats}, " \
+        "rate_cache=#{rate_limiter_cache}, favicon_pool=#{favicon_pool}\n" \
+        "GC: heap=#{(gc.heap_size / 1024 / 1024).round(1)}MB, free=#{(gc.free_bytes / 1024 / 1024).round(1)}MB, " \
         "unmapped=#{(gc.unmapped_bytes / 1024 / 1024).round(1)}MB, total=#{(gc.total_bytes / 1024 / 1024).round(1)}MB\n" \
-        "StateStore: feeds=#{feed_count}, items=#{item_count}, tabs=#{tab_count}, tab_items=#{tab_item_count}\n" \
-        "StringIntern pool: #{string_pool_size} entries"
+        "Store: feeds=#{feed_count}, items=#{item_count}, tabs=#{tab_count}, tab_items=#{tab_item_count}, pool=#{string_pool_size}"
       end
     rescue ex : Exception
       Log.for("quickheadlines.memory").debug { "Failed to get memory status: #{ex.message}" }
