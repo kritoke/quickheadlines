@@ -1,5 +1,5 @@
 {
-  "assignee": "",
+  "assignee": "kritoke",
   "blocked_by": [
     "quickhea-vnk.6"
   ],
@@ -12,8 +12,8 @@
   "labels": [],
   "parent": "quickhea-vnk",
   "priority": 0,
-  "status": "open",
+  "status": "in_progress",
   "title": "Cap and LRU-evict FaviconActor @client_pool",
   "type": "task",
-  "updated_at": "2026-06-18T01:22:51Z"
+  "updated_at": "2026-06-18T10:34:12Z"
 }
