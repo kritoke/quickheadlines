@@ -2,6 +2,7 @@
   "assignee": "",
   "blocked_by": [
     "quickhea-9i6",
+    "quickhea-qo4",
     "quickhea-ule",
     "quickhea-vnk.1",
     "quickhea-vnk.15",
@@ -22,5 +23,5 @@
   "status": "open",
   "title": "Long-running FreeBSD 48h soak test with RSS assertions",
   "type": "task",
-  "updated_at": "2026-06-18T10:32:28Z"
+  "updated_at": "2026-06-18T10:32:29Z"
 }
