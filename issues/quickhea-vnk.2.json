@@ -1,0 +1,15 @@
+{
+  "assignee": "",
+  "blocked_by": [],
+  "blocks": [],
+  "created": "2026-06-18T01:21:09Z",
+  "description": "## Goal\n\nsrc/favicon_storage.cr @client_pool is a Hash(String, HTTP::Client)\nkeyed by host. Each unique feed host adds a client (with its own\nsocket pool / TLS context) that is never removed. With many\ndistinct feed sources the pool grows unbounded and each client\nholds a live socket.\n\n## Approach\n\n1. Add a MAX_CLIENT_POOL_SIZE constant (start with 32, configurable\n   via QuickHeadlines::Constants).\n2. On insert, if size \u003e= MAX, close and evict the oldest entry\n   (use the same access-order / shift pattern as FaviconCache in\n   src/favicon_cache.cr).\n3. Also evict on error path (fetch_http rescue already deletes\n   the pool key; verify close is called on the dropped client).\n4. Add a getter `client_pool_size` to expose this in the memory\n   log.\n\n## Acceptance\n\n- Pool never exceeds MAX_CLIENT_POOL_SIZE.\n- Oldest client is closed (and the underlying socket released)\n  on eviction.\n- New getter surfaces in the memory report (cf. task 1).\n- Build + spec + ameba clean.",
+  "id": "quickhea-vnk.2",
+  "labels": [],
+  "parent": "quickhea-vnk",
+  "priority": 0,
+  "status": "open",
+  "title": "Cap and LRU-evict FaviconActor @client_pool",
+  "type": "task",
+  "updated_at": "2026-06-18T01:21:09Z"
+}
