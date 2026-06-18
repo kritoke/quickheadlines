@@ -342,12 +342,20 @@ class SocketManager < Actor
     RefreshLoop::FiberTracker.tracked_spawn("ws-writer-#{connection.ip}") do
       loop do
         begin
-          message = connection.outgoing.receive?
-          break if message.nil?
-
-          connection.websocket.send(message)
-          @messages_sent += 1
-          connection_activity(connection.websocket)
+          # Use select with timeout to detect dead connections
+          select
+          when message = connection.outgoing.receive?
+            break if message.nil?
+            connection.websocket.send(message)
+            @messages_sent += 1
+            connection_activity(connection.websocket)
+          when timeout(5.seconds)
+            # Check if websocket is still alive
+            if connection.websocket.closed?
+              Log.for("quickheadlines.websocket").debug { "Writer fiber: websocket closed for #{connection.ip}" }
+              break
+            end
+          end
         rescue Channel::ClosedError
           break
         rescue IO::TimeoutError
