@@ -1,7 +1,9 @@
 {
   "assignee": "",
   "blocked_by": [],
-  "blocks": [],
+  "blocks": [
+    "quickhea-vnk.7"
+  ],
   "created": "2026-06-18T10:31:36Z",
   "description": "**File**: `src/services/memory_manager_actor.cr:284-292`\n\n**Severity**: P3 (dead code, confusing, masks fiber count)\n\n```crystal\nif @consecutive_high \u003e= 5\n  Log.for(\"quickheadlines.memory\").error { \"Sustained critical memory pressure, considering restart\" }\n  RefreshLoop::FiberTracker.tracked_spawn do\n    sleep(5.seconds)\n    unless QuickHeadlines.shutting_down?\n      Log.for(\"quickheadlines.memory\").warn { \"Initiating graceful restart due to memory pressure\" }\n    end\n  end\nend\n```\n\nThe comment says \"considering restart\" but the spawn only logs a\nwarning — it never actually restarts. The fiber IS tracked, so it\ncounts toward `FiberTracker.active_fibers`, masking the real\nfiber count in leak diagnostics.\n\nThis is a known issue called out in `quickhea-hwp` (\"Add periodic\nforced full GC to MemoryManagerActor\") which is a different fix;\nthis ticket is specifically about the dead spawn.\n\n**Fix**: Either\n1. Implement the restart (`exit 1` to let the supervisor restart,\n   or signal `QuickHeadlines.initiate_shutdown`), or\n2. Remove the spawn entirely\n\nFound during code review 2026-06-18, see\n`planning/code-review-2026-06-18.md` §2.2.",
   "id": "quickhea-9i6",
@@ -10,5 +12,5 @@
   "status": "open",
   "title": "Dead 'restart' fiber in MemoryManagerActor.handle_check_and_gc",
   "type": "bug",
-  "updated_at": "2026-06-18T10:31:36Z"
+  "updated_at": "2026-06-18T10:32:28Z"
 }
