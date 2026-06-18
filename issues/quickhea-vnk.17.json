@@ -1,7 +1,9 @@
 {
   "assignee": "",
   "blocked_by": [],
-  "blocks": [],
+  "blocks": [
+    "quickhea-vnk.7"
+  ],
   "created": "2026-06-18T10:30:54Z",
   "description": "**File**: `src/websocket/event_broadcaster.cr:99-118`\n\n**Severity**: P2 (mutex contention, leaky abstraction per architecture.md)\n\n`broadcast_json` holds `@@mutex` for the entire iteration of\n`@@clients` and `@@subscribers`. Each `client.send(json)` is a\nnetwork IO operation that runs inside the global mutex.\n\nA slow client blocks `EventBroadcaster.stats`, `subscribe`,\n`unsubscribe`, and the entire broadcast loop — every other client\nand every other subscriber has to wait for the slow client.\n\nThis violates `planning/architecture.md` §1 (\"Hide implementation\ndetails\") because the broadcaster exposes the locking strategy\nthrough its slow path; a caller cannot reason about latency without\nunderstanding the internal locking.\n\n**Fix sketch**:\n1. Snapshot `@@clients.to_a` and `@@subscribers.to_a` inside the mutex\n2. Release the mutex\n3. Iterate the snapshot and perform the IO\n4. Re-acquire the mutex only to remove failed clients/subscribers\n\nFound during code review 2026-06-18, see\n`planning/code-review-2026-06-18.md` §1.3.",
   "id": "quickhea-vnk.17",
@@ -11,5 +13,5 @@
   "status": "open",
   "title": "EventBroadcaster holds @@mutex during client.send network IO",
   "type": "bug",
-  "updated_at": "2026-06-18T10:30:54Z"
+  "updated_at": "2026-06-18T10:32:27Z"
 }
