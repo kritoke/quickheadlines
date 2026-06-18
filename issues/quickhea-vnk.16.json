@@ -1,0 +1,15 @@
+{
+  "assignee": "",
+  "blocked_by": [],
+  "blocks": [],
+  "created": "2026-06-18T10:29:17Z",
+  "description": "**File**: `src/fetcher/feed_fetcher_concurrent.cr:128-150`\n\n**Severity**: P1 (resource leak under load)\n\nWhen the outer `select` times out and closes `result_channel`, the\ninner fiber continues running the full `Fetcher.pull` (up to\n`FETCH_TIMEOUT_SECONDS`) and only discovers the closed channel when\nit tries to send. The fiber stays alive (tracked by FiberTracker),\nholds `feed`, `config`, and may itself spawn more fibers for redirects.\n\nWith 207+ feeds refreshing every 30 min and a few slow hosts, this\ncan keep 10-20 inner fibers alive indefinitely, each holding their\ncaptured `feed`/`config`/result structures.\n\n**Fix sketch**:\n1. Wrap the inner fetch in a cancellation-aware `Future`-style abstraction\n2. The outer fiber sets a `done` flag (or closes a sentinel channel)\n   on timeout; the inner fiber checks it before/after blocking calls\n3. Or: use `Crystal::Fiber.timeout` (if available) on the inner fetch\n\n**Alternative**: Move to a poll-and-bail design where the inner fiber\nchecks `result_channel.closed?` after every long-running call.\n\n**Related**: `quickhea-vnk` EPIC description lists this in its\n\"feed_fetcher_concurrent.cr\" leak vector, but no child ticket\nspecifically tracks the inner-fiber leak.\n\nFound during code review 2026-06-18, see\n`planning/code-review-2026-06-18.md` §1.2.",
+  "id": "quickhea-vnk.16",
+  "labels": [],
+  "parent": "quickhea-vnk",
+  "priority": 1,
+  "status": "open",
+  "title": "FeedFetcherConcurrent inner fetch fiber leaks when outer times out",
+  "type": "bug",
+  "updated_at": "2026-06-18T10:29:17Z"
+}
