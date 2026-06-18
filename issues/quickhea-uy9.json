@@ -1,7 +1,9 @@
 {
   "assignee": "",
   "blocked_by": [],
-  "blocks": [],
+  "blocks": [
+    "quickhea-vnk.7"
+  ],
   "created": "2026-06-18T11:04:46Z",
   "description": "Favicons that are .ico files render as gray placeholder blocks in the UI.\nAffects sites like Variety, Deadline, etc.\n\n## Likely root causes (need to verify)\n\n1. **Premature Google fallback delete**: src/favicon_storage.cr:177-193 — the original\n   .ico file is written, then deleted if the Google fallback succeeds. Google's\n   s2/favicons returns PNG. If the PNG write fails (transient, oversized, or\n   invalid), the user is left with no file and the broken image shows in the UI.\n   The is_tiny threshold (ext == \"ico\" \u0026\u0026 size \u003c 800) is aggressive — many real\n   favicon.ico files are smaller than 800 bytes (a 16x16 single-frame is ~1KB).\n\n2. **Stale fallback in get_or_fetch**: src/favicon_storage.cr:208-216 iterates\n   POSSIBLE_EXTENSIONS in fixed order {png, jpg, jpeg, ico, svg, webp}. If a\n   Google PNG fallback is cached but missing on disk, the path is returned and\n   the browser 404s. The order means a missing .png shadows any .ico that\n   might exist.\n\n3. **Content-Type misdetection**: extension_from_content_type defaults to \"png\"\n   for any unrecognized content type. Some sites serve favicon.ico without\n   image/x-icon — they get saved as foo.png with ICO bytes inside, which most\n   browsers can't render inline.\n\n## Reproduction\n- Add Variety (variety.com) and Deadline (deadline.com) to feeds.yml\n- Refresh — gray blocks where favicon should be\n- Check public/favicons/ — what extension is on the file? Is the Google fallback\n  path being returned when no file exists?\n\n## Debugging plan\n- Add logging in handle_save_favicon for: content-type, size, ext, is_tiny, google_result\n- Inspect a failing feed end-to-end\n- Check whether the issue is the Google fallback returning a path to a missing\n  PNG, or a real .ico being overwritten, or wrong content-type\n- Fix at the right layer: probably (1) — don't delete the original if fallback\n  returns nil; (2) check file exists in get_or_fetch before returning the path\n\n## Acceptance\n- Variety, Deadline favicons render correctly in the timeline and feed views\n- No regression for sites whose favicons currently work\n- Existing favicon cache should be invalidated/refreshed",
   "id": "quickhea-uy9",
@@ -10,5 +12,5 @@
   "status": "open",
   "title": "[BUG] ICO favicons render as gray block (Variety, Deadline, etc.)",
   "type": "bug",
-  "updated_at": "2026-06-18T11:04:46Z"
+  "updated_at": "2026-06-18T11:04:48Z"
 }
