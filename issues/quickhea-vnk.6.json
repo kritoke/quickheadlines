@@ -1,5 +1,5 @@
 {
-  "assignee": "",
+  "assignee": "kritoke",
   "blocked_by": [
     "quickhea-vnk.1"
   ],
@@ -15,8 +15,8 @@
   "labels": [],
   "parent": "quickhea-vnk",
   "priority": 2,
-  "status": "open",
+  "status": "in_progress",
   "title": "Audit all unbounded data structures in long-lived paths",
   "type": "task",
-  "updated_at": "2026-06-18T01:22:51Z"
+  "updated_at": "2026-06-18T10:19:49Z"
 }
