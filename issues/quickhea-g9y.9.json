@@ -7,9 +7,15 @@
   "id": "quickhea-g9y.9",
   "labels": [],
   "parent": "quickhea-g9y",
+  "comments": [
+    {
+      "text": "Additional finding from code review §2.1: the @cleanup_handlers Hash itself is unbounded and holds closure references. The Hash is only trimmed via unregister_cleanup_handler (called manually). If any code registers a handler without a matching unregister, the closure pins its captured context for the process lifetime. The proposed fix (subsystems own their cleanup) addresses this naturally — subsystems pair register/unregister in their lifecycle. The Hash is bounded by the number of registered subsystems (≤ 5 in practice) so the absolute size is small, but the fix above is the right answer.",
+      "timestamp": "2026-06-18T10:32:12Z"
+    }
+  ],
   "priority": 2,
   "status": "open",
   "title": "MemoryManagerActor.clear_system_caches knows every cache (leaky abstraction)",
   "type": "refactor",
-  "updated_at": "2026-06-18T10:31:23Z"
+  "updated_at": "2026-06-18T10:32:12Z"
 }
