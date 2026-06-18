@@ -2,7 +2,8 @@
   "assignee": "",
   "blocked_by": [],
   "blocks": [
-    "quickhea-y94.6"
+    "quickhea-y94.6",
+    "quickhea-y94.7"
   ],
   "created": "2026-06-18T01:26:00Z",
   "description": "## Goal\n\nGive operators (and us) a cheap, always-on diagnostic that shows\nexactly which subsystem is leaking. Without this, the next\nmulti-day investigation is the same as this one.\n\n## Approach\n\n1. In Monitoring.report_status (src/fetcher/monitoring.cr), add\n   RSS deltas: capture rss_mb at startup, store in a class var,\n   and log \"RSS +X MB since startup\" + \"delta over last interval\"\n   on every report.\n2. Extend the existing memory log line with: FiberTracker active\n   count, EventBroadcaster client count, SocketManager\n   connection count, StringIntern pool size, RateLimiter cache\n   size, FaviconActor @client_pool size (need a new getter).\n3. Add a \"heap snapshot\" trigger every N cycles (configurable,\n   default 6) that writes /proc/\u003cpid\u003e/{maps,smaps,status} + GC.stats\n   to /tmp/qh-snap-\u003cts\u003e/. Wire it to the existing\n   MemoryManagerActor.dump_heap(false) call (cheap, no gcore).\n4. Log the rss_mb of the snapshot before/after to make it clear\n   what GC reclaimed.\n\n## Acceptance\n\n- One new log line per reporter tick with all the counters and\n  deltas.\n- A snapshot directory is created every ~30 min and the path\n  appears in the log.\n- The log line includes FaviconActor @client_pool size, which\n  requires adding a `client_pool_size` getter to FaviconActor.\n- Build + spec + ameba clean.\n\n## Note\n\nMemoryManagerActor.dump_heap already exists from the earlier\ninvestigation (quickhea-qm4). This task wires it into the\nreporter loop.",
@@ -13,5 +14,5 @@
   "status": "open",
   "title": "Add periodic heap snapshot + RSS delta logging",
   "type": "task",
-  "updated_at": "2026-06-18T01:26:09Z"
+  "updated_at": "2026-06-18T01:26:12Z"
 }
