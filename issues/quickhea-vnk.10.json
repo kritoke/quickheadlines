@@ -2,14 +2,16 @@
   "assignee": "",
   "blocked_by": [],
   "blocks": [],
+  "closed_at": "2026-06-18T01:27:43Z",
+  "close_reason": "Duplicate of original child task",
   "created": "2026-06-18T01:27:08Z",
   "description": "## Goal\n\nsrc/websocket/socket_manager.cr spawn_writer_fiber creates a\nper-connection writer fiber. The fiber exits only when\nconn.outgoing is closed, which happens in\nhandle_unregister_connection, handle_connection_closed,\nhandle_shutdown_all, and handle_cleanup_dead.\n\nRisk: if HTTP::WebSocket#closed? returns false but the underlying\nTCP socket is half-closed (NAT timeout, client crash, etc.),\nthe writer fiber is stuck on a blocking send, holding\nconn.websocket, conn.outgoing, and any pending broadcast\npayloads (which can be MB for big feeds).\n\n## Approach\n\n1. Wrap writer sends with a select + small timeout (e.g. 5s).\n   On timeout, send a connection_send_error cast and break out\n   of the loop (or close the outgoing channel so the fiber\n   exits).\n2. Periodic self-check: every N seconds the writer checks\n   conn.websocket.closed? and exits if true (with a\n   CastConnectionClosed message to clean up actor state).\n3. Increase cleanup_dead frequency from on-demand to a periodic\n   timer in the reporter (every 30s) so dead connections are\n   reaped even when no new ones register.\n4. Verify handle_register_connection's purge_closed_connections\n   rolls back the IP count for the stale entries it purges\n   (it currently does not increment on the new connection until\n   after the purge, so this is fine — but check).\n\n## Acceptance\n\n- Writer fiber exits within 5s of a slow/dead client.\n- cleanup_dead runs every 30s; connection_count and\n  EventBroadcaster.client_count agree within one tick.\n- No code path retains a Connection whose websocket has been\n  closed for \u003e 60s.\n- Build + spec + ameba clean.",
   "id": "quickhea-vnk.10",
   "labels": [],
   "parent": "quickhea-vnk",
   "priority": 1,
-  "status": "open",
+  "status": "closed",
   "title": "Cap SocketManager writer fiber lifetime + connection cleanup",
   "type": "task",
-  "updated_at": "2026-06-18T01:27:08Z"
+  "updated_at": "2026-06-18T01:27:43Z"
 }
