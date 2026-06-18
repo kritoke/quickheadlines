@@ -37,9 +37,12 @@ class FaviconActor < Actor
   # Actor state
   # =========================================================================
 
+  MAX_CLIENT_POOL_SIZE = 32
+
   @favicon_dir : String
   @initialized : Bool = false
   @client_pool : Hash(String, HTTP::Client) = {} of String => HTTP::Client
+  @client_pool_order : Array(String) = [] of String
 
   def initialize(@name : String = "FaviconActor")
     super(@name, mailbox_size: 100)
@@ -308,15 +311,34 @@ class FaviconActor < Actor
 
   # Get or create a pooled HTTP client for the given host.
   # Reuses existing connections to avoid TCP/TLS handshake overhead.
+  # LRU eviction when pool exceeds MAX_CLIENT_POOL_SIZE.
   private def pooled_client(host : String, port : Int32?, tls : Bool) : HTTP::Client
     pool_key = "#{host}:#{port}:#{tls}"
     if client = @client_pool[pool_key]?
+      # Move to end of access order (most recently used)
+      @client_pool_order.delete(pool_key)
+      @client_pool_order.push(pool_key)
       return client
     end
+
+    # Evict oldest if at capacity
+    evict_oldest_client if @client_pool.size >= MAX_CLIENT_POOL_SIZE
+
     client = HTTP::Client.new(host, port: port, tls: tls)
     apply_default_timeouts(client)
     @client_pool[pool_key] = client
+    @client_pool_order.push(pool_key)
     client
+  end
+
+  # Evict the least-recently-used client from the pool.
+  private def evict_oldest_client : Nil
+    return if @client_pool_order.empty?
+    oldest_key = @client_pool_order.shift
+    if client = @client_pool.delete(oldest_key)
+      client.close rescue nil
+      Log.for("quickheadlines.storage").debug { "Evicted HTTP client: #{oldest_key}" }
+    end
   end
 
   # Close idle pooled clients (called during cleanup).
@@ -325,6 +347,7 @@ class FaviconActor < Actor
       client.close rescue nil
     end
     @client_pool.clear
+    @client_pool_order.clear
   end
 
   private def reject_private_host?(host : String, url : String) : Bool
