@@ -1,6 +1,8 @@
 {
   "assignee": "",
-  "blocked_by": [],
+  "blocked_by": [
+    "quickhea-vnk.2"
+  ],
   "blocks": [],
   "created": "2026-06-18T01:21:10Z",
   "description": "## Goal\n\nVerify that all the fixes in this epic actually solve the\ncrash-after-1-2-days problem. Without a soak test we are\nguessing.\n\n## Approach\n\n1. Deploy the fixed binary to the FreeBSD Bastille jail.\n2. Use a representative feeds.yml (the production one if it\n   is not too big, else a curated subset of ~50 feeds covering\n   RSS, Atom, and slow/timeout-prone sources).\n3. Run for 48 h. Log RSS every 5 min via the new reporter\n   (task 1).\n4. Verify at the end:\n   - RSS never exceeds 1 GB\n   - RSS growth over the last 24 h \u003c 100 MB\n   - No OOM kill\n   - All expected feeds are still being fetched\n5. Capture the qh-snap-* heap snapshots and inspect the\n   largest VMAs (anon vs file-backed) to confirm the dominant\n   resident set is sane.\n\n## Acceptance\n\n- A report at docs/soak-2026-XX.md with the RSS chart,\n  heap snapshot inventory, and a pass/fail verdict.\n- If the test fails, the report identifies the dominant\n  leak source so we can open a follow-up ticket.\n\n## Note\n\nThis task depends on tasks 1-5. Run it last in the epic\nsequencing.",
@@ -11,5 +13,5 @@
   "status": "open",
   "title": "Long-running FreeBSD 48h soak test with RSS assertions",
   "type": "task",
-  "updated_at": "2026-06-18T01:21:10Z"
+  "updated_at": "2026-06-18T01:22:51Z"
 }
