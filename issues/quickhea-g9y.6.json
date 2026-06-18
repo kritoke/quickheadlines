@@ -3,7 +3,8 @@
   "blocked_by": [
     "quickhea-g9y.1",
     "quickhea-g9y.2",
-    "quickhea-g9y.3"
+    "quickhea-g9y.3",
+    "quickhea-g9y.9"
   ],
   "blocks": [
     "quickhea-g9y.8"
@@ -18,5 +19,5 @@
   "status": "closed",
   "title": "Add boundary testing and module swap tests",
   "type": "task",
-  "updated_at": "2026-06-17T12:33:18Z"
+  "updated_at": "2026-06-18T10:32:30Z"
 }

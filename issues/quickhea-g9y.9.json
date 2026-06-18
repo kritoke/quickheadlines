@@ -1,7 +1,9 @@
 {
   "assignee": "",
   "blocked_by": [],
-  "blocks": [],
+  "blocks": [
+    "quickhea-g9y.6"
+  ],
   "created": "2026-06-18T10:31:23Z",
   "description": "**File**: `src/services/memory_manager_actor.cr:396-422`\n\n**Severity**: P2 (architecture violation per architecture.md §1)\n\n`clear_system_caches` enumerates every cache in the system by name:\n- `VugAdapter.clear_cache`\n- `Fetcher::DnsCache.clear_expired`\n- `Fetcher::CrestHttpClient.clear_rate_limiters`\n- `Fetcher::URLValidator.clear_validated`\n- `Fetcher::CircuitBreaker::Registry.store.clear_expired`\n- `ColorExtractor.sweep_cache`\n- `QuickHeadlines::StringIntern.clear`\n- `FaviconActor.instance.close_pooled_clients`\n- `FaviconCache.clear`\n\nThis is the opposite of \"replaceable modules\" (`planning/architecture.md`\n§1). Every time someone adds a new cache, they must update this\nmethod. The Hash `@cleanup_handlers` already exists for exactly this\npurpose but is not used here.\n\n**Fix sketch**:\n1. Move each cleanup call into a `register_cleanup_handler` cast\n   from the subsystem itself (e.g., `StringIntern.register_cleanup`)\n2. `clear_system_caches` becomes `run_registered_handlers(level)`\n3. Subsystems own their cleanup; the actor only orchestrates\n\nThis is the plugin-architecture pattern explicitly called out in\n`planning/architecture.md`.\n\nFound during code review 2026-06-18, see\n`planning/code-review-2026-06-18.md` §3.2.",
   "id": "quickhea-g9y.9",
@@ -17,5 +19,5 @@
   "status": "open",
   "title": "MemoryManagerActor.clear_system_caches knows every cache (leaky abstraction)",
   "type": "refactor",
-  "updated_at": "2026-06-18T10:32:12Z"
+  "updated_at": "2026-06-18T10:32:30Z"
 }
