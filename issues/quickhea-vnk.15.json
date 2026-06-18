@@ -1,0 +1,15 @@
+{
+  "assignee": "",
+  "blocked_by": [],
+  "blocks": [],
+  "created": "2026-06-18T10:29:10Z",
+  "description": "**File**: `src/websocket/socket_manager.cr:343`\n\n**Severity**: P1 (architecture violation, race condition)\n\nThe writer fiber in `spawn_writer_fiber` directly increments\n`@messages_sent += 1` while running in `tracked_spawn(\"ws-writer-...\")`,\nwhich is a separate fiber from the actor's main loop. The file's own\nheader comment says \"Does NOT mutate actor state directly\" but the code\ncontradicts that.\n\nWith N concurrent writer fibers (one per WebSocket connection), all\ndoing `+=` on the same `Int64`, `get_stats` returns torn values. This\nviolates `planning/architecture.md` §1 (\"Hide implementation details\")\nand §3 (\"Thread safety\").\n\n**Fix sketch**:\n1. Add `def_cast message_sent(ws : HTTP::WebSocket)` to the actor\n2. Have the writer call `message_sent(connection.websocket)` instead of `+=`\n3. `handle_message_sent` does `+=` inside the actor loop\n\n**Related**: `quickhea-vnk.3` (writer fiber lifetime cleanup) — that ticket\naddresses *lifetime*, this ticket addresses the *data race*. Both are\nneeded for full correctness.\n\nFound during code review 2026-06-18, see\n`planning/code-review-2026-06-18.md` §1.1.",
+  "id": "quickhea-vnk.15",
+  "labels": [],
+  "parent": "quickhea-vnk",
+  "priority": 1,
+  "status": "open",
+  "title": "SocketManager writer fiber mutates @messages_sent outside actor model",
+  "type": "bug",
+  "updated_at": "2026-06-18T10:29:10Z"
+}
