@@ -1,5 +1,5 @@
 {
-  description = "Quickheadlines Spoke - Crystal & Svelte 5";
+  description = "Quickheadlines Spoke - Nim backend (port) & Svelte 5 frontend";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
@@ -11,58 +11,49 @@
       system = "aarch64-linux";
       pkgs = nixpkgs.legacyPackages.${system};
 
-      # 💎 Use nixpkgs Crystal 1.18.2
-      crystal_1_18 = pkgs.crystal;
+      # Nim toolchain (nim-backend-port branch). Replaces the Crystal
+      # toolchain from main. nim + nimble come straight from nixpkgs;
+      # verified via spoke-gen (kritoke/aiworkflow#1): nim 2.2.4.
+      nimToolchain = [ pkgs.nim pkgs.nimble ];
 
-      # Read a local flake.private.nix if present. We wrap it in a guard so
-      # Nix evaluation doesn't error when the file is missing.
+      # Frontend toolchain is carried over verbatim from the Crystal spoke
+      # (Svelte 5 SPA is out of scope for the port).
+      frontendToolchain = [ pkgs.nodejs_22 pkgs.pnpm ];
+
+      # Native libs the Nim backend will bind to: SQLite (stores), libxml2
+      # (RSS/Atom parsing), openssl (TLS), zlib. pkg-config to locate them.
+      nativeLibs = with pkgs; [ sqlite libxml2 openssl zlib pcre2 gmp pkg-config ];
+
+      # Read a local flake.private.nix if present (same shape as the Crystal spoke).
       private_hook = builtins.tryEval (if builtins.pathExists ./flake.private.nix then builtins.readFile ./flake.private.nix else "");
 
     in {
-      # Nesting under the system fixes the 'attribute missing' error
       devShells.${system} = {
         default = pkgs.mkShell {
-            buildInputs = with pkgs; [
-              crystal
-              bash
-              shards pkg-config openssl sqlite libxml2 libyaml
-              libevent zlib pcre2 gmp boehmgc file
-              # Svelte 5 build tools
-              nodejs_22 pnpm
-              git curl gnumake gcc
-              openspec.packages.${system}.default
-              ameba
-              # Screenshot tools
-              shot-scraper
-            ];
+          buildInputs = nimToolchain ++ frontendToolchain ++ nativeLibs ++ (with pkgs; [
+            git curl gnumake gcc file
+            openspec.packages.${system}.default
+            shot-scraper
+          ]);
 
           shellHook = ''
-            export LD_LIBRARY_PATH="${pkgs.lib.makeLibraryPath [ pkgs.boehmgc pkgs.libevent pkgs.openssl pkgs.file pkgs.pcre2 pkgs.gmp ]}:$LD_LIBRARY_PATH"
+            export LD_LIBRARY_PATH="${pkgs.lib.makeLibraryPath [ pkgs.sqlite pkgs.libxml2 pkgs.openssl pkgs.zlib pkgs.pcre2 pkgs.gmp ]}:$LD_LIBRARY_PATH"
 
             mkdir -p ~/.local/bin
-            ln -sf ${pkgs.crystal}/bin/crystal ~/.local/bin/crystal
-            ln -sf ${pkgs.crystal}/bin/shards ~/.local/bin/shards
+            ln -sf ${pkgs.nim}/bin/nim ~/.local/bin/nim
+            ln -sf ${pkgs.nimble}/bin/nimble ~/.local/bin/nimble
             ln -sf ${openspec.packages.${system}.default}/bin/openspec ~/.local/bin/openspec
 
-            # Ensure the openspec package's bin directory is first on PATH so the
-            # binary is resolvable in all subsequent shell commands.
             export PATH="${openspec.packages.${system}.default}/bin:$HOME/.local/bin:$PWD/bin:$PATH"
-
-            export APP_ENV=development
-            echo "🚀 Quickheadlines Loaded with Crystal & Svelte 5"
-
-            # Avoid creating aliases that interfere with command lookup; rely on PATH
             export OPEN_SPEC_PROJECT_DIR="$PWD"
+            export APP_ENV=development
 
-            # Guarded check for OpenSpec so shell initialization doesn't fail if
-            # the binary is not present or PATH isn't set yet.
+            echo "🚀 Quickheadlines Nim Port DevShell | Nim $(nim --version | head -1)"
+
             if command -v openspec >/dev/null 2>&1; then
-              echo "🚀 Quickheadlines DevShell Active | OpenSpec $(openspec --version)"
-            else
-              echo "🚀 Quickheadlines DevShell Active | OpenSpec (not found on PATH)"
+              echo "🚀 OpenSpec $(openspec --version)"
             fi
 
-            # Private system-specific configuration (from flake.private.nix)
             ${if private_hook.success then private_hook.value else ""}
           '';
         };
