@@ -2,7 +2,8 @@
   "assignee": "",
   "blocked_by": [],
   "blocks": [
-    "quickhea-511.15"
+    "quickhea-511.15",
+    "quickhea-511.19"
   ],
   "created": "2026-06-19T19:54:25Z",
   "description": "Production Fetcher: bounded pool (spike algorithm) + retry/backoff + favicon. Satisfies Fetcher concept.",
@@ -13,5 +14,5 @@
   "status": "open",
   "title": "P3.4 Fetcher: concurrent, retry, backpressure (prod)",
   "type": "task",
-  "updated_at": "2026-06-19T19:54:29Z"
+  "updated_at": "2026-06-19T19:54:31Z"
 }
