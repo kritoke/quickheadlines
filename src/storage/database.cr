@@ -110,7 +110,6 @@ module Database
     db.exec("PRAGMA synchronous = NORMAL")
     db.exec("PRAGMA cache_size = -16000")
     db.exec("PRAGMA foreign_keys = ON")
-    db.exec("PRAGMA mmap_size = 0")
     db.exec("PRAGMA wal_autocheckpoint = #{QuickHeadlines::Constants::WAL_AUTOCHECKPOINT_PAGES}")
     db.exec("PRAGMA busy_timeout = #{QuickHeadlines::Constants::SQLITE_BUSY_TIMEOUT_MS}")
     db.exec("PRAGMA temp_store = MEMORY")
