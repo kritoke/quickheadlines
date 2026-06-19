@@ -1,0 +1,15 @@
+{
+  "assignee": "",
+  "blocked_by": [],
+  "blocks": [],
+  "created": "2026-06-19T19:54:24Z",
+  "description": "Production ConfigSource impl: parse feeds.yml into Config (types.nim). First external dep (YAML) wrapped behind an adapter (design D4). Validate feed URLs.",
+  "id": "quickhea-511.10",
+  "labels": [],
+  "parent": "quickhea-511",
+  "priority": 1,
+  "status": "open",
+  "title": "P3.1 Config loader + feeds.yml validation",
+  "type": "task",
+  "updated_at": "2026-06-19T19:54:24Z"
+}
