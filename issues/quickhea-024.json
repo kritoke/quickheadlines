@@ -1,5 +1,5 @@
 {
-  "assignee": "",
+  "assignee": "kritoke",
   "blocked_by": [],
   "blocks": [],
   "created": "2026-06-08T18:04:25Z",
@@ -7,8 +7,8 @@
   "id": "quickhea-024",
   "labels": [],
   "priority": 4,
-  "status": "open",
+  "status": "in_progress",
   "title": "Small cleanups in src/fetcher/monitoring.cr",
   "type": "task",
-  "updated_at": "2026-06-08T18:04:25Z"
+  "updated_at": "2026-06-19T10:45:25Z"
 }
