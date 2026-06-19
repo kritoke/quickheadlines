@@ -96,7 +96,6 @@ module RefreshLoop
 
     # Reclaim memory from temporary feed data before building new state
     GC.collect
-    2.times { LibGC.GC_gcollect_and_unmap }
 
     new_feeds = config.feeds.map do |feed|
       FeedFetcherConcurrent.best_available_feed(feed, fetched_map[feed.url]?, existing_data[feed.url]?)

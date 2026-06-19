@@ -142,7 +142,7 @@ class MemoryManagerActor < Actor
   @last_priority : CleanupPriority? = nil
   @is_cleaning_up : Bool = false
 
-  FORCED_GC_INTERVAL = 30.minutes
+  FORCED_GC_INTERVAL = 60.minutes
 
   def initialize(@name : String = "MemoryManager")
     super(@name, mailbox_size: 100)
