@@ -1,0 +1,15 @@
+{
+  "assignee": "",
+  "blocked_by": [],
+  "blocks": [],
+  "created": "2026-06-19T19:54:24Z",
+  "description": "Production SQLite impls of the store concepts behind wrappers. Fix P0 #3 (LSH read race) inside ClusterStore.",
+  "id": "quickhea-511.12",
+  "labels": [],
+  "parent": "quickhea-511",
+  "priority": 1,
+  "status": "open",
+  "title": "P3.3 FeedStore/ItemStore/ClusterStore (SQLite)",
+  "type": "task",
+  "updated_at": "2026-06-19T19:54:24Z"
+}
