@@ -1,5 +1,5 @@
 {
-  "assignee": "",
+  "assignee": "kritoke",
   "blocked_by": [],
   "blocks": [
     "quickhea-vnk.7"
@@ -9,8 +9,8 @@
   "id": "quickhea-t33",
   "labels": [],
   "priority": 2,
-  "status": "open",
+  "status": "in_progress",
   "title": "Worker fiber captures config_snapshot by closure in run_timed_refresh",
   "type": "bug",
-  "updated_at": "2026-06-18T10:32:31Z"
+  "updated_at": "2026-06-19T00:56:22Z"
 }
