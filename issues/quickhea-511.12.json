@@ -7,14 +7,15 @@
     "quickhea-511.15",
     "quickhea-511.19"
   ],
+  "closed_at": "2026-06-19T21:22:58Z",
   "created": "2026-06-19T19:54:24Z",
   "description": "Production SQLite impls of the store concepts behind wrappers. Fix P0 #3 (LSH read race) inside ClusterStore.",
   "id": "quickhea-511.12",
   "labels": [],
   "parent": "quickhea-511",
   "priority": 1,
-  "status": "in_progress",
+  "status": "closed",
   "title": "P3.3 FeedStore/ItemStore/ClusterStore (SQLite)",
   "type": "task",
-  "updated_at": "2026-06-19T21:08:24Z"
+  "updated_at": "2026-06-19T21:22:58Z"
 }
