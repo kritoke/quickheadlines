@@ -1,0 +1,15 @@
+{
+  "assignee": "",
+  "blocked_by": [],
+  "blocks": [],
+  "created": "2026-06-19T17:47:51Z",
+  "description": "Update openspec/changes/nim-backend-port/design.md D1 and add planning/decisions/0001 recording the 2026-06-19 decision to do the port as a worktree-branch in THIS repo (not a fork). Note spoke-gen nim support (kritoke/aiworkflow#1) satisfies D2.",
+  "id": "quickhea-511.2",
+  "labels": [],
+  "parent": "quickhea-511",
+  "priority": 1,
+  "status": "open",
+  "title": "Record D1 fork-\u003ebranch override + planning decision",
+  "type": "task",
+  "updated_at": "2026-06-19T17:47:51Z"
+}
