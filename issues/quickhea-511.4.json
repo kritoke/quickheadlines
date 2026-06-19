@@ -1,6 +1,8 @@
 {
   "assignee": "",
-  "blocked_by": [],
+  "blocked_by": [
+    "quickhea-511.1"
+  ],
   "blocks": [],
   "created": "2026-06-19T17:47:52Z",
   "description": "Clusterer concept + port MinHash/LSH/Union-Find to Nim. Run on frozen test fixtures from Crystal impl; verify cluster IDs byte-equal. Per openspec tasks 1.2. Parallelizable.",
@@ -11,5 +13,5 @@
   "status": "open",
   "title": "Phase-1 spike: clustering vertical",
   "type": "task",
-  "updated_at": "2026-06-19T17:47:52Z"
+  "updated_at": "2026-06-19T17:48:15Z"
 }
