@@ -17,8 +17,9 @@ requires "nim >= 2.2.0"
 requires "yaml >= 2.2.0"
 requires "tiny_sqlite >= 0.1.0"
 
-task test, "Run the Phase-2/3 contract + in-memory + config + storage tests":
+task test, "Run all Phase-2/3 tests":
   exec "nim c -r tests/test_concept_checks.nim"
   exec "nim c -r tests/test_config.nim"
   exec "nim c -r tests/test_storage.nim"
+  exec "nim c -r tests/test_sqlite_stores.nim"
 
