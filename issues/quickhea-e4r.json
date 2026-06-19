@@ -6,9 +6,15 @@
   "description": "feed_cache.cr lines 27-28 and 30-31 have identical getter declarations for clustering_store, header_color_store, cleanup_store, db_service. Harmless but dead code.",
   "id": "quickhea-e4r",
   "labels": [],
+  "comments": [
+    {
+      "text": "Fixed in commit 1111ab5d. Removed duplicate getter declaration.",
+      "timestamp": "2026-06-19T10:06:50Z"
+    }
+  ],
   "priority": 2,
   "status": "open",
   "title": "FeedCache duplicate getter",
   "type": "bug",
-  "updated_at": "2026-06-17T00:59:22Z"
+  "updated_at": "2026-06-19T10:06:50Z"
 }
