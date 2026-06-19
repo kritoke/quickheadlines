@@ -6,9 +6,15 @@
   "description": "",
   "id": "quickhea-hs8",
   "labels": [],
+  "comments": [
+    {
+      "text": "Fixed in commit 63682dc1. Removed contradictory PRAGMA mmap_size = 0.",
+      "timestamp": "2026-06-19T10:03:58Z"
+    }
+  ],
   "priority": 2,
   "status": "open",
   "title": "contradictory-PRAGMA-mmap_size",
   "type": "bug",
-  "updated_at": "2026-06-17T01:00:25Z"
+  "updated_at": "2026-06-19T10:03:58Z"
 }
