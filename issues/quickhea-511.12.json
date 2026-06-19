@@ -1,5 +1,5 @@
 {
-  "assignee": "",
+  "assignee": "kritoke",
   "blocked_by": [
     "quickhea-511.11"
   ],
@@ -13,8 +13,8 @@
   "labels": [],
   "parent": "quickhea-511",
   "priority": 1,
-  "status": "open",
+  "status": "in_progress",
   "title": "P3.3 FeedStore/ItemStore/ClusterStore (SQLite)",
   "type": "task",
-  "updated_at": "2026-06-19T19:54:31Z"
+  "updated_at": "2026-06-19T21:08:24Z"
 }
