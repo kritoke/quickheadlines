@@ -1,5 +1,5 @@
 {
-  "assignee": "",
+  "assignee": "kritoke",
   "blocked_by": [],
   "blocks": [],
   "created": "2026-06-19T17:47:51Z",
@@ -8,8 +8,8 @@
   "labels": [],
   "parent": "quickhea-511",
   "priority": 1,
-  "status": "open",
+  "status": "in_progress",
   "title": "Record D1 fork-\u003ebranch override + planning decision",
   "type": "task",
-  "updated_at": "2026-06-19T17:47:51Z"
+  "updated_at": "2026-06-19T17:51:53Z"
 }
