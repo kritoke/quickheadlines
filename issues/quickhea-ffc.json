@@ -2,6 +2,7 @@
   "assignee": "",
   "blocked_by": [],
   "blocks": [],
+  "closed_at": "2026-06-19T10:06:53Z",
   "created": "2026-06-17T01:14:38Z",
   "description": "",
   "id": "quickhea-ffc",
@@ -13,7 +14,7 @@
     }
   ],
   "priority": 4,
-  "status": "open",
+  "status": "closed",
   "title": "FeedCache-duplicate-getter",
   "type": "bug",
   "updated_at": "2026-06-19T10:06:53Z"
