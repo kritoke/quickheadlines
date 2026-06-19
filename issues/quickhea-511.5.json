@@ -1,6 +1,8 @@
 {
   "assignee": "",
-  "blocked_by": [],
+  "blocked_by": [
+    "quickhea-511.1"
+  ],
   "blocks": [],
   "created": "2026-06-19T17:47:52Z",
   "description": "Evaluate std/async vs chronos vs asyncdispatch on a representative HTTP request. Pick one; record rationale in design.md (open question 1). Per openspec tasks 1.3.",
@@ -11,5 +13,5 @@
   "status": "open",
   "title": "Phase-1 spike: concurrency library eval",
   "type": "task",
-  "updated_at": "2026-06-19T17:47:52Z"
+  "updated_at": "2026-06-19T17:48:15Z"
 }
