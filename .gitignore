@@ -122,5 +122,13 @@ planning/
 # Local Pi runtime state
 .atl/
 .pi/
+
+# Nim build artifacts (nim-backend-port branch)
+nimcache/
+# Nim compiles binaries next to source when invoked as `nim c <file>.nim`;
+# nimble-built binaries go to bin/ (already ignored). Ignore the stray ones:
+src/qh/spike/fetch_vertical
+src/qh/spike/clustering_vertical
+
 .catseye.toml
 .catseye/
