@@ -4,13 +4,14 @@
   "blocks": [
     "quickhea-vnk.7"
   ],
+  "closed_at": "2026-06-19T09:56:03Z",
   "created": "2026-06-18T10:31:47Z",
   "description": "**File**: `src/favicon_cache.cr:30`\n\n**Severity**: P3 (perf)\n\n```crystal\n@@access_order.delete(key)        # O(n) Array delete\n@@access_order \u003c\u003c key\n```\n\n`Array#delete` is O(n) — it walks the array to find the key. With\n`MAX_ENTRIES = 200`, every cache hit and every cache miss walks up\nto 200 elements. Under high traffic this is 200 × O(n) per access.\n\nThe cap is small (200) so the absolute cost is bounded, but a\ndoubly-linked list or a \"move-to-back\" pointer trick would be\nasymptotically O(1).\n\n**Fix sketch**:\n1. Use a doubly-linked list of keys, OR\n2. Use a Set(String) for membership + Array for ordering\n   (still O(n) on `index`), OR\n3. Accept the O(n) cost since MAX_ENTRIES is small and document\n   the trade-off\n\n**Related**: `quickhea-gz7.7` (Improve valid_image_data? with\nmagic byte validation) is a different ticket but covers\nfavicon-cache-related perf. Comment on that ticket to cross-link.\n\nFound during code review 2026-06-18, see\n`planning/code-review-2026-06-18.md` §4.3.",
   "id": "quickhea-gxm",
   "labels": [],
   "priority": 3,
-  "status": "in_progress",
+  "status": "closed",
   "title": "FaviconCache LRU is O(n) Array delete",
   "type": "perf",
-  "updated_at": "2026-06-19T09:50:43Z"
+  "updated_at": "2026-06-19T09:56:03Z"
 }
