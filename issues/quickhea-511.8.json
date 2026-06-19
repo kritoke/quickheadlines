@@ -2,14 +2,15 @@
   "assignee": "",
   "blocked_by": [],
   "blocks": [],
+  "closed_at": "2026-06-19T19:51:09Z",
   "created": "2026-06-19T17:58:10Z",
   "description": "Write in-memory impls satisfying each concept so unit tests run without SQLite/HTTP. Compiler-enforced concept checks (design spec: production impl must match concept or build fails). tasks.md 2.2.",
   "id": "quickhea-511.8",
   "labels": [],
   "parent": "quickhea-511",
   "priority": 1,
-  "status": "open",
+  "status": "closed",
   "title": "Phase 2: in-memory test impls for every concept",
   "type": "task",
-  "updated_at": "2026-06-19T17:59:02Z"
+  "updated_at": "2026-06-19T19:51:09Z"
 }
