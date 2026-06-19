@@ -215,7 +215,7 @@ begin
   # (the graceful path) and `server.stop` (closes the listener).
   # `server.stop` is also called by Athena's handler, but calling
   # it twice is idempotent (the server checks `closed?` first).
-  spawn do
+  RefreshLoop::FiberTracker.tracked_spawn("shutdown-retrap") do
     sleep 0.5.seconds
     Process.on_terminate do |_reason|
       initiate_shutdown("signal")
