@@ -68,7 +68,7 @@ begin
 
   stats = GC.stats
   Log.for("quickheadlines.gc").info do
-    "GC tuning applied: force_unmap=1, max_heap=512MB, free_space_divisor=8, " \
+    "GC tuning applied: force_unmap=1, free_space_divisor=8, " \
     "heap=#{(stats.heap_size / 1024 / 1024).round(1)}MB, " \
     "free=#{(stats.free_bytes / 1024 / 1024).round(1)}MB, " \
     "unmapped=#{(stats.unmapped_bytes / 1024 / 1024).round(1)}MB"
