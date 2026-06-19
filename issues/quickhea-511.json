@@ -1,0 +1,14 @@
+{
+  "assignee": "",
+  "blocked_by": [],
+  "blocks": [],
+  "created": "2026-06-19T17:09:11Z",
+  "description": "Port QuickHeadlines backend from Crystal to Nim per openspec/changes/nim-backend-port. Worktree-branch in THIS repo (overrides design D1 fork decision). Phase 1 = vertical spikes (fetch, clustering) + library evals (concurrency, Result). Frontend/Svelte5, API.md, SQLite schema, feeds.yml frozen.",
+  "id": "quickhea-511",
+  "labels": [],
+  "priority": 1,
+  "status": "open",
+  "title": "Nim backend port - Phase 1 spike",
+  "type": "epic",
+  "updated_at": "2026-06-19T17:09:11Z"
+}
