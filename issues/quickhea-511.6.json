@@ -1,6 +1,8 @@
 {
   "assignee": "",
-  "blocked_by": [],
+  "blocked_by": [
+    "quickhea-511.1"
+  ],
   "blocks": [],
   "created": "2026-06-19T17:47:53Z",
   "description": "Evaluate questionable, resultty, and a 30-line homegrown Result[T,E]. Pick one; record rationale in design.md (open question 2). Per openspec tasks 1.4.",
@@ -11,5 +13,5 @@
   "status": "open",
   "title": "Phase-1 spike: Result library eval",
   "type": "task",
-  "updated_at": "2026-06-19T17:47:53Z"
+  "updated_at": "2026-06-19T17:48:16Z"
 }
