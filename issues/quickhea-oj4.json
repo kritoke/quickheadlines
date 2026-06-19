@@ -6,9 +6,15 @@
   "description": "",
   "id": "quickhea-oj4",
   "labels": [],
+  "comments": [
+    {
+      "text": "Fixed in commit bdab9482. Removed stale max_heap=512MB from GC log message.",
+      "timestamp": "2026-06-19T10:10:24Z"
+    }
+  ],
   "priority": 3,
   "status": "open",
   "title": "stale-max-heap-in-gc-log",
   "type": "bug",
-  "updated_at": "2026-06-17T01:14:38Z"
+  "updated_at": "2026-06-19T10:10:24Z"
 }
