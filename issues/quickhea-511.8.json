@@ -2,7 +2,6 @@
   "assignee": "",
   "blocked_by": [],
   "blocks": [
-    "quickhea-511.3",
     "quickhea-511.4"
   ],
   "created": "2026-06-19T17:58:10Z",
@@ -14,5 +13,5 @@
   "status": "open",
   "title": "Phase 2: in-memory test impls for every concept",
   "type": "task",
-  "updated_at": "2026-06-19T17:58:11Z"
+  "updated_at": "2026-06-19T17:59:02Z"
 }

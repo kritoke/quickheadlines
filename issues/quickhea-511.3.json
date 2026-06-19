@@ -1,8 +1,7 @@
 {
   "assignee": "",
   "blocked_by": [
-    "quickhea-511.1",
-    "quickhea-511.8"
+    "quickhea-511.1"
   ],
   "blocks": [],
   "created": "2026-06-19T17:47:52Z",
@@ -14,5 +13,5 @@
   "status": "open",
   "title": "Phase-1 spike: fetch vertical",
   "type": "task",
-  "updated_at": "2026-06-19T17:58:11Z"
+  "updated_at": "2026-06-19T17:59:02Z"
 }
