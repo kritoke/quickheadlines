@@ -1,0 +1,15 @@
+{
+  "assignee": "",
+  "blocked_by": [],
+  "blocks": [],
+  "created": "2026-06-19T17:47:52Z",
+  "description": "Fetcher concept + one concrete driver (RSS via nimquery/libxml2) + bounded Channel[FetchJob] with backpressure. Fetch one real feed; measure latency vs Crystal. Capture memory baseline over 30min. Per openspec tasks 1.1. Parallelizable.",
+  "id": "quickhea-511.3",
+  "labels": [],
+  "parent": "quickhea-511",
+  "priority": 1,
+  "status": "open",
+  "title": "Phase-1 spike: fetch vertical",
+  "type": "task",
+  "updated_at": "2026-06-19T17:47:52Z"
+}
