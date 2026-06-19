@@ -23,9 +23,12 @@ module RefreshLoop::FiberTracker
     @@active_fibers.add(1)
     count = @@active_fibers.get
     @@fiber_spawns.add(1)
-    # Update peak
-    current_peak = @@peak_fibers.get
-    @@peak_fibers.add(1) if count > current_peak
+    # Update peak using CAS loop to avoid race condition
+    loop do
+      p = @@peak_fibers.get
+      break if count <= p
+      break if @@peak_fibers.compare_and_set(p, count)
+    end
   end
 
   # Call this when a fiber exits
