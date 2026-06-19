@@ -60,6 +60,8 @@ type
     feedUrl*: string
     feedLink*: string
     favicon*: string
+    headerColor*: string
+    headerTextColor*: string
     clusterId*: int64          ## 0 == no cluster
     representative*: bool
     clusterSize*: int

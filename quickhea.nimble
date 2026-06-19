@@ -9,7 +9,7 @@ license       = "MIT"
 srcDir        = "src"
 binDir        = "bin"
 
-bin = @["qh/spike/fetch_vertical", "qh/spike/clustering_vertical"]
+bin = @["qh/spike/fetch_vertical", "qh/spike/clustering_vertical", "qh/main"]
 
 # Dependencies: Phase-3 build-out adds wrapped deps (design D4: every external
 # lib behind an adapter). Phase-1/2 were zero-dep.

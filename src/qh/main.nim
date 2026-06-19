@@ -1,0 +1,65 @@
+## QuickHeadlines (Nim) - main entrypoint.
+##
+## Wires the production boundaries into the App composition root, does an
+## initial feed refresh so there is data to serve, then starts the HTTP API.
+##
+## Build: nim c -d:ssl --threads:on -o:bin/quickheadlines src/qh/main.nim
+## Run:   ./bin/quickheadlines   (QUICKHEADLINES_CONFIG, QUICKHEADLINES_DB,
+##                                QUICKHEADLINES_PORT env vars optional)
+
+import std/[os, strutils, times]
+import types
+import config/[yaml_config, config_source]
+import storage/[database, feed_store, item_store, cluster_store]
+import fetcher/[http_fetcher, fetch_pipeline]
+import clustering/clusterer
+import in_memory/[stores, fetcher_clusterer, services]
+import app
+import web/server
+
+proc envInt(key: string; dflt: int): int =
+  try: getEnv(key, $dflt).parseInt() except ValueError: dflt
+
+proc main() =
+  let cfgPath = getEnv("QUICKHEADLINES_CONFIG", "feeds.yml")
+  let dbPath  = getEnv("QUICKHEADLINES_DB", "qh_nim.db")
+  let port    = envInt("QUICKHEADLINES_PORT", 8080)
+
+  # 1. config
+  let cfgSrc = YamlConfigSource(path: cfgPath)
+  let cfgR = cfgSrc.load()
+  if not cfgR.isOk:
+    echo "Failed to load config ", cfgPath, ": err=", cfgR.err, " (set QUICKHEADLINES_CONFIG)"
+    quit(1)
+  let config = cfgR.config
+  echo "Loaded config: ", config.tabs.len, " tab(s), page_title=\"", config.pageTitle, "\""
+
+  # 2. open DB + build the production stores
+  let db = openAndCreate(dbPath)
+  let feedStore    = SqliteFeedStore(db: db)
+  let itemStore    = SqliteItemStore(db: db)
+  let clusterStore = SqliteClusterStore(db: db)
+
+  # 3. App composition root (validates every boundary composes - concepts
+  #    enforced at compile time; in-memory impls stand in for not-yet-prod ones).
+  let app = newApp(
+    newHttpFetcher(), newNimClusterer(), feedStore, itemStore, clusterStore,
+    InMemoryBroadcaster(subscribers: 0), cfgSrc,
+    InMemoryHealthReporter(healthyFlag: true, detail: "feeds refreshing"),
+    InMemoryRateLimiter(budget: 60), InMemoryProxyValidator())
+
+  # 4. initial refresh: fetch every configured feed concurrently -> persist
+  var feedConfigs: seq[FeedConfig]
+  for t in config.tabs:
+    for f in t.feeds: feedConfigs.add(FeedConfig(url: f.url, title: f.title))
+  echo "Refreshing ", feedConfigs.len, " feed(s)..."
+  let summary = app.fetcher.refreshAll(feedConfigs, feedStore, 8)
+  echo "  fetched=", summary.fetched, " failed=", summary.failed, " items=", summary.items
+
+  # 5. serve the read API
+  let ctx = ServerCtx(
+    config: config, feedStore: feedStore, itemStore: itemStore,
+    startedAtMs: now().utc().toTime().toUnix() * 1000'i64)
+  ctx.serve(port)
+
+when isMainModule: main()

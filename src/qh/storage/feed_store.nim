@@ -60,6 +60,11 @@ proc listFeeds*(s: SqliteFeedStore): FeedListResult =
   except CatchableError:
     errFeeds(seIo)
 
+proc countItems*(s: SqliteFeedStore; feedId: int64): int =
+  ## Item count for one feed (production batches this - P1 #7).
+  let r = s.db.one("SELECT COUNT(*) FROM items WHERE feed_id = ?", feedId)
+  if r.isSome: r.get[0].intVal.int else: 0
+
 proc feedIdForUrl(s: SqliteFeedStore; url: string): int64 =
   let r = s.db.one("SELECT id FROM feeds WHERE url = ?", url)
   if r.isSome: r.get[0].intVal else: 0'i64

@@ -52,6 +52,7 @@ proc findTimeline*(s: SqliteItemStore; limit, offset: int;
         id: r[0].intOrZero(), title: r[1].dbStr, link: r[2].dbStr,
         pubDate: r[3].dbStr, feedTitle: r[4].dbStr, feedUrl: r[5].dbStr,
         feedLink: r[6].dbStr, favicon: r[7].dbStr,
+        headerColor: r[9].dbStr, headerTextColor: r[10].dbStr,
         clusterId: r[11].intOrZero(),
         representative: r[12].intOrZero() == 1,
         clusterSize: r[13].intOrZero().int,
