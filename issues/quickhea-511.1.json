@@ -7,14 +7,15 @@
     "quickhea-511.5",
     "quickhea-511.6"
   ],
+  "closed_at": "2026-06-19T17:56:03Z",
   "created": "2026-06-19T17:47:51Z",
   "description": "Provision the nim worktree (.worktrees/quickhea-511/nim-backend-port). Write a Nim-capable flake.nix for the worktree (nim+nimble from nixpkgs). Verify nim --version compiles a hello-world. Supersedes the hand-rolled standalone-flake choice; uses spoke-gen nim module pattern (kritoke/aiworkflow#1).",
   "id": "quickhea-511.1",
   "labels": [],
   "parent": "quickhea-511",
   "priority": 0,
-  "status": "in_progress",
+  "status": "closed",
   "title": "Nim tooling + flake in worktree",
   "type": "task",
-  "updated_at": "2026-06-19T17:48:59Z"
+  "updated_at": "2026-06-19T17:56:03Z"
 }
