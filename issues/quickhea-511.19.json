@@ -1,6 +1,8 @@
 {
   "assignee": "",
-  "blocked_by": [],
+  "blocked_by": [
+    "quickhea-511.12"
+  ],
   "blocks": [],
   "created": "2026-06-19T19:54:27Z",
   "description": "Bounded-channel supervisors for refresh/clustering/cleanup. Structured shutdown.",
@@ -11,5 +13,5 @@
   "status": "open",
   "title": "P3.10 Background supervisors (refresh, clustering, cleanup)",
   "type": "task",
-  "updated_at": "2026-06-19T19:54:27Z"
+  "updated_at": "2026-06-19T19:54:31Z"
 }
