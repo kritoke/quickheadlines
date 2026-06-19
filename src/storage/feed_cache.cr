@@ -62,8 +62,6 @@ class FeedCache
 
   getter :clustering_store, :header_color_store, :cleanup_store, :db_service
 
-  getter :clustering_store, :header_color_store, :cleanup_store, :db_service
-
   getter :db_path
 
   def add(feed_data : FeedData)
