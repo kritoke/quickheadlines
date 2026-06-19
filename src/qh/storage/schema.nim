@@ -1,0 +1,66 @@
+## SQLite schema - verbatim port of src/storage/schema.cr.
+## A Nim-created DB is byte-compatible with a Crystal-created DB (same DDL,
+## same migrations applied). The frozen schema is a design hard-constraint
+## (openspec nim-api-contract-preservation).
+##
+## Plain strings (tiny_sqlite takes raw SQL strings, unlike std db_sqlite's
+## `sql()` wrapper - which is absent from this Nim build anyway).
+
+const
+  FeedsTable* = """
+    CREATE TABLE IF NOT EXISTS feeds (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      url TEXT UNIQUE NOT NULL,
+      title TEXT NOT NULL,
+      site_link TEXT,
+      header_color TEXT,
+      header_theme_colors TEXT,
+      header_text_color TEXT,
+      etag TEXT,
+      last_modified TEXT,
+      favicon TEXT,
+      favicon_data TEXT,
+      last_fetched TEXT NOT NULL,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    )"""
+
+  ItemsTable* = """
+    CREATE TABLE IF NOT EXISTS items (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      feed_id INTEGER NOT NULL,
+      title TEXT NOT NULL,
+      link TEXT NOT NULL,
+      normalized_link TEXT NOT NULL DEFAULT '',
+      pub_date TEXT,
+      version TEXT,
+      minhash_signature BLOB,
+      cluster_id INTEGER REFERENCES items(id),
+      FOREIGN KEY (feed_id) REFERENCES feeds(id) ON DELETE CASCADE,
+      UNIQUE(feed_id, normalized_link)
+    )"""
+
+  LshBandsTable* = """
+    CREATE TABLE IF NOT EXISTS lsh_bands (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      item_id INTEGER NOT NULL,
+      band_index INTEGER NOT NULL,
+      band_hash TEXT NOT NULL,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      FOREIGN KEY (item_id) REFERENCES items(id) ON DELETE CASCADE,
+      UNIQUE(item_id, band_index)
+    )"""
+
+## Indexes split into one statement each. Verbatim from schema.cr.
+const Indexes* = [
+  "CREATE INDEX IF NOT EXISTS idx_items_feed_id ON items(feed_id)",
+  "CREATE INDEX IF NOT EXISTS idx_items_pub_date ON items(pub_date DESC)",
+  "CREATE INDEX IF NOT EXISTS idx_feeds_last_fetched ON feeds(last_fetched DESC)",
+  "CREATE INDEX IF NOT EXISTS idx_feeds_url ON feeds(url)",
+  "CREATE INDEX IF NOT EXISTS idx_items_cluster ON items(cluster_id)",
+  "CREATE INDEX IF NOT EXISTS idx_lsh_band_search ON lsh_bands(band_index, band_hash)",
+  "CREATE UNIQUE INDEX IF NOT EXISTS idx_items_unique_feed_link ON items(feed_id, normalized_link)",
+  "CREATE INDEX IF NOT EXISTS idx_items_link ON items(link)",
+  "CREATE INDEX IF NOT EXISTS idx_items_timeline ON items(pub_date DESC, id DESC, cluster_id)",
+  "CREATE INDEX IF NOT EXISTS idx_items_cluster_rep ON items(cluster_id, id)",
+  "CREATE INDEX IF NOT EXISTS idx_items_feed_timeline ON items(feed_id, pub_date DESC, id DESC)",
+]

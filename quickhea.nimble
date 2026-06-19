@@ -15,8 +15,10 @@ bin = @["qh/spike/fetch_vertical", "qh/spike/clustering_vertical"]
 # lib behind an adapter). Phase-1/2 were zero-dep.
 requires "nim >= 2.2.0"
 requires "yaml >= 2.2.0"
+requires "tiny_sqlite >= 0.1.0"
 
-task test, "Run the Phase-2/3 contract + in-memory + config tests":
+task test, "Run the Phase-2/3 contract + in-memory + config + storage tests":
   exec "nim c -r tests/test_concept_checks.nim"
   exec "nim c -r tests/test_config.nim"
+  exec "nim c -r tests/test_storage.nim"
 
