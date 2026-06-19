@@ -324,13 +324,7 @@ class MemoryManagerActor < Actor
       force_gc
 
       if @consecutive_high >= 5
-        Log.for("quickheadlines.memory").error { "Sustained critical memory pressure, considering restart" }
-        RefreshLoop::FiberTracker.tracked_spawn do
-          sleep(5.seconds)
-          unless QuickHeadlines.shutting_down?
-            Log.for("quickheadlines.memory").warn { "Initiating graceful restart due to memory pressure" }
-          end
-        end
+        Log.for("quickheadlines.memory").error { "Sustained critical memory pressure (#{@consecutive_high} consecutive checks)" }
       end
     end
 
