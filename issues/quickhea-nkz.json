@@ -2,13 +2,14 @@
   "assignee": "kritoke",
   "blocked_by": [],
   "blocks": [],
+  "closed_at": "2026-06-19T16:58:56Z",
   "created": "2026-06-18T10:32:00Z",
   "description": "**File**: `src/quickheadlines.cr:218`\n\n**Severity**: P4 (consistency)\n\n```crystal\nspawn do\n  sleep 0.5.seconds\n  Process.on_terminate do |_reason|\n    initiate_shutdown(\"signal\")\n    ...\n  end\nend\n```\n\nThis is a one-shot startup fiber, but it bypasses\n`FiberTracker.tracked_spawn`. The audit notes this as a consistency\nissue. Either:\n1. Use `tracked_spawn` for consistency (and accept that this\n   one-shot fiber counts toward `active_fibers` for ~0.5s), or\n2. Add a comment explaining why this particular spawn is exempt\n\nThe fiber is short-lived so the impact on diagnostics is\nnegligible, but consistency is valuable.\n\n**Related**: `quickhea-hc7` (Wire FiberTracker into the actual\nspawn sites) is closed. This ticket is the only remaining\nuntracked spawn.\n\nFound during code review 2026-06-18, see\n`planning/code-review-2026-06-18.md` §6 positive findings note.",
   "id": "quickhea-nkz",
   "labels": [],
   "priority": 4,
-  "status": "in_progress",
+  "status": "closed",
   "title": "quickheadlines.cr:218 uses untracked spawn for shutdown re-trap",
   "type": "chore",
-  "updated_at": "2026-06-19T14:37:37Z"
+  "updated_at": "2026-06-19T16:58:56Z"
 }
