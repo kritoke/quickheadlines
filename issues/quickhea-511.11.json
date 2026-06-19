@@ -4,14 +4,15 @@
   "blocks": [
     "quickhea-511.12"
   ],
+  "closed_at": "2026-06-19T21:02:49Z",
   "created": "2026-06-19T19:54:24Z",
   "description": "Port src/storage/schema.cr DDL verbatim. std/db_sqlite (stdlib - no dep). Migrations + WAL.",
   "id": "quickhea-511.11",
   "labels": [],
   "parent": "quickhea-511",
   "priority": 1,
-  "status": "in_progress",
+  "status": "closed",
   "title": "P3.2 SQLite schema + migrations (verbatim)",
   "type": "task",
-  "updated_at": "2026-06-19T20:51:09Z"
+  "updated_at": "2026-06-19T21:02:49Z"
 }
