@@ -4,13 +4,14 @@
   "blocks": [
     "quickhea-vnk.7"
   ],
+  "closed_at": "2026-06-19T09:50:12Z",
   "created": "2026-06-18T10:31:46Z",
   "description": "**File**: `src/utils/url_normalizer.cr:106`\n\n**Severity**: P3 (perf, allocation hotspot)\n\n```crystal\nprivate def self.normalize_query(query : String) : String\n  ...\n  tracking_pattern = Regex.new(\"#{TRACKING_PARAMS.join(\"|\")}=?(\u0026|$)\", Regex::Options::IGNORE_CASE)\n  cleaned = cleaned.gsub(tracking_pattern, \"\")\n```\n\nEvery URL normalization allocates a new `Regex` object. Should be\na module-level constant alongside the existing `TRACKING_REGEX`\n(line 65-68).\n\n**Fix**: Move the `Regex.new` call out of the method and into a\nmodule-level constant.\n\n```crystal\nTRACKING_EMPTY_REGEX = Regex.new(\n  \"(#{TRACKING_PARAMS.join(\"|\")})=?(\u0026|$)\",\n  Regex::Options::IGNORE_CASE\n)\n```\n\nThis is called per URL on every feed refresh, so the allocation\nsavings add up over a refresh cycle with 207 feeds.\n\nFound during code review 2026-06-18, see\n`planning/code-review-2026-06-18.md` §4.1.",
   "id": "quickhea-qo4",
   "labels": [],
   "priority": 3,
-  "status": "in_progress",
+  "status": "closed",
   "title": "URLNormalizer builds Regex per call (allocation hotspot)",
   "type": "perf",
-  "updated_at": "2026-06-19T01:45:34Z"
+  "updated_at": "2026-06-19T09:50:12Z"
 }
