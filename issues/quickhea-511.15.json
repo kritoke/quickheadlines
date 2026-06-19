@@ -1,0 +1,15 @@
+{
+  "assignee": "",
+  "blocked_by": [],
+  "blocks": [],
+  "created": "2026-06-19T19:54:26Z",
+  "description": "HTTP server against frozen API.md. /api/feeds, /api/timeline, /api/content, /api/cluster, /api/admin, /api/health, /api/version.",
+  "id": "quickhea-511.15",
+  "labels": [],
+  "parent": "quickhea-511",
+  "priority": 1,
+  "status": "open",
+  "title": "P3.6 HTTP server + controllers + DTOs (API.md)",
+  "type": "task",
+  "updated_at": "2026-06-19T19:54:26Z"
+}
