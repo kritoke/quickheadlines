@@ -1,5 +1,5 @@
 {
-  "assignee": "",
+  "assignee": "kritoke",
   "blocked_by": [],
   "blocks": [],
   "created": "2026-06-08T18:04:25Z",
@@ -7,8 +7,8 @@
   "id": "quickhea-ivz",
   "labels": [],
   "priority": 2,
-  "status": "open",
+  "status": "in_progress",
   "title": "Add spec/monitoring_spec.cr for RefreshLoop::Monitoring",
   "type": "task",
-  "updated_at": "2026-06-08T18:04:25Z"
+  "updated_at": "2026-06-19T10:33:35Z"
 }
