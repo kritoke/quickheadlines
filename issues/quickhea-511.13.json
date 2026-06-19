@@ -1,5 +1,5 @@
 {
-  "assignee": "",
+  "assignee": "kritoke",
   "blocked_by": [],
   "blocks": [
     "quickhea-511.15",
@@ -11,8 +11,8 @@
   "labels": [],
   "parent": "quickhea-511",
   "priority": 1,
-  "status": "open",
+  "status": "in_progress",
   "title": "P3.4 Fetcher: concurrent, retry, backpressure (prod)",
   "type": "task",
-  "updated_at": "2026-06-19T19:54:31Z"
+  "updated_at": "2026-06-19T21:24:44Z"
 }
