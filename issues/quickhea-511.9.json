@@ -1,0 +1,15 @@
+{
+  "assignee": "",
+  "blocked_by": [],
+  "blocks": [],
+  "created": "2026-06-19T17:58:11Z",
+  "description": "Map each concept to its current Crystal module + actual interface; flag leaky abstractions to feed back into quickhea-g9y. tasks.md 2.3.",
+  "id": "quickhea-511.9",
+  "labels": [],
+  "parent": "quickhea-511",
+  "priority": 2,
+  "status": "open",
+  "title": "Phase 2: Crystal-equivalent interface audit",
+  "type": "task",
+  "updated_at": "2026-06-19T17:58:11Z"
+}
