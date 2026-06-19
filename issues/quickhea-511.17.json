@@ -1,6 +1,8 @@
 {
   "assignee": "",
-  "blocked_by": [],
+  "blocked_by": [
+    "quickhea-511.15"
+  ],
   "blocks": [],
   "created": "2026-06-19T19:54:27Z",
   "description": "Admin auth (timing-safe), RateLimiter (fix g9y.10/P2 #20), ProxyValidator with pinned IP (fix P0 #1 SSRF).",
@@ -11,5 +13,5 @@
   "status": "open",
   "title": "P3.8 Auth + rate limiter + image proxy",
   "type": "task",
-  "updated_at": "2026-06-19T19:54:27Z"
+  "updated_at": "2026-06-19T19:54:30Z"
 }

@@ -6,7 +6,8 @@
     "quickhea-511.13"
   ],
   "blocks": [
-    "quickhea-511.16"
+    "quickhea-511.16",
+    "quickhea-511.17"
   ],
   "created": "2026-06-19T19:54:26Z",
   "description": "HTTP server against frozen API.md. /api/feeds, /api/timeline, /api/content, /api/cluster, /api/admin, /api/health, /api/version.",
