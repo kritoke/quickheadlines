@@ -11,11 +11,12 @@ binDir        = "bin"
 
 bin = @["qh/spike/fetch_vertical", "qh/spike/clustering_vertical"]
 
-# Dependencies: deliberately none for the spike. Phase-3 build-out may add
-# a SQLite binding, an HTTP server framework, etc. (each behind a wrapper,
-# per design D4).
+# Dependencies: Phase-3 build-out adds wrapped deps (design D4: every external
+# lib behind an adapter). Phase-1/2 were zero-dep.
 requires "nim >= 2.2.0"
+requires "yaml >= 2.2.0"
 
-task test, "Run the Phase-2 contract + in-memory tests":
+task test, "Run the Phase-2/3 contract + in-memory + config tests":
   exec "nim c -r tests/test_concept_checks.nim"
+  exec "nim c -r tests/test_config.nim"
 
