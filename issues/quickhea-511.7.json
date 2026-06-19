@@ -1,5 +1,5 @@
 {
-  "assignee": "",
+  "assignee": "kritoke",
   "blocked_by": [],
   "blocks": [],
   "created": "2026-06-19T17:58:10Z",
@@ -8,8 +8,8 @@
   "labels": [],
   "parent": "quickhea-511",
   "priority": 1,
-  "status": "open",
+  "status": "in_progress",
   "title": "Phase 2: declare Nim black-box concepts + types + App root",
   "type": "task",
-  "updated_at": "2026-06-19T17:58:10Z"
+  "updated_at": "2026-06-19T19:21:18Z"
 }
