@@ -2,6 +2,7 @@
   "assignee": "",
   "blocked_by": [],
   "blocks": [],
+  "closed_at": "2026-06-19T10:06:51Z",
   "created": "2026-06-17T00:59:40Z",
   "description": "",
   "id": "quickhea-8rp",
@@ -13,7 +14,7 @@
     }
   ],
   "priority": 2,
-  "status": "open",
+  "status": "closed",
   "title": "\"FeedCache-duplicate-getters\"",
   "type": "bug",
   "updated_at": "2026-06-19T10:06:51Z"
