@@ -1,6 +1,8 @@
 require "./utils"
 
 module FaviconCache
+  # NOTE: Array#delete is O(n) but MAX_ENTRIES=200 keeps it bounded.
+  # A doubly-linked list would be O(1) but the complexity isn't worth it at this scale.
   MAX_ENTRIES = 200
 
   # NOTE: Uses :unchecked mutex to avoid Boehm GC mutex initialization
