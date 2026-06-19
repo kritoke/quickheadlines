@@ -209,6 +209,26 @@ tabs:
         url: "https://blog.ploeh.dk/rss"
       - title: "Sergey Tikhonov"
         url: "https://sergeytihon.com/feed/"
+      - title: Microsoft .NET Blog (F# Tag)
+        url: https://devblogs.microsoft.com/dotnet/category/fsharp/feed/
+      - title: Urs Enzler (PlanetGeek - Active F# Event Sourcing Series)
+        url: https://www.planetgeek.ch/feed/
+      - title: Ian Erik Varatalu
+        url: https://iev.ee/feed.xml
+      - title: Mathias Brandewinder
+        url: https://brandewinder.com/atom.xml
+      - title: Amplifying F# Blog
+        url: https://amplifyingfsharp.io/blog/feed.xml
+      - title: G-Research Tech Blog
+        url: https://www.gresearch.com/feed/
+      - title: "r/fsharp"
+        url: "https://www.reddit.com/r/fsharp"
+        subreddit: "fsharp"
+        sort: "hot"
+      - title: Stack Overflow (F# Tag)
+        url: https://stackoverflow.com/feeds/tag?tagnames=f%23&sort=newest
+      - title: Tony Lucca
+        url: https://medium.com/feed/@tonylucca
     software_releases:
       title: "Project Updates"
       repos:

@@ -137,9 +137,6 @@ module RefreshLoop::Monitoring
     last_complete = @@last_refresh_complete.get
     return false if last_complete > start_time
 
-    old_value = @@last_refresh_start.get
-    return false if old_value == 0
-
     @@last_refresh_start.set(0)
     Log.for("quickheadlines.feed").info { "Monitoring: atomic recovery performed" }
     true
