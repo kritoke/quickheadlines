@@ -192,6 +192,6 @@ module RefreshLoop
     # fibers are spawned below. The accessor is idempotent and cheap.
     pool
     RefreshLoop::Supervisor.start(config_path, cache, db_service, RefreshLoop.pool)
-    RefreshLoop::Monitoring.start
+    RefreshLoop::Monitoring.start_reporter
   end
 end

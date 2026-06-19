@@ -162,11 +162,13 @@ module RefreshLoop::Monitoring
   # logs refresh-cycle health (this module's own `status`) plus
   # memory status with diagnostic counts (sockets, event clients,
   # fibers).
-  def self.start : Nil
+  def self.start_reporter : Nil
     RefreshLoop::FiberTracker.tracked_spawn("health_monitor_reporter") do
       loop do
         break if QuickHeadlines.shutting_down?
         RefreshLoop::InterruptibleSleep.sleep(REPORT_INTERVAL)
+        # Defense-in-depth: check again after sleep returns in case
+        # shutdown was signaled during the sleep window.
         break if QuickHeadlines.shutting_down?
         report_status
       rescue ex : Exception
