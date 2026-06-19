@@ -1,0 +1,15 @@
+{
+  "assignee": "",
+  "blocked_by": [],
+  "blocks": [],
+  "created": "2026-06-19T19:54:24Z",
+  "description": "Port src/storage/schema.cr DDL verbatim. std/db_sqlite (stdlib - no dep). Migrations + WAL.",
+  "id": "quickhea-511.11",
+  "labels": [],
+  "parent": "quickhea-511",
+  "priority": 1,
+  "status": "open",
+  "title": "P3.2 SQLite schema + migrations (verbatim)",
+  "type": "task",
+  "updated_at": "2026-06-19T19:54:24Z"
+}
