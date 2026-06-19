@@ -1,0 +1,15 @@
+{
+  "assignee": "",
+  "blocked_by": [],
+  "blocks": [],
+  "created": "2026-06-19T19:54:25Z",
+  "description": "Move spike MinHash/LSH/UnionFind into production Clusterer. Frozen fixtures vs Crystal cluster IDs.",
+  "id": "quickhea-511.14",
+  "labels": [],
+  "parent": "quickhea-511",
+  "priority": 1,
+  "status": "open",
+  "title": "P3.5 Clustering engine: real Clusterer impl",
+  "type": "task",
+  "updated_at": "2026-06-19T19:54:25Z"
+}
