@@ -1,0 +1,15 @@
+{
+  "assignee": "",
+  "blocked_by": [],
+  "blocks": [],
+  "created": "2026-06-19T19:54:27Z",
+  "description": "Compile-time embed of frontend/dist (equivalent of baked_file_system). Dev reads from disk.",
+  "id": "quickhea-511.18",
+  "labels": [],
+  "parent": "quickhea-511",
+  "priority": 2,
+  "status": "open",
+  "title": "P3.9 Asset embedding of Svelte 5 build",
+  "type": "task",
+  "updated_at": "2026-06-19T19:54:27Z"
+}
