@@ -250,13 +250,16 @@ module RefreshLoop
       completion_channel = Channel(Nil).new(1)
       RefreshLoop::FiberTracker.tracked_spawn("refresh_worker") do
         begin
-          RefreshLoop.refresh_all(config_snapshot, @cache, @db_service, cancel_ch)
+          # Use local variable to avoid holding config reference after refresh
+          cfg = config_snapshot
+          RefreshLoop.refresh_all(cfg, @cache, @db_service, cancel_ch)
           refresh_all_duration = (Time.utc - refresh_all_start).total_seconds
-          if config_snapshot.debug?
+          if cfg.debug?
             Log.for("quickheadlines.feed").debug { "Refreshed feeds in #{refresh_all_duration.round(2)}s" }
           elsif refresh_all_duration > LONG_REFRESH_DURATION_WARN.total_seconds
             Log.for("quickheadlines.feed").warn { "refresh_all took #{refresh_all_duration.round(2)}s - long duration" }
           end
+          cfg = nil
         rescue CancelError
           Log.for("quickheadlines.feed").warn { "Refresh worker cancelled by supervisor" }
           RefreshLoop::Monitoring.record_failure
