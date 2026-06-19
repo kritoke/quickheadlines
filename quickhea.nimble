@@ -23,4 +23,5 @@ task test, "Run all Phase-2/3 tests":
   exec "nim c -d:ssl --threads:on -r tests/test_storage.nim"
   exec "nim c -d:ssl --threads:on -r tests/test_sqlite_stores.nim"
   exec "nim c -d:ssl --threads:on -r tests/test_fetcher.nim"
+  exec "nim c -d:ssl --threads:on -r tests/test_clustering.nim"
 
