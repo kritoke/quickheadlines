@@ -15,3 +15,7 @@ bin = @["qh/spike/fetch_vertical", "qh/spike/clustering_vertical"]
 # a SQLite binding, an HTTP server framework, etc. (each behind a wrapper,
 # per design D4).
 requires "nim >= 2.2.0"
+
+task test, "Run the Phase-2 contract + in-memory tests":
+  exec "nim c -r tests/test_concept_checks.nim"
+

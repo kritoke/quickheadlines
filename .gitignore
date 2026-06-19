@@ -129,6 +129,7 @@ nimcache/
 # nimble-built binaries go to bin/ (already ignored). Ignore the stray ones:
 src/qh/spike/fetch_vertical
 src/qh/spike/clustering_vertical
+tests/test_concept_checks
 
 .catseye.toml
 .catseye/
