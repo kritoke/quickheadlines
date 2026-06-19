@@ -130,6 +130,10 @@ nimcache/
 src/qh/spike/fetch_vertical
 src/qh/spike/clustering_vertical
 tests/test_concept_checks
+tests/test_config
+# Nim compiles test binaries next to source; keep only the .nim sources tracked:
+tests/*
+!tests/*.nim
 
 .catseye.toml
 .catseye/
