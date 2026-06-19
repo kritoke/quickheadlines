@@ -5,12 +5,13 @@
     "quickhea-vnk.7"
   ],
   "created": "2026-06-18T10:31:23Z",
+  "defer_until": "2026-06-25",
   "description": "**File**: `src/services/favicon_sync_service.cr:218-280`\n\n**Severity**: P2 (startup latency + actor mailbox saturation)\n\n`process_google_backfills` and `process_missing_backfills` each iterate\nover the backfill array and call `FaviconActor.instance.fetch_and_save`\nsequentially. Each call is a `def_call` — allocates a\n`Channel(String).new(1)`, a `CallFetchAndSave` struct, JSON\nserialization for the reply, then waits for the actor to handle it.\n\nFor 207 feeds with 50+ needing backfill, this is 50+ round-trips\nthrough the FaviconActor mailbox on startup, holding the startup\nfiber for many seconds.\n\n**Fix sketch**:\n1. Add `def_call backfill_many(urls : Array(String)), Array(String?)`\n   to FaviconActor\n2. The actor loops over the urls internally (single mailbox entry)\n3. Push the whole backfill list through one call\n\nFound during code review 2026-06-18, see\n`planning/code-review-2026-06-18.md` §2.4.",
   "id": "quickhea-ule",
   "labels": [],
   "priority": 2,
-  "status": "in_progress",
+  "status": "deferred",
   "title": "FaviconSyncService backfill runs sequentially (N def_call round-trips on startup)",
   "type": "perf",
-  "updated_at": "2026-06-19T09:56:31Z"
+  "updated_at": "2026-06-19T09:56:36Z"
 }
