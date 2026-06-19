@@ -43,6 +43,12 @@ module QuickHeadlines::Utils
       Regex::Options::IGNORE_CASE
     )
 
+    # Regex to match tracking parameters with empty values
+    TRACKING_EMPTY_REGEX = Regex.new(
+      "(#{TRACKING_PARAMS.join("|")})=?(&|$)",
+      Regex::Options::IGNORE_CASE
+    )
+
     # Normalize a URL for database uniqueness comparison
     # Strips:
     # - Query parameters (except those needed for functionality)
@@ -103,8 +109,7 @@ module QuickHeadlines::Utils
       # First, remove tracking parameters (regex is already case-insensitive)
       cleaned = query.gsub(TRACKING_REGEX, "")
       # Also remove tracking params with empty values
-      tracking_pattern = Regex.new("#{TRACKING_PARAMS.join("|")}=?(&|$)", Regex::Options::IGNORE_CASE)
-      cleaned = cleaned.gsub(tracking_pattern, "")
+      cleaned = cleaned.gsub(TRACKING_EMPTY_REGEX, "")
 
       # Parse remaining params and keep only functional ones
       params = HTTP::Params.parse(cleaned)
