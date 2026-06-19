@@ -6,9 +6,15 @@
   "description": "",
   "id": "quickhea-4vk",
   "labels": [],
+  "comments": [
+    {
+      "text": "Fixed in commit 1111ab5d. Removed duplicate getter declaration.",
+      "timestamp": "2026-06-19T10:06:52Z"
+    }
+  ],
   "priority": 2,
   "status": "open",
   "title": "FeedCache-duplicate-getter",
   "type": "bug",
-  "updated_at": "2026-06-17T01:00:25Z"
+  "updated_at": "2026-06-19T10:06:52Z"
 }
