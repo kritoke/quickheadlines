@@ -1,0 +1,15 @@
+{
+  "assignee": "",
+  "blocked_by": [],
+  "blocks": [],
+  "created": "2026-06-19T17:58:10Z",
+  "description": "Declare every black-box concept from design D4 as Nim concepts with full signatures (Fetcher, Clusterer, FeedStore, ItemStore, ClusterStore, Broadcaster, ConfigSource, HealthReporter, RateLimiter, ProxyValidator). Define domain types (Item, FeedData, ClusteringItem, TimelineEntry), errors, a provisional Result[T,E] (homegrown, validated in P1), and the App composition root. tasks.md 2.1.",
+  "id": "quickhea-511.7",
+  "labels": [],
+  "parent": "quickhea-511",
+  "priority": 1,
+  "status": "open",
+  "title": "Phase 2: declare Nim black-box concepts + types + App root",
+  "type": "task",
+  "updated_at": "2026-06-19T17:58:10Z"
+}
