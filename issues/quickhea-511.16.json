@@ -1,0 +1,15 @@
+{
+  "assignee": "",
+  "blocked_by": [],
+  "blocks": [],
+  "created": "2026-06-19T19:54:26Z",
+  "description": "Production Broadcaster: snapshot subscribers, per-message timeout (fixes P0 #4 double-decrement, P2 #17 mutex-over-IO).",
+  "id": "quickhea-511.16",
+  "labels": [],
+  "parent": "quickhea-511",
+  "priority": 2,
+  "status": "open",
+  "title": "P3.7 WebSocket broadcaster (prod)",
+  "type": "task",
+  "updated_at": "2026-06-19T19:54:26Z"
+}
