@@ -155,7 +155,7 @@ proc fetchFaviconAsync*(siteLink, feedUrl: string): Future[Option[FavBytes]] {.a
   if origin.len == 0: return none(FavBytes)
   let host = extractHost(if siteLink.len > 0: siteLink else: feedUrl)
   let client = newAsyncHttpClient()
-  client.headers = newHttpHeaders({"User-Agent": FavUserAgent})
+  client.headers = newHttpHeaders({"User-Agent": FavUserAgent, "Accept-Encoding": "identity"})
   try:
     # 1. Try common favicon paths at the site origin (port of vug.cr DEFAULT_FAVICON_PATHS)
     for path in ["/favicon.ico", "/favicon.png", "/apple-touch-icon.png",
