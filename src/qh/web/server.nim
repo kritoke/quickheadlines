@@ -3,10 +3,11 @@
 ## matching; JSON shapes come from dtos.nim. Background write jobs (refresh,
 ## clustering) land in P3.10; this is the runnable read API.
 
-import std/[asynchttpserver, asyncdispatch, json, uri, strutils, tables, times]
+import std/[asynchttpserver, asyncdispatch, json, uri, strutils, tables, times, options]
 import ../types
 import ../storage/[feed_store, item_store]
 import ./dtos
+import ./assets
 
 type
   ServerCtx* = ref object
@@ -44,8 +45,20 @@ proc handle(ctx: ServerCtx; req: Request): Future[void] {.async.} =
     await req.respond(Http405, $(%*{"error": "method not allowed"}), jsonHeaders())
     return
 
-  # Pattern-match on the path (Nim's idiomatic dispatch; for parameterised
-  # routes like /api/clusters/{id}/items, fall through to startsWith branches).
+  # API + SPA routing. API routes are matched exactly; everything else is a
+  # static asset (embedded) or, failing that, the SPA index.html fallback
+  # (client-side routing).
+  if not path.startsWith("/api/"):
+    if path == "/version":
+      await req.respond(Http200, $ctx.startedAtMs, plainTextHeaders())
+      return
+    let a = if path == "/": some(indexAsset()) else: getAsset(path)
+    let asset = if a.isSome: a.get else: indexAsset()   # SPA fallback
+    await req.respond(Http200, asset.content,
+                      newHttpHeaders({"Content-Type": asset.contentType,
+                                       "Cache-Control": "no-cache"}))
+    return
+
   case path
   of "/api/timeline":
     let limit = q.intParam("limit", 35)
@@ -80,9 +93,6 @@ proc handle(ctx: ServerCtx; req: Request): Future[void] {.async.} =
 
   of "/api/version":
     await req.respond(Http200, $versionJson(ctx.startedAtMs), jsonHeaders())
-
-  of "/version":
-    await req.respond(Http200, $ctx.startedAtMs, plainTextHeaders())
 
   else:
     await req.respond(Http404, $(%*{"error": "not found"}), jsonHeaders())
