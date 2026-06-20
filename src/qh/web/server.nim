@@ -8,7 +8,7 @@
 ## registry needs no lock. The only cross-thread bit is `ctx.dirty` (an Atomic-
 ## Bool ref set by the refresh supervisor thread).
 
-import std/[asynchttpserver, asyncdispatch, asyncnet, json, uri, strutils, tables, options, atomics, sequtils]
+import std/[asynchttpserver, asyncdispatch, asyncnet, json, uri, strutils, tables, options, atomics, sequtils, os]
 import ../types
 import ../storage/[feed_store, item_store]
 import ./dtos
@@ -76,7 +76,29 @@ proc handle(ctx: ServerCtx; req: Request): Future[void] {.async.} =
 
   if not path.startsWith("/api/"):
     if path == "/version":
-      await req.respond(Http200, $ctx.startedAtMs, plainTextHeaders()); return
+      await req.respond(Http200, $ctx.startedAtMs, plainTextHeaders())
+      return
+    # Runtime favicon files (written by a favicon supervisor). Only serve the
+    # basename from the favicons/ dir; reject anything that looks like traversal.
+    # Missing file -> fall back to the embedded favicon.svg (no 404 spam).
+    if path.startsWith("/favicons/"):
+      let name = path[11..^1]                      # strip "/favicons/"
+      if name.len > 0 and "/" notin name and ".." notin name:
+        let fp = "favicons" / name
+        if fileExists(fp):
+          let ext = fp.rsplit('.', maxsplit = 1)
+          let ct = if ext.len == 2 and ext[1] == "png": "image/png"
+                   elif ext.len == 2 and ext[1] == "svg": "image/svg+xml"
+                   else: "image/x-icon"
+          await req.respond(Http200, readFile(fp),
+                            newHttpHeaders({"Content-Type": ct, "Cache-Control": "public, max-age=604800"}))
+          return
+      # Fallback: embedded favicon.svg (avoids a sea of 404s for missing icons).
+      let fb = getAsset("/favicon.svg")
+      let asset = if fb.isSome: fb.get else: indexAsset()
+      await req.respond(Http200, asset.content,
+                        newHttpHeaders({"Content-Type": asset.contentType, "Cache-Control": "no-cache"}))
+      return
     let a = if path == "/": some(indexAsset()) else: getAsset(path)
     let asset = if a.isSome: a.get else: indexAsset()   # SPA fallback
     await req.respond(Http200, asset.content,

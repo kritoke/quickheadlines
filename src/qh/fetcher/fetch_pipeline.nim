@@ -4,7 +4,7 @@
 ## by the caller on its own DbConn (SQLite connections are not thread-safe, so
 ## fetch is parallel and persist is serial - DB writes are the cheap part).
 
-import std/[tables, sugar, sequtils, atomics]
+import std/[tables, sugar, sequtils, atomics, options]
 import ../types
 import ../storage/feed_store
 import ./http_fetcher
@@ -84,8 +84,8 @@ proc refreshAll*(f: HttpFetcher; feeds: seq[FeedConfig];
       result.items += o.res.data.items.len
       var fd = o.res.data
       if fd.title.len == 0: fd.title = byUrl.getOrDefault(o.url)
-      discard store.upsertWithItems(fd)
-      if not dirty.isNil: dirty[].store(true)    # notify WS watcher per feed
+      discard store.upsertWithItems(fd)            # favicon (if fetched) persisted with the feed
+      if not dirty.isNil: dirty[].store(true)      # notify WS watcher per feed
     else:
       inc result.failed
   for i in 0..<n: ths[i].joinThread()
