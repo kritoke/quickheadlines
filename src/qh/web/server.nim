@@ -110,7 +110,15 @@ proc handle(ctx: ServerCtx; req: Request): Future[void] {.async.} =
   of "/api/timeline":
     let limit = q.intParam("limit", 35); let offset = q.intParam("offset", 0)
     let days = q.intParam("days", 7)
-    let r = ctx.itemStore.findTimeline(limit, offset, days)
+    let tab = q.getOrDefault("tab", "")
+    # Build allowed feed URLs for this tab (empty = all feeds).
+    var allowedUrls: seq[string] = @[]
+    if tab.len > 0 and tab.toLowerAscii() != "all":
+      for t in ctx.config.tabs:
+        if t.name.toLowerAscii() == tab.toLowerAscii():
+          for f in t.feeds: allowedUrls.add(f.url)
+          break
+    let r = ctx.itemStore.findTimeline(limit, offset, days, allowedUrls)
     if r.isOk:
       await req.respond(Http200, $timelineJson(r.entries, r.total, limit), jsonHeaders())
     else:

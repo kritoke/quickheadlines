@@ -3,7 +3,7 @@
 ## cluster_info CTE + JOINs, faithfully ported (COUNT(*) OVER() carries the
 ## total so the expensive CTE runs once, not twice - addresses P1 #8).
 
-import std/[times]
+import std/[times, sequtils, strutils]
 import tiny_sqlite
 import ../types
 import ./feed_store   # DbTimeFormat
@@ -22,10 +22,15 @@ proc cutoffStr(daysBack: int): string =
   else: "1970-01-01 00:00:00"
 
 proc findTimeline*(s: SqliteItemStore; limit, offset: int;
-                   daysBack: int): TimelineResult =
+                   daysBack: int; allowedFeedUrls: seq[string] = @[]): TimelineResult =
   ## Port of StoryRepository.find_timeline_items. Returns entries + total.
+  ## When allowedFeedUrls is non-empty, only items from those feeds are returned
+  ## (tab filtering). The IN clause is built inline (trusted config URLs).
   try:
     let cutoff = cutoffStr(daysBack)
+    let feedFilter = if allowedFeedUrls.len > 0:
+      " AND f.url IN (" & allowedFeedUrls.mapIt("'" & it.replace("'", "''") & "'").join(",") & ")"
+    else: ""
     var entries: seq[TimelineEntry]
     var total = 0
     let q = """
@@ -43,7 +48,7 @@ proc findTimeline*(s: SqliteItemStore; limit, offset: int;
       LEFT JOIN cluster_info ci ON i.cluster_id = ci.cluster_id
       WHERE (i.pub_date IS NULL OR i.pub_date <= datetime('now','+1 day'))
         AND (i.cluster_id IS NULL OR i.id = ci.representative_id)
-        AND i.pub_date >= ?
+        AND i.pub_date >= ?""" & feedFilter & """
       ORDER BY COALESCE(i.pub_date, '1970-01-01 00:00:00') DESC, i.id DESC
       LIMIT ? OFFSET ?"""
     for r in s.db.all(q, cutoff, cutoff, limit, offset):
