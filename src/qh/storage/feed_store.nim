@@ -3,7 +3,7 @@
 ## upsertWithItems, the core write path used by the fetcher pipeline. Sole
 ## importer of tiny_sqlite alongside the other storage modules.
 
-import std/[times, options]
+import std/[times, os, options]
 import tiny_sqlite
 import ../types
 import ./url_normalizer
@@ -74,9 +74,16 @@ proc recentItems*(s: SqliteFeedStore; feedId: int64; limit = 30): seq[Item] =
                     commentaryUrl: r[5].dbStr)
 
 proc feedsMissingFavicon*(s: SqliteFeedStore; limit = 1): seq[(int64, string, string)] =
-  ## Feeds whose favicon column is empty: (id, site_link, url).
-  for r in s.db.all("SELECT id, COALESCE(site_link,''), url FROM feeds WHERE favicon IS NULL OR favicon = '' LIMIT ?", limit):
-    result.add((r[0].intVal, r[1].dbStr, r[2].dbStr))
+  ## Feeds whose favicon is empty OR whose favicon file is missing on disk
+  ## (stale path from a previous run where favicons/ was cleared).
+  ## Returns (id, site_link, url). Fetches limit*3 candidates to skip ones that
+  ## already have a valid cached file.
+  for r in s.db.all("SELECT id, COALESCE(site_link,''), url, COALESCE(favicon,'') FROM feeds LIMIT ?", limit * 3):
+    let fav = r[3].dbStr
+    let missing = fav.len == 0 or (fav.len > 10 and not fileExists("favicons" / fav[10..^1]))
+    if missing:
+      result.add((r[0].intVal, r[1].dbStr, r[2].dbStr))
+      if result.len >= limit: break
 
 proc setFavicon*(s: SqliteFeedStore; feedId: int64; path: string) =
   s.db.exec("UPDATE feeds SET favicon = ? WHERE id = ?", path, feedId)
