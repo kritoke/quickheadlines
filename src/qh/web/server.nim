@@ -193,19 +193,25 @@ proc feedWatcher(ctx: ServerCtx): Future[void] {.async.} =
         except CatchableError: ok = false
         if ok: alive.add(c)
       wsClients = alive
-    # Favicon: fetch a few missing icons every 3s (rate-limited, background).
+    # Favicon: fetch several missing icons concurrently every 3s (async,
+    # isolated in the event loop - can't deadlock). Parallel, not sequential.
     if tick mod 3 == 0:
-      for missing in ctx.feedStore.feedsMissingFavicon(3):
-        let (id, siteLink, url) = missing
-        let fav = await fetchFaviconAsync(siteLink, url)
-        if fav.isSome:
-          try:
-            let origin = if siteLink.len > 0: siteLink else: url
-            let path = saveFavicon(fav.get, origin)
-            ctx.feedStore.setFavicon(id, path)
-            ctx.dirty[].store(true)              # notify SPA: a feed changed
-          except CatchableError:
-            discard
+      let missing = ctx.feedStore.feedsMissingFavicon(8)
+      if missing.len > 0:
+        var futures: seq[Future[Option[FavBytes]]] = @[]
+        for (id, siteLink, url) in missing:
+          futures.add fetchFaviconAsync(siteLink, url)
+        let results = await all(futures)
+        for i in 0 ..< results.len:
+          if results[i].isSome:
+            try:
+              let (id, siteLink, url) = missing[i]
+              let origin = if siteLink.len > 0: siteLink else: url
+              let path = saveFavicon(results[i].get, origin)
+              ctx.feedStore.setFavicon(id, path)
+              ctx.dirty[].store(true)
+            except CatchableError:
+              discard
 
 proc serve*(ctx: ServerCtx; port = 8080) =
   ## Start the HTTP server (blocks) + the WS-broadcast watcher on one event loop.
