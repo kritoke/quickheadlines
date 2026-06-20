@@ -11,6 +11,7 @@
 import std/[asynchttpserver, asyncdispatch, asyncnet, json, uri, strutils, tables, options, atomics, sequtils, os]
 import ../types
 import ../storage/[feed_store, item_store]
+import ../fetcher/favicon
 import ./dtos
 import ./assets
 import ./ws
@@ -82,7 +83,7 @@ proc handle(ctx: ServerCtx; req: Request): Future[void] {.async.} =
     # basename from the favicons/ dir; reject anything that looks like traversal.
     # Missing file -> fall back to the embedded favicon.svg (no 404 spam).
     if path.startsWith("/favicons/"):
-      let name = path[11..^1]                      # strip "/favicons/"
+      let name = path[10..^1]                      # strip "/favicons/" (10 chars)
       if name.len > 0 and "/" notin name and ".." notin name:
         let fp = "favicons" / name
         if fileExists(fp):
@@ -154,19 +155,38 @@ proc handle(ctx: ServerCtx; req: Request): Future[void] {.async.} =
     await req.respond(Http404, $(%*{"error": "not found"}), jsonHeaders())
 
 proc feedWatcher(ctx: ServerCtx): Future[void] {.async.} =
-  ## Periodically push a WS 'feed_update' when the refresh supervisor signals.
+  ## Periodically push a WS 'feed_update' when feeds change, AND progressively
+  ## fetch missing favicons (async, in the event loop - can't deadlock the feed
+  ## worker pool the way a threaded sync fetcher did).
+  var tick = 0
   while true:
     await sleepAsync(1000)
+    inc tick
+    # WS broadcast on dirty.
     if wsClients.len > 0 and ctx.dirty[].load():
       ctx.dirty[].store(false)
-      let snap = wsClients                       # copy (mutation-safe over awaits)
+      let snap = wsClients
       var alive: seq[AsyncSocket] = @[]
       for c in snap:
         var ok = true
         try: await sendWsText(c, "{\"type\":\"feed_update\"}")
         except CatchableError: ok = false
         if ok: alive.add(c)
-      wsClients = alive                          # drop dead clients
+      wsClients = alive
+    # Favicon: fetch ONE missing feed's icon every 3s (rate-limited, background).
+    if tick mod 3 == 0:
+      let missing = ctx.feedStore.feedsMissingFavicon(1)
+      if missing.len > 0:
+        let (id, siteLink, url) = missing[0]
+        let fav = await fetchFaviconAsync(siteLink, url)
+        if fav.isSome:
+          try:
+            let origin = if siteLink.len > 0: siteLink else: url
+            let path = saveFavicon(fav.get, origin)
+            ctx.feedStore.setFavicon(id, path)
+            ctx.dirty[].store(true)              # notify SPA: a feed changed
+          except CatchableError:
+            discard
 
 proc serve*(ctx: ServerCtx; port = 8080) =
   ## Start the HTTP server (blocks) + the WS-broadcast watcher on one event loop.

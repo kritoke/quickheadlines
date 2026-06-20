@@ -73,6 +73,14 @@ proc recentItems*(s: SqliteFeedStore; feedId: int64; limit = 30): seq[Item] =
                     version: r[3].dbStr, commentUrl: r[4].dbStr,
                     commentaryUrl: r[5].dbStr)
 
+proc feedsMissingFavicon*(s: SqliteFeedStore; limit = 1): seq[(int64, string, string)] =
+  ## Feeds whose favicon column is empty: (id, site_link, url).
+  for r in s.db.all("SELECT id, COALESCE(site_link,''), url FROM feeds WHERE favicon IS NULL OR favicon = '' LIMIT ?", limit):
+    result.add((r[0].intVal, r[1].dbStr, r[2].dbStr))
+
+proc setFavicon*(s: SqliteFeedStore; feedId: int64; path: string) =
+  s.db.exec("UPDATE feeds SET favicon = ? WHERE id = ?", path, feedId)
+
 proc feedIdForUrl(s: SqliteFeedStore; url: string): int64 =
   let r = s.db.one("SELECT id FROM feeds WHERE url = ?", url)
   if r.isSome: r.get[0].intVal else: 0'i64

@@ -3,7 +3,7 @@
 ## re module is not safe inside the fetch worker threads (it hung the refresh).
 ## The HTML <link rel=icon> parse can be added later via a non-threaded path.
 
-import std/[httpclient, uri, strutils, sha1, os, options]
+import std/[httpclient, asyncdispatch, uri, strutils, sha1, os, options]
 import ../types
 
 const FavTimeoutMs = 4000
@@ -44,6 +44,27 @@ proc fetchFavicon*(siteLink, feedUrl: string): Option[FavBytes] =
     some(FavBytes(bytes: body, ext: ctToExt(resp.headers.getOrDefault("Content-Type"))))
   except CatchableError:
     none(FavBytes)
+  finally:
+    client.close()
+
+proc fetchFaviconAsync*(siteLink, feedUrl: string): Future[Option[FavBytes]] {.async.} =
+  ## Async version - runs in the server event loop (sync httpclient's timeout
+  ## doesn't bound connect/DNS in a thread, which deadlocked the feed worker
+  ## pool). Best-effort /favicon.ico. A hung connect blocks only this one
+  ## coroutine, not the event loop - no deadlock.
+  let origin = if siteLink.len > 0: originOf(siteLink) else: originOf(feedUrl)
+  if origin.len == 0: return none(FavBytes)
+  let client = newAsyncHttpClient()
+  client.headers = newHttpHeaders({"User-Agent": FavUserAgent})
+  try:
+    let resp = await client.request(origin & "/favicon.ico", HttpGet)
+    let code = resp.code.int
+    if code != 200 and code != 301 and code != 302: return none(FavBytes)
+    let body = await resp.body
+    if body.len < 50: return none(FavBytes)
+    return some(FavBytes(bytes: body, ext: ctToExt(resp.headers.getOrDefault("Content-Type"))))
+  except CatchableError:
+    return none(FavBytes)
   finally:
     client.close()
 
