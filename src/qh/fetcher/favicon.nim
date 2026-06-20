@@ -76,34 +76,51 @@ proc findIconHref(html, origin: string): string =
           if eq > 0: return resolveHref(origin, val[1 ..< eq])
   ""
 
+proc followFetch(client: AsyncHttpClient; startUrl: string;
+                 maxHops = 3): Future[Option[string]] {.async.} =
+  ## Fetch with redirect following (async request doesn't auto-follow).
+  var url = startUrl
+  for _ in 0..maxHops:
+    let resp = await client.request(url, HttpGet)
+    let code = resp.code.int
+    if code == 301 or code == 302 or code == 303 or code == 307 or code == 308:
+      # HttpHeaderValues is distinct seq[string]; cast to seq to index.
+      let locSeq = seq[string](resp.headers.getOrDefault("Location"))
+      if locSeq.len == 0: return none(string)
+      let loc = locSeq[0]
+      if loc.len == 0: return none(string)
+      url = (if loc.startsWith("http"): loc else: url.rsplit("/",1)[0] & "/" & loc)
+      continue
+    if code == 200:
+      return some(await resp.body)
+    return none(string)
+  none(string)
+
 proc fetchFaviconAsync*(siteLink, feedUrl: string): Future[Option[FavBytes]] {.async.} =
-  ## Async favicon fetch in the server event loop. Tries /favicon.ico, then
-  ## parses the homepage HTML for <link rel="icon">. Can't deadlock (async).
+  ## Async favicon fetch. Tries /favicon.ico (with redirects), then parses
+  ## the homepage HTML for <link rel="icon">. Can't deadlock (async, event loop).
   let origin = if siteLink.len > 0: originOf(siteLink) else: originOf(feedUrl)
   if origin.len == 0: return none(FavBytes)
   let client = newAsyncHttpClient()
   client.headers = newHttpHeaders({"User-Agent": FavUserAgent})
   try:
-    # 1) direct /favicon.ico
-    block tryDirect:
-      let resp = await client.request(origin & "/favicon.ico", HttpGet)
-      let code = resp.code.int
-      if code == 200 or code == 301 or code == 302:
-        let body = await resp.body
-        if body.len >= 50:
-          return some(FavBytes(bytes: body, ext: ctToExt(resp.headers.getOrDefault("Content-Type"))))
+    # 1) /favicon.ico (following redirects to CDNs)
+    let ico = await client.followFetch(origin & "/favicon.ico")
+    if ico.isSome and ico.get.len >= 50:
+      return some(FavBytes(bytes: ico.get, ext: "ico"))
     # 2) parse homepage HTML for <link rel="icon">
-    let htmlResp = await client.request(origin & "/", HttpGet)
-    let htmlCode = htmlResp.code.int
-    if htmlCode == 200:
-      let html = await htmlResp.body
-      let href = findIconHref(html, origin)
+    let htmlOpt = await client.followFetch(origin & "/")
+    if htmlOpt.isSome:
+      let href = findIconHref(htmlOpt.get, origin)
       if href.len > 0:
-        let iconResp = await client.request(href, HttpGet)
-        if iconResp.code.int == 200:
-          let body = await iconResp.body
-          if body.len >= 50:
-            return some(FavBytes(bytes: body, ext: ctToExt(iconResp.headers.getOrDefault("Content-Type"))))
+        let iconOpt = await client.followFetch(href)
+        if iconOpt.isSome and iconOpt.get.len >= 50:
+          # infer ext from the href URL
+          let ext = if href.endsWith(".png"): "png"
+                    elif href.endsWith(".svg"): "svg"
+                    elif href.endsWith(".jpg") or href.endsWith(".jpeg"): "jpg"
+                    else: "ico"
+          return some(FavBytes(bytes: iconOpt.get, ext: ext))
   except CatchableError:
     discard
   finally:
