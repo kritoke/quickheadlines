@@ -3,6 +3,7 @@
 ## accept-key + sending unmasked text frames. (No client-frame parsing beyond
 ## detecting close; the SPA only sends occasional masked frames we can discard.)
 
+{.warning[Deprecated]: off.}  # std/sha1 is deprecated but the WS handshake requires real SHA-1
 import std/[asyncnet, asyncdispatch, sha1, base64]
 
 const WsGuid* = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"

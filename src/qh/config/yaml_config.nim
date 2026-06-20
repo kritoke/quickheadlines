@@ -61,10 +61,6 @@ proc loadYamlConfig*(path: string): Result[YamlConfig, ConfigError] =
 
 # ---------------------------------------------------------------- mapping -> domain Config (defaults from Crystal src/config/structures.cr)
 
-proc defaultClustering(): ClusteringConfig =
-  ClusteringConfig(enabled: true, runOnStartup: true, maxItems: 0,
-                   maxFetchItems: 1000, threshold: 0.35)
-
 proc toDomain*(f: YamlFeed): Feed =
   Feed(title: f.title, url: f.url, headerColor: "", headerTextColor: "",
        itemLimit: 0)

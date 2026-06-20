@@ -173,11 +173,10 @@ proc feedWatcher(ctx: ServerCtx): Future[void] {.async.} =
         except CatchableError: ok = false
         if ok: alive.add(c)
       wsClients = alive
-    # Favicon: fetch ONE missing feed's icon every 3s (rate-limited, background).
+    # Favicon: fetch a few missing icons every 3s (rate-limited, background).
     if tick mod 3 == 0:
-      let missing = ctx.feedStore.feedsMissingFavicon(1)
-      if missing.len > 0:
-        let (id, siteLink, url) = missing[0]
+      for missing in ctx.feedStore.feedsMissingFavicon(3):
+        let (id, siteLink, url) = missing
         let fav = await fetchFaviconAsync(siteLink, url)
         if fav.isSome:
           try:

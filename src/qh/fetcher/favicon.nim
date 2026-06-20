@@ -3,8 +3,7 @@
 ## re module is not safe inside the fetch worker threads (it hung the refresh).
 ## The HTML <link rel=icon> parse can be added later via a non-threaded path.
 
-import std/[httpclient, asyncdispatch, uri, strutils, sha1, os, options]
-import ../types
+import std/[httpclient, asyncdispatch, uri, strutils, os, options]
 
 const FavTimeoutMs = 4000
 const FavUserAgent = "QuickHeadlines-Nim/0.1 (+https://github.com/kritoke/quickheadlines)"
@@ -69,7 +68,12 @@ proc fetchFaviconAsync*(siteLink, feedUrl: string): Future[Option[FavBytes]] {.a
     client.close()
 
 proc faviconHash*(origin: string): string =
-  ($secureHash(origin)).toLowerAscii()
+  ## Stable per-site filename stem (FNV-1a hash → hex, no deprecated sha1 dep).
+  var h: uint64 = 14695981039346656037'u64
+  for c in origin:
+    h = h xor uint64(c)
+    h = h * 1099511628211'u64
+  result = h.toHex().toLowerAscii()
 
 proc saveFavicon*(fav: FavBytes; origin: string; dir = "favicons"): string =
   ## Save bytes to {dir}/{hash}.{ext}; create dir if needed. Returns the URL

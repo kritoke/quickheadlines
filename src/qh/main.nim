@@ -7,7 +7,7 @@
 ## Run:   ./bin/quickheadlines   (QUICKHEADLINES_CONFIG, QUICKHEADLINES_DB,
 ##                                QUICKHEADLINES_PORT env vars optional)
 
-import std/[os, strutils, times, atomics, asyncdispatch]
+import std/[os, strutils, times, atomics]
 import types
 import config/config_source
 import storage/[database, feed_store, item_store, cluster_store]

@@ -4,7 +4,7 @@
 ## by the caller on its own DbConn (SQLite connections are not thread-safe, so
 ## fetch is parallel and persist is serial - DB writes are the cheap part).
 
-import std/[tables, sugar, sequtils, atomics, options]
+import std/[tables, sugar, sequtils, atomics]
 import ../types
 import ../storage/feed_store
 import ./http_fetcher
