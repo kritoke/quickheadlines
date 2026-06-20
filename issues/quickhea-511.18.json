@@ -2,14 +2,15 @@
   "assignee": "kritoke",
   "blocked_by": [],
   "blocks": [],
+  "closed_at": "2026-06-20T00:11:07Z",
   "created": "2026-06-19T19:54:27Z",
   "description": "Compile-time embed of frontend/dist (equivalent of baked_file_system). Dev reads from disk.",
   "id": "quickhea-511.18",
   "labels": [],
   "parent": "quickhea-511",
   "priority": 2,
-  "status": "in_progress",
+  "status": "closed",
   "title": "P3.9 Asset embedding of Svelte 5 build",
   "type": "task",
-  "updated_at": "2026-06-20T00:01:35Z"
+  "updated_at": "2026-06-20T00:11:07Z"
 }
