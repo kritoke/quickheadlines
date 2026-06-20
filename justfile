@@ -623,12 +623,20 @@ nim-check: nim-frontend
     nix develop . --command nim check -d:ssl --threads:on src/qh/main.nim
 
 # Compile the Nim server with the embedded frontend -> bin/quickheadlines.
+# Produces a thin wrapper that bakes in LD_LIBRARY_PATH so nim-run does NOT need
+# a slow `nix develop` per launch (the #1 source of startup delay).
 nim-build: nim-frontend
-    @echo "Compiling Nim server (ssl + threads)..."
-    @rm -f bin/quickheadlines
-    nix develop . --command nim c -d:ssl --threads:on -o:bin/quickheadlines src/qh/main.nim
-    @echo "✓ Built bin/quickheadlines"
-    @ls -lh bin/quickheadlines
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "Compiling Nim server (ssl + threads)..."
+    rm -f bin/quickheadlines bin/quickheadlines.bin
+    nix develop . --command nim c -d:ssl --threads:on -o:bin/quickheadlines.bin src/qh/main.nim
+    # Capture the devshell lib path ONCE (build-time) and bake it into a wrapper,
+    # so nim-run launches the binary directly (no slow `nix develop` per run).
+    LDLP="$(nix develop . --command sh -c 'echo $LD_LIBRARY_PATH')"
+    sh scripts/nim-wrap.sh bin/quickheadlines bin/quickheadlines.bin "$LDLP"
+    echo "Built bin/quickheadlines (wrapper + .bin)"
+    ls -lh bin/quickheadlines bin/quickheadlines.bin
 
 # Optimised release build.
 nim-build-release: nim-frontend
@@ -641,13 +649,13 @@ nim-test:
     nix develop . --command nimble --accept test
 
 # Build + run the server. Override config/db/port via env vars.
-# Kills any stale quickheadlines on port 8080 first (old binaries get orphaned
-# when the nix wrapper is killed without reaping the child).
+# Runs the wrapper directly (no `nix develop` per launch -> instant start).
+# Kills any stale quickheadlines on port 8080 first.
 nim-run: nim-build nim-stop
     QUICKHEADLINES_CONFIG={{env_var_or_default("QUICKHEADLINES_CONFIG","feeds.yml")}} \
     QUICKHEADLINES_DB={{env_var_or_default("QUICKHEADLINES_DB","qh_nim.db")}} \
     QUICKHEADLINES_PORT={{env_var_or_default("QUICKHEADLINES_PORT","8080")}} \
-    nix develop . --command ./bin/quickheadlines
+    ./bin/quickheadlines
 
 # Stop any running Nim server (by port or binary name).
 nim-stop:
