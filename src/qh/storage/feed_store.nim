@@ -77,8 +77,9 @@ proc feedsMissingFavicon*(s: SqliteFeedStore; limit = 1): seq[(int64, string, st
   ## Feeds whose favicon is empty OR whose favicon file is missing on disk
   ## (stale path from a previous run where favicons/ was cleared).
   ## Returns (id, site_link, url). Fetches limit*3 candidates to skip ones that
-  ## already have a valid cached file.
-  for r in s.db.all("SELECT id, COALESCE(site_link,''), url, COALESCE(favicon,'') FROM feeds LIMIT ?", limit * 3):
+  ## already have a valid cached file. ORDER BY RANDOM() to avoid getting stuck
+  ## retrying the same stubborn feed every tick.
+  for r in s.db.all("SELECT id, COALESCE(site_link,''), url, COALESCE(favicon,'') FROM feeds ORDER BY RANDOM() LIMIT ?", limit * 3):
     let fav = r[3].dbStr
     let missing = fav.len == 0 or (fav.len > 10 and not fileExists("favicons" / fav[10..^1]))
     if missing:
