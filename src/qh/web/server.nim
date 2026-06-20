@@ -77,7 +77,18 @@ proc handle(ctx: ServerCtx; req: Request): Future[void] {.async.} =
     await req.respond(Http200, $tabsJson(ctx.config.tabs), jsonHeaders())
 
   of "/api/feeds":
-    let listed = ctx.feedStore.listFeeds()
+    # Hydrate-on-first-load (long-poll): if the DB cache is still empty (the
+    # background refresh hasn't committed yet), wait briefly for it to populate
+    # so the SPA's initial request returns real data instead of an empty list
+    # it would never re-fetch (no WebSocket push yet - P3.7). sleepAsync yields
+    # the event loop, so other requests are still served while we wait.
+    var listed = ctx.feedStore.listFeeds()
+    if listed.isOk:
+      for _ in 0 ..< 30:                       # up to ~30s
+        if listed.feeds.len > 0: break
+        await sleepAsync(1000)
+        listed = ctx.feedStore.listFeeds()
+        if not listed.isOk: break
     if not listed.isOk:
       await req.respond(Http500, $(%*{"error": "feeds read failed"}), jsonHeaders())
       return

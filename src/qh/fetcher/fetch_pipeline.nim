@@ -57,18 +57,34 @@ proc refreshAll*(f: HttpFetcher; feeds: seq[FeedConfig];
                  store: SqliteFeedStore;
                  maxConcurrency = 8): RefreshSummary =
   ## Fetch every feed concurrently and persist successes via the FeedStore.
-  ## Returns a summary (fetched / failed / total items).
+  ## Persists INCREMENTALLY - each feed is written as its fetch completes, so
+  ## readers (and the /api/feeds long-poll) see feeds progressively rather than
+  ## waiting for the slowest feed. Returns a summary (fetched / failed / items).
   let urls = feeds.mapIt(it.url)
-  let outcomes = f.fetchAllConcurrent(urls, maxConcurrency)
+  let n = maxConcurrency.clamp(1, 32)
+  var jobs: Channel[string]
+  var ress: Channel[FetchOutcome]
+  jobs.open(n)                                   # bounded -> backpressure
+  ress.open(max(urls.len, 1))
   let byUrl = collect(initTable):
-    for o in outcomes: {o.url: o.res}
-  for fc in feeds:
-    let r = byUrl.getOrDefault(fc.url)
-    if r.isOk:
+    for fc in feeds: {fc.url: fc.title}
+  let a = WorkerArgs(fetcher: f, jobs: addr(jobs), ress: addr(ress))
+  var ths: seq[Thread[WorkerArgs]]
+  newSeq(ths, n)
+  for i in 0..<n: ths[i].createThread(worker, a)
+  for u in urls: jobs.send(u)                    # backpressure point
+  for _ in 0..<n: jobs.send("")                  # one sentinel per worker
+  # Consume + persist each outcome as it arrives (progressive hydration).
+  for _ in 0..<urls.len:
+    let o = ress.recv()
+    if o.res.isOk:
       inc result.fetched
-      result.items += r.data.items.len
-      var fd = r.data
-      if fd.title.len == 0: fd.title = fc.title   # fall back to configured title
+      result.items += o.res.data.items.len
+      var fd = o.res.data
+      if fd.title.len == 0: fd.title = byUrl.getOrDefault(o.url)
       discard store.upsertWithItems(fd)
     else:
       inc result.failed
+  for i in 0..<n: ths[i].joinThread()
+  jobs.close()
+  ress.close()
