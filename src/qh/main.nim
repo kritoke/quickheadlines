@@ -19,6 +19,7 @@ import web/server
 import supervisors/refresh_supervisor
 import supervisors/cluster_supervisor
 import supervisors/cleanup_supervisor
+import security/rate_limiter
 
 proc envInt(key: string; dflt: int): int =
   try: getEnv(key, $dflt).parseInt() except ValueError: dflt
@@ -79,10 +80,11 @@ proc main() =
   echo "Cleanup supervisor started (retention=336h interval=30min)"
 
   # 6. Serve the read API + embedded SPA + WS push. (Blocks; main thread.)
+  let limiter = newRateLimiter(limit = 60, windowSec = 60.0)
   let ctx = ServerCtx(
     config: config, feedStore: feedStore, itemStore: itemStore,
     startedAtMs: now().utc().toTime().toUnix() * 1000'i64,
-    dirty: dirty)
+    dirty: dirty, rateLimiter: limiter)
   ctx.serve(port)
 
 when isMainModule: main()

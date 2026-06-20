@@ -12,6 +12,7 @@ import std/[asynchttpserver, asyncdispatch, asyncnet, json, uri, strutils, table
 import ../types
 import ../storage/[feed_store, item_store]
 import ../fetcher/favicon
+import ../security/[auth, rate_limiter]
 import ./dtos
 import ./assets
 import ./ws
@@ -23,6 +24,7 @@ type
     itemStore*: SqliteItemStore
     startedAtMs*: int64
     dirty*: ref Atomic[bool]     # set by refresh supervisor -> watcher broadcasts
+    rateLimiter*: RateLimiter
 
 # WS client registry (event-loop thread only - no lock needed).
 var wsClients: seq[AsyncSocket] = @[]
@@ -65,6 +67,15 @@ proc handle(ctx: ServerCtx; req: Request): Future[void] {.async.} =
   let path = req.url.path
   let verb = req.reqMethod
   let q = queryParams(req.url.query)
+
+  # ---- rate limit by peer IP (P3.8) ----
+  if ctx.rateLimiter != nil:
+    let (peerIp, _) = req.client.getPeerAddr()
+    if not ctx.rateLimiter.isAllowed(peerIp):
+      await req.respond(Http429,
+        $(%*{"error": "rate limited", "retry_after": 60}),
+        jsonHeaders())
+      return
 
   # ---- WebSocket upgrade (before the GET-only / static checks) ----
   if path == "/api/ws" and verb == HttpGet:
