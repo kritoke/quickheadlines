@@ -641,11 +641,21 @@ nim-test:
     nix develop . --command nimble --accept test
 
 # Build + run the server. Override config/db/port via env vars.
-nim-run: nim-build
+# Kills any stale quickheadlines on port 8080 first (old binaries get orphaned
+# when the nix wrapper is killed without reaping the child).
+nim-run: nim-build nim-stop
     QUICKHEADLINES_CONFIG={{env_var_or_default("QUICKHEADLINES_CONFIG","feeds.yml")}} \
     QUICKHEADLINES_DB={{env_var_or_default("QUICKHEADLINES_DB","qh_nim.db")}} \
     QUICKHEADLINES_PORT={{env_var_or_default("QUICKHEADLINES_PORT","8080")}} \
     nix develop . --command ./bin/quickheadlines
+
+# Stop any running Nim server (by port or binary name).
+nim-stop:
+    #!/usr/bin/env sh
+    for pid in $(pgrep -f 'bin/quickheadlines' 2>/dev/null); do kill "$pid" 2>/dev/null; done
+    sleep 1
+    for pid in $(pgrep -f 'bin/quickheadlines' 2>/dev/null); do kill -9 "$pid" 2>/dev/null; done
+    echo "✓ stopped any running Nim server"
 
 # Help
 help:

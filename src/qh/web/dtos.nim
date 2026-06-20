@@ -44,9 +44,14 @@ proc timelineJson*(entries: seq[TimelineEntry]; total: int; limit: int): JsonNod
     "total_count": %total
   }
 
-proc feedJson*(f: FeedRow; itemCount: int): JsonNode =
+proc itemJson*(it: Item): JsonNode =
+  %*{"title": %it.title, "link": %it.link, "pub_date": %(toMillis(it.pubDate)),
+     "content": %it.content, "version": %it.version,
+     "comment_url": %it.commentUrl, "commentary_url": %it.commentaryUrl}
+
+proc feedJson*(f: FeedRow; items: seq[Item]; itemCount: int): JsonNode =
   %{
-    "tab": %"",                              # tabs handled at the page level
+    "tab": %"",
     "url": %f.url,
     "title": %f.title,
     "display_link": %f.siteLink,
@@ -55,6 +60,7 @@ proc feedJson*(f: FeedRow; itemCount: int): JsonNode =
     "favicon_data": jstrOr(f.faviconData),
     "header_color": jstr(f.headerColor),
     "header_text_color": jstr(f.headerTextColor),
+    "items": %(items.mapIt(itemJson(it))),
     "total_item_count": %itemCount
   }
 
@@ -62,3 +68,12 @@ proc statusJson*(isClustering: bool; activeJobs: int): JsonNode =
   %{"is_clustering": %isClustering, "active_jobs": %activeJobs}
 
 proc versionJson*(updatedAtMs: int64): JsonNode = %{"updated_at": %updatedAtMs}
+
+proc configJson*(c: Config): JsonNode =
+  ## ConfigResponse: {refresh_minutes, item_limit, debug}
+  %{"refresh_minutes": %c.refreshMinutes, "item_limit": %c.itemLimit, "debug": %c.debug}
+
+proc tabsJson*(tabs: seq[TabConfig]): JsonNode =
+  var t: seq[JsonNode]
+  for x in tabs: t.add(%*{"name": %x.name})
+  %{"tabs": %t}

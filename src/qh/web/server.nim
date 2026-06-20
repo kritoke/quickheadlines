@@ -70,6 +70,12 @@ proc handle(ctx: ServerCtx; req: Request): Future[void] {.async.} =
     else:
       await req.respond(Http500, $(%*{"error": "timeline read failed"}), jsonHeaders())
 
+  of "/api/config":
+    await req.respond(Http200, $configJson(ctx.config), jsonHeaders())
+
+  of "/api/tabs":
+    await req.respond(Http200, $tabsJson(ctx.config.tabs), jsonHeaders())
+
   of "/api/feeds":
     let listed = ctx.feedStore.listFeeds()
     if not listed.isOk:
@@ -77,13 +83,15 @@ proc handle(ctx: ServerCtx; req: Request): Future[void] {.async.} =
       return
     var feedNodes: seq[JsonNode]
     for f in listed.feeds:
-      # per-feed item count (best-effort; production batches this - P1 #7)
-      feedNodes.add(feedJson(f, ctx.feedStore.countItems(f.id)))
+      let items = ctx.feedStore.recentItems(f.id, ctx.config.itemLimit)
+      feedNodes.add(feedJson(f, items, ctx.feedStore.countItems(f.id)))
     let activeTab = q.getOrDefault("tab", "all")
-    var tabsNodes: seq[JsonNode]
-    for t in ctx.config.tabs: tabsNodes.add(%*{"name": %t.name})
-    await req.respond(Http200, $(%*{"tabs": tabsNodes, "active_tab": %activeTab, "feeds": %feedNodes}),
-                      jsonHeaders())
+    await req.respond(Http200, $(%*{
+      "tabs": tabsJson(ctx.config.tabs)["tabs"],
+      "active_tab": %activeTab, "feeds": %feedNodes,
+      "software_releases": newJArray(),
+      "is_clustering": false,
+      "updated_at": %ctx.startedAtMs}), jsonHeaders())
 
   of "/api/status":
     await req.respond(Http200, $statusJson(false, 0), jsonHeaders())

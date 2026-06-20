@@ -65,6 +65,14 @@ proc countItems*(s: SqliteFeedStore; feedId: int64): int =
   let r = s.db.one("SELECT COUNT(*) FROM items WHERE feed_id = ?", feedId)
   if r.isSome: r.get[0].intVal.int else: 0
 
+proc recentItems*(s: SqliteFeedStore; feedId: int64; limit = 30): seq[Item] =
+  ## Most-recent items for a feed (port of find_with_items item read).
+  const Q = "SELECT title, link, pub_date, COALESCE(version,''), COALESCE(comment_url,''), COALESCE(commentary_url,'') FROM items WHERE feed_id = ? AND (pub_date IS NULL OR pub_date <= datetime('now','+1 day')) ORDER BY COALESCE(pub_date,'1970-01-01 00:00:00') DESC, id DESC LIMIT ?"
+  for r in s.db.all(Q, feedId, limit):
+    result.add Item(title: r[0].dbStr, link: r[1].dbStr, pubDate: r[2].dbStr,
+                    version: r[3].dbStr, commentUrl: r[4].dbStr,
+                    commentaryUrl: r[5].dbStr)
+
 proc feedIdForUrl(s: SqliteFeedStore; url: string): int64 =
   let r = s.db.one("SELECT id FROM feeds WHERE url = ?", url)
   if r.isSome: r.get[0].intVal else: 0'i64
