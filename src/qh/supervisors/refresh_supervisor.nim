@@ -3,8 +3,7 @@
 ## the main connection; WAL lets the two coexist). Does an immediate refresh on
 ## start, then repeats every intervalSec (0 = one-shot initial refresh only).
 
-import std/[os]
-import ../types
+import std/[os, atomics]
 import ../storage/[database, feed_store]
 import ../fetcher/[http_fetcher, fetch_pipeline]
 
@@ -13,6 +12,7 @@ type
     feedConfigs: seq[FeedConfig]
     dbPath: string
     intervalSec: int
+    dirty: ref Atomic[bool]        # set after each refresh -> WS feed_update push
 
 proc refreshLoop(a: RefreshArgs) {.thread.} =
   # ORC is thread-safe at runtime; assert gcsafe without transitive checks.
@@ -21,16 +21,19 @@ proc refreshLoop(a: RefreshArgs) {.thread.} =
     let store = SqliteFeedStore(db: db)
     let fetcher = newHttpFetcher()
     while true:
-      let s = fetcher.refreshAll(a.feedConfigs, store, 8)
+      let s = fetcher.refreshAll(a.feedConfigs, store, a.dirty, 8)
       echo "[refresh] fetched=", s.fetched, " failed=", s.failed, " items=", s.items
+      a.dirty[].store(true)          # final notify (belt-and-suspenders)
       if a.intervalSec <= 0: break       # one-shot
       sleep(a.intervalSec * 1000)
     closeDb(db)
 
 proc startRefreshSupervisor*(feedConfigs: seq[FeedConfig]; dbPath: string;
+                             dirty: ref Atomic[bool];
                              intervalSec = 0): Thread[RefreshArgs] =
-  ## Spawn the refresh thread (detached). Returns the handle. intervalSec<=0
-  ## means a single immediate refresh then exit.
+  ## Spawn the refresh thread (detached). `dirty` is set after each refresh so
+  ## the server's WS watcher pushes a feed_update to connected clients.
+  ## intervalSec<=0 means a single immediate refresh then exit.
   createThread(result, refreshLoop,
                RefreshArgs(feedConfigs: feedConfigs, dbPath: dbPath,
-                           intervalSec: intervalSec))
+                           intervalSec: intervalSec, dirty: dirty))

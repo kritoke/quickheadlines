@@ -4,7 +4,7 @@
 ## by the caller on its own DbConn (SQLite connections are not thread-safe, so
 ## fetch is parallel and persist is serial - DB writes are the cheap part).
 
-import std/[tables, sugar, sequtils]
+import std/[tables, sugar, sequtils, atomics]
 import ../types
 import ../storage/feed_store
 import ./http_fetcher
@@ -55,11 +55,13 @@ proc fetchAllConcurrent*(f: HttpFetcher; urls: seq[string];
 
 proc refreshAll*(f: HttpFetcher; feeds: seq[FeedConfig];
                  store: SqliteFeedStore;
+                 dirty: ref Atomic[bool] = nil;
                  maxConcurrency = 8): RefreshSummary =
   ## Fetch every feed concurrently and persist successes via the FeedStore.
   ## Persists INCREMENTALLY - each feed is written as its fetch completes, so
-  ## readers (and the /api/feeds long-poll) see feeds progressively rather than
-  ## waiting for the slowest feed. Returns a summary (fetched / failed / items).
+  ## readers (and the /api/feeds long-poll) see feeds progressively. `dirty`
+  ## (if given) is set after EACH persist, so the WS watcher pushes feed_update
+  ## as feeds land - not delayed by the slowest/hanging feed.
   let urls = feeds.mapIt(it.url)
   let n = maxConcurrency.clamp(1, 32)
   var jobs: Channel[string]
@@ -83,6 +85,7 @@ proc refreshAll*(f: HttpFetcher; feeds: seq[FeedConfig];
       var fd = o.res.data
       if fd.title.len == 0: fd.title = byUrl.getOrDefault(o.url)
       discard store.upsertWithItems(fd)
+      if not dirty.isNil: dirty[].store(true)    # notify WS watcher per feed
     else:
       inc result.failed
   for i in 0..<n: ths[i].joinThread()

@@ -7,7 +7,7 @@
 ## Run:   ./bin/quickheadlines   (QUICKHEADLINES_CONFIG, QUICKHEADLINES_DB,
 ##                                QUICKHEADLINES_PORT env vars optional)
 
-import std/[os, strutils, times]
+import std/[os, strutils, times, atomics, asyncdispatch]
 import types
 import config/config_source
 import storage/[database, feed_store, item_store, cluster_store]
@@ -56,14 +56,17 @@ proc main() =
 
   # 5. Refresh in a background thread (its own DbConn). The server starts
   #    listening IMMEDIATELY instead of blocking on the initial fetch, so the
-  #    SPA loads right away and feeds populate as the refresh completes.
-  discard startRefreshSupervisor(feedConfigs, dbPath, config.refreshMinutes * 60)
+  #    SPA loads right away; the WS push notifies it when feeds land.
+  var dirty: ref Atomic[bool]
+  new(dirty); dirty[].store(false)
+  discard startRefreshSupervisor(feedConfigs, dbPath, dirty, config.refreshMinutes * 60)
   echo "Refresh running in background; serving reads now."
 
-  # 6. Serve the read API + embedded SPA. (Blocks; this is the main thread.)
+  # 6. Serve the read API + embedded SPA + WS push. (Blocks; main thread.)
   let ctx = ServerCtx(
     config: config, feedStore: feedStore, itemStore: itemStore,
-    startedAtMs: now().utc().toTime().toUnix() * 1000'i64)
+    startedAtMs: now().utc().toTime().toUnix() * 1000'i64,
+    dirty: dirty)
   ctx.serve(port)
 
 when isMainModule: main()
