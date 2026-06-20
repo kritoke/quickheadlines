@@ -142,3 +142,6 @@ frontend/dist/
 
 # Runtime SQLite DB (Nim server default)
 qh_nim.db*
+
+# Runtime favicon cache (Nim)
+favicons/
