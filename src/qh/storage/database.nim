@@ -132,6 +132,10 @@ proc openAndCreate*(dbPath: string): DbConn =
   result = openDatabase(dbPath)
   result.createSchema(dbPath)
 
+proc closeDb*(db: DbConn) {.inline.} =
+  ## Close a DbConn (tiny_sqlite wrapper; keeps the close call in storage/).
+  db.close()
+
 proc integrityOk*(dbPath: string): bool =
   ## PRAGMA integrity_check == "ok".
   let db = openDatabase(dbPath)

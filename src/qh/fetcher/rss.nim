@@ -27,9 +27,17 @@ proc normalizePubDate*(s: string): string =
       discard
   ""
 
+proc allText(n: XmlNode): string =
+  ## innerText() skips xnCData (Nim 2.2.4); this collects text AND CDATA
+  ## content, so titles/descriptions wrapped in <![CDATA[...]]> parse correctly.
+  case n.kind
+  of xnText, xnVerbatimText, xnComment, xnCData, xnEntity: result.add(n.text)
+  else:
+    for c in n: result.add(c.allText)
+
 proc childText*(n: XmlNode; tag: string): string =
   let c = n.child(tag)
-  if c == nil: "" else: c.innerText.strip()
+  if c == nil: "" else: c.allText.strip()
 
 proc parseRss*(url, body: string): FetchResult =
   ## Parse RSS 2.0 (or Atom <feed>) into FeedData. Any parse error -> feParse.

@@ -16,6 +16,7 @@ import clustering/clusterer
 import in_memory/services
 import app
 import web/server
+import supervisors/refresh_supervisor
 
 proc envInt(key: string; dflt: int): int =
   try: getEnv(key, $dflt).parseInt() except ValueError: dflt
@@ -42,21 +43,24 @@ proc main() =
 
   # 3. App composition root (validates every boundary composes - concepts
   #    enforced at compile time; in-memory impls stand in for not-yet-prod ones).
-  let app = newApp(
+  discard newApp(
     newHttpFetcher(), newNimClusterer(), feedStore, itemStore, clusterStore,
     InMemoryBroadcaster(subscribers: 0), cfgSrc,
     InMemoryHealthReporter(healthyFlag: true, detail: "feeds refreshing"),
     InMemoryRateLimiter(budget: 60), InMemoryProxyValidator())
 
-  # 4. initial refresh: fetch every configured feed concurrently -> persist
+  # 4. Build the feed list from config.
   var feedConfigs: seq[FeedConfig]
   for t in config.tabs:
     for f in t.feeds: feedConfigs.add(FeedConfig(url: f.url, title: f.title))
-  echo "Refreshing ", feedConfigs.len, " feed(s)..."
-  let summary = app.fetcher.refreshAll(feedConfigs, feedStore, 8)
-  echo "  fetched=", summary.fetched, " failed=", summary.failed, " items=", summary.items
 
-  # 5. serve the read API
+  # 5. Refresh in a background thread (its own DbConn). The server starts
+  #    listening IMMEDIATELY instead of blocking on the initial fetch, so the
+  #    SPA loads right away and feeds populate as the refresh completes.
+  discard startRefreshSupervisor(feedConfigs, dbPath, config.refreshMinutes * 60)
+  echo "Refresh running in background; serving reads now."
+
+  # 6. Serve the read API + embedded SPA. (Blocks; this is the main thread.)
   let ctx = ServerCtx(
     config: config, feedStore: feedStore, itemStore: itemStore,
     startedAtMs: now().utc().toTime().toUnix() * 1000'i64)
