@@ -139,3 +139,6 @@ frontend/dist/
 
 .catseye.toml
 .catseye/
+
+# Runtime SQLite DB (Nim server default)
+qh_nim.db*
