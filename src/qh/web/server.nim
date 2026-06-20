@@ -12,6 +12,7 @@ import std/[asynchttpserver, asyncdispatch, asyncnet, json, uri, strutils, table
 import ../types
 import ../storage/[feed_store, item_store]
 import ../fetcher/favicon
+import ../color/extractor as colorExtractor
 import ../security/[auth, rate_limiter]
 import ./dtos
 import ./assets
@@ -220,8 +221,14 @@ proc feedWatcher(ctx: ServerCtx): Future[void] {.async.} =
             try:
               let (id, siteLink, url) = missing[i]
               let origin = if siteLink.len > 0: siteLink else: url
-              let path = saveFavicon(results[i].get, origin)
+              let fav = results[i].get
+              let path = saveFavicon(fav, origin)
               ctx.feedStore.setFavicon(id, path)
+              # Extract theme colors from the favicon (prismatiq MMCQ port).
+              let theme = colorExtractor.extractTheme(fav.bytes)
+              if theme.isSome:
+                ctx.feedStore.setHeaderColor(id, theme.get.bgColor,
+                  theme.get.lightTextColor)  # use light text as default
               ctx.dirty[].store(true)
               inc saved
             except CatchableError:

@@ -16,7 +16,8 @@ bin = @["qh/spike/fetch_vertical", "qh/spike/clustering_vertical", "qh/main"]
 requires "nim >= 2.2.0"
 requires "yaml >= 2.2.0"
 requires "tiny_sqlite >= 0.1.0"
-requires "fusion >= 1.2.0"   # pattern matching (patty)
+requires "fusion >= 1.2.0"
+requires "stb_image >= 2.5.0"   # image decode for color extraction (prismatiq port)
 
 task test, "Run all Phase-2/3 tests":
   exec "nim c -d:ssl --threads:on -r tests/test_concept_checks.nim"

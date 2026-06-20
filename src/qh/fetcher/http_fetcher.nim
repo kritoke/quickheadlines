@@ -36,13 +36,22 @@ proc backoffMs(attempt: int): int =
   ## Exponential backoff: 100ms, 200ms, 400ms... (capped at 2s).
   min(100 * (1 shl attempt), 2000)
 
+proc transformFeedUrl*(url: string): string =
+  ## Reddit subreddit URLs need .rss suffix to get RSS feeds.
+  ## www.reddit.com/r/technology -> www.reddit.com/r/technology/.rss
+  if url.contains("reddit.com/r/") and not url.endsWith(".rss"):
+    let base = url.strip(chars={'/'})
+    return base & "/.rss"
+  url
+
 proc fetch*(f: HttpFetcher; url: string): FetchResult =
   ## Boundary proc. Retries on transient (network) errors up to maxRetries,
   ## with exponential backoff. HTTP-status and parse errors are not retried
   ## (they won't fix themselves in 200ms).
+  let actualUrl = transformFeedUrl(url)
   var last = errFetch(feNetwork)
   for attempt in 0..f.maxRetries:
-    last = f.fetchOnce(url)
+    last = f.fetchOnce(actualUrl)
     if last.isOk: return last
     if last.err != feNetwork: return last   # feHttp / feParse: don't retry
     if attempt < f.maxRetries:

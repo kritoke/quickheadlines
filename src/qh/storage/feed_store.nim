@@ -89,6 +89,10 @@ proc feedsMissingFavicon*(s: SqliteFeedStore; limit = 1): seq[(int64, string, st
 proc setFavicon*(s: SqliteFeedStore; feedId: int64; path: string) =
   s.db.exec("UPDATE feeds SET favicon = ? WHERE id = ?", path, feedId)
 
+proc setHeaderColor*(s: SqliteFeedStore; feedId: int64; bgColor, textColor: string) =
+  s.db.exec("UPDATE feeds SET header_color = ?, header_text_color = ? WHERE id = ?",
+            bgColor, textColor, feedId)
+
 proc feedIdForUrl(s: SqliteFeedStore; url: string): int64 =
   let r = s.db.one("SELECT id FROM feeds WHERE url = ?", url)
   if r.isSome: r.get[0].intVal else: 0'i64
