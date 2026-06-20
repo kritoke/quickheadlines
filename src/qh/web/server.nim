@@ -3,7 +3,7 @@
 ## matching; JSON shapes come from dtos.nim. Background write jobs (refresh,
 ## clustering) land in P3.10; this is the runnable read API.
 
-import std/[asynchttpserver, asyncdispatch, json, uri, strutils, tables, times, options]
+import std/[asynchttpserver, asyncdispatch, json, uri, strutils, tables, options]
 import ../types
 import ../storage/[feed_store, item_store]
 import ./dtos

@@ -596,6 +596,57 @@ clean:
 # Full rebuild - clean everything and rebuild
 rebuild: clean build
 
+# ====================================================================
+# Nim port (branch quickhea-511/nim-backend-port)
+# The flake.nix on this branch is the Nim devShell (nim + nimble + yaml +
+# tiny_sqlite). All Nim recipes run through `nix develop .`.
+# ====================================================================
+
+# Build the Svelte frontend if dist/ is missing (the compile-time embed needs it).
+nim-frontend:
+    #!/usr/bin/env sh
+    if [ ! -d frontend/dist ] || [ -z "$(ls -A frontend/dist 2>/dev/null)" ]; then
+        echo "Building Svelte frontend (frontend/dist missing)..."
+        (cd frontend && (test -d node_modules || npm install --no-audit --no-fund) && npm run build)
+    else
+        echo "✓ frontend/dist exists (skip build; use 'just nim-frontend-force' to rebuild)"
+    fi
+
+# Force-rebuild the Svelte frontend.
+nim-frontend-force:
+    @cd frontend && (test -d node_modules || npm install --no-audit --no-fund) && npm run build
+    @echo "✓ frontend/dist rebuilt"
+
+# Fast semantic check of the whole Nim program (no codegen, no binary) - the
+# quickest "does it compile?" signal. Needs frontend/dist for the embed.
+nim-check: nim-frontend
+    nix develop . --command nim check -d:ssl --threads:on src/qh/main.nim
+
+# Compile the Nim server with the embedded frontend -> bin/quickheadlines.
+nim-build: nim-frontend
+    @echo "Compiling Nim server (ssl + threads)..."
+    @rm -f bin/quickheadlines
+    nix develop . --command nim c -d:ssl --threads:on -o:bin/quickheadlines src/qh/main.nim
+    @echo "✓ Built bin/quickheadlines"
+    @ls -lh bin/quickheadlines
+
+# Optimised release build.
+nim-build-release: nim-frontend
+    @rm -f bin/quickheadlines
+    nix develop . --command nim c -d:ssl -d:danger --threads:on --opt:speed -o:bin/quickheadlines src/qh/main.nim
+    @ls -lh bin/quickheadlines
+
+# Run the Nim test suite.
+nim-test:
+    nix develop . --command nimble --accept test
+
+# Build + run the server. Override config/db/port via env vars.
+nim-run: nim-build
+    QUICKHEADLINES_CONFIG={{env_var_or_default("QUICKHEADLINES_CONFIG","feeds.yml")}} \
+    QUICKHEADLINES_DB={{env_var_or_default("QUICKHEADLINES_DB","qh_nim.db")}} \
+    QUICKHEADLINES_PORT={{env_var_or_default("QUICKHEADLINES_PORT","8080")}} \
+    nix develop . --command ./bin/quickheadlines
+
 # Help
 help:
     @echo "QuickHeadlines Justfile (Svelte 5 + Crystal)"

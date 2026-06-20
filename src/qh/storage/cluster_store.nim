@@ -8,10 +8,9 @@
 ## construction (no cross-connection read/write race within the boundary).
 ## LSH band storage helpers for the clustering pipeline live here too.
 
-import std/[options, sets, tables]
+import std/[sets, tables]
 import tiny_sqlite
 import ../types
-import ./database
 
 type
   SqliteClusterStore* = ref object

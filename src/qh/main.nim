@@ -9,11 +9,11 @@
 
 import std/[os, strutils, times]
 import types
-import config/[yaml_config, config_source]
+import config/config_source
 import storage/[database, feed_store, item_store, cluster_store]
 import fetcher/[http_fetcher, fetch_pipeline]
 import clustering/clusterer
-import in_memory/[stores, fetcher_clusterer, services]
+import in_memory/services
 import app
 import web/server
 

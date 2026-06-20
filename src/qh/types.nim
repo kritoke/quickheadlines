@@ -7,7 +7,7 @@
 ## The generic `Result[T,E]` in results.nim remains available for non-boundary
 ## internal code.
 
-import std/[tables, times]
+import std/tables
 
 # ---------------------------------------------------------------- core domain
 

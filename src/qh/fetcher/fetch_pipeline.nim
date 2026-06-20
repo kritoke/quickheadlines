@@ -4,8 +4,7 @@
 ## by the caller on its own DbConn (SQLite connections are not thread-safe, so
 ## fetch is parallel and persist is serial - DB writes are the cheap part).
 
-import std/[options, tables, sugar, sequtils]
-import tiny_sqlite          # Channel[T] is a system builtin under --threads:on
+import std/[tables, sugar, sequtils]
 import ../types
 import ../storage/feed_store
 import ./http_fetcher

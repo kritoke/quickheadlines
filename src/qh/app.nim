@@ -6,7 +6,6 @@
 ## impls, so the same App shell works for production (real impls) and for tests
 ## (in-memory impls). Constructed once in main.nim (Phase 3).
 
-import ./types
 import ./concepts
 
 type

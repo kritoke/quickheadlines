@@ -3,7 +3,7 @@
 ## cluster_info CTE + JOINs, faithfully ported (COUNT(*) OVER() carries the
 ## total so the expensive CTE runs once, not twice - addresses P1 #8).
 
-import std/[times, options]
+import std/[times]
 import tiny_sqlite
 import ../types
 import ./feed_store   # DbTimeFormat

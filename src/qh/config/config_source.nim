@@ -4,7 +4,7 @@
 ##
 ## Port of Crystal src/config/loader.cr + validator.cr. No module-level state.
 
-import std/[uri, strutils]
+import std/uri
 import ../types
 import ./yaml_config
 

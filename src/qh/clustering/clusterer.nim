@@ -8,7 +8,7 @@
 ##
 ## Default bands/rows/threshold mirror Crystal ClusteringConfig defaults.
 
-import std/[sets, tables, algorithm, sequtils]
+import std/[sets, tables, sequtils]
 import ../types
 import ../storage/cluster_store
 import ./engine

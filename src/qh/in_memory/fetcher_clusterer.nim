@@ -5,7 +5,7 @@
 ## fast; the real MinHash/LSH Clusterer lives in spike/clustering_vertical.nim
 ## and will move into production in Phase 3.
 
-import std/[tables, sets, strutils, sequtils]
+import std/[tables, sets, strutils]
 import ../types
 
 # ---------------------------------------------------------------- Fetcher
