@@ -65,3 +65,16 @@ proc findTimeline*(s: SqliteItemStore; limit, offset: int;
     okTimeline(entries, total)
   except CatchableError:
     errTimeline(seIo)
+
+proc loadUnclusteredItems*(s: SqliteItemStore; limit = 500): seq[ClusteringItem] =
+  ## Items whose cluster_id IS NULL, newest first. Used by the clustering
+  ## supervisor to find items that need clustering.
+  for r in s.db.all("""
+    SELECT i.id, i.title, f.id, f.url
+    FROM items i JOIN feeds f ON i.feed_id = f.id
+    WHERE i.cluster_id IS NULL
+      AND (i.pub_date IS NULL OR i.pub_date <= datetime('now','+1 day'))
+      AND (i.pub_date IS NULL OR i.pub_date >= datetime('now', '-' || '30' || ' days'))
+    ORDER BY i.id DESC LIMIT ?""", limit):
+    result.add ClusteringItem(id: r[0].intVal, title: r[1].dbStr,
+                              feedId: r[2].intVal, feedUrl: r[3].dbStr)

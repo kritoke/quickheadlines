@@ -136,6 +136,12 @@ proc closeDb*(db: DbConn) {.inline.} =
   ## Close a DbConn (tiny_sqlite wrapper; keeps the close call in storage/).
   db.close()
 
+proc purgeOldItems*(db: DbConn; retentionHours: int) =
+  ## Delete items older than the retention window + WAL checkpoint.
+  ## Used by the cleanup supervisor (keeps tiny_sqlite calls in storage/).
+  db.exec("DELETE FROM items WHERE pub_date IS NOT NULL AND pub_date < datetime('now', '-' || '" & $retentionHours & "' || ' hours')")
+  db.exec("PRAGMA wal_checkpoint(TRUNCATE)")
+
 proc integrityOk*(dbPath: string): bool =
   ## PRAGMA integrity_check == "ok".
   let db = openDatabase(dbPath)

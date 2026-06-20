@@ -17,6 +17,8 @@ import in_memory/services
 import app
 import web/server
 import supervisors/refresh_supervisor
+import supervisors/cluster_supervisor
+import supervisors/cleanup_supervisor
 
 proc envInt(key: string; dflt: int): int =
   try: getEnv(key, $dflt).parseInt() except ValueError: dflt
@@ -61,6 +63,20 @@ proc main() =
   new(dirty); dirty[].store(false)
   discard startRefreshSupervisor(feedConfigs, dbPath, dirty, config.refreshMinutes * 60)
   echo "Refresh running in background; serving reads now."
+
+  # 6. Periodic clustering (its own DbConn; threshold from config).
+  let cc = config.clustering
+  let clInterval = if cc.runOnStartup: 1 else: 3600  # 1s if startup-run (first tick), then 1h
+  let clThreshold = cc.threshold
+  discard startClusterSupervisor(dbPath, threshold = clThreshold,
+                                  maxItems = cc.maxItems.clamp(1, 5000),
+                                  intervalSec = clInterval, dirty = dirty)
+  echo "Cluster supervisor started (threshold=", clThreshold, " interval=", clInterval, "s)"
+
+  # 7. Periodic cleanup (its own DbConn; retention from config).
+  discard startCleanupSupervisor(dbPath, cacheRetentionHours = 336,
+                                 intervalSec = 1800, dirty = dirty)
+  echo "Cleanup supervisor started (retention=336h interval=30min)"
 
   # 6. Serve the read API + embedded SPA + WS push. (Blocks; main thread.)
   let ctx = ServerCtx(
