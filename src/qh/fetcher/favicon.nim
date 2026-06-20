@@ -46,26 +46,69 @@ proc fetchFavicon*(siteLink, feedUrl: string): Option[FavBytes] =
   finally:
     client.close()
 
+proc resolveHref(origin, href: string): string =
+  let h = href.strip()
+  if h.startsWith("http://") or h.startsWith("https://"): return h
+  if h.startsWith("//"): return "https:" & h
+  if h.startsWith("/"): return origin & h
+  origin & "/" & h
+
+proc findIconHref(html, origin: string): string =
+  ## Plain-string search for <link rel="icon" href="...">. No regex dep.
+  let lower = html.toLowerAscii()
+  var pos = 0
+  while true:
+    let ls = lower.find("<link", pos)
+    if ls < 0: break
+    let le = lower.find(">", ls)
+    if le < 0: break
+    let tag = lower[ls..le]
+    pos = le + 1
+    if ("icon" in tag or "shortcut icon" in tag) and "href" in tag:
+      let hp = tag.find("href")
+      if hp < 0: continue
+      let rest = tag[hp + 4 ..^ 1].strip()
+      if rest.len > 1 and rest[0] == '=':
+        let val = rest[1..^1].strip()
+        if val.len > 0 and (val[0] == '"' or val[0] == '\''):
+          let q = val[0]
+          let eq = val.find(q, 1)
+          if eq > 0: return resolveHref(origin, val[1 ..< eq])
+  ""
+
 proc fetchFaviconAsync*(siteLink, feedUrl: string): Future[Option[FavBytes]] {.async.} =
-  ## Async version - runs in the server event loop (sync httpclient's timeout
-  ## doesn't bound connect/DNS in a thread, which deadlocked the feed worker
-  ## pool). Best-effort /favicon.ico. A hung connect blocks only this one
-  ## coroutine, not the event loop - no deadlock.
+  ## Async favicon fetch in the server event loop. Tries /favicon.ico, then
+  ## parses the homepage HTML for <link rel="icon">. Can't deadlock (async).
   let origin = if siteLink.len > 0: originOf(siteLink) else: originOf(feedUrl)
   if origin.len == 0: return none(FavBytes)
   let client = newAsyncHttpClient()
   client.headers = newHttpHeaders({"User-Agent": FavUserAgent})
   try:
-    let resp = await client.request(origin & "/favicon.ico", HttpGet)
-    let code = resp.code.int
-    if code != 200 and code != 301 and code != 302: return none(FavBytes)
-    let body = await resp.body
-    if body.len < 50: return none(FavBytes)
-    return some(FavBytes(bytes: body, ext: ctToExt(resp.headers.getOrDefault("Content-Type"))))
+    # 1) direct /favicon.ico
+    block tryDirect:
+      let resp = await client.request(origin & "/favicon.ico", HttpGet)
+      let code = resp.code.int
+      if code == 200 or code == 301 or code == 302:
+        let body = await resp.body
+        if body.len >= 50:
+          return some(FavBytes(bytes: body, ext: ctToExt(resp.headers.getOrDefault("Content-Type"))))
+    # 2) parse homepage HTML for <link rel="icon">
+    let htmlResp = await client.request(origin & "/", HttpGet)
+    let htmlCode = htmlResp.code.int
+    if htmlCode == 200:
+      let html = await htmlResp.body
+      let href = findIconHref(html, origin)
+      if href.len > 0:
+        let iconResp = await client.request(href, HttpGet)
+        if iconResp.code.int == 200:
+          let body = await iconResp.body
+          if body.len >= 50:
+            return some(FavBytes(bytes: body, ext: ctToExt(iconResp.headers.getOrDefault("Content-Type"))))
   except CatchableError:
-    return none(FavBytes)
+    discard
   finally:
     client.close()
+  none(FavBytes)
 
 proc faviconHash*(origin: string): string =
   ## Stable per-site filename stem (FNV-1a hash → hex, no deprecated sha1 dep).

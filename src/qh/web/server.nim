@@ -132,8 +132,20 @@ proc handle(ctx: ServerCtx; req: Request): Future[void] {.async.} =
         if not listed.isOk or listed.feeds.len > 0: break
     if not listed.isOk:
       await req.respond(Http500, $(%*{"error": "feeds read failed"}), jsonHeaders()); return
+    let tab = q.getOrDefault("tab", "all").toLowerAscii()
+    # Build tab→urls map from config for filtering.
+    var tabUrls: Table[string, seq[string]]
+    for t in ctx.config.tabs:
+      var urls: seq[string]
+      for f in t.feeds: urls.add(f.url)
+      tabUrls[t.name.toLowerAscii()] = urls
     var feedNodes: seq[JsonNode]
     for f in listed.feeds:
+      # Filter: if a specific tab is requested, only include feeds whose URL is
+      # in that tab's config feed list. "all" includes everything.
+      if tab != "all":
+        let urls = tabUrls.getOrDefault(tab, @[])
+        if f.url notin urls: continue
       let items = ctx.feedStore.recentItems(f.id, ctx.config.itemLimit)
       feedNodes.add(feedJson(f, items, ctx.feedStore.countItems(f.id)))
     let activeTab = q.getOrDefault("tab", "all")
