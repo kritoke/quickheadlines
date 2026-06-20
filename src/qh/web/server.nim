@@ -202,6 +202,7 @@ proc feedWatcher(ctx: ServerCtx): Future[void] {.async.} =
         for (id, siteLink, url) in missing:
           futures.add fetchFaviconAsync(siteLink, url)
         let results = await all(futures)
+        var saved, failed: int
         for i in 0 ..< results.len:
           if results[i].isSome:
             try:
@@ -210,8 +211,12 @@ proc feedWatcher(ctx: ServerCtx): Future[void] {.async.} =
               let path = saveFavicon(results[i].get, origin)
               ctx.feedStore.setFavicon(id, path)
               ctx.dirty[].store(true)
+              inc saved
             except CatchableError:
-              discard
+              inc failed
+          else:
+            inc failed
+        echo "[favicon] tick=", tick, " tried=", missing.len, " saved=", saved, " failed=", failed
 
 proc serve*(ctx: ServerCtx; port = 8080) =
   ## Start the HTTP server (blocks) + the WS-broadcast watcher on one event loop.
