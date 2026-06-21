@@ -217,8 +217,6 @@ tabs:
         url: https://iev.ee/feed.xml
       - title: Mathias Brandewinder
         url: https://brandewinder.com/atom.xml
-      - title: Amplifying F# Blog
-        url: https://amplifyingfsharp.io/blog/feed.xml
       - title: G-Research Tech Blog
         url: https://www.gresearch.com/feed/
       - title: "r/fsharp"

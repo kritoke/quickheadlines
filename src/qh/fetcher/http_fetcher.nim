@@ -22,6 +22,7 @@ proc fetchOnce(f: HttpFetcher; url: string): FetchResult =
   let client = newHttpClient(timeout = f.timeoutMs)
   client.headers = newHttpHeaders({
     "User-Agent": f.userAgent,
+    "Accept": "application/rss+xml, application/atom+xml, application/xml, text/xml",
     "Accept-Encoding": "identity"
   })
   try:
@@ -42,11 +43,8 @@ proc backoffMs(attempt: int): int =
   min(100 * (1 shl attempt), 2000)
 
 proc transformFeedUrl*(url: string): string =
-  ## Reddit subreddit URLs need .rss suffix to get RSS feeds.
-  ## www.reddit.com/r/technology -> www.reddit.com/r/technology/.rss
-  if url.contains("reddit.com/r/") and not url.endsWith(".rss"):
-    let base = url.strip(chars={'/'})
-    return base & "/.rss"
+  ## No-op: the plain subreddit URL works (Reddit redirects with Accept headers).
+  ## Appending .rss triggers aggressive rate-limiting (429).
   url
 
 proc fetch*(f: HttpFetcher; url: string): FetchResult =
