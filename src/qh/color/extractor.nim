@@ -12,11 +12,17 @@ import ./mmcq
 proc decodeImage(data: string): Option[seq[byte]] =
   ## Decode image bytes -> RGBA pixel array via stb_image.
   if data.len == 0: return none(seq[byte])
+  # Proper string -> seq[byte] (cast is unsafe under ORC: string and seq
+  # have different memory layouts).
+  var bytes = newSeq[byte](data.len)
+  for i in 0 ..< data.len: bytes[i] = byte(data[i])
   var w, h, ch: int
-  let pixels = stbi.loadFromMemory(
-    cast[seq[byte]](data), w, h, ch, 4)  # 4 = RGBA
-  if pixels.len == 0: return none(seq[byte])
-  some(pixels)
+  try:
+    let pixels = stbi.loadFromMemory(bytes, w, h, ch, 4)  # 4 = RGBA
+    if pixels.len == 0: return none(seq[byte])
+    some(pixels)
+  except stbi.STBIException:
+    none(seq[byte])
 
 proc buildHistogram(pixels: seq[byte]): seq[uint32] =
   ## Build a 32768-bin histogram from RGBA pixel data.
