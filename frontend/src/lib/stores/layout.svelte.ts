@@ -1,9 +1,9 @@
 import { getStoredInt, setStoredValue } from "$lib/utils/storage";
 
-export type ColumnCount = 1 | 2 | 3 | 4;
+export type ColumnCount = 1 | 2 | 3;
 
-const VALID_TIMELINE_COLUMNS = new Set(["1", "2", "3", "4"]);
-const VALID_FEED_COLUMNS = new Set(["2", "3", "4"]);
+const VALID_TIMELINE_COLUMNS = new Set(["1", "2", "3"]);
+const VALID_FEED_COLUMNS = new Set(["2", "3"]);
 
 export const columnOptions: {
 	id: ColumnCount;
@@ -12,7 +12,6 @@ export const columnOptions: {
 }[] = [
 	{ id: 2, name: "2 Columns", description: "Two column layout" },
 	{ id: 3, name: "3 Columns", description: "Three column layout" },
-	{ id: 4, name: "4 Columns", description: "Four column layout" },
 ];
 
 export const layoutState = $state({
@@ -49,6 +48,5 @@ export function setFeedColumns(count: ColumnCount) {
 
 export function getFeedGridClass(cols: number): string {
 	if (cols <= 2) return "grid-cols-1 sm:grid-cols-2";
-	if (cols === 3) return "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3";
-	return "grid-cols-1 sm:grid-cols-2 lg:grid-cols-4";
+	return "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3";
 }
