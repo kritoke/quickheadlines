@@ -14,9 +14,9 @@ proc toMillis(s: string): int64 =
   except CatchableError:
     result = 0
 
-proc jstr(v: string): JsonNode =
+proc jstr*(v: string): JsonNode =
   if v.len == 0: newJNull() else: %v
-proc jstrOr(v: string; dflt = ""): JsonNode =
+proc jstrOr*(v: string; dflt = ""): JsonNode =
   %(if v.len == 0: dflt else: v)
 
 proc timelineItemJson*(e: TimelineEntry): JsonNode =

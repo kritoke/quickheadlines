@@ -29,8 +29,12 @@ proc upsertFeed*(s: SqliteFeedStore; f: FeedRow): StoreUnitResult =
     if existing.isSome:
       let id = existing.get[0].intVal
       s.db.exec("""
-        UPDATE feeds SET title=?, site_link=?, favicon=?, favicon_data=?,
-                          header_color=?, header_text_color=?, last_fetched=?
+        UPDATE feeds SET title=?, site_link=?,
+                          favicon=COALESCE(NULLIF(?, ''), favicon),
+                          favicon_data=COALESCE(NULLIF(?, ''), favicon_data),
+                          header_color=COALESCE(NULLIF(?, ''), header_color),
+                          header_text_color=COALESCE(NULLIF(?, ''), header_text_color),
+                          last_fetched=?
         WHERE id=?""",
         f.title, f.siteLink, f.favicon, f.faviconData, f.headerColor,
         f.headerTextColor, nowUtcStr(), id)

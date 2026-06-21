@@ -8,7 +8,7 @@
 ## registry needs no lock. The only cross-thread bit is `ctx.dirty` (an Atomic-
 ## Bool ref set by the refresh supervisor thread).
 
-import std/[asynchttpserver, asyncdispatch, asyncnet, json, uri, strutils, tables, options, atomics, sequtils, os]
+import std/[asynchttpserver, asyncdispatch, asyncnet, json, uri, strutils, tables, options, atomics, sequtils, os, algorithm]
 import ../types
 import ../storage/[feed_store, item_store]
 import ../fetcher/favicon
@@ -182,6 +182,64 @@ proc handle(ctx: ServerCtx; req: Request): Future[void] {.async.} =
 
   of "/api/version":
     await req.respond(Http200, $versionJson(ctx.startedAtMs), jsonHeaders())
+
+  # /api/feed_more?url=...&limit=10&offset=0 — more items for a specific feed.
+  of "/api/feed_more":
+    let url = q.getOrDefault("url", "")
+    let limit = q.intParam("limit", 10)
+    let offset = q.intParam("offset", 0)
+    if url.len == 0:
+      await req.respond(Http400, $(%*{"error": "url required"}), jsonHeaders())
+    else:
+      let r = ctx.itemStore.feedItems(url, limit, offset)
+      if r.isOk:
+        # Find the feed metadata.
+        var feedNode = %*{"url": url, "title": "", "display_link": "", "site_link": "",
+                          "favicon": "", "favicon_data": "", "header_color": newJNull(),
+                          "header_text_color": newJNull(), "tab": "",
+                          "items": %(r.entries.mapIt(timelineItemJson(it))),
+                          "total_item_count": %r.total}
+        let listed = ctx.feedStore.listFeeds()
+        if listed.isOk:
+          for f in listed.feeds:
+            if f.url == url:
+              feedNode["title"] = %f.title
+              feedNode["display_link"] = %f.siteLink
+              feedNode["site_link"] = %f.siteLink
+              feedNode["favicon"] = jstrOr(f.favicon)
+              feedNode["header_color"] = jstr(f.headerColor)
+              feedNode["header_text_color"] = jstr(f.headerTextColor)
+              break
+        await req.respond(Http200, $feedNode, jsonHeaders())
+      else:
+        await req.respond(Http500, $(%*{"error": "feed_more failed"}), jsonHeaders())
+
+  # /api/clusters — list all clusters with their items.
+  of "/api/clusters":
+    let limit = q.intParam("limit", 50)
+    let offset = q.intParam("offset", 0)
+    let clusterMap = ctx.itemStore.loadAllClusters()
+    var clusterIds: seq[int64]
+    for cid in clusterMap.keys: clusterIds.add(cid)
+    clusterIds.sort()
+    let slice = clusterIds[offset ..< min(offset + limit, clusterIds.len)]
+    var clusterNodes: seq[JsonNode]
+    for cid in slice:
+      let members = clusterMap[cid]
+      var representative = newJObject()
+      var others: seq[JsonNode] = @[]
+      for m in members:
+        if m.representative: representative = timelineItemJson(m)
+        else: others.add(timelineItemJson(m))
+      clusterNodes.add(%*{
+        "id": %($cid),
+        "representative": representative,
+        "others": %others,
+        "cluster_size": %members.len
+      })
+    await req.respond(Http200, $(%*{
+      "clusters": %clusterNodes,
+      "total_count": %clusterIds.len}), jsonHeaders())
 
   else:
     await req.respond(Http404, $(%*{"error": "not found"}), jsonHeaders())
