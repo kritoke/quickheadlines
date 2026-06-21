@@ -265,7 +265,9 @@ proc feedWatcher(ctx: ServerCtx): Future[void] {.async.} =
       wsClients = alive
     # Favicon: fetch several missing icons concurrently every 3s (async,
     # isolated in the event loop - can't deadlock). Parallel, not sequential.
+    # Also re-extract colors for feeds that have a favicon but no valid color.
     if tick mod 3 == 0:
+      # 1. Fetch missing favicons.
       let missing = ctx.feedStore.feedsMissingFavicon(8)
       if missing.len > 0:
         var futures: seq[Future[Option[FavBytes]]] = @[]
@@ -282,12 +284,10 @@ proc feedWatcher(ctx: ServerCtx): Future[void] {.async.} =
               let fav = results[i].get
               let path = saveFavicon(fav, origin)
               ctx.feedStore.setFavicon(id, path)
-              # Extract theme colors from the favicon (prismatiq MMCQ port).
-              # Pick text color with good contrast against the background.
               let theme = colorExtractor.extractTheme(fav.bytes)
               if theme.isSome:
-                let textColor = colorExtractor.selectTextColor(theme.get)
-                ctx.feedStore.setHeaderColor(id, theme.get.bgColor, textColor)
+                ctx.feedStore.setHeaderColor(id, theme.get.bgColor,
+                  colorExtractor.selectTextColor(theme.get))
               ctx.dirty[].store(true)
               inc saved
             except CatchableError:
@@ -298,6 +298,22 @@ proc feedWatcher(ctx: ServerCtx): Future[void] {.async.} =
             failUrls.add(missing[i][2])
         let failMsg = if failUrls.len > 0: " failed_urls=" & failUrls.join(",") else: ""
         echo "[favicon] tick=", tick, " tried=", missing.len, " saved=", saved, " failed=", failed, failMsg
+      # 2. Re-extract colors for feeds that have a favicon file but no valid color.
+      #    (handles stale/empty header_color from prior runs)
+      for row in ctx.feedStore.db.all("""
+        SELECT id, COALESCE(favicon,'') FROM feeds
+        WHERE (header_color IS NULL OR header_color = '' OR header_color NOT LIKE '#___%')
+          AND favicon IS NOT NULL AND favicon != ''"""):
+        let fid = row[0].intVal
+        let favPath = "favicons" & row[1].dbStr[9..^1]   # strip "/favicons/"
+        if fileExists(favPath):
+          let bytes = readFile(favPath)
+          if bytes.len > 0:
+            let theme = colorExtractor.extractTheme(bytes)
+            if theme.isSome:
+              ctx.feedStore.setHeaderColor(fid, theme.get.bgColor,
+                colorExtractor.selectTextColor(theme.get))
+              ctx.dirty[].store(true)
 
 proc serve*(ctx: ServerCtx; port = 8080) =
   ## Start the HTTP server (blocks) + the WS-broadcast watcher on one event loop.
