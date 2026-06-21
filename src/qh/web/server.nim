@@ -8,9 +8,9 @@
 ## registry needs no lock. The only cross-thread bit is `ctx.dirty` (an Atomic-
 ## Bool ref set by the refresh supervisor thread).
 
-import std/[asynchttpserver, asyncdispatch, asyncnet, json, uri, strutils, tables, options, atomics, sequtils, os, algorithm, net, httpclient]
+import std/[asynchttpserver, asyncdispatch, asyncnet, json, uri, strutils, tables, options, atomics, sequtils, os, algorithm, net, httpclient, re]
 import ../types
-import ../storage/[feed_store, item_store]
+import ../storage/[feed_store, item_store, content_store]
 import ../fetcher/favicon
 import ../color/extractor as colorExtractor
 import ../security/[rate_limiter, auth, proxy_validator]
@@ -23,6 +23,7 @@ type
     config*: Config
     feedStore*: SqliteFeedStore
     itemStore*: SqliteItemStore
+    contentStore*: SqliteContentStore
     startedAtMs*: int64
     dirty*: ref Atomic[bool]     # set by refresh supervisor -> watcher broadcasts
     rateLimiter*: RateLimiter
@@ -314,6 +315,26 @@ proc handle(ctx: ServerCtx; req: Request): Future[void] {.async.} =
 
   of "/api/version":
     await req.respond(Http200, $versionJson(ctx.startedAtMs), jsonHeaders())
+
+  of "/api/content":
+    let link = q.getOrDefault("link", "")
+    if link.len == 0:
+      await req.respond(Http400, $(%*{"error": "missing link parameter"}), jsonHeaders())
+    elif ctx.contentStore == nil:
+      await req.respond(Http500, $(%*{"error": "content store not configured"}), jsonHeaders())
+    else:
+      let article = ctx.contentStore.getArticle(link)
+      if article.link.len == 0:
+        await req.respond(Http200, $(%*{
+          "error": "Full article not available. Content is fetched from RSS feeds which typically contain only summaries, not full articles.",
+          "is_summary": false, "article_url": %link}), jsonHeaders())
+      else:
+        # Check if content is summary-only (same heuristic as Crystal controller).
+        let isSummary = article.content.len < 500 or
+          article.content.toLowerAscii().contains(re"(read more|read full|subscribe|click here|sorry.*content)")
+        await req.respond(Http200, $(%*{
+          "content": %article.content, "content_type": %article.contentType,
+          "is_summary": %isSummary, "article_url": %article.link}), jsonHeaders())
 
   # /api/feed_more?url=...&limit=10&offset=0 — more items for a specific feed.
   of "/api/feed_more":

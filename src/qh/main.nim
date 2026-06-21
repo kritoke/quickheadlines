@@ -11,7 +11,7 @@ import std/[os, strutils, times, atomics]
 import types
 import config/config_source
 import config/yaml_config
-import storage/[database, feed_store, item_store, cluster_store]
+import storage/[database, feed_store, item_store, cluster_store, content_store]
 import fetcher/[http_fetcher, fetch_pipeline]
 import clustering/clusterer
 import in_memory/services
@@ -44,6 +44,7 @@ proc main() =
   let feedStore    = SqliteFeedStore(db: db)
   let itemStore    = SqliteItemStore(db: db)
   let clusterStore = SqliteClusterStore(db: db)
+  let contentStore = SqliteContentStore(db: db)
 
   # 3. App composition root (validates every boundary composes - concepts
   #    enforced at compile time; in-memory impls stand in for not-yet-prod ones).
@@ -95,6 +96,7 @@ proc main() =
       "fastly.picsum.photos"])
   let ctx = ServerCtx(
     config: config, feedStore: feedStore, itemStore: itemStore,
+    contentStore: contentStore,
     startedAtMs: now().utc().toTime().toUnix() * 1000'i64,
     dirty: dirty, rateLimiter: limiter, proxyValidator: pv)
   ctx.serve(port)

@@ -76,6 +76,21 @@ proc migrations(): seq[Migration] =
         db.exec("UPDATE items SET normalized_link = link")
         db.exec("DROP INDEX IF EXISTS idx_items_unique_feed_link")
         db.exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_items_unique_feed_link ON items(feed_id, normalized_link)")),
+    Migration(version: 11, name: "create_article_content_table",
+      up: proc(db: DbConn) =
+        db.exec("""CREATE TABLE IF NOT EXISTS article_content (
+          id            INTEGER PRIMARY KEY AUTOINCREMENT,
+          item_link     TEXT UNIQUE NOT NULL,
+          feed_url      TEXT NOT NULL,
+          title         TEXT NOT NULL,
+          content       TEXT NOT NULL,
+          content_type  TEXT DEFAULT 'html',
+          fetched_at    TEXT NOT NULL,
+          created_at    TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
+        )""")
+        db.exec("CREATE INDEX IF NOT EXISTS idx_content_link ON article_content(item_link)")
+        db.exec("CREATE INDEX IF NOT EXISTS idx_content_feed ON article_content(feed_url)")
+        db.exec("CREATE INDEX IF NOT EXISTS idx_content_created ON article_content(created_at)")),
   ]
 
 proc ensureSchemaInfoTable(db: DbConn) =

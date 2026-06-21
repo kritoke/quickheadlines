@@ -6,7 +6,7 @@
 
 import std/[tables, sugar, sequtils, atomics]
 import ../types
-import ../storage/feed_store
+import ../storage/[feed_store, content_store as cstore]
 import ./http_fetcher
 
 type
@@ -55,6 +55,7 @@ proc fetchAllConcurrent*(f: HttpFetcher; urls: seq[string];
 
 proc refreshAll*(f: HttpFetcher; feeds: seq[FeedConfig];
                  store: SqliteFeedStore;
+                 contentStore: SqliteContentStore = nil;
                  dirty: ref Atomic[bool] = nil;
                  maxConcurrency = 8): RefreshSummary =
   ## Fetch every feed concurrently and persist successes via the FeedStore.
@@ -62,6 +63,8 @@ proc refreshAll*(f: HttpFetcher; feeds: seq[FeedConfig];
   ## readers (and the /api/feeds long-poll) see feeds progressively. `dirty`
   ## (if given) is set after EACH persist, so the WS watcher pushes feed_update
   ## as feeds land - not delayed by the slowest/hanging feed.
+  ## If contentStore is provided, article content is persisted and stripped from
+  ## in-memory items (port of Crystal persist_entry_content + strip_content).
   let urls = feeds.mapIt(it.url)
   let n = maxConcurrency.clamp(1, 32)
   var jobs: Channel[string]
@@ -86,6 +89,14 @@ proc refreshAll*(f: HttpFetcher; feeds: seq[FeedConfig];
       # Always use the configured title from feeds.yml (the user configures
       # display names there; RSS titles may differ or be generic).
       fd.title = byUrl.getOrDefault(o.url, fd.title)
+      # Persist article content to the content store before stripping.
+      if not contentStore.isNil:
+        for it in fd.items:
+          if it.content.len > 0 and not cstore.isSummaryOnly(it.content):
+            discard contentStore.storeContent(it.link, o.url, it.title, it.content)
+      # Strip content from in-memory items (saves memory; content is in the DB).
+      for i in 0 ..< fd.items.len:
+        fd.items[i].content = ""
       discard store.upsertWithItems(fd)            # favicon (if fetched) persisted with the feed
       if not dirty.isNil: dirty[].store(true)      # notify WS watcher per feed
     else:

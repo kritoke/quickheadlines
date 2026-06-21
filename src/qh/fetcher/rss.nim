@@ -94,6 +94,23 @@ proc linkOf*(n: XmlNode): string =
   if h.len > 0: return h.strip()
   c.allText.strip()
 
+proc entryContent*(n: XmlNode): string =
+  ## Extract article content from an RSS/Atom entry.
+  ## Tries: content:encoded (RSS), content (Atom), summary (Atom), description (RSS fallback).
+  for tag in ["content", "summary", "description"]:
+    let c = n.childNs(tag)
+    if c != nil:
+      let text = c.allText.strip()
+      if text.len > 0: return text
+  # RSS content:encoded uses a namespace prefix — look for any tag ending in ":encoded"
+  for c in n:
+    if c.kind == xnElement:
+      let t = c.tag
+      if t.endsWith(":encoded"):
+        let text = c.allText.strip()
+        if text.len > 0: return text
+  ""
+
 proc parseRss*(url, body: string): FetchResult =
   try:
     let tree = parseXml(newStringStream(body))
@@ -111,7 +128,8 @@ proc parseRss*(url, body: string): FetchResult =
           fd.items.add Item(
             title: it.childText("title"),
             link: it.linkOf,
-            pubDate: normalizePubDate(it.childText("updated")))
+            pubDate: normalizePubDate(it.childText("updated")),
+            content: it.entryContent())
       else:
         let channel = if root.bareTag == "channel": root else: root.childNs("channel")
         if channel != nil:
@@ -121,7 +139,8 @@ proc parseRss*(url, body: string): FetchResult =
             fd.items.add Item(
               title: it.childText("title"),
               link: it.linkOf,
-              pubDate: normalizePubDate(it.childText("pubDate")))
+              pubDate: normalizePubDate(it.childText("pubDate")),
+              content: it.entryContent())
       okFetch(fd)
     else:
       okFetch(fd)

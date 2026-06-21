@@ -38,7 +38,7 @@ suite "schema + migrations (P3.2)":
     let db = openDatabase(":memory:")
     defer: db.close()
     db.createSchema(":memory:")
-    check db.schemaVersion() == "10"
+    check db.schemaVersion() == "11"
 
   test "post-migration columns present on items":
     let db = openDatabase(":memory:")
@@ -80,7 +80,7 @@ suite "schema + migrations (P3.2)":
     let db2 = openDatabase(path)
     defer: db2.close()
     db2.createSchema(path)
-    check db2.schemaVersion() == "10"
+    check db2.schemaVersion() == "11"
     removeFile(path)
     removeFile(path & "-wal")
     removeFile(path & "-shm")

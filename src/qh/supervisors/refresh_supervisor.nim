@@ -4,7 +4,7 @@
 ## start, then repeats every intervalSec (0 = one-shot initial refresh only).
 
 import std/[os, atomics]
-import ../storage/[database, feed_store]
+import ../storage/[database, feed_store, content_store]
 import ../fetcher/[http_fetcher, fetch_pipeline, software_fetcher]
 
 type
@@ -19,13 +19,14 @@ proc refreshLoop(a: RefreshArgs) {.thread.} =
   {.cast(gcsafe).}:
     let db = openAndCreate(a.dbPath)
     let store = SqliteFeedStore(db: db)
+    let contentStore = SqliteContentStore(db: db)
     let fetcher = newHttpFetcher()
     # Clear ALL stored colors on startup so the watcher re-extracts with the
     # final algorithm (WCAG-validated, unified for both theme modes).
     # This is aggressive but the watcher processes 8 feeds per 3s tick (~5 min).
     store.clearAllColors()
     while true:
-      let s = fetcher.refreshAll(a.feedConfigs, store, a.dirty, 8)
+      let s = fetcher.refreshAll(a.feedConfigs, store, contentStore, a.dirty, 8)
       echo "[refresh] fetched=", s.fetched, " failed=", s.failed, " items=", s.items
       # Fetch software releases if repos configured.
       if a.swRepos.len > 0:
@@ -33,6 +34,9 @@ proc refreshLoop(a: RefreshArgs) {.thread.} =
         if swFeed.items.len > 0:
           discard store.upsertWithItems(swFeed)
           echo "[sw-releases] ", swFeed.items.len, " releases from ", a.swRepos.len, " repos"
+      # Cleanup old content entries periodically.
+      let cleaned = contentStore.cleanupOldEntries()
+      if cleaned > 0: echo "[content] cleaned ", cleaned, " old entries"
       a.dirty[].store(true)          # final notify
       if a.intervalSec <= 0: break   # one-shot
       sleep(a.intervalSec * 1000)
