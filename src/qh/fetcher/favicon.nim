@@ -161,14 +161,20 @@ proc fetchFaviconAsync*(siteLink, feedUrl: string): Future[Option[FavBytes]] {.a
     #    vug.cr also prefers HTML <link> over direct paths for this reason.
     let htmlOpt = await client.followFetch(origin & "/")
     if htmlOpt.isSome:
-      let hrefs = findIconHrefs(htmlOpt.get, origin)
-      for href in hrefs:
-        let r = await client.tryFetchValidImage(href)
-        if r.isSome: return r
+      let raw = htmlOpt.get
+      # If the response is gzip-compressed (0x1F 0x8B), we can't parse it
+      # (std/zlib isn't available in this nix Nim build). Skip and fall through
+      # to Google/DuckDuckGo which serve uncompressed.
+      let isGzip = raw.len > 2 and raw[0] == '\x1F' and raw[1] == '\x8B'
+      if not isGzip:
+        let hrefs = findIconHrefs(raw, origin)
+        for href in hrefs:
+          let r = await client.tryFetchValidImage(href)
+          if r.isSome: return r
 
-    # 2. Fallback: try common favicon paths at the site origin.
-    for path in ["/apple-touch-icon.png", "/apple-touch-icon-180x180.png",
-                 "/favicon.png", "/favicon.ico"]:
+    # 2. Try common favicon paths at the site origin.
+    for path in ["/favicon.png", "/apple-touch-icon.png",
+                 "/apple-touch-icon-180x180.png", "/favicon.ico"]:
       let r = await client.tryFetchValidImage(origin & path)
       if r.isSome: return r
 
