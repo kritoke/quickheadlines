@@ -283,10 +283,11 @@ proc feedWatcher(ctx: ServerCtx): Future[void] {.async.} =
               let path = saveFavicon(fav, origin)
               ctx.feedStore.setFavicon(id, path)
               # Extract theme colors from the favicon (prismatiq MMCQ port).
+              # Pick text color with good contrast against the background.
               let theme = colorExtractor.extractTheme(fav.bytes)
               if theme.isSome:
-                ctx.feedStore.setHeaderColor(id, theme.get.bgColor,
-                  theme.get.lightTextColor)  # use light text as default
+                let textColor = colorExtractor.selectTextColor(theme.get)
+                ctx.feedStore.setHeaderColor(id, theme.get.bgColor, textColor)
               ctx.dirty[].store(true)
               inc saved
             except CatchableError:

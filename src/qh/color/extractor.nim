@@ -87,3 +87,10 @@ proc extractTheme*(imageData: string; maxColors = 6): Option[ThemeResult] =
     bgColor: bg.toHex,
     lightTextColor: lightText.toHex,
     darkTextColor: darkText.toHex))
+
+proc selectTextColor*(theme: ThemeResult): string =
+  ## Pick light or dark text for a background: dark bg -> light text,
+  ## light bg -> dark text. Returns a hex color string.
+  let bg = parseHex(theme.bgColor)
+  let lum = relativeLuminance(bg)
+  if lum < 0.5: theme.lightTextColor else: theme.darkTextColor
