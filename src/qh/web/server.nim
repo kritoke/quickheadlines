@@ -296,8 +296,11 @@ proc feedWatcher(ctx: ServerCtx): Future[void] {.async.} =
               ctx.feedStore.setFavicon(id, path)
               let theme = colorExtractor.extractTheme(fav.bytes)
               if theme.isSome:
+                # Prismatiq convention: 'light' = text for LIGHT backgrounds (dark text),
+                # 'dark' = text for DARK backgrounds (light text).
+                # SPA: isDark -> dark variant, !isDark -> light variant.
                 ctx.feedStore.setThemeColors(id, theme.get.bgColor,
-                  theme.get.lightTextColor, theme.get.darkTextColor)
+                  theme.get.darkTextColor, theme.get.lightTextColor)
               ctx.dirty[].store(true)
               inc saved
             except CatchableError:
@@ -317,7 +320,7 @@ proc feedWatcher(ctx: ServerCtx): Future[void] {.async.} =
             let theme = colorExtractor.extractTheme(bytes)
             if theme.isSome:
               ctx.feedStore.setThemeColors(fid, theme.get.bgColor,
-                theme.get.lightTextColor, theme.get.darkTextColor)
+                theme.get.darkTextColor, theme.get.lightTextColor)
               ctx.dirty[].store(true)
 
 proc serve*(ctx: ServerCtx; port = 8080) =

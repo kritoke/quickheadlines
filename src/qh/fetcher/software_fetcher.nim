@@ -65,7 +65,8 @@ proc fetchSoftwareReleases*(repos: seq[string]): FeedData =
           item.title = fixSoftwareTitle(item.title, repo)
           result.items.add(item)
       client.close()
-    except CatchableError:
+    except CatchableError as e:
+      echo "[sw-releases] ", repo, " failed: ", e.msg
       discard
   # Sort combined results by pub_date descending.
   result.items.sort do (a, b: Item) -> int:

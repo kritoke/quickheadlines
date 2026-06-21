@@ -625,14 +625,13 @@ nim-check: nim-frontend
 # Compile the Nim server with the embedded frontend -> bin/quickheadlines.
 # Produces a thin wrapper that bakes in LD_LIBRARY_PATH so nim-run does NOT need
 # a slow `nix develop` per launch (the #1 source of startup delay).
-nim-build: nim-frontend
+nim-build: nim-frontend-force
     #!/usr/bin/env bash
     set -euo pipefail
-    echo "Compiling Nim server (ssl + threads)..."
+    echo "Compiling Nim server..."
     rm -f bin/quickheadlines bin/quickheadlines.bin
     nix develop . --command nim c -d:ssl --threads:on -o:bin/quickheadlines.bin src/qh/main.nim
-    # Capture the devshell lib path ONCE (build-time) and bake it into a wrapper,
-    # so nim-run launches the binary directly (no slow `nix develop` per run).
+    # Capture the devshell lib path once and bake into a wrapper.
     LDLP="$(nix develop . --command sh -c 'echo $LD_LIBRARY_PATH')"
     sh scripts/nim-wrap.sh bin/quickheadlines bin/quickheadlines.bin "$LDLP"
     echo "Built bin/quickheadlines (wrapper + .bin)"

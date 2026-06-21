@@ -46,14 +46,18 @@ proc transformFeedUrl*(url: string): string =
 
 proc fetch*(f: HttpFetcher; url: string): FetchResult =
   ## Boundary proc. Retries on transient (network) errors up to maxRetries,
-  ## with exponential backoff. HTTP-status and parse errors are not retried
-  ## (they won't fix themselves in 200ms).
+  ## with exponential backoff. HTTP-status and parse errors are not retried.
+  ## The FeedData.url is ALWAYS the original config URL (not the transformed
+  ## fetch URL), so the tab filter and favicon lookup work correctly.
   let actualUrl = transformFeedUrl(url)
   var last = errFetch(feNetwork)
   for attempt in 0..f.maxRetries:
     last = f.fetchOnce(actualUrl)
-    if last.isOk: return last
-    if last.err != feNetwork: return last   # feHttp / feParse: don't retry
+    if last.isOk:
+      # Restore the original config URL as the feed's identity.
+      last.data.url = url
+      return last
+    if last.err != feNetwork: return last
     if attempt < f.maxRetries:
       sleep(backoffMs(attempt))
   last
