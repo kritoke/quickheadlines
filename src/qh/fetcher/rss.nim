@@ -65,64 +65,64 @@ proc normalizePubDate*(s: string): string =
   ""
 
 proc allText(n: XmlNode): string =
-  ## innerText() skips xnCData (Nim 2.2.4); this collects text AND CDATA
-  ## content, so titles/descriptions wrapped in <![CDATA[...]]> parse correctly.
   case n.kind
   of xnText, xnVerbatimText, xnComment, xnCData, xnEntity: result.add(n.text)
   else:
     for c in n: result.add(c.allText)
 
+proc bareTag(n: XmlNode): string =
+  let t = n.tag
+  if t.contains('}'): t[t.find('}') + 1 .. ^1] else: t
+
+proc childNs*(n: XmlNode; tag: string): XmlNode =
+  for c in n:
+    if c.bareTag == tag: return c
+
+proc findAllNs*(n: XmlNode; tag: string): seq[XmlNode] =
+  for c in n:
+    if c.bareTag == tag: result.add(c)
+
 proc childText*(n: XmlNode; tag: string): string =
-  let c = n.child(tag)
+  let c = n.childNs(tag)
   if c == nil: "" else: decodeHtmlEntities(c.allText.strip())
 
 proc linkOf*(n: XmlNode): string =
-  ## Extract the link URL from an item. Handles both:
-  ## - RSS: <link>http://example.com/article</link>  (text content)
-  ## - Atom: <link href="http://example.com/article"/>  (href attribute)
-  let c = n.child("link")
+  let c = n.childNs("link")
   if c == nil: return ""
-  # Try href attribute first (Atom-style: <link href="..." rel="alternate"/>).
   let h = c.attr("href")
   if h.len > 0: return h.strip()
-  # Fall back to text content (RSS-style: <link>http://...</link>).
   c.allText.strip()
 
 proc parseRss*(url, body: string): FetchResult =
-  ## Parse RSS 2.0 (or Atom <feed>) into FeedData. Any parse error -> feParse.
   try:
     let tree = parseXml(newStringStream(body))
     var fd = FeedData(url: url)
-    # RSS 2.0: <rss><channel>...; Atom: <feed> (may have namespace).
-    # Strip namespace from the tag for comparison: "{http://...}feed" -> "feed".
-    let rawTag = tree.tag
-    let bareTag = if rawTag.contains('}'): rawTag[rawTag.find('}') + 1 .. ^1] else: rawTag
+    let bare = tree.bareTag
     let root =
-      if bareTag in ["rss", "feed"]: tree
-      elif bareTag == "channel": tree
-      else: tree.child("channel")
+      if bare in ["rss", "feed"]: tree
+      elif bare == "channel": tree
+      else: tree.childNs("channel")
     if root != nil:
-      let rootTag = if root.tag.contains('}'): root.tag[root.tag.find('}') + 1 .. ^1] else: root.tag
-      if rootTag == "feed":               # Atom
+      if root.bareTag == "feed":
         fd.title = root.childText("title")
-        fd.siteLink = root.linkOf          # Atom: <link href="..." rel="alternate"/>
-        for it in root.findAll("entry"):
+        fd.siteLink = root.linkOf
+        for it in root.findAllNs("entry"):
           fd.items.add Item(
             title: it.childText("title"),
             link: it.linkOf,
             pubDate: normalizePubDate(it.childText("updated")))
-      else:                                 # RSS 2.0
-        let channel = if root.tag == "channel": root else: root.child("channel")
+      else:
+        let channel = if root.bareTag == "channel": root else: root.childNs("channel")
         if channel != nil:
           fd.title = channel.childText("title")
-          fd.siteLink = channel.linkOf     # RSS: <link>https://...</link>
-          for it in channel.findAll("item"):
+          fd.siteLink = channel.linkOf
+          for it in channel.findAllNs("item"):
             fd.items.add Item(
               title: it.childText("title"),
               link: it.linkOf,
               pubDate: normalizePubDate(it.childText("pubDate")))
       okFetch(fd)
     else:
-      okFetch(fd)   # parsed but no known root; return empty (not a parse error)
+      okFetch(fd)
   except CatchableError:
     errFetch(feParse)
