@@ -68,6 +68,7 @@ proc parseRss*(url, body: string): FetchResult =
       let rootTag = if root.tag.contains('}'): root.tag[root.tag.find('}') + 1 .. ^1] else: root.tag
       if rootTag == "feed":               # Atom
         fd.title = root.childText("title")
+        fd.siteLink = root.linkOf          # Atom: <link href="..." rel="alternate"/>
         for it in root.findAll("entry"):
           fd.items.add Item(
             title: it.childText("title"),
@@ -77,6 +78,7 @@ proc parseRss*(url, body: string): FetchResult =
         let channel = if root.tag == "channel": root else: root.child("channel")
         if channel != nil:
           fd.title = channel.childText("title")
+          fd.siteLink = channel.linkOf     # RSS: <link>https://...</link>
           for it in channel.findAll("item"):
             fd.items.add Item(
               title: it.childText("title"),

@@ -166,10 +166,11 @@ proc handle(ctx: ServerCtx; req: Request): Future[void] {.async.} =
     var feedNodes: seq[JsonNode]
     var swNodes: seq[JsonNode]
     for f in listed.feeds:
-      # Software releases feed is served separately (not filtered by tab).
+      # Software releases feed is included only in the "all" tab view.
       if f.url == "software://releases":
-        let items = ctx.feedStore.recentItems(f.id, ctx.config.itemLimit)
-        swNodes.add(feedJson(f, items, ctx.feedStore.countItems(f.id)))
+        if tab == "all":
+          let items = ctx.feedStore.recentItems(f.id, ctx.config.itemLimit)
+          swNodes.add(feedJson(f, items, ctx.feedStore.countItems(f.id)))
         continue
       # Filter: if a specific tab is requested, only include feeds whose URL is
       # in that tab's config feed list. "all" includes everything.
@@ -296,11 +297,10 @@ proc feedWatcher(ctx: ServerCtx): Future[void] {.async.} =
               ctx.feedStore.setFavicon(id, path)
               let theme = colorExtractor.extractTheme(fav.bytes)
               if theme.isSome:
-                # Prismatiq convention: 'light' = text for LIGHT backgrounds (dark text),
-                # 'dark' = text for DARK backgrounds (light text).
-                # SPA: isDark -> dark variant, !isDark -> light variant.
-                ctx.feedStore.setThemeColors(id, theme.get.bgColor,
-                  theme.get.darkTextColor, theme.get.lightTextColor)
+                # The bg color is constant (not theme-dependent), so use the
+                # WCAG-validated text color for both light and dark variants.
+                let textColor = colorExtractor.selectTextColor(theme.get)
+                ctx.feedStore.setThemeColors(id, theme.get.bgColor, textColor, textColor)
               ctx.dirty[].store(true)
               inc saved
             except CatchableError:
@@ -319,8 +319,8 @@ proc feedWatcher(ctx: ServerCtx): Future[void] {.async.} =
           if bytes.len > 0:
             let theme = colorExtractor.extractTheme(bytes)
             if theme.isSome:
-              ctx.feedStore.setThemeColors(fid, theme.get.bgColor,
-                theme.get.darkTextColor, theme.get.lightTextColor)
+              let textColor = colorExtractor.selectTextColor(theme.get)
+              ctx.feedStore.setThemeColors(fid, theme.get.bgColor, textColor, textColor)
               ctx.dirty[].store(true)
 
 proc serve*(ctx: ServerCtx; port = 8080) =
