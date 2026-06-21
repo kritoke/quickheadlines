@@ -2,7 +2,7 @@
 ## Applied to admin endpoints (POST /api/*). If ADMIN_SECRET is not set, auth
 ## is disabled (dev mode). Port of Crystal src/controllers/api_base_controller.cr.
 
-import std/[strutils, times, os]
+import std/[strutils, os]
 
 proc timingSafeEq(a, b: string): bool =
   ## Constant-time string comparison (no early exit on mismatch).

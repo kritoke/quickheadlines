@@ -2,7 +2,7 @@
 ## Core algorithm for extracting dominant colors from pixel data via histogram
 ## building + iterative median-cut splitting in 3D color space.
 
-import std/[algorithm, sequtils]
+import std/algorithm
 import ./types, ./color_space
 
 const

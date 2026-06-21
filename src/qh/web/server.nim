@@ -13,7 +13,7 @@ import ../types
 import ../storage/[feed_store, item_store]
 import ../fetcher/favicon
 import ../color/extractor as colorExtractor
-import ../security/[auth, rate_limiter]
+import ../security/rate_limiter
 import ./dtos
 import ./assets
 import ./ws
@@ -143,13 +143,17 @@ proc handle(ctx: ServerCtx; req: Request): Future[void] {.async.} =
     await req.respond(Http200, $tabsJson(ctx.config.tabs), jsonHeaders())
 
   of "/api/feeds":
-    # Short grace (2s) for instant landers; real first-load hydration is via the
-    # WS feed_update push (handled by the watcher). Subsequent calls are instant.
+    # Long-poll: if DB is empty (first load), wait for the refresh supervisor
+    # to populate feeds. Polls every 500ms for up to 30s. Once feeds exist,
+    # returns immediately. This ensures the SPA gets real data on first load
+    # even without WebSocket push (WS provides progressive updates later).
     var listed = ctx.feedStore.listFeeds()
     if listed.isOk and listed.feeds.len == 0:
-      for _ in 0..<2:
-        await sleepAsync(1000); listed = ctx.feedStore.listFeeds()
-        if not listed.isOk or listed.feeds.len > 0: break
+      for _ in 0 ..< 60:
+        await sleepAsync(500)
+        listed = ctx.feedStore.listFeeds()
+        if listed.isOk and listed.feeds.len > 0:
+          break
     if not listed.isOk:
       await req.respond(Http500, $(%*{"error": "feeds read failed"}), jsonHeaders()); return
     let tab = q.getOrDefault("tab", "all").toLowerAscii()

@@ -5,13 +5,12 @@
 ## Repo format: "owner/repo" (default GitHub) or "owner/repo:provider" where
 ## provider is gh (GitHub), gl (GitLab), cb (Codeberg).
 
-import std/[strutils, algorithm, tables, httpclient]
+import std/[strutils, algorithm, httpclient]
 import ../types
 import ./rss
 
 const
   SwUrl* = "software://releases"
-  MinContrast = 4.5   # WCAG AA minimum contrast ratio for normal text
 
 proc repoToAtomUrl(entry: string): string =
   let parts = entry.split(':')

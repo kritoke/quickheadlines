@@ -12,10 +12,9 @@
 ## (prevents saving HTML error pages as favicons - a real failure mode).
 
 import std/[httpclient, asyncdispatch, uri, strutils, os, options, algorithm]
-import ../types
+
 
 const
-  FavTimeoutMs = 6000
   FavUserAgent = "QuickHeadlines-Nim/0.1 (+https://github.com/kritoke/quickheadlines)"
   GoogleFaviconSize = 256
 

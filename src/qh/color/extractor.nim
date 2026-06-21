@@ -2,9 +2,9 @@
 ## Decodes an image (via stb_image), builds a histogram, runs MMCQ, and
 ## selects background + text colors with WCAG contrast ratio.
 
-import std/[strutils, math, options]
+import std/[math, options]
 import stb_image/read as stbi
-import ../types
+
 import ./types as colorTypes
 import ./color_space
 import ./mmcq
