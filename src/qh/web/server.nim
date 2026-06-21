@@ -8,7 +8,7 @@
 ## registry needs no lock. The only cross-thread bit is `ctx.dirty` (an Atomic-
 ## Bool ref set by the refresh supervisor thread).
 
-import std/[asynchttpserver, asyncdispatch, asyncnet, json, uri, strutils, tables, options, atomics, sequtils, os, algorithm, net, httpclient, re]
+import std/[asynchttpserver, asyncdispatch, asyncnet, json, uri, strutils, tables, options, atomics, sequtils, os, algorithm, net, httpclient, re, times]
 import ../types
 import ../storage/[feed_store, item_store, content_store]
 import ../fetcher/favicon
@@ -29,8 +29,36 @@ type
     rateLimiter*: RateLimiter
     proxyValidator*: ProxyValidator
 
-# WS client registry (event-loop thread only - no lock needed).
-var wsClients: seq[AsyncSocket] = @[]
+# ---- WebSocket connection management ----
+const
+  WsMaxConnections* = 100
+  WsMaxPerIp* = 10
+  WsHeartbeatSec* = 30
+  WsStaleTimeoutSec* = 120
+  WsJanitorIntervalSec* = 300  # 5 min
+  WsLeakWarnThreshold* = 50
+
+type
+  WsClient = object
+    socket: AsyncSocket
+    ip: string
+    createdAt: float       # epoch seconds
+    lastActivity: float    # epoch seconds
+
+var wsClients: seq[WsClient] = @[]
+
+proc wsCountByIp(ip: string): int =
+  for c in wsClients:
+    if c.ip == ip: inc result
+
+proc wsRemoveClient(sock: AsyncSocket) =
+  wsClients.keepItIf(it.socket != sock)
+
+proc wsTouch(sock: AsyncSocket) =
+  for c in wsClients.mitems:
+    if c.socket == sock:
+      c.lastActivity = epochTime()
+      return
 
 proc queryParams(q: string): Table[string, string] =
   for kv in q.split('&'):
@@ -59,18 +87,32 @@ proc wsSession(req: Request): Future[void] {.async.} =
   if key.len == 0:
     await req.respond(Http400, $(%*{"error": "missing Sec-WebSocket-Key"}), jsonHeaders())
     return
+  # Connection limits.
+  let (peerIp, _) = req.client.getPeerAddr()
+  if wsClients.len >= WsMaxConnections:
+    await req.respond(Http429, $(%*{"error": "too many websocket connections"}), jsonHeaders())
+    return
+  if wsCountByIp(peerIp) >= WsMaxPerIp:
+    await req.respond(Http429, $(%*{"error": "too many connections from your IP"}), jsonHeaders())
+    return
+  # Leak detection.
+  if wsClients.len >= WsLeakWarnThreshold:
+    echo "[ws] WARNING: client count=", wsClients.len, " (possible leak)"
   let accept = wsAcceptKey(key)
   await req.client.send(
     "HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\n" &
     "Connection: Upgrade\r\nSec-WebSocket-Accept: " & accept & "\r\n\r\n")
-  wsClients.add(req.client)                       # register for broadcasts
+  let now = epochTime()
+  wsClients.add(WsClient(socket: req.client, ip: peerIp,
+                          createdAt: now, lastActivity: now))
   try:
     while true:
       let data = await req.client.recv(4096)       # detect close; discard frames
       if data.len == 0: break
+      wsTouch(req.client)                          # update activity
   except CatchableError:
     discard
-  wsClients.keepItIf(it != req.client)            # unregister on close
+  wsRemoveClient(req.client)
 
 proc handle(ctx: ServerCtx; req: Request): Future[void] {.async.} =
   let path = req.url.path
@@ -405,20 +447,40 @@ proc feedWatcher(ctx: ServerCtx): Future[void] {.async.} =
   while true:
     await sleepAsync(1000)
     inc tick
-    # WS broadcast on dirty.
+
+    # ---- WS broadcast on dirty flag ----
     if wsClients.len > 0 and ctx.dirty[].load():
       ctx.dirty[].store(false)
-      let snap = wsClients
-      var alive: seq[AsyncSocket] = @[]
-      for c in snap:
-        var ok = true
-        try: await sendWsText(c, "{\"type\":\"feed_update\"}")
-        except CatchableError: ok = false
-        if ok: alive.add(c)
-      wsClients = alive
-    # Favicon: fetch several missing icons concurrently every 3s (async,
-    # isolated in the event loop - can't deadlock). Parallel, not sequential.
-    # Also re-extract colors for feeds that have a favicon but no valid color.
+      var removeIdxs: seq[int] = @[]
+      for i in 0 ..< wsClients.len:
+        try: await sendWsText(wsClients[i].socket, "{\"type\":\"feed_update\"}")
+        except CatchableError: removeIdxs.add(i); continue
+        wsClients[i].lastActivity = epochTime()
+      for i in removeIdxs.reversed: wsClients.delete(i)
+
+    # ---- WS heartbeat every 30s ----
+    if wsClients.len > 0 and tick mod WsHeartbeatSec == 0:
+      let hb = "{\"type\":\"heartbeat\",\"ts\":" & $(epochTime().int64) & "}"
+      var removeIdxs: seq[int] = @[]
+      for i in 0 ..< wsClients.len:
+        try: await sendWsText(wsClients[i].socket, hb)
+        except CatchableError: removeIdxs.add(i); continue
+        wsClients[i].lastActivity = epochTime()
+      for i in removeIdxs.reversed: wsClients.delete(i)
+
+    # ---- WS janitor every 5 min: clean stale connections ----
+    if tick mod WsJanitorIntervalSec == 0 and wsClients.len > 0:
+      let now = epochTime()
+      var removeIdxs: seq[int] = @[]
+      for i in 0 ..< wsClients.len:
+        if now - wsClients[i].lastActivity > WsStaleTimeoutSec.float:
+          try: wsClients[i].socket.close() except CatchableError: discard
+          removeIdxs.add(i)
+      for i in removeIdxs.reversed: wsClients.delete(i)
+      if removeIdxs.len > 0:
+        echo "[ws] janitor: removed ", removeIdxs.len, " stale connections (remaining=", wsClients.len, ")"
+
+    # ---- Favicon: fetch several missing icons concurrently every 3s ----
     if tick mod 3 == 0:
       # 1. Fetch missing favicons.
       let missing = ctx.feedStore.feedsMissingFavicon(8)
