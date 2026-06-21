@@ -22,15 +22,17 @@ proc fetchOnce(f: HttpFetcher; url: string): FetchResult =
   let client = newHttpClient(timeout = f.timeoutMs)
   client.headers = newHttpHeaders({
     "User-Agent": f.userAgent,
-    "Accept-Encoding": "identity"  # prevent gzip (async httpclient doesn't auto-decompress)
+    "Accept-Encoding": "identity"
   })
   try:
     let resp = client.request(url, HttpGet)
     let code = resp.code.int
     if code != 200 and code != 301 and code != 302 and code != 304:
+      echo "[fetch] ", url[0..min(50,url.len-1)], " HTTP ", code
       return errFetch(feHttp)
     parseRss(url, resp.body)
-  except CatchableError:
+  except CatchableError as e:
+    echo "[fetch] ", url[0..min(50,url.len-1)], " ERROR: ", e.msg[0..min(80,e.msg.len-1)]
     errFetch(feNetwork)
   finally:
     client.close()
