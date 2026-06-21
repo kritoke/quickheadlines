@@ -43,6 +43,7 @@ type
     faviconData*: string
     headerColor*: string
     headerTextColor*: string
+    headerThemeColors*: string   # JSON string: {"bg":"#rrggbb","text":{"light":"#rrggbb","dark":"#rrggbb"}}
 
   ClusteringItem* = object
     id*: int64

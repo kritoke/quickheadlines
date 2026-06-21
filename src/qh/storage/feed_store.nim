@@ -54,12 +54,13 @@ proc listFeeds*(s: SqliteFeedStore): FeedListResult =
     var rows: seq[FeedRow]
     for r in s.db.all("""
       SELECT id, url, title, site_link, favicon, favicon_data,
-             header_color, header_text_color
+             header_color, header_text_color, COALESCE(header_theme_colors,'')
       FROM feeds ORDER BY id"""):
       rows.add FeedRow(
         id: r[0].intVal, url: r[1].strVal, title: r[2].strVal,
         siteLink: r[3].dbStr, favicon: r[4].dbStr, faviconData: r[5].dbStr,
-        headerColor: r[6].dbStr, headerTextColor: r[7].dbStr)
+        headerColor: r[6].dbStr, headerTextColor: r[7].dbStr,
+        headerThemeColors: r[8].dbStr)
     okFeeds(rows)
   except CatchableError:
     errFeeds(seIo)
@@ -96,6 +97,16 @@ proc setFavicon*(s: SqliteFeedStore; feedId: int64; path: string) =
 proc setHeaderColor*(s: SqliteFeedStore; feedId: int64; bgColor, textColor: string) =
   s.db.exec("UPDATE feeds SET header_color = ?, header_text_color = ? WHERE id = ?",
             bgColor, textColor, feedId)
+
+proc setThemeColors*(s: SqliteFeedStore; feedId: int64;
+                     bgColor, lightText, darkText: string) =
+  ## Store the rich prismatiq-style theme colors: bg + light/dark text variants.
+  ## Stored as JSON in header_theme_colors. Also sets header_color + header_text_color
+  ## for backward compatibility (light text as default).
+  let json = "{\"bg\":\"" & bgColor & "\",\"text\":{" &
+             "\"light\":\"" & lightText & "\",\"dark\":\"" & darkText & "\"}}"
+  s.db.exec("UPDATE feeds SET header_color = ?, header_text_color = ?, header_theme_colors = ? WHERE id = ?",
+            bgColor, lightText, json, feedId)
 
 proc feedsNeedingColor*(s: SqliteFeedStore): seq[(int64, string)] =
   ## Feeds with a favicon path but no valid hex color — for color re-extraction.

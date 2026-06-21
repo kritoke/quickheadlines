@@ -286,8 +286,8 @@ proc feedWatcher(ctx: ServerCtx): Future[void] {.async.} =
               ctx.feedStore.setFavicon(id, path)
               let theme = colorExtractor.extractTheme(fav.bytes)
               if theme.isSome:
-                ctx.feedStore.setHeaderColor(id, theme.get.bgColor,
-                  colorExtractor.selectTextColor(theme.get))
+                ctx.feedStore.setThemeColors(id, theme.get.bgColor,
+                  theme.get.lightTextColor, theme.get.darkTextColor)
               ctx.dirty[].store(true)
               inc saved
             except CatchableError:
@@ -306,8 +306,8 @@ proc feedWatcher(ctx: ServerCtx): Future[void] {.async.} =
           if bytes.len > 0:
             let theme = colorExtractor.extractTheme(bytes)
             if theme.isSome:
-              ctx.feedStore.setHeaderColor(fid, theme.get.bgColor,
-                colorExtractor.selectTextColor(theme.get))
+              ctx.feedStore.setThemeColors(fid, theme.get.bgColor,
+                theme.get.lightTextColor, theme.get.darkTextColor)
               ctx.dirty[].store(true)
 
 proc serve*(ctx: ServerCtx; port = 8080) =

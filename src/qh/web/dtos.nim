@@ -50,6 +50,9 @@ proc itemJson*(it: Item): JsonNode =
      "comment_url": %it.commentUrl, "commentary_url": %it.commentaryUrl}
 
 proc feedJson*(f: FeedRow; items: seq[Item]; itemCount: int): JsonNode =
+  let themeColors = if f.headerThemeColors.len > 0:
+    try: parseJson(f.headerThemeColors) except: newJNull()
+  else: newJNull()
   %{
     "tab": %"",
     "url": %f.url,
@@ -60,6 +63,7 @@ proc feedJson*(f: FeedRow; items: seq[Item]; itemCount: int): JsonNode =
     "favicon_data": jstrOr(f.faviconData),
     "header_color": jstr(f.headerColor),
     "header_text_color": jstr(f.headerTextColor),
+    "header_theme_colors": themeColors,
     "items": %(items.mapIt(itemJson(it))),
     "total_item_count": %itemCount
   }
