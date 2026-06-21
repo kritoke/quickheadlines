@@ -56,13 +56,17 @@ proc parseRss*(url, body: string): FetchResult =
   try:
     let tree = parseXml(newStringStream(body))
     var fd = FeedData(url: url)
-    # RSS 2.0: <rss><channel>...; Atom: <feed>.
+    # RSS 2.0: <rss><channel>...; Atom: <feed> (may have namespace).
+    # Strip namespace from the tag for comparison: "{http://...}feed" -> "feed".
+    let rawTag = tree.tag
+    let bareTag = if rawTag.contains('}'): rawTag[rawTag.find('}') + 1 .. ^1] else: rawTag
     let root =
-      if tree.tag in ["rss", "feed"]: tree
-      elif tree.tag == "channel": tree
+      if bareTag in ["rss", "feed"]: tree
+      elif bareTag == "channel": tree
       else: tree.child("channel")
     if root != nil:
-      if root.tag == "feed":               # Atom
+      let rootTag = if root.tag.contains('}'): root.tag[root.tag.find('}') + 1 .. ^1] else: root.tag
+      if rootTag == "feed":               # Atom
         fd.title = root.childText("title")
         for it in root.findAll("entry"):
           fd.items.add Item(
