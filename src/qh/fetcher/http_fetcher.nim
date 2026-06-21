@@ -12,7 +12,7 @@ type
     maxRetries*: int
     userAgent*: string
 
-const DefaultUserAgent* = "QuickHeadlines-Nim/0.1 (+https://github.com/kritoke/quickheadlines)"
+const DefaultUserAgent* = "Mozilla/5.0 (compatible; QuickHeadlines/0.1; +https://github.com/kritoke/quickheadlines)"
 
 proc newHttpFetcher*(timeoutMs = 15000, maxRetries = 2,
                      userAgent = DefaultUserAgent): HttpFetcher =
@@ -20,7 +20,10 @@ proc newHttpFetcher*(timeoutMs = 15000, maxRetries = 2,
 
 proc fetchOnce(f: HttpFetcher; url: string): FetchResult =
   let client = newHttpClient(timeout = f.timeoutMs)
-  client.headers = newHttpHeaders({"User-Agent": f.userAgent})
+  client.headers = newHttpHeaders({
+    "User-Agent": f.userAgent,
+    "Accept-Encoding": "identity"  # prevent gzip (async httpclient doesn't auto-decompress)
+  })
   try:
     let resp = client.request(url, HttpGet)
     let code = resp.code.int

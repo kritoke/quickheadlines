@@ -72,12 +72,13 @@ proc contrastRatio*(a, b: RGB): float =
 
 proc selectTextColors*(bg: RGB; palette: seq[RGB]): (RGB, RGB) =
   ## Select light and dark text colors with best contrast against bg.
-  ## Returns (lightText, darkText).
+  ## Returns (lightText, darkText). Never uses bg itself as a text color.
   var bestLightContrast = 0.0
   var bestLight = RGB(r: 255, g: 255, b: 255)
   var bestDarkContrast = 0.0
   var bestDark = RGB(r: 0, g: 0, b: 0)
   for c in palette:
+    if c.r == bg.r and c.g == bg.g and c.b == bg.b: continue  # skip bg
     let lum = relativeLuminance(c)
     let contrast = contrastRatio(c, bg)
     if lum > 0.5 and contrast > bestLightContrast:
