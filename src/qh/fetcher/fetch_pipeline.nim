@@ -83,7 +83,9 @@ proc refreshAll*(f: HttpFetcher; feeds: seq[FeedConfig];
       inc result.fetched
       result.items += o.res.data.items.len
       var fd = o.res.data
-      if fd.title.len == 0: fd.title = byUrl.getOrDefault(o.url)
+      # Always use the configured title from feeds.yml (the user configures
+      # display names there; RSS titles may differ or be generic).
+      fd.title = byUrl.getOrDefault(o.url, fd.title)
       discard store.upsertWithItems(fd)            # favicon (if fetched) persisted with the feed
       if not dirty.isNil: dirty[].store(true)      # notify WS watcher per feed
     else:

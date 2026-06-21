@@ -39,6 +39,18 @@ proc childText*(n: XmlNode; tag: string): string =
   let c = n.child(tag)
   if c == nil: "" else: c.allText.strip()
 
+proc linkOf*(n: XmlNode): string =
+  ## Extract the link URL from an item. Handles both:
+  ## - RSS: <link>http://example.com/article</link>  (text content)
+  ## - Atom: <link href="http://example.com/article"/>  (href attribute)
+  let c = n.child("link")
+  if c == nil: return ""
+  # Try href attribute first (Atom-style: <link href="..." rel="alternate"/>).
+  let h = c.attr("href")
+  if h.len > 0: return h.strip()
+  # Fall back to text content (RSS-style: <link>http://...</link>).
+  c.allText.strip()
+
 proc parseRss*(url, body: string): FetchResult =
   ## Parse RSS 2.0 (or Atom <feed>) into FeedData. Any parse error -> feParse.
   try:
@@ -55,7 +67,7 @@ proc parseRss*(url, body: string): FetchResult =
         for it in root.findAll("entry"):
           fd.items.add Item(
             title: it.childText("title"),
-            link: it.childText("link"),
+            link: it.linkOf,
             pubDate: normalizePubDate(it.childText("updated")))
       else:                                 # RSS 2.0
         let channel = if root.tag == "channel": root else: root.child("channel")
@@ -64,7 +76,7 @@ proc parseRss*(url, body: string): FetchResult =
           for it in channel.findAll("item"):
             fd.items.add Item(
               title: it.childText("title"),
-              link: it.childText("link"),
+              link: it.linkOf,
               pubDate: normalizePubDate(it.childText("pubDate")))
       okFetch(fd)
     else:
