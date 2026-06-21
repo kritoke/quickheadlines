@@ -61,7 +61,7 @@ proc findTimeline*(s: SqliteItemStore; limit, offset: int;
         clusterId: r[11].intOrZero(),
         representative: r[12].intOrZero() == 1,
         clusterSize: r[13].intOrZero().int,
-        commentUrl: r[14].dbStr)
+        commentUrl: r[14].dbStr, commentaryUrl: r[15].dbStr)
     okTimeline(entries, total)
   except CatchableError:
     errTimeline(seIo)
@@ -100,6 +100,27 @@ proc loadAllClusters*(s: SqliteItemStore): Table[int64, seq[TimelineEntry]] =
       clusterId: cid, representative: r[12].intOrZero() == 1,
       clusterSize: r[13].intOrZero().int, commentUrl: r[14].dbStr)
     result.mgetOrPut(cid, @[]).add(entry)
+
+proc getClusterItems*(s: SqliteItemStore; clusterId: int64): seq[TimelineEntry] =
+  ## All items in a specific cluster (port of /api/clusters/{id}/items).
+  for r in s.db.all("""
+    SELECT i.id, i.title, i.link, i.pub_date,
+           f.title, f.url, f.site_link, f.favicon, f.favicon_data,
+           f.header_color, f.header_text_color, i.cluster_id,
+           CASE WHEN i.id = (SELECT MIN(id) FROM items WHERE cluster_id = i.cluster_id) THEN 1 ELSE 0 END,
+           (SELECT COUNT(*) FROM items WHERE cluster_id = i.cluster_id),
+           COALESCE(i.comment_url,''), COALESCE(i.commentary_url,'')
+    FROM items i JOIN feeds f ON i.feed_id = f.id
+    WHERE i.cluster_id = ?
+    ORDER BY i.pub_date DESC, i.id DESC""", clusterId):
+    result.add TimelineEntry(
+      id: r[0].intOrZero(), title: r[1].dbStr, link: r[2].dbStr,
+      pubDate: r[3].dbStr, feedTitle: r[4].dbStr, feedUrl: r[5].dbStr,
+      feedLink: r[6].dbStr, favicon: r[7].dbStr,
+      headerColor: r[9].dbStr, headerTextColor: r[10].dbStr,
+      clusterId: r[11].intOrZero(), representative: r[12].intOrZero() == 1,
+      clusterSize: r[13].intOrZero().int, commentUrl: r[14].dbStr,
+      commentaryUrl: r[15].dbStr)
 
 proc feedItems*(s: SqliteItemStore; feedUrl: string;
                 limit, offset: int): TimelineResult =

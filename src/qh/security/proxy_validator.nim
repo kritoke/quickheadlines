@@ -3,12 +3,13 @@
 ## (prevents DNS rebinding), pin the IP for the fetch. Returns the resolved IP
 ## so the caller can use it directly (don't re-resolve).
 
-import std/[net, uri, strutils]
+import std/[net, uri, strutils, nativesockets]
 import ../types
 
 type
   ProxyValidator* = ref object
     blockedDomains*: seq[string]   # exact-match blocklist
+    allowedDomains*: seq[string]   # empty = allow all non-blocked
 
 proc isPrivateIp(ip: string): bool =
   ## Check if an IP is private/link-local (RFC 1918, RFC 6598, loopback).
@@ -25,12 +26,20 @@ proc isPrivateIp(ip: string): bool =
   if a == 192 and b == 168: return true
   false
 
+proc resolveHost(host: string): string =
+  ## Resolve hostname to IP string. Returns "" on failure.
+  try:
+    let ha = getHostByName(host)
+    return ha.addrList[0]
+  except CatchableError:
+    return ""
+
 proc validate*(v: ProxyValidator; url: string): ProxyValidateResult =
   ## Validate a URL for proxying. Returns the pinned resolved IP on success.
   if url.len == 0: return errProxy(peMalformed)
   try:
     let parsed = parseUri(url)
-    if parsed.scheme != "http" and parsed.scheme != "https":
+    if parsed.scheme != "https":
       return errProxy(peMalformed)
     let host = parsed.hostname
     if host.len == 0: return errProxy(peMalformed)
@@ -38,8 +47,15 @@ proc validate*(v: ProxyValidator; url: string): ProxyValidateResult =
     for blocked in v.blockedDomains:
       if host == blocked or host.endsWith("." & blocked):
         return errProxy(peBlocked)
+    # Check allowed domains (if list is non-empty, host must be in it)
+    if v.allowedDomains.len > 0:
+      var allowed = false
+      for ad in v.allowedDomains:
+        if host == ad or host.endsWith("." & ad):
+          allowed = true; break
+      if not allowed: return errProxy(peBlocked)
     # Resolve and validate IP (the SSRF fix: pin the IP, don't re-resolve later)
-    let ip = $getAddrInfo(host)
+    let ip = resolveHost(host)
     if ip.len == 0: return errProxy(peMalformed)
     if isPrivateIp(ip): return errProxy(pePrivateIp)
     okProxy(ip)

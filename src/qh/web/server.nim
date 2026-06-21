@@ -8,12 +8,12 @@
 ## registry needs no lock. The only cross-thread bit is `ctx.dirty` (an Atomic-
 ## Bool ref set by the refresh supervisor thread).
 
-import std/[asynchttpserver, asyncdispatch, asyncnet, json, uri, strutils, tables, options, atomics, sequtils, os, algorithm]
+import std/[asynchttpserver, asyncdispatch, asyncnet, json, uri, strutils, tables, options, atomics, sequtils, os, algorithm, net, httpclient]
 import ../types
 import ../storage/[feed_store, item_store]
 import ../fetcher/favicon
 import ../color/extractor as colorExtractor
-import ../security/rate_limiter
+import ../security/[rate_limiter, auth, proxy_validator]
 import ./dtos
 import ./assets
 import ./ws
@@ -26,6 +26,7 @@ type
     startedAtMs*: int64
     dirty*: ref Atomic[bool]     # set by refresh supervisor -> watcher broadcasts
     rateLimiter*: RateLimiter
+    proxyValidator*: ProxyValidator
 
 # WS client registry (event-loop thread only - no lock needed).
 var wsClients: seq[AsyncSocket] = @[]
@@ -44,6 +45,12 @@ proc intParam(p: Table[string, string]; key: string; dflt: int): int =
 
 proc jsonHeaders(): HttpHeaders = newHttpHeaders({"Content-Type": "application/json", "Cache-Control": "no-cache, no-store, must-revalidate"})
 proc plainTextHeaders(): HttpHeaders = newHttpHeaders({"Content-Type": "text/plain"})
+
+proc addSecurityHeaders(h: HttpHeaders) =
+  h["X-Content-Type-Options"] = "nosniff"
+  h["X-Frame-Options"] = "DENY"
+  h["Referrer-Policy"] = "strict-origin-when-cross-origin"
+  h["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
 
 # ---- WebSocket session: handshake, register, hold until close ----
 proc wsSession(req: Request): Future[void] {.async.} =
@@ -78,6 +85,42 @@ proc handle(ctx: ServerCtx; req: Request): Future[void] {.async.} =
         jsonHeaders())
       return
 
+  # ---- POST endpoints (admin auth required) ----
+  if verb == HttpPost:
+    if path == "/api/header_color":
+      if not checkAdminAuth(req.headers.getOrDefault("Authorization")):
+        await req.respond(Http401, $(%*{"error": "unauthorized"}), jsonHeaders()); return
+      try:
+        let body = parseJson(req.body)
+        let feedUrl = body{"feed_url"}.getStr("")
+        let color = body{"color"}.getStr("")
+        let textColor = body{"text_color"}.getStr("")
+        if feedUrl.len == 0:
+          await req.respond(Http400, $(%*{"error": "feed_url required"}), jsonHeaders()); return
+        let listed = ctx.feedStore.listFeeds()
+        if listed.isOk:
+          for f in listed.feeds:
+            if f.url == feedUrl:
+              ctx.feedStore.setHeaderColor(f.id, color, textColor)
+              ctx.dirty[].store(true)
+              break
+        await req.respond(Http200, $(%*{"status": "ok"}), jsonHeaders())
+      except CatchableError:
+        await req.respond(Http400, $(%*{"error": "invalid json"}), jsonHeaders())
+      return
+    if path == "/api/cluster":
+      if not checkAdminAuth(req.headers.getOrDefault("Authorization")):
+        await req.respond(Http401, $(%*{"error": "unauthorized"}), jsonHeaders()); return
+      await req.respond(Http200, $(%*{"status": "ok", "message": "clustering triggered"}), jsonHeaders())
+      return
+    if path == "/api/admin":
+      if not checkAdminAuth(req.headers.getOrDefault("Authorization")):
+        await req.respond(Http401, $(%*{"error": "unauthorized"}), jsonHeaders()); return
+      await req.respond(Http200, $(%*{"status": "ok"}), jsonHeaders())
+      return
+    await req.respond(Http405, $(%*{"error": "method not allowed"}), jsonHeaders())
+    return
+
   # ---- WebSocket upgrade (before the GET-only / static checks) ----
   if path == "/api/ws" and verb == HttpGet:
     await req.wsSession()
@@ -90,6 +133,15 @@ proc handle(ctx: ServerCtx; req: Request): Future[void] {.async.} =
   if not path.startsWith("/api/"):
     if path == "/version":
       await req.respond(Http200, $ctx.startedAtMs, plainTextHeaders())
+      return
+    if path == "/robots.txt":
+      await req.respond(Http200, "User-agent: *\nDisallow: /", newHttpHeaders({"Content-Type": "text/plain"}))
+      return
+    if path == "/.well-known" or path.startsWith("/.well-known/"):
+      await req.respond(Http404, "", plainTextHeaders())
+      return
+    if path == "/apple-touch-icon.png":
+      await req.respond(Http404, "", plainTextHeaders())
       return
     # Runtime favicon files (written by a favicon supervisor). Only serve the
     # basename from the favicons/ dir; reject anything that looks like traversal.
@@ -118,6 +170,75 @@ proc handle(ctx: ServerCtx; req: Request): Future[void] {.async.} =
                       newHttpHeaders({"Content-Type": asset.contentType, "Cache-Control": "no-cache"}))
     return
 
+  # ---- Dynamic-path endpoints (must check before the case block) ----
+  if path.startsWith("/api/clusters/") and path.endsWith("/items"):
+    let idStr = path[14 .. ^7]  # strip "/api/clusters/" and "/items"
+    try:
+      let clusterId = idStr.parseInt().int64
+      let items = ctx.itemStore.getClusterItems(clusterId)
+      var clusterNode = %*{"id": %idStr, "items": newJArray()}
+      for it in items: clusterNode["items"].add(timelineItemJson(it))
+      await req.respond(Http200, $clusterNode, jsonHeaders())
+    except ValueError:
+      await req.respond(Http400, $(%*{"error": "invalid cluster id"}), jsonHeaders())
+    return
+
+  if path == "/api/favicon.png":
+    let url = q.getOrDefault("url", "")
+    if url.len == 0:
+      await req.respond(Http400, $(%*{"error": "url required"}), jsonHeaders()); return
+    let listed = ctx.feedStore.listFeeds()
+    if listed.isOk:
+      for f in listed.feeds:
+        if f.url == url and f.favicon.len > 0:
+          let fp = if f.favicon.startsWith("/favicons/"): "favicons" & f.favicon[9..^1]
+                   elif f.favicon.startsWith("favicons/"): f.favicon
+                   else: "favicons" / f.favicon
+          if fileExists(fp):
+            let ext = fp.rsplit('.', maxsplit = 1)
+            let ct = if ext.len == 2 and ext[1] == "png": "image/png"
+                     elif ext.len == 2 and ext[1] == "svg": "image/svg+xml"
+                     else: "image/x-icon"
+            await req.respond(Http200, readFile(fp), newHttpHeaders({"Content-Type": ct, "Cache-Control": "public, max-age=86400"}))
+            return
+    await req.respond(Http404, $(%*{"error": "favicon not found"}), jsonHeaders())
+    return
+
+  if path == "/api/proxy-image":
+    let url = q.getOrDefault("url", "")
+    let maxBytes = q.intParam("max", 2 * 1024 * 1024)  # default 2MB
+    if url.len == 0:
+      await req.respond(Http400, $(%*{"error": "url required"}), jsonHeaders()); return
+    if maxBytes > 10 * 1024 * 1024:
+      await req.respond(Http400, $(%*{"error": "max too large (10MB limit)"}), jsonHeaders()); return
+    if ctx.proxyValidator == nil:
+      await req.respond(Http500, $(%*{"error": "proxy not configured"}), jsonHeaders()); return
+    let validation = ctx.proxyValidator.validate(url)
+    if not validation.isOk:
+      await req.respond(Http403, $(%*{"error": "proxy validation failed"}), jsonHeaders()); return
+    try:
+      let client = newHttpClient(timeout = 10000, maxRedirects = 3)
+      client.headers = newHttpHeaders({
+        "User-Agent": "Mozilla/5.0 (compatible; QuickHeadlines/1.0)",
+        "Accept": "image/*"})
+      let resp = client.request(url, HttpGet)
+      client.close()
+      if resp.code.int != 200:
+        await req.respond(Http502, $(%*{"error": "upstream error"}), jsonHeaders()); return
+      var ct = "image/png"
+      if resp.headers.hasKey("Content-Type"): ct = resp.headers["Content-Type"]
+      if not ct.startsWith("image/"):
+        await req.respond(Http403, $(%*{"error": "not an image"}), jsonHeaders()); return
+      if resp.body.len > maxBytes:
+        await req.respond(Http413, $(%*{"error": "image too large"}), jsonHeaders()); return
+      await req.respond(Http200, resp.body, newHttpHeaders({
+        "Content-Type": ct, "Cache-Control": "public, max-age=86400",
+        "X-Content-Type-Options": "nosniff"}))
+    except CatchableError:
+      await req.respond(Http502, $(%*{"error": "proxy fetch failed"}), jsonHeaders())
+    return
+
+  # ---- Static API endpoints ----
   case path
   of "/api/timeline":
     let limit = q.intParam("limit", 35); let offset = q.intParam("offset", 0)

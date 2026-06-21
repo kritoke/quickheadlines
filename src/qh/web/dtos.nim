@@ -33,7 +33,9 @@ proc timelineItemJson*(e: TimelineEntry): JsonNode =
     "header_text_color": jstr(e.headerTextColor),
     "cluster_id": (if e.clusterId == 0: newJNull() else: %($e.clusterId)),
     "is_representative": %e.representative,
-    "cluster_size": %e.clusterSize
+    "cluster_size": %e.clusterSize,
+    "comment_url": jstr(e.commentUrl),
+    "commentary_url": jstr(e.commentaryUrl)
   }
 
 proc timelineJson*(entries: seq[TimelineEntry]; total: int; limit: int): JsonNode =

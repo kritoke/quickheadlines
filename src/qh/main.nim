@@ -20,7 +20,7 @@ import web/server
 import supervisors/refresh_supervisor
 import supervisors/cluster_supervisor
 import supervisors/cleanup_supervisor
-import security/rate_limiter
+import security/[rate_limiter, proxy_validator]
 
 proc envInt(key: string; dflt: int): int =
   try: getEnv(key, $dflt).parseInt() except ValueError: dflt
@@ -88,10 +88,15 @@ proc main() =
 
   # 6. Serve the read API + embedded SPA + WS push. (Blocks; main thread.)
   let limiter = newRateLimiter(limit = 1000, windowSec = 60.0)
+  let pv = ProxyValidator(
+    allowedDomains: @[
+      "i.imgur.com", "pbs.twimg.com", "avatars.githubusercontent.com",
+      "lh3.googleusercontent.com", "i.pravatar.cc", "images.unsplash.com",
+      "fastly.picsum.photos"])
   let ctx = ServerCtx(
     config: config, feedStore: feedStore, itemStore: itemStore,
     startedAtMs: now().utc().toTime().toUnix() * 1000'i64,
-    dirty: dirty, rateLimiter: limiter)
+    dirty: dirty, rateLimiter: limiter, proxyValidator: pv)
   ctx.serve(port)
 
 when isMainModule: main()

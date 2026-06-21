@@ -67,6 +67,7 @@ type
     representative*: bool
     clusterSize*: int
     commentUrl*: string
+    commentaryUrl*: string
 
   Cluster* = Table[int64, seq[int64]]   ## representative id -> member ids
 
