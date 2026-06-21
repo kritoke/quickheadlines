@@ -13,7 +13,7 @@ proc toHex*(c: RGB): string =
   ## Convert RGB to hex color string (e.g. "#ff8800").
   result = "#"
   for v in [c.r, c.g, c.b]:
-    result &= (if v < 16: "0" else: "") & v.toHex(2).toLowerAscii()
+    result &= v.toHex(2).toLowerAscii()
 
 proc parseHex*(hex: string): RGB =
   ## Parse "#rrggbb" to RGB.
