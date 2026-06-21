@@ -111,16 +111,23 @@ proc setThemeColors*(s: SqliteFeedStore; feedId: int64;
             bgColor, lightText, json, feedId)
 
 proc feedsNeedingColor*(s: SqliteFeedStore): seq[(int64, string)] =
-  ## Feeds with a favicon path but no valid color, OR where bg == text color
-  ## (the old extraction bug produced same-color text/background).
+  ## Feeds with a favicon path but no valid color, OR where the stored color
+  ## likely has poor contrast (same bg/text, or both are very similar).
+  ## Re-extracted on next watcher tick.
   for r in s.db.all("""
     SELECT id, favicon FROM feeds
     WHERE favicon IS NOT NULL AND favicon != ''
       AND (
         header_color IS NULL OR header_color = ''
         OR header_color = header_text_color
+        OR length(header_color) < 7
       )"""):
     result.add((r[0].intVal, r[1].dbStr))
+
+proc clearAllColors*(s: SqliteFeedStore) =
+  ## Force re-extraction of all feed colors on next watcher pass.
+  ## Called at startup to pick up new color extraction algorithm improvements.
+  s.db.exec("UPDATE feeds SET header_color = '', header_text_color = '', header_theme_colors = ''")
 
 proc feedIdForUrl(s: SqliteFeedStore; url: string): int64 =
   let r = s.db.one("SELECT id FROM feeds WHERE url = ?", url)

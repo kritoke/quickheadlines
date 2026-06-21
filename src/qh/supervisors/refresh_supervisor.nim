@@ -20,6 +20,9 @@ proc refreshLoop(a: RefreshArgs) {.thread.} =
     let db = openAndCreate(a.dbPath)
     let store = SqliteFeedStore(db: db)
     let fetcher = newHttpFetcher()
+    # On startup, clear all stored colors so the watcher re-extracts with the
+    # latest color algorithm (fixes stale/wrong colors from prior versions).
+    store.clearAllColors()
     while true:
       let s = fetcher.refreshAll(a.feedConfigs, store, a.dirty, 8)
       echo "[refresh] fetched=", s.fetched, " failed=", s.failed, " items=", s.items
