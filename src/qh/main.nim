@@ -7,7 +7,7 @@
 ## Run:   ./bin/quickheadlines   (QUICKHEADLINES_CONFIG, QUICKHEADLINES_DB,
 ##                                QUICKHEADLINES_PORT env vars optional)
 
-import std/[os, strutils, times, atomics]
+import std/[os, strutils, times, atomics, posix]
 import types
 import config/config_source
 import config/yaml_config
@@ -25,7 +25,34 @@ import security/[rate_limiter, proxy_validator]
 proc envInt(key: string; dflt: int): int =
   try: getEnv(key, $dflt).parseInt() except ValueError: dflt
 
+# ---- Graceful shutdown ----
+var shuttingDown*: Atomic[bool]   # checked by supervisors + feedWatcher
+shuttingDown.store(false)
+
+proc forceExitTimer() {.thread.} =
+  sleep(5000)
+  echo "[shutdown] Force exit after 5s timeout"
+  quit(1)
+
+proc initiateShutdown(sig: cint) {.noconv.} =
+  if shuttingDown.load(): return   # already shutting down
+  shuttingDown.store(true)
+  echo ""
+  echo "[shutdown] Signal received, shutting down gracefully..."
+  # Force exit after 5s if graceful shutdown stalls.
+  var t: Thread[void]
+  createThread(t, forceExitTimer)
+
+proc installSignalHandlers() =
+  var sa: Sigaction
+  sa.sa_handler = initiateShutdown
+  sa.sa_flags = 0
+  discard sigemptyset(sa.sa_mask)
+  discard sigaction(SIGINT, sa)
+  discard sigaction(SIGTERM, sa)
+
 proc main() =
+  installSignalHandlers()
   let cfgPath = getEnv("QUICKHEADLINES_CONFIG", "feeds.yml")
   let dbPath  = getEnv("QUICKHEADLINES_DB", "qh_nim.db")
   let port    = envInt("QUICKHEADLINES_PORT", 8080)
@@ -70,7 +97,8 @@ proc main() =
   # 5. Refresh in a background thread (its own DbConn).
   var dirty: ref Atomic[bool]
   new(dirty); dirty[].store(false)
-  discard startRefreshSupervisor(feedConfigs, swRepos, dbPath, dirty, config.refreshMinutes * 60)
+  discard startRefreshSupervisor(feedConfigs, swRepos, dbPath, dirty,
+                                 config.refreshMinutes * 60, addr shuttingDown)
   echo "Refresh running in background (", feedConfigs.len, " feeds, ", swRepos.len, " software repos); serving reads now."
 
   # 6. Periodic clustering (its own DbConn; threshold from config).
@@ -79,12 +107,14 @@ proc main() =
   let clThreshold = cc.threshold
   discard startClusterSupervisor(dbPath, threshold = clThreshold,
                                   maxItems = cc.maxItems.clamp(1, 5000),
-                                  intervalSec = clInterval, dirty = dirty)
+                                  intervalSec = clInterval, dirty = dirty,
+                                  shuttingDown = addr shuttingDown)
   echo "Cluster supervisor started (threshold=", clThreshold, " interval=", clInterval, "s)"
 
   # 7. Periodic cleanup (its own DbConn; retention from config).
   discard startCleanupSupervisor(dbPath, cacheRetentionHours = 336,
-                                 intervalSec = 1800, dirty = dirty)
+                                 intervalSec = 1800, dirty = dirty,
+                                 shuttingDown = addr shuttingDown)
   echo "Cleanup supervisor started (retention=336h interval=30min)"
 
   # 6. Serve the read API + embedded SPA + WS push. (Blocks; main thread.)

@@ -12,12 +12,18 @@ type
     cacheRetentionHours: int
     intervalSec: int
     dirty: ref Atomic[bool]
+    shuttingDown: ptr Atomic[bool]
 
 proc cleanupLoop(a: CleanupArgs) {.thread.} =
   {.cast(gcsafe).}:
     let db = openAndCreate(a.dbPath)
     while true:
-      sleep(a.intervalSec * 1000)
+      for _ in 0 ..< a.intervalSec:
+        if a.shuttingDown != nil and a.shuttingDown[].load():
+          echo "[cleanup] shutting down"
+          closeDb(db)
+          return
+        sleep(1000)
       try:
         purgeOldItems(db, a.cacheRetentionHours)
         a.dirty[].store(true)
@@ -28,9 +34,10 @@ proc cleanupLoop(a: CleanupArgs) {.thread.} =
 
 proc startCleanupSupervisor*(dbPath: string; cacheRetentionHours = 336;
                              intervalSec = 1800;
-                             dirty: ref Atomic[bool] = nil): Thread[CleanupArgs] =
-  ## Spawn the cleanup thread. intervalSec default 30min; retention default 14 days.
+                             dirty: ref Atomic[bool] = nil;
+                             shuttingDown: ptr Atomic[bool] = nil): Thread[CleanupArgs] =
   createThread(result, cleanupLoop,
                CleanupArgs(dbPath: dbPath,
                            cacheRetentionHours: cacheRetentionHours,
-                           intervalSec: intervalSec, dirty: dirty))
+                           intervalSec: intervalSec, dirty: dirty,
+                           shuttingDown: shuttingDown))

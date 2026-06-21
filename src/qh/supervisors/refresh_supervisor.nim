@@ -14,6 +14,7 @@ type
     dbPath: string
     intervalSec: int
     dirty: ref Atomic[bool]        # set after each refresh -> WS feed_update push
+    shuttingDown: ptr Atomic[bool]  # checked each cycle for graceful shutdown
 
 proc refreshLoop(a: RefreshArgs) {.thread.} =
   {.cast(gcsafe).}:
@@ -26,6 +27,9 @@ proc refreshLoop(a: RefreshArgs) {.thread.} =
     # This is aggressive but the watcher processes 8 feeds per 3s tick (~5 min).
     store.clearAllColors()
     while true:
+      if a.shuttingDown != nil and a.shuttingDown[].load():
+        echo "[refresh] shutting down"
+        break
       let s = fetcher.refreshAll(a.feedConfigs, store, contentStore, a.dirty, 8)
       echo "[refresh] fetched=", s.fetched, " failed=", s.failed, " items=", s.items
       # Fetch software releases if repos configured.
@@ -39,14 +43,19 @@ proc refreshLoop(a: RefreshArgs) {.thread.} =
       if cleaned > 0: echo "[content] cleaned ", cleaned, " old entries"
       a.dirty[].store(true)          # final notify
       if a.intervalSec <= 0: break   # one-shot
-      sleep(a.intervalSec * 1000)
+      # Interruptible sleep: 1s chunks checking shutdown flag.
+      for _ in 0 ..< a.intervalSec:
+        if a.shuttingDown != nil and a.shuttingDown[].load(): break
+        sleep(1000)
     closeDb(db)
 
 proc startRefreshSupervisor*(feedConfigs: seq[FeedConfig];
                              swRepos: seq[string];
                              dbPath: string;
                              dirty: ref Atomic[bool];
-                             intervalSec = 0): Thread[RefreshArgs] =
+                             intervalSec = 0;
+                             shuttingDown: ptr Atomic[bool] = nil): Thread[RefreshArgs] =
   createThread(result, refreshLoop,
                RefreshArgs(feedConfigs: feedConfigs, swRepos: swRepos,
-                           dbPath: dbPath, intervalSec: intervalSec, dirty: dirty))
+                           dbPath: dbPath, intervalSec: intervalSec, dirty: dirty,
+                           shuttingDown: shuttingDown))

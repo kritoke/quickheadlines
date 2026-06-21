@@ -18,6 +18,7 @@ type
     maxItems: int
     intervalSec: int
     dirty: ref Atomic[bool]
+    shuttingDown: ptr Atomic[bool]
 
 proc clusterLoop(a: ClusterArgs) {.thread.} =
   {.cast(gcsafe).}:
@@ -26,6 +27,9 @@ proc clusterLoop(a: ClusterArgs) {.thread.} =
     let clusterStore = SqliteClusterStore(db: db)
     let clusterer = newNimClusterer(a.threshold, a.bands, a.rows)
     while true:
+      if a.shuttingDown != nil and a.shuttingDown[].load():
+        echo "[cluster] shutting down"
+        break
       let items = itemStore.loadUnclusteredItems(a.maxItems)
       if items.len > 0:
         let res = clusterer.runClusteringPipeline(clusterStore, items)
@@ -33,16 +37,18 @@ proc clusterLoop(a: ClusterArgs) {.thread.} =
           a.dirty[].store(true)
           echo "[cluster] clustered ", items.len, " items into ", res.clusters.len, " groups"
       if a.intervalSec <= 0: break
-      sleep(a.intervalSec * 1000)
+      for _ in 0 ..< a.intervalSec:
+        if a.shuttingDown != nil and a.shuttingDown[].load(): break
+        sleep(1000)
     closeDb(db)
 
 proc startClusterSupervisor*(dbPath: string; threshold = 0.35;
                              bands = 20; rows = 6; maxItems = 500;
                              intervalSec = 3600;
-                             dirty: ref Atomic[bool] = nil): Thread[ClusterArgs] =
-  ## Spawn the clustering thread. intervalSec default 1h (60*60).
-  ## dirty (if given) is set after each cluster run -> WS push.
+                             dirty: ref Atomic[bool] = nil;
+                             shuttingDown: ptr Atomic[bool] = nil): Thread[ClusterArgs] =
   createThread(result, clusterLoop,
                ClusterArgs(dbPath: dbPath, threshold: threshold,
                            bands: bands, rows: rows, maxItems: maxItems,
-                           intervalSec: intervalSec, dirty: dirty))
+                           intervalSec: intervalSec, dirty: dirty,
+                           shuttingDown: shuttingDown))
