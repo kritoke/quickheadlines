@@ -1,0 +1,15 @@
+{
+  "assignee": "",
+  "blocked_by": [],
+  "blocks": [],
+  "created": "2026-06-21T00:17:34Z",
+  "description": "Add /api/feed_more, /api/clusters, /api/clusters/{id}/items endpoints to fix SPA 404s. Port the Crystal query logic.",
+  "id": "quickhea-511.20",
+  "labels": [],
+  "parent": "quickhea-511",
+  "priority": 1,
+  "status": "open",
+  "title": "P3.11 Missing API endpoints (feed_more, clusters, content)",
+  "type": "task",
+  "updated_at": "2026-06-21T00:17:34Z"
+}
