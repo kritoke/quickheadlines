@@ -11,7 +11,7 @@
 ## (feeds.yml is canonical). Phase 3.x can revisit with DOM-based loading if
 ## full optionality is needed.
 
-import std/[streams, os]
+import std/[streams, os, options, strutils]
 import yaml
 import yaml/annotations
 import ../results
@@ -24,6 +24,10 @@ type
     title*: string
     url*: string
 
+  YamlSoftwareReleases* {.ignore: [].} = object
+    title*: string
+    repos*: seq[string]
+
   YamlClustering* {.ignore: [].} = object
     enabled*: bool
     run_on_startup*: bool
@@ -32,6 +36,9 @@ type
   YamlTab* {.ignore: [].} = object
     name*: string
     feeds*: seq[YamlFeed]
+    # software_releases: not declared in DTO — NimYAML requires all declared
+    # fields to be present, but not every tab has software_releases. Parsed
+    # manually via parseSwRepos() below.
 
   YamlConfig* {.ignore: [].} = object
     debug*: bool
@@ -80,3 +87,23 @@ proc toDomain*(y: YamlConfig): Config =
     itemLimit: y.item_limit, dbFetchLimit: y.db_fetch_limit,
     serverPort: y.server_port, timelineBatchSize: 30,
     feeds: @[], tabs: tabs, clustering: y.clustering.toDomain())
+
+proc parseSwRepos*(path: string): seq[string] =
+  ## Parse software_release repos from the YAML config file. Extracts
+  ## "- owner/repo:provider" lines under a "repos:" block that follows
+  ## "software_releases:". Robust line-based parser (no NimYAML strictness).
+  if not fileExists(path): return @[]
+  let content = readFile(path)
+  var inRepos = false
+  for line in content.splitLines():
+    let s = line.strip()
+    if s == "software_releases:" or s.startsWith("software_releases:"):
+      inRepos = true; continue
+    if inRepos:
+      if s.startsWith("repos:"): continue
+      if s.startsWith("- "):
+        let val = s[2..^1].strip(chars={'"', '\''})
+        if val.len > 0 and '/' in val:
+          result.add(val)
+      elif s.len > 0 and not s.startsWith("#") and not s.startsWith("-") and not s.startsWith("title:"):
+        inRepos = false  # left the repos block

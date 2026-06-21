@@ -10,6 +10,7 @@
 import std/[os, strutils, times, atomics]
 import types
 import config/config_source
+import config/yaml_config
 import storage/[database, feed_store, item_store, cluster_store]
 import fetcher/[http_fetcher, fetch_pipeline]
 import clustering/clusterer
@@ -35,7 +36,7 @@ proc main() =
   if not cfgR.isOk:
     echo "Failed to load config ", cfgPath, ": err=", cfgR.err, " (set QUICKHEADLINES_CONFIG)"
     quit(1)
-  let config = cfgR.config
+  var config = cfgR.config
   echo "Loaded config: ", config.tabs.len, " tab(s), page_title=\"", config.pageTitle, "\""
 
   # 2. open DB + build the production stores
@@ -57,13 +58,19 @@ proc main() =
   for t in config.tabs:
     for f in t.feeds: feedConfigs.add(FeedConfig(url: f.url, title: f.title))
 
-  # 5. Refresh in a background thread (its own DbConn). The server starts
-  #    listening IMMEDIATELY instead of blocking on the initial fetch, so the
-  #    SPA loads right away; the WS push notifies it when feeds land.
+  # Software release repos parsed from feeds.yml tabs (Option[YamlSoftwareReleases]).
+  # Parse software_release repos from the YAML file (NimYAML can't parse
+  # optional nested objects; repos are extracted with a line-based parser).
+  let swRepos = yaml_config.parseSwRepos(cfgPath)
+  config.swRepos = swRepos
+  if swRepos.len > 0:
+    echo "Software repos: ", swRepos.len, " configured"
+
+  # 5. Refresh in a background thread (its own DbConn).
   var dirty: ref Atomic[bool]
   new(dirty); dirty[].store(false)
-  discard startRefreshSupervisor(feedConfigs, dbPath, dirty, config.refreshMinutes * 60)
-  echo "Refresh running in background; serving reads now."
+  discard startRefreshSupervisor(feedConfigs, swRepos, dbPath, dirty, config.refreshMinutes * 60)
+  echo "Refresh running in background (", feedConfigs.len, " feeds, ", swRepos.len, " software repos); serving reads now."
 
   # 6. Periodic clustering (its own DbConn; threshold from config).
   let cc = config.clustering

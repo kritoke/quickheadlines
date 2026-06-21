@@ -5,17 +5,17 @@
 
 import std/[os, atomics]
 import ../storage/[database, feed_store]
-import ../fetcher/[http_fetcher, fetch_pipeline]
+import ../fetcher/[http_fetcher, fetch_pipeline, software_fetcher]
 
 type
   RefreshArgs = object
     feedConfigs: seq[FeedConfig]
+    swRepos: seq[string]
     dbPath: string
     intervalSec: int
     dirty: ref Atomic[bool]        # set after each refresh -> WS feed_update push
 
 proc refreshLoop(a: RefreshArgs) {.thread.} =
-  # ORC is thread-safe at runtime; assert gcsafe without transitive checks.
   {.cast(gcsafe).}:
     let db = openAndCreate(a.dbPath)
     let store = SqliteFeedStore(db: db)
@@ -23,17 +23,22 @@ proc refreshLoop(a: RefreshArgs) {.thread.} =
     while true:
       let s = fetcher.refreshAll(a.feedConfigs, store, a.dirty, 8)
       echo "[refresh] fetched=", s.fetched, " failed=", s.failed, " items=", s.items
-      a.dirty[].store(true)          # final notify (belt-and-suspenders)
-      if a.intervalSec <= 0: break       # one-shot
+      # Fetch software releases if repos configured.
+      if a.swRepos.len > 0:
+        let swFeed = fetchSoftwareReleases(a.swRepos)
+        if swFeed.items.len > 0:
+          discard store.upsertWithItems(swFeed)
+          echo "[sw-releases] ", swFeed.items.len, " releases from ", a.swRepos.len, " repos"
+      a.dirty[].store(true)          # final notify
+      if a.intervalSec <= 0: break   # one-shot
       sleep(a.intervalSec * 1000)
     closeDb(db)
 
-proc startRefreshSupervisor*(feedConfigs: seq[FeedConfig]; dbPath: string;
+proc startRefreshSupervisor*(feedConfigs: seq[FeedConfig];
+                             swRepos: seq[string];
+                             dbPath: string;
                              dirty: ref Atomic[bool];
                              intervalSec = 0): Thread[RefreshArgs] =
-  ## Spawn the refresh thread (detached). `dirty` is set after each refresh so
-  ## the server's WS watcher pushes a feed_update to connected clients.
-  ## intervalSec<=0 means a single immediate refresh then exit.
   createThread(result, refreshLoop,
-               RefreshArgs(feedConfigs: feedConfigs, dbPath: dbPath,
-                           intervalSec: intervalSec, dirty: dirty))
+               RefreshArgs(feedConfigs: feedConfigs, swRepos: swRepos,
+                           dbPath: dbPath, intervalSec: intervalSec, dirty: dirty))

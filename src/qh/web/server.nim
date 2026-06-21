@@ -160,7 +160,13 @@ proc handle(ctx: ServerCtx; req: Request): Future[void] {.async.} =
       for f in t.feeds: urls.add(f.url)
       tabUrls[t.name.toLowerAscii()] = urls
     var feedNodes: seq[JsonNode]
+    var swNodes: seq[JsonNode]
     for f in listed.feeds:
+      # Software releases feed is served separately (not filtered by tab).
+      if f.url == "software://releases":
+        let items = ctx.feedStore.recentItems(f.id, ctx.config.itemLimit)
+        swNodes.add(feedJson(f, items, ctx.feedStore.countItems(f.id)))
+        continue
       # Filter: if a specific tab is requested, only include feeds whose URL is
       # in that tab's config feed list. "all" includes everything.
       if tab != "all":
@@ -171,7 +177,7 @@ proc handle(ctx: ServerCtx; req: Request): Future[void] {.async.} =
     let activeTab = q.getOrDefault("tab", "all")
     await req.respond(Http200, $(%*{
       "tabs": tabsJson(ctx.config.tabs)["tabs"], "active_tab": %activeTab,
-      "feeds": %feedNodes, "software_releases": newJArray(),
+      "feeds": %feedNodes, "software_releases": %swNodes,
       "is_clustering": false, "updated_at": %ctx.startedAtMs}), jsonHeaders())
 
   of "/api/status":

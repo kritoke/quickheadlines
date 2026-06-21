@@ -102,6 +102,7 @@ type
     feeds*: seq[Feed]
     tabs*: seq[TabConfig]
     clustering*: ClusteringConfig
+    swRepos*: seq[string]     # software release repos (from feeds.yml)
 
 # ---------------------------------------------------------------- error enums (concrete)
 
