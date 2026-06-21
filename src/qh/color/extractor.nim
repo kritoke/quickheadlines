@@ -9,13 +9,32 @@ import ./types as colorTypes
 import ./color_space
 import ./mmcq
 
+proc isIco(data: string): bool =
+  data.len >= 4 and data[0] == '\x00' and data[1] == '\x00' and data[2] == '\x01' and data[3] == '\x00'
+
+proc extractIcoPng(data: string): string =
+  ## Find embedded PNG data inside an ICO file. Many ICO favicons contain
+  ## PNG-encoded images. Scans for the PNG magic bytes.
+  for i in 0 ..< data.len - 4:
+    if data[i] == '\x89' and data[i+1] == 'P' and data[i+2] == 'N' and data[i+3] == 'G':
+      return data[i .. ^1]
+  data  # no PNG found, return original (stb_image will try as-is)
+
 proc decodeImage(data: string): Option[seq[byte]] =
   ## Decode image bytes -> RGBA pixel array via stb_image.
+  ## Handles ICO files by extracting embedded PNG (stb_image can't decode ICO
+  ## directly - it only supports PNG/JPEG/BMP/GIF). Many favicon ICO files
+  ## contain PNG-encoded images, which we extract before decoding.
   if data.len == 0: return none(seq[byte])
-  # Proper string -> seq[byte] (cast is unsafe under ORC: string and seq
-  # have different memory layouts).
-  var bytes = newSeq[byte](data.len)
-  for i in 0 ..< data.len: bytes[i] = byte(data[i])
+  # For ICO files, try to extract embedded PNG first.
+  var imageData = data
+  if isIco(data):
+    let pngData = extractIcoPng(data)
+    if pngData.len > 0 and pngData.len < data.len:
+      imageData = pngData
+  # Proper string -> seq[byte] (cast is unsafe under ORC).
+  var bytes = newSeq[byte](imageData.len)
+  for i in 0 ..< imageData.len: bytes[i] = byte(imageData[i])
   var w, h, ch: int
   try:
     let pixels = stbi.loadFromMemory(bytes, w, h, ch, 4)  # 4 = RGBA
