@@ -71,6 +71,7 @@ proc allText(n: XmlNode): string =
     for c in n: result.add(c.allText)
 
 proc bareTag(n: XmlNode): string =
+  if n.kind != xnElement: return ""
   let t = n.tag
   if t.contains('}'): t[t.find('}') + 1 .. ^1] else: t
 
