@@ -75,7 +75,6 @@ proc selectTextColors*(bg: RGB; palette: seq[RGB]): (RGB, RGB) =
   ## Returns (lightText, darkText). Never uses bg itself. Only considers
   ## palette colors with WCAG AA contrast (4.5:1) against bg; falls back to
   ## white/black if no palette color meets the threshold.
-  let bgLum = relativeLuminance(bg)
   var bestLightContrast = 0.0
   var bestLight = RGB(r: 255, g: 255, b: 255)   # default: white (always good on dark bg)
   var bestDarkContrast = 0.0

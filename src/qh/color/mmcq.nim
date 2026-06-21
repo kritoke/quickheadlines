@@ -7,7 +7,6 @@ import ./types, ./color_space
 
 const
   MaxIterations = 1000
-  Significance = 0.001
 
 type
   VBox* = object
