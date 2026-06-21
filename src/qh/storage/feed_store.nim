@@ -111,16 +111,15 @@ proc setThemeColors*(s: SqliteFeedStore; feedId: int64;
             bgColor, lightText, json, feedId)
 
 proc feedsNeedingColor*(s: SqliteFeedStore): seq[(int64, string)] =
-  ## Feeds with a favicon path but no valid color, OR where the stored color
-  ## likely has poor contrast (same bg/text, or both are very similar).
-  ## Re-extracted on next watcher tick.
+  ## Feeds that need color re-extraction: no color, same-color bug, or missing
+  ## header_theme_colors (old extraction before WCAG contrast validation).
   for r in s.db.all("""
     SELECT id, favicon FROM feeds
     WHERE favicon IS NOT NULL AND favicon != ''
       AND (
         header_color IS NULL OR header_color = ''
         OR header_color = header_text_color
-        OR length(header_color) < 7
+        OR header_theme_colors IS NULL OR header_theme_colors = ''
       )"""):
     result.add((r[0].intVal, r[1].dbStr))
 
