@@ -3,9 +3,46 @@
 ## (okFetch / errFetch(feParse)). Sole place that knows the feed XML shape.
 
 import std/[streams, strutils, xmltree, xmlparser, times]
+from unicode import Rune, toUTF8
 import ../types
 
-const DbTimeFormat = "yyyy-MM-dd HH:mm:ss"   # SQLite stores pub_date as this string
+const DbTimeFormat = "yyyy-MM-dd HH:mm:ss"
+
+proc decodeHtmlEntities*(s: string): string =
+  ## Decode HTML numeric character references (&#NNN; and &#xHHHH;) that the
+  ## XML parser leaves raw inside CDATA sections.  Also handles the common
+  ## named entities that RSS feeds use.
+  result = s
+  var res = newStringOfCap(s.len)
+  var i = 0
+  while i < s.len:
+    if s[i] == '&' and (i + 2 < s.len):
+      if s[i+1] == '#':
+        # Numeric entity: &#NNN; or &#xHHHH;
+        let semi = s.find(';', i + 2)
+        if semi > i + 1:
+          let numStr = s[i+2 ..< semi]
+          var codepoint: int
+          if numStr.len > 0 and numStr[0] == 'x':
+            codepoint = parseHexInt(numStr[1..^1])
+          else:
+            codepoint = parseInt(numStr)
+          res.add(Rune(codepoint).toUTF8)
+          i = semi + 1
+          continue
+      elif s[i+1..^1].startsWith("amp;"):
+        res.add('&'); i += 5; continue
+      elif s[i+1..^1].startsWith("lt;"):
+        res.add('<'); i += 4; continue
+      elif s[i+1..^1].startsWith("gt;"):
+        res.add('>'); i += 4; continue
+      elif s[i+1..^1].startsWith("quot;"):
+        res.add('"'); i += 6; continue
+      elif s[i+1..^1].startsWith("apos;"):
+        res.add('\''); i += 6; continue
+    res.add(s[i])
+    i += 1
+  result = res   # SQLite stores pub_date as this string
 
 proc normalizePubDate*(s: string): string =
   ## RSS pubDates come as RFC822 ("Tue, 19 Jun 2026 15:30:00 +0000") or ISO
@@ -37,7 +74,7 @@ proc allText(n: XmlNode): string =
 
 proc childText*(n: XmlNode; tag: string): string =
   let c = n.child(tag)
-  if c == nil: "" else: c.allText.strip()
+  if c == nil: "" else: decodeHtmlEntities(c.allText.strip())
 
 proc linkOf*(n: XmlNode): string =
   ## Extract the link URL from an item. Handles both:

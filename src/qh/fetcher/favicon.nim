@@ -15,7 +15,7 @@ import std/[httpclient, asyncdispatch, uri, strutils, os, options, algorithm]
 
 
 const
-  FavUserAgent = "QuickHeadlines-Nim/0.1 (+https://github.com/kritoke/quickheadlines)"
+  FavUserAgent = "Mozilla/5.0 (compatible; QuickHeadlines/0.1; +https://github.com/kritoke/quickheadlines)"
   GoogleFaviconSize = 256
 
 type FavBytes* = object
