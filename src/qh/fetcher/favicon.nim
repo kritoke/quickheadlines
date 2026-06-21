@@ -157,19 +157,21 @@ proc fetchFaviconAsync*(siteLink, feedUrl: string): Future[Option[FavBytes]] {.a
   let client = newAsyncHttpClient()
   client.headers = newHttpHeaders({"User-Agent": FavUserAgent, "Accept-Encoding": "identity"})
   try:
-    # 1. Try common favicon paths at the site origin (port of vug.cr DEFAULT_FAVICON_PATHS)
-    for path in ["/favicon.ico", "/favicon.png", "/apple-touch-icon.png",
-                 "/apple-touch-icon-180x180.png"]:
-      let r = await client.tryFetchValidImage(origin & path)
-      if r.isSome: return r
-
-    # 2. Parse homepage HTML for <link rel="icon"> (plain string parse, robust)
+    # 1. Parse homepage HTML for <link rel="icon"> first — usually has the
+    #    largest/best-quality icon (SVG, large PNG, apple-touch-icon).
+    #    vug.cr also prefers HTML <link> over direct paths for this reason.
     let htmlOpt = await client.followFetch(origin & "/")
     if htmlOpt.isSome:
       let hrefs = findIconHrefs(htmlOpt.get, origin)
       for href in hrefs:
         let r = await client.tryFetchValidImage(href)
         if r.isSome: return r
+
+    # 2. Fallback: try common favicon paths at the site origin.
+    for path in ["/apple-touch-icon.png", "/apple-touch-icon-180x180.png",
+                 "/favicon.png", "/favicon.ico"]:
+      let r = await client.tryFetchValidImage(origin & path)
+      if r.isSome: return r
 
     # 3. Google favicon service fallback (broad coverage)
     if host.len > 0:

@@ -110,6 +110,16 @@ proc extractTheme*(imageData: string; maxColors = 6): Option[ThemeResult] =
 proc selectTextColor*(theme: ThemeResult): string =
   ## Pick light or dark text for a background: dark bg -> light text,
   ## light bg -> dark text. Returns a hex color string.
+  ## Ensures minimum WCAG AA contrast (4.5:1); falls back to white/black
+  ## if the palette text color doesn't have sufficient contrast.
   let bg = parseHex(theme.bgColor)
   let lum = relativeLuminance(bg)
-  if lum < 0.5: theme.lightTextColor else: theme.darkTextColor
+  let textColor = if lum < 0.5: theme.lightTextColor else: theme.darkTextColor
+  let text = parseHex(textColor)
+  let ratio = contrastRatio(text, bg)
+  if ratio >= 4.5:
+    textColor   # good contrast from palette
+  elif lum < 0.5:
+    "#ffffff"   # dark bg -> white text (guaranteed high contrast)
+  else:
+    "#000000"   # light bg -> black text (guaranteed high contrast)
