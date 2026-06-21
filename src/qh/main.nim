@@ -80,7 +80,7 @@ proc main() =
   echo "Cleanup supervisor started (retention=336h interval=30min)"
 
   # 6. Serve the read API + embedded SPA + WS push. (Blocks; main thread.)
-  let limiter = newRateLimiter(limit = 60, windowSec = 60.0)
+  let limiter = newRateLimiter(limit = 1000, windowSec = 60.0)
   let ctx = ServerCtx(
     config: config, feedStore: feedStore, itemStore: itemStore,
     startedAtMs: now().utc().toTime().toUnix() * 1000'i64,

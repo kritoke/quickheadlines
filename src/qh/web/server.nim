@@ -69,8 +69,8 @@ proc handle(ctx: ServerCtx; req: Request): Future[void] {.async.} =
   let verb = req.reqMethod
   let q = queryParams(req.url.query)
 
-  # ---- rate limit by peer IP (P3.8) ----
-  if ctx.rateLimiter != nil:
+  # ---- rate limit API requests only (not static assets) ----
+  if ctx.rateLimiter != nil and path.startsWith("/api/"):
     let (peerIp, _) = req.client.getPeerAddr()
     if not ctx.rateLimiter.isAllowed(peerIp):
       await req.respond(Http429,
