@@ -299,15 +299,10 @@ proc feedWatcher(ctx: ServerCtx): Future[void] {.async.} =
         let failMsg = if failUrls.len > 0: " failed_urls=" & failUrls.join(",") else: ""
         echo "[favicon] tick=", tick, " tried=", missing.len, " saved=", saved, " failed=", failed, failMsg
       # 2. Re-extract colors for feeds that have a favicon file but no valid color.
-      #    (handles stale/empty header_color from prior runs)
-      for row in ctx.feedStore.db.all("""
-        SELECT id, COALESCE(favicon,'') FROM feeds
-        WHERE (header_color IS NULL OR header_color = '' OR header_color NOT LIKE '#___%')
-          AND favicon IS NOT NULL AND favicon != ''"""):
-        let fid = row[0].intVal
-        let favPath = "favicons" & row[1].dbStr[9..^1]   # strip "/favicons/"
-        if fileExists(favPath):
-          let bytes = readFile(favPath)
+      for (fid, favPath) in ctx.feedStore.feedsNeedingColor():
+        let filePath = "favicons" & favPath[9..^1]   # strip "/favicons/"
+        if fileExists(filePath):
+          let bytes = readFile(filePath)
           if bytes.len > 0:
             let theme = colorExtractor.extractTheme(bytes)
             if theme.isSome:

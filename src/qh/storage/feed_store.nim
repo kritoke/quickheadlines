@@ -97,6 +97,14 @@ proc setHeaderColor*(s: SqliteFeedStore; feedId: int64; bgColor, textColor: stri
   s.db.exec("UPDATE feeds SET header_color = ?, header_text_color = ? WHERE id = ?",
             bgColor, textColor, feedId)
 
+proc feedsNeedingColor*(s: SqliteFeedStore): seq[(int64, string)] =
+  ## Feeds with a favicon path but no valid hex color — for color re-extraction.
+  for r in s.db.all("""
+    SELECT id, favicon FROM feeds
+    WHERE (header_color IS NULL OR header_color = '')
+      AND favicon IS NOT NULL AND favicon != ''"""):
+    result.add((r[0].intVal, r[1].dbStr))
+
 proc feedIdForUrl(s: SqliteFeedStore; url: string): int64 =
   let r = s.db.one("SELECT id FROM feeds WHERE url = ?", url)
   if r.isSome: r.get[0].intVal else: 0'i64
