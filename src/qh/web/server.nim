@@ -42,7 +42,7 @@ proc intParam(p: Table[string, string]; key: string; dflt: int): int =
     try: p[key].parseInt() except ValueError: dflt
   else: dflt
 
-proc jsonHeaders(): HttpHeaders = newHttpHeaders({"Content-Type": "application/json"})
+proc jsonHeaders(): HttpHeaders = newHttpHeaders({"Content-Type": "application/json", "Cache-Control": "no-cache, no-store, must-revalidate"})
 proc plainTextHeaders(): HttpHeaders = newHttpHeaders({"Content-Type": "text/plain"})
 
 # ---- WebSocket session: handshake, register, hold until close ----
