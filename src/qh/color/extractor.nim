@@ -72,21 +72,27 @@ proc contrastRatio*(a, b: RGB): float =
 
 proc selectTextColors*(bg: RGB; palette: seq[RGB]): (RGB, RGB) =
   ## Select light and dark text colors with best contrast against bg.
-  ## Returns (lightText, darkText). Never uses bg itself as a text color.
+  ## Returns (lightText, darkText). Never uses bg itself. Only considers
+  ## palette colors with WCAG AA contrast (4.5:1) against bg; falls back to
+  ## white/black if no palette color meets the threshold.
+  let bgLum = relativeLuminance(bg)
   var bestLightContrast = 0.0
-  var bestLight = RGB(r: 255, g: 255, b: 255)
+  var bestLight = RGB(r: 255, g: 255, b: 255)   # default: white (always good on dark bg)
   var bestDarkContrast = 0.0
-  var bestDark = RGB(r: 0, g: 0, b: 0)
+  var bestDark = RGB(r: 0, g: 0, b: 0)           # default: black (always good on light bg)
   for c in palette:
-    if c.r == bg.r and c.g == bg.g and c.b == bg.b: continue  # skip bg
+    if c.r == bg.r and c.g == bg.g and c.b == bg.b: continue
     let lum = relativeLuminance(c)
-    let contrast = contrastRatio(c, bg)
-    if lum > 0.5 and contrast > bestLightContrast:
-      bestLightContrast = contrast
+    let ratio = contrastRatio(c, bg)
+    if lum > 0.5 and ratio > bestLightContrast:
+      bestLightContrast = ratio
       bestLight = c
-    elif lum <= 0.5 and contrast > bestDarkContrast:
-      bestDarkContrast = contrast
+    elif lum <= 0.5 and ratio > bestDarkContrast:
+      bestDarkContrast = ratio
       bestDark = c
+  # If the best palette color has < 4.5:1 contrast, fall back to pure white/black.
+  if bestLightContrast < 4.5: bestLight = RGB(r: 255, g: 255, b: 255)
+  if bestDarkContrast < 4.5: bestDark = RGB(r: 0, g: 0, b: 0)
   (bestLight, bestDark)
 
 type ThemeResult* = object
