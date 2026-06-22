@@ -734,7 +734,9 @@ help:
 # ====================================================================
 
 # Install Nim + dependencies on FreeBSD via pkg.
-# Requires root. Run as root or install sudo first: pkg install sudo
+# Run as root (e.g.: sudo just freebsd-nim-setup).
+# When called from deploy scripts via jexec, run as root:
+#   sudo jexec qh just freebsd-nim-setup
 freebsd-nim-setup:
     #!/usr/bin/env sh
     set -e
@@ -742,26 +744,27 @@ freebsd-nim-setup:
         echo "Error: freebsd-nim-setup is for FreeBSD only"
         exit 1
     fi
-    # Detect privilege escalation command.
-    if command -v sudo >/dev/null 2>&1; then
-        SU="sudo"
-    elif command -v doas >/dev/null 2>&1; then
-        SU="doas"
-    elif [ "$(id -u)" = "0" ]; then
-        SU=""
-    else
-        echo "Error: No privilege escalation tool found."
-        echo "Run as root, or install sudo/doas:"
+    # Add non-standard nim paths to PATH.
+    for d in /usr/local/nim/bin /usr/local/bin; do
+        case ":$PATH:" in *":$d:"*) ;; *) PATH="$d:$PATH" ;; esac
+    done
+    # Check if we can install packages (root or sudo).
+    if [ "$(id -u)" != "0" ] && ! command -v sudo >/dev/null 2>&1 && ! command -v doas >/dev/null 2>&1; then
+        echo "Error: Must be run as root, or install sudo/doas:"
         echo "  pkg install sudo"
-        echo "  pkg install doas"
         exit 1
+    fi
+    SU=""
+    if [ "$(id -u)" != "0" ]; then
+        if command -v sudo >/dev/null 2>&1; then SU="sudo"
+        elif command -v doas >/dev/null 2>&1; then SU="doas"
+        fi
     fi
     # Find nim binary in common locations.
     NIM_BIN=""
     for candidate in /usr/local/nim/bin/nim /usr/local/bin/nim /usr/bin/nim nim; do
-        if [ -x "$candidate" ] || command -v "$candidate" >/dev/null 2>&1; then
-            NIM_BIN="$candidate"
-            break
+        if [ -x "$candidate" ] 2>/dev/null; then NIM_BIN="$candidate"; break
+        elif command -v "$candidate" >/dev/null 2>&1; then NIM_BIN="$candidate"; break
         fi
     done
     echo "Installing Nim and dependencies on FreeBSD..."
@@ -775,9 +778,8 @@ freebsd-nim-setup:
     # nimble (usually bundled with nim)
     NIMBLE_BIN=""
     for candidate in /usr/local/nim/bin/nimble /usr/local/bin/nimble /usr/bin/nimble nimble; do
-        if [ -x "$candidate" ] || command -v "$candidate" >/dev/null 2>&1; then
-            NIMBLE_BIN="$candidate"
-            break
+        if [ -x "$candidate" ] 2>/dev/null; then NIMBLE_BIN="$candidate"; break
+        elif command -v "$candidate" >/dev/null 2>&1; then NIMBLE_BIN="$candidate"; break
         fi
     done
     if [ -n "$NIMBLE_BIN" ]; then
@@ -830,19 +832,19 @@ freebsd-nim-setup:
 freebsd-nim-check-deps:
     #!/usr/bin/env sh
     set -e
+    # Add non-standard nim paths to PATH.
+    for d in /usr/local/nim/bin /usr/local/bin; do
+        case ":$PATH:" in *":$d:"*) ;; *) PATH="$d:$PATH" ;; esac
+    done
     echo "Checking FreeBSD Nim build dependencies..."
     FAIL=0
     # Check nim in PATH and common locations.
     NIM_FOUND=""
-    for candidate in /usr/local/nim/bin/nim /usr/local/bin/nim /usr/bin/nim; do
-        if [ -x "$candidate" ]; then
-            NIM_FOUND="$candidate"
-            break
+    for candidate in /usr/local/nim/bin/nim /usr/local/bin/nim /usr/bin/nim nim; do
+        if [ -x "$candidate" ] 2>/dev/null; then NIM_FOUND="$candidate"; break
+        elif command -v "$candidate" >/dev/null 2>&1; then NIM_FOUND="$(command -v "$candidate")"; break
         fi
     done
-    if [ -z "$NIM_FOUND" ] && command -v nim >/dev/null 2>&1; then
-        NIM_FOUND="$(command -v nim)"
-    fi
     if [ -n "$NIM_FOUND" ]; then
         echo "  nim: $NIM_FOUND"
     else
