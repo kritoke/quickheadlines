@@ -895,14 +895,13 @@ freebsd-nim-check-deps:
 # Build the Nim server on FreeBSD (no nix required).
 # Requires: nim, nimble, node, npm, sqlite3, openssl.
 freebsd-nim-build: freebsd-nim-check-deps
-    #!/usr/bin/env bash
-    set -euo pipefail
+    #!/usr/bin/env sh
+    set -eu
     # Ensure nim/nimble from non-standard paths are in PATH.
     for d in /usr/local/nim/bin /usr/local/bin; do
-        if [ -d "$d" ] && echo ":$PATH:" | grep -qv ":$d:"; then
-            export PATH="$d:$PATH"
-        fi
+        case ":$PATH:" in *":$d:"*) ;; *) PATH="$d:$PATH" ;; esac
     done
+    export PATH
     echo "Building Svelte frontend..."
     cd frontend && (test -d node_modules || npm install --no-audit --no-fund) && npm run build
     cd ..
