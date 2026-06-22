@@ -44,7 +44,7 @@ suite "SQLite stores (P3.3)":
       items: @[
         Item(title: "Story A", link: "https://example.com/a", pubDate: earlier),
         Item(title: "Story B", link: "https://example.com/b", pubDate: latest),
-        Item(title: "Story A dup", link: "https://example.com/a?utm=1", pubDate: earlier),  # dedups onto A
+        Item(title: "Story A dup", link: "https://example.com/a?utm_source=test", pubDate: earlier),  # dedups onto A
       ]))
     check upsert.isOk
     discard nowStr

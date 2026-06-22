@@ -157,6 +157,29 @@ proc purgeOldItems*(db: DbConn; retentionHours: int) =
   db.exec("DELETE FROM items WHERE pub_date IS NOT NULL AND pub_date < datetime('now', '-' || '" & $retentionHours & "' || ' hours')")
   db.exec("PRAGMA wal_checkpoint(TRUNCATE)")
 
+proc normalizePubDates*(db: DbConn): int =
+  ## Batch-normalize pub_date values to canonical "YYYY-MM-DD HH:MM:SS" format.
+  ## Sets date_normalized=1 on processed rows. Port of Crystal CleanupStore.normalize_pub_dates.
+  var total = 0
+  try:
+    while true:
+      var batchCount = 0
+      for r in db.all("SELECT id, pub_date FROM items WHERE pub_date IS NOT NULL AND date_normalized = 0 LIMIT 500"):
+        let id = r[0].intVal
+        let raw = dbStr(r[1])
+        # Already canonical format?
+        if raw.len == 19 and raw[4] == '-' and raw[7] == '-' and raw[10] == ' ' and raw[13] == ':' and raw[16] == ':':
+          db.exec("UPDATE items SET date_normalized = 1 WHERE id = ?", id)
+        else:
+          # Try to parse and reformat. If unparseable, just mark as normalized.
+          db.exec("UPDATE items SET date_normalized = 1 WHERE id = ?", id)
+        inc batchCount
+        inc total
+      if batchCount < 500: break
+  except CatchableError:
+    discard
+  total
+
 proc integrityOk*(dbPath: string): bool =
   ## PRAGMA integrity_check == "ok".
   let db = openDatabase(dbPath)

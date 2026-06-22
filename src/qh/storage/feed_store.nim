@@ -148,12 +148,12 @@ proc upsertWithItems*(s: SqliteFeedStore; fd: FeedData): StoreUnitResult =
     for it in fd.items:
       s.db.exec("""
         INSERT INTO items (feed_id, title, link, normalized_link, pub_date,
-                           version, comment_url, commentary_url)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                           version, comment_url, commentary_url, date_normalized)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)
         ON CONFLICT(feed_id, normalized_link) DO UPDATE SET
           title=excluded.title, link=excluded.link, pub_date=excluded.pub_date,
           version=excluded.version, comment_url=excluded.comment_url,
-          commentary_url=excluded.commentary_url""",
+          commentary_url=excluded.commentary_url, date_normalized=1""",
         feedId, it.title, it.link, normalizeUrl(it.link), it.pubDate,
         it.version, it.commentUrl, it.commentaryUrl)
     s.db.exec("COMMIT")

@@ -693,7 +693,18 @@ help:
     @echo "  test-frontend     - Run Vitest frontend tests"
     @echo "  clean             - Remove build artifacts"
     @echo "  rebuild           - Clean and rebuild everything"
-    @echo "  help              - Show this help message"
+    @echo ""
+    @echo "Nim port (branch quickhea-511/nim-backend-port):"
+    @echo "  nim-build         - Build Nim server (frontend + backend)"
+    @echo "  nim-test          - Run Nim test suite"
+    @echo "  nim-run           - Build + run Nim server"
+    @echo "  nim-stop          - Stop running Nim server"
+    @echo "  nim-check         - Fast semantic check (no codegen)"
+    @echo "  nim-frontend      - Build Svelte frontend if dist/ missing"
+    @echo "  nim-frontend-force - Force-rebuild Svelte frontend"
+    @echo "  freebsd-nim-setup - Install Nim + deps on FreeBSD"
+    @echo "  freebsd-nim-build - Build Nim server on FreeBSD (no nix)"
+    @echo "  freebsd-nim-run   - Build + run on FreeBSD (no nix)"
     @echo ""
     @echo "Platform: {{os}}-{{arch}}"
     @echo "Version: {{BUILD_REV}}"
@@ -716,3 +727,121 @@ help:
     @echo "  Arch:          sudo pacman -S crystal sqlite openssl libmagic nodejs"
     @echo "  macOS:         brew install crystal openssl libmagic node"
     @echo "  FreeBSD:       sudo pkg install crystal sqlite3 openssl git gmake libyaml libevent llvm19 libmagic node"
+
+# ====================================================================
+# FreeBSD Nim setup (no nix required)
+# For deploying the Nim backend on FreeBSD without nix.
+# ====================================================================
+
+# Install Nim + dependencies on FreeBSD via pkg.
+freebsd-nim-setup:
+    #!/usr/bin/env sh
+    set -e
+    if [ "$(uname -s)" != "FreeBSD" ]; then
+        echo "Error: freebsd-nim-setup is for FreeBSD only"
+        exit 1
+    fi
+    echo "Installing Nim and dependencies on FreeBSD..."
+    # Nim compiler
+    if command -v nim >/dev/null 2>&1; then
+        echo "  Nim: $(nim --version | head -1)"
+    else
+        echo "  Installing nim..."
+        sudo pkg install -y nim
+    fi
+    # nimble (usually bundled with nim)
+    if command -v nimble >/dev/null 2>&1; then
+        echo "  nimble: $(nimble --version | head -1)"
+    else
+        echo "  Installing nimble..."
+        sudo pkg install -y nimble
+    fi
+    # SQLite3
+    if pkg info -e sqlite3 >/dev/null 2>&1; then
+        echo "  sqlite3: installed"
+    else
+        echo "  Installing sqlite3..."
+        sudo pkg install -y sqlite3
+    fi
+    # OpenSSL
+    if pkg info -e openssl >/dev/null 2>&1; then
+        echo "  openssl: installed"
+    else
+        echo "  Installing openssl..."
+        sudo pkg install -y openssl
+    fi
+    # Node.js (for frontend build)
+    if command -v node >/dev/null 2>&1; then
+        echo "  node: $(node --version)"
+    else
+        echo "  Installing node..."
+        sudo pkg install -y node
+    fi
+    # npm
+    if command -v npm >/dev/null 2>&1; then
+        echo "  npm: $(npm --version)"
+    else
+        echo "  Installing npm..."
+        sudo pkg install -y npm
+    fi
+    # Install nimble packages (yaml, tiny_sqlite, stb_image)
+    echo "  Installing nimble packages..."
+    nimble install -y yaml tiny_sqlite stb_image fusion 2>/dev/null || true
+    echo ""
+    echo "Nim setup complete. Run 'just freebsd-nim-build' to build."
+
+# Build the Nim server on FreeBSD (no nix required).
+# Requires: nim, nimble, node, npm, sqlite3, openssl.
+freebsd-nim-build: freebsd-nim-check-deps
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "Building Svelte frontend..."
+    cd frontend && (test -d node_modules || npm install --no-audit --no-fund) && npm run build
+    cd ..
+    echo "Compiling Nim server..."
+    mkdir -p bin
+    # Find nimble package paths for imports
+    YTS="$(nimble path tiny_sqlite 2>/dev/null || echo '')"
+    NIM_FLAGS="-d:ssl --threads:on"
+    if [ -n "$YTS" ]; then
+        NIM_FLAGS="$NIM_FLAGS --path:$YTS"
+    fi
+    nim c $NIM_FLAGS -o:bin/quickheadlines src/qh/main.nim
+    echo "Built bin/quickheadlines"
+    ls -lh bin/quickheadlines
+
+# Check FreeBSD Nim build dependencies.
+freebsd-nim-check-deps:
+    #!/usr/bin/env sh
+    set -e
+    echo "Checking FreeBSD Nim build dependencies..."
+    FAIL=0
+    for cmd in nim nimble node npm; do
+        if command -v $cmd >/dev/null 2>&1; then
+            echo "  $cmd: $(command -v $cmd)"
+        else
+            echo "  $cmd: NOT FOUND"
+            FAIL=1
+        fi
+    done
+    for pkg_name in sqlite3 openssl; do
+        if pkg info -e $pkg_name >/dev/null 2>&1; then
+            echo "  $pkg_name: installed"
+        else
+            echo "  $pkg_name: NOT FOUND"
+            FAIL=1
+        fi
+    done
+    if [ "$FAIL" = "1" ]; then
+        echo ""
+        echo "Missing dependencies. Run 'just freebsd-nim-setup' to install."
+        exit 1
+    fi
+    echo "All dependencies found."
+
+# Build + run on FreeBSD (no nix).
+freebsd-nim-run: freebsd-nim-build nim-stop
+    QUICKHEADLINES_CONFIG={{env_var_or_default("QUICKHEADLINES_CONFIG","feeds.yml")}} \
+    QUICKHEADLINES_DB={{env_var_or_default("QUICKHEADLINES_DB","qh_nim.db")}} \
+    QUICKHEADLINES_PORT={{env_var_or_default("QUICKHEADLINES_PORT","8080")}} \
+    ./bin/quickheadlines
