@@ -756,17 +756,32 @@ freebsd-nim-setup:
         echo "  pkg install doas"
         exit 1
     fi
+    # Find nim binary in common locations.
+    NIM_BIN=""
+    for candidate in /usr/local/nim/bin/nim /usr/local/bin/nim /usr/bin/nim nim; do
+        if [ -x "$candidate" ] || command -v "$candidate" >/dev/null 2>&1; then
+            NIM_BIN="$candidate"
+            break
+        fi
+    done
     echo "Installing Nim and dependencies on FreeBSD..."
     # Nim compiler
-    if command -v nim >/dev/null 2>&1; then
-        echo "  Nim: $(nim --version | head -1)"
+    if [ -n "$NIM_BIN" ]; then
+        echo "  Nim: $($NIM_BIN --version 2>/dev/null | head -1)"
     else
         echo "  Installing nim..."
         $SU pkg install -y nim
     fi
     # nimble (usually bundled with nim)
-    if command -v nimble >/dev/null 2>&1; then
-        echo "  nimble: $(nimble --version | head -1)"
+    NIMBLE_BIN=""
+    for candidate in /usr/local/nim/bin/nimble /usr/local/bin/nimble /usr/bin/nimble nimble; do
+        if [ -x "$candidate" ] || command -v "$candidate" >/dev/null 2>&1; then
+            NIMBLE_BIN="$candidate"
+            break
+        fi
+    done
+    if [ -n "$NIMBLE_BIN" ]; then
+        echo "  nimble: $($NIMBLE_BIN --version 2>/dev/null | head -1)"
     else
         echo "  Installing nimble..."
         $SU pkg install -y nimble
@@ -801,29 +816,15 @@ freebsd-nim-setup:
     fi
     # Install nimble packages (yaml, tiny_sqlite, stb_image)
     echo "  Installing nimble packages..."
-    nimble install -y yaml tiny_sqlite stb_image fusion 2>/dev/null || true
+    if [ -n "$NIMBLE_BIN" ]; then
+        $NIMBLE_BIN install -y yaml tiny_sqlite stb_image fusion 2>/dev/null || true
+    elif command -v nimble >/dev/null 2>&1; then
+        nimble install -y yaml tiny_sqlite stb_image fusion 2>/dev/null || true
+    else
+        echo "  Warning: nimble not found, skipping nimble packages"
+    fi
     echo ""
     echo "Nim setup complete. Run 'just freebsd-nim-build' to build."
-
-# Build the Nim server on FreeBSD (no nix required).
-# Requires: nim, nimble, node, npm, sqlite3, openssl.
-freebsd-nim-build: freebsd-nim-check-deps
-    #!/usr/bin/env bash
-    set -euo pipefail
-    echo "Building Svelte frontend..."
-    cd frontend && (test -d node_modules || npm install --no-audit --no-fund) && npm run build
-    cd ..
-    echo "Compiling Nim server..."
-    mkdir -p bin
-    # Find nimble package paths for imports
-    YTS="$(nimble path tiny_sqlite 2>/dev/null || echo '')"
-    NIM_FLAGS="-d:ssl --threads:on"
-    if [ -n "$YTS" ]; then
-        NIM_FLAGS="$NIM_FLAGS --path:$YTS"
-    fi
-    nim c $NIM_FLAGS -o:bin/quickheadlines src/qh/main.nim
-    echo "Built bin/quickheadlines"
-    ls -lh bin/quickheadlines
 
 # Check FreeBSD Nim build dependencies.
 freebsd-nim-check-deps:
@@ -831,7 +832,42 @@ freebsd-nim-check-deps:
     set -e
     echo "Checking FreeBSD Nim build dependencies..."
     FAIL=0
-    for cmd in nim nimble node npm; do
+    # Check nim in PATH and common locations.
+    NIM_FOUND=""
+    for candidate in /usr/local/nim/bin/nim /usr/local/bin/nim /usr/bin/nim; do
+        if [ -x "$candidate" ]; then
+            NIM_FOUND="$candidate"
+            break
+        fi
+    done
+    if [ -z "$NIM_FOUND" ] && command -v nim >/dev/null 2>&1; then
+        NIM_FOUND="$(command -v nim)"
+    fi
+    if [ -n "$NIM_FOUND" ]; then
+        echo "  nim: $NIM_FOUND"
+    else
+        echo "  nim: NOT FOUND"
+        echo "    Expected locations: /usr/local/nim/bin/nim, /usr/local/bin/nim"
+        FAIL=1
+    fi
+    # Check nimble similarly.
+    NIMBLE_FOUND=""
+    for candidate in /usr/local/nim/bin/nimble /usr/local/bin/nimble /usr/bin/nimble; do
+        if [ -x "$candidate" ]; then
+            NIMBLE_FOUND="$candidate"
+            break
+        fi
+    done
+    if [ -z "$NIMBLE_FOUND" ] && command -v nimble >/dev/null 2>&1; then
+        NIMBLE_FOUND="$(command -v nimble)"
+    fi
+    if [ -n "$NIMBLE_FOUND" ]; then
+        echo "  nimble: $NIMBLE_FOUND"
+    else
+        echo "  nimble: NOT FOUND"
+        FAIL=1
+    fi
+    for cmd in node npm; do
         if command -v $cmd >/dev/null 2>&1; then
             echo "  $cmd: $(command -v $cmd)"
         else
@@ -853,6 +889,26 @@ freebsd-nim-check-deps:
         exit 1
     fi
     echo "All dependencies found."
+
+# Build the Nim server on FreeBSD (no nix required).
+# Requires: nim, nimble, node, npm, sqlite3, openssl.
+freebsd-nim-build: freebsd-nim-check-deps
+    #!/usr/bin/env bash
+    set -euo pipefail
+    # Ensure nim/nimble from non-standard paths are in PATH.
+    for d in /usr/local/nim/bin /usr/local/bin; do
+        if [ -d "$d" ] && echo ":$PATH:" | grep -qv ":$d:"; then
+            export PATH="$d:$PATH"
+        fi
+    done
+    echo "Building Svelte frontend..."
+    cd frontend && (test -d node_modules || npm install --no-audit --no-fund) && npm run build
+    cd ..
+    echo "Compiling Nim server..."
+    mkdir -p bin
+    nim c -d:ssl --threads:on -o:bin/quickheadlines src/qh/main.nim
+    echo "Built bin/quickheadlines"
+    ls -lh bin/quickheadlines
 
 # Build + run on FreeBSD (no nix).
 freebsd-nim-run: freebsd-nim-build nim-stop
