@@ -3,7 +3,7 @@
 ## endpoint (/api/content). Uses the same SQLite database as feeds/items
 ## (article_content table, migration 11).
 
-import std/[times, strutils, re]
+import std/[times, strutils, re, logging]
 import tiny_sqlite
 import ./database  # dbStr
 
@@ -82,7 +82,8 @@ proc cleanupOldEntries*(s: SqliteContentStore; retentionDays = RetentionDays): i
     s.db.exec("DELETE FROM article_content WHERE created_at < datetime('now', '-' || ? || ' days')", retentionDays)
     let after = s.db.one("SELECT COUNT(*) FROM article_content").get[0].intVal
     (before - after).int
-  except CatchableError:
+  except CatchableError as e:
+    warn "content_store.cleanupOldEntries failed: ", e.msg
     0
 
 proc cleanupLowQuality*(s: SqliteContentStore; minLength = MinContentLength): int =
@@ -92,7 +93,8 @@ proc cleanupLowQuality*(s: SqliteContentStore; minLength = MinContentLength): in
     s.db.exec("DELETE FROM article_content WHERE LENGTH(content) < ?", minLength)
     let after = s.db.one("SELECT COUNT(*) FROM article_content").get[0].intVal
     (before - after).int
-  except CatchableError:
+  except CatchableError as e:
+    warn "content_store.cleanupLowQuality failed: ", e.msg
     0
 
 proc contentCount*(s: SqliteContentStore): int =

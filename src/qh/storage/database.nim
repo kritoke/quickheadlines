@@ -176,8 +176,8 @@ proc normalizePubDates*(db: DbConn): int =
         inc batchCount
         inc total
       if batchCount < 500: break
-  except CatchableError:
-    discard
+  except CatchableError as e:
+    warn "normalizePubDates failed: ", e.msg
   total
 
 proc integrityOk*(dbPath: string): bool =

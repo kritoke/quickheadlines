@@ -122,10 +122,28 @@ proc handle(ctx: ServerCtx; req: Request): Future[void] {.async.} =
   # ---- rate limit API requests only (not static assets) ----
   if ctx.rateLimiter != nil and path.startsWith("/api/"):
     let (peerIp, _) = req.client.getPeerAddr()
-    if not ctx.rateLimiter.isAllowed(peerIp):
+    # Per-endpoint rate limits (port of Crystal's per-controller limits).
+    let endpointLimit = case path
+      of "/api/feeds": 600
+      of "/api/timeline": 360
+      of "/api/config": 600
+      of "/api/tabs": 600
+      of "/api/feed_more": 30
+      of "/api/clusters": 120
+      of "/api/content": 120
+      of "/api/proxy-image": 30
+      of "/api/status": 60
+      of "/api/health": 60
+      of "/api/version": 60
+      of "/api/ws": 10
+      else: 1000  # admin + unknown endpoints
+    let rateKey = path & ":" & peerIp
+    if not ctx.rateLimiter.isAllowed(rateKey, endpointLimit):
+      let retrySec = ctx.rateLimiter.retryAfter(rateKey, endpointLimit)
       await req.respond(Http429,
-        $(%*{"error": "rate limited", "retry_after": 60}),
-        jsonHeaders())
+        $(%*{"error": "rate limited", "retry_after": retrySec}),
+        newHttpHeaders({"Content-Type": "application/json",
+                        "Retry-After": $retrySec}))
       return
 
   # ---- POST endpoints (admin auth required) ----

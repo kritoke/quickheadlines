@@ -734,11 +734,26 @@ help:
 # ====================================================================
 
 # Install Nim + dependencies on FreeBSD via pkg.
+# Requires root. Run as root or install sudo first: pkg install sudo
 freebsd-nim-setup:
     #!/usr/bin/env sh
     set -e
     if [ "$(uname -s)" != "FreeBSD" ]; then
         echo "Error: freebsd-nim-setup is for FreeBSD only"
+        exit 1
+    fi
+    # Detect privilege escalation command.
+    if command -v sudo >/dev/null 2>&1; then
+        SU="sudo"
+    elif command -v doas >/dev/null 2>&1; then
+        SU="doas"
+    elif [ "$(id -u)" = "0" ]; then
+        SU=""
+    else
+        echo "Error: No privilege escalation tool found."
+        echo "Run as root, or install sudo/doas:"
+        echo "  pkg install sudo"
+        echo "  pkg install doas"
         exit 1
     fi
     echo "Installing Nim and dependencies on FreeBSD..."
@@ -747,42 +762,42 @@ freebsd-nim-setup:
         echo "  Nim: $(nim --version | head -1)"
     else
         echo "  Installing nim..."
-        sudo pkg install -y nim
+        $SU pkg install -y nim
     fi
     # nimble (usually bundled with nim)
     if command -v nimble >/dev/null 2>&1; then
         echo "  nimble: $(nimble --version | head -1)"
     else
         echo "  Installing nimble..."
-        sudo pkg install -y nimble
+        $SU pkg install -y nimble
     fi
     # SQLite3
     if pkg info -e sqlite3 >/dev/null 2>&1; then
         echo "  sqlite3: installed"
     else
         echo "  Installing sqlite3..."
-        sudo pkg install -y sqlite3
+        $SU pkg install -y sqlite3
     fi
     # OpenSSL
     if pkg info -e openssl >/dev/null 2>&1; then
         echo "  openssl: installed"
     else
         echo "  Installing openssl..."
-        sudo pkg install -y openssl
+        $SU pkg install -y openssl
     fi
     # Node.js (for frontend build)
     if command -v node >/dev/null 2>&1; then
         echo "  node: $(node --version)"
     else
         echo "  Installing node..."
-        sudo pkg install -y node
+        $SU pkg install -y node
     fi
     # npm
     if command -v npm >/dev/null 2>&1; then
         echo "  npm: $(npm --version)"
     else
         echo "  Installing npm..."
-        sudo pkg install -y npm
+        $SU pkg install -y npm
     fi
     # Install nimble packages (yaml, tiny_sqlite, stb_image)
     echo "  Installing nimble packages..."
