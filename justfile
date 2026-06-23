@@ -894,7 +894,6 @@ freebsd-nim-check-deps:
 
 # Build the Nim server on FreeBSD (no nix required).
 # Builds frontend locally and only compiles Nim in the jail.
-# Use this when frontend build keeps failing in the jail.
 freebsd-nim-build: freebsd-nim-check-deps
     #!/usr/bin/env sh
     set -eu
@@ -903,35 +902,37 @@ freebsd-nim-build: freebsd-nim-check-deps
         case ":$PATH:" in *":$d:"*) ;; *) PATH="$d:$PATH" ;; esac
     done
     export PATH
-    # Check that frontend/dist exists (should be built locally and rsynced).
     if [ ! -d frontend/dist ] || [ ! -f frontend/dist/index.html ]; then
-        echo "Error: frontend/dist not found."
-        echo "Build the frontend locally first, then rsync it to the jail."
-        echo "  Local: just nim-frontend-force"
-        echo "  Rsync: rsync -avz frontend/dist/ <host>:<jail>/frontend/dist/"
+        echo "Error: frontend/dist not found. Build frontend locally first."
         exit 1
     fi
-    # Find nimble package paths using nimble path command.
+    # Locate yaml.nim to find the package root.
     NIM_FLAGS="-d:ssl --threads:on"
-    # Try nimble path for each required package.
-    for pkg in yaml tiny_sqlite stb_image fusion; do
-        PKG_PATH=""
-        # Try nimble path command first.
-        if command -v nimble >/dev/null 2>&1; then
-            PKG_PATH="$(nimble path "$pkg" 2>/dev/null || true)"
-        fi
-        # Fallback: search common nimble directories.
-        if [ -z "$PKG_PATH" ] || [ ! -d "$PKG_PATH" ]; then
-            for d in "$HOME/.nimble/pkgs2/${pkg}"-* /usr/local/nim/pkgs2/${pkg}-* "$HOME/.nimble/pkgs/${pkg}"-*; do
-                if [ -d "$d" ]; then PKG_PATH="$d"; break; fi
-            done
-        fi
-        if [ -n "$PKG_PATH" ] && [ -d "$PKG_PATH" ]; then
-            echo "  $pkg: $PKG_PATH"
-            NIM_FLAGS="$NIM_FLAGS --path:$PKG_PATH"
-        else
-            echo "  $pkg: NOT FOUND"
-        fi
+    YAML_NIM=""
+    for d in "$HOME/.nimble/pkgs2" /usr/local/nim/pkgs2; do
+        YAML_NIM="$(find "$d" -name 'yaml.nim' -path '*/yaml-*' 2>/dev/null | head -1 || true)"
+        [ -n "$YAML_NIM" ] && break
+    done
+    if [ -z "$YAML_NIM" ]; then
+        echo "Error: yaml.nim not found in nimble packages."
+        echo "Searched: $HOME/.nimble/pkgs2, /usr/local/nim/pkgs2"
+        echo "Run: nimble install yaml"
+        exit 1
+    fi
+    YAML_DIR="$(dirname "$YAML_NIM")"
+    NIM_FLAGS="$NIM_FLAGS --path:$YAML_DIR"
+    echo "  yaml -> $YAML_DIR"
+    # Add other packages similarly.
+    for pkg in tiny_sqlite stb_image; do
+        for base in "$HOME/.nimble/pkgs2" /usr/local/nim/pkgs2; do
+            found="$(find "$base" -name "${pkg}.nim" -path "*/${pkg}-*" 2>/dev/null | head -1 || true)"
+            if [ -n "$found" ]; then
+                pkgdir="$(dirname "$found")"
+                NIM_FLAGS="$NIM_FLAGS --path:$pkgdir"
+                echo "  $pkg -> $pkgdir"
+                break
+            fi
+        done
     done
     echo "Compiling Nim server..."
     mkdir -p bin
