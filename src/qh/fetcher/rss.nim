@@ -2,7 +2,7 @@
 ## Uses std/xmltree + std/xmlparser (no libxml2 dep). Returns a FetchResult
 ## (okFetch / errFetch(feParse)). Sole place that knows the feed XML shape.
 
-import std/[streams, strutils, xmltree, xmlparser, times]
+import std/[streams, strutils, xmltree, xmlparser, times, uri]
 from unicode import Rune, toUTF8
 import ../types
 
@@ -102,14 +102,35 @@ proc entryContent*(n: XmlNode): string =
     if c != nil:
       let text = c.allText.strip()
       if text.len > 0: return text
-  # RSS content:encoded uses a namespace prefix — look for any tag ending in ":encoded"
+  # RSS content:encoded uses a namespace prefix. The XML parser converts it to
+  # "{http://purl.org/rss/1.0/modules/content/}encoded" — check for }encoded.
   for c in n:
     if c.kind == xnElement:
       let t = c.tag
-      if t.endsWith(":encoded"):
+      if t.endsWith(":encoded") or t.endsWith("}encoded"):
         let text = c.allText.strip()
         if text.len > 0: return text
   ""
+
+proc deriveSiteLink(feedUrl, siteLink: string): string =
+  ## If siteLink is empty or looks like a feed URL, derive the site URL from the
+  ## feed URL by stripping the path. Handles malformed feeds where <link> points
+  ## to the feed URL itself (e.g. Tech Radar).
+  let sl = siteLink.strip()
+  let fl = feedUrl.strip()
+  if sl.len > 0 and sl != fl and not sl.contains("/feed") and
+     not sl.contains("/rss") and not sl.endsWith(".xml") and
+     not sl.endsWith(".atom"):
+    return sl
+  # Derive from feed URL: scheme://host
+  try:
+    let p = parseUri(fl)
+    if p.hostname.len > 0:
+      let scheme = if p.scheme.len > 0: p.scheme else: "https"
+      return scheme & "://" & p.hostname
+  except CatchableError:
+    discard
+  sl  # fallback to whatever we had
 
 proc parseRss*(url, body: string): FetchResult =
   try:
@@ -141,6 +162,7 @@ proc parseRss*(url, body: string): FetchResult =
               link: it.linkOf,
               pubDate: normalizePubDate(it.childText("pubDate")),
               content: it.entryContent())
+      fd.siteLink = deriveSiteLink(url, fd.siteLink)
       okFetch(fd)
     else:
       okFetch(fd)
