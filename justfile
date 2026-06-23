@@ -911,23 +911,28 @@ freebsd-nim-build: freebsd-nim-check-deps
         echo "  Rsync: rsync -avz frontend/dist/ <host>:<jail>/frontend/dist/"
         exit 1
     fi
-    # Find nimble package paths (yaml, tiny_sqlite, stb_image, etc.).
-    NIMBLE_PKGS=""
-    for d in "$HOME/.nimble/pkgs2" "/usr/local/nim/pkgs2" "$HOME/.nimble/pkgs"; do
-        if [ -d "$d" ]; then NIMBLE_PKGS="$d"; break; fi
-    done
+    # Find nimble package paths using nimble path command.
     NIM_FLAGS="-d:ssl --threads:on"
-    if [ -n "$NIMBLE_PKGS" ]; then
-        echo "  nimble packages: $NIMBLE_PKGS"
-        # Add each package directory as a --path so imports resolve.
-        for pkg in "$NIMBLE_PKGS"/*/; do
-            if [ -d "$pkg" ]; then
-                NIM_FLAGS="$NIM_FLAGS --path:$pkg"
-            fi
-        done
-    else
-        echo "Warning: nimble packages directory not found"
-    fi
+    # Try nimble path for each required package.
+    for pkg in yaml tiny_sqlite stb_image fusion; do
+        PKG_PATH=""
+        # Try nimble path command first.
+        if command -v nimble >/dev/null 2>&1; then
+            PKG_PATH="$(nimble path "$pkg" 2>/dev/null || true)"
+        fi
+        # Fallback: search common nimble directories.
+        if [ -z "$PKG_PATH" ] || [ ! -d "$PKG_PATH" ]; then
+            for d in "$HOME/.nimble/pkgs2/${pkg}"-* /usr/local/nim/pkgs2/${pkg}-* "$HOME/.nimble/pkgs/${pkg}"-*; do
+                if [ -d "$d" ]; then PKG_PATH="$d"; break; fi
+            done
+        fi
+        if [ -n "$PKG_PATH" ] && [ -d "$PKG_PATH" ]; then
+            echo "  $pkg: $PKG_PATH"
+            NIM_FLAGS="$NIM_FLAGS --path:$PKG_PATH"
+        else
+            echo "  $pkg: NOT FOUND"
+        fi
+    done
     echo "Compiling Nim server..."
     mkdir -p bin
     nim c $NIM_FLAGS -o:bin/quickheadlines src/qh/main.nim
