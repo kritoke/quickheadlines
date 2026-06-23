@@ -214,7 +214,7 @@ tabs:
       - title: Urs Enzler (PlanetGeek - Active F# Event Sourcing Series)
         url: https://www.planetgeek.ch/feed/
       - title: Ian Erik Varatalu
-        url: https://iev.ee/feed.xml
+        url: https://iev.ee/rss.xml
       - title: Mathias Brandewinder
         url: https://brandewinder.com/atom.xml
       - title: G-Research Tech Blog
@@ -258,7 +258,7 @@ tabs:
       - title: "9 to 5 Linux"
         url: "https://9to5linux.com/feed/"
       - title: "Linux Journal"
-        url: "https://www.linuxjournal.com/content/rss"
+        url: "https://www.linuxjournal.com/node/feed"
       - title: "Linux Weekly News"
         url: "https://lwn.net/headlines/newrss"
       - title: "Linux Uprising"
@@ -366,7 +366,7 @@ tabs:
       - title: "NVIDIA Developer Blog"
         url: "https://developer.nvidia.com/blog/feed/"
       - title: "Microsoft AI Blog"
-        url: "https://blogs.microsoft.com/ai/feed/"
+        url: "https://news.microsoft.com/source/topics/ai/feed"
       - title: "Hugging Face Blog"
         url: "https://huggingface.co/blog/feed.xml"
       - title: "Machine Learning Mastery"
@@ -471,8 +471,6 @@ tabs:
         url: "https://kubernetes.io/feed.xml"
       - title: "HashiCorp Blog"
         url: "https://www.hashicorp.com/blog/feed.xml"
-      - title: "Datadog Blog"
-        url: "https://www.datadoghq.com/blog/rss.xml"
       - title: "AWS Architecture Blog"
         url: "https://aws.amazon.com/blogs/architecture/feed/"
       - title: "Cloud Native Computing Foundation"

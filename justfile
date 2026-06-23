@@ -911,9 +911,26 @@ freebsd-nim-build: freebsd-nim-check-deps
         echo "  Rsync: rsync -avz frontend/dist/ <host>:<jail>/frontend/dist/"
         exit 1
     fi
+    # Find nimble package paths (yaml, tiny_sqlite, stb_image, etc.).
+    NIMBLE_PKGS=""
+    for d in "$HOME/.nimble/pkgs2" "/usr/local/nim/pkgs2" "$HOME/.nimble/pkgs"; do
+        if [ -d "$d" ]; then NIMBLE_PKGS="$d"; break; fi
+    done
+    NIM_FLAGS="-d:ssl --threads:on"
+    if [ -n "$NIMBLE_PKGS" ]; then
+        echo "  nimble packages: $NIMBLE_PKGS"
+        # Add each package directory as a --path so imports resolve.
+        for pkg in "$NIMBLE_PKGS"/*/; do
+            if [ -d "$pkg" ]; then
+                NIM_FLAGS="$NIM_FLAGS --path:$pkg"
+            fi
+        done
+    else
+        echo "Warning: nimble packages directory not found"
+    fi
     echo "Compiling Nim server..."
     mkdir -p bin
-    nim c -d:ssl --threads:on -o:bin/quickheadlines src/qh/main.nim
+    nim c $NIM_FLAGS -o:bin/quickheadlines src/qh/main.nim
     echo "Built bin/quickheadlines"
     ls -lh bin/quickheadlines
 
