@@ -802,6 +802,13 @@ freebsd-nim-setup:
         echo "  Installing openssl..."
         $SU pkg install -y openssl
     fi
+    # libxml2 (required by Nim's XML parser)
+    if pkg info -e libxml2 >/dev/null 2>&1; then
+        echo "  libxml2: installed"
+    else
+        echo "  Installing libxml2..."
+        $SU pkg install -y libxml2
+    fi
     # Node.js (for frontend build)
     if command -v node >/dev/null 2>&1; then
         echo "  node: $(node --version)"
@@ -877,7 +884,7 @@ freebsd-nim-check-deps:
             FAIL=1
         fi
     done
-    for pkg_name in sqlite3 openssl; do
+    for pkg_name in sqlite3 openssl libxml2; do
         if pkg info -e $pkg_name >/dev/null 2>&1; then
             echo "  $pkg_name: installed"
         else

@@ -102,7 +102,10 @@ proc parseSwRepos*(path: string): seq[string] =
     if inRepos:
       if s.startsWith("repos:"): continue
       if s.startsWith("- "):
-        let val = s[2..^1].strip(chars={'"', '\''})
+        # Strip quotes, then strip inline comments (# ...).
+        var val = s[2..^1].strip(chars={'"', '\''})
+        let commentIdx = val.find('#')
+        if commentIdx >= 0: val = val[0 ..< commentIdx].strip()
         if val.len > 0 and '/' in val:
           result.add(val)
       elif s.len > 0 and not s.startsWith("#") and not s.startsWith("-") and not s.startsWith("title:"):
