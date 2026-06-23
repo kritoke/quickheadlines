@@ -46,7 +46,6 @@ proc findSimilarPairsInMemory(items: seq[ClusteringItem];
         seen.incl(key)
         let ia = byId[x]; let ib = byId[y]
         if ia.feedId == ib.feedId: continue          # same-feed dedup
-        if sameBaseDomain(ia.feedUrl, ib.feedUrl): continue
         if overlapCoefficient(words[x], words[y]) >= threshold:
           result.add(key)
 
@@ -80,16 +79,21 @@ proc runClusteringPipeline*(c: NimClusterer; store: SqliteClusterStore;
   var sigs: Table[int64, seq[uint32]]
   var words: Table[int64, HashSet[string]]
   var byId: Table[int64, ClusteringItem]
+  var skipped = 0
   for it in items:
-    if not canCluster(it.title): continue
+    if not canCluster(it.title):
+      inc skipped
+      continue
     sigs[it.id] = minhashSignature(it.title, numHashes)
     words[it.id] = wordSet(it.title)
     byId[it.id] = it
     let bands = bandHashes(sigs[it.id], c.bands, c.rows)
-    store.storeLshBands(it.id, bands.mapIt(it[1]))   # hex hashes only
+    store.storeLshBands(it.id, bands.mapIt(it[1]))
+  echo "[cluster] batch: ", items.len, " items, ", sigs.len, " canCluster, ", skipped, " skipped, numHashes=", numHashes
 
   var seen: HashSet[(int64, int64)]
   var pairs: seq[(int64, int64)]
+  var candidateChecks = 0
   for id, sig in pairs(sigs):
     let candidates = store.findLshCandidates(bandHashes(sig, c.bands, c.rows))
     for cand in candidates:
@@ -97,13 +101,17 @@ proc runClusteringPipeline*(c: NimClusterer; store: SqliteClusterStore;
       let key = if id < cand: (id, cand) else: (cand, id)
       if key in seen: continue
       seen.incl(key)
+      inc candidateChecks
       let ia = byId[id]; let ib = byId[cand]
       if ia.feedId == ib.feedId: continue
-      if sameBaseDomain(ia.feedUrl, ib.feedUrl): continue
-      if overlapCoefficient(words[id], words[cand]) >= c.threshold:
+      let overlap = overlapCoefficient(words[id], words[cand])
+      if overlap >= c.threshold:
         pairs.add(key)
+  echo "[cluster] candidates: ", candidateChecks, " pairs: ", pairs.len
 
   let ids = toSeq(byId.keys)
   let clusters = buildClustersFromPairs(pairs, ids)
-  discard store.assignClusters(clusters)
+  if clusters.len > 0:
+    let stored = store.assignClusters(clusters)
+    echo "[cluster] assigned ", clusters.len, " clusters, store ok=", stored.isOk
   okCluster(clusters)
