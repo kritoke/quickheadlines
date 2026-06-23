@@ -7,7 +7,7 @@
 ## Run:   ./bin/quickheadlines   (QUICKHEADLINES_CONFIG, QUICKHEADLINES_DB,
 ##                                QUICKHEADLINES_PORT env vars optional)
 
-import std/[os, strutils, times, atomics, posix, httpclient]
+import std/[os, strutils, times, atomics, posix]
 import types
 import config/config_source
 import config/yaml_config
@@ -53,10 +53,6 @@ proc installSignalHandlers() =
 
 proc main() =
   installSignalHandlers()
-  # Force SSL context init in main thread (OpenSSL isn't thread-safe for init).
-  # Without this, worker threads race on getDefaultSSL() and crash on FreeBSD.
-  let sslClient = newHttpClient(timeout = 1000)
-  sslClient.close()
   let cfgPath = getEnv("QUICKHEADLINES_CONFIG", "feeds.yml")
   let dbPath  = getEnv("QUICKHEADLINES_DB", "qh_nim.db")
   let port    = envInt("QUICKHEADLINES_PORT", 8080)

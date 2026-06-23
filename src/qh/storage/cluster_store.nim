@@ -45,13 +45,13 @@ proc clearClusters*(s: SqliteClusterStore): StoreUnitResult =
 # ---------------------------------------------------------------- LSH band helpers (for the P3.5 clustering pipeline)
 
 proc storeLshBands*(s: SqliteClusterStore; itemId: int64; bandHashes: seq[string]) =
-  ## Replace this item's LSH bands. bandHashes are pre-formatted hex strings
-  ## (port of store_lsh_bands; the hashing is owned by the Clusterer).
+  ## Replace this item's LSH bands. Uses INSERT OR REPLACE to handle
+  ## items that already have bands from a previous clustering run.
   s.db.exec("BEGIN")
   s.db.exec("DELETE FROM lsh_bands WHERE item_id = ?", itemId)
   for i, bh in bandHashes:
     s.db.exec(
-      "INSERT INTO lsh_bands (item_id, band_index, band_hash) VALUES (?, ?, ?)",
+      "INSERT OR REPLACE INTO lsh_bands (item_id, band_index, band_hash) VALUES (?, ?, ?)",
       itemId, i, bh)
   s.db.exec("COMMIT")
 
