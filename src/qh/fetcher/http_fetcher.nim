@@ -2,7 +2,7 @@
 ## Promotes the spike's sync httpclient path + adds retry/backoff for
 ## transient network errors. The boundary returns the concrete FetchResult.
 
-import std/[httpclient, os, strutils, locks]
+import std/[httpclient, os, strutils, osproc, streams]
 import ../types
 import ./rss
 
@@ -11,31 +11,39 @@ type
     timeoutMs*: int
     maxRetries*: int
     userAgent*: string
+    useCurl: bool  # true if OpenSSL is broken (FreeBSD workaround)
 
 const DefaultUserAgent* = "Mozilla/5.0 (compatible; QuickHeadlines/0.1; +https://github.com/kritoke/quickheadlines)"
 
-# Global SSL init lock — OpenSSL's getDefaultSSL() isn't thread-safe on FreeBSD.
-var sslLock: Lock
-initLock(sslLock)
-var sslInitialized = false
-
-proc ensureSslInit() =
-  if not sslInitialized:
-    withLock(sslLock):
-      if not sslInitialized:
-        try:
-          let c = newHttpClient(timeout = 1000)
-          c.close()
-        except CatchableError:
-          discard
-        sslInitialized = true
+proc fetchViaCurl(url: string; timeoutMs: int): (int, string) =
+  ## Fallback: use system curl for HTTPS when Nim's OpenSSL is broken.
+  let timeoutSec = max(timeoutMs div 1000, 5)
+  let (output, exitCode) = execCmdEx(
+    "curl -sL --max-time " & $timeoutSec & " -H 'Accept-Encoding: identity' " & quoteShell(url))
+  (exitCode, output)
 
 proc newHttpFetcher*(timeoutMs = 15000, maxRetries = 2,
                      userAgent = DefaultUserAgent): HttpFetcher =
-  HttpFetcher(timeoutMs: timeoutMs, maxRetries: maxRetries, userAgent: userAgent)
+  # On FreeBSD, OpenSSL context creation can SIGSEGV. Set
+  # QUICKHEADLINES_USE_CURL=1 to use system curl as fallback.
+  let useCurl = getEnv("QUICKHEADLINES_USE_CURL", "0") == "1"
+  if useCurl:
+    echo "[fetch] Using curl fallback for HTTP requests"
+  HttpFetcher(timeoutMs: timeoutMs, maxRetries: maxRetries, userAgent: userAgent,
+              useCurl: useCurl)
 
 proc fetchOnce(f: HttpFetcher; url: string): FetchResult =
-  ensureSslInit()
+  # Use curl fallback if httpclient SSL is broken.
+  if f.useCurl:
+    let (code, body) = fetchViaCurl(url, f.timeoutMs)
+    if code != 0:
+      echo "[fetch] ", url[0..min(50,url.len-1)], " curl exit=", code
+      return errFetch(feNetwork)
+    if body.len == 0:
+      echo "[fetch] ", url[0..min(50,url.len-1)], " curl empty response"
+      return errFetch(feNetwork)
+    return parseRss(url, body)
+
   let client = newHttpClient(timeout = f.timeoutMs)
   client.headers = newHttpHeaders({
     "User-Agent": f.userAgent,
