@@ -949,6 +949,7 @@ freebsd-nim-build: freebsd-nim-check-deps
 
 # Build + run on FreeBSD (no nix).
 freebsd-nim-run: freebsd-nim-build nim-stop
+    LD_LIBRARY_PATH=/usr/local/lib \
     QUICKHEADLINES_CONFIG={{env_var_or_default("QUICKHEADLINES_CONFIG","feeds.yml")}} \
     QUICKHEADLINES_DB={{env_var_or_default("QUICKHEADLINES_DB","qh_nim.db")}} \
     QUICKHEADLINES_PORT={{env_var_or_default("QUICKHEADLINES_PORT","8080")}} \
