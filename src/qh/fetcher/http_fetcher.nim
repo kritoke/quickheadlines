@@ -2,7 +2,7 @@
 ## Promotes the spike's sync httpclient path + adds retry/backoff for
 ## transient network errors. The boundary returns the concrete FetchResult.
 
-import std/[httpclient, os, strutils]
+import std/[httpclient, os, strutils, locks]
 import ../types
 import ./rss
 
@@ -14,29 +14,33 @@ type
 
 const DefaultUserAgent* = "Mozilla/5.0 (compatible; QuickHeadlines/0.1; +https://github.com/kritoke/quickheadlines)"
 
+# Global SSL init lock — OpenSSL's getDefaultSSL() isn't thread-safe on FreeBSD.
+var sslLock: Lock
+initLock(sslLock)
+var sslInitialized = false
+
+proc ensureSslInit() =
+  if not sslInitialized:
+    withLock(sslLock):
+      if not sslInitialized:
+        try:
+          let c = newHttpClient(timeout = 1000)
+          c.close()
+        except CatchableError:
+          discard
+        sslInitialized = true
+
 proc newHttpFetcher*(timeoutMs = 15000, maxRetries = 2,
                      userAgent = DefaultUserAgent): HttpFetcher =
   HttpFetcher(timeoutMs: timeoutMs, maxRetries: maxRetries, userAgent: userAgent)
 
-# Thread-local client: reused across fetch calls within the same worker thread.
-# Avoids racing on getDefaultSSL() lazy init (OpenSSL isn't thread-safe).
-var threadClient {.threadvar.}: HttpClient
-var threadClientAgent {.threadvar.}: string
-
-proc getThreadClient(f: HttpFetcher): HttpClient =
-  if threadClient == nil or threadClientAgent != f.userAgent:
-    if threadClient != nil:
-      try: threadClient.close() except CatchableError: discard
-    threadClient = newHttpClient(timeout = f.timeoutMs)
-    threadClient.headers = newHttpHeaders({
-      "User-Agent": f.userAgent,
-      "Accept": "application/rss+xml, application/atom+xml, application/xml, text/xml",
-      "Accept-Encoding": "identity"})
-    threadClientAgent = f.userAgent
-  threadClient
-
 proc fetchOnce(f: HttpFetcher; url: string): FetchResult =
-  let client = f.getThreadClient()
+  ensureSslInit()
+  let client = newHttpClient(timeout = f.timeoutMs)
+  client.headers = newHttpHeaders({
+    "User-Agent": f.userAgent,
+    "Accept": "application/rss+xml, application/atom+xml, application/xml, text/xml",
+    "Accept-Encoding": "identity"})
   try:
     let resp = client.request(url, HttpGet)
     let code = resp.code.int
@@ -47,6 +51,8 @@ proc fetchOnce(f: HttpFetcher; url: string): FetchResult =
   except CatchableError as e:
     echo "[fetch] ", url[0..min(50,url.len-1)], " ERROR: ", e.msg[0..min(80,e.msg.len-1)]
     errFetch(feNetwork)
+  finally:
+    client.close()
 
 proc backoffMs(attempt: int): int =
   ## Exponential backoff: 100ms, 200ms, 400ms... (capped at 2s).
