@@ -62,8 +62,12 @@ proc stripWww(host: string): string =
     host
 
 proc normalizeQuery(query: string): string =
-  ## Remove tracking params from query string, preserve the rest.
+  ## Remove ALL query params except known content params.
+  ## This matches the old behavior (strip everything) while preserving
+  ## params that carry unique content identity.
   if query.len == 0: return ""
+  # Known content-bearing params that should be preserved.
+  const KeepParams = ["id", "p", "page", "article", "post", "entry", "slug"]
   var keep: seq[string]
   for part in query.split('&'):
     if part.len == 0: continue
@@ -71,9 +75,9 @@ proc normalizeQuery(query: string): string =
     let key = if eqIdx >= 0: part[0 ..< eqIdx] else: part
     let val = if eqIdx >= 0: part[eqIdx+1 .. ^1] else: ""
     if key.len == 0: continue
-    if key.toLowerAscii() in trackingSet: continue
-    if val.len == 0: continue
-    keep.add(part)
+    # Keep known content params; strip everything else.
+    if key.toLowerAscii() in KeepParams and val.len > 0:
+      keep.add(part)
   if keep.len == 0: "" else: keep.join("&")
 
 proc normalizeUrl*(url: string): string =
