@@ -905,7 +905,7 @@ freebsd-nim-build: freebsd-nim-check-deps
     echo "Building Svelte frontend..."
     cd frontend
     echo "  Clean installing npm dependencies..."
-    rm -rf node_modules package-lock.json
+    rm -rf node_modules package-lock.json .svelte-kit
     npm install --no-audit --no-fund
     echo "  Running vite build..."
     npx vite build
