@@ -26,8 +26,9 @@ proc clusterLoop(a: ClusterArgs) {.thread.} =
     let itemStore = SqliteItemStore(db: db)
     let clusterStore = SqliteClusterStore(db: db)
     let clusterer = newNimClusterer(a.threshold, a.bands, a.rows)
-    let idleSec = max(a.intervalSec, 60)  # at least 60s between idle checks
+    let idleSec = max(a.intervalSec, 60)
     var consecutiveEmpty = 0
+    echo "[cluster] started (threshold=", a.threshold, " maxItems=", a.maxItems, " interval=", a.intervalSec, "s)"
     while true:
       if a.shuttingDown != nil and a.shuttingDown[].load():
         echo "[cluster] shutting down"
@@ -36,10 +37,16 @@ proc clusterLoop(a: ClusterArgs) {.thread.} =
       if items.len > 0:
         consecutiveEmpty = 0
         let res = clusterer.runClusteringPipeline(clusterStore, items)
-        if res.isOk and res.clusters.len > 0:
-          a.dirty[].store(true)
-          echo "[cluster] clustered ", items.len, " items into ", res.clusters.len, " groups"
+        if res.isOk:
+          echo "[cluster] result: ", res.clusters.len, " clusters from ", items.len, " items"
+          if res.clusters.len > 0:
+            a.dirty[].store(true)
+        else:
+          echo "[cluster] pipeline failed: ", res.err
       else:
+        inc consecutiveEmpty
+        if consecutiveEmpty <= 2:
+          echo "[cluster] no unclustered items (", consecutiveEmpty, " empty cycles)"
         inc consecutiveEmpty
       # Sleep: short on first run, long when idle.
       let sleepSec = if consecutiveEmpty == 0: min(a.intervalSec, 5)
