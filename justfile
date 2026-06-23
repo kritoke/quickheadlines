@@ -893,7 +893,8 @@ freebsd-nim-check-deps:
     echo "All dependencies found."
 
 # Build the Nim server on FreeBSD (no nix required).
-# Requires: nim, nimble, node, npm, sqlite3, openssl.
+# Builds frontend locally and only compiles Nim in the jail.
+# Use this when frontend build keeps failing in the jail.
 freebsd-nim-build: freebsd-nim-check-deps
     #!/usr/bin/env sh
     set -eu
@@ -902,14 +903,14 @@ freebsd-nim-build: freebsd-nim-check-deps
         case ":$PATH:" in *":$d:"*) ;; *) PATH="$d:$PATH" ;; esac
     done
     export PATH
-    echo "Building Svelte frontend..."
-    cd frontend
-    echo "  Clean installing npm dependencies..."
-    rm -rf node_modules package-lock.json .svelte-kit
-    npm install --no-audit --no-fund
-    echo "  Running vite build..."
-    npx vite build
-    cd ..
+    # Check that frontend/dist exists (should be built locally and rsynced).
+    if [ ! -d frontend/dist ] || [ ! -f frontend/dist/index.html ]; then
+        echo "Error: frontend/dist not found."
+        echo "Build the frontend locally first, then rsync it to the jail."
+        echo "  Local: just nim-frontend-force"
+        echo "  Rsync: rsync -avz frontend/dist/ <host>:<jail>/frontend/dist/"
+        exit 1
+    fi
     echo "Compiling Nim server..."
     mkdir -p bin
     nim c -d:ssl --threads:on -o:bin/quickheadlines src/qh/main.nim
