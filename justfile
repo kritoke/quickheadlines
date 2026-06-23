@@ -903,7 +903,11 @@ freebsd-nim-build: freebsd-nim-check-deps
     done
     export PATH
     echo "Building Svelte frontend..."
-    cd frontend && (test -d node_modules || npm install --no-audit --no-fund) && npm run build
+    cd frontend
+    echo "  Installing npm dependencies..."
+    npm install --no-audit --no-fund
+    echo "  Running vite build..."
+    npx vite build
     cd ..
     echo "Compiling Nim server..."
     mkdir -p bin
