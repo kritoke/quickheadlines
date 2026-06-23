@@ -30,7 +30,7 @@ proc refreshLoop(a: RefreshArgs) {.thread.} =
       if a.shuttingDown != nil and a.shuttingDown[].load():
         echo "[refresh] shutting down"
         break
-      let s = fetcher.refreshAll(a.feedConfigs, store, contentStore, a.dirty, 8)
+      let s = fetcher.refreshAll(a.feedConfigs, store, contentStore, a.dirty, 4)
       echo "[refresh] fetched=", s.fetched, " failed=", s.failed, " items=", s.items
       # Fetch software releases if repos configured.
       if a.swRepos.len > 0:
