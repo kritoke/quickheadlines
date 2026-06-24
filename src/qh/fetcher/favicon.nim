@@ -195,9 +195,14 @@ proc fetchFaviconAsync*(siteLink, feedUrl: string): Future[Option[FavBytes]] {.a
   none(FavBytes)
 
 proc faviconHash*(origin: string): string =
-  var h: uint64 = 14695981039346656037'u64
-  for c in origin: h = h xor uint64(c); h = h * 1099511628211'u64
-  result = h.toHex().toLowerAscii()
+  ## 128-bit FNV-1a hash (two 64-bit halves with different salts).
+  ## Much lower collision risk than 64-bit alone.
+  var h1: uint64 = 14695981039346656037'u64
+  var h2: uint64 = 14695981039346656037'u64 xor 0x1B873593'u64
+  for c in origin:
+    h1 = h1 xor uint64(c); h1 = h1 * 1099511628211'u64
+    h2 = h2 xor uint64(c); h2 = h2 * 0x9E3779B185EBCA87'u64
+  result = h1.toHex().toLowerAscii() & h2.toHex().toLowerAscii()
 
 proc saveFavicon*(fav: FavBytes; origin: string; dir = "favicons"): string =
   createDir(dir)

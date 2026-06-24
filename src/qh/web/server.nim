@@ -19,6 +19,12 @@ import ./assets
 import ./ws
 
 type
+  WsClient = object
+    socket: AsyncSocket
+    ip: string
+    createdAt: float       # epoch seconds
+    lastActivity: float    # epoch seconds
+
   ServerCtx* = ref object
     config*: Config
     feedStore*: SqliteFeedStore
@@ -30,6 +36,8 @@ type
     triggerCluster*: ref Atomic[bool]  # set by /api/cluster to trigger immediate run
     rateLimiter*: RateLimiter
     proxyValidator*: ProxyValidator
+    wsClients: seq[WsClient]         # WS connection registry (event-loop only)
+    faviconFailures: Table[string, int]  # favicon failure backoff tracking
 
 # ---- WebSocket connection management ----
 const
@@ -40,27 +48,15 @@ const
   WsJanitorIntervalSec* = 300  # 5 min
   WsLeakWarnThreshold* = 50
 
-type
-  WsClient = object
-    socket: AsyncSocket
-    ip: string
-    createdAt: float       # epoch seconds
-    lastActivity: float    # epoch seconds
-
-var wsClients: seq[WsClient] = @[]
-
-# Favicon failure tracking — skip feeds that fail repeatedly.
-var faviconFailures: Table[string, int]
-
-proc wsCountByIp(ip: string): int =
-  for c in wsClients:
+proc wsCountByIp(ctx: ServerCtx; ip: string): int =
+  for c in ctx.wsClients:
     if c.ip == ip: inc result
 
-proc wsRemoveClient(sock: AsyncSocket) =
-  wsClients.keepItIf(it.socket != sock)
+proc wsRemoveClient(ctx: ServerCtx; sock: AsyncSocket) =
+  ctx.wsClients.keepItIf(it.socket != sock)
 
-proc wsTouch(sock: AsyncSocket) =
-  for c in wsClients.mitems:
+proc wsTouch(ctx: ServerCtx; sock: AsyncSocket) =
+  for c in ctx.wsClients.mitems:
     if c.socket == sock:
       c.lastActivity = epochTime()
       return
@@ -94,37 +90,37 @@ proc plainTextHeaders(): HttpHeaders =
   h
 
 # ---- WebSocket session: handshake, register, hold until close ----
-proc wsSession(req: Request): Future[void] {.async.} =
+proc wsSession(ctx: ServerCtx; req: Request): Future[void] {.async.} =
   let key = req.headers.getOrDefault("Sec-WebSocket-Key")
   if key.len == 0:
     await req.respond(Http400, $(%*{"error": "missing Sec-WebSocket-Key"}), jsonHeaders())
     return
   # Connection limits.
   let (peerIp, _) = req.client.getPeerAddr()
-  if wsClients.len >= WsMaxConnections:
+  if ctx.wsClients.len >= WsMaxConnections:
     await req.respond(Http429, $(%*{"error": "too many websocket connections"}), jsonHeaders())
     return
-  if wsCountByIp(peerIp) >= WsMaxPerIp:
+  if ctx.wsCountByIp(peerIp) >= WsMaxPerIp:
     await req.respond(Http429, $(%*{"error": "too many connections from your IP"}), jsonHeaders())
     return
   # Leak detection.
-  if wsClients.len >= WsLeakWarnThreshold:
-    echo "[ws] WARNING: client count=", wsClients.len, " (possible leak)"
+  if ctx.wsClients.len >= WsLeakWarnThreshold:
+    echo "[ws] WARNING: client count=", ctx.wsClients.len, " (possible leak)"
   let accept = wsAcceptKey(key)
   await req.client.send(
     "HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\n" &
     "Connection: Upgrade\r\nSec-WebSocket-Accept: " & accept & "\r\n\r\n")
   let now = epochTime()
-  wsClients.add(WsClient(socket: req.client, ip: peerIp,
-                          createdAt: now, lastActivity: now))
+  ctx.wsClients.add(WsClient(socket: req.client, ip: peerIp,
+                              createdAt: now, lastActivity: now))
   try:
     while true:
       let data = await req.client.recv(4096)       # detect close; discard frames
       if data.len == 0: break
-      wsTouch(req.client)                          # update activity
+      ctx.wsTouch(req.client)                      # update activity
   except CatchableError:
     discard
-  wsRemoveClient(req.client)
+  ctx.wsRemoveClient(req.client)
 
 proc handle(ctx: ServerCtx; req: Request): Future[void] {.async.} =
   let path = req.url.path
@@ -198,7 +194,7 @@ proc handle(ctx: ServerCtx; req: Request): Future[void] {.async.} =
 
   # ---- WebSocket upgrade (before the GET-only / static checks) ----
   if path == "/api/ws" and verb == HttpGet:
-    await req.wsSession()
+    await ctx.wsSession(req)
     return
 
   if verb != HttpGet:
@@ -490,36 +486,36 @@ proc feedWatcher(ctx: ServerCtx): Future[void] {.async.} =
     inc tick
 
     # ---- WS broadcast on dirty flag ----
-    if wsClients.len > 0 and ctx.dirty[].load():
+    if ctx.wsClients.len > 0 and ctx.dirty[].load():
       ctx.dirty[].store(false)
       var removeIdxs: seq[int] = @[]
-      for i in 0 ..< wsClients.len:
-        try: await sendWsText(wsClients[i].socket, "{\"type\":\"feed_update\"}")
+      for i in 0 ..< ctx.wsClients.len:
+        try: await sendWsText(ctx.wsClients[i].socket, "{\"type\":\"feed_update\"}")
         except CatchableError: removeIdxs.add(i); continue
-        wsClients[i].lastActivity = epochTime()
-      for i in removeIdxs.reversed: wsClients.delete(i)
+        ctx.wsClients[i].lastActivity = epochTime()
+      for i in removeIdxs.reversed: ctx.wsClients.delete(i)
 
     # ---- WS heartbeat every 30s ----
-    if wsClients.len > 0 and tick mod WsHeartbeatSec == 0:
+    if ctx.wsClients.len > 0 and tick mod WsHeartbeatSec == 0:
       let hb = "{\"type\":\"heartbeat\",\"ts\":" & $(epochTime().int64) & "}"
       var removeIdxs: seq[int] = @[]
-      for i in 0 ..< wsClients.len:
-        try: await sendWsText(wsClients[i].socket, hb)
+      for i in 0 ..< ctx.wsClients.len:
+        try: await sendWsText(ctx.wsClients[i].socket, hb)
         except CatchableError: removeIdxs.add(i); continue
-        wsClients[i].lastActivity = epochTime()
-      for i in removeIdxs.reversed: wsClients.delete(i)
+        ctx.wsClients[i].lastActivity = epochTime()
+      for i in removeIdxs.reversed: ctx.wsClients.delete(i)
 
     # ---- WS janitor every 5 min: clean stale connections ----
-    if tick mod WsJanitorIntervalSec == 0 and wsClients.len > 0:
+    if tick mod WsJanitorIntervalSec == 0 and ctx.wsClients.len > 0:
       let now = epochTime()
       var removeIdxs: seq[int] = @[]
-      for i in 0 ..< wsClients.len:
-        if now - wsClients[i].lastActivity > WsStaleTimeoutSec.float:
-          try: wsClients[i].socket.close() except CatchableError: discard
+      for i in 0 ..< ctx.wsClients.len:
+        if now - ctx.wsClients[i].lastActivity > WsStaleTimeoutSec.float:
+          try: ctx.wsClients[i].socket.close() except CatchableError: discard
           removeIdxs.add(i)
-      for i in removeIdxs.reversed: wsClients.delete(i)
+      for i in removeIdxs.reversed: ctx.wsClients.delete(i)
       if removeIdxs.len > 0:
-        echo "[ws] janitor: removed ", removeIdxs.len, " stale connections (remaining=", wsClients.len, ")"
+        echo "[ws] janitor: removed ", removeIdxs.len, " stale connections (remaining=", ctx.wsClients.len, ")"
 
     # ---- Favicon: fetch several missing icons concurrently every 3s ----
     if tick mod 3 == 0:
@@ -530,7 +526,7 @@ proc feedWatcher(ctx: ServerCtx): Future[void] {.async.} =
         for (id, siteLink, url) in missing:
           # Skip feeds that have failed recently (in-memory backoff).
           let failKey = url
-          if failKey in faviconFailures and faviconFailures[failKey] >= 3:
+          if failKey in ctx.faviconFailures and ctx.faviconFailures[failKey] >= 3:
             continue
           futures.add fetchFaviconAsync(siteLink, url)
         if futures.len > 0:
@@ -552,15 +548,15 @@ proc feedWatcher(ctx: ServerCtx): Future[void] {.async.} =
                 ctx.dirty[].store(true)
                 inc saved
                 # Clear failure count on success.
-                faviconFailures.del(url)
+                ctx.faviconFailures.del(url)
               except CatchableError:
                 inc failed
                 failUrls.add(missing[i][2])
-                faviconFailures[missing[i][2]] = faviconFailures.getOrDefault(missing[i][2], 0) + 1
+                ctx.faviconFailures[missing[i][2]] = ctx.faviconFailures.getOrDefault(missing[i][2], 0) + 1
             else:
               inc failed
               failUrls.add(missing[i][2])
-              faviconFailures[missing[i][2]] = faviconFailures.getOrDefault(missing[i][2], 0) + 1
+              ctx.faviconFailures[missing[i][2]] = ctx.faviconFailures.getOrDefault(missing[i][2], 0) + 1
           let failMsg = if failUrls.len > 0: " failed_urls=" & failUrls.join(",") else: ""
           if saved > 0 or failed > 0:
             echo "[favicon] tick=", tick, " tried=", futures.len, " saved=", saved, " failed=", failed, failMsg
