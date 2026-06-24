@@ -1,0 +1,14 @@
+{
+  "assignee": "",
+  "blocked_by": [],
+  "blocks": [],
+  "created": "2026-06-24T13:01:46Z",
+  "description": "cleanup_supervisor.nim:31 has except CatchableError: discard. DB errors during purgeOldItems are lost. Should log the error.",
+  "id": "quickhea-8v1",
+  "labels": [],
+  "priority": 1,
+  "status": "open",
+  "title": "Cleanup supervisor silently swallows all errors",
+  "type": "bug",
+  "updated_at": "2026-06-24T13:01:46Z"
+}
