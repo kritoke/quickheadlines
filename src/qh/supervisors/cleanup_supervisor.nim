@@ -28,9 +28,8 @@ proc cleanupLoop(a: CleanupArgs) {.thread.} =
         purgeOldItems(db, a.cacheRetentionHours)
         a.dirty[].store(true)
         echo "[cleanup] retention=", a.cacheRetentionHours, "h"
-      except CatchableError:
-        discard
-    closeDb(db)
+      except CatchableError as e:
+        echo "[cleanup] ERROR: ", e.msg
 
 proc startCleanupSupervisor*(dbPath: string; cacheRetentionHours = 336;
                              intervalSec = 1800;

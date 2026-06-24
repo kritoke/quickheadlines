@@ -40,7 +40,7 @@ proc fetchAllConcurrent*(f: HttpFetcher; urls: seq[string];
   var jobs: Channel[string]
   var ress: Channel[FetchOutcome]
   jobs.open(n)                                   # bounded -> backpressure
-  ress.open(max(urls.len, 1))
+  ress.open(n)                                   # bounded -> memory cap
   defer:
     jobs.close()
     ress.close()
@@ -70,7 +70,7 @@ proc refreshAll*(f: HttpFetcher; feeds: seq[FeedConfig];
   var jobs: Channel[string]
   var ress: Channel[FetchOutcome]
   jobs.open(n)                                   # bounded -> backpressure
-  ress.open(max(urls.len, 1))
+  ress.open(n)                                   # bounded -> memory cap
   let byUrl = collect(initTable):
     for fc in feeds: {fc.url: fc.title}
   let a = WorkerArgs(fetcher: f, jobs: addr(jobs), ress: addr(ress))

@@ -75,14 +75,21 @@ proc intParam(p: Table[string, string]; key: string; dflt: int): int =
     try: p[key].parseInt() except ValueError: dflt
   else: dflt
 
-proc jsonHeaders(): HttpHeaders = newHttpHeaders({"Content-Type": "application/json", "Cache-Control": "no-cache, no-store, must-revalidate"})
-proc plainTextHeaders(): HttpHeaders = newHttpHeaders({"Content-Type": "text/plain"})
-
 proc addSecurityHeaders(h: HttpHeaders) =
   h["X-Content-Type-Options"] = "nosniff"
   h["X-Frame-Options"] = "DENY"
   h["Referrer-Policy"] = "strict-origin-when-cross-origin"
   h["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
+
+proc jsonHeaders(): HttpHeaders =
+  let h = newHttpHeaders({"Content-Type": "application/json", "Cache-Control": "no-cache, no-store, must-revalidate"})
+  addSecurityHeaders(h)
+  h
+
+proc plainTextHeaders(): HttpHeaders =
+  let h = newHttpHeaders({"Content-Type": "text/plain"})
+  addSecurityHeaders(h)
+  h
 
 # ---- WebSocket session: handshake, register, hold until close ----
 proc wsSession(req: Request): Future[void] {.async.} =
@@ -281,11 +288,15 @@ proc handle(ctx: ServerCtx; req: Request): Future[void] {.async.} =
     if not validation.isOk:
       await req.respond(Http403, $(%*{"error": "proxy validation failed"}), jsonHeaders()); return
     try:
+      let parsed = parseUri(url)
+      var resolvedUrl = parsed.scheme & "://" & validation.resolvedIp & parsed.path
+      if parsed.query.len > 0: resolvedUrl = resolvedUrl & "?" & parsed.query
       let client = newHttpClient(timeout = 10000, maxRedirects = 3)
       client.headers = newHttpHeaders({
         "User-Agent": "Mozilla/5.0 (compatible; QuickHeadlines/1.0)",
-        "Accept": "image/*"})
-      let resp = client.request(url, HttpGet)
+        "Accept": "image/*",
+        "Host": parsed.hostname})
+      let resp = client.request(resolvedUrl, HttpGet)
       client.close()
       if resp.code.int != 200:
         await req.respond(Http502, $(%*{"error": "upstream error"}), jsonHeaders()); return
