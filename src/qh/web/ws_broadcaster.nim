@@ -10,7 +10,7 @@
 ##   - Stale connection cleanup (janitor, 5 min interval)
 ##   - Leak detection (warn at 50+ clients)
 
-import std/[asyncdispatch, asyncnet, json, times, strutils, sequtils]
+import std/[asyncdispatch, asyncnet, times, strutils, sequtils]
 import ./ws
 
 const

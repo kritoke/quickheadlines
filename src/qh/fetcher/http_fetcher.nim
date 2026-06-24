@@ -2,7 +2,7 @@
 ## Promotes the spike's sync httpclient path + adds retry/backoff for
 ## transient network errors. The boundary returns the concrete FetchResult.
 
-import std/[httpclient, os, strutils, osproc, streams]
+import std/[httpclient, os, strutils, osproc]
 import ../types
 import ./rss
 

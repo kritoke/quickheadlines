@@ -3,7 +3,7 @@
 ## Strips tracking params (40+), www. prefix, feed suffixes, fragments.
 ## Lowercases scheme/host. Removes standard ports.
 
-import std/[uri, strutils, sets, re]
+import std/[uri, strutils, sets]
 
 const TrackingParams = [
   # UTM (7)
@@ -103,10 +103,10 @@ proc normalizeUrl*(url: string): string =
     # Always drop fragment.
     p.anchor = ""
     # Rebuild.
-    var result = p.scheme & "://" & p.hostname
-    if p.port.len > 0: result &= ":" & p.port
-    result &= p.path
-    if p.query.len > 0: result &= "?" & p.query
-    result
+    var urlResult = p.scheme & "://" & p.hostname
+    if p.port.len > 0: urlResult &= ":" & p.port
+    urlResult &= p.path
+    if p.query.len > 0: urlResult &= "?" & p.query
+    urlResult
   except CatchableError:
     url.strip()
