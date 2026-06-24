@@ -2,13 +2,14 @@
   "assignee": "",
   "blocked_by": [],
   "blocks": [],
+  "closed_at": "2026-06-24T13:15:14Z",
   "created": "2026-06-24T13:01:47Z",
   "description": "favicon.nim:197-200 uses 64-bit FNV-1a truncated to 16 hex chars. Collision probability increases with more feeds. Should use SHA-256 or at least 128-bit hash.",
   "id": "quickhea-fpi",
   "labels": [],
   "priority": 2,
-  "status": "open",
+  "status": "closed",
   "title": "Favicon hash uses FNV-1a with 16-char hex prefix (64-bit)",
   "type": "task",
-  "updated_at": "2026-06-24T13:01:47Z"
+  "updated_at": "2026-06-24T13:15:14Z"
 }
