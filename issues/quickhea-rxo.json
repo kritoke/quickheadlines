@@ -1,0 +1,14 @@
+{
+  "assignee": "",
+  "blocked_by": [],
+  "blocks": [],
+  "created": "2026-06-24T13:01:46Z",
+  "description": "server.nim:175-179 returns ok without triggering clustering. Should delegate to cluster supervisor.",
+  "id": "quickhea-rxo",
+  "labels": [],
+  "priority": 1,
+  "status": "open",
+  "title": "/api/cluster POST endpoint is a no-op stub",
+  "type": "bug",
+  "updated_at": "2026-06-24T13:01:46Z"
+}
