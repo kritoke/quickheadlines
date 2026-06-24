@@ -2,13 +2,14 @@
   "assignee": "",
   "blocked_by": [],
   "blocks": [],
+  "closed_at": "2026-06-24T13:06:11Z",
   "created": "2026-06-24T13:01:45Z",
   "description": "fetch_pipeline.nim:43 opens ress with max(urls.len, 1) capacity. With 206+ feeds, ALL results sit in memory. Should be bounded to maxConcurrency.",
   "id": "quickhea-mgb",
   "labels": [],
   "priority": 0,
-  "status": "open",
+  "status": "closed",
   "title": "fetchAllConcurrent result channel has unbounded capacity",
   "type": "bug",
-  "updated_at": "2026-06-24T13:01:45Z"
+  "updated_at": "2026-06-24T13:06:11Z"
 }
