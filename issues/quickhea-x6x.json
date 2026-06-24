@@ -1,0 +1,14 @@
+{
+  "assignee": "",
+  "blocked_by": [],
+  "blocks": [],
+  "created": "2026-06-24T13:01:47Z",
+  "description": "cluster_supervisor.nim:59 catches CatchableError but only echoes. Should log stack trace and attempt recovery.",
+  "id": "quickhea-x6x",
+  "labels": [],
+  "priority": 1,
+  "status": "open",
+  "title": "Cluster supervisor FATAL error only echoes message",
+  "type": "bug",
+  "updated_at": "2026-06-24T13:01:47Z"
+}
