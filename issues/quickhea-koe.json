@@ -2,13 +2,14 @@
   "assignee": "",
   "blocked_by": [],
   "blocks": [],
+  "closed_at": "2026-06-24T13:06:11Z",
   "created": "2026-06-24T13:01:44Z",
   "description": "addSecurityHeaders() defined in server.nim:81 but never applied to any response. All responses lack X-Content-Type-Options, X-Frame-Options, Referrer-Policy, Permissions-Policy. Security vulnerability.",
   "id": "quickhea-koe",
   "labels": [],
   "priority": 0,
-  "status": "open",
+  "status": "closed",
   "title": "Security headers function exists but is never called",
   "type": "bug",
-  "updated_at": "2026-06-24T13:01:44Z"
+  "updated_at": "2026-06-24T13:06:11Z"
 }
