@@ -56,8 +56,8 @@ proc clusterLoop(a: ClusterArgs) {.thread.} =
           inc consecutiveEmpty
           if consecutiveEmpty <= 2:
             echo "[cluster] no unclustered items (", consecutiveEmpty, " empty cycles)"
-        let sleepSec = if consecutiveEmpty == 0: min(a.intervalSec, 5)
-                       elif consecutiveEmpty < 3: 10
+        let sleepSec = if consecutiveEmpty == 0: max(a.intervalSec, 30)
+                       elif consecutiveEmpty < 3: 60
                        else: idleSec
         for _ in 0 ..< sleepSec:
           if a.shuttingDown != nil and a.shuttingDown[].load(): break
