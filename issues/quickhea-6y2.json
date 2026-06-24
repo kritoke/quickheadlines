@@ -2,13 +2,14 @@
   "assignee": "",
   "blocked_by": [],
   "blocks": [],
+  "closed_at": "2026-06-24T13:06:12Z",
   "created": "2026-06-24T13:02:00Z",
   "description": "server.nim:284-288 creates HttpClient with original URL, not the pinned IP from proxyValidator.validate(). DNS rebinding possible.",
   "id": "quickhea-6y2",
   "labels": [],
   "priority": 2,
-  "status": "open",
+  "status": "closed",
   "title": "/api/proxy-image doesn't use resolved IP for connection",
   "type": "bug",
-  "updated_at": "2026-06-24T13:02:00Z"
+  "updated_at": "2026-06-24T13:06:12Z"
 }
