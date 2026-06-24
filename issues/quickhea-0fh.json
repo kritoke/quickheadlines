@@ -1,0 +1,14 @@
+{
+  "assignee": "",
+  "blocked_by": [],
+  "blocks": [],
+  "created": "2026-06-24T13:02:00Z",
+  "description": "originOf/extractHost in favicon.nim duplicate logic. Should be shared utility.",
+  "id": "quickhea-0fh",
+  "labels": [],
+  "priority": 3,
+  "status": "open",
+  "title": "URL origin extraction duplicated in favicon.nim and server.nim",
+  "type": "task",
+  "updated_at": "2026-06-24T13:02:00Z"
+}
