@@ -1,0 +1,14 @@
+{
+  "assignee": "",
+  "blocked_by": [],
+  "blocks": [],
+  "created": "2026-06-24T13:02:02Z",
+  "description": "server.nim:11 imports re for the content summary regex. Could use strutils.contains instead.",
+  "id": "quickhea-7mf",
+  "labels": [],
+  "priority": 4,
+  "status": "open",
+  "title": "Server imports 're' module but only uses it for one regex",
+  "type": "task",
+  "updated_at": "2026-06-24T13:02:02Z"
+}
