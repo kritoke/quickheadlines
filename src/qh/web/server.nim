@@ -47,6 +47,9 @@ type
 
 var wsClients: seq[WsClient] = @[]
 
+# Favicon failure tracking — skip feeds that fail repeatedly.
+var faviconFailures: Table[string, int]
+
 proc wsCountByIp(ip: string): int =
   for c in wsClients:
     if c.ip == ip: inc result
@@ -505,34 +508,42 @@ proc feedWatcher(ctx: ServerCtx): Future[void] {.async.} =
       if missing.len > 0:
         var futures: seq[Future[Option[FavBytes]]] = @[]
         for (id, siteLink, url) in missing:
+          # Skip feeds that have failed recently (in-memory backoff).
+          let failKey = url
+          if failKey in faviconFailures and faviconFailures[failKey] >= 3:
+            continue
           futures.add fetchFaviconAsync(siteLink, url)
-        let results = await all(futures)
-        var saved, failed: int
-        var failUrls: seq[string]
-        for i in 0 ..< results.len:
-          if results[i].isSome:
-            try:
-              let (id, siteLink, url) = missing[i]
-              let origin = if siteLink.len > 0: siteLink else: url
-              let fav = results[i].get
-              let path = saveFavicon(fav, origin)
-              ctx.feedStore.setFavicon(id, path)
-              let theme = colorExtractor.extractTheme(fav.bytes)
-              if theme.isSome:
-                # The bg color is constant (not theme-dependent), so use the
-                # WCAG-validated text color for both light and dark variants.
-                let textColor = colorExtractor.selectTextColor(theme.get)
-                ctx.feedStore.setThemeColors(id, theme.get.bgColor, textColor, textColor)
-              ctx.dirty[].store(true)
-              inc saved
-            except CatchableError:
+        if futures.len > 0:
+          let results = await all(futures)
+          var saved, failed: int
+          var failUrls: seq[string]
+          for i in 0 ..< results.len:
+            if results[i].isSome:
+              try:
+                let (id, siteLink, url) = missing[i]
+                let origin = if siteLink.len > 0: siteLink else: url
+                let fav = results[i].get
+                let path = saveFavicon(fav, origin)
+                ctx.feedStore.setFavicon(id, path)
+                let theme = colorExtractor.extractTheme(fav.bytes)
+                if theme.isSome:
+                  let textColor = colorExtractor.selectTextColor(theme.get)
+                  ctx.feedStore.setThemeColors(id, theme.get.bgColor, textColor, textColor)
+                ctx.dirty[].store(true)
+                inc saved
+                # Clear failure count on success.
+                faviconFailures.del(url)
+              except CatchableError:
+                inc failed
+                failUrls.add(missing[i][2])
+                faviconFailures[missing[i][2]] = faviconFailures.getOrDefault(missing[i][2], 0) + 1
+            else:
               inc failed
               failUrls.add(missing[i][2])
-          else:
-            inc failed
-            failUrls.add(missing[i][2])
-        let failMsg = if failUrls.len > 0: " failed_urls=" & failUrls.join(",") else: ""
-        echo "[favicon] tick=", tick, " tried=", missing.len, " saved=", saved, " failed=", failed, failMsg
+              faviconFailures[missing[i][2]] = faviconFailures.getOrDefault(missing[i][2], 0) + 1
+          let failMsg = if failUrls.len > 0: " failed_urls=" & failUrls.join(",") else: ""
+          if saved > 0 or failed > 0:
+            echo "[favicon] tick=", tick, " tried=", futures.len, " saved=", saved, " failed=", failed, failMsg
       # 2. Re-extract colors for feeds that have a favicon file but no valid color.
       for (fid, favPath) in ctx.feedStore.feedsNeedingColor():
         let filePath = "favicons" & favPath[9..^1]   # strip "/favicons/"
