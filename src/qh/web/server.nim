@@ -452,7 +452,7 @@ proc feedWatcher(ctx: ServerCtx): Future[void] {.async.} =
   ## fetch missing favicons (async, in the event loop).
   var tick = 0
   while true:
-    await sleepAsync(1000)
+    await sleepAsync(5000)  # 5s base interval (was 1s)
     inc tick
 
     # ---- WS broadcast on dirty flag ----
@@ -471,7 +471,7 @@ proc feedWatcher(ctx: ServerCtx): Future[void] {.async.} =
       if removed > 0:
         echo "[ws] janitor: removed ", removed, " stale connections (remaining=", ctx.broadcaster.len, ")"
 
-    # ---- Favicon: fetch several missing icons concurrently every 3s ----
+    # ---- Favicon: fetch missing icons every 15s (3 ticks × 5s) ----
     if tick mod 3 == 0:
       # 1. Fetch missing favicons.
       let missing = ctx.feedStore.feedsMissingFavicon(8)
