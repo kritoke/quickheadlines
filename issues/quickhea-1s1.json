@@ -2,13 +2,14 @@
   "assignee": "",
   "blocked_by": [],
   "blocks": [],
+  "closed_at": "2026-06-24T13:11:37Z",
   "created": "2026-06-24T13:01:45Z",
   "description": "server.nim:374 always returns statusJson(false, 0). Should reflect actual clustering state.",
   "id": "quickhea-1s1",
   "labels": [],
   "priority": 1,
-  "status": "open",
+  "status": "closed",
   "title": "/api/status returns hardcoded is_clustering=false active_jobs=0",
   "type": "bug",
-  "updated_at": "2026-06-24T13:01:45Z"
+  "updated_at": "2026-06-24T13:11:37Z"
 }
