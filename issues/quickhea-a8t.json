@@ -1,0 +1,14 @@
+{
+  "assignee": "",
+  "blocked_by": [],
+  "blocks": [],
+  "created": "2026-06-24T13:02:02Z",
+  "description": "server.nim:377 returns {status: ok} without checking DB, refresh status, or memory. Should verify actual health.",
+  "id": "quickhea-a8t",
+  "labels": [],
+  "priority": 3,
+  "status": "open",
+  "title": "/api/health endpoint always returns ok without checking anything",
+  "type": "task",
+  "updated_at": "2026-06-24T13:02:02Z"
+}
