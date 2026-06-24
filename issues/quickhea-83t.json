@@ -1,0 +1,14 @@
+{
+  "assignee": "",
+  "blocked_by": [],
+  "blocks": [],
+  "created": "2026-06-24T13:02:01Z",
+  "description": "Rate limits, WS timeouts, favicon retry threshold all hardcoded. Should be configurable constants.",
+  "id": "quickhea-83t",
+  "labels": [],
+  "priority": 3,
+  "status": "open",
+  "title": "Server has hardcoded magic numbers (port 8080, limits, timeouts)",
+  "type": "task",
+  "updated_at": "2026-06-24T13:02:01Z"
+}
