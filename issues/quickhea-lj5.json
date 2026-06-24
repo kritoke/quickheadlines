@@ -2,13 +2,14 @@
   "assignee": "",
   "blocked_by": [],
   "blocks": [],
+  "closed_at": "2026-06-24T13:11:38Z",
   "created": "2026-06-24T13:02:00Z",
   "description": "rss.nim:67-71 allText recurses without depth limit. Malicious XML with deep nesting could stack overflow.",
   "id": "quickhea-lj5",
   "labels": [],
   "priority": 2,
-  "status": "open",
+  "status": "closed",
   "title": "RSS parser allText has no depth limit on recursive tree traversal",
   "type": "bug",
-  "updated_at": "2026-06-24T13:02:00Z"
+  "updated_at": "2026-06-24T13:11:38Z"
 }
