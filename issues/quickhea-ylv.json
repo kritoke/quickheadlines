@@ -1,0 +1,14 @@
+{
+  "assignee": "",
+  "blocked_by": [],
+  "blocks": [],
+  "created": "2026-06-24T13:02:01Z",
+  "description": "cleanup_supervisor.nim:33 closeDb(db) is unreachable — the while(true) loop only exits via return on shutdown.",
+  "id": "quickhea-ylv",
+  "labels": [],
+  "priority": 3,
+  "status": "open",
+  "title": "Cleanup supervisor has unreachable closeDb after infinite loop",
+  "type": "bug",
+  "updated_at": "2026-06-24T13:02:01Z"
+}
