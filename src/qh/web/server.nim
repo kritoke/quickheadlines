@@ -26,6 +26,8 @@ type
     contentStore*: SqliteContentStore
     startedAtMs*: int64
     dirty*: ref Atomic[bool]     # set by refresh supervisor -> watcher broadcasts
+    isClustering*: ref Atomic[bool]  # set by cluster supervisor during clustering
+    triggerCluster*: ref Atomic[bool]  # set by /api/cluster to trigger immediate run
     rateLimiter*: RateLimiter
     proxyValidator*: ProxyValidator
 
@@ -182,6 +184,8 @@ proc handle(ctx: ServerCtx; req: Request): Future[void] {.async.} =
     if path == "/api/cluster":
       if not checkAdminAuth(req.headers.getOrDefault("Authorization")):
         await req.respond(Http401, $(%*{"error": "unauthorized"}), jsonHeaders()); return
+      if ctx.triggerCluster != nil:
+        ctx.triggerCluster[].store(true)
       await req.respond(Http200, $(%*{"status": "ok", "message": "clustering triggered"}), jsonHeaders())
       return
     if path == "/api/admin":
@@ -382,10 +386,15 @@ proc handle(ctx: ServerCtx; req: Request): Future[void] {.async.} =
       "is_clustering": false, "updated_at": %ctx.startedAtMs}), jsonHeaders())
 
   of "/api/status":
-    await req.respond(Http200, $statusJson(false, 0), jsonHeaders())
+    let clustering = if ctx.isClustering != nil: ctx.isClustering[].load() else: false
+    await req.respond(Http200, $statusJson(clustering, 0), jsonHeaders())
 
   of "/api/health":
-    await req.respond(Http200, $(%*{"status": "ok"}), jsonHeaders())
+    # Verify DB connectivity.
+    let dbOk = ctx.feedStore.listFeeds().isOk
+    let status = if dbOk: "ok" else: "degraded"
+    let code = if dbOk: Http200 else: Http503
+    await req.respond(code, $(%*{"status": status}), jsonHeaders())
 
   of "/api/version":
     await req.respond(Http200, $versionJson(ctx.startedAtMs), jsonHeaders())

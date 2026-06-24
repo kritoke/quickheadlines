@@ -64,11 +64,17 @@ proc normalizePubDate*(s: string): string =
       discard
   ""
 
-proc allText(n: XmlNode): string =
-  case n.kind
-  of xnText, xnVerbatimText, xnComment, xnCData, xnEntity: result.add(n.text)
-  else:
-    for c in n: result.add(c.allText)
+proc allText(n: XmlNode; maxDepth = 50): string =
+  var depth = 0
+  proc helper(node: XmlNode): string =
+    inc depth
+    if depth > maxDepth: dec depth; return ""
+    case node.kind
+    of xnText, xnVerbatimText, xnComment, xnCData, xnEntity: result.add(node.text)
+    else:
+      for c in node: result.add(helper(c))
+    dec depth
+  helper(n)
 
 proc bareTag(n: XmlNode): string =
   if n.kind != xnElement: return ""

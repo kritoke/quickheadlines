@@ -105,10 +105,16 @@ proc main() =
   let cc = config.clustering
   let clInterval = if cc.runOnStartup: 1 else: 3600  # 1s if startup-run (first tick), then 1h
   let clThreshold = cc.threshold
+  var isClustering: ref Atomic[bool]
+  new(isClustering); isClustering[].store(false)
+  var triggerCluster: ref Atomic[bool]
+  new(triggerCluster); triggerCluster[].store(false)
   discard startClusterSupervisor(dbPath, threshold = clThreshold,
                                   maxItems = cc.maxItems.clamp(1, 5000),
                                   intervalSec = clInterval, dirty = dirty,
-                                  shuttingDown = addr shuttingDown)
+                                  shuttingDown = addr shuttingDown,
+                                  isClustering = isClustering,
+                                  triggerCluster = triggerCluster)
   echo "Cluster supervisor started (threshold=", clThreshold, " interval=", clInterval, "s)"
 
   # 7. Periodic cleanup (its own DbConn; retention from config).
@@ -128,7 +134,8 @@ proc main() =
     config: config, feedStore: feedStore, itemStore: itemStore,
     contentStore: contentStore,
     startedAtMs: now().utc().toTime().toUnix() * 1000'i64,
-    dirty: dirty, rateLimiter: limiter, proxyValidator: pv)
+    dirty: dirty, isClustering: isClustering, triggerCluster: triggerCluster,
+    rateLimiter: limiter, proxyValidator: pv)
   ctx.serve(port)
 
 when isMainModule: main()

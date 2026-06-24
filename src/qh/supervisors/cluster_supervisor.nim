@@ -19,6 +19,8 @@ type
     intervalSec: int
     dirty: ref Atomic[bool]
     shuttingDown: ptr Atomic[bool]
+    isClustering: ref Atomic[bool]
+    triggerCluster: ref Atomic[bool]
 
 proc clusterLoop(a: ClusterArgs) {.thread.} =
   {.cast(gcsafe).}:
@@ -34,10 +36,16 @@ proc clusterLoop(a: ClusterArgs) {.thread.} =
         if a.shuttingDown != nil and a.shuttingDown[].load():
           echo "[cluster] shutting down"
           break
+        # Check if manually triggered via /api/cluster.
+        let triggered = a.triggerCluster != nil and a.triggerCluster[].load()
+        if triggered and a.triggerCluster != nil:
+          a.triggerCluster[].store(false)
         let items = itemStore.loadUnclusteredItems(a.maxItems)
-        if items.len > 0:
+        if items.len > 0 or triggered:
           consecutiveEmpty = 0
+          if a.isClustering != nil: a.isClustering[].store(true)
           let res = clusterer.runClusteringPipeline(clusterStore, items)
+          if a.isClustering != nil: a.isClustering[].store(false)
           if res.isOk:
             echo "[cluster] result: ", res.clusters.len, " clusters from ", items.len, " items"
             if res.clusters.len > 0:
@@ -62,9 +70,13 @@ proc startClusterSupervisor*(dbPath: string; threshold = 0.35;
                              bands = 20; rows = 6; maxItems = 500;
                              intervalSec = 3600;
                              dirty: ref Atomic[bool] = nil;
-                             shuttingDown: ptr Atomic[bool] = nil): Thread[ClusterArgs] =
+                             shuttingDown: ptr Atomic[bool] = nil;
+                             isClustering: ref Atomic[bool] = nil;
+                             triggerCluster: ref Atomic[bool] = nil): Thread[ClusterArgs] =
   createThread(result, clusterLoop,
                ClusterArgs(dbPath: dbPath, threshold: threshold,
                            bands: bands, rows: rows, maxItems: maxItems,
                            intervalSec: intervalSec, dirty: dirty,
-                           shuttingDown: shuttingDown))
+                           shuttingDown: shuttingDown,
+                           isClustering: isClustering,
+                           triggerCluster: triggerCluster))
