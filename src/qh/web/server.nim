@@ -17,6 +17,7 @@ import ../security/[rate_limiter, auth, proxy_validator]
 import ./dtos
 import ./assets
 import ./ws
+import ./ws_broadcaster
 
 type
   WsClient = object
@@ -36,42 +37,8 @@ type
     triggerCluster*: ref Atomic[bool]  # set by /api/cluster to trigger immediate run
     rateLimiter*: RateLimiter
     proxyValidator*: ProxyValidator
-    wsClients: seq[WsClient]         # WS connection registry (event-loop only)
+    broadcaster*: WsBroadcaster       # WS connection management + event broadcasting
     faviconFailures: Table[string, int]  # favicon failure backoff tracking
-
-# ---- WebSocket connection management ----
-const
-  WsMaxConnections* = 100
-  WsMaxPerIp* = 10
-  WsHeartbeatSec* = 30
-  WsStaleTimeoutSec* = 120
-  WsJanitorIntervalSec* = 300  # 5 min
-  WsLeakWarnThreshold* = 50
-
-proc wsCountByIp(ctx: ServerCtx; ip: string): int =
-  for c in ctx.wsClients:
-    if c.ip == ip: inc result
-
-proc wsRemoveClient(ctx: ServerCtx; sock: AsyncSocket) =
-  ctx.wsClients.keepItIf(it.socket != sock)
-
-proc wsTouch(ctx: ServerCtx; sock: AsyncSocket) =
-  for c in ctx.wsClients.mitems:
-    if c.socket == sock:
-      c.lastActivity = epochTime()
-      return
-
-proc queryParams(q: string): Table[string, string] =
-  for kv in q.split('&'):
-    if kv.len == 0: continue
-    let parts = kv.split('=', maxsplit = 1)
-    if parts.len == 2: result[parts[0]] = decodeUrl(parts[1])
-    else: result[parts[0]] = ""
-
-proc intParam(p: Table[string, string]; key: string; dflt: int): int =
-  if key in p:
-    try: p[key].parseInt() except ValueError: dflt
-  else: dflt
 
 proc addSecurityHeaders(h: HttpHeaders) =
   h["X-Content-Type-Options"] = "nosniff"
@@ -95,32 +62,36 @@ proc wsSession(ctx: ServerCtx; req: Request): Future[void] {.async.} =
   if key.len == 0:
     await req.respond(Http400, $(%*{"error": "missing Sec-WebSocket-Key"}), jsonHeaders())
     return
-  # Connection limits.
   let (peerIp, _) = req.client.getPeerAddr()
-  if ctx.wsClients.len >= WsMaxConnections:
-    await req.respond(Http429, $(%*{"error": "too many websocket connections"}), jsonHeaders())
+  let (canConnect, reason) = ctx.broadcaster.canAccept(peerIp)
+  if not canConnect:
+    await req.respond(Http429, $(%*{"error": reason}), jsonHeaders())
     return
-  if ctx.wsCountByIp(peerIp) >= WsMaxPerIp:
-    await req.respond(Http429, $(%*{"error": "too many connections from your IP"}), jsonHeaders())
-    return
-  # Leak detection.
-  if ctx.wsClients.len >= WsLeakWarnThreshold:
-    echo "[ws] WARNING: client count=", ctx.wsClients.len, " (possible leak)"
   let accept = wsAcceptKey(key)
   await req.client.send(
     "HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\n" &
     "Connection: Upgrade\r\nSec-WebSocket-Accept: " & accept & "\r\n\r\n")
-  let now = epochTime()
-  ctx.wsClients.add(WsClient(socket: req.client, ip: peerIp,
-                              createdAt: now, lastActivity: now))
+  ctx.broadcaster.register(req.client, peerIp)
   try:
     while true:
-      let data = await req.client.recv(4096)       # detect close; discard frames
+      let data = await req.client.recv(4096)
       if data.len == 0: break
-      ctx.wsTouch(req.client)                      # update activity
+      ctx.broadcaster.touch(req.client)
   except CatchableError:
     discard
-  ctx.wsRemoveClient(req.client)
+  ctx.broadcaster.remove(req.client)
+
+proc queryParams(q: string): Table[string, string] =
+  for kv in q.split('&'):
+    if kv.len == 0: continue
+    let parts = kv.split('=', maxsplit = 1)
+    if parts.len == 2: result[parts[0]] = decodeUrl(parts[1])
+    else: result[parts[0]] = ""
+
+proc intParam(p: Table[string, string]; key: string; dflt: int): int =
+  if key in p:
+    try: p[key].parseInt() except ValueError: dflt
+  else: dflt
 
 proc handle(ctx: ServerCtx; req: Request): Future[void] {.async.} =
   let path = req.url.path
@@ -477,45 +448,28 @@ proc handle(ctx: ServerCtx; req: Request): Future[void] {.async.} =
     await req.respond(Http404, $(%*{"error": "not found"}), jsonHeaders())
 
 proc feedWatcher(ctx: ServerCtx): Future[void] {.async.} =
-  ## Periodically push a WS 'feed_update' when feeds change, AND progressively
-  ## fetch missing favicons (async, in the event loop - can't deadlock the feed
-  ## worker pool the way a threaded sync fetcher did).
+  ## Periodically push WS events when feeds change, AND progressively
+  ## fetch missing favicons (async, in the event loop).
   var tick = 0
   while true:
     await sleepAsync(1000)
     inc tick
 
     # ---- WS broadcast on dirty flag ----
-    if ctx.wsClients.len > 0 and ctx.dirty[].load():
+    if ctx.broadcaster.len > 0 and ctx.dirty[].load():
       ctx.dirty[].store(false)
-      var removeIdxs: seq[int] = @[]
-      for i in 0 ..< ctx.wsClients.len:
-        try: await sendWsText(ctx.wsClients[i].socket, "{\"type\":\"feed_update\"}")
-        except CatchableError: removeIdxs.add(i); continue
-        ctx.wsClients[i].lastActivity = epochTime()
-      for i in removeIdxs.reversed: ctx.wsClients.delete(i)
+      let sent = await ctx.broadcaster.broadcast(feedUpdateJson())
+      if sent > 0: discard  # logged by broadcaster
 
     # ---- WS heartbeat every 30s ----
-    if ctx.wsClients.len > 0 and tick mod WsHeartbeatSec == 0:
-      let hb = "{\"type\":\"heartbeat\",\"ts\":" & $(epochTime().int64) & "}"
-      var removeIdxs: seq[int] = @[]
-      for i in 0 ..< ctx.wsClients.len:
-        try: await sendWsText(ctx.wsClients[i].socket, hb)
-        except CatchableError: removeIdxs.add(i); continue
-        ctx.wsClients[i].lastActivity = epochTime()
-      for i in removeIdxs.reversed: ctx.wsClients.delete(i)
+    if ctx.broadcaster.len > 0 and tick mod WsHeartbeatSec == 0:
+      discard await ctx.broadcaster.broadcast(heartbeatJson())
 
     # ---- WS janitor every 5 min: clean stale connections ----
-    if tick mod WsJanitorIntervalSec == 0 and ctx.wsClients.len > 0:
-      let now = epochTime()
-      var removeIdxs: seq[int] = @[]
-      for i in 0 ..< ctx.wsClients.len:
-        if now - ctx.wsClients[i].lastActivity > WsStaleTimeoutSec.float:
-          try: ctx.wsClients[i].socket.close() except CatchableError: discard
-          removeIdxs.add(i)
-      for i in removeIdxs.reversed: ctx.wsClients.delete(i)
-      if removeIdxs.len > 0:
-        echo "[ws] janitor: removed ", removeIdxs.len, " stale connections (remaining=", ctx.wsClients.len, ")"
+    if tick mod WsJanitorIntervalSec == 0 and ctx.broadcaster.len > 0:
+      let removed = ctx.broadcaster.cleanupStale()
+      if removed > 0:
+        echo "[ws] janitor: removed ", removed, " stale connections (remaining=", ctx.broadcaster.len, ")"
 
     # ---- Favicon: fetch several missing icons concurrently every 3s ----
     if tick mod 3 == 0:

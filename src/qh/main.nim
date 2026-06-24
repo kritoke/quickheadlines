@@ -16,7 +16,7 @@ import fetcher/[http_fetcher, fetch_pipeline]
 import clustering/clusterer
 import in_memory/services
 import app
-import web/server
+import web/[server, ws_broadcaster]
 import supervisors/refresh_supervisor
 import supervisors/cluster_supervisor
 import supervisors/cleanup_supervisor
@@ -135,7 +135,8 @@ proc main() =
     contentStore: contentStore,
     startedAtMs: now().utc().toTime().toUnix() * 1000'i64,
     dirty: dirty, isClustering: isClustering, triggerCluster: triggerCluster,
-    rateLimiter: limiter, proxyValidator: pv)
+    rateLimiter: limiter, proxyValidator: pv,
+    broadcaster: newWsBroadcaster())
   ctx.serve(port)
 
 when isMainModule: main()
