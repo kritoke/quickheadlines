@@ -1,0 +1,14 @@
+{
+  "assignee": "",
+  "blocked_by": [],
+  "blocks": [],
+  "created": "2026-06-24T13:01:46Z",
+  "description": "server.nim:48-51 has module-level var wsClients and faviconFailures. Not testable, not composable. Should be on ServerCtx.",
+  "id": "quickhea-6e1",
+  "labels": [],
+  "priority": 2,
+  "status": "open",
+  "title": "Server uses module-level mutable vars (wsClients, faviconFailures)",
+  "type": "bug",
+  "updated_at": "2026-06-24T13:01:46Z"
+}
