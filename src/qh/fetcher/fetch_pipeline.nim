@@ -30,14 +30,19 @@ type
     ress: Channel[FetchOutcome]
 
   WorkerArgs = object
-    fetcher: HttpFetcher
+    ## All fields are VALUE types captured per-worker. Sharing a ref object
+    ## (HttpFetcher) across N threads and concurrently reading its string
+    ## fields races on ORC refcount ops and intermittently SIGSEGVs.
+    userAgent: string
+    curlPath: string
     chans: PipelineChannels
 
 proc worker(a: WorkerArgs) {.thread.} =
   while true:
     let url = a.chans.jobs.recv()
     if url == "": break                          # sentinel -> stop
-    a.chans.ress.send(FetchOutcome(url: url, res: a.fetcher.fetchWithDeadline(url)))
+    a.chans.ress.send(FetchOutcome(url: url,
+      res: fetchWithDeadline(a.userAgent, a.curlPath, url)))
 
 proc fetchAllConcurrent*(f: HttpFetcher; urls: seq[string];
                          maxConcurrency = 8): seq[FetchOutcome] =
@@ -47,7 +52,7 @@ proc fetchAllConcurrent*(f: HttpFetcher; urls: seq[string];
   let chans = PipelineChannels()
   chans.jobs.open(n)                             # bounded -> backpressure
   chans.ress.open(n)                             # bounded -> memory cap
-  let a = WorkerArgs(fetcher: f, chans: chans)
+  let a = WorkerArgs(userAgent: f.userAgent, curlPath: f.curlPath, chans: chans)
   var ths: seq[Thread[WorkerArgs]]
   newSeq(ths, n)
   for i in 0..<n: ths[i].createThread(worker, a)
@@ -82,7 +87,7 @@ proc refreshAll*(f: HttpFetcher; feeds: seq[FeedConfig];
   chans.ress.open(max(urls.len, n))            # large enough that workers NEVER block on send (critical: if the batch deadline detaches the consumer, a full ress would deadlock workers on send and they'd never reach their sentinel -> thread leak)
   let byUrl = collect(initTable):
     for fc in feeds: {fc.url: fc.title}
-  let a = WorkerArgs(fetcher: f, chans: chans)
+  let a = WorkerArgs(userAgent: f.userAgent, curlPath: f.curlPath, chans: chans)
   var ths: seq[Thread[WorkerArgs]]
   newSeq(ths, n)
   for i in 0..<n: ths[i].createThread(worker, a)

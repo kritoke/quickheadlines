@@ -127,7 +127,7 @@ proc fetch*(f: HttpFetcher; url: string): FetchResult =
       sleep(backoffMs(attempt))
   last
 
-proc fetchWithDeadline*(f: HttpFetcher; url: string; deadlineMs = 20000): FetchResult =
+proc fetchWithDeadline*(userAgent, curlPath, url: string; deadlineMs = 20000): FetchResult =
   ## Fetch a single feed with a HARD wall-clock deadline.  Nim stdlib
   ## httpclient timeout does not reliably fire on slow-dribble/hung feeds
   ## (e.g. freshports.org accepts the TCP connection then never completes).
@@ -135,8 +135,12 @@ proc fetchWithDeadline*(f: HttpFetcher; url: string; deadlineMs = 20000): FetchR
   ## kill (sends SIGALRM), unlike socket timeouts that can be defeated by
   ## a server that trickles bytes or holds the connection open.
   ## The FeedData.url is ALWAYS the original config URL.
-  if not f.curlPath.len.bool or not fileExists(f.curlPath):
-    echo "[fetch] ", url[0..min(50, url.len - 1)], " FAILED — curl not available"
+  ##
+  ## Takes only value parameters (no ref objects) so it is safe to call from
+  ## concurrent worker threads under ORC — sharing a ref object across threads
+  ## and concurrently reading its string fields races on ORC refcount operations
+  ## and intermittently SIGSEGVs (the 'Illegal storage access' crashes).
+  if curlPath.len == 0 or not fileExists(curlPath):
     return errFetch(feNetwork)
   let actualUrl = transformFeedUrl(url)
   let timeoutSec = max(deadlineMs div 1000, 5)
@@ -145,21 +149,18 @@ proc fetchWithDeadline*(f: HttpFetcher; url: string; deadlineMs = 20000): FetchR
   # Every interpolated value is quoteShell-escaped to prevent shell injection;
   # the User-Agent is a constant today, but we escape it defensively so a future
   # change to the UA string can never become an injection vector.
-  # CurlPath is an absolute path resolved at startup, so we don't depend on
+  # curlPath is an absolute path resolved at startup, so we don't depend on
   # PATH at runtime (FreeBSD daemons often lack /usr/local/bin on PATH).
-  let cmd = quoteShell(f.curlPath) &
+  let cmd = quoteShell(curlPath) &
             " -sL --fail --max-time " & $timeoutSec &
             " -H " & quoteShell("Accept-Encoding: identity") &
             " -H " & quoteShell("Accept: application/rss+xml, application/atom+xml, application/xml, text/xml") &
-            " -H " & quoteShell("User-Agent: " & f.userAgent) &
+            " -H " & quoteShell("User-Agent: " & userAgent) &
             " " & quoteShell(actualUrl)
   let (body, exitCode) = execCmdEx(cmd)
   if exitCode != 0:
-    echo "[fetch] ", url[0..min(50, url.len - 1)], " deadline curl exit=", exitCode,
-         " (", deadlineMs, "ms)"
     return errFetch(feNetwork)
   if body.len == 0:
-    echo "[fetch] ", url[0..min(50, url.len - 1)], " deadline empty response"
     return errFetch(feNetwork)
   result = parseRss(url, body)
   if result.isOk:
