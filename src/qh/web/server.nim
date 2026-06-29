@@ -447,6 +447,20 @@ proc handle(ctx: ServerCtx; req: Request): Future[void] {.async.} =
   else:
     await req.respond(Http404, $(%*{"error": "not found"}), jsonHeaders())
 
+proc faviconWithTimeout(fut: Future[Option[FavBytes]]; timeoutMs: int):
+    Future[Option[FavBytes]] {.async.} =
+  ## Race a favicon fetch against a hard deadline.  The favicon fetcher hits
+  ## many different site origins, some of which accept the TCP connection then
+  ## never respond — and fetchFaviconAsync runs on the server's single event
+  ## loop, so a single hanging host would stall the entire server (HTTP
+  ## requests + WS pushes). Abandoning the future after timeoutMs keeps the
+  ## event loop live; the underlying request may complete later and be GC'd.
+  let timer = sleepAsync(timeoutMs)
+  await fut or timer
+  if fut.finished and not fut.failed:
+    return fut.read()        # the resolved Option[FavBytes]
+  return none(FavBytes)      # timed out or failed -> treat as no favicon
+
 proc feedWatcher(ctx: ServerCtx): Future[void] {.async.} =
   ## Periodically push WS events when feeds change, AND progressively
   ## fetch missing favicons (async, in the event loop).
@@ -482,7 +496,7 @@ proc feedWatcher(ctx: ServerCtx): Future[void] {.async.} =
           let failKey = url
           if failKey in ctx.faviconFailures and ctx.faviconFailures[failKey] >= 3:
             continue
-          futures.add fetchFaviconAsync(siteLink, url)
+          futures.add faviconWithTimeout(fetchFaviconAsync(siteLink, url), 15000)
         if futures.len > 0:
           let results = await all(futures)
           var saved, failed: int

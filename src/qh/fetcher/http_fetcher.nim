@@ -2,7 +2,7 @@
 ## Promotes the spike's sync httpclient path + adds retry/backoff for
 ## transient network errors. The boundary returns the concrete FetchResult.
 
-import std/[httpclient, os, strutils, osproc]
+import std/[httpclient, os, strutils, osproc, uri]
 import ../types
 import ./rss
 
@@ -11,9 +11,25 @@ type
     timeoutMs*: int
     maxRetries*: int
     userAgent*: string
+    curlPath*: string          # absolute curl path resolved at startup (avoids PATH dependency at runtime)
     useCurl: bool  # true if OpenSSL is broken (FreeBSD workaround)
 
 const DefaultUserAgent* = "Mozilla/5.0 (compatible; QuickHeadlines/0.1; +https://github.com/kritoke/quickheadlines)"
+
+proc findCurlPath(): string =
+  ## Locate curl at startup, checking known absolute locations before PATH.
+  ## On FreeBSD curl lives at /usr/local/bin/curl, which is often NOT on PATH
+  ## for a daemon/service process (the runtime only sets LD_LIBRARY_PATH).
+  ## Returning "" means curl is unavailable — callers must degrade gracefully.
+  for candidate in ["/usr/local/bin/curl", "/usr/bin/curl", "/bin/curl",
+                    "/usr/pkg/bin/curl", "/opt/local/bin/curl"]:
+    if fileExists(candidate): return candidate
+  # Fall back to PATH lookup.
+  let (outp, code) = execCmdEx("command -v curl 2>/dev/null")
+  if code == 0: result = outp.strip() else: result = ""
+
+let CurlPath* = findCurlPath()   # resolved once at startup
+let CurlAvailable* = CurlPath.len > 0
 
 proc fetchViaCurl(url: string; timeoutMs: int): (int, string) =
   ## Fallback: use system curl for HTTPS when Nim's OpenSSL is broken.
@@ -29,8 +45,16 @@ proc newHttpFetcher*(timeoutMs = 15000, maxRetries = 2,
   let useCurl = getEnv("QUICKHEADLINES_USE_CURL", "0") == "1"
   if useCurl:
     echo "[fetch] Using curl fallback for HTTP requests"
+  if not CurlAvailable:
+    # fetchWithDeadline requires curl; if it's missing, every feed fetch will
+    # fail. Surface this loudly at startup so it's not a silent mystery.
+    echo "[fetch] WARNING: curl not found on PATH or known locations — ",
+         "feed fetching via fetchWithDeadline will fail. ",
+         "Install curl or add its directory to PATH."
+  else:
+    echo "[fetch] curl found at: ", CurlPath
   HttpFetcher(timeoutMs: timeoutMs, maxRetries: maxRetries, userAgent: userAgent,
-              useCurl: useCurl)
+              curlPath: CurlPath, useCurl: useCurl)
 
 proc fetchOnce(f: HttpFetcher; url: string): FetchResult =
   # Use curl fallback if httpclient SSL is broken.
@@ -67,9 +91,23 @@ proc backoffMs(attempt: int): int =
   min(100 * (1 shl attempt), 2000)
 
 proc transformFeedUrl*(url: string): string =
-  ## No-op: the plain subreddit URL works (Reddit redirects with Accept headers).
-  ## Appending .rss triggers aggressive rate-limiting (429).
-  url
+  ## Transform feed URLs for compatibility.  Reddit subreddit URLs need the
+  ## '.rss' suffix — the plain URL returns an HTML page, not an RSS feed.
+  ## Uses URI parsing so only genuine reddit.com hosts are rewritten (a plain
+  ## substring match would also hit e.g. 'notreddit.com'), and so a query
+  ## string (e.g. '?sort=new') is preserved rather than corrupted.
+  try:
+    let p = parseUri(url)
+    # Only rewrite genuine reddit.com subdomains (www., old., bare).
+    if p.hostname.endsWith("reddit.com") and p.path.startsWith("/r/") and
+       not p.path.endsWith(".rss"):
+      var q = p
+      q.path = p.path.strip(leading = false, trailing = true, chars = {'/'}) & "/.rss"
+      result = $q
+    else:
+      result = url
+  except CatchableError:
+    result = url   # leave malformed URLs untouched; the fetcher will report the error
 
 proc fetch*(f: HttpFetcher; url: string): FetchResult =
   ## Boundary proc. Retries on transient (network) errors up to maxRetries,
@@ -88,3 +126,41 @@ proc fetch*(f: HttpFetcher; url: string): FetchResult =
     if attempt < f.maxRetries:
       sleep(backoffMs(attempt))
   last
+
+proc fetchWithDeadline*(f: HttpFetcher; url: string; deadlineMs = 20000): FetchResult =
+  ## Fetch a single feed with a HARD wall-clock deadline.  Nim stdlib
+  ## httpclient timeout does not reliably fire on slow-dribble/hung feeds
+  ## (e.g. freshports.org accepts the TCP connection then never completes).
+  ## We use system curl with --max-time which is a reliable process-level
+  ## kill (sends SIGALRM), unlike socket timeouts that can be defeated by
+  ## a server that trickles bytes or holds the connection open.
+  ## The FeedData.url is ALWAYS the original config URL.
+  if not f.curlPath.len.bool or not fileExists(f.curlPath):
+    echo "[fetch] ", url[0..min(50, url.len - 1)], " FAILED — curl not available"
+    return errFetch(feNetwork)
+  let actualUrl = transformFeedUrl(url)
+  let timeoutSec = max(deadlineMs div 1000, 5)
+  # --fail: exit non-zero on HTTP 4xx/5xx (restores status-code check lost when
+  #   moving off httpclient; otherwise error-page HTML would reach parseRss).
+  # Every interpolated value is quoteShell-escaped to prevent shell injection;
+  # the User-Agent is a constant today, but we escape it defensively so a future
+  # change to the UA string can never become an injection vector.
+  # CurlPath is an absolute path resolved at startup, so we don't depend on
+  # PATH at runtime (FreeBSD daemons often lack /usr/local/bin on PATH).
+  let cmd = quoteShell(f.curlPath) &
+            " -sL --fail --max-time " & $timeoutSec &
+            " -H " & quoteShell("Accept-Encoding: identity") &
+            " -H " & quoteShell("Accept: application/rss+xml, application/atom+xml, application/xml, text/xml") &
+            " -H " & quoteShell("User-Agent: " & f.userAgent) &
+            " " & quoteShell(actualUrl)
+  let (body, exitCode) = execCmdEx(cmd)
+  if exitCode != 0:
+    echo "[fetch] ", url[0..min(50, url.len - 1)], " deadline curl exit=", exitCode,
+         " (", deadlineMs, "ms)"
+    return errFetch(feNetwork)
+  if body.len == 0:
+    echo "[fetch] ", url[0..min(50, url.len - 1)], " deadline empty response"
+    return errFetch(feNetwork)
+  result = parseRss(url, body)
+  if result.isOk:
+    result.data.url = url

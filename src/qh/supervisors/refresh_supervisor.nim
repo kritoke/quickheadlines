@@ -3,7 +3,7 @@
 ## the main connection; WAL lets the two coexist). Does an immediate refresh on
 ## start, then repeats every intervalSec (0 = one-shot initial refresh only).
 
-import std/[os, atomics]
+import std/[os, atomics, tables]
 import ../storage/[database, feed_store, content_store]
 import ../fetcher/[http_fetcher, fetch_pipeline, software_fetcher]
 
@@ -22,6 +22,15 @@ proc refreshLoop(a: RefreshArgs) {.thread.} =
     let store = SqliteFeedStore(db: db)
     let contentStore = SqliteContentStore(db: db)
     let fetcher = newHttpFetcher()
+    # Consecutive-failure watchdog: after skipThreshold consecutive failures,
+    # a feed is skipped for most cycles (frees the pool for healthy feeds) but
+    # is re-probed every `reprobeEvery` cycles so a transiently-broken feed
+    # that recovers isn't permanently dead.
+    var failCounts: Table[string, int]
+    var cycleCount = 0
+    const skipThreshold = 3
+    const reprobeEvery = 10      # re-attempt chronically-failing feeds every 10th cycle
+    const batchDeadlineMs = 300_000   # 5 min hard budget for the entire batch
     # Clear ALL stored colors on startup so the watcher re-extracts with the
     # final algorithm (WCAG-validated, unified for both theme modes).
     # This is aggressive but the watcher processes 8 feeds per 3s tick (~5 min).
@@ -30,7 +39,31 @@ proc refreshLoop(a: RefreshArgs) {.thread.} =
       if a.shuttingDown != nil and a.shuttingDown[].load():
         echo "[refresh] shutting down"
         break
-      let s = fetcher.refreshAll(a.feedConfigs, store, contentStore, a.dirty, 4)
+      inc cycleCount
+      # Filter out feeds at/above the skip threshold — except on a re-probe
+      # cycle, where every feed is retried so transient outages can clear.
+      let isReprobeCycle = cycleCount mod reprobeEvery == 0
+      var activeFeeds = newSeq[FeedConfig]()
+      var skipped = 0
+      for fc in a.feedConfigs:
+        if failCounts.getOrDefault(fc.url, 0) >= skipThreshold and not isReprobeCycle:
+          inc skipped
+        else:
+          activeFeeds.add(fc)
+      if skipped > 0:
+        echo "[refresh] skipping ", skipped, " feed(s) with >= ", skipThreshold,
+             " consecutive failures"
+      let s = fetcher.refreshAll(activeFeeds, store, contentStore, a.dirty, 4,
+                                 batchDeadlineMs)
+      # Update consecutive-failure counts.
+      for url in s.failedUrls:
+        failCounts[url] = failCounts.getOrDefault(url, 0) + 1
+        if failCounts[url] == skipThreshold:
+          echo "[refresh] ", url, " reached ", skipThreshold,
+               " consecutive failures; will skip future cycles"
+      for fc in activeFeeds:
+        if fc.url notin s.failedUrls:
+          failCounts[fc.url] = 0
       echo "[refresh] fetched=", s.fetched, " failed=", s.failed, " items=", s.items
       # Fetch software releases if repos configured.
       if a.swRepos.len > 0:
