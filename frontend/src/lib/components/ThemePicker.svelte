@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { Popover, Portal } from '@skeletonlabs/skeleton-svelte';
-	import { themeState, setTheme, ALL_THEMES, isNoveltyTheme } from '$lib/stores/theme.svelte';
+	import { themeState, setTheme, ALL_THEMES, isNoveltyTheme } from '$lib/stores/theme.svelte.ts';
 
 	let searchQuery = $state('');
 

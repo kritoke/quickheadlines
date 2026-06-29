@@ -7,7 +7,7 @@ export type WebSocketMessage = {
 };
 
 import { logger } from '$lib/utils/debug';
-import { setConnectionState, setLatency, incrementReconnectAttempts, resetReconnectAttempts } from '$lib/stores/connection.svelte';
+import { setConnectionState, setLatency, incrementReconnectAttempts, resetReconnectAttempts } from '$lib/stores/connection.svelte.ts';
 
 // Shared WebSocket connection instance
 let sharedConnection: WebSocket | null = null;

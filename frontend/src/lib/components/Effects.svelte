@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { spring } from 'svelte/motion';
-	import { themeState, getCursorColors, getAccentColor } from '$lib/stores/theme.svelte';
+	import { themeState, getCursorColors, getAccentColor } from '$lib/stores/theme.svelte.ts';
 
 	let coords = spring({ x: -100, y: -100 }, { stiffness: 0.1, damping: 0.25 });
 	let trail = spring({ x: -100, y: -100 }, { stiffness: 0.05, damping: 0.3 });

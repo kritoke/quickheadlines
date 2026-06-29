@@ -1,10 +1,10 @@
 <script lang="ts">
 	import '../app.css';
-	import { themeState, initTheme } from '$lib/stores/theme.svelte';
-	import { initReadMode } from '$lib/stores/readMode.svelte';
-	import { initLayout } from '$lib/stores/layout.svelte';
+	import { themeState, initTheme } from '$lib/stores/theme.svelte.ts';
+	import { initReadMode } from '$lib/stores/readMode.svelte.ts';
+	import { initLayout } from '$lib/stores/layout.svelte.ts';
 	import { isIOS } from '$lib/utils/theme';
-	import { initBreakpoints } from '$lib/utils/breakpoint.svelte';
+	import { initBreakpoints } from '$lib/utils/breakpoint.svelte.ts';
 	import { onNavigate } from '$app/navigation';
 	import type { Navigation } from '@sveltejs/kit';
 	import {
@@ -14,7 +14,7 @@
 		markVisited,
 		scrollToPosition,
 		resetScroll
-	} from '$lib/stores/navigation.svelte';
+	} from '$lib/stores/navigation.svelte.ts';
 	import Effects from '$lib/components/Effects.svelte';
 	import CrystalBadge from '$lib/components/CrystalBadge.svelte';
 	import ScrollToTop from '$lib/components/ScrollToTop.svelte';

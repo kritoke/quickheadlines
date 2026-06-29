@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { fade } from 'svelte/transition';
-	import type { ToastMessage } from '$lib/stores/toast.svelte';
+	import type { ToastMessage } from '$lib/stores/toast.svelte.ts';
 
 	const HIGHLIGHTED_TYPES = new Set(['error', 'success', 'warning', 'info']);
 

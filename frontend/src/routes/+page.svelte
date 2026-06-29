@@ -5,7 +5,7 @@
 	import LayoutPicker from '$lib/components/LayoutPicker.svelte';
 	import type { FeedResponse } from '$lib/types';
 	import { NavigationService } from '$lib/services/navigationService';
-	import { createFeedEffects } from '$lib/stores/effects.svelte';
+	import { createFeedEffects } from '$lib/stores/effects.svelte.ts';
 	import { logger, initDebug } from '$lib/utils/debug';
 	import { page } from '$app/stores';
 	import { onMount } from 'svelte';
@@ -19,11 +19,11 @@
 		isRefreshing,
 		isError,
 		getError
-	} from '$lib/stores/feedStore.svelte';
-	import { layoutState, getFeedGridClass } from '$lib/stores/layout.svelte';
-	import { searchState, toggleSearch } from '$lib/stores/search.svelte';
+	} from '$lib/stores/feedStore.svelte.ts';
+	import { layoutState, getFeedGridClass } from '$lib/stores/layout.svelte.ts';
+	import { searchState, toggleSearch } from '$lib/stores/search.svelte.ts';
 	import { createLazyLoader } from '$lib/utils/lazyComponent';
-	import { getStoredTab } from '$lib/stores/tabStore.svelte';
+	import { getStoredTab } from '$lib/stores/tabStore.svelte.ts';
 
 	const loadSearchModal = createLazyLoader(() => import('$lib/components/BitsSearchModal.svelte'));
 

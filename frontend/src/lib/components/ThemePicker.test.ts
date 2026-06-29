@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { mount, unmount } from 'svelte';
 import ThemePicker from './ThemePicker.svelte';
-import { themeState, setTheme } from '$lib/stores/theme.svelte';
+import { themeState, setTheme } from '$lib/stores/theme.svelte.ts';
 
 describe('ThemePicker', () => {
 	let cleanup: (() => void) | undefined;

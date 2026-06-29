@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { breakpointState } from '$lib/utils/breakpoint.svelte';
+	import { breakpointState } from '$lib/utils/breakpoint.svelte.ts';
 	import { Tabs } from '@skeletonlabs/skeleton-svelte';
 	import MobileTabSheet from './MobileTabSheet.svelte';
 	import type { TabResponse } from '$lib/types';

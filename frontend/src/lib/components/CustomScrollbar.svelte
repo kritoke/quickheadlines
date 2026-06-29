@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { themeState } from '$lib/stores/theme.svelte';
+	import { themeState } from '$lib/stores/theme.svelte.ts';
 
 	interface Props {
 		class?: string;

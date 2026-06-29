@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { Dialog, Portal } from '@skeletonlabs/skeleton-svelte';
-	import { searchState, closeSearch, setSearchQuery } from '$lib/stores/search.svelte';
+	import { searchState, closeSearch, setSearchQuery } from '$lib/stores/search.svelte.ts';
 	import CloseIcon from './icons/CloseIcon.svelte';
 
 	interface Props {

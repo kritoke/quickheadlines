@@ -6,7 +6,7 @@
 	import type { TabResponse } from '$lib/types';
 	import {
 		createTimelineEffects,
-	} from '$lib/stores/effects.svelte';
+	} from '$lib/stores/effects.svelte.ts';
 	import { logger } from '$lib/utils/debug';
 	import { NavigationService } from '$lib/services/navigationService';
 	import { page } from '$app/stores';
@@ -22,11 +22,11 @@
 		cancelRetry,
 		loadAllRemainingItems,
 		isSearchLoadingAll
-	} from '$lib/stores/timelineStore.svelte';
-	import { searchState, toggleSearch } from '$lib/stores/search.svelte';
+	} from '$lib/stores/timelineStore.svelte.ts';
+	import { searchState, toggleSearch } from '$lib/stores/search.svelte.ts';
 	import { createLazyLoader } from '$lib/utils/lazyComponent';
 	import { onMount } from 'svelte';
-	import { getStoredTab } from '$lib/stores/tabStore.svelte';
+	import { getStoredTab } from '$lib/stores/tabStore.svelte.ts';
 
 	const loadTimelineView = createLazyLoader(() => import('$lib/components/TimelineView.svelte'));
 	const loadSearchModal = createLazyLoader(() => import('$lib/components/BitsSearchModal.svelte'));

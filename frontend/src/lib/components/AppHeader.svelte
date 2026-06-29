@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { themeState, toggleEffects } from '$lib/stores/theme.svelte';
-	import { readModeState, toggleReadMode } from '$lib/stores/readMode.svelte';
+	import { themeState, toggleEffects } from '$lib/stores/theme.svelte.ts';
+	import { readModeState, toggleReadMode } from '$lib/stores/readMode.svelte.ts';
 	import ThemePicker from './ThemePicker.svelte';
 	import TabSelector from './TabSelector.svelte';
 	import { goto } from '$app/navigation';

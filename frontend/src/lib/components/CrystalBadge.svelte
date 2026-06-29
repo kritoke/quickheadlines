@@ -1,7 +1,7 @@
 <script lang="ts">
   import { browser } from '$app/environment';
   import { CrystalEngine } from '$lib/crystal-engine';
-  import { themeState, isDarkTheme } from '$lib/stores/theme.svelte';
+  import { themeState, isDarkTheme } from '$lib/stores/theme.svelte.ts';
 
   let canvasEl = $state<HTMLCanvasElement | null>(null);
   let engine = $state<CrystalEngine | null>(null);

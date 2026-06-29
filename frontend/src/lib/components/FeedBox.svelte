@@ -1,10 +1,10 @@
 <script lang="ts">
 	import type { FeedResponse } from '$lib/types';
 	import { formatTimestamp } from '$lib/api';
-	import { readModeState } from '$lib/stores/readMode.svelte';
-	import { breakpointState } from '$lib/utils/breakpoint.svelte';
+	import { readModeState } from '$lib/stores/readMode.svelte.ts';
+	import { breakpointState } from '$lib/utils/breakpoint.svelte.ts';
 	import { getFaviconSrc, getHeaderStyle as getSharedHeaderStyle, getFaviconBgStyle as getSharedFaviconBgStyle } from '$lib/utils/feedItem';
-	import { feedState } from '$lib/stores/feedStore.svelte';
+	import { feedState } from '$lib/stores/feedStore.svelte.ts';
 	import { sanitizeUrl } from '$lib/utils/validation';
 	import CommentIcon from './icons/CommentIcon.svelte';
 	import DiscussionIcon from './icons/DiscussionIcon.svelte';
