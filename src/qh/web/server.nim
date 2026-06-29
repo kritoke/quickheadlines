@@ -8,7 +8,7 @@
 ## registry needs no lock. The only cross-thread bit is `ctx.dirty` (an Atomic-
 ## Bool ref set by the refresh supervisor thread).
 
-import std/[asynchttpserver, asyncdispatch, asyncnet, json, uri, strutils, tables, options, atomics, sequtils, os, algorithm, net, httpclient, re, times]
+import std/[asynchttpserver, asyncdispatch, asyncnet, json, uri, strutils, tables, options, atomics, sequtils, os, algorithm, net, httpclient, re]
 import ../types
 import ../storage/[feed_store, item_store, content_store]
 import ../fetcher/favicon
@@ -20,12 +20,6 @@ import ./ws
 import ./ws_broadcaster
 
 type
-  WsClient = object
-    socket: AsyncSocket
-    ip: string
-    createdAt: float       # epoch seconds
-    lastActivity: float    # epoch seconds
-
   ServerCtx* = ref object
     config*: Config
     feedStore*: SqliteFeedStore

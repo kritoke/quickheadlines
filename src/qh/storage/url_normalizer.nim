@@ -1,49 +1,19 @@
 ## URL normalizer - port of src/utils/url_normalizer.cr.
 ## Normalizes URLs for the UNIQUE(feed_id, normalized_link) dedup constraint.
-## Strips tracking params (40+), www. prefix, feed suffixes, fragments.
+## Strips ALL query params except a small content-bearing allowlist (id, p,
+## page, article, post, entry, slug), www. prefix, feed suffixes, fragments.
 ## Lowercases scheme/host. Removes standard ports.
+##
+## NOTE: an earlier revision kept a 47-entry TrackingParams blocklist, but it
+## was never wired into normalizeUrl — the allowlist approach (drop everything
+## not in KeepParams) is stricter and is what shipped, so the blocklist is gone.
 
-import std/[uri, strutils, sets]
-
-const TrackingParams = [
-  # UTM (7)
-  "utm_source", "utm_medium", "utm_campaign", "utm_term", "utm_content",
-  "utm_reader", "utm_viz_id", "utm_pubreferrer", "utm_swu",
-  # Common tracking (8)
-  "fbclid", "gclid", "gclsrc", "dclid", "msclkid", "mc_cid", "mc_eid",
-  "_ga", "_gl",
-  # Referral/source (6)
-  "ref", "referrer", "referer", "source", "via", "campaign",
-  # Social (3)
-  "igshid", "twclid", "li_fat_id",
-  # Affiliate (2)
-  "affiliate", "partner",
-  # Click tracking (2)
-  "clickid", "sessionid",
-  # Other (3)
-  "mkt_tok", "trk", "trkInfo",
-  # Reddit (3)
-  "context", "depth", "embed",
-  # Hacker News (2)
-  "focusedCommentId", "commentInformTab",
-  # StackOverflow (4)
-  "answertab", "votes", "pagesize", "sort",
-  # Google (4)
-  "sa", "ved", "ei", "usg",
-  # News (3)
-  "outputType", "pageType", "pf",
-]
+import std/[uri, strutils]
 
 const FeedSuffixes = [
   "/feed.xml", "/rss.xml", "/feed", "/rss", "/atom.xml",
   "/rss2.xml", "/feed/", "/rss/", "/atom/",
 ]
-
-proc buildTrackingSet(): HashSet[string] =
-  result = initHashSet[string]()
-  for p in TrackingParams: result.incl(p)
-
-let trackingSet = buildTrackingSet()
 
 proc stripFeedSuffix(path: string): string =
   ## Strip common feed suffixes from path (/feed.xml, /rss, etc.).
