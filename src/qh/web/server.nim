@@ -531,7 +531,15 @@ proc feedWatcher(ctx: ServerCtx): Future[void] {.async.} =
           if saved > 0 or failed > 0:
             echo "[favicon] tick=", tick, " tried=", futures.len, " saved=", saved, " failed=", failed, failMsg
       # 2. Re-extract colors for feeds that have a favicon file but no valid color.
+      # CAP per tick + yield between extractions: color extraction is
+      # synchronous CPU work that runs ON the event loop. Without a cap, the
+      # startup pass (clearAllColors nukes every feed) would do 200+ decodes
+      # back-to-back and hang the web server for minutes. Doing a bounded
+      # batch per 15s tick spreads the work out and keeps the loop live.
+      const ColorBatchPerTick = 8
+      var colorDone = 0
       for (fid, favPath) in ctx.feedStore.feedsNeedingColor():
+        if colorDone >= ColorBatchPerTick: break
         let filePath = "favicons" & favPath[9..^1]   # strip "/favicons/"
         if fileExists(filePath):
           let bytes = readFile(filePath)
@@ -541,6 +549,12 @@ proc feedWatcher(ctx: ServerCtx): Future[void] {.async.} =
               let textColor = colorExtractor.selectTextColor(theme.get)
               ctx.feedStore.setThemeColors(fid, theme.get.bgColor, textColor, textColor)
               ctx.dirty[].store(true)
+              inc colorDone
+        # Yield to the event loop between CPU-bound extractions so HTTP/WS
+        # requests are not starved while the startup backlog is cleared.
+        await sleepAsync(0)
+      if colorDone > 0:
+        echo "[favicon] re-extracted colors for ", colorDone, " feed(s) this tick"
 
 proc serve*(ctx: ServerCtx; port = 8080) =
   ## Start the HTTP server (blocks) + the WS-broadcast watcher on one event loop.
