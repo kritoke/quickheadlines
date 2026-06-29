@@ -75,11 +75,13 @@ proc wsSession(ctx: ServerCtx; req: Request): Future[void] {.async.} =
   try:
     while true:
       let data = await req.client.recv(4096)
-      if data.len == 0: break
+      if data.len == 0: break            # client closed the connection
       ctx.broadcaster.touch(req.client)
   except CatchableError:
-    discard
+    discard                              # socket died; drop it below
+  # Always remove + close so we never leak the FD or a broadcaster slot.
   ctx.broadcaster.remove(req.client)
+  try: req.client.close() except CatchableError: discard
 
 proc queryParams(q: string): Table[string, string] =
   for kv in q.split('&'):
