@@ -53,6 +53,11 @@ proc installSignalHandlers() =
 
 proc main() =
   installSignalHandlers()
+  # Build banner — printed FIRST so it's always visible at the top of the log.
+  # Lets you confirm the running binary matches the latest commit (a stale
+  # binary is the #1 confusion when logs don't match expectations).
+  const buildId {.strdefine.}: string = "dev"
+  echo "=== QuickHeadlines (Nim) build=" & buildId & " pid=" & $getCurrentProcessId() & " ==="
   let cfgPath = getEnv("QUICKHEADLINES_CONFIG", "feeds.yml")
   let dbPath  = getEnv("QUICKHEADLINES_DB", "qh_nim.db")
   let port    = envInt("QUICKHEADLINES_PORT", 8080)

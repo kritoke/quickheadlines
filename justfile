@@ -629,8 +629,9 @@ nim-build: nim-frontend-force
     #!/usr/bin/env bash
     set -euo pipefail
     echo "Compiling Nim server..."
+    BUILD_ID="$(date -u +%Y%m%d-%H%M%S)-$(git rev-parse --short HEAD 2>/dev/null || echo nogit)"
     rm -f bin/quickheadlines bin/quickheadlines.bin
-    nix develop . --command nim c -d:ssl --threads:on -o:bin/quickheadlines.bin src/qh/main.nim
+    nix develop . --command nim c -d:ssl --threads:on "-d:buildId=$BUILD_ID" -o:bin/quickheadlines.bin src/qh/main.nim
     # Capture the devshell lib path once and bake into a wrapper.
     LDLP="$(nix develop . --command sh -c 'echo $LD_LIBRARY_PATH')"
     sh scripts/nim-wrap.sh bin/quickheadlines bin/quickheadlines.bin "$LDLP"
@@ -942,9 +943,10 @@ freebsd-nim-build: freebsd-nim-check-deps
         done
     done
     echo "Compiling Nim server..."
+    BUILD_ID="$(date -u +%Y%m%d-%H%M%S)-$(git rev-parse --short HEAD 2>/dev/null || echo nogit)"
     mkdir -p bin
-    nim c $NIM_FLAGS -o:bin/quickheadlines src/qh/main.nim
-    echo "Built bin/quickheadlines"
+    nim c $NIM_FLAGS "-d:buildId=$BUILD_ID" -o:bin/quickheadlines src/qh/main.nim
+    echo "Built bin/quickheadlines (build=$BUILD_ID)"
     ls -lh bin/quickheadlines
 
 # Build + run on FreeBSD (no nix).
