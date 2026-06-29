@@ -955,4 +955,5 @@ freebsd-nim-run: freebsd-nim-build nim-stop
     QUICKHEADLINES_CONFIG={{env_var_or_default("QUICKHEADLINES_CONFIG","feeds.yml")}} \
     QUICKHEADLINES_DB={{env_var_or_default("QUICKHEADLINES_DB","qh_nim.db")}} \
     QUICKHEADLINES_PORT={{env_var_or_default("QUICKHEADLINES_PORT","8080")}} \
+    QUICKHEADLINES_LOG={{env_var_or_default("QUICKHEADLINES_LOG","qh.log")}} \
     ./bin/quickheadlines

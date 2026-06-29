@@ -57,7 +57,21 @@ proc main() =
   # Lets you confirm the running binary matches the latest commit (a stale
   # binary is the #1 confusion when logs don't match expectations).
   const buildId {.strdefine.}: string = "dev"
+  # Optional file logging: set QUICKHEADLINES_LOG to a path and stdout+stderr
+  # are redirected there for the life of the process. Without it, logs go to
+  # the terminal (which vanishes when the launching shell exits — the source
+  # of endless "where is the log?" confusion during daemon-style deploys).
+  let logPath = getEnv("QUICKHEADLINES_LOG", "")
+  if logPath.len > 0:
+    try:
+      let f = open(logPath, fmWrite)
+      discard dup2(f.getOsFileHandle(), 1)   # stdout
+      discard dup2(f.getOsFileHandle(), 2)   # stderr
+      f.close()
+    except CatchableError as e:
+      echo "WARNING: could not open log file ", logPath, ": ", e.msg, " (logging to terminal)"
   echo "=== QuickHeadlines (Nim) build=" & buildId & " pid=" & $getCurrentProcessId() & " ==="
+  if logPath.len > 0: echo "[main] logging to file: ", logPath
   let cfgPath = getEnv("QUICKHEADLINES_CONFIG", "feeds.yml")
   let dbPath  = getEnv("QUICKHEADLINES_DB", "qh_nim.db")
   let port    = envInt("QUICKHEADLINES_PORT", 8080)
