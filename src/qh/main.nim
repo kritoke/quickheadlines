@@ -85,8 +85,19 @@ proc main() =
   var config = cfgR.config
   echo "Loaded config: ", config.tabs.len, " tab(s), page_title=\"", config.pageTitle, "\""
 
-  # 2. open DB + build the production stores
-  let db = openAndCreate(dbPath)
+  # 2. open DB + build the production stores. The main-thread open runs
+  # migrations on an existing (e.g. Crystal-created) DB; a migration failure
+  # (e.g. CREATE UNIQUE INDEX on a table with duplicate normalized_link rows)
+  # would otherwise throw an unhandled exception and kill the process before
+  # the server starts. Surface the error and exit cleanly instead of crashing.
+  echo "[main] opening DB: ", dbPath
+  let db =
+    try: openAndCreate(dbPath)
+    except CatchableError as e:
+      echo "[main] FATAL: DB open/migration failed: ", e.msg
+      echo "[main] If this is a schema issue, back up the DB and let it re-create:"
+      echo "[main]   mv ", dbPath, " ", dbPath, ".bak && restart"
+      quit(1)
   let feedStore    = SqliteFeedStore(db: db)
   let itemStore    = SqliteItemStore(db: db)
   let clusterStore = SqliteClusterStore(db: db)
