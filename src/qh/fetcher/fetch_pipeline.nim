@@ -1,11 +1,26 @@
-## Concurrent fetch pipeline - promotes the Phase-1 spike's bounded-pool model
-## into production. N worker threads fetch via the (retrying) HttpFetcher with a
-## HARD per-feed deadline (fetchWithDeadline); the bounded work channel applies
-## backpressure (design D5). Persistence is done by the caller on its own DbConn
-## (SQLite connections are not thread-safe, so fetch is parallel and persist is
-## serial - DB writes are the cheap part).
+## Sequential fetch pipeline.
+##
+## DESIGN CHANGE (was: N-thread worker pool sharing channels + refs). The
+## thread-pool design fought Nim's ORC GC at every shared-deref: channels move
+## heap-allocated FetchResults (containing seq[Item] with heap strings) across
+## threads, the PipelineChannels ref is dereffed by every worker, and ORC's
+## refcount operations are not atomic across threads. Result: intermittent
+## "SIGSEGV: Illegal storage access" under load, reproducible only in production
+## (FreeBSD), never on the dev box.
+##
+## Crystal achieved fetch parallelism with fibers on a single-thread event loop
+## — no GC-across-threads problem. The safe Nim equivalent is to run fetches
+## SEQUENTIALLY on the supervisor's own thread. Each fetch is a curl subprocess
+## with a hard deadline, so no single feed can stall the loop. We lose raw
+## parallelism (N feeds no longer fetch simultaneously), but the per-feed curl
+## spawn is I/O-bound wall-clock, and 226 feeds × ~0.5s = ~2 min — acceptable
+## for a 30-min refresh interval, and correctness beats crashing.
+##
+## Bounded parallelism can return later via async on a private event loop
+## (cooperative, single-thread, no ORC-across-threads). This module is the
+## safe baseline.
 
-import std/[tables, sugar, sequtils, atomics, monotimes, sets, os, times]
+import std/[tables, sugar, monotimes, sets, atomics, times]
 import ../types
 import ../storage/[feed_store, content_store as cstore]
 import ./http_fetcher
@@ -14,143 +29,64 @@ type
   FeedConfig* = object     ## a feed to fetch
     url*: string
     title*: string
-  FetchOutcome* = object   ## url + the fetch result
-    url: string
-    res: FetchResult
   RefreshSummary* = object
     fetched*: int
     failed*: int
     items*: int
     failedUrls*: seq[string]   ## URLs that failed (for watchdog tracking)
 
-  PipelineChannels = ref object
-    ## Heap-allocated channels so they survive worker detachment when a
-    ## batch deadline causes early return.
-    jobs: Channel[string]
-    ress: Channel[FetchOutcome]
-
-  WorkerArgs = object
-    ## All fields are VALUE types captured per-worker. Sharing a ref object
-    ## (HttpFetcher) across N threads and concurrently reading its string
-    ## fields races on ORC refcount ops and intermittently SIGSEGVs.
-    userAgent: string
-    curlPath: string
-    chans: PipelineChannels
-
-proc worker(a: WorkerArgs) {.thread.} =
-  while true:
-    let url = a.chans.jobs.recv()
-    if url == "": break                          # sentinel -> stop
-    a.chans.ress.send(FetchOutcome(url: url,
-      res: fetchWithDeadline(a.userAgent, a.curlPath, url)))
-
-proc fetchAllConcurrent*(f: HttpFetcher; urls: seq[string];
-                         maxConcurrency = 8): seq[FetchOutcome] =
-  ## Fetch `urls` concurrently with a bounded work pool. Producer blocks when
-  ## the work channel is full (backpressure).
-  let n = maxConcurrency.clamp(1, 32)
-  let chans = PipelineChannels()
-  chans.jobs.open(n)                             # bounded -> backpressure
-  chans.ress.open(n)                             # bounded -> memory cap
-  let a = WorkerArgs(userAgent: f.userAgent, curlPath: f.curlPath, chans: chans)
-  var ths: seq[Thread[WorkerArgs]]
-  newSeq(ths, n)
-  for i in 0..<n: ths[i].createThread(worker, a)
-  for u in urls: chans.jobs.send(u)              # backpressure point
-  for _ in 0..<n: chans.jobs.send("")            # one sentinel per worker
-  for _ in 0..<urls.len: result.add chans.ress.recv()
-  for i in 0..<n: ths[i].joinThread()
-  chans.jobs.close()
-  chans.ress.close()
-
 proc refreshAll*(f: HttpFetcher; feeds: seq[FeedConfig];
                  store: SqliteFeedStore;
                  contentStore: SqliteContentStore = nil;
                  dirty: ref Atomic[bool] = nil;
-                 maxConcurrency = 8;
+                 maxConcurrency = 8;           ## ignored (kept for API compat)
                  batchDeadlineMs = 0): RefreshSummary =
-  ## Fetch every feed concurrently and persist successes via the FeedStore.
-  ## Persists INCREMENTALLY - each feed is written as its fetch completes, so
-  ## readers (and the /api/feeds long-poll) see feeds progressively. `dirty`
-  ## (if given) is set after EACH persist, so the WS watcher pushes feed_update
-  ## as feeds land - not delayed by the slowest/hanging feed.
-  ## If contentStore is provided, article content is persisted and stripped from
-  ## in-memory items (port of Crystal persist_entry_content + strip_content).
-  ## `batchDeadlineMs` (0 = no cap) sets a hard wall-clock budget for the entire
-  ## batch. When exceeded, remaining feeds are counted as failed and abandoned
-  ## (their worker threads are detached).
+  ## Fetch every feed sequentially and persist successes via the FeedStore.
+  ## Persists INCREMENTALLY — each feed is written as its fetch completes, so
+  ## readers see feeds progressively. `dirty` (if given) is set after EACH
+  ## persist, so the WS watcher pushes feed_update as feeds land.
+  ##
+  ## `maxConcurrency` is accepted for call-site compatibility but intentionally
+  ## ignored: the fetch loop is sequential (see module docstring for why).
+  ## `batchDeadlineMs` (0 = no cap) sets a hard wall-clock budget for the whole
+  ## batch; when exceeded, remaining feeds are counted as failed and skipped.
   if feeds.len == 0: return
-  let urls = feeds.mapIt(it.url)
-  let n = maxConcurrency.clamp(1, 32)
-  let chans = PipelineChannels()
-  chans.jobs.open(max(urls.len, n))           # large enough that producer never blocks
-  chans.ress.open(max(urls.len, n))            # large enough that workers NEVER block on send (critical: if the batch deadline detaches the consumer, a full ress would deadlock workers on send and they'd never reach their sentinel -> thread leak)
   let byUrl = collect(initTable):
     for fc in feeds: {fc.url: fc.title}
-  let a = WorkerArgs(userAgent: f.userAgent, curlPath: f.curlPath, chans: chans)
-  var ths: seq[Thread[WorkerArgs]]
-  newSeq(ths, n)
-  for i in 0..<n: ths[i].createThread(worker, a)
-  for u in urls: chans.jobs.send(u)              # backpressure point
-  for _ in 0..<n: chans.jobs.send("")            # one sentinel per worker
-
-  # Consume + persist each outcome as it arrives (progressive hydration).
-  # Uses a poll loop so a batch deadline can abandon stragglers.
-  # NOTE: the loop-exit condition uses a COUNTER (received), not the
-  # receivedSet's len, because duplicate feed URLs across tabs are legal —
-  # a HashSet len would never reach urls.len and the loop would spin forever.
-  var received = 0
-  var receivedSet = initHashSet[string]()
   let start = getMonoTime()
-  while received < urls.len:
-    let r = chans.ress.tryRecv()
-    if r.dataAvailable:
-      let o = r.msg
-      inc received
-      receivedSet.incl(o.url)
-      if o.res.isOk:
-        inc result.fetched
-        result.items += o.res.data.items.len
-        var fd = o.res.data
-        # Always use the configured title from feeds.yml (the user configures
-        # display names there; RSS titles may differ or be generic).
-        fd.title = byUrl.getOrDefault(o.url, fd.title)
-        # Persist article content to the content store before stripping.
-        if not contentStore.isNil:
-          for it in fd.items:
-            if it.content.len > 0 and not cstore.isSummaryOnly(it.content):
-              discard contentStore.storeContent(it.link, o.url, it.title, it.content)
-        # Strip content from in-memory items (saves memory; content is in the DB).
-        for i in 0 ..< fd.items.len:
-          fd.items[i].content = ""
-        discard store.upsertWithItems(fd)          # favicon (if fetched) persisted with the feed
-        if not dirty.isNil: dirty[].store(true)    # notify WS watcher per feed
-      else:
-        inc result.failed
-        result.failedUrls.add(o.url)
-    else:
-      sleep(100)
-    # Check batch deadline (wall-clock from start).
+  var done = initHashSet[string]()
+  for fc in feeds:
+    # Batch deadline check (wall-clock from start).
     if batchDeadlineMs > 0:
       let elapsed = (getMonoTime() - start).inMilliseconds.int
       if elapsed >= batchDeadlineMs:
-        let abandoned = urls.len - received
+        let abandoned = feeds.len - done.len
         if abandoned > 0:
           echo "[refresh] batch deadline hit, ", abandoned, " feeds abandoned"
-          for u in urls:
-            if u notin receivedSet:
-              result.failedUrls.add(u)
+          for f2 in feeds:
+            if f2.url notin done:
+              result.failedUrls.add(f2.url)
               inc result.failed
         break
-
-  # Join workers when all results received (clean exit).  When the batch
-  # deadline was hit, detach the still-running workers — they hold a ref to
-  # the PipelineChannels so it stays alive until they terminate. Workers can
-  # always drain ress (capacity >= urls.len) and reach their sentinel, so no
-  # thread is stranded on a blocked send.
-  if received == urls.len:
-    for i in 0..<n: ths[i].joinThread()
-    chans.jobs.close()
-    chans.ress.close()
-  else:
-    echo "[refresh] detaching ", n, " worker threads (batch deadline exceeded)"
+    let r = fetchWithDeadline(f.userAgent, f.curlPath, fc.url)
+    done.incl(fc.url)
+    if r.isOk:
+      inc result.fetched
+      result.items += r.data.items.len
+      var fd = r.data
+      # Always use the configured title from feeds.yml (the user configures
+      # display names there; RSS titles may differ or be generic).
+      fd.title = byUrl.getOrDefault(fc.url, fd.title)
+      # Persist article content to the content store before stripping.
+      if not contentStore.isNil:
+        for it in fd.items:
+          if it.content.len > 0 and not cstore.isSummaryOnly(it.content):
+            discard contentStore.storeContent(it.link, fc.url, it.title, it.content)
+      # Strip content from in-memory items (saves memory; content is in the DB).
+      for i in 0 ..< fd.items.len:
+        fd.items[i].content = ""
+      discard store.upsertWithItems(fd)            # favicon (if fetched) persisted with the feed
+      if not dirty.isNil: dirty[].store(true)      # notify WS watcher per feed
+    else:
+      inc result.failed
+      result.failedUrls.add(fc.url)
