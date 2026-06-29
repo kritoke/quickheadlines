@@ -910,8 +910,14 @@ freebsd-nim-build: freebsd-nim-check-deps
         case ":$PATH:" in *":$d:"*) ;; *) PATH="$d:$PATH" ;; esac
     done
     export PATH
+    # ALWAYS rebuild the frontend before compiling Nim. The Nim binary bakes
+    # frontend/dist into itself at compile time (assets.nim staticRead); a stale
+    # dist means the served HTML references CSS/JS hashes that aren't in the
+    # binary -> CSS preload errors and broken lazy-loaded routes (timeline).
+    echo "Building Svelte frontend..."
+    (cd frontend && (test -d node_modules || npm install --no-audit --no-fund) && npm run build)
     if [ ! -d frontend/dist ] || [ ! -f frontend/dist/index.html ]; then
-        echo "Error: frontend/dist not found. Build frontend locally first."
+        echo "Error: frontend build failed (frontend/dist/index.html missing)."
         exit 1
     fi
     # Locate yaml.nim to find the package root.
