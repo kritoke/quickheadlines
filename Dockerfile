@@ -1,8 +1,8 @@
 # Multi-stage build for QuickHeadlines with Svelte 5 frontend
-# Uses native amd64 build for speed; arm64 built separately in CI
+# Multi-arch build (amd64 + arm64)
 
-# Stage 1: Build Svelte frontend (AMD64)
-FROM --platform=linux/amd64 node:22 AS svelte-builder
+# Stage 1: Build Svelte frontend
+FROM node:22 AS svelte-builder
 
 WORKDIR /app/frontend
 
@@ -17,8 +17,8 @@ RUN pnpm run build
 # Copy logo to dist
 RUN cp static/logo.svg dist/ 2>/dev/null || true
 
-# Stage 2: Build Crystal binary (AMD64)
-FROM --platform=linux/amd64 84codes/crystal:1.18.2-ubuntu-22.04 AS builder
+# Stage 2: Build Crystal binary
+FROM crystallang/crystal:1.18.2-ubuntu AS builder
 
 WORKDIR /app
 
@@ -52,8 +52,8 @@ RUN if file /app/server | grep -q "executable"; then \
     exit 1; \
     fi
 
-# Stage 3: Minimal runtime (AMD64)
-FROM --platform=linux/amd64 debian:stable-slim
+# Stage 3: Minimal runtime
+FROM debian:stable-slim
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libmagic1 libxml2 libssl3 libyaml-0-2 libsqlite3-0 libreadline8 ca-certificates curl \
