@@ -25,13 +25,13 @@ describe EventBroadcaster do
     end
 
     it "completes quickly" do
-      start_time = Time.monotonic
+      start_time = Time.instant
 
       1000.times do |i|
         EventBroadcaster.notify_feed_update(1234567890 + i)
       end
 
-      elapsed = Time.monotonic - start_time
+      elapsed = Time.instant - start_time
       # Should complete in reasonable time (< 1 second)
       elapsed.total_seconds.should be < 1.0
     end

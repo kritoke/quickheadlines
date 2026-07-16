@@ -39,9 +39,9 @@ class RequestTimingHandler
   SLOW_THRESHOLD_MS = 500.0
 
   def call(context : HTTP::Server::Context)
-    start = Time.monotonic
+    start = Time.instant
     call_next(context)
-    elapsed = Time.monotonic - start
+    elapsed = Time.instant - start
     ms = elapsed.total_milliseconds
     path = context.request.path
     method = context.request.method

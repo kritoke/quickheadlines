@@ -64,11 +64,11 @@ class FeedFetcher
     current_url = feed.url
     redirects = 0
     retries = 0
-    start_time = Time.monotonic
+    start_time = Time.instant
 
     loop do
       timeout_seconds = QuickHeadlines::Constants::FETCH_TIMEOUT_SECONDS
-      elapsed_seconds = (Time.monotonic - start_time).total_seconds
+      elapsed_seconds = (Time.instant - start_time).total_seconds
       abort_decision = should_abort_fetch?(feed, elapsed_seconds, retries, redirects, timeout_seconds)
 
       if abort_result = handle_abort_condition(feed, effective_item_limit, previous_data, abort_decision)
