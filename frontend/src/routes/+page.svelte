@@ -75,11 +75,23 @@
 		};
 	});
 
+	// Skip only the effect's initial mount run — onMount performs the first
+	// load, so we avoid a double-load by skipping once, then react to every
+	// subsequent URL tab change. The previous gate inferred "loaded" from
+	// feedState.feeds.length > 0, which made tab CLICKS no-ops when a category
+	// was legitimately empty (e.g. after clearing the cache DB): a browser
+	// refresh worked only because it re-runs onMount and bypassed this gate.
+	let handledInitialTabUrl = false;
+
 	$effect(() => {
 		const urlTab = $page.url?.searchParams.get('tab') ?? getStoredTab();
-		const alreadyLoaded = feedState.status !== 'idle' || feedState.feeds.length > 0;
 
-		if (alreadyLoaded && urlTab !== feedState.activeTab) {
+		if (!handledInitialTabUrl) {
+			handledInitialTabUrl = true;
+			return;
+		}
+
+		if (urlTab !== feedState.activeTab) {
 			logger.log('[Page] URL tab changed from', feedState.activeTab, 'to', urlTab, ', reloading...');
 			loadFeeds(urlTab);
 		}
