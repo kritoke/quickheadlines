@@ -3,13 +3,13 @@ permissions: {}
 
 on:
   push:
-    tags: [ "v*.*.*" ]
+    tags: ["v*.*.*"]
   workflow_dispatch:
     inputs:
       platform:
-        description: 'Platform to build'
+        description: "Platform to build"
         required: true
-        default: 'freebsd'
+        default: "freebsd"
         type: choice
         options:
           - freebsd
@@ -145,7 +145,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: "22"
 
       - name: Verify Node.js version
         run: |
@@ -178,7 +178,7 @@ jobs:
         run: |
           docker run --rm --platform linux/${{ matrix.arch == 'x64' && 'amd64' || 'arm64' }} \
             --entrypoint /bin/sh \
-            -v ${{ github.workspace }}:/app -w /app 84codes/crystal:1.18.2-ubuntu-22.04 \
+            -v ${{ github.workspace }}:/app -w /app 84codes/crystal:1.19.1-ubuntu-22.04 \
             -c "apt-get update && apt-get install -y libxml2-dev libssl-dev libyaml-dev libsqlite3-dev libmagic-dev curl make && \
             shards install --production && \
             mkdir -p /app/bin && \
@@ -206,7 +206,7 @@ jobs:
         if: matrix.target == 'macos'
         uses: crystal-lang/install-crystal@v1
         with:
-          crystal: 1.18.2
+          crystal: 1.19.1
 
       - name: Build Crystal binary (macOS)
         if: matrix.target == 'macos'
@@ -227,22 +227,22 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '22'
-      
+          node-version: "22"
+
       - name: Install pnpm
         run: npm install -g pnpm@9
-      
+
       - name: Build Svelte frontend
         run: cd frontend && pnpm install && pnpm run build
-      
+
       - name: Install shards (for caching)
         uses: crystal-lang/install-crystal@v1
         with:
-          crystal: 1.18.2
+          crystal: 1.19.1
 
       - name: Cache shards
         uses: actions/cache@v4
@@ -268,7 +268,7 @@ jobs:
             export LDFLAGS="${LDFLAGS:-} -L/usr/local/lib"
             VERSION=$(grep '^version:' shard.yml | awk '{print $2}')
             crystal build --release -Os -Dpreview_lto -Dversion=v$VERSION src/quickheadlines.cr -o bin/quickheadlines-freebsd-x64
-      
+
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:

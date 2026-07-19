@@ -2,7 +2,7 @@ version: 2.0
 shards:
   ameba:
     git: https://github.com/crystal-ameba/ameba.git
-    version: 1.7.0-dev+git.commit.8033ebf8e3cbd4045ccc49292ba5446fcb0ba323
+    version: 1.7.0-dev+git.commit.fcbd5703c50b47a5f280a11ab1c3416f5f3a9ea9
 
   athena:
     git: https://github.com/athena-framework/framework.git
@@ -62,7 +62,7 @@ shards:
 
   azurite:
     git: https://github.com/kritoke/azurite.cr.git
-    version: 0.1.0+git.commit.9e0547a976865543186ebdbfbb99f95bc816dfe5
+    version: 0.1.0+git.commit.8c629b72bede1f0ba9244fee927b6a9a1ee4696b
 
   baked_file_system:
     git: https://github.com/schovi/baked_file_system.git
@@ -74,7 +74,7 @@ shards:
 
   crest:
     git: https://github.com/mamantoha/crest.git
-    version: 1.8.0
+    version: 1.8.1
 
   crimage:
     git: https://github.com/naqvis/crimage.git
@@ -90,7 +90,7 @@ shards:
 
   fetcher:
     git: https://github.com/kritoke/fetcher.cr.git
-    version: 0.9.20+git.commit.e138e6c3f6a8dee6ce05150d233245872a1245b1
+    version: 0.9.20+git.commit.1d00f497c7aec98ed9ced1ab51bf3a7eb7857c14
 
   html5:
     git: https://github.com/naqvis/crystal-html5.git
@@ -106,11 +106,11 @@ shards:
 
   lexis-minhash:
     git: https://github.com/kritoke/lexis-minhash.git
-    version: 0.5.0
+    version: 0.5.0+git.commit.9447f7f9c044b3eedbbb4ebccc4f2daf78f8ed01
 
   prismatiq:
     git: https://github.com/kritoke/prismatiq.git
-    version: 0.7.2+git.commit.0b48d704742857ec8bb25989729bcbb47fa58952
+    version: 0.7.2+git.commit.f42aa2187c9b038c6e744e1842a873fb75bb487c
 
   sanitize:
     git: https://github.com/straight-shoota/sanitize.git
@@ -122,7 +122,7 @@ shards:
 
   vug:
     git: https://github.com/kritoke/vug.cr.git
-    version: 0.5.7+git.commit.75be79b2e963911104215a57d9943c54118a9808
+    version: 0.5.7+git.commit.11354f28d0de056c19c57e2d44717bb32b2de4e8
 
   xpath2:
     git: https://github.com/naqvis/crystal-xpath2.git

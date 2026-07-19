@@ -14,7 +14,7 @@ jobs:
       - name: Setup Crystal
         uses: crystal-lang/setup-crystal@v2
         with:
-          crystal_version: 1.18.2
+          crystal_version: 1.19.1
 
       - name: Install system dependencies
         run: sudo apt-get install -y libsqlite3-dev libssl-dev libmagic-dev
@@ -47,7 +47,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: "22"
 
       - name: Install pnpm
         run: npm install -g pnpm@9
@@ -67,7 +67,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: "22"
 
       - name: Install pnpm
         run: npm install -g pnpm@9
@@ -75,7 +75,7 @@ jobs:
       - name: Setup Crystal
         uses: crystal-lang/setup-crystal@v2
         with:
-          crystal_version: 1.18.2
+          crystal_version: 1.19.1
 
       - name: Install system dependencies
         run: sudo apt-get install -y libsqlite3-dev libssl-dev libmagic-dev

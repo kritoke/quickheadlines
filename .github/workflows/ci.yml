@@ -3,9 +3,9 @@ permissions: {}
 
 on:
   push:
-    branches: [ main, master ]
+    branches: [main, master]
   pull_request:
-    branches: [ main, master ]
+    branches: [main, master]
 
 jobs:
   test-ubuntu:
@@ -20,7 +20,7 @@ jobs:
       - name: Install Crystal
         uses: crystal-lang/install-crystal@v1
         with:
-          crystal: 1.18.2
+          crystal: 1.19.1
 
       - name: Install system dependencies
         run: |
@@ -35,7 +35,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: "22"
 
       - name: Install pnpm
         run: npm install -g pnpm@9
@@ -70,7 +70,7 @@ jobs:
       - name: Install Crystal
         uses: crystal-lang/install-crystal@v1
         with:
-          crystal: 1.18.2
+          crystal: 1.19.1
 
       - name: Install OpenSSL and libmagic
         run: |
@@ -80,7 +80,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: "22"
 
       - name: Install pnpm
         run: npm install -g pnpm@9
