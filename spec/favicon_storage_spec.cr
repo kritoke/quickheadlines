@@ -65,11 +65,11 @@ describe "FaviconActor pure helpers" do
     it "parses a single-frame 16x16 ICO" do
       # 6-byte header + 16-byte directory entry: width=16, height=16
       ico = Bytes[
-        0x00, 0x00, 0x01, 0x00, 0x01, 0x00,            # header: 1 frame
-        0x10, 0x10, 0x00, 0x00,                          # 16x16, 0 colors, reserved
-        0x01, 0x00, 0x20, 0x00,                          # 1 color plane, 32bpp
-        0x00, 0x10, 0x00, 0x00,                          # image size (4096 bytes)
-        0x16, 0x00, 0x00, 0x00,                          # offset in file (22)
+        0x00, 0x00, 0x01, 0x00, 0x01, 0x00, # header: 1 frame
+        0x10, 0x10, 0x00, 0x00,             # 16x16, 0 colors, reserved
+        0x01, 0x00, 0x20, 0x00,             # 1 color plane, 32bpp
+        0x00, 0x10, 0x00, 0x00,             # image size (4096 bytes)
+        0x16, 0x00, 0x00, 0x00,             # offset in file (22)
       ]
       info = FaviconActor.parse_ico_info(ico)
       info.should_not be_nil

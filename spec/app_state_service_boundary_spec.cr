@@ -83,10 +83,10 @@ describe "AppStateService boundary" do
 
     it "tracks clustering state" do
       service = create_app_state_service
-      service.set_clustering(true)
+      service.clustering = true
       service.clustering?.should be_true
 
-      service.set_clustering(false)
+      service.clustering = false
       service.clustering?.should be_false
     end
   end
@@ -99,7 +99,7 @@ describe "AppStateService boundary" do
 
     it "tracks refreshing state" do
       service = create_app_state_service
-      service.set_refreshing(true)
+      service.refreshing = true
       service.refreshing?.should be_true
     end
   end
@@ -116,8 +116,8 @@ describe "AppStateService boundary" do
     it "resets to initial state" do
       service = create_app_state_service
       service.update(&.copy_with(feeds: [state_sample_feed], config_title: "Custom"))
-      service.set_clustering(true)
-      service.set_refreshing(true)
+      service.clustering = true
+      service.refreshing = true
 
       service.clear
       state = service.get
@@ -129,10 +129,10 @@ describe "AppStateService boundary" do
     end
   end
 
-  describe "#set_config_title" do
+  describe "#config_title=" do
     it "updates config title" do
       service = create_app_state_service
-      service.set_config_title("My RSS Reader")
+      service.config_title = "My RSS Reader"
 
       service.config_title.should eq("My RSS Reader")
     end
