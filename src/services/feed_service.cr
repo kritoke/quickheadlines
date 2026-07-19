@@ -227,7 +227,7 @@ module QuickHeadlines::Services
       tabs_response = tabs_snapshot.map { |tab| QuickHeadlines::DTOs::TabResponse.new(name: tab.name) }
 
       feed_pairs = collect_feed_pairs(feeds_snapshot, tabs_snapshot, active_tab)
-      all_urls = feed_pairs.map { |pair| pair[:feed].url }
+      all_urls = feed_pairs.map(&.[:feed].url)
       item_counts = cache.item_counts(all_urls)
 
       feeds_response = feed_pairs.map do |entry|

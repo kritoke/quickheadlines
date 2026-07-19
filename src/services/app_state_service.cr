@@ -110,7 +110,7 @@ module QuickHeadlines::Services
       @clustering.get
     end
 
-    def set_clustering(value : Bool) : Nil
+    def clustering=(value : Bool) : Nil
       @clustering.set(value)
       if value
         TaskMetadata.set_clustering_started
@@ -138,13 +138,13 @@ module QuickHeadlines::Services
       @refreshing.get
     end
 
-    def set_refreshing(value : Bool) : Nil
+    def refreshing=(value : Bool) : Nil
       @refreshing.set(value)
       # Also sync to snapshot for backward-compatible API consumers
       update(&.copy_with(refreshing: value))
     end
 
-    def set_config_title(value : String) : Nil
+    def config_title=(value : String) : Nil
       update(&.copy_with(config_title: value))
     end
 

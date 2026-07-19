@@ -110,7 +110,7 @@ module StateStore
   end
 
   def self.clustering=(value : Bool)
-    service.set_clustering(value)
+    service.clustering = value
   end
 
   def self.start_clustering_if_idle : Bool
@@ -122,11 +122,11 @@ module StateStore
   end
 
   def self.refreshing=(value : Bool)
-    service.set_refreshing(value)
+    service.refreshing = value
   end
 
   def self.config_title=(value : String)
-    service.set_config_title(value)
+    service.config_title = value
   end
 
   def self.clear : Nil

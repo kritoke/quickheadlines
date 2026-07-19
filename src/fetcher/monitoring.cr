@@ -99,14 +99,12 @@ module RefreshLoop::Monitoring
 
   # Initialize RSS tracking (call once at startup)
   def self.init_rss_tracking : Nil
-    begin
-      @@startup_rss_mb = MemoryManagerActor.instance.get_memory_status.rss_mb
-      @@last_rss_mb = @@startup_rss_mb
-      @@last_report_time = Time.utc
-      Log.for("quickheadlines.memory").info { "RSS tracking initialized: #{@@startup_rss_mb.round(1)}MB" }
-    rescue ex
-      Log.for("quickheadlines.memory").warn { "Failed to init RSS tracking: #{ex.message}" }
-    end
+    @@startup_rss_mb = MemoryManagerActor.instance.get_memory_status.rss_mb
+    @@last_rss_mb = @@startup_rss_mb
+    @@last_report_time = Time.utc
+    Log.for("quickheadlines.memory").info { "RSS tracking initialized: #{@@startup_rss_mb.round(1)}MB" }
+  rescue ex
+    Log.for("quickheadlines.memory").warn { "Failed to init RSS tracking: #{ex.message}" }
   end
 
   # ---------------------------------------------------------------------

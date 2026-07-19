@@ -7,6 +7,7 @@ module RefreshLoop
     fun GC_gcollect_and_unmap : Void
   end
 end
+
 require "../models"
 require "../storage"
 require "../software_fetcher"

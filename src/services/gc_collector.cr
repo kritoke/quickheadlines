@@ -22,7 +22,7 @@ module RefreshLoop::GCCollector
     Log.for("quickheadlines.gc").info { "GC force_unmap enabled" }
   end
 
-  def self.set_free_space_divisor(divisor : Int32) : Nil
+  def self.free_space_divisor=(divisor : Int32) : Nil
     LibGC.GC_set_free_space_divisor(divisor)
   end
 

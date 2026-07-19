@@ -64,7 +64,7 @@ begin
   # A cap causes OOM during concurrent fetch (214 feeds × fibers).
 
   # Higher divisor = more aggressive collection (default is 3)
-  RefreshLoop::GCCollector.set_free_space_divisor(8)
+  RefreshLoop::GCCollector.free_space_divisor = 8
 
   stats = GC.stats
   Log.for("quickheadlines.gc").info do

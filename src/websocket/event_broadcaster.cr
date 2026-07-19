@@ -100,7 +100,7 @@ class EventBroadcaster
           failed_clients << client
         end
       end
-      failed_clients.each { |c| @@clients.delete(c) }
+      failed_clients.each { |client| @@clients.delete(client) }
 
       # Notify subscriber channels — collect failures, delete after iteration
       failed_subs = [] of SubscribeMessage
@@ -111,7 +111,7 @@ class EventBroadcaster
           failed_subs << sub
         end
       end
-      failed_subs.each { |s| @@subscribers.delete(s) }
+      failed_subs.each { |sub| @@subscribers.delete(sub) }
     end
   end
 

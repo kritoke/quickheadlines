@@ -259,7 +259,6 @@ module RefreshLoop
           elsif refresh_all_duration > LONG_REFRESH_DURATION_WARN.total_seconds
             Log.for("quickheadlines.feed").warn { "refresh_all took #{refresh_all_duration.round(2)}s - long duration" }
           end
-          cfg = nil
         rescue CancelError
           Log.for("quickheadlines.feed").warn { "Refresh worker cancelled by supervisor" }
           RefreshLoop::Monitoring.record_failure
