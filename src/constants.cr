@@ -1,5 +1,5 @@
 module QuickHeadlines::Constants
-  CONCURRENCY               =   1
+  CONCURRENCY               =   4
   CACHE_RETENTION_HOURS     = 168
   CACHE_RETENTION_DAYS      = CACHE_RETENTION_HOURS // 24
   DB_SIZE_WARNING_THRESHOLD = 50 * 1024 * 1024
@@ -62,9 +62,9 @@ module QuickHeadlines::Constants
 
   SQLITE_BUSY_TIMEOUT_MS = 30000
 
-  NORMALIZE_BATCH_SIZE =  500
-  MAX_FEED_ITEMS_LOAD  =  100
-  DB_MAX_POOL_SIZE     =    4
+  NORMALIZE_BATCH_SIZE = 500
+  MAX_FEED_ITEMS_LOAD  = 100
+  DB_MAX_POOL_SIZE     =   4
   # WAL checkpoint threshold - smaller value = more frequent checkpoints = less WAL growth
   WAL_AUTOCHECKPOINT_PAGES = 1000
 
