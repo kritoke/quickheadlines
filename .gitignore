@@ -122,5 +122,6 @@ planning/
 # Local Pi runtime state
 .atl/
 .pi/
+.pi-lens/
 .catseye.toml
 .catseye/
