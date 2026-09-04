@@ -1,0 +1,14 @@
+{
+  "assignee": "",
+  "blocked_by": [],
+  "blocks": [],
+  "created": "2026-09-04T11:02:43Z",
+  "description": "svelte-check reports 7 errors in 3 files (was 8; the 4-column grid fix removed one). npm run check is not part of CI, so these accumulated silently. Fix the three files, then add svelte-check to CI so it stays at zero. Mermaid: graph LR; A[CrystalBadge] --\u003e D[CI gate]; B[tokens index] --\u003e D; C[toast timers] --\u003e D.",
+  "id": "quickhea-90g",
+  "labels": [],
+  "priority": 2,
+  "status": "open",
+  "title": "Frontend svelte-check cleanup (7 type errors)",
+  "type": "epic",
+  "updated_at": "2026-09-04T11:02:43Z"
+}
