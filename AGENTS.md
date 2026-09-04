@@ -45,7 +45,7 @@ nix develop . --command ticket ready              # List tickets with deps resol
 ### 1. The Core Agent Directive
 
 > Execution Context:
-> This project is a Nix Spoke. You are running inside a persistent Hub, but the project-specific tools (Crystal 1.18.2, Node.js 22, pnpm) are isolated.
+> This project is a Nix Spoke. You are running inside a persistent Hub, but the project-specific tools (Crystal 1.19.1, Node.js 22, pnpm) are isolated.
 > Rule: For ANY shell command execution (compiling, testing, formatting), you MUST run commands inside the nix devshell. Prefer either: (A) call `just` recipes from inside the devshell (recommended), or (B) use the devshell `--command` with the working-directory semantics your tooling supports.
 > - Recommended: `just nix-build` or `nix develop . --command crystal spec`
 > - Incorrect: `crystal spec` (without devshell)
@@ -53,7 +53,7 @@ nix develop . --command ticket ready              # List tickets with deps resol
 
 ### 2. The Library/Linker Workaround
 
-Because Crystal 1.18.2 is manually derived and requires specific library paths:
+Because Crystal is provided by nixpkgs and requires specific library paths:
 
 > Library Path Handling:
 > If a command fails with a "library not found" error (e.g., libgc.so.1 or libevent), do not attempt to install packages via apt. Instead, verify that the command is being run through the nix develop wrapper, as the flake handles the LD_LIBRARY_PATH internally.
@@ -66,7 +66,7 @@ Because Crystal 1.18.2 is manually derived and requires specific library paths:
 ### 4. Why This Is Necessary
 
 OpenCode agents often try to be "helpful" by running commands directly in the shell they find themselves in. In this setup:
-- The Base Shell is your "Hub" (which has Go, Node, but NOT Crystal 1.18.2)
+- The Base Shell is your "Hub" (which has Go, Node, but NOT Crystal 1.19.1)
 - The Sub-Shell created by `nix develop . --command` has the "Spoke" tools
 
 If you don't use the prefix, you will get a `command not found: crystal` error, even though the file is right there in the project.
@@ -367,14 +367,15 @@ svelte_svelte-autofixer({
 
 ## Crystal Versioning & Platform Compatibility
 
-### Crystal 1.18.2 Requirement
+### Crystal 1.19.1 Baseline (nix dev path)
 
-This project requires **Crystal 1.18.2** for FreeBSD compatibility. The Athena framework dependency requires this specific version.
+This project's **nix dev toolchain** uses **Crystal 1.19.1**, provided by `pkgs.crystal` from the pinned `nixos-unstable` nixpkgs input. The Athena framework (`~> 0.22.0`) requires Crystal `~> 1.17` and is fully compatible with 1.19.1.
 
-**Why 1.18.2?**
-- FreeBSD's package system only has Crystal 1.18.2 available
-- Athena framework v0.21.x is compatible with Crystal 1.18.x
-- Crystal 1.19.x deprecates `Time.monotonic` (warnings only, still compiles)
+**Why 1.19.1 and not 1.20.x?**
+- nixpkgs (stable and unstable) currently tops out at Crystal **1.19.1**; **no nixpkgs revision packages Crystal 1.20.x yet**.
+- FreeBSD Ports officially ships Crystal 1.20.2, so the FreeBSD target may run newer; the `justfile` `CRYSTAL_VERSION` constant tracks the nix dev baseline (1.19.1) for the source-build fallback.
+- The 1.20.x upgrade is **intentionally deferred** until nixpkgs packages it; it is not blocked by anything in this project.
+- `Time.monotonic` (deprecated in 1.19) has been migrated to `Time.instant`.
 
 ## Debug Mode & Favicon Troubleshooting
 
