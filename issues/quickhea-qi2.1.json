@@ -1,0 +1,15 @@
+{
+  "assignee": "",
+  "blocked_by": [],
+  "blocks": [],
+  "created": "2026-09-04T10:27:15Z",
+  "description": "read_rss_mb is broken everywhere. Linux: the {% if flag?(:freebsd) %} branch is skipped so no /proc/self/status read happens at all; falls back to GC.stats.heap_size (Boehm committed heap, NOT resident set). FreeBSD: the branch parses Linux-style 'VmRSS:' from /proc/curproc/status, but FreeBSD procfs status has no such field, so the regex never matches and it also falls back. Consequences: PressureLevel thresholds (500/650/800) documented as 'RSS' are applied to GC heap size; heap_size also misses VmData growth (exactly what quickhea-alz investigates). Downstream consumers acting on the wrong number: memory_aware.cr (backpressure, fail-open to Low), monitoring.cr startup_rss_mb, refresh_supervisor, task_scheduler, app_state_service. Also: rescue fallback returns @last_rss_mb which is 0.0 before first success, masking read failures as Low pressure. Fix: read /proc/self/status VmRSS on Linux via flag?(:linux), use sysctl kern.proc or procstat on FreeBSD (or drop the bogus branch), return nil/raise on failure instead of 0.0, and document the metric per platform.",
+  "id": "quickhea-qi2.1",
+  "labels": [],
+  "parent": "quickhea-qi2",
+  "priority": 1,
+  "status": "open",
+  "title": "RSS never measured: metric is GC heap size on both platforms",
+  "type": "bug",
+  "updated_at": "2026-09-04T10:27:15Z"
+}
