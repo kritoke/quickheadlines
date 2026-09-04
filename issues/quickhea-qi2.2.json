@@ -1,6 +1,8 @@
 {
   "assignee": "",
-  "blocked_by": [],
+  "blocked_by": [
+    "quickhea-qi2.1"
+  ],
   "blocks": [],
   "created": "2026-09-04T10:27:15Z",
   "description": "@max_rss_mb (default 750) is stored by handle_set_threshold but nothing in the codebase ever reads it - calculate_pressure hardcodes 500/650/800 and set_threshold has zero callers. Misleading API: callers believe they tuned memory thresholds but nothing changes. Either derive calculate_pressure bands from @max_rss_mb and have callers use it, or delete set_threshold/CastSetThreshold/@max_rss_mb entirely. Coordinate with the RSS metric fix which touches the same code.",
@@ -11,5 +13,5 @@
   "status": "open",
   "title": "set_threshold/max_rss_mb is write-only dead config",
   "type": "task",
-  "updated_at": "2026-09-04T10:27:15Z"
+  "updated_at": "2026-09-04T10:27:16Z"
 }
