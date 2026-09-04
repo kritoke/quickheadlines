@@ -17,22 +17,22 @@ dependencies:
     version: ~> 0.23.0
   lexis-minhash:
     github: kritoke/lexis-minhash
-    commit: 9447f7f9c044b3eedbbb4ebccc4f2daf78f8ed01
+    version: ~> 0.5.1
   prismatiq:
     github: kritoke/prismatiq
-    commit: f42aa2187c9b038c6e744e1842a873fb75bb487c
+    version: ~> 0.7.3
   baked_file_system:
     github: schovi/baked_file_system
     version: ~> 0.14.0
   fetcher:
     github: kritoke/fetcher.cr
-    commit: 1d00f497c7aec98ed9ced1ab51bf3a7eb7857c14
+    version: ~> 0.9.21
   vug:
     github: kritoke/vug.cr
-    commit: 11354f28d0de056c19c57e2d44717bb32b2de4e8
+    version: ~> 0.5.8
   azurite:
     github: kritoke/azurite.cr
-    commit: 8c629b72bede1f0ba9244fee927b6a9a1ee4696b
+    version: ~> 0.1.1
 
 development_dependencies:
   ameba:
