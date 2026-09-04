@@ -1,0 +1,14 @@
+{
+  "assignee": "",
+  "blocked_by": [],
+  "blocks": [],
+  "created": "2026-09-04T10:27:14Z",
+  "description": "Analysis of src/services/memory_manager_actor.cr (498 lines, largest project source file). The file consolidates four unrelated responsibilities (memory monitoring, GC coordination, cleanup coordination, heap-dump diagnostics) and contains reliability defects in the memory metric itself. Highly relevant to in-progress P0 quickhea-alz (9GB VIRT leak): the 'RSS' metric that drives backpressure is actually GC heap size. Mermaid: graph LR; A[RSS metric fix] --\u003e B[wire thresholds]; D[extract HeapDumper] --\u003e C[harden dump_heap]",
+  "id": "quickhea-qi2",
+  "labels": [],
+  "priority": 2,
+  "status": "open",
+  "title": "memory_manager_actor.cr readability and reliability refactor",
+  "type": "epic",
+  "updated_at": "2026-09-04T10:27:14Z"
+}
