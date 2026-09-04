@@ -1,0 +1,15 @@
+{
+  "assignee": "",
+  "blocked_by": [],
+  "blocks": [],
+  "created": "2026-09-04T11:02:45Z",
+  "description": "npm run check (svelte-kit sync + svelte-check) exists in frontend/package.json but no workflow runs it - tests.yml only runs vitest, which is why 8 type errors accumulated unnoticed. Add a svelte-check step to .github/workflows/tests.yml (frontend job) once the three fix tickets land so the gate starts green; treat any new svelte-check error as a build failure going forward.",
+  "id": "quickhea-90g.4",
+  "labels": [],
+  "parent": "quickhea-90g",
+  "priority": 2,
+  "status": "open",
+  "title": "Add svelte-check to CI so type errors cannot accumulate silently",
+  "type": "task",
+  "updated_at": "2026-09-04T11:02:45Z"
+}
