@@ -15,11 +15,15 @@
     {
       "text": "\"Investigation:",
       "timestamp": "2026-06-03T02:16:20Z"
+    },
+    {
+      "text": "Related finding: quickhea-qi2.1 - MemoryManagerActor.read_rss_mb never measures actual RSS on any platform (Linux skips /proc entirely, FreeBSD branch parses Linux-format VmRSS that never matches; both fall back to GC.stats.heap_size). Any heap-growth analysis based on get_memory_status.rss_mb is looking at the wrong number, and heap_size won't see VmData growth.",
+      "timestamp": "2026-09-04T10:27:24Z"
     }
   ],
   "priority": 0,
   "status": "in_progress",
   "title": "Memory growth - 9GB VIRT after 1.5h runtime",
   "type": "task",
-  "updated_at": "2026-06-03T11:03:11Z"
+  "updated_at": "2026-09-04T10:27:24Z"
 }
