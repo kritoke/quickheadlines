@@ -57,18 +57,18 @@ end
 
 # Apply GC tuning early, before heavy allocations.
 begin
-  # Force unmapping freed pages on every GC collect.
-  RefreshLoop::GCCollector.enable_force_unmap
+  # NOTE: force_unmap / gcollect_and_unmap / compaction are intentionally NOT
+  # enabled — they return freed pages to the OS but race with C-library
+  # finalizers (libxml2/sqlite) on Boehm GC, causing a segfault during the
+  # finalization cycle. Plain GC.collect + free_space_divisor keeps the
+  # process stable (RSS plateaus instead of shrinking).
 
-  # No heap cap — compaction handles RSS growth.
-  # A cap causes OOM during concurrent fetch (214 feeds × fibers).
-
-  # Higher divisor = more aggressive collection (default is 3)
+  # No heap cap. Higher divisor = more aggressive collection (default is 3)
   RefreshLoop::GCCollector.free_space_divisor = 8
 
   stats = GC.stats
   Log.for("quickheadlines.gc").info do
-    "GC tuning applied: force_unmap=1, free_space_divisor=8, " \
+    "GC tuning applied: free_space_divisor=8, " \
     "heap=#{(stats.heap_size / 1024 / 1024).round(1)}MB, " \
     "free=#{(stats.free_bytes / 1024 / 1024).round(1)}MB, " \
     "unmapped=#{(stats.unmapped_bytes / 1024 / 1024).round(1)}MB"

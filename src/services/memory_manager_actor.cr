@@ -177,9 +177,10 @@ class MemoryManagerActor < Actor
         next if StateStore.refreshing?
 
         before = GC.stats
+        # Plain GC.collect only — GC_gcollect_and_unmap was removed because
+        # unmapping pages races with C-library finalizers (libxml2/sqlite)
+        # on Boehm GC and caused a segfault during the finalization cycle.
         GC.collect
-        GC.collect
-        QuickHeadlines::LibGC.GC_gcollect_and_unmap
         after = GC.stats
 
         before_mb = before.heap_size / (1024 * 1024)

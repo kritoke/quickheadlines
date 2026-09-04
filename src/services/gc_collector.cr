@@ -1,26 +1,23 @@
 # Garbage collection triggers for the refresh loop.
 #
-# Tracks when GC was last run and forces periodic compaction to
-# reclaim fragmented memory. Called by `RefreshLoop.refresh_all`
-# after each refresh cycle, and by the supervisor on memory pressure signals.
+# Runs a plain `GC.collect` after each refresh cycle. We intentionally do NOT
+# use `GC_gcollect_and_unmap`, heap compaction, or `force_unmap`: returning
+# freed pages to the OS races with C-library finalizers (libxml2, sqlite3) on
+# Boehm GC and caused a segfault during the finalization cycle
+# ("GC Warning: Finalization cycle involving (???)" was the last log before
+# the crash). Plain GC.collect reclaims dead objects within the heap without
+# unmapping pages, so RSS plateaus at the high-water mark instead of
+# shrinking — we trade memory reclamation for process stability.
+#
+# Called by `RefreshLoop.refresh_all` after each refresh cycle, and by the
+# supervisor on memory-pressure signals.
 module RefreshLoop::GCCollector
   lib LibGC
-    fun GC_set_force_unmap_on_gcollect(value : LibC::Int)
-    fun GC_gcollect_and_unmap : Void
-    fun GC_expand_hp(bytes : LibC::SizeT) : Void
     fun GC_set_free_space_divisor(divisor : LibC::Int)
   end
 
   @@last_gc_collect = Time.utc
-  @@last_compaction = Time.utc
   @@gc_runs : Int32 = 0
-
-  # Enable forced unmap on every GC collect.
-  # This is critical — without it, freed pages are never returned to the OS.
-  def self.enable_force_unmap : Nil
-    LibGC.GC_set_force_unmap_on_gcollect(1)
-    Log.for("quickheadlines.gc").info { "GC force_unmap enabled" }
-  end
 
   def self.free_space_divisor=(divisor : Int32) : Nil
     LibGC.GC_set_free_space_divisor(divisor)
@@ -36,64 +33,20 @@ module RefreshLoop::GCCollector
     end
   end
 
-  # Called after every refresh cycle. Runs GC + unmap to return freed pages to OS.
+  # Called after every refresh cycle. Plain GC.collect only — see module docs
+  # for why unmap/compaction are avoided.
   def self.collect_now : Nil
     GC.collect
-    # Explicitly call gcollect_and_unmap to return freed pages to OS.
-    # force_unmap flag doesn't seem to work on FreeBSD's Boehm GC.
-    # Multiple passes needed for fragmented heaps.
-    3.times { LibGC.GC_gcollect_and_unmap }
     @@last_gc_collect = Time.utc
     @@gc_runs += 1
     stats = GC.stats
     total_mb = stats.total_bytes / (1024 * 1024)
     heap_mb = stats.heap_size / (1024 * 1024)
     unmapped_mb = stats.unmapped_bytes / (1024 * 1024)
-    Log.for("quickheadlines.gc").debug { "GC + unmap after refresh (run #{@@gc_runs}): total=#{total_mb.round(1)}MB, heap=#{heap_mb.round(1)}MB, unmapped=#{unmapped_mb.round(1)}MB" }
-
-    # Compaction: every 3 cycles (~1.5 hours at 30min intervals), force the
-    # GC to relocate live objects to fewer pages and unmap the rest.
-    # Without this, Boehm GC keeps freed pages mapped because live objects
-    # are scattered across them (fragmentation).
-    # Also compact if heap is large (>2GB) or fragmented (>50% free).
-    stats = GC.stats
-    heap_mb = stats.heap_size / (1024 * 1024)
-    free_pct = stats.heap_size > 0 ? (stats.free_bytes.to_f / stats.heap_size * 100) : 0
-    if @@gc_runs % 3 == 0 || heap_mb > 2048 || free_pct > 50
-      Log.for("quickheadlines.gc").info { "Compaction triggered: heap=#{heap_mb}MB, free=#{free_pct.round(1)}%, runs=#{@@gc_runs}" }
-      compact_heap
-    end
-  end
-
-  # Force heap compaction: expand, collect, unmap.
-  # This relocates live objects to new pages and frees old pages back to OS.
-  private def self.compact_heap : Nil
-    before = GC.stats
-    Log.for("quickheadlines.gc").info do
-      "Compaction starting: heap=#{(before.heap_size / 1024 / 1024).round(1)}MB, " \
-      "free=#{(before.free_bytes / 1024 / 1024).round(1)}MB, " \
-      "unmapped=#{(before.unmapped_bytes / 1024 / 1024).round(1)}MB"
-    end
-
-    # Expand heap to give GC room to relocate live objects
-    LibGC.GC_expand_hp(64_u64 * 1024_u64 * 1024_u64)
-
-    # Multiple collection passes to fully relocate
-    3.times { GC.collect }
-    LibGC.GC_gcollect_and_unmap
-
-    after = GC.stats
-    @@last_compaction = Time.utc
-
-    Log.for("quickheadlines.gc").info do
-      "Compaction done: heap=#{(after.heap_size / 1024 / 1024).round(1)}MB, " \
-      "free=#{(after.free_bytes / 1024 / 1024).round(1)}MB, " \
-      "unmapped=#{(after.unmapped_bytes / 1024 / 1024).round(1)}MB, " \
-      "freed=#{((before.heap_size - after.heap_size + before.unmapped_bytes - after.unmapped_bytes) / 1024 / 1024).round(1)}MB"
-    end
+    Log.for("quickheadlines.gc").debug { "GC after refresh (run #{@@gc_runs}): total=#{total_mb.round(1)}MB, heap=#{heap_mb.round(1)}MB, unmapped=#{unmapped_mb.round(1)}MB" }
   end
 
   def self.stats : String
-    "gc_runs=#{@@gc_runs}, last_collect=#{@@last_gc_collect}, last_compaction=#{@@last_compaction}"
+    "gc_runs=#{@@gc_runs}, last_collect=#{@@last_gc_collect}"
   end
 end
