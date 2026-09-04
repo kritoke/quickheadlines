@@ -1,0 +1,15 @@
+{
+  "assignee": "",
+  "blocked_by": [],
+  "blocks": [],
+  "created": "2026-09-04T10:27:16Z",
+  "description": "Three DRY violations: (1) run_normal_cleanup and run_aggressive_cleanup are byte-identical apart from the level symbol - parameterize into run_cleanup(level); keep emergency separate (3x GC + sleeps). (2) The begin/rescue/log-continue pattern is repeated in clear_system_caches (twice), run_registered_handlers, and elsewhere - extract a safe(label : String, \u0026block) helper that logs and swallows. (3) Emergency cleanup blocking the actor mailbox 300ms+ with 3x GC.collect + sleep is worth a comment documenting the tradeoff. Also fix self.reset which uses 'inst.shutdown rescue nil' (inline rescue swallows everything including real shutdown bugs - use an explicit rescue block).",
+  "id": "quickhea-qi2.6",
+  "labels": [],
+  "parent": "quickhea-qi2",
+  "priority": 3,
+  "status": "open",
+  "title": "DRY cleanup strategies and error-swallow blocks",
+  "type": "task",
+  "updated_at": "2026-09-04T10:27:16Z"
+}
