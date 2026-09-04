@@ -2,13 +2,14 @@
   "assignee": "kritoke",
   "blocked_by": [],
   "blocks": [],
+  "closed_at": "2026-09-04T10:44:32Z",
   "created": "2026-09-04T10:38:07Z",
   "description": "nixpkgs still ships 1.19.1 (1.20.2 PR unmerged), so provide crystal 1.21.0 via flake overlay using the official prebuilt linux-aarch64 tarball + autoPatchelfHook. Bump justfile CRYSTAL_VERSION, CI workflows (ci.yml, tests.yml, docker-image.yml), Dockerfile (crystallang/crystal:1.21.0, 84codes image), shard.yml crystal constraint, AGENTS.md versioning docs. Codebase already clean of 1.21 breaking changes (verified: no same_thread/on_tty_only/writeable/Process::Status.new/preview_mt/thread-locals; Time.monotonic already migrated to Time.instant). Execution contexts are default-on in 1.21 (parallelism 1, fibers may switch threads) - actor/Channel code unaffected since it makes no thread-pinning assumptions; Fiber.list still unavailable so FiberTracker stays.",
   "id": "quickhea-8l2",
   "labels": [],
   "priority": 2,
-  "status": "in_progress",
+  "status": "closed",
   "title": "Upgrade Crystal baseline to 1.21.0",
   "type": "task",
-  "updated_at": "2026-09-04T10:38:08Z"
+  "updated_at": "2026-09-04T10:44:32Z"
 }
