@@ -2,7 +2,8 @@
   "assignee": "",
   "blocked_by": [
     "quickhea-90g.1",
-    "quickhea-90g.2"
+    "quickhea-90g.2",
+    "quickhea-90g.3"
   ],
   "blocks": [],
   "created": "2026-09-04T11:02:45Z",
@@ -14,5 +15,5 @@
   "status": "open",
   "title": "Add svelte-check to CI so type errors cannot accumulate silently",
   "type": "task",
-  "updated_at": "2026-09-04T11:02:45Z"
+  "updated_at": "2026-09-04T11:02:46Z"
 }

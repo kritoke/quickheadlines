@@ -1,7 +1,9 @@
 {
   "assignee": "",
   "blocked_by": [],
-  "blocks": [],
+  "blocks": [
+    "quickhea-90g.4"
+  ],
   "created": "2026-09-04T11:02:44Z",
   "description": "svelte-check: 'Argument of type Timeout is not assignable to parameter of number' at src/lib/stores/toast.svelte.ts:72 and :75. timeoutIds is declared Set\u003cnumber\u003e (line 15) but setTimeout returns NodeJS.Timeout under the current tsconfig typings. Fix: type as Set\u003cReturnType\u003ctypeof setTimeout\u003e\u003e (robust across DOM/Node lib configs). Runtime works today only because happy-dom/vitest laxity - keep it type-clean.",
   "id": "quickhea-90g.3",
@@ -11,5 +13,5 @@
   "status": "open",
   "title": "toast.svelte.ts timer type mismatch (Timeout vs number)",
   "type": "bug",
-  "updated_at": "2026-09-04T11:02:44Z"
+  "updated_at": "2026-09-04T11:02:46Z"
 }
