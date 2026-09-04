@@ -39,6 +39,6 @@ development_dependencies:
     github: crystal-ameba/ameba
     branch: master
 
-crystal: ">= 1.19.0"
+crystal: ">= 1.21.0"
 
 license: AGPL-3.0

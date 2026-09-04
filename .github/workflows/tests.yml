@@ -14,7 +14,7 @@ jobs:
       - name: Setup Crystal
         uses: crystal-lang/setup-crystal@v2
         with:
-          crystal_version: 1.19.1
+          crystal_version: 1.21.0
 
       - name: Install system dependencies
         run: sudo apt-get install -y libsqlite3-dev libssl-dev libmagic-dev
@@ -75,7 +75,7 @@ jobs:
       - name: Setup Crystal
         uses: crystal-lang/setup-crystal@v2
         with:
-          crystal_version: 1.19.1
+          crystal_version: 1.21.0
 
       - name: Install system dependencies
         run: sudo apt-get install -y libsqlite3-dev libssl-dev libmagic-dev

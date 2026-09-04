@@ -18,7 +18,7 @@ RUN pnpm run build
 RUN cp static/logo.svg dist/ 2>/dev/null || true
 
 # Stage 2: Build Crystal binary
-FROM crystallang/crystal:1.19.1 AS builder
+FROM crystallang/crystal:1.21.0 AS builder
 
 WORKDIR /app
 

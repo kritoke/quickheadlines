@@ -45,8 +45,9 @@ nix develop . --command ticket ready              # List tickets with deps resol
 ### 1. The Core Agent Directive
 
 > Execution Context:
-> This project is a Nix Spoke. You are running inside a persistent Hub, but the project-specific tools (Crystal 1.19.1, Node.js 22, pnpm) are isolated.
+> This project is a Nix Spoke. You are running inside a persistent Hub, but the project-specific tools (Crystal 1.21.0, Node.js 22, pnpm) are isolated.
 > Rule: For ANY shell command execution (compiling, testing, formatting), you MUST run commands inside the nix devshell. Prefer either: (A) call `just` recipes from inside the devshell (recommended), or (B) use the devshell `--command` with the working-directory semantics your tooling supports.
+>
 > - Recommended: `just nix-build` or `nix develop . --command crystal spec`
 > - Incorrect: `crystal spec` (without devshell)
 > - Incorrect: `shards install` (without devshell)
@@ -66,7 +67,8 @@ Because Crystal is provided by nixpkgs and requires specific library paths:
 ### 4. Why This Is Necessary
 
 OpenCode agents often try to be "helpful" by running commands directly in the shell they find themselves in. In this setup:
-- The Base Shell is your "Hub" (which has Go, Node, but NOT Crystal 1.19.1)
+
+- The Base Shell is your "Hub" (which has Go, Node, but NOT Crystal 1.21.0)
 - The Sub-Shell created by `nix develop . --command` has the "Spoke" tools
 
 If you don't use the prefix, you will get a `command not found: crystal` error, even though the file is right there in the project.
@@ -77,6 +79,7 @@ If you don't use the prefix, you will get a `command not found: crystal` error, 
 > Before EVER saying a task is "done", "complete", "ready for review", or marking it as finished, you MUST run `just nix-build` and verify it succeeds.
 >
 > **Required command:**
+>
 > ```bash
 > just nix-build
 > ```
@@ -97,15 +100,18 @@ If you don't use the prefix, you will get a `command not found: crystal` error, 
 2. **Verify Work:** Run `nix develop . --command crystal spec` and `cd frontend && npm run test`
 3. **Archival:** Use `/opsx:archive <name>` for all completed changes.
 4. **PUSH TO REMOTE:**
+
     ```bash
     git pull --rebase
     git push
     git status  # MUST show "up to date with origin"
     ```
+
 5. **Clean up:** Clear stashes, prune remote branches.
 6. **Hand off:** Provide context for next session.
 
 **CRITICAL RULES:**
+
 - Work is NOT complete until `git push` succeeds.
 - NEVER stop before pushing - that leaves work stranded locally.
 - NEVER say "ready to push when you are" - YOU must push.
@@ -114,6 +120,7 @@ If you don't use the prefix, you will get a `command not found: crystal` error, 
 ## Building & Running QuickHeadlines
 
 ### The Golden Rule
+
 **ALWAYS use `just nix-build` for building. This ensures BakedFileSystem picks up new frontend assets.**
 
 ### Quick Reference
@@ -135,6 +142,7 @@ cd frontend && npm run test
 ### Why `just nix-build`?
 
 The `just nix-build` command:
+
 1. Builds the Svelte frontend (`npm run build`)
 2. Updates a timestamp in `src/web/assets.cr` to force BakedFileSystem recompilation
 3. Rebuilds the Crystal binary with fresh assets baked in
@@ -155,6 +163,7 @@ The `just nix-build` command:
 ### Environment Variables
 
 The nix develop shell sets these automatically:
+
 - `APP_ENV=development`
 - `LD_LIBRARY_PATH` - Includes Crystal dependencies
 - `PATH` - Includes crystal, shards, node, pnpm, make, openspec
@@ -164,7 +173,7 @@ The nix develop shell sets these automatically:
 1. **Crystal Backend** (`src/quickheadlines.cr`)
    - Compiled with `crystal build --release`
    - Uses BakedFileSystem to embed frontend assets
-   - Server listens on http://0.0.0.0:8080
+   - Server listens on <http://0.0.0.0:8080>
 
 2. **Svelte 5 Frontend** (`frontend/`)
    - Built with Vite to `frontend/dist/`
@@ -229,6 +238,7 @@ export const themeState = $state({
 **CRITICAL:** The Crystal binary MUST be rebuilt after any Svelte build changes.
 
 BakedFileSystem embeds files at **compile time**, not runtime. If you:
+
 1. Run `npm run build` in frontend/
 2. But don't rebuild the Crystal binary
 
@@ -244,6 +254,7 @@ nix develop . --command crystal build --release src/quickheadlines.cr -o bin/qui
 ```
 
 **Force rebuild when assets change:**
+
 ```bash
 touch src/web/assets.cr && nix develop . --command crystal build --release src/quickheadlines.cr -o bin/quickheadlines
 ```
@@ -257,6 +268,7 @@ just nix-build && just nix-build && just nix-build
 ```
 
 This is required because `just nix-build` touches `assets.cr` before each build, but the Svelte build output needs to propagate through multiple build cycles for:
+
 - Theme color changes
 - New CSS/Tailwind classes
 - Border beam or animation changes
@@ -367,14 +379,22 @@ svelte_svelte-autofixer({
 
 ## Crystal Versioning & Platform Compatibility
 
-### Crystal 1.19.1 Baseline (nix dev path)
+### Crystal 1.21.0 Baseline (nix dev path)
 
-This project's **nix dev toolchain** uses **Crystal 1.19.1**, provided by `pkgs.crystal` from the pinned `nixos-unstable` nixpkgs input. The Athena framework (`~> 0.22.0`) requires Crystal `~> 1.17` and is fully compatible with 1.19.1.
+This project's **nix dev toolchain** uses **Crystal 1.21.0**, provided by the `crystal1_21` overlay in `flake.nix` (official prebuilt tarball + `autoPatchelfHook`; statically-linked compiler ELF, stdlib under `lib/crystal`). The Athena framework (`~> 0.22.0`) requires Crystal `~> 1.17` and compiles cleanly on 1.21.0.
 
-**Why 1.19.1 and not 1.20.x?**
-- nixpkgs (stable and unstable) currently tops out at Crystal **1.19.1**; **no nixpkgs revision packages Crystal 1.20.x yet**.
-- FreeBSD Ports officially ships Crystal 1.20.2, so the FreeBSD target may run newer; the `justfile` `CRYSTAL_VERSION` constant tracks the nix dev baseline (1.19.1) for the source-build fallback.
-- The 1.20.x upgrade is **intentionally deferred** until nixpkgs packages it; it is not blocked by anything in this project.
+**Why an overlay?**
+
+- nixpkgs (stable and unstable) still tops out at **1.19.1** (a 1.20.2 PR is pending); no nixpkgs revision packages 1.21.x yet.
+- The overlay is a **separate attr** (`crystal1_21`) so nixpkgs' `crystal` — whose `passthru.buildCrystalPackage` is needed by the nixpkgs `shards` package — stays intact. The devshell symlinks `crystal`/`shards` from `crystal1_21` (the tarball ships a version-matched Shards 0.20.0).
+- **Swap the devshell back to `pkgs.crystal` once nixpkgs catches up**, then delete the overlay.
+- FreeBSD Ports ships newer Crystal; the `justfile` `CRYSTAL_VERSION` constant tracks the baseline (1.21.0) for the source-build fallback.
+
+**1.21.0 notes (execution contexts):**
+
+- Execution contexts are **enabled by default**: the default context has parallelism 1, but fibers may switch threads across yields/blocking syscalls. `spawn(same_thread: true)` is unsupported. This codebase's actor/Channel model makes no thread-pinning assumptions — verified by the full spec suite.
+- PCRE1 fallback is disabled (PCRE2 only) — fine on nix where `pcre2` is the only option.
+- `Fiber.list` is still unavailable; fiber visibility remains via `RefreshLoop::FiberTracker`.
 - `Time.monotonic` (deprecated in 1.19) has been migrated to `Time.instant`.
 
 ## Debug Mode & Favicon Troubleshooting
@@ -428,6 +448,7 @@ cd frontend && npx vitest run src/lib/stores/theme.test.ts
 ### Test Structure
 
 Tests are located in `frontend/src/lib/`:
+
 - `stores/theme.test.ts` - Theme store unit tests
 - `test/integration.test.ts` - API integration tests
 - `test/setup.ts` - Test environment setup (jest-dom)

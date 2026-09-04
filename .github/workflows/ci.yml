@@ -20,7 +20,7 @@ jobs:
       - name: Install Crystal
         uses: crystal-lang/install-crystal@v1
         with:
-          crystal: 1.19.1
+          crystal: 1.21.0
 
       - name: Install system dependencies
         run: |
@@ -70,7 +70,7 @@ jobs:
       - name: Install Crystal
         uses: crystal-lang/install-crystal@v1
         with:
-          crystal: 1.19.1
+          crystal: 1.21.0
 
       - name: Install OpenSSL and libmagic
         run: |

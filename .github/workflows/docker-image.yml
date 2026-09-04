@@ -178,7 +178,7 @@ jobs:
         run: |
           docker run --rm --platform linux/${{ matrix.arch == 'x64' && 'amd64' || 'arm64' }} \
             --entrypoint /bin/sh \
-            -v ${{ github.workspace }}:/app -w /app 84codes/crystal:1.19.1-ubuntu-22.04 \
+            -v ${{ github.workspace }}:/app -w /app 84codes/crystal:1.21.0-ubuntu-22.04 \
             -c "apt-get update && apt-get install -y libxml2-dev libssl-dev libyaml-dev libsqlite3-dev libmagic-dev curl make && \
             shards install --production && \
             mkdir -p /app/bin && \
@@ -206,7 +206,7 @@ jobs:
         if: matrix.target == 'macos'
         uses: crystal-lang/install-crystal@v1
         with:
-          crystal: 1.19.1
+          crystal: 1.21.0
 
       - name: Build Crystal binary (macOS)
         if: matrix.target == 'macos'
@@ -242,7 +242,7 @@ jobs:
       - name: Install shards (for caching)
         uses: crystal-lang/install-crystal@v1
         with:
-          crystal: 1.19.1
+          crystal: 1.21.0
 
       - name: Cache shards
         uses: actions/cache@v4

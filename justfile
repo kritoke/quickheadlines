@@ -6,8 +6,8 @@ set shell := ["/bin/sh", "-c"]
 
 # Variables
 NAME := "quickheadlines"
-CRYSTAL_VERSION := "1.19.1"
-BOOTSTRAP_CRYSTAL_VERSION := "1.19.1"
+CRYSTAL_VERSION := "1.21.0"
+BOOTSTRAP_CRYSTAL_VERSION := "1.21.0"
 VERSION := `grep '^version:' shard.yml | sed 's/version: *//' | tr -d ' '`
 BUILD_REV := "v" + VERSION
 
@@ -638,7 +638,7 @@ help:
     @echo "  - libmagic"
     @echo ""
     @echo "FreeBSD-specific notes:"
-    @echo "  - Uses system Crystal 1.19.1 (Athena-compatible)"
+    @echo "  - Uses system Crystal 1.21.0 (Athena-compatible)"
     @echo "  - Node.js required at build time only"
     @echo "  - Frontend is baked into binary (no runtime deps)"
     @echo ""
