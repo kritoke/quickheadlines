@@ -1,6 +1,8 @@
 {
   "assignee": "",
-  "blocked_by": [],
+  "blocked_by": [
+    "quickhea-qi2.3"
+  ],
   "blocks": [],
   "created": "2026-09-04T10:27:16Z",
   "description": "handle_dump_heap calls Process.run(gcore) unguarded. If gcore is not installed, FileNotFoundError propagates: actor run_loop logs it and moves on, but the reply channel is never signaled and deliver_error in actor.cr is a no-op, so the caller (admin_controller.cr:298) blocks for the full ACTOR_CALL_TIMEOUT_SECONDS=30 before CallTimeoutError - an HTTP admin request hangs half a minute. Also: gcore exit status is ignored (only File.exists? checked), no disk-space check before writing a multi-GB core to /tmp (can fill the disk on a memory-pressured box - the exact moment you need a dump), and the /tmp/qh-snap-%Y%m%dT%H%M%S timestamp has second-resolution collision. Fix: check gcore availability first (Process.find_executable), capture exit status, check free space on /tmp before deep dump, add microseconds to the dir name, wrap in begin/rescue returning an error string so callers always get a reply. Best done inside the extracted HeapDumper class.",
@@ -11,5 +13,5 @@
   "status": "open",
   "title": "Harden dump_heap: missing gcore stalls admin endpoint 30s",
   "type": "bug",
-  "updated_at": "2026-09-04T10:27:16Z"
+  "updated_at": "2026-09-04T10:27:17Z"
 }

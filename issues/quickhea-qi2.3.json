@@ -1,7 +1,9 @@
 {
   "assignee": "",
   "blocked_by": [],
-  "blocks": [],
+  "blocks": [
+    "quickhea-qi2.4"
+  ],
   "created": "2026-09-04T10:27:15Z",
   "description": "handle_dump_heap + safe_proc_read (~90 lines) are offline diagnostics, unrelated to memory monitoring or cleanup coordination. Extract to a plain class src/services/heap_dumper.cr (e.g. HeapDumper.dump(deep : Bool) : String) invoked from the actor handler - keeps actor serialization semantics while giving the dumper its own file, testable without an actor. While there: the nine sequential safe_proc_read calls should become a data-driven list of {proc_file, dest_name} pairs; and remove the dead QuickHeadlines::LibGC lib declaration at the top of memory_manager_actor.cr (duplicate of RefreshLoop::LibGC in refresh_loop.cr; nothing calls it - only a comment references it).",
   "id": "quickhea-qi2.3",
@@ -11,5 +13,5 @@
   "status": "open",
   "title": "Extract HeapDumper from MemoryManagerActor (SRP)",
   "type": "task",
-  "updated_at": "2026-09-04T10:27:15Z"
+  "updated_at": "2026-09-04T10:27:17Z"
 }
