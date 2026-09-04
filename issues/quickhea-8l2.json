@@ -1,5 +1,5 @@
 {
-  "assignee": "",
+  "assignee": "kritoke",
   "blocked_by": [],
   "blocks": [],
   "created": "2026-09-04T10:38:07Z",
@@ -7,8 +7,8 @@
   "id": "quickhea-8l2",
   "labels": [],
   "priority": 2,
-  "status": "open",
+  "status": "in_progress",
   "title": "Upgrade Crystal baseline to 1.21.0",
   "type": "task",
-  "updated_at": "2026-09-04T10:38:07Z"
+  "updated_at": "2026-09-04T10:38:08Z"
 }
