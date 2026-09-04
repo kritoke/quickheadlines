@@ -1,52 +1,50 @@
 /**
- * Grid system with responsive breakpoints
- * Use these instead of magic numbers for column counts
+ * Grid system with responsive breakpoints.
+ *
+ * IMPORTANT: All Tailwind class strings must be complete string literals in
+ * source code. Tailwind scans source text and never evaluates JavaScript, so
+ * dynamically constructed classes (`grid-cols-${n}`) are silently missing from
+ * the compiled CSS. That bug previously broke the 4-column timeline layout
+ * (`xl:grid-cols-4` was never generated and the grid fell back to 3 columns).
  */
 
 /**
- * Breakpoint definitions matching Tailwind defaults
+ * Timeline grid: multi-column only on large screens.
+ * getGridClass(4) → "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
  */
-export const breakpoints = {
-	base: '0px', // Mobile first
-	sm: '640px',
-	md: '768px',
-	lg: '1024px',
-	xl: '1280px',
-	'2xl': '1536px',
+const timelineGridClasses = {
+	1: 'grid-cols-1',
+	2: 'grid-cols-1 sm:grid-cols-2',
+	3: 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3',
+	4: 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4',
 } as const;
 
-export type BreakpointKey = keyof typeof breakpoints;
-
 /**
- * Grid column configurations
- * Each entry defines responsive column counts
+ * Feed grid: compact cards, so 4 columns kick in earlier (lg instead of xl).
+ * getFeedGridClass(4) → "grid-cols-1 sm:grid-cols-2 lg:grid-cols-4"
  */
-export const gridColumns = {
-	1: { base: 1 },
-	2: { base: 1, sm: 2 },
-	3: { base: 1, sm: 2, lg: 3 },
-	4: { base: 1, sm: 2, lg: 3, xl: 4 },
-	5: { base: 1, sm: 2, lg: 3, xl: 5 },
-	6: { base: 1, sm: 2, lg: 4, xl: 6 },
+const feedGridClasses = {
+	1: 'grid-cols-1',
+	2: 'grid-cols-1 sm:grid-cols-2',
+	3: 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3',
+	4: 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-4',
 } as const;
 
-export type GridColumnsKey = keyof typeof gridColumns;
+export type GridColumnsKey = keyof typeof timelineGridClasses;
+export type FeedGridColumnsKey = keyof typeof feedGridClasses;
 
-/**
- * Generate Tailwind grid classes from column configuration
- * Example: getGridClass(3) → "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3"
- */
+/** Timeline grid classes for the requested column count. */
 export function getGridClass(columns: GridColumnsKey): string {
-	const config = gridColumns[columns];
-	return Object.entries(config)
-		.map(([breakpoint, cols]) => {
-			return breakpoint === 'base' ? `grid-cols-${cols}` : `${breakpoint}:grid-cols-${cols}`;
-		})
-		.join(' ');
+	return timelineGridClasses[columns];
+}
+
+/** Feed page grid classes for the requested column count. */
+export function getFeedGridClass(columns: FeedGridColumnsKey): string {
+	return feedGridClasses[columns];
 }
 
 /**
- * Generate gap classes for consistent spacing in grids
+ * Gap classes for consistent spacing in grids
  */
 export const gap = {
 	none: 'gap-0',

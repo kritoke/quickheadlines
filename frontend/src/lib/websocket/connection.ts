@@ -55,7 +55,7 @@ function flushMessageQueue() {
 		if (queued) {
 			// Skip stale messages
 			if (now - queued.queuedAt > MAX_QUEUE_AGE_MS) {
-				logger.debug('[WebSocket] Skipping stale queued message');
+				logger.log('[WebSocket] Skipping stale queued message');
 				continue;
 			}
 			listeners.forEach(listener => {

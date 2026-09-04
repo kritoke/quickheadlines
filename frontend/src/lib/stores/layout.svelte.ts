@@ -1,5 +1,9 @@
 import { getStoredInt, setStoredValue } from "$lib/utils/storage";
 
+// Grid classes live in tokens/grid.ts as complete string literals so Tailwind
+// can see them; re-exported here for existing importers.
+export { getFeedGridClass } from "$lib/tokens/grid";
+
 export type ColumnCount = 1 | 2 | 3 | 4;
 
 const VALID_TIMELINE_COLUMNS = new Set(["1", "2", "3", "4"]);
@@ -45,10 +49,4 @@ export function setTimelineColumns(count: ColumnCount) {
 export function setFeedColumns(count: ColumnCount) {
 	layoutState.feedColumns = count;
 	setStoredValue("quickheadlines-feed-columns", String(count));
-}
-
-export function getFeedGridClass(cols: number): string {
-	if (cols <= 2) return "grid-cols-1 sm:grid-cols-2";
-	if (cols === 3) return "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3";
-	return "grid-cols-1 sm:grid-cols-2 lg:grid-cols-4";
 }

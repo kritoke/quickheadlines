@@ -5,10 +5,12 @@
 
 	let isMobile = $derived(breakpointState.isMobile);
 
+	// Complete string literals so Tailwind's source scanner generates the classes
 	function getColumnBlocks(count: number): string {
 		if (count === 1) return 'grid-cols-1';
 		if (count === 2) return 'grid-cols-2';
-		return 'grid-cols-3';
+		if (count === 3) return 'grid-cols-3';
+		return 'grid-cols-4';
 	}
 
 	interface ColumnOptionData {
