@@ -16,15 +16,15 @@
   "pnpm": {
     "onlyBuiltDependencies": [
       "esbuild"
-    ]
-  },
-  "overrides": {
-    "cookie": ">=0.7.0"
+    ],
+    "overrides": {
+      "cookie": ">=0.7.0"
+    }
   },
   "dependencies": {
-    "@sveltejs/kit": "^2.70.1",
+    "@sveltejs/kit": "^2.70.2",
     "@tailwindcss/typography": "^0.5.20",
-    "dompurify": "^3.4.12",
+    "dompurify": "^3.4.13",
     "svelte": "^5.56.7",
     "typescript": "^6.0.3",
     "vite": "^6.4.3"
@@ -46,7 +46,7 @@
     "autoprefixer": "^10.5.4",
     "clsx": "^2.1.1",
     "happy-dom": "^20.11.0",
-    "postcss": "^8.5.21",
+    "postcss": "^8.5.23",
     "svelte-check": "^4.7.3",
     "tailwind-merge": "^3.6.0",
     "tailwindcss": "^4.3.3",
