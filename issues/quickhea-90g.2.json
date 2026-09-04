@@ -1,7 +1,9 @@
 {
   "assignee": "",
   "blocked_by": [],
-  "blocks": [],
+  "blocks": [
+    "quickhea-90g.4"
+  ],
   "created": "2026-09-04T11:02:44Z",
   "description": "svelte-check: 'Cannot find name' x3 at src/lib/tokens/index.ts:29-31. generateAllCssVars() calls spacingToCss(), radiusToCss(), shadowsToCss() which exist in ./spacing, ./radius, ./shadows but are never imported - only the spacing/radius objects are. The function is broken at runtime (ReferenceError if ever called). Fix: add the three functions to the import statements. Also verify nothing else consumes the missing names, and check whether the now-unused spacing/radius object imports below are actually used (semanticSpacing).",
   "id": "quickhea-90g.2",
@@ -11,5 +13,5 @@
   "status": "open",
   "title": "tokens/index.ts generateAllCssVars references unimported functions",
   "type": "bug",
-  "updated_at": "2026-09-04T11:02:44Z"
+  "updated_at": "2026-09-04T11:02:45Z"
 }
