@@ -1,0 +1,15 @@
+{
+  "assignee": "",
+  "blocked_by": [],
+  "blocks": [],
+  "created": "2026-09-04T11:02:44Z",
+  "description": "svelte-check: 'Expected 0 arguments, but got 1' at src/lib/components/CrystalBadge.svelte:21 and :32. isDarkTheme() was changed to a 0-arg function (reads themeState.theme internally, theme.svelte.ts:65) but these two call sites still pass themeState.theme. Fix: isDarkTheme(themeState.theme) -\u003e isDarkTheme(). Note the calls are inside $effect, so reactivity is preserved (TimelineView.svelte:40 already uses the 0-arg form correctly).",
+  "id": "quickhea-90g.1",
+  "labels": [],
+  "parent": "quickhea-90g",
+  "priority": 2,
+  "status": "open",
+  "title": "CrystalBadge passes stale arg to 0-arg isDarkTheme",
+  "type": "bug",
+  "updated_at": "2026-09-04T11:02:44Z"
+}
