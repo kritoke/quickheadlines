@@ -1,0 +1,15 @@
+{
+  "assignee": "",
+  "blocked_by": [],
+  "blocks": [],
+  "created": "2026-09-04T10:27:16Z",
+  "description": "MemoryStatus and CleanupStatus live inside the actor class with hand-rolled to_json/from_json (~80 lines). Project convention already keeps DTOs in src/dtos/ (api_responses.cr). Move MemoryStatus, CleanupStatus, PressureLevel, CleanupPriority to src/dtos/memory_dtos.cr and replace hand-rolled serialization with JSON::Serializable (from_json parsing then also becomes automatic and consistent - note both structs also accept a missing last_gc_time/last_priority key inconsistently via obj[...]?.try).",
+  "id": "quickhea-qi2.5",
+  "labels": [],
+  "parent": "quickhea-qi2",
+  "priority": 3,
+  "status": "open",
+  "title": "Move memory DTOs to src/dtos and use JSON::Serializable",
+  "type": "task",
+  "updated_at": "2026-09-04T10:27:16Z"
+}
