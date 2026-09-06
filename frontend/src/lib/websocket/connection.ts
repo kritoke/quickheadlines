@@ -1,22 +1,17 @@
-export type ConnectionState = "connecting" | "connected" | "disconnected";
+export type ConnectionState = 'connecting' | 'connected' | 'disconnected';
 
 export type WebSocketMessage = {
-	type: "feed_update" | "heartbeat" | "clustering_status";
+	type: 'feed_update' | 'heartbeat' | 'clustering_status';
 	timestamp: number;
 	is_clustering?: boolean;
 };
 
-import { logger } from "$lib/utils/debug";
-import {
-	setConnectionState,
-	setLatency,
-	incrementReconnectAttempts,
-	resetReconnectAttempts,
-} from "$lib/stores/connection.svelte";
+import { logger } from '$lib/utils/debug';
+import { setConnectionState, setLatency, incrementReconnectAttempts, resetReconnectAttempts } from '$lib/stores/connection.svelte';
 
 // Shared WebSocket connection instance
 let sharedConnection: WebSocket | null = null;
-let sharedState: ConnectionState = "disconnected";
+let sharedState: ConnectionState = 'disconnected';
 let reconnectTimeout: ReturnType<typeof setTimeout> | null = null;
 let intentionalClose = false;
 const reconnectListeners = new Set<() => void>();
@@ -60,15 +55,11 @@ function flushMessageQueue() {
 		if (queued) {
 			// Skip stale messages
 			if (now - queued.queuedAt > MAX_QUEUE_AGE_MS) {
-				logger.log("[WebSocket] Skipping stale queued message");
+				logger.log('[WebSocket] Skipping stale queued message');
 				continue;
 			}
-			listeners.forEach((listener) => {
-				try {
-					listener(queued.message);
-				} catch (err) {
-					logger.error("[WebSocket] Listener error:", err);
-				}
+			listeners.forEach(listener => {
+				try { listener(queued.message); } catch (err) { logger.error('[WebSocket] Listener error:', err); }
 			});
 		}
 	}
@@ -76,15 +67,12 @@ function flushMessageQueue() {
 
 function queueMessage(message: WebSocketMessage) {
 	const now = Date.now();
-
+	
 	// Remove stale messages when adding new ones
-	while (
-		messageQueue.length > 0 &&
-		now - messageQueue[0].queuedAt > MAX_QUEUE_AGE_MS
-	) {
+	while (messageQueue.length > 0 && now - messageQueue[0].queuedAt > MAX_QUEUE_AGE_MS) {
 		messageQueue.shift();
 	}
-
+	
 	if (messageQueue.length < MAX_QUEUE_SIZE) {
 		messageQueue.push({ message, queuedAt: now });
 	}
@@ -105,9 +93,7 @@ function scheduleReconnect() {
 
 	const delay = calculateDelay();
 	incrementReconnectAttempts();
-	logger.log(
-		`[WebSocket] Reconnecting in ${Math.round(delay)}ms (current delay: ${currentDelayMs}ms)`,
-	);
+	logger.log(`[WebSocket] Reconnecting in ${Math.round(delay)}ms (current delay: ${currentDelayMs}ms)`);
 
 	reconnectTimeout = setTimeout(() => {
 		reconnectTimeout = null;
@@ -123,50 +109,50 @@ export function onReconnect(callback: () => void): () => void {
 // Helper to reset connection state after failure
 function resetConnectionState(): void {
 	sharedConnection = null;
-	sharedState = "disconnected";
-	setConnectionState("disconnected");
+	sharedState = 'disconnected';
+	setConnectionState('disconnected');
 }
 
 // Reconnection logic with exponential backoff
 function connectWebSocket() {
 	// Guard against multiple simultaneous connection attempts
-	if (sharedConnection || sharedState === "connecting") {
+	if (sharedConnection || sharedState === 'connecting') {
 		return;
 	}
-
+	
 	// Rate limit connection attempts
 	resetConnectAttemptsIfNeeded();
 	if (connectAttempts >= MAX_CONNECT_ATTEMPTS_PER_MINUTE) {
-		logger.warn("[WebSocket] Rate limited: too many connection attempts");
+		logger.warn('[WebSocket] Rate limited: too many connection attempts');
 		return;
 	}
 	connectAttempts++;
 
-	sharedState = "connecting";
-	setConnectionState("connecting");
+	sharedState = 'connecting';
+	setConnectionState('connecting');
 
-	const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+	const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
 	const wsUrl = `${protocol}://${window.location.host}/api/ws`;
 
 	try {
 		sharedConnection = new WebSocket(wsUrl);
 	} catch (e) {
-		logger.error("[WebSocket] Failed to create WebSocket:", e);
+		logger.error('[WebSocket] Failed to create WebSocket:', e);
 		resetConnectionState();
 		return;
 	}
 
 	sharedConnection.onopen = () => {
 		const wasReconnect = currentDelayMs > INITIAL_DELAY_MS;
-		sharedState = "connected";
-		setConnectionState("connected");
+		sharedState = 'connected';
+		setConnectionState('connected');
 		resetReconnectAttempts();
 		currentDelayMs = INITIAL_DELAY_MS; // Reset delay on successful connection
-		logger.log("[WebSocket] Connected");
+		logger.log('[WebSocket] Connected');
 
 		if (wasReconnect) {
-			logger.log("[WebSocket] Reconnected, calling hooks");
-			reconnectListeners.forEach((listener) => listener());
+			logger.log('[WebSocket] Reconnected, calling hooks');
+			reconnectListeners.forEach(listener => listener());
 		}
 
 		// Flush any queued messages
@@ -178,35 +164,31 @@ function connectWebSocket() {
 			const data: WebSocketMessage = JSON.parse(event.data);
 
 			// Track latency from heartbeats
-			if (data.type === "heartbeat") {
+			if (data.type === 'heartbeat') {
 				const latency = Date.now() - data.timestamp;
 				setLatency(latency);
 			}
 
 			// Dispatch to all registered listeners
-			listeners.forEach((listener) => {
-				try {
-					listener(data);
-				} catch (err) {
-					logger.error("[WebSocket] Listener error:", err);
-				}
+			listeners.forEach(listener => {
+				try { listener(data); } catch (err) { logger.error('[WebSocket] Listener error:', err); }
 			});
 		} catch (e) {
-			logger.error("[WebSocket] Failed to parse message:", e);
+			logger.error('[WebSocket] Failed to parse message:', e);
 		}
 	};
 
 	sharedConnection.onerror = (error) => {
-		logger.error("[WebSocket] Error:", error);
+		logger.error('[WebSocket] Error:', error);
 		// Error will trigger onclose, so we don't need to set state here
 	};
 
 	sharedConnection.onclose = () => {
-		const wasConnected = sharedState === "connected";
+		const wasConnected = sharedState === 'connected';
 		sharedConnection = null;
-		sharedState = "disconnected";
-		setConnectionState("disconnected");
-		logger.log("[WebSocket] Disconnected");
+		sharedState = 'disconnected';
+		setConnectionState('disconnected');
+		logger.log('[WebSocket] Disconnected');
 
 		if (!intentionalClose) {
 			// Increase delay for next attempt (exponential backoff)
@@ -226,9 +208,9 @@ export function getWebSocketConnection() {
 
 		connect() {
 			// Connect if disconnected or if connection attempt failed and we're stuck in 'connecting'
-			if (sharedState === "disconnected" || sharedState === "connecting") {
+			if (sharedState === 'disconnected' || sharedState === 'connecting') {
 				// If stuck in 'connecting', reset state first
-				if (sharedState === "connecting" && !sharedConnection) {
+				if (sharedState === 'connecting' && !sharedConnection) {
 					resetConnectionState();
 				}
 				connectWebSocket();
@@ -245,7 +227,7 @@ export function getWebSocketConnection() {
 				sharedConnection.close();
 				sharedConnection = null;
 			}
-			sharedState = "disconnected";
+			sharedState = 'disconnected';
 			// Reset delay on intentional disconnect
 			currentDelayMs = INITIAL_DELAY_MS;
 		},
@@ -277,7 +259,7 @@ export function getWebSocketConnection() {
 		// Get queue size (for debugging)
 		getQueueSize() {
 			return messageQueue.length;
-		},
+		}
 	};
 }
 
