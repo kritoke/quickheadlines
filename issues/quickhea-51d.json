@@ -1,0 +1,14 @@
+{
+  "assignee": "",
+  "blocked_by": [],
+  "blocks": [],
+  "created": "2026-09-06T16:36:00Z",
+  "description": "Production FreeBSD jail (source-synced build incl. d3319563 unmap removal) still crashes after 1-2 days, preceded by bursts of 'GC Warning: Finalization cycle involving (???)' (40-80 per refresh cycle, interleaved with feed upserts; present pre- and post-fix in Jul/Sep logs).\n\nEstablished: (1) NOT the unmap segfault - that fix is deployed. (2) Zero warnings on Linux after 2.5 production-scale refresh cycles (226 feeds) - reporting is FreeBSD-libgc-build specific, but per bdwgc docs finalization cycles are PERMANENT LEAKS (objects never finalized), so the underlying leak may be cross-platform and silent on Linux. (3) Working theory: finalizable stdlib objects (Socket#finalize, Regex PCRE2 finalize, XML Box closures) form cycles during feed fetch/parse; leak feeds quickhea-alz memory growth; jail memory ceiling kills the process = 'crash'. Stdlib finalizer inventory: socket.cr, regex/pcre2.cr, process.cr, yaml, pthread mutex/condvar. App+shard tree has only baked_file_system + crtemp finalize (not per-cycle).\n\nLanded: src/gc_diagnostics.cr - allocation-free GC warn proc that prints '[gc-diag] finalizable=0xADDR' after each warning (FreeBSD libgc message omits the address; the arg is passed separately). Deployed to VPS it will identify the leaking object's address pattern.\n\nNeeded from VPS: (a) new log lines with finalizable=0x addresses after 1-2 cycles, (b) dmesg//var/log/messages at crash - SIGSEGV vs SIGKILL(OOM/limit), (c) jail memory limits (jls/rlimits), (d) crystal version + libgc linkage of the VPS build, (e) uptime before death. Interim mitigation: scheduled restart every ~12h.",
+  "id": "quickhea-51d",
+  "labels": [],
+  "priority": 1,
+  "status": "open",
+  "title": "VPS FreeBSD jail: daily crash + Finalization cycle warning storm",
+  "type": "bug",
+  "updated_at": "2026-09-06T16:36:00Z"
+}
