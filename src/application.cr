@@ -1,5 +1,7 @@
 require "athena"
 
+require "./gc_diagnostics"
+
 require "./module"
 
 require "./services/gc_collector"
