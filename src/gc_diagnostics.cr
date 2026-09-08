@@ -22,32 +22,39 @@ private module GCDiagnostics
 
   HEX = "0123456789abcdef"
 
+  # Prefix of the one message stock Crystal deliberately suppresses
+  # (very-large-block spam); keep that behavior so diagnostics do not add noise.
+  SUPPRESSED = "GC Warning: Repeated allocation of very large block"
+
   def self.install : Nil
     LibGC.set_warn_proc ->(msg : LibC::Char*, v : LibGC::Word) do
       begin
-        # 1) Raw message via the same non-allocating path the stock filter uses.
-        Crystal::System.print_error msg, v
+        # Match the stock filter: suppress very-large-block spam. Implements
+        # String#starts_with? without allocating (GC callback context).
+        head = Slice.new(msg, Math.min(LibC.strlen(msg), SUPPRESSED.bytesize))
+        unless head == SUPPRESSED.to_slice
+          # 1) Raw message via the same non-allocating path the stock filter uses.
+          Crystal::System.print_error msg, v
 
-        # 2) Explicit pointer line (the FreeBSD build's message omits it).
-        i = 0
-        slice = @@buffer.to_slice
-        prefix = "  [gc-diag] finalizable=0x"
-        prefix.each_byte do |b|
-          slice[i] = b
+          # 2) Explicit pointer line (the FreeBSD build's message omits it).
+          i = 0
+          slice = @@buffer.to_slice
+          prefix = "  [gc-diag] finalizable=0x"
+          prefix.each_byte do |b|
+            slice[i] = b
+            i += 1
+          end
+          value = v
+          16.times do |shift|
+            digit = ((value >> ((15 - shift) * 4)) & 0xF).to_u8
+            next if shift < 15 && value < (1_u64 << ((15 - shift) * 4)) && digit == 0
+            slice[i] = HEX.to_unsafe[digit]
+            i += 1
+          end
+          slice[i] = 0xA_u8 # '\n'
           i += 1
+          Crystal::System.print_error slice[0, i]
         end
-        value = v
-        16.times do |shift|
-          digit = ((value >> ((15 - shift) * 4)) & 0xF).to_u8
-          next if shift < 15 && value < (1_u64 << ((15 - shift) * 4)) && digit == 0
-          slice[i] = HEX.to_unsafe[digit]
-          i += 1
-        end
-        slice[i] = 0x5A_u8 # 'Z'
-        i += 1
-        slice[i] = 0xA_u8 # '\n'
-        i += 1
-        Crystal::System.print_error slice[0, i]
       rescue
         # Never let diagnostics take the process down - GC context is fragile.
         # Static message only: interpolation would allocate inside the GC callback.
