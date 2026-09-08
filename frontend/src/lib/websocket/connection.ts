@@ -35,48 +35,8 @@ function resetConnectAttemptsIfNeeded(): void {
 	}
 }
 
-// Message queue for offline buffering
-interface QueuedMessage {
-	message: WebSocketMessage;
-	queuedAt: number;
-}
-
-const messageQueue: QueuedMessage[] = [];
-const MAX_QUEUE_SIZE = 100;
-const MAX_QUEUE_AGE_MS = 5 * 60 * 1000; // 5 minutes - messages older than this are stale
-
 // Event listeners for WebSocket messages
 const listeners = new Set<(message: WebSocketMessage) => void>();
-
-function flushMessageQueue() {
-	const now = Date.now();
-	while (messageQueue.length > 0) {
-		const queued = messageQueue.shift();
-		if (queued) {
-			// Skip stale messages
-			if (now - queued.queuedAt > MAX_QUEUE_AGE_MS) {
-				logger.log('[WebSocket] Skipping stale queued message');
-				continue;
-			}
-			listeners.forEach(listener => {
-				try { listener(queued.message); } catch (err) { logger.error('[WebSocket] Listener error:', err); }
-			});
-		}
-	}
-}
-
-function queueMessage(message: WebSocketMessage) {
-	const now = Date.now();
-	
-	// Remove stale messages when adding new ones
-	while (messageQueue.length > 0 && now - messageQueue[0].queuedAt > MAX_QUEUE_AGE_MS) {
-		messageQueue.shift();
-	}
-	
-	if (messageQueue.length < MAX_QUEUE_SIZE) {
-		messageQueue.push({ message, queuedAt: now });
-	}
-}
 
 // Calculate delay with jitter
 function calculateDelay(): number {
@@ -154,9 +114,6 @@ function connectWebSocket() {
 			logger.log('[WebSocket] Reconnected, calling hooks');
 			reconnectListeners.forEach(listener => listener());
 		}
-
-		// Flush any queued messages
-		flushMessageQueue();
 	};
 
 	sharedConnection.onmessage = (event) => {
@@ -184,7 +141,6 @@ function connectWebSocket() {
 	};
 
 	sharedConnection.onclose = () => {
-		const wasConnected = sharedState === 'connected';
 		sharedConnection = null;
 		sharedState = 'disconnected';
 		setConnectionState('disconnected');
@@ -254,11 +210,6 @@ export function getWebSocketConnection() {
 		// Get current backoff state (for debugging)
 		getBackoffDelay() {
 			return currentDelayMs;
-		},
-
-		// Get queue size (for debugging)
-		getQueueSize() {
-			return messageQueue.length;
 		}
 	};
 }
