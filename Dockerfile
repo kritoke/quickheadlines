@@ -23,7 +23,7 @@ FROM crystallang/crystal:1.21.0 AS builder
 WORKDIR /app
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    libmagic-dev libxml2-dev libssl-dev libyaml-dev libsqlite3-dev libreadline-dev curl git \
+    file libmagic-dev libxml2-dev libssl-dev libyaml-dev libsqlite3-dev libreadline-dev curl git \
     && rm -rf /var/lib/apt/lists/*
 
 COPY feeds.yml ./
