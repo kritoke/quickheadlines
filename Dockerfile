@@ -42,7 +42,28 @@ ENV CRYSTAL_WORKERS=4
 # Force BakedFileSystem to bake frontend by updating timestamp
 RUN sed -i 's/# Build:.*/# Build: '\"$(date -Iseconds)\"'/' src/web/assets.cr
 
-RUN APP_ENV=production crystal build --release --no-debug -Os -Dpreview_lto -Dversion=${BUILD_REV} src/quickheadlines.cr -o /app/server
+# Determine build revision: prefer build-arg, else shard.yml version, else git short commit, else 'unknown'
+RUN set -eux; \
+    BUILD_REV_FINAL="$BUILD_REV"; \
+    if [ "$BUILD_REV_FINAL" = "unknown" ] || [ -z "$BUILD_REV_FINAL" ]; then \
+      VERSION="$(grep '^version:' shard.yml 2>/dev/null | sed 's/version: *//' | tr -d ' ')"; \
+      if [ -n "$VERSION" ]; then \
+        BUILD_REV_FINAL="v$VERSION"; \
+      else \
+        if [ -d .git ]; then \
+          GIT_REV="$(git rev-parse --short HEAD 2>/dev/null || true)"; \
+          if [ -n "$GIT_REV" ]; then \
+            BUILD_REV_FINAL="$GIT_REV"; \
+          else \
+            BUILD_REV_FINAL="unknown"; \
+          fi; \
+        else \
+          BUILD_REV_FINAL="unknown"; \
+        fi; \
+      fi; \
+    fi; \
+    echo "Building with BUILD_REV=${BUILD_REV_FINAL}"; \
+    APP_ENV=production crystal build --release --no-debug -Os -Dpreview_lto -Dversion="${BUILD_REV_FINAL}" src/quickheadlines.cr -o /app/server
 
 # Verify the binary has baked assets
 RUN if file /app/server | grep -q "executable"; then \
