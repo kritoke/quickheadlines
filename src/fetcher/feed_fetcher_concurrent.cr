@@ -5,6 +5,7 @@ require "../constants"
 require "./feed_fetcher"
 require "./monitoring"
 require "./semaphore_pool"
+require "./adapter"
 require "../services/fiber_tracker"
 
 # Per-feed concurrent fetch logic used by the refresh loop.
@@ -134,7 +135,7 @@ module RefreshLoop
 
       RefreshLoop::FiberTracker.tracked_spawn("feed_fetch_inner_#{index}") do
         begin
-          fetch_result = FeedFetcher.instance.fetch(feed, config.item_limit, config.db_fetch_limit, previous_feed_data)
+          fetch_result = FetcherRegistry.impl.fetch(feed, config.item_limit, config.db_fetch_limit, previous_feed_data)
           result_channel.send(fetch_result)
         rescue Channel::ClosedError
           # The outer fiber already closed the channel — either
