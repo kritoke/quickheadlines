@@ -24,10 +24,29 @@ module QuickHeadlines
   Log = ::Log.for("quickheadlines")
 end
 
+# Only lets WebSocket upgrades through on a single path; everything else
+# falls through to the next handler as a normal HTTP request.
+class WebSocketPathHandler
+  include HTTP::Handler
+
+  def initialize(@path : String, @inner : HTTP::WebSocketHandler)
+  end
+
+  def call(context : HTTP::Server::Context)
+    if context.request.path == @path
+      @inner.next = self.next
+      @inner.call(context)
+    else
+      call_next(context)
+    end
+  end
+end
+
 class ClientIPHandler
   include HTTP::Handler
 
   def call(context : HTTP::Server::Context)
+    # Always overwrite: never let a client-supplied X-Client-IP through.
     context.request.headers["X-Client-IP"] = ::Utils.extract_client_ip(context.request)
     call_next(context)
   end
@@ -180,12 +199,18 @@ begin
 
     EventBroadcaster.add_client(ws)
 
+    # Inbound traffic counts as activity, so quiet-but-healthy clients aren't
+    # reaped by the stale-connection janitor between broadcasts.
+    ws.on_message { |_| SocketManager.instance.connection_activity(ws) }
+    ws.on_ping { |_| SocketManager.instance.connection_activity(ws) }
+    ws.on_pong { |_| SocketManager.instance.connection_activity(ws) }
+
     ws.on_close do
       SocketManager.instance.unregister(ws, ip)
       EventBroadcaster.remove_client(ws)
     end
   end
-  handlers << ws_handler
+  handlers << WebSocketPathHandler.new("/api/ws", ws_handler)
   Log.for("quickheadlines.websocket").info { "Enabled - clients can connect to ws://host/api/ws" }
 
   # Construct the server instance directly (instead of `ATH.run`)

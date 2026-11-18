@@ -1,3 +1,4 @@
+require "socket"
 require "http/client"
 require "uri"
 require "./constants"
@@ -61,6 +62,39 @@ module Utils
     false
   end
 
+  # True if the address is loopback, private (RFC1918 / fc00::/7), link-local,
+  # unspecified, CGNAT (100.64.0.0/10), or an IPv4-mapped form of any of those.
+  def self.non_public_ip?(ip : Socket::IPAddress) : Bool
+    return true if ip.loopback? || ip.private? || ip.link_local? || ip.unspecified?
+    addr = ip.address
+    if ip.family.inet6? && addr.downcase.starts_with?("::ffff:")
+      v4 = addr[7..]
+      return Socket::IPAddress.valid_v4?(v4) ? non_public_ip?(Socket::IPAddress.new(v4, 0)) : true
+    end
+    if ip.family.inet?
+      octets = addr.split('.').map(&.to_i)
+      return true if octets[0] == 0                                     # 0.0.0.0/8
+      return true if octets[0] == 100 && (64..127).includes?(octets[1]) # CGNAT
+    end
+    false
+  end
+
+  # Resolves `host` and returns true if ANY resolved address is non-public,
+  # or if resolution fails (fail closed). Use this before fetching any URL
+  # whose host comes from untrusted content (feeds, HTML).
+  def self.resolves_to_private?(host : String) : Bool
+    h = host.lchop('[').rchop(']')
+    return true if private_host?(h)
+    if Socket::IPAddress.valid?(h)
+      return non_public_ip?(Socket::IPAddress.new(h, 0))
+    end
+    addrs = Socket::Addrinfo.resolve(h, 80, type: Socket::Type::STREAM)
+    return true if addrs.empty?
+    addrs.any? { |a| non_public_ip?(a.ip_address) }
+  rescue Socket::Error | IO::Error | ArgumentError
+    true
+  end
+
   private def self.private_cidr_range?(host : String, min : Int32, max : Int32) : Bool
     parts = host.split('.')
     return false unless parts.size >= 2
@@ -105,27 +139,33 @@ module Utils
     MIME_TYPES[ext.downcase]? || "application/octet-stream"
   end
 
-  def self.extract_client_ip(request) : String
-    if ENV["TRUSTED_PROXY"]?
-      # SECURITY NOTE: This trusts X-Forwarded-For from any client.
-      # Only enable if your deployment ensures only trusted proxies can reach this server
-      # (e.g., firewall rules, VPN, or direct server access is blocked).
-      # For safer behavior, use X-Client-IP from your reverse proxy instead.
-      Log.for("quickheadlines.utils").warn { "TRUSTED_PROXY enabled - ensure only trusted proxies can reach this server" } if ENV["APP_ENV"]? && ENV["APP_ENV"] == "development"
+  # Returns the client IP for rate limiting / logging.
+  #
+  # The TCP peer address is authoritative. Client-supplied headers are only
+  # honored when TRUSTED_PROXY is set AND the peer itself is a private/loopback
+  # address (i.e. the request really came through a local reverse proxy). In that
+  # case the right-most X-Forwarded-For entry is used, since it is the one appended
+  # by the trusted proxy and cannot be forged by the client.
+  def self.extract_client_ip(request : HTTP::Request) : String
+    peer = peer_ip(request)
+
+    if ENV["TRUSTED_PROXY"]? && peer && private_host?(peer)
       if xff = request.headers["X-Forwarded-For"]?
-        if first_ip = xff.split(",").first?.try(&.strip)
-          # Additional validation: only trust X-Forwarded-For if it appears to be from an internal/proxy source
-          # (loopback, private range, or internal network). This prevents direct client IP spoofing.
-          if private_host?(first_ip) || first_ip == "localhost" || first_ip.starts_with?("127.") || first_ip.starts_with?("[::1")
-            Log.for("quickheadlines.utils").debug { "TRUSTED_PROXY: using X-Forwarded-For IP #{first_ip}" }
-            return first_ip
-          end
-          # For non-internal IPs, log and fall through to X-Client-IP
-          Log.for("quickheadlines.utils").debug { "TRUSTED_PROXY: X-Forwarded-For #{first_ip} not from internal range, using X-Client-IP" }
+        if forwarded = xff.split(',').map(&.strip).reject(&.empty?).last?
+          return forwarded
         end
       end
+      if real = request.headers["X-Real-IP"]?.try(&.strip)
+        return real unless real.empty?
+      end
     end
-    request.headers["X-Client-IP"]?.try(&.strip) || "unknown"
+
+    peer || "unknown"
+  end
+
+  def self.peer_ip(request : HTTP::Request) : String?
+    addr = request.remote_address
+    addr.is_a?(Socket::IPAddress) ? addr.address : nil
   end
 
   # Timing-safe string comparison to prevent timing attacks on auth tokens.

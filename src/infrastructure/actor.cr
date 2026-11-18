@@ -46,6 +46,10 @@ require "../services/fiber_tracker"
 # forever if the actor is deadlocked, crashed, or the mailbox is full.
 ACTOR_CALL_TIMEOUT_SECONDS = 30_i64
 
+# Prefix marking an error reply on a def_call reply channel. Valid JSON never
+# begins with a NUL byte, so this cannot collide with a real reply.
+ACTOR_ERROR_REPLY_PREFIX = "\u0000actor-error:"
+
 abstract class Actor
   abstract struct Message
   end
@@ -112,6 +116,8 @@ abstract class Actor
         rescue ex
           @messages_failed.add(1)
           Log.for("actor.#{@name}").error(exception: ex) { "Error processing #{message.class.name}" }
+          # Fail the caller immediately instead of leaving it to time out.
+          message.deliver_error("#{ex.class}: #{ex.message}") if message.is_a?(CallMessage)
         end
       rescue Channel::ClosedError
         break
@@ -137,6 +143,9 @@ abstract class Actor
   protected def _actor_call_with_timeout_json(reply_ch : Channel(String), timeout_seconds : Int64, & : String -> T) : T forall T
     select
     when json_str = reply_ch.receive
+      if json_str.starts_with?(ACTOR_ERROR_REPLY_PREFIX)
+        raise ActorCallError.new("Actor call failed: #{json_str[ACTOR_ERROR_REPLY_PREFIX.size..]}")
+      end
       yield json_str
     when timeout(timeout_seconds.seconds)
       raise CallTimeoutError.new("Actor call timed out after #{timeout_seconds}s")
@@ -250,6 +259,8 @@ macro def_call(call, return_type = nil)
       end
 
       def deliver_error(message : String) : Nil
+        @reply.send(ACTOR_ERROR_REPLY_PREFIX + message)
+      rescue Channel::ClosedError
       end
     end
 
@@ -294,6 +305,8 @@ macro def_call(call, return_type = nil)
       end
 
       def deliver_error(message : String) : Nil
+        @reply.send(ACTOR_ERROR_REPLY_PREFIX + message)
+      rescue Channel::ClosedError
       end
     end
 
@@ -310,4 +323,8 @@ end
 # Raised when a def_call message does not receive a reply within the timeout.
 # Indicates the actor is stuck, crashed, or the mailbox is saturated.
 class CallTimeoutError < Exception
+end
+
+# Raised in the caller when the actor's handler raised while processing a def_call.
+class ActorCallError < Exception
 end

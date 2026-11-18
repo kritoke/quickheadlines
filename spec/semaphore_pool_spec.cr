@@ -121,26 +121,45 @@ describe RefreshLoop::SemaphorePool do
       pool.repair.should eq(0)
     end
 
-    it "refills missing slots and returns the count refilled" do
+    it "does not refill slots that are still held" do
       pool = RefreshLoop::SemaphorePool.new(4)
       pool.acquire
       pool.acquire
       pool.health_status[:available].should eq(2)
 
-      refilled = pool.repair
-      refilled.should eq(2)
+      pool.repair.should eq(0)
+      pool.health_status[:available].should eq(2)
+
+      pool.release
+      pool.release
       pool.health_status[:available].should eq(4)
+    end
+
+    it "release never blocks even when the pool is already full" do
+      pool = RefreshLoop::SemaphorePool.new(2)
+      pool.acquire
+      pool.reset_for_testing # simulate an over-refill while a permit is held
+
+      done = Channel(Nil).new(1)
+      spawn do
+        pool.release
+        done.send(nil)
+      end
+
+      select
+      when done.receive
+      when timeout(1.second)
+        fail "release blocked on a full pool"
+      end
+      pool.health_status[:available].should eq(2)
     end
 
     it "is safe to call concurrently from multiple fibers" do
       pool = RefreshLoop::SemaphorePool.new(4)
       pool.acquire
       pool.acquire
-      pool.acquire # 1 available, 3 in use
+      pool.acquire
 
-      # Spawn several fibers that all call repair. They should
-      # collectively refill the missing 3 slots, and the final
-      # count should be exactly the limit (no double-refill).
       done = Channel(Nil).new(5)
       5.times do
         spawn do
@@ -150,6 +169,8 @@ describe RefreshLoop::SemaphorePool do
       end
       5.times { done.receive }
 
+      pool.health_status[:available].should eq(1)
+      3.times { pool.release }
       pool.health_status[:available].should eq(4)
     end
   end

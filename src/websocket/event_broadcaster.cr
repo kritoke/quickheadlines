@@ -9,6 +9,8 @@ class EventBroadcaster
   # concurrent modification by the broadcaster fiber.
   @@mutex = Mutex.new(:unchecked)
   @@subscribers = [] of SubscribeMessage
+  # Registry used only for client counts / leak diagnostics. Sending goes
+  # through SocketManager.
   @@clients = [] of HTTP::WebSocket
 
   UPDATE_CHANNEL   = Channel(FeedUpdateEvent).new(QuickHeadlines::Constants::WEBSOCKET_CHANNEL_SIZE)
@@ -91,16 +93,10 @@ class EventBroadcaster
   # broadcaster fiber modifies the arrays.
   private def self.broadcast_json(json : String) : Nil
     @@mutex.synchronize do
-      # Send to WebSocket clients — collect failures, delete after iteration
-      failed_clients = [] of HTTP::WebSocket
-      @@clients.each do |client|
-        begin
-          client.send(json)
-        rescue IO::Error | Channel::ClosedError
-          failed_clients << client
-        end
-      end
-      failed_clients.each { |client| @@clients.delete(client) }
+      # WebSocket clients are written to ONLY by SocketManager's per-connection
+      # writer fibers; never call `client.send` here, or two fibers could write
+      # frames to the same socket concurrently.
+      SocketManager.instance?.try(&.broadcast(json))
 
       # Notify subscriber channels — collect failures, delete after iteration
       failed_subs = [] of SubscribeMessage
@@ -182,12 +178,7 @@ class EventBroadcaster
 
   private def self.shutdown_all : Nil
     @@mutex.synchronize do
-      @@clients.each do |client|
-        begin
-          client.close
-        rescue IO::Error
-        end
-      end
+      # Sockets are closed by SocketManager#shutdown_all_connections.
       @@clients.clear
       @@subscribers.each do |sub|
         sub.channel.close

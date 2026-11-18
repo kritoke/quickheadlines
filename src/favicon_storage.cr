@@ -426,8 +426,8 @@ class FaviconActor < Actor
   end
 
   private def reject_private_host?(host : String, url : String) : Bool
-    if Utils.private_host?(host)
-      Log.for("quickheadlines.storage").debug { "SSRF blocked: private host #{host} in #{url}" }
+    if Utils.resolves_to_private?(host)
+      Log.for("quickheadlines.storage").debug { "SSRF blocked: private or unresolvable host #{host} in #{url}" }
       return true
     end
     false

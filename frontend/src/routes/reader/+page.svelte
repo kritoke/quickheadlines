@@ -4,6 +4,7 @@
 	import { goto } from '$app/navigation';
 	import { onMount } from 'svelte';
 	import DOMPurify from 'dompurify';
+	import { isValidUrl } from '$lib/utils/validation';
 	
 	let content: string | null = $state(null);
 	let title: string = $state('');
@@ -20,12 +21,16 @@
 		const url = $page.url.searchParams.get('url');
 		const pageTitle = $page.url.searchParams.get('title');
 		
+		let decoded: string | null = null;
 		if (url) {
-			try { articleUrl = decodeURIComponent(url); } catch { articleUrl = url; }
+			try { decoded = decodeURIComponent(url); } catch { decoded = url; }
+		}
+		if (decoded && isValidUrl(decoded)) {
+			articleUrl = decoded;
 			title = pageTitle ? decodeURIComponent(pageTitle) : 'Article';
 			fetchContent();
 		} else {
-			error = 'No article URL provided';
+			error = url ? 'Invalid article URL' : 'No article URL provided';
 			loading = false;
 		}
 	});
@@ -97,7 +102,7 @@
 				const isCtaLink = selfLinkTexts.some(cta => linkText === cta || linkText.includes(cta) || cta.includes(linkText));
 				const isCommentsLink = commentsTexts.some(cta => linkText.includes(cta) || parentText.includes(cta) || combinedText.includes('discuss') || combinedText.includes('comment'));
 				
-				if (isCommentsLink && rawHref) {
+				if (isCommentsLink && rawHref && isValidUrl(rawHref)) {
 					commentsUrl = rawHref;
 					const parent = link.parentElement;
 					if (parent) {

@@ -167,6 +167,10 @@ export function resetTimelineStore(): void {
 }
 
 let timelineRequestId = 0;
+// Incremented by every full load (refresh / tab change). Appends started under
+// an older generation are discarded so they can't mix old offsets into new data.
+let timelineGeneration = 0;
+let latestFullRequestId = 0;
 let retryTimerId: ReturnType<typeof setTimeout> | null = null;
 // Track the request ID that a pending retry is for
 let pendingRetryRequestId: number | null = null;
@@ -191,13 +195,30 @@ export async function loadTimeline(
 	append: boolean = false,
 	tab?: string,
 ): Promise<void> {
-	const requestId = ++timelineRequestId;
 	tab ??= timelineState.tabName;
 
-	if (!append) {
-		if (isRefreshing(timelineState) || isLoading(timelineState)) return;
-
+	if (append) {
+		// Appends only extend the current list: skip if a full load is in flight
+		// (it will replace the items and offset) or another append is running.
+		if (
+			timelineState.loadingMore ||
+			isRefreshing(timelineState) ||
+			isLoading(timelineState)
+		)
+			return;
+		timelineState.loadingMore = true;
+	} else {
 		const isTabChange = tab !== timelineState.tabName;
+		// A tab change supersedes an in-flight load; a plain refresh does not.
+		if (
+			!isTabChange &&
+			(isRefreshing(timelineState) || isLoading(timelineState))
+		)
+			return;
+
+		// Bump the generation: any in-flight request from an older generation
+		// (refresh or append) is now stale and will be discarded.
+		timelineGeneration++;
 		const hasExistingData = timelineState.items.length > 0;
 
 		if (isTabChange || !hasExistingData) {
@@ -210,10 +231,18 @@ export async function loadTimeline(
 		} else {
 			Object.assign(timelineState, {
 				status: "refreshing" as const,
+				loadingMore: false,
 				tabName: tab,
 			});
 		}
 	}
+
+	const generation = timelineGeneration;
+	const requestId = ++timelineRequestId;
+	const isStale = () =>
+		generation !== timelineGeneration ||
+		(!append && requestId !== latestFullRequestId);
+	if (!append) latestFullRequestId = requestId;
 
 	try {
 		const response = await fetchTimeline(
@@ -222,14 +251,14 @@ export async function loadTimeline(
 			30,
 			tab === "all" ? undefined : tab,
 		);
-		if (requestId !== timelineRequestId) return;
+		if (isStale()) return;
 		cancelRetry();
 		Object.assign(
 			timelineState,
 			setTimelineData(timelineState, response.items, response.has_more, append),
 		);
 	} catch (e) {
-		if (requestId !== timelineRequestId) return;
+		if (isStale()) return;
 
 		if (e instanceof RateLimitError) {
 			Object.assign(timelineState, {
@@ -237,21 +266,18 @@ export async function loadTimeline(
 				retryAfterMs: e.retryAfterMs,
 			});
 			cancelRetry();
-			// Store the request ID and params for the retry callback to use
-			// This fixes the bug where the comparison against timelineRequestId
-			// would never match because timelineRequestId is incremented before retry fires
-			pendingRetryRequestId = requestId;
+			pendingRetryRequestId = generation;
 			pendingRetryParams = { append, tab };
 			retryTimerId = setTimeout(() => {
 				retryTimerId = null;
-				const retryId = pendingRetryRequestId;
+				const retryGen = pendingRetryRequestId;
 				const params = pendingRetryParams;
-				// Only retry if this retry timer belongs to the current request
-				if (retryId === timelineRequestId && params) {
-					loadTimeline(params.append, params.tab);
-				}
 				pendingRetryRequestId = null;
 				pendingRetryParams = null;
+				// Only retry if nothing newer has replaced this timeline since
+				if (retryGen === timelineGeneration && params) {
+					loadTimeline(params.append, params.tab);
+				}
 			}, e.retryAfterMs);
 			return;
 		}
@@ -282,10 +308,18 @@ export function getFilteredItems(query: string): TimelineItemResponse[] {
 	);
 }
 
-export async function handleLoadMore(): Promise<void> {
-	if (!timelineState.loadingMore && timelineState.hasMore) {
-		await loadTimeline(true);
+/** Returns true if a page was requested, false if skipped. */
+export async function handleLoadMore(): Promise<boolean> {
+	if (
+		timelineState.loadingMore ||
+		!timelineState.hasMore ||
+		isLoading(timelineState) ||
+		isRefreshing(timelineState)
+	) {
+		return false;
 	}
+	await loadTimeline(true);
+	return true;
 }
 
 let searchLoadingAll = false;
@@ -294,8 +328,10 @@ export async function loadAllRemainingItems(): Promise<void> {
 	if (searchLoadingAll || !timelineState.hasMore) return;
 	searchLoadingAll = true;
 	try {
-		while (timelineState.hasMore) {
-			await handleLoadMore();
+		// Stop if a page couldn't be requested (another load in flight) or the
+		// last one failed — otherwise this would spin forever.
+		while (timelineState.hasMore && !isError(timelineState)) {
+			if (!(await handleLoadMore())) break;
 		}
 	} finally {
 		searchLoadingAll = false;

@@ -36,10 +36,10 @@ module QuickHeadlines::Storage
 
     def store_lsh_bands(item_id : Int64, band_hashes : Array(UInt64))
       @mutex.synchronize do
-        @db.transaction do
-          @db.exec("DELETE FROM lsh_bands WHERE item_id = ?", item_id)
+        @db.transaction do |tx|
+          tx.connection.exec("DELETE FROM lsh_bands WHERE item_id = ?", item_id)
           band_hashes.each_with_index do |band_hash, band_index|
-            @db.exec(
+            tx.connection.exec(
               "INSERT INTO lsh_bands (item_id, band_index, band_hash, created_at) VALUES (?, ?, ?, ?)",
               item_id,
               band_index,
@@ -74,9 +74,9 @@ module QuickHeadlines::Storage
 
     def clear_clustering_metadata
       @mutex.synchronize do
-        @db.transaction do
-          @db.exec("UPDATE items SET cluster_id = NULL")
-          @db.exec("DELETE FROM lsh_bands")
+        @db.transaction do |tx|
+          tx.connection.exec("UPDATE items SET cluster_id = NULL")
+          tx.connection.exec("DELETE FROM lsh_bands")
         end
         Log.for("quickheadlines.storage").info { "Cleared clustering metadata" }
       end
@@ -84,13 +84,13 @@ module QuickHeadlines::Storage
 
     def assign_clusters_bulk(clusters : Hash(Int64, Array(Int64)))
       @mutex.synchronize do
-        @db.transaction do
+        @db.transaction do |tx|
           clusters.each do |rep_id, members|
             next if members.empty?
             placeholders = QuickHeadlines::Repositories::RepositoryBase.placeholders(members.size)
             sql = "UPDATE items SET cluster_id = ? WHERE id IN (#{placeholders})"
             args = [rep_id] + members
-            @db.exec(sql, args: args)
+            tx.connection.exec(sql, args: args)
           end
         end
       end
@@ -158,6 +158,12 @@ module QuickHeadlines::Storage
           item_id,
           as: String
         )
+      end
+    end
+
+    def get_item_cluster_id(item_id : Int64) : Int64?
+      @mutex.synchronize do
+        @db.query_one?("SELECT cluster_id FROM items WHERE id = ?", item_id, as: Int64?)
       end
     end
 

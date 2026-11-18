@@ -21,15 +21,13 @@ function createEffectHandles(): EffectHandles {
 	};
 }
 
-let lastUpdate = 0;
-let preservedScrollY = 0;
-let feedUpdateDebounce: ReturnType<typeof setTimeout> | null = null;
 const FEED_UPDATE_DEBOUNCE_MS = 2000;
 const CONFIG_CHECK_INTERVAL_MS = 60000;
 
-function resetLastUpdate() {
-	lastUpdate = 0;
-	logger.log("[Effects] lastUpdate reset");
+/** Per-effect-instance state, so two pages' effects never clobber each other. */
+interface EffectContext {
+	lastUpdate: number;
+	feedUpdateDebounce: ReturnType<typeof setTimeout> | null;
 }
 
 /** Pure predicate: should this update be accepted? */
@@ -37,34 +35,31 @@ function shouldAcceptUpdate(timestamp: number, lastUpdate: number): boolean {
 	return timestamp >= lastUpdate;
 }
 
-function handleFeedUpdate(timestamp: number) {
-	const delta = timestamp - lastUpdate;
+/** Reload feeds + timeline, restoring scroll only after the data has landed. */
+async function reloadPreservingScroll(): Promise<void> {
+	const scrollY = window.scrollY;
+	await Promise.all([loadFeeds(feedState.activeTab, true), loadTimeline()]);
+	window.scrollTo(0, scrollY);
+}
+
+function handleFeedUpdate(ctx: EffectContext, timestamp: number) {
+	const delta = timestamp - ctx.lastUpdate;
 	logger.log(
-		`[Effects] Feed update received: ts=${timestamp}, lastUpdate=${lastUpdate}, delta=${delta}ms`,
+		`[Effects] Feed update received: ts=${timestamp}, lastUpdate=${ctx.lastUpdate}, delta=${delta}ms`,
 	);
 
-	if (shouldAcceptUpdate(timestamp, lastUpdate)) {
+	if (shouldAcceptUpdate(timestamp, ctx.lastUpdate)) {
 		logger.log("[Effects] Update accepted, scheduling reload...");
-		lastUpdate = timestamp;
-		preservedScrollY = window.scrollY;
+		ctx.lastUpdate = timestamp;
 
-		if (feedUpdateDebounce) clearTimeout(feedUpdateDebounce);
-		feedUpdateDebounce = setTimeout(() => {
-			feedUpdateDebounce = null;
+		if (ctx.feedUpdateDebounce) clearTimeout(ctx.feedUpdateDebounce);
+		ctx.feedUpdateDebounce = setTimeout(() => {
+			ctx.feedUpdateDebounce = null;
 			logger.log("[Effects] Debounce fired, reloading feeds and timeline...");
-			loadFeeds(feedState.activeTab, true);
-			loadTimeline();
-			window.scrollTo(0, preservedScrollY);
+			void reloadPreservingScroll();
 		}, FEED_UPDATE_DEBOUNCE_MS);
 	} else {
 		logger.log("[Effects] Update rejected (stale)");
-	}
-}
-
-function clearDebounce() {
-	if (feedUpdateDebounce) {
-		clearTimeout(feedUpdateDebounce);
-		feedUpdateDebounce = null;
 	}
 }
 
@@ -81,18 +76,7 @@ function handleClusteringStatus(isClustering: boolean) {
 
 	timelineState.isClustering = isClustering;
 	if (!isClustering) {
-		preservedScrollY = window.scrollY;
-		loadTimeline();
-		loadFeeds(feedState.activeTab, true);
-		window.scrollTo(0, preservedScrollY);
-	}
-}
-
-function handleWebSocketMessage(message: WebSocketMessage) {
-	if (message.type === "feed_update") {
-		handleFeedUpdate(message.timestamp);
-	} else if (message.type === "clustering_status") {
-		handleClusteringStatus(message.is_clustering ?? false);
+		void reloadPreservingScroll();
 	}
 }
 
@@ -100,36 +84,57 @@ async function checkConfig(): Promise<number> {
 	return loadConfigForStore(feedState, setFeedRefreshMinutes);
 }
 
-function stopEffects(handles: EffectHandles) {
+function stopEffects(handles: EffectHandles, ctx: EffectContext) {
 	if (handles.refreshInterval) clearInterval(handles.refreshInterval);
 	if (handles.configInterval) clearInterval(handles.configInterval);
 	if (handles.clusteringInterval) clearInterval(handles.clusteringInterval);
-	clearDebounce();
+	handles.refreshInterval = null;
+	handles.configInterval = null;
+	handles.clusteringInterval = null;
+	if (ctx.feedUpdateDebounce) {
+		clearTimeout(ctx.feedUpdateDebounce);
+		ctx.feedUpdateDebounce = null;
+	}
 }
 
 function createRefreshEffect(
 	refreshFn: () => void,
 	onConnect?: () => void,
-): { start: () => void; stop: () => void; handles: EffectHandles } {
+): { start: () => Promise<void>; stop: () => void; handles: EffectHandles } {
 	const handles = createEffectHandles();
+	const ctx: EffectContext = { lastUpdate: 0, feedUpdateDebounce: null };
 	let started = false;
+
+	// A distinct function per instance: the connection stores listeners in a
+	// Set, so sharing one module-level function would let one page's stop()
+	// unsubscribe the other page.
+	const listener = (message: WebSocketMessage) => {
+		if (message.type === "feed_update") {
+			handleFeedUpdate(ctx, message.timestamp);
+		} else if (message.type === "clustering_status") {
+			handleClusteringStatus(message.is_clustering ?? false);
+		}
+	};
 
 	async function start() {
 		if (started) return;
 		started = true;
 
-		resetLastUpdate();
-		websocketConnection.addEventListener(handleWebSocketMessage);
+		ctx.lastUpdate = 0;
+		websocketConnection.addEventListener(listener);
 		websocketConnection.connect();
 
 		onConnect?.();
 
 		const minutes = await checkConfig();
+		// stop() may have run while we awaited; don't create orphaned intervals.
+		if (!started) return;
 
 		handles.refreshInterval = setInterval(refreshFn, minutes * 60 * 1000);
 
 		handles.configInterval = setInterval(async () => {
 			const newMinutes = await checkConfig();
+			if (!started) return;
 			if (handles.refreshInterval) {
 				clearInterval(handles.refreshInterval);
 				handles.refreshInterval = setInterval(
@@ -143,15 +148,15 @@ function createRefreshEffect(
 	function stop() {
 		if (!started) return;
 		started = false;
-		stopEffects(handles);
-		websocketConnection.removeEventListener(handleWebSocketMessage);
+		stopEffects(handles, ctx);
+		websocketConnection.removeEventListener(listener);
 	}
 
 	return { start, stop, handles };
 }
 
 export function createFeedEffects(): {
-	start: () => void;
+	start: () => Promise<void>;
 	stop: () => void;
 	handles: EffectHandles;
 } {
@@ -159,7 +164,7 @@ export function createFeedEffects(): {
 }
 
 export function createTimelineEffects(): {
-	start: () => void;
+	start: () => Promise<void>;
 	stop: () => void;
 	handles: EffectHandles;
 } {

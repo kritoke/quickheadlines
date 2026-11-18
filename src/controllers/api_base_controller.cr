@@ -52,7 +52,7 @@ class QuickHeadlines::Controllers::ApiBaseController < Athena::Framework::Contro
     # Fail loudly in development if ADMIN_SECRET is not configured
     # This helps catch misconfigurations early instead of silently denying access
     if secret.nil? || secret.empty?
-      if ENV["APP_ENV"] == "development"
+      if ENV["APP_ENV"]? == "development"
         Log.for("quickheadlines.auth").error { "ADMIN_SECRET not configured! Set ADMIN_SECRET environment variable for admin endpoints to work." }
       else
         Log.for("quickheadlines.auth").warn { "Admin auth attempt without ADMIN_SECRET configured from #{client_ip(request)}" } if has_auth_header?(request)
@@ -92,7 +92,7 @@ class QuickHeadlines::Controllers::ApiBaseController < Athena::Framework::Contro
   end
 
   private def client_ip(request : AHTTP::Request) : String
-    ::Utils.extract_client_ip(request)
+    ::Utils.extract_client_ip(request.request)
   end
 
   # Validate proxy URL and return resolved IP to prevent DNS rebinding.
@@ -115,7 +115,7 @@ class QuickHeadlines::Controllers::ApiBaseController < Athena::Framework::Contro
       addr_info = Socket::Addrinfo.resolve(host, 443, type: Socket::Type::STREAM)
       if addr = addr_info.first?
         ip_address = addr.ip_address.address
-        if ::Utils.private_host?(ip_address)
+        if ::Utils.non_public_ip?(addr.ip_address)
           Log.for("quickheadlines.proxy").warn { "SSRF protection: #{host} resolved to private IP #{ip_address}" }
           return {false, nil}
         end
@@ -178,8 +178,11 @@ class QuickHeadlines::Controllers::ApiBaseController < Athena::Framework::Contro
     validate_int(value, default, min, max)
   end
 
-  private def validate_offset(value : String?, default : Int32 = 0) : Int32
-    validate_int(value, default, 0)
+  # Upper bound keeps `offset + limit` far from Int32 overflow.
+  MAX_OFFSET = 100_000
+
+  private def validate_offset(value : String?, default : Int32 = 0, max : Int32 = MAX_OFFSET) : Int32
+    validate_int(value, default, 0, max)
   end
 
   private def validate_days(value : String?, default : Int32, min : Int32 = 1, max : Int32 = 365) : Int32
@@ -225,9 +228,9 @@ class QuickHeadlines::Controllers::ApiBaseController < Athena::Framework::Contro
       raise AHK::Exception::HTTPException.new(404, "Not Found")
     end
 
-    ip = client_ip(request)
+    ip = ::Utils.peer_ip(request.request)
     allowed = ["127.0.0.1", "::1", "::ffff:127.0.0.1"]
-    unless ip == "unknown" || allowed.includes?(ip)
+    unless ip && allowed.includes?(ip)
       raise AHK::Exception::HTTPException.new(401, "Unauthorized")
     end
 

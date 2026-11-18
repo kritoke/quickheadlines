@@ -293,6 +293,8 @@ class QuickHeadlines::Controllers::AdminController < QuickHeadlines::Controllers
   @[ARTA::Get(path: "/api/admin/heap_dump")]
   def heap_dump(request : AHTTP::Request) : Hash(String, String)
     raise AHK::Exception::HTTPException.new(401, "Unauthorized") unless check_admin_auth(request)
+    # Dumps (especially deep core dumps) are large; don't let them fill the disk.
+    check_rate_limit!(request, "heap_dump", 1, 300)
 
     deep = request.query_params["deep"]? == "1"
     path = @memory_manager.dump_heap(deep)

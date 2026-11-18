@@ -97,18 +97,9 @@ end
 # Cache layer tests for QuickHeadlines::RateLimiter
 # ============================================================================
 #
-# The cache is a positive-result cache: it caches the actor's
-# `true` verdict for CACHE_TTL_SECONDS (1s). Within that window,
-# subsequent calls return `true` from the cache without
-# consulting the actor. The actor is only consulted on cache
-# miss (first call or after the TTL expires).
-#
-# Trade-off: within the TTL, the cache grants `true` even if
-# the actor would say `false` (over the rate limit). This is
-# acceptable for the leak fix because:
-#   - The 60-second actor rate limit still applies long-term.
-#   - The overshoot is bounded (1 extra request per second per key).
-#   - The leak (per-call def_call allocations) is the priority.
+# The cache is a token lease: on a miss the actor reserves a small batch of
+# requests (<= 10% of the limit) and counts them immediately; cache hits spend
+# those tokens. The limit can therefore never be exceeded via the cache.
 describe QuickHeadlines::RateLimiter, "cache layer" do
   Spec.before_each do
     # Reset the cache between tests so each test sees a known state.
@@ -116,14 +107,20 @@ describe QuickHeadlines::RateLimiter, "cache layer" do
     ensure_throttler_actor
   end
 
-  it "caches positive results to avoid repeated actor calls" do
-    # First call: cache miss, hits the actor (true), caches the verdict.
-    QuickHeadlines::RateLimiter.allowed?("cache-test-#{rand(100000)}", 5, 60).should be_true
-    # Subsequent calls within the TTL: cache hit, never reach the actor.
-    10.times do
-      QuickHeadlines::RateLimiter.allowed?("cache-test-#{rand(100000)}", 5, 60).should be_true
-    end
+  it "caches leased tokens to avoid repeated actor calls" do
+    QuickHeadlines::RateLimiter.allowed?("cache-test-#{rand(100000)}", 100, 60).should be_true
     QuickHeadlines::RateLimiter.cache_size.should be > 0
+  end
+
+  it "never allows more than max_requests, even via the cache" do
+    key = "strict-#{rand(100000)}"
+    allowed = 0
+    50.times { allowed += 1 if QuickHeadlines::RateLimiter.allowed?(key, 20, 60) }
+    allowed.should eq(20)
+
+    admin_key = "strict-admin-#{rand(100000)}"
+    results = 5.times.map { QuickHeadlines::RateLimiter.allowed?(admin_key, 1, 60) }.to_a
+    results.should eq([true, false, false, false, false])
   end
 
   it "expires cached entries after the TTL" do
@@ -143,14 +140,14 @@ describe QuickHeadlines::RateLimiter, "cache layer" do
   it "uses a different cache entry for different rate-limit configs" do
     # The same key with different (max, window) should NOT collide.
     key = "config-#{rand(100000)}"
-    QuickHeadlines::RateLimiter.allowed?(key, 1, 60).should be_true
+    QuickHeadlines::RateLimiter.allowed?(key, 50, 60).should be_true
     QuickHeadlines::RateLimiter.allowed?(key, 100, 60).should be_true
     # Both entries are cached.
     QuickHeadlines::RateLimiter.cache_size.should eq(2)
   end
 
   it "clears the cache on shutdown" do
-    QuickHeadlines::RateLimiter.allowed?("shutdown-test-#{rand(100000)}", 5, 60).should be_true
+    QuickHeadlines::RateLimiter.allowed?("shutdown-test-#{rand(100000)}", 100, 60).should be_true
     QuickHeadlines::RateLimiter.cache_size.should be > 0
     QuickHeadlines::RateLimiter.shutdown
     QuickHeadlines::RateLimiter.cache_size.should eq(0)
@@ -160,7 +157,7 @@ describe QuickHeadlines::RateLimiter, "cache layer" do
     # CACHE_MAX_ENTRIES is 256. Pump more than that through and
     # verify the cache is at most CACHE_MAX_ENTRIES.
     500.times do |i|
-      QuickHeadlines::RateLimiter.allowed?("bounded-#{i}-#{rand(100000)}", 5, 60)
+      QuickHeadlines::RateLimiter.allowed?("bounded-#{i}-#{rand(100000)}", 100, 60)
     end
     QuickHeadlines::RateLimiter.cache_size.should be <= 256
   end

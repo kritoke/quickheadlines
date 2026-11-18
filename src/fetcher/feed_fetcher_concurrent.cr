@@ -51,7 +51,10 @@ module RefreshLoop
       total_feeds = all_configs.size
 
       end_time = Time.utc + OVERALL_FETCH_TIMEOUT
-      total_feeds.times do
+      # Loop on real completions, bounded only by the overall deadline. A
+      # `select` timeout is just a wake-up to re-check the deadline; it must
+      # not count as a completed feed.
+      while completed < total_feeds
         remaining = (end_time - Time.utc).total_seconds
         break if remaining <= 0
 
@@ -63,10 +66,8 @@ module RefreshLoop
             Log.for("quickheadlines.feed").warn { "fetch_all: failed to fetch feed" }
           end
           completed += 1
-        when timeout(remaining.ceil.clamp(0.1, 10).seconds)
-          if completed >= total_feeds
-            break
-          end
+        when timeout(remaining.clamp(0.1, 10.0).seconds)
+          # wake up and re-check the overall deadline
         end
       end
 
@@ -99,10 +100,9 @@ module RefreshLoop
       index : Int32,
       semaphore : SemaphorePool,
     ) : Nil
-      semaphore.acquire
       begin
         RefreshLoop::Monitoring.feed_fetch_started
-        result = fetch_one_with_timeout(feed, config, previous_feed_data, index)
+        result = fetch_one_with_timeout(feed, config, previous_feed_data, index, semaphore)
         begin
           channel.send(result)
         rescue Channel::ClosedError
@@ -116,7 +116,6 @@ module RefreshLoop
         end
       ensure
         RefreshLoop::Monitoring.feed_fetch_completed
-        semaphore.release
       end
     end
 
@@ -125,6 +124,7 @@ module RefreshLoop
       config : Config,
       previous_feed_data : FeedData?,
       index : Int32,
+      semaphore : SemaphorePool,
     ) : FeedData
       timeout_seconds = QuickHeadlines::Constants::FETCH_TIMEOUT_SECONDS
 
@@ -133,6 +133,11 @@ module RefreshLoop
       # for a receiver that already returned.
       result_channel = Channel(FeedData?).new(1)
 
+      # The permit is held by the fiber doing the actual HTTP work and released
+      # only when that work finishes. If the per-feed timeout fires first, the
+      # outer fiber returns a fallback but the slot stays occupied until the
+      # fetch really ends, so real concurrency never exceeds the pool limit.
+      semaphore.acquire
       RefreshLoop::FiberTracker.tracked_spawn("feed_fetch_inner_#{index}") do
         begin
           fetch_result = FetcherRegistry.impl.fetch(feed, config.item_limit, config.db_fetch_limit, previous_feed_data)
@@ -151,6 +156,8 @@ module RefreshLoop
             result_channel.send(nil)
           rescue Channel::ClosedError
           end
+        ensure
+          semaphore.release
         end
       end
 

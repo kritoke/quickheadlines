@@ -55,7 +55,7 @@ class SocketManager < Actor
     @connections = [] of Connection
     @ip_counts = {} of String => Int32
     @last_activity = {} of HTTP::WebSocket => Time
-    @messages_sent = 0_i64
+    @messages_sent = Atomic(Int64).new(0_i64)
     @messages_dropped = 0_i64
     @send_errors = 0_i64
     @closed_total = 0_i64
@@ -66,6 +66,10 @@ class SocketManager < Actor
 
   def self.instance : SocketManager
     @@instance || raise "SocketManager not initialized. AppBootstrap must create and set SocketManager.instance=."
+  end
+
+  def self.instance? : SocketManager?
+    @@instance
   end
 
   def self.instance=(value : SocketManager)
@@ -189,10 +193,12 @@ class SocketManager < Actor
   private def handle_broadcast_message(message : String) : Nil
     @connections.each do |conn|
       begin
+        # Never block the actor on a slow client: if its queue is full, drop
+        # the message for that client and move on.
         select
         when conn.outgoing.send(message)
           # Will be counted by writer fiber on actual send
-        when timeout(QuickHeadlines::Constants::BROADCAST_TIMEOUT_MS.milliseconds)
+        else
           @messages_dropped += 1
           Log.for("quickheadlines.websocket").debug { "Dropped message for slow client: #{conn.ip}" }
         end
@@ -293,7 +299,7 @@ class SocketManager < Actor
   private def handle_get_stats : Hash(String, Int64)
     {
       "connections"      => @connections.size.to_i64,
-      "messages_sent"    => @messages_sent,
+      "messages_sent"    => @messages_sent.get,
       "messages_dropped" => @messages_dropped,
       "send_errors"      => @send_errors,
       "closed_total"     => @closed_total,
@@ -347,7 +353,7 @@ class SocketManager < Actor
           when message = connection.outgoing.receive?
             break if message.nil?
             connection.websocket.send(message)
-            @messages_sent += 1
+            @messages_sent.add(1)
             connection_activity(connection.websocket)
           when timeout(5.seconds)
             # Check if websocket is still alive

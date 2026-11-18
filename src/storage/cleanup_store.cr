@@ -3,6 +3,20 @@ require "../repositories/repository_base"
 
 module QuickHeadlines::Storage
   class CleanupStore
+    # Deletes items older than the cutoff. Cluster members (cluster_id != id) and
+    # unclustered items go immediately. A representative (cluster_id = id) is kept
+    # only while some other item still points at it, so members never reference a
+    # deleted rep; once its members age out, the rep is removed on the next run.
+    DELETE_OLD_ITEMS_SQL = <<-SQL
+      DELETE FROM items
+      WHERE pub_date < ?
+        AND (
+          cluster_id IS NULL
+          OR cluster_id != id
+          OR NOT EXISTS (SELECT 1 FROM items m WHERE m.cluster_id = items.id AND m.id != items.id)
+        )
+      SQL
+
     # Maximum WAL size before forcing a checkpoint truncate (500MB)
     MAX_WAL_SIZE_BEFORE_TRUNCATE = 500 * 1024 * 1024
 
@@ -54,26 +68,23 @@ module QuickHeadlines::Storage
       @mutex.synchronize do
         cutoff = (Time.utc - retention_days.days).to_s(QuickHeadlines::Constants::DB_TIME_FORMAT)
 
-        @db.transaction do
-          # Delete old unclustered items and singleton cluster reps (cluster reps with no members).
-          # Keep cluster representatives that have other items in their cluster.
-          # Note: cluster reps have cluster_id != id (they're the lowest id in their cluster),
-          # so the condition checks for: (cluster_id IS NULL) OR (singleton cluster rep).
-          result = @db.exec("DELETE FROM items WHERE pub_date < ? AND (cluster_id IS NULL OR (cluster_id IS NOT NULL AND cluster_id NOT IN (SELECT cluster_id FROM items WHERE cluster_id != id)))", cutoff)
+        @db.transaction do |tx|
+          # See DELETE_OLD_ITEMS_SQL for which old items are removed.
+          result = tx.connection.exec(DELETE_OLD_ITEMS_SQL, cutoff)
           deleted_count = result.rows_affected
 
           if deleted_count > 0
             Log.for("quickheadlines.storage").debug { "Cleaned up #{deleted_count} old articles (older than #{retention_days} days)" }
           end
 
-          result = @db.exec("DELETE FROM items WHERE feed_id NOT IN (SELECT id FROM feeds)")
+          result = tx.connection.exec("DELETE FROM items WHERE feed_id NOT IN (SELECT id FROM feeds)")
           orphaned_count = result.rows_affected
 
           if orphaned_count > 0
             Log.for("quickheadlines.storage").debug { "Cleaned up #{orphaned_count} orphaned items" }
           end
 
-          delete_orphaned_lsh_bands
+          delete_orphaned_lsh_bands(tx.connection)
         end
       end
     end
@@ -87,13 +98,13 @@ module QuickHeadlines::Storage
         if current_size_mb > max_size_mb
           Log.for("quickheadlines.storage").warn { "Database size (#{current_size_mb.round(2)}MB) exceeds limit (#{max_size_mb}MB), running aggressive cleanup..." }
           cutoff = (Time.utc - QuickHeadlines::Constants::AGGRESSIVE_CLEANUP_DAYS.days).to_s(QuickHeadlines::Constants::DB_TIME_FORMAT)
-          result = @db.exec("DELETE FROM items WHERE pub_date < ? AND (cluster_id IS NULL OR (cluster_id IS NOT NULL AND cluster_id NOT IN (SELECT cluster_id FROM items WHERE cluster_id != id)))", cutoff)
+          result = @db.exec(DELETE_OLD_ITEMS_SQL, cutoff)
           deleted_count = result.rows_affected
           Log.for("quickheadlines.storage").info { "Aggressive cleanup deleted #{deleted_count} old articles" }
 
           if File.size(@db_path).to_f64 / (1024 * 1024) > max_size_mb
             cutoff = (Time.utc - QuickHeadlines::Constants::VERY_AGGRESSIVE_CLEANUP_DAYS.days).to_s(QuickHeadlines::Constants::DB_TIME_FORMAT)
-            result = @db.exec("DELETE FROM items WHERE pub_date < ? AND (cluster_id IS NULL OR (cluster_id IS NOT NULL AND cluster_id NOT IN (SELECT cluster_id FROM items WHERE cluster_id != id)))", cutoff)
+            result = @db.exec(DELETE_OLD_ITEMS_SQL, cutoff)
             deleted_count = result.rows_affected
             Log.for("quickheadlines.storage").info { "Very aggressive cleanup deleted #{deleted_count} recent-old articles" }
           end
@@ -152,8 +163,10 @@ module QuickHeadlines::Storage
       Log.for("quickheadlines.storage").debug { "VACUUM completed" }
     end
 
-    private def delete_orphaned_lsh_bands
-      result = @db.exec("DELETE FROM lsh_bands WHERE item_id NOT IN (SELECT id FROM items)")
+    # Pass the transaction's connection when called inside `@db.transaction`;
+    # using a different pooled connection there would hit "database is locked".
+    private def delete_orphaned_lsh_bands(conn : DB::Connection | DB::Database = @db)
+      result = conn.exec("DELETE FROM lsh_bands WHERE item_id NOT IN (SELECT id FROM items)")
       deleted_count = result.rows_affected
       if deleted_count > 0
         Log.for("quickheadlines.storage").debug { "Cleaned up #{deleted_count} orphaned LSH band entries" }

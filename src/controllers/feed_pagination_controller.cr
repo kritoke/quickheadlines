@@ -36,9 +36,13 @@ class QuickHeadlines::Controllers::FeedPaginationController < QuickHeadlines::Co
 
       needed_count = offset + limit
 
-      if current_count < needed_count
-        db_fetch_limit = StateStore.config.try(&.db_fetch_limit) || 500
-        @feed_fetcher.fetch(feed_config, needed_count + QuickHeadlines::Constants::FETCH_BUFFER_ITEMS, db_fetch_limit, nil)
+      # Only go upstream when it can actually yield more items: the store never
+      # holds more than db_fetch_limit, so a huge offset must not trigger a
+      # fresh upstream fetch on every request.
+      db_fetch_limit = StateStore.config.try(&.db_fetch_limit) || 500
+      if current_count < needed_count && current_count < db_fetch_limit
+        fetch_target = {needed_count + QuickHeadlines::Constants::FETCH_BUFFER_ITEMS, db_fetch_limit}.min
+        @feed_fetcher.fetch(feed_config, fetch_target, db_fetch_limit, nil)
       end
 
       if data = cache.get(url)

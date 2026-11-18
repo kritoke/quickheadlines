@@ -1,3 +1,4 @@
+require "log"
 require "../constants"
 
 # Per-process concurrency semaphore for the feed refresh loop.
@@ -25,23 +26,34 @@ module RefreshLoop
 
     @channel : Channel(Nil)
     @counter : Atomic(Int32)
+    @in_use : Atomic(Int32)
     @repair_mutex : Mutex
 
     def initialize(@limit : Int32 = DEFAULT_LIMIT)
       @channel = Channel(Nil).new(@limit)
       @limit.times { @channel.send(nil) }
       @counter = Atomic(Int32).new(@limit)
+      @in_use = Atomic(Int32).new(0)
       @repair_mutex = Mutex.new(:unchecked)
     end
 
     def acquire : Nil
       @channel.receive
-      @counter.add(-1, :relaxed)
+      @counter.sub(1)
+      @in_use.add(1)
     end
 
+    # Never blocks. If the channel is already full (e.g. a repair refilled a
+    # slot that was in fact still held), the permit is dropped rather than
+    # blocking the releasing fiber forever.
     def release : Nil
-      @counter.add(1, :relaxed)
-      @channel.send(nil)
+      @in_use.sub(1)
+      select
+      when @channel.send(nil)
+        @counter.add(1)
+      else
+        Log.for("quickheadlines.feed").warn { "SemaphorePool#release: pool already full, dropping surplus permit" }
+      end
     rescue Channel::ClosedError
     end
 
@@ -49,19 +61,25 @@ module RefreshLoop
       {available: @counter.get, expected: @limit}
     end
 
-    # Returns the number of slots that were refilled (0 if already at
-    # capacity). Safe to call from multiple fibers; the underlying
-    # `@repair_mutex` serializes refills.
+    # Refills only slots that are genuinely lost: neither available nor held
+    # by a fiber that will release them. Slots held by slow or orphaned
+    # fetches are NOT refilled, since their eventual release returns them.
+    # Returns the number of slots refilled.
     def repair : Int32
       @repair_mutex.synchronize do
-        available = @counter.get
-        return 0 if available == @limit
-        missing = @limit - available
-        missing.times do
-          @channel.send(nil)
-          @counter.add(1)
+        lost = @limit - @counter.get - @in_use.get
+        return 0 if lost <= 0
+        refilled = 0
+        lost.times do
+          select
+          when @channel.send(nil)
+            @counter.add(1)
+            refilled += 1
+          else
+            break
+          end
         end
-        missing
+        refilled
       end
     end
 
@@ -69,7 +87,8 @@ module RefreshLoop
     def reset_for_testing : Nil
       @repair_mutex.synchronize do
         while @counter.get < @limit
-          @counter.add(1, :relaxed)
+          @counter.add(1)
+          @in_use.set(0)
           @channel.send(nil)
         end
       end

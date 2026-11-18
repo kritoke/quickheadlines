@@ -135,6 +135,9 @@ module QuickHeadlines::Services
       index = LexisMinhash::LSHIndex.new(bands: bands, expected_docs: items.size)
       signatures = {} of Int64 => Array(UInt32)
       items_map = {} of Int64 => ClusteringItem
+      # LSHIndex uses Int32 doc ids, but item ids are Int64. Index by dense
+      # position in this batch instead, so large item ids can't overflow.
+      local_to_id = [] of Int64
 
       items.each_with_index do |item, idx|
         next unless can_cluster?(item.title)
@@ -142,7 +145,8 @@ module QuickHeadlines::Services
         sig = compute_minhash_signature(item.title)
         signatures[item.id] = sig
         items_map[item.id] = item
-        index.add_with_signature(item.id.to_i32, sig)
+        index.add_with_signature(local_to_id.size, sig)
+        local_to_id << item.id
         # Yield periodically to prevent GC pressure and allow event loop processing
         Fiber.yield if idx % 100 == 0
       end
@@ -157,8 +161,8 @@ module QuickHeadlines::Services
       end
 
       candidate_pairs.each_with_index do |pair, idx|
-        a = pair[0].to_i64
-        b = pair[1].to_i64
+        a = local_to_id[pair[0]]
+        b = local_to_id[pair[1]]
 
         next unless items_map.has_key?(a) && items_map.has_key?(b)
         next if items_map[a].feed_id == items_map[b].feed_id

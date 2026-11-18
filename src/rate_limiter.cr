@@ -3,26 +3,12 @@ require "./services/throttler_actor"
 module QuickHeadlines
   # Backward-compatible API — delegates to ThrottlerActor.
   #
-  # Adds a small positive-result cache in front of the actor. Most
-  # API requests are under the rate limit, so the actor's answer is
-  # `true` 99% of the time. Caching that verdict for a short TTL
-  # eliminates most of the actor round-trip allocations (Channel
-  # allocation, JSON serialize/deserialize, Call{Method} struct).
-  # The actor is still the source of truth — the cache is a fast
-  # path that respects the actor's verdict.
-  #
-  # Trade-off: within the TTL window, a misbehaving client can
-  # make more than `max_requests` requests and still receive
-  # `true` from the cache. The 60-second rate limit still applies
-  # on the longer term — once the TTL expires, the actor's count
-  # is consulted. The cache is best-effort, not a strict replica
-  # of the actor's rate-limit logic. This is acceptable because:
-  #   1. The leak (per-call def_call allocations) is the priority
-  #      issue; the rate-limit precision is a secondary concern.
-  #   2. The 1-second TTL bounds the overshoot: at most 1 extra
-  #      request per second per key beyond the actor's count.
-  #   3. For low-limit endpoints (admin: 1/60s), the overshoot is
-  #      at most 1 request per second, which is acceptable.
+  # Adds a small token-lease cache in front of the actor to avoid an actor
+  # round-trip per request. On a miss, the actor *reserves* a small batch of
+  # requests (at most 10% of the limit, capped at LEASE_MAX) and records them
+  # as used; cache hits then spend those pre-counted tokens. The actor's count
+  # therefore never under-counts, so the limit can't be exceeded. The cost is
+  # that unused leased tokens still count against the client for the window.
   class RateLimiter
     # =========================================================================
     # Cache configuration
@@ -45,55 +31,41 @@ module QuickHeadlines
     # =========================================================================
 
     @@cache_mutex = Mutex.new
-    @@allowed_cache = {} of String => {Int64, Bool}
+    @@allowed_cache = {} of String => {Int64, Int32}
 
     # =========================================================================
     # Public API
     # =========================================================================
 
+    LEASE_MAX = 10
+
     def self.allowed?(key : String, max_requests : Int32 = 60, window_seconds : Int32 = 60) : Bool
-      # Cache key includes all parameters so different rate-limit
-      # configurations don't collide. The caller already includes
-      # the IP in `key` (see `check_rate_limit!`), so this cache
-      # is per-(ip, route, rate-config).
       cache_key = "#{key}:#{max_requests}:#{window_seconds}"
       now = Time.utc.to_unix
 
-      # Cache hit? The cache stores positive verdicts only. If we
-      # have a recent `true`, return it without consulting the actor.
-      # If we have a `false` (from a recent actor call) or the
-      # entry is stale, fall through to the actor.
       @@cache_mutex.synchronize do
-        entry = @@allowed_cache[cache_key]?
-        if entry && (now - entry[0]) < CACHE_TTL_SECONDS
-          # Note: entry[1] is always `true` here because we only
-          # cache positive verdicts. A `false` is a transient
-          # state that resolves on the next actor call.
-          return true if entry[1]
-        end
-      end
-
-      # Cache miss or stale — ask the actor. The `def_call`
-      # allocates a Channel, a CallAllowed struct, and a JSON
-      # reply string. This is the slow path.
-      result = ThrottlerActor.instance.allowed(key, max_requests, window_seconds)
-
-      # Cache the positive result. Negative results are not cached
-      # — if you're over the rate limit, you should hit the actor
-      # every time so the response is accurate.
-      if result
-        @@cache_mutex.synchronize do
-          if @@allowed_cache.size >= CACHE_MAX_ENTRIES
-            # Bound the cache. Clearing is cheaper than tracking
-            # per-key expiry and the cache will repopulate from
-            # the next batch of requests.
-            @@allowed_cache.clear
+        if entry = @@allowed_cache[cache_key]?
+          ts, tokens = entry
+          if (now - ts) < CACHE_TTL_SECONDS && tokens > 0
+            @@allowed_cache[cache_key] = {ts, tokens - 1}
+            return true
           end
-          @@allowed_cache[cache_key] = {now, true}
+          @@allowed_cache.delete(cache_key)
         end
       end
 
-      result
+      want = (max_requests // 10).clamp(1, LEASE_MAX)
+      granted = ThrottlerActor.instance.reserve(key, max_requests, window_seconds, want)
+      return false if granted <= 0
+
+      # One token is spent by this request; cache the rest.
+      if granted > 1
+        @@cache_mutex.synchronize do
+          @@allowed_cache.clear if @@allowed_cache.size >= CACHE_MAX_ENTRIES
+          @@allowed_cache[cache_key] = {now, granted - 1}
+        end
+      end
+      true
     end
 
     def self.retry_after(key : String, window_seconds : Int32 = 60) : Int32

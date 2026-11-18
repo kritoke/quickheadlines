@@ -75,17 +75,21 @@
 		const tab = $page.url?.searchParams.get('tab') ?? getStoredTab();
         initialized = true;
 		
+		let disposed = false;
 		(async () => {
 			await Promise.all([
 				loadTimeline(false, tab),
 				loadTimelineConfig(),
 				loadTabs()
 			]);
+			// The page may have been left while loading; cleanup already ran.
+			if (disposed) return;
 			timelineEffects = createTimelineEffects();
 			timelineEffects.start();
 		})();
 		
 		return () => {
+			disposed = true;
 			if (timelineEffects) {
 				timelineEffects.stop();
 				timelineEffects = null;
@@ -246,7 +250,7 @@
 			{#if timelineState.loadingMore}
 				<!-- Optimistic UI: Show placeholder items while loading more -->
 				<div class="space-y-3 py-6 animate-pulse">
-					{#each Array(5) as _}
+					{#each Array(5) as _, i (i)}
 						<div class="flex gap-3 p-3 rounded-xl bg-surface-100/50 dark:bg-surface-800/50">
 							<div class="w-12 h-12 rounded-lg bg-surface-200 dark:bg-surface-700 flex-shrink-0"></div>
 							<div class="flex-1 space-y-2">

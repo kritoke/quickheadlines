@@ -21,93 +21,86 @@ class QuickHeadlines::Controllers::ProxyController < QuickHeadlines::Controllers
     proxy_image_fetch(url, max_bytes)
   end
 
-  private def proxy_image_fetch(url : String, max_bytes : Int64) : AHTTP::Response
-    uri = URI.parse(url)
+  MAX_PROXY_REDIRECTS = 5
 
-    # Validate and resolve DNS once — pin to prevent rebinding
+  private def proxy_image_fetch(url : String, max_bytes : Int64) : AHTTP::Response
+    current_uri = URI.parse(url)
+
+    # Validate and resolve DNS once per hop — pin to prevent rebinding
     valid, resolved_ip = validate_proxy_url_with_ip(url)
     raise AHK::Exception::HTTPException.new(403, "Disallowed proxy domain") unless valid
 
-    client = create_pinned_client(uri, resolved_ip)
+    redirects = 0
+    loop do
+      client = create_pinned_client(current_uri, resolved_ip)
+      next_location : String? = nil
+      result : AHTTP::Response? = nil
 
-    begin
-      # Follow redirects manually with validation + DNS pinning
-      target_uri = uri
-      response_headers = follow_redirects(client, target_uri, resolved_ip)
-
-      # Validate content type before streaming body
-      content_type = (response_headers["content-type"]? || "application/octet-stream").split(";").first
-      unless content_type.starts_with?("image/")
-        raise AHK::Exception::HTTPException.new(415, "Not an image")
-      end
-
-      content_length_header = response_headers["Content-Length"]?
-      if content_length_header && (content_length = content_length_header.to_i64?) && content_length > max_bytes
-        raise AHK::Exception::HTTPException.new(413, "Image too large")
-      end
-
-      # Final GET with streaming body read to enforce size limit
-      body_bytes = Bytes.empty
-      client.get(target_uri.request_target) do |response|
-        if response.status_code >= 400
-          raise AHK::Exception::HTTPException.new(502, "Bad Gateway")
-        end
-
-        body = IO::Memory.new
-        buf = Bytes.new(8192)
-        loop do
-          bytes_read = response.body_io.read(buf)
-          break if bytes_read == 0
-          body.write(buf[0, bytes_read])
-          if body.bytesize > max_bytes
-            raise AHK::Exception::HTTPException.new(413, "Image too large")
+      begin
+        # One request per hop: the body is streamed from the same response
+        # whose status/headers were validated.
+        client.get(current_uri.request_target) do |response|
+          if response.status_code >= 300 && response.status_code < 400
+            next_location = response.headers["Location"]?
+            raise AHK::Exception::HTTPException.new(502, "Bad Gateway") unless next_location
+          else
+            result = read_image_response(response, max_bytes)
           end
         end
-        body_bytes = body.to_slice
+      rescue ex : AHK::Exception::HTTPException
+        raise ex
+      rescue ex
+        Log.for("quickheadlines.http").error(exception: ex) { "Proxy image fetch error for #{url}" }
+        raise AHK::Exception::HTTPException.new(502, "Bad Gateway")
+      ensure
+        client.close
       end
 
-      AHTTP::Response.new(String.new(body_bytes), 200, HTTP::Headers{
-        "content-type"           => content_type,
-        "cache-control"          => "public, max-age=86400",
-        "x-content-type-options" => "nosniff",
-      })
-    rescue ex : AHK::Exception::HTTPException
-      raise ex
-    rescue ex
-      Log.for("quickheadlines.http").error(exception: ex) { "Proxy image fetch error for #{url}" }
-      raise AHK::Exception::HTTPException.new(502, "Bad Gateway")
-    ensure
-      client.close
+      if r = result
+        return r
+      end
+
+      redirects += 1
+      raise AHK::Exception::HTTPException.new(502, "Too many redirects") if redirects > MAX_PROXY_REDIRECTS
+
+      # Resolve relative Location headers against the current URL
+      redirect_uri = current_uri.resolve(next_location.not_nil!)
+      redirect_valid, redirect_ip = validate_proxy_url_with_ip(redirect_uri.to_s)
+      unless redirect_valid
+        Log.for("quickheadlines.proxy").warn { "Redirect to unvalidated URL blocked: #{redirect_uri}" }
+        raise AHK::Exception::HTTPException.new(403, "Disallowed redirect domain")
+      end
+      current_uri = redirect_uri
+      resolved_ip = redirect_ip
     end
   end
 
-  # Follow redirects with validation + DNS pinning. Mutates client and returns final response headers.
-  private def follow_redirects(client : HTTP::Client, target_uri : URI, resolved_ip : String?) : HTTP::Headers
-    response = client.get(target_uri.request_target)
+  private def read_image_response(response : HTTP::Client::Response, max_bytes : Int64) : AHTTP::Response
+    raise AHK::Exception::HTTPException.new(502, "Bad Gateway") if response.status_code >= 400
 
-    while response.status_code >= 300 && response.status_code < 400
-      redirect_location = response.headers["Location"]?
-      unless redirect_location
-        raise AHK::Exception::HTTPException.new(502, "Bad Gateway")
-      end
-
-      redirect_valid, redirect_ip = validate_proxy_url_with_ip(redirect_location)
-      unless redirect_valid
-        Log.for("quickheadlines.proxy").warn { "Redirect to unvalidated URL blocked: #{redirect_location}" }
-        raise AHK::Exception::HTTPException.new(403, "Disallowed redirect domain")
-      end
-
-      redirect_uri = URI.parse(redirect_location)
-      client.close
-      client = create_pinned_client(redirect_uri, redirect_ip)
-      response = client.get(redirect_uri.request_target)
+    content_type = (response.headers["content-type"]? || "application/octet-stream").split(";").first.strip
+    unless content_type.starts_with?("image/")
+      raise AHK::Exception::HTTPException.new(415, "Not an image")
     end
 
-    if response.status_code >= 400
-      raise AHK::Exception::HTTPException.new(502, "Bad Gateway")
+    if (cl = response.headers["Content-Length"]?) && (content_length = cl.to_i64?) && content_length > max_bytes
+      raise AHK::Exception::HTTPException.new(413, "Image too large")
     end
 
-    response.headers
+    body = IO::Memory.new
+    buf = Bytes.new(8192)
+    loop do
+      bytes_read = response.body_io.read(buf)
+      break if bytes_read == 0
+      body.write(buf[0, bytes_read])
+      raise AHK::Exception::HTTPException.new(413, "Image too large") if body.bytesize > max_bytes
+    end
+
+    AHTTP::Response.new(String.new(body.to_slice), 200, HTTP::Headers{
+      "content-type"           => content_type,
+      "cache-control"          => "public, max-age=86400",
+      "x-content-type-options" => "nosniff",
+    })
   end
 
   @[ARTA::Get(path: "/favicons/{hash}.{ext}")]

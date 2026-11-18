@@ -24,22 +24,27 @@ module QuickHeadlines::Repositories
           i.comment_url,
           i.commentary_url
         FROM (
-          SELECT cluster_id as id, MIN(id) as representative_id
+          SELECT cluster_id as id
           FROM items
           WHERE cluster_id IS NOT NULL
           GROUP BY cluster_id
+          HAVING COUNT(*) > 1
         ) c
         JOIN items i ON i.cluster_id = c.id
         JOIN feeds f ON i.feed_id = f.id
-        ORDER BY c.id, i.id ASC
+        ORDER BY c.id DESC, i.id ASC
         LIMIT ?
         SQL
 
       cluster_items = Hash(Int64, Array({id: Int64, title: String, link: String, pub_date: Time?, feed_url: String, feed_title: String, feed_link: String, favicon: String?, favicon_data: String?, header_color: String?, header_text_color: String?, comment_url: String?, commentary_url: String?})).new
 
+      row_count = 0
+      last_cluster_id = nil
       db.query(query, limit) do |rows|
         rows.each do
+          row_count += 1
           cluster_id = rows.read(Int64)
+          last_cluster_id = cluster_id
           item_id = rows.read(Int64)
           item_title = rows.read(String)
           item_link = rows.read(String)
@@ -73,6 +78,12 @@ module QuickHeadlines::Repositories
             commentary_url:    commentary_url,
           }
         end
+      end
+
+      # `limit` caps item rows; if it was hit, the last cluster may be cut off
+      # mid-member, so drop it rather than return a partial cluster.
+      if row_count >= limit && (lc = last_cluster_id) && cluster_items.size > 1
+        cluster_items.delete(lc)
       end
 
       cluster_items.each do |_cluster_id, items|

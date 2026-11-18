@@ -122,8 +122,8 @@ module Database
 
     run_migrations(db)
 
-    db.transaction do
-      cleanup_result = db.exec(<<-SQL
+    db.transaction do |tx|
+      cleanup_result = tx.connection.exec(<<-SQL
         DELETE FROM items
         WHERE id NOT IN (
           SELECT MAX(id)

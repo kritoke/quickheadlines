@@ -170,8 +170,12 @@ class QuickHeadlines::Services::ClusteringService
 
   private def assign_cluster_item(item_id : Int64, match : ClusterMatchResult, threshold : Float64, title : String, cache : FeedCache) : Int64
     if match.match_id && match.similarity >= threshold
-      cluster_items = cache.clustering_store.get_cluster_items(match.match_id)
-      cluster_id = cluster_items.any? { |id| id != match.match_id } ? cluster_items.first : match.match_id
+      match_id = match.match_id.not_nil!
+      # Join the match's existing cluster (its representative), not the match
+      # itself — the match may be a non-representative member. If the match
+      # isn't clustered yet, it becomes the representative.
+      cluster_id = cache.clustering_store.get_item_cluster_id(match_id) || match_id
+      cache.clustering_store.assign_cluster(match_id, cluster_id) if cluster_id == match_id
       cache.clustering_store.assign_cluster(item_id, cluster_id)
       Log.for("quickheadlines.clustering").debug { "Clustered '#{title[0...QuickHeadlines::Constants::CLUSTER_TITLE_TRUNCATE_LENGTH]}...' with '#{match.match_title[0...QuickHeadlines::Constants::CLUSTER_TITLE_TRUNCATE_LENGTH]}...'" } if ENV["DEBUG_CLUSTERING"]?
       cluster_id

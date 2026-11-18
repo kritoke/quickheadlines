@@ -54,6 +54,9 @@ module RefreshLoop
     @db_service : DatabaseService
     @config_path : String
     @semaphore : SemaphorePool
+    # True while a refresh_worker fiber is alive, including one that was
+    # signalled to cancel after the outer timeout but hasn't exited yet.
+    @worker_alive = Atomic(Bool).new(false)
 
     def initialize(initial_config : Config, @config_path : String, @cache : FeedCache, @db_service : DatabaseService, @semaphore : SemaphorePool)
       @state = State.new(initial_config, File.info(@config_path).modification_time)
@@ -240,6 +243,12 @@ module RefreshLoop
         Log.for("quickheadlines.feed").debug { "Memory pressure check failed: #{ex.message}" }
       end
 
+      if @worker_alive.get
+        Log.for("quickheadlines.feed").warn { "Previous refresh worker still running (cancelled, not yet exited) - skipping this cycle" }
+        RefreshLoop::Monitoring.record_failure
+        return 0.0
+      end
+
       StateStore.refreshing = true
       refresh_start_time = Time.utc
       outer_timeout = @state.outer_timeout_seconds.seconds
@@ -248,6 +257,7 @@ module RefreshLoop
 
       cancel_ch = Channel(Nil).new(1)
       completion_channel = Channel(Nil).new(1)
+      @worker_alive.set(true)
       RefreshLoop::FiberTracker.tracked_spawn("refresh_worker") do
         begin
           # Use local variable to avoid holding config reference after refresh
@@ -265,6 +275,8 @@ module RefreshLoop
         rescue ex : Exception
           Log.for("quickheadlines.feed").error(exception: ex) { "refresh_loop refresh_all failed" }
           RefreshLoop::Monitoring.record_failure
+        ensure
+          @worker_alive.set(false)
         end
         completion_channel.send(nil)
       end

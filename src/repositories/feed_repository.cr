@@ -101,25 +101,26 @@ module QuickHeadlines::Repositories
     end
 
     def upsert_with_items(feed_data : FeedData) : Nil
-      db.transaction do
-        feed_id = upsert_feed(feed_data)
-        insert_items(feed_id, feed_data.items)
+      db.transaction do |tx|
+        conn = tx.connection
+        feed_id = upsert_feed(conn, feed_data)
+        insert_items(conn, feed_id, feed_data.items)
         Log.for("quickheadlines.feed").info { "Upserted feed: #{feed_data.title} (#{feed_data.url}) with #{feed_data.items.size} items" }
       end
     end
 
-    private def upsert_feed(feed_data : FeedData) : Int64
-      result = db.query_one?("SELECT id FROM feeds WHERE url = ?", feed_data.url, as: {Int64})
+    private def upsert_feed(conn : DB::Connection, feed_data : FeedData) : Int64
+      result = conn.query_one?("SELECT id FROM feeds WHERE url = ?", feed_data.url, as: {Int64})
 
       if result
-        update_feed(result, feed_data)
+        update_feed(conn, result, feed_data)
       else
-        insert_feed(feed_data)
+        insert_feed(conn, feed_data)
       end
     end
 
-    private def update_feed(feed_id : Int64, feed_data : FeedData) : Int64
-      existing = db.query_one?("SELECT header_color, header_text_color, header_theme_colors, site_link FROM feeds WHERE id = ?", feed_id) do |row|
+    private def update_feed(conn : DB::Connection, feed_id : Int64, feed_data : FeedData) : Int64
+      existing = conn.query_one?("SELECT header_color, header_text_color, header_theme_colors, site_link FROM feeds WHERE id = ?", feed_id) do |row|
         {
           color:      row.read(String?),
           text_color: row.read(String?),
@@ -141,7 +142,7 @@ module QuickHeadlines::Repositories
                             feed_data.site_link
                           end
 
-      db.exec(
+      conn.exec(
         "UPDATE feeds SET title = ?, site_link = ?, header_color = ?, header_text_color = ?, header_theme_colors = ?, etag = ?, last_modified = ?, favicon = ?, favicon_data = ?, last_fetched = ? WHERE id = ?",
         feed_data.title,
         site_link_to_save,
@@ -158,8 +159,8 @@ module QuickHeadlines::Repositories
       feed_id
     end
 
-    private def insert_feed(feed_data : FeedData) : Int64
-      db.exec(
+    private def insert_feed(conn : DB::Connection, feed_data : FeedData) : Int64
+      conn.exec(
         "INSERT INTO feeds (url, title, site_link, header_color, header_text_color, header_theme_colors, etag, last_modified, favicon, favicon_data, last_fetched) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
         feed_data.url,
         feed_data.title,
@@ -173,16 +174,16 @@ module QuickHeadlines::Repositories
         feed_data.favicon_data,
         Time.utc.to_s(QuickHeadlines::Constants::DB_TIME_FORMAT)
       )
-      db.scalar("SELECT last_insert_rowid()").as(Int64)
+      conn.scalar("SELECT last_insert_rowid()").as(Int64)
     end
 
-    private def insert_items(feed_id : Int64, items : Array(Item)) : Nil
+    private def insert_items(conn : DB::Connection, feed_id : Int64, items : Array(Item)) : Nil
       return if items.empty?
 
-      batch_insert(items, feed_id)
+      batch_insert(conn, items, feed_id)
     end
 
-    private def batch_insert(items : Array(Item), feed_id : Int64) : Nil
+    private def batch_insert(conn : DB::Connection, items : Array(Item), feed_id : Int64) : Nil
       items.each_slice(QuickHeadlines::Constants::BATCH_INSERT_SIZE) do |batch|
         values_clause = batch.map do
           "(?, ?, ?, ?, ?, ?, ?, ?)"
@@ -194,7 +195,7 @@ module QuickHeadlines::Repositories
           normalized = QuickHeadlines::Utils::UrlNormalizer.normalize(item.link)
           [feed_id, item.title, item.link, normalized, pub_date_str, item.version, item.comment_url, item.commentary_url]
         end
-        db.exec("INSERT INTO items (feed_id, title, link, normalized_link, pub_date, version, comment_url, commentary_url) VALUES #{values_clause} ON CONFLICT(feed_id, normalized_link) DO UPDATE SET title=excluded.title, link=excluded.link, pub_date=excluded.pub_date, version=excluded.version, comment_url=excluded.comment_url, commentary_url=excluded.commentary_url", args: args)
+        conn.exec("INSERT INTO items (feed_id, title, link, normalized_link, pub_date, version, comment_url, commentary_url) VALUES #{values_clause} ON CONFLICT(feed_id, normalized_link) DO UPDATE SET title=excluded.title, link=excluded.link, pub_date=excluded.pub_date, version=excluded.version, comment_url=excluded.comment_url, commentary_url=excluded.commentary_url", args: args)
       end
     end
 

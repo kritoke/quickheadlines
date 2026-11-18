@@ -35,6 +35,18 @@ module QuickHeadlines
         end
       end
 
+      # Grants up to `want` requests at once, recording each as used now.
+      # Returns the number granted (0 when over the limit).
+      def reserve(now : Int64, want : Int32) : Int32
+        cutoff = now - @window_seconds
+        @requests.reject! { |timestamp| timestamp < cutoff }
+        granted = {want, @max_requests - @requests.size}.min
+        return 0 if granted <= 0
+        granted.times { @requests << now }
+        @last_accessed = now
+        granted
+      end
+
       def retry_after(now : Int64) : Int32
         return @window_seconds if @requests.empty?
 
@@ -55,6 +67,7 @@ module QuickHeadlines
 
     # Call messages (request-reply)
     def_call allowed(key : String, max_requests : Int32, window_seconds : Int32), Bool
+    def_call reserve(key : String, max_requests : Int32, window_seconds : Int32, want : Int32), Int32
     def_call retry_after(key : String, window_seconds : Int32), Int32
 
     # Cast messages (fire-and-forget)
@@ -106,6 +119,7 @@ module QuickHeadlines
     def dispatch(message : Message) : Nil
       case message
       when CallAllowed           then message.deliver_reply_json(handle_allowed(message.key, message.max_requests, message.window_seconds).to_json)
+      when CallReserve           then message.deliver_reply_json(handle_reserve(message.key, message.max_requests, message.window_seconds, message.want).to_json)
       when CallRetryAfter        then message.deliver_reply_json(handle_retry_after(message.key, message.window_seconds).to_json)
       when CastShutdownThrottler then handle_shutdown
       else                            raise "Unknown message: #{message.class.name}"
@@ -129,6 +143,14 @@ module QuickHeadlines
       end
 
       @instances[limiter_key].allowed?(now)
+    end
+
+    private def handle_reserve(key : String, max_requests : Int32, window_seconds : Int32, want : Int32) : Int32
+      maybe_cleanup
+      now = Time.utc.to_unix
+      limiter_key = "#{key}:#{max_requests}:#{window_seconds}"
+      state = (@instances[limiter_key] ||= LimiterState.new(max_requests, window_seconds))
+      state.reserve(now, want)
     end
 
     private def handle_retry_after(key : String, window_seconds : Int32) : Int32
