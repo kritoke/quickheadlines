@@ -68,6 +68,12 @@ function scheduleReconnect() {
 	}, delay);
 }
 
+/** `location.protocol` already ends in ":" — don't add another. */
+export function buildWebSocketUrl(loc: Pick<Location, "protocol" | "host">): string {
+	const protocol = loc.protocol === "https:" ? "wss:" : "ws:";
+	return `${protocol}//${loc.host}/api/ws`;
+}
+
 export function onReconnect(callback: () => void): () => void {
 	reconnectListeners.add(callback);
 	return () => reconnectListeners.delete(callback);
@@ -98,8 +104,7 @@ function connectWebSocket() {
 	sharedState = "connecting";
 	setConnectionState("connecting");
 
-	const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-	const wsUrl = `${protocol}//${window.location.host}/api/ws`;
+	const wsUrl = buildWebSocketUrl(window.location);
 
 	try {
 		sharedConnection = new WebSocket(wsUrl);
