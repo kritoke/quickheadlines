@@ -18,16 +18,23 @@
       "esbuild"
     ],
     "overrides": {
-      "cookie": "~0.7.0"
+      "cookie": "~0.7.0",
+      "source-map-js": ">=1.2.2",
+      "devalue": ">=5.9.3",
+      "postcss": ">=8.5.23",
+      "nanoid@<4": ">=3.3.18 <4",
+      "postcss-selector-parser@<7": ">=6.1.5 <7",
+      "browserslist": ">=4.28.7",
+      "baseline-browser-mapping": ">=2.11.0"
     }
   },
   "dependencies": {
-    "@sveltejs/kit": "^2.70.2",
+    "@sveltejs/kit": "^2.70.4",
     "@tailwindcss/typography": "^0.5.20",
-    "dompurify": "^3.4.13",
+    "dompurify": "^3.4.18",
     "svelte": "^5.56.7",
     "typescript": "^6.0.3",
-    "vite": "^6.4.3"
+    "vite": "^6.4.6"
   },
   "browserslist": [
     "Safari >= 13",
@@ -37,7 +44,7 @@
     "@skeletonlabs/skeleton": "^4.15.2",
     "@skeletonlabs/skeleton-common": "^4.15.2",
     "@skeletonlabs/skeleton-svelte": "^4.15.2",
-    "@sveltejs/adapter-static": "^3.0.10",
+    "@sveltejs/adapter-static": "^3.0.11",
     "@sveltejs/vite-plugin-svelte": "^6.2.4",
     "@tailwindcss/postcss": "^4.3.3",
     "@testing-library/jest-dom": "^6.9.1",
@@ -45,11 +52,11 @@
     "@types/dompurify": "^3.2.0",
     "autoprefixer": "^10.5.4",
     "clsx": "^2.1.1",
-    "happy-dom": "^20.11.0",
+    "happy-dom": "^21.0.4",
     "postcss": "^8.5.23",
     "svelte-check": "^4.7.3",
     "tailwind-merge": "^3.6.0",
     "tailwindcss": "^4.3.3",
-    "vitest": "^4.1.10"
+    "vitest": "^4.1.12"
   }
 }
