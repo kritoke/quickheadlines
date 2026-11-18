@@ -11,7 +11,6 @@ require "../websocket"
 require "../fetcher/vug_adapter"
 require "azurite"
 require "./memory_manager_actor"
-require "./memory_budget"
 require "./task_scheduler"
 require "../rate_limiter"
 
@@ -40,7 +39,6 @@ class AppBootstrap
 
   def initialize(
     @config : Config,
-    @janitor_interval = QuickHeadlines::Constants::JANITOR_INTERVAL,
     @clustering_interval = QuickHeadlines::Constants::CLUSTERING_INTERVAL,
     @cleanup_interval = QuickHeadlines::Constants::CLEANUP_INTERVAL,
     @ws_janitor_interval = QuickHeadlines::Constants::WS_JANITOR_INTERVAL,

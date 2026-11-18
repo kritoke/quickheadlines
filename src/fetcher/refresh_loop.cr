@@ -39,11 +39,7 @@ module RefreshLoop
   # Semaphore management
   # -------------------------------------------------------------------------
 
-  # NOTE: The concurrency primitives (channel, atomic counter, repair
-  # mutex) now live in `RefreshLoop::SemaphorePool` (see
-  # `src/fetcher/semaphore_pool.cr`). A single process-wide instance is
-  # created lazily on first use; tests that need to isolate state
-  # should call `RefreshLoop.pool.reset_for_testing` between cases.
+  # A single process-wide `SemaphorePool` limits concurrent feed fetches.
   @@pool : SemaphorePool?
   @@pool_mutex = Mutex.new(:unchecked)
 
@@ -189,10 +185,7 @@ module RefreshLoop
   # reporter is a sibling fiber that wakes every few minutes to log
   # refresh-cycle and memory diagnostics.
   def self.start(config_path : String, cache : FeedCache, db_service : DatabaseService) : Nil
-    # Touch the pool accessor so the SemaphorePool is built before any
-    # fibers are spawned below. The accessor is idempotent and cheap.
-    pool
-    RefreshLoop::Supervisor.start(config_path, cache, db_service, RefreshLoop.pool)
+    RefreshLoop::Supervisor.start(config_path, cache, db_service)
     RefreshLoop::Monitoring.start_reporter
   end
 end

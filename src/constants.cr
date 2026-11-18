@@ -47,12 +47,10 @@ module QuickHeadlines::Constants
   WEBSOCKET_HEARTBEAT_SECONDS = 30
   WEBSOCKET_SEND_TIMEOUT_MS   = 10
 
-  JANITOR_INTERVAL        = 60.seconds
-  CLUSTERING_INTERVAL     = 60.minutes
-  CLEANUP_INTERVAL        = 6.hours
-  WS_JANITOR_INTERVAL     = 5.minutes
-  INITIAL_CLUSTER_DELAY   = 30.seconds
-  STUCK_CLUSTER_THRESHOLD = 4.hours
+  CLUSTERING_INTERVAL   = 60.minutes
+  CLEANUP_INTERVAL      = 6.hours
+  WS_JANITOR_INTERVAL   = 5.minutes
+  INITIAL_CLUSTER_DELAY = 30.seconds
 
   CACHE_ONE_YEAR = 31536000
   CACHE_ONE_HOUR =     3600
@@ -96,10 +94,11 @@ module QuickHeadlines::Constants
   PRIVATE_172_MIN_BITS =  16
   PRIVATE_172_MAX_BITS =  31
 
-  # Refresh loop thresholds
-  STUCK_THRESHOLD_SECONDS = 3
-  OUTER_TIMEOUT_SECONDS   = 3
-  SLEEP_TIMEOUT_SECONDS   = 3
+  # A refresh that runs longer than refresh_interval * this is cancelled.
+  OUTER_TIMEOUT_MULTIPLIER = 1.5
+  # Consecutive cycles skipped because a cancelled worker has not exited
+  # before the process exits (only when WATCHDOG_ESCALATE_EXIT is set).
+  STUCK_WORKER_EXIT_AFTER_SKIPS = 3
 
   # Color cache
   COLOR_CACHE_MAX_ENTRIES = 24
@@ -116,14 +115,11 @@ module QuickHeadlines::Constants
     "fastly.picsum.photos",
   }
 
-  # Watchdog defaults for auto-recovery
-  WATCHDOG_INTERVAL_SECONDS       = 30.seconds
-  WATCHDOG_RETRY_INTERVAL_SECONDS = 30.seconds
-  WATCHDOG_MAX_ATTEMPTS           = 3
-  WATCHDOG_DEBOUNCE_COUNT         = 2
-  WATCHDOG_ESCALATE_EXIT          = if ENV["QUICKHEADLINES_WATCHDOG_EXIT_ON_FAIL"]? && ENV["QUICKHEADLINES_WATCHDOG_EXIT_ON_FAIL"] == "true"
-                                      true
-                                    else
-                                      false
-                                    end
+  # Exit the process (for an external supervisor to restart it) when a
+  # refresh worker is wedged. Opt-in via QUICKHEADLINES_WATCHDOG_EXIT_ON_FAIL=true.
+  WATCHDOG_ESCALATE_EXIT = if ENV["QUICKHEADLINES_WATCHDOG_EXIT_ON_FAIL"]? && ENV["QUICKHEADLINES_WATCHDOG_EXIT_ON_FAIL"] == "true"
+                             true
+                           else
+                             false
+                           end
 end

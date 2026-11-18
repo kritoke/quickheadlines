@@ -1,7 +1,6 @@
 require "./application"
 require "./websocket"
 require "./services/clustering_service"
-require "./dev_tools/refresh_simulator"
 
 require "http"
 require "log"
@@ -98,18 +97,16 @@ def initiate_shutdown(signal_name : String) : Nil
   # Clean up rate limiter resources
   QuickHeadlines::RateLimiter.shutdown
 
-  # Gracefully stop actors with network/heavy I/O — shutdown allows in-flight
-  # work to complete. FaviconActor gets 10s, ClusteringActor gets 30s.
-  RefreshLoop::FiberTracker.tracked_spawn do
+  # Actor#shutdown only closes the mailbox (non-blocking), so these run
+  # well within the 5s force-exit deadline above.
+  begin
     FaviconActor.instance.shutdown
-  end
-  sleep(10.seconds)
-  RefreshLoop::FiberTracker.tracked_spawn do
     QuickHeadlines::Services::ClusteringActor.instance.shutdown
+  rescue ex
+    SHUTDOWN_LOG.warn(exception: ex) { "Actor shutdown failed" }
   end
-  sleep(30.seconds)
 
-  SocketManager.instance.shutdown_all_connections
+  SocketManager.instance?.try(&.shutdown_all_connections)
   SHUTDOWN_LOG.info { "Shutdown complete" }
 end
 

@@ -17,7 +17,6 @@ end
 #
 # Usage:
 #   MemoryManagerActor.instance.get_rss_mb
-#   MemoryManagerActor.instance.check_and_gc
 #   MemoryManagerActor.instance.get_memory_status
 #   MemoryManagerActor.instance.request_cleanup(CleanupPriority::Normal)
 #
@@ -29,10 +28,8 @@ class MemoryManagerActor < Actor
   struct MemoryStatus
     getter rss_mb : Float64
     getter pressure_level : PressureLevel
-    getter last_gc_time : Time?
-    getter gc_count : Int32
 
-    def initialize(@rss_mb, @pressure_level, @last_gc_time, @gc_count)
+    def initialize(@rss_mb, @pressure_level)
     end
 
     def to_json : String
@@ -40,8 +37,6 @@ class MemoryManagerActor < Actor
         json.object do
           json.field "rss_mb", @rss_mb
           json.field "pressure_level", @pressure_level.value
-          json.field "last_gc_time", @last_gc_time.try(&.to_unix_ms)
-          json.field "gc_count", @gc_count
         end
       end
     end
@@ -51,9 +46,7 @@ class MemoryManagerActor < Actor
       obj = parser.parse.as_h
       MemoryStatus.new(
         rss_mb: obj["rss_mb"].as_f,
-        pressure_level: PressureLevel.new(obj["pressure_level"].as_i),
-        last_gc_time: obj["last_gc_time"]?.try { |v| Time.unix_ms(v.as_i64) },
-        gc_count: obj["gc_count"].as_i
+        pressure_level: PressureLevel.new(obj["pressure_level"].as_i)
       )
     end
   end
@@ -71,38 +64,6 @@ class MemoryManagerActor < Actor
     Emergency  # Drop non-essential data, trigger restart
   end
 
-  struct CleanupStatus
-    getter last_cleanup_time : Time?
-    getter cleanup_count : Int32
-    getter handlers_count : Int32
-    getter last_priority : CleanupPriority?
-
-    def initialize(@last_cleanup_time, @cleanup_count, @handlers_count, @last_priority)
-    end
-
-    def to_json : String
-      JSON.build do |json|
-        json.object do
-          json.field "last_cleanup_time", @last_cleanup_time.try(&.to_unix_ms)
-          json.field "cleanup_count", @cleanup_count
-          json.field "handlers_count", @handlers_count
-          json.field "last_priority", @last_priority.try(&.value)
-        end
-      end
-    end
-
-    def self.from_json(json_str : String) : CleanupStatus
-      parser = JSON::Parser.new(json_str)
-      obj = parser.parse.as_h
-      CleanupStatus.new(
-        last_cleanup_time: obj["last_cleanup_time"]?.try { |v| Time.unix_ms(v.as_i64) },
-        cleanup_count: obj["cleanup_count"].as_i,
-        handlers_count: obj["handlers_count"].as_i,
-        last_priority: obj["last_priority"]?.try { |v| CleanupPriority.new(v.as_i) }
-      )
-    end
-  end
-
   # =========================================================================
   # Messages
   # =========================================================================
@@ -110,34 +71,17 @@ class MemoryManagerActor < Actor
   # Call messages (request-reply)
   def_call get_rss_mb, Float64
   def_call get_memory_status, MemoryStatus
-  def_call get_cleanup_status, CleanupStatus
-  # Capture a process memory snapshot to a directory under /tmp and
-  # return the directory path. If `deep` is true, also runs `gcore`
-  # to write a full process core dump (multi-GB, invasive). See
-  # ticket quickhea-qm4 - this is the cheapest diagnostic for the
-  # 4 GB / 22h leak we observed.
-  def_call dump_heap(deep : Bool), String
 
   # Cast messages (fire-and-forget)
-  def_cast check_and_gc
-  def_cast set_threshold(max_rss_mb : Int32)
   def_cast request_cleanup(priority : CleanupPriority)
-  def_cast register_cleanup_handler(name : String, handler : -> Nil)
-  def_cast unregister_cleanup_handler(name : String)
 
   # =========================================================================
   # Actor state
   # =========================================================================
 
-  # Monitor state
-  @max_rss_mb : Int32 = 750
   @last_rss_mb : Float64 = 0.0
-  @consecutive_high : Int32 = 0
-  @gc_count : Int32 = 0
-  @last_gc_time : Time? = nil
 
   # Cleanup state
-  @cleanup_handlers : Hash(String, -> Nil) = {} of String => (-> Nil)
   @last_cleanup_time : Time? = nil
   @cleanup_count : Int32 = 0
   @last_priority : CleanupPriority? = nil
@@ -202,16 +146,10 @@ class MemoryManagerActor < Actor
 
   def dispatch(message : Message) : Nil
     case message
-    when CallGetRssMb                 then message.deliver_reply_json(handle_get_rss_mb.to_json)
-    when CallGetMemoryStatus          then message.deliver_reply_json(handle_get_memory_status.to_json)
-    when CallGetCleanupStatus         then message.deliver_reply_json(handle_get_cleanup_status.to_json)
-    when CallDumpHeap                 then message.deliver_reply_json(handle_dump_heap(message.deep).to_json)
-    when CastCheckAndGc               then handle_check_and_gc
-    when CastSetThreshold             then handle_set_threshold(message.max_rss_mb)
-    when CastRequestCleanup           then handle_request_cleanup(message.priority)
-    when CastRegisterCleanupHandler   then handle_register_cleanup_handler(message.name, message.handler)
-    when CastUnregisterCleanupHandler then handle_unregister_cleanup_handler(message.name)
-    else                                   raise "Unknown message: #{message.class.name}"
+    when CallGetRssMb        then message.deliver_reply_json(handle_get_rss_mb.to_json)
+    when CallGetMemoryStatus then message.deliver_reply_json(handle_get_memory_status.to_json)
+    when CastRequestCleanup  then handle_request_cleanup(message.priority)
+    else                          raise "Unknown message: #{message.class.name}"
     end
   end
 
@@ -225,8 +163,7 @@ class MemoryManagerActor < Actor
 
   private def handle_get_memory_status : MemoryStatus
     rss = read_rss_mb
-    pressure = calculate_pressure(rss)
-    MemoryStatus.new(rss, pressure, @last_gc_time, @gc_count)
+    MemoryStatus.new(rss, calculate_pressure(rss))
   end
 
   # Captures a process memory snapshot for offline analysis.
@@ -237,19 +174,21 @@ class MemoryManagerActor < Actor
   #
   # - /proc/<pid>/{maps,smaps,smaps_rollup,status,cmdline,stat,statm,io,limits}
   # - Crystal's GC.stats (heap_size, free_bytes, total_bytes)
-  # - Crystal's current fiber name (1.18 has no Fiber.list)
-  # - The current MemoryStatus as JSON
+  # - Live fiber counts from RefreshLoop::FiberTracker
+  # - RSS as read by RssReader
   #
   # These tell us:
   # - Whether the heap grew (GC.stats.heap_size vs VmData)
-  # - How many live fibers we have (via FiberTracker once wired)
   # - Where the RSS lives (anonymous heap pages vs file-backed mmap)
   # - Which VMAs are biggest (might catch a runaway mmap)
   #
   # If `deep` is true, also runs `gcore` to write a full process
   # core dump. That file is multi-GB and invasive (brief pause)
   # but is the gold-standard for offline heap analysis with gdb.
-  private def handle_dump_heap(deep : Bool) : String
+  #
+  # Runs in the caller's fiber, NOT through the actor mailbox, so a slow
+  # `gcore` never blocks other callers of get_memory_status.
+  def dump_heap(deep : Bool) : String
     timestamp = Time.utc.to_s("%Y%m%dT%H%M%S")
     dir = "/tmp/qh-snap-#{timestamp}"
     Dir.mkdir_p(dir)
@@ -266,12 +205,9 @@ class MemoryManagerActor < Actor
     safe_proc_read(pid, "limits", "#{dir}/proc-limits.txt")
 
     File.write("#{dir}/crystal-gc-stats.txt", GC.stats.inspect)
-    # Crystal 1.18 does not expose Fiber.list. The fiber wiring work
-    # (ticket quickhea-hc7) will add visibility through
-    # RefreshLoop::FiberTracker. For now we record the current
-    # fiber name as a sanity check.
-    File.write("#{dir}/crystal-current-fiber.txt", Fiber.current.name || "(unnamed)")
-    File.write("#{dir}/crystal-memory-status.txt", handle_get_memory_status.to_json)
+    File.write("#{dir}/crystal-fibers.txt", RefreshLoop::FiberTracker.stats.inspect)
+    rss, src = RssReader.read
+    File.write("#{dir}/rss.txt", "#{rss.round(1)}MB (src=#{src})")
 
     if deep
       core_path = "#{dir}/core"
@@ -303,48 +239,9 @@ class MemoryManagerActor < Actor
     end
   end
 
-  private def handle_check_and_gc : Nil
-    rss = read_rss_mb
-    pressure = calculate_pressure(rss)
-
-    Log.for("quickheadlines.memory").debug { "Memory check: RSS=#{rss.round(1)}MB, pressure=#{pressure}" }
-
-    case pressure
-    when .low?
-      @consecutive_high = 0
-    when .medium?
-      # No action needed
-    when .high?
-      @consecutive_high += 1
-      if @consecutive_high >= 3
-        Log.for("quickheadlines.memory").warn { "High memory pressure detected (#{@consecutive_high} consecutive checks)" }
-        force_gc
-      end
-    when .critical?
-      @consecutive_high += 1
-      Log.for("quickheadlines.memory").error { "Critical memory pressure: RSS=#{rss.round(1)}MB" }
-      force_gc
-
-      if @consecutive_high >= 5
-        Log.for("quickheadlines.memory").error { "Sustained critical memory pressure (#{@consecutive_high} consecutive checks)" }
-      end
-    end
-
-    @last_rss_mb = rss
-  end
-
-  private def handle_set_threshold(max_rss_mb : Int32) : Nil
-    @max_rss_mb = max_rss_mb
-    Log.for("quickheadlines.memory").info { "Memory threshold set to #{max_rss_mb}MB" }
-  end
-
   # =========================================================================
   # Cleanup handlers
   # =========================================================================
-
-  private def handle_get_cleanup_status : CleanupStatus
-    CleanupStatus.new(@last_cleanup_time, @cleanup_count, @cleanup_handlers.size, @last_priority)
-  end
 
   private def handle_request_cleanup(priority : CleanupPriority) : Nil
     if @is_cleaning_up
@@ -377,29 +274,17 @@ class MemoryManagerActor < Actor
     end
   end
 
-  private def handle_register_cleanup_handler(name : String, handler : -> Nil) : Nil
-    @cleanup_handlers[name] = handler
-    Log.for("quickheadlines.cleanup").debug { "Registered cleanup handler: #{name}" }
-  end
-
-  private def handle_unregister_cleanup_handler(name : String) : Nil
-    @cleanup_handlers.delete(name)
-    Log.for("quickheadlines.cleanup").debug { "Unregistered cleanup handler: #{name}" }
-  end
-
   # =========================================================================
   # Cleanup strategies
   # =========================================================================
 
   private def run_normal_cleanup : Nil
-    run_registered_handlers("normal")
     clear_system_caches(:normal)
     GC.collect
     Log.for("quickheadlines.cleanup").debug { "GC.collect triggered after normal cleanup" }
   end
 
   private def run_aggressive_cleanup : Nil
-    run_registered_handlers("aggressive")
     clear_system_caches(:aggressive)
     GC.collect
     Log.for("quickheadlines.cleanup").debug { "GC.collect triggered after aggressive cleanup" }
@@ -407,23 +292,12 @@ class MemoryManagerActor < Actor
 
   private def run_emergency_cleanup : Nil
     Log.for("quickheadlines.cleanup").error { "Emergency cleanup initiated" }
-    run_registered_handlers("emergency")
     clear_system_caches(:emergency)
     3.times do
       GC.collect
       sleep(100.milliseconds)
     end
     Log.for("quickheadlines.cleanup").debug { "Forced GC.collect 3 times after emergency cleanup" }
-  end
-
-  # Iterate all registered cleanup handlers, logging and swallowing per-handler errors.
-  private def run_registered_handlers(level : String) : Nil
-    @cleanup_handlers.each do |name, handler|
-      handler.call
-      Log.for("quickheadlines.cleanup").debug { "#{level.capitalize} cleanup: #{name} completed" }
-    rescue ex
-      Log.for("quickheadlines.cleanup").error(exception: ex) { "#{level.capitalize} cleanup: #{name} failed" }
-    end
   end
 
   # Clear system-level caches based on cleanup severity.
@@ -476,12 +350,5 @@ class MemoryManagerActor < Actor
     else
       PressureLevel::Critical
     end
-  end
-
-  private def force_gc : Nil
-    GC.collect
-    @gc_count += 1
-    @last_gc_time = Time.utc
-    Log.for("quickheadlines.memory").debug { "GC.collect triggered (total: #{@gc_count})" }
   end
 end

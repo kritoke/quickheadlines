@@ -219,51 +219,6 @@ class QuickHeadlines::Controllers::ApiBaseController < Athena::Framework::Contro
     )
   end
 
-  # DEV ONLY: force stuck state for testing watchdog. Local-only access.
-  @[ARTA::Post(path: "/api/_dev/force_stuck")]
-  def force_stuck(request : AHTTP::Request) : QuickHeadlines::DTOs::HealthResponse
-    # Opt-in guard: only allow when QUICKHEADLINES_ENABLE_DEV_ENDPOINT is explicitly set to "true"
-    unless ENV["QUICKHEADLINES_ENABLE_DEV_ENDPOINT"]? && ENV["QUICKHEADLINES_ENABLE_DEV_ENDPOINT"] == "true"
-      # Hide the endpoint when not enabled
-      raise AHK::Exception::HTTPException.new(404, "Not Found")
-    end
-
-    ip = ::Utils.peer_ip(request.request)
-    allowed = ["127.0.0.1", "::1", "::ffff:127.0.0.1"]
-    unless ip && allowed.includes?(ip)
-      raise AHK::Exception::HTTPException.new(401, "Unauthorized")
-    end
-
-    body = request.body
-    seconds = QuickHeadlines::Constants::API_CACHE_TTL_SECONDS
-    if body
-      content = ::Utils.read_body_safe(body)
-      begin
-        parsed = JSON.parse(content)
-        if val = parsed["seconds"]?
-          seconds = val.to_s.to_i32
-        end
-      rescue JSON::ParseException
-        # Invalid JSON — use default seconds
-      rescue ArgumentError
-        # Invalid number format — use default seconds
-      end
-    end
-
-    QuickHeadlines::DevRefreshSimulator.force_stuck!(seconds)
-
-    status = RefreshLoop::Monitoring.status
-    QuickHeadlines::DTOs::HealthResponse.new(
-      status[:last_start],
-      status[:last_complete],
-      status[:cycles],
-      status[:failures],
-      StateStore.refreshing?,
-      StateStore.feeds.size,
-      StateStore.tabs.size
-    )
-  end
-
   private def clustering_service : QuickHeadlines::Services::ClusteringService
     @clustering_service ||= QuickHeadlines::Services::ClusteringService.new(
       @db_service,

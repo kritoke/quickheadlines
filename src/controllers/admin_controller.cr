@@ -285,8 +285,7 @@ class QuickHeadlines::Controllers::AdminController < QuickHeadlines::Controllers
   # What's captured by default:
   # - /proc/<pid>/{maps,smaps,smaps_rollup,status,cmdline,stat,statm,io,limits}
   # - Crystal's GC.stats (heap_size, free_bytes, etc.)
-  # - Crystal's live fiber names (one per line)
-  # - The current MemoryStatus as JSON
+  # - Live fiber counts (FiberTracker) and current RSS
   #
   # With `?deep=1`, also adds:
   # - /tmp/qh-snap-<ts>/core (full process core via gcore)

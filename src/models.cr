@@ -77,14 +77,6 @@ module StateStore
     service.update(&transform)
   end
 
-  def self.memory_history_summary : String
-    service.memory_history_summary
-  end
-
-  def self.memory_growth_rate : String
-    service.memory_growth_rate
-  end
-
   def self.feeds
     service.feeds
   end

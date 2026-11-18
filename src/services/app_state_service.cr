@@ -1,7 +1,6 @@
 require "athena"
 require "../models"
 require "./task_metadata"
-require "./memory_manager_actor"
 
 # AppStateService manages the application state snapshot with thread-safe access.
 # Wired by AppBootstrap at startup and injected into StateStore facade.
@@ -11,11 +10,6 @@ require "./memory_manager_actor"
 # behind clear interfaces.
 module QuickHeadlines::Services
   class AppStateService
-    # Memory history tracking for leak diagnosis
-    # Format: Array of {timestamp, rss_mb, state_snapshot_size}
-    @memory_history = [] of {time: Time, rss_mb: Float64, feeds_count: Int32, items_count: Int32}
-    @memory_history_max_entries = 500 # ~4 hours at 30s intervals
-
     @current = AppStateSnapshot.new(
       feeds: [] of FeedData,
       tabs: [] of Tab,
@@ -41,49 +35,7 @@ module QuickHeadlines::Services
 
     def update(&transform : AppStateSnapshot -> AppStateSnapshot) : AppStateSnapshot
       Log.for("quickheadlines.state").debug { "update" }
-      @mutex.synchronize do
-        @current = transform.call(@current)
-
-        # Track memory growth after state updates
-        track_memory_usage
-
-        @current
-      end
-    end
-
-    # Track memory usage for leak diagnosis
-    private def track_memory_usage : Nil
-      # Only track every 10 updates to reduce overhead
-      return if @memory_history.size % 10 != 0
-
-      begin
-        rss_mb = MemoryManagerActor.instance.get_memory_status.rss_mb
-        feeds_count = @current.feeds.size
-        items_count = @current.feeds.sum(&.items.size)
-
-        @memory_history << {time: Time.utc, rss_mb: rss_mb, feeds_count: feeds_count, items_count: items_count}
-        @memory_history.shift if @memory_history.size > @memory_history_max_entries
-      rescue ex : Exception
-        Log.for("quickheadlines.memory").debug { "Memory tracking error: #{ex.message}" }
-      end
-    end
-
-    def memory_history_summary : String
-      return "No history" if @memory_history.empty?
-      recent = @memory_history.last(20)
-      rss_values = recent.map(&.[:rss_mb])
-      "min_rss=#{rss_values.min.round(1)}MB, max_rss=#{rss_values.max.round(1)}MB, current=#{rss_values.last.round(1)}MB, samples=#{recent.size}"
-    end
-
-    def memory_growth_rate : String
-      return "No history" if @memory_history.size < 10
-      recent = @memory_history.last(10)
-      time_span_hrs = (recent.last[:time] - recent.first[:time]).total_hours
-      return "No history" if time_span_hrs < 0.01
-
-      rss_diff = recent.last[:rss_mb] - recent.first[:rss_mb]
-      rate = rss_diff / time_span_hrs
-      "#{rate.round(2)}MB/hr (#{rss_diff.round(1)}MB over #{time_span_hrs.round(1)}hrs)"
+      @mutex.synchronize { @current = transform.call(@current) }
     end
 
     def feeds : Array(FeedData)

@@ -5,8 +5,6 @@ describe RefreshLoop::Monitoring do
   before_each do
     # Reset state before each test
     RefreshLoop::Monitoring.reset_failures
-    RefreshLoop::Monitoring.last_refresh_start_for_testing = 0_i64
-    RefreshLoop::Monitoring.last_refresh_complete_for_testing = 0_i64
   end
 
   describe "constants" do
@@ -77,63 +75,6 @@ describe RefreshLoop::Monitoring do
       status.has_key?(:cycles).should be_true
       status.has_key?(:failures).should be_true
       status.has_key?(:feeds_in_progress).should be_true
-    end
-  end
-
-  describe "stuck?" do
-    it "returns false when never started" do
-      RefreshLoop::Monitoring.stuck?(60).should be_false
-    end
-
-    it "returns false when last_complete > start_time" do
-      RefreshLoop::Monitoring.record_cycle_start
-      RefreshLoop::Monitoring.record_cycle_complete
-      RefreshLoop::Monitoring.stuck?(60).should be_false
-    end
-
-    it "returns true when age exceeds max_age_seconds" do
-      # Set start time to 120 seconds ago
-      old_time = (Time.utc - 120.seconds).to_unix_ms
-      RefreshLoop::Monitoring.last_refresh_start_for_testing = old_time
-      RefreshLoop::Monitoring.stuck?(60).should be_true
-    end
-
-    it "returns false when age is within max_age_seconds" do
-      RefreshLoop::Monitoring.record_cycle_start
-      RefreshLoop::Monitoring.stuck?(120).should be_false
-    end
-  end
-
-  describe "attempt_recovery" do
-    it "returns true and zeros start time when stuck" do
-      old_time = (Time.utc - 120.seconds).to_unix_ms
-      RefreshLoop::Monitoring.last_refresh_start_for_testing = old_time
-      result = RefreshLoop::Monitoring.attempt_recovery
-      result.should be_true
-      RefreshLoop::Monitoring.status[:last_start].should eq(0)
-    end
-
-    it "returns false when not stuck" do
-      now = Time.utc.to_unix_ms
-      RefreshLoop::Monitoring.last_refresh_start_for_testing = now
-      RefreshLoop::Monitoring.last_refresh_complete_for_testing = now + 1000
-      RefreshLoop::Monitoring.attempt_recovery.should be_false
-    end
-
-    it "returns false when never started" do
-      RefreshLoop::Monitoring.attempt_recovery.should be_false
-    end
-  end
-
-  describe "testing setters" do
-    it "last_refresh_start_for_testing= sets the value" do
-      RefreshLoop::Monitoring.last_refresh_start_for_testing = 12345_i64
-      RefreshLoop::Monitoring.status[:last_start].should eq(12345_i64)
-    end
-
-    it "last_refresh_complete_for_testing= sets the value" do
-      RefreshLoop::Monitoring.last_refresh_complete_for_testing = 67890_i64
-      RefreshLoop::Monitoring.status[:last_complete].should eq(67890_i64)
     end
   end
 end

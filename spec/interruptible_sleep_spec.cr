@@ -46,18 +46,8 @@ describe RefreshLoop::InterruptibleSleep do
       (Time.instant - start).should be < 0.1.seconds
     end
 
-    it "respects outer_cap: exits when elapsed >= outer_cap even if total has not been reached" do
-      # With outer_cap=0.05.seconds and total=1.second, the
-      # helper should exit after the first chunk because
-      # elapsed(>=0.05) >= outer_cap(0.05).
-      start = Time.instant
-      elapsed = RefreshLoop::InterruptibleSleep.sleep(1.second, outer_cap: 0.05.seconds, chunk: 0.1.seconds)
-      elapsed.should be < 0.2.seconds
-      (Time.instant - start).should be < 0.3.seconds
-    end
-
     it "respects chunk: completes close to total for many small chunks" do
-      # With a small chunk and no outer_cap, the loop should
+      # With a small chunk, the loop should
       # complete close to the requested total.
       start = Time.instant
       elapsed = RefreshLoop::InterruptibleSleep.sleep(0.15.seconds, chunk: 0.05.seconds)

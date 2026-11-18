@@ -17,18 +17,11 @@ require "../utils/string_pool"
 #   `record_failure`, `reset_failures`, `feed_fetch_started`,
 #   `feed_fetch_completed`, `status`. These are called from
 #   the supervisor and the per-feed fetcher.
-# - Stuck detection and recovery: `stuck?` and `attempt_recovery`,
-#   called from the supervisor's `check_stuck_recovery` and from
-#   `app_bootstrap`.
 # - Periodic logging: `start` spawns a long-lived fiber that
 #   wakes every `REPORT_INTERVAL` and logs refresh-cycle health
 #   plus memory status with diagnostic counts (sockets, event
 #   clients, fibers). The reporter is on the suspect list for
 #   the in-flight P0 memory-growth investigation (`quickhea-alz`).
-# - Test-only setters: `last_refresh_start_for_testing=` and
-#   `last_refresh_complete_for_testing=` are used exclusively by
-#   `src/dev_tools/refresh_simulator.cr` to simulate a stuck
-#   state.
 #
 # History: this module merges what used to be two separate
 # `RefreshLoop::*` sub-modules — `RefreshHealthMonitor`
@@ -108,51 +101,6 @@ module RefreshLoop::Monitoring
   end
 
   # ---------------------------------------------------------------------
-  # Stuck detection and recovery
-  # ---------------------------------------------------------------------
-
-  def self.stuck?(max_age_seconds : Int32) : Bool
-    start_time = @@last_refresh_start.get
-    return false if start_time == 0
-
-    last_complete = @@last_refresh_complete.get
-    return false if last_complete > start_time
-
-    age_ms = Time.utc.to_unix_ms - start_time
-    result = age_ms > (max_age_seconds * 1000)
-    if result
-      Log.for("quickheadlines.feed").warn do
-        "Monitoring.stuck?: start=#{start_time}, last_complete=#{last_complete}, age_ms=#{age_ms}, threshold_ms=#{max_age_seconds * 1000}"
-      end
-    end
-    result
-  end
-
-  def self.attempt_recovery : Bool
-    start_time = @@last_refresh_start.get
-    return false if start_time == 0
-
-    last_complete = @@last_refresh_complete.get
-    return false if last_complete > start_time
-
-    @@last_refresh_start.set(0)
-    Log.for("quickheadlines.feed").info { "Monitoring: atomic recovery performed" }
-    true
-  end
-
-  # ---------------------------------------------------------------------
-  # Test-only setters (used by src/dev_tools/refresh_simulator.cr)
-  # ---------------------------------------------------------------------
-
-  def self.last_refresh_start_for_testing=(ms : Int64) : Nil
-    @@last_refresh_start.set(ms)
-  end
-
-  def self.last_refresh_complete_for_testing=(ms : Int64) : Nil
-    @@last_refresh_complete.set(ms)
-  end
-
-  # ---------------------------------------------------------------------
   # Periodic logging
   # ---------------------------------------------------------------------
 
@@ -162,6 +110,7 @@ module RefreshLoop::Monitoring
   # fibers).
   def self.start_reporter : Nil
     RefreshLoop::FiberTracker.tracked_spawn("health_monitor_reporter") do
+      init_rss_tracking
       loop do
         break if QuickHeadlines.shutting_down?
         RefreshLoop::InterruptibleSleep.sleep(REPORT_INTERVAL)
@@ -225,7 +174,7 @@ module RefreshLoop::Monitoring
 
       Log.for("quickheadlines.memory").info do
         "Memory: RSS=#{current_rss.round(1)}MB [src=#{RssReader.read[1]}] native≈#{(current_rss - gc.heap_size / 1024.0 / 1024.0).round(1)}MB (#{delta_since_startup >= 0 ? "+" : ""}#{delta_since_startup.round(1)} since startup, #{delta_since_last >= 0 ? "+" : ""}#{delta_since_last.round(1)} in #{time_since_last.round(0)}s), " \
-        "pressure=#{memory_status.pressure_level}, GC=#{memory_status.gc_count}\n" \
+        "pressure=#{memory_status.pressure_level}\n" \
         "Diag: sockets=#{socket_count}, event_clients=#{event_clients}, fibers=#{fiber_stats}, " \
         "rate_cache=#{rate_limiter_cache}, favicon_pool=#{favicon_pool}\n" \
         "GC: heap=#{(gc.heap_size / 1024 / 1024).round(1)}MB, free=#{(gc.free_bytes / 1024 / 1024).round(1)}MB, " \

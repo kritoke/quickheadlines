@@ -38,13 +38,12 @@ describe RefreshLoop::Supervisor do
 
   describe "State" do
     describe "constructor" do
-      it "initializes cycle_count and consecutive_skips to 0" do
+      it "initializes cycle_count to 0" do
         config = build_supervisor_config
         now = Time.utc
         state = RefreshLoop::Supervisor::State.new(config, now)
 
         state.cycle_count.should eq(0)
-        state.consecutive_skips.should eq(0)
       end
 
       it "stores active_config and last_mtime" do
@@ -101,60 +100,21 @@ describe RefreshLoop::Supervisor do
       end
     end
 
-    describe "consecutive_skips mutations" do
-      it "increment_skips returns the new value" do
-        state = RefreshLoop::Supervisor::State.new(build_supervisor_config, Time.utc)
-        state.increment_skips.should eq(1)
-        state.increment_skips.should eq(2)
-        state.increment_skips.should eq(3)
-      end
-
-      it "reset_skips brings the count back to 0" do
-        state = RefreshLoop::Supervisor::State.new(build_supervisor_config, Time.utc)
-        3.times { state.increment_skips }
-        state.reset_skips
-        state.consecutive_skips.should eq(0)
-      end
-
-      it "MAX_CONSECUTIVE_SKIPS is 3" do
-        # The supervisor force-resets the refreshing flag after
-        # this many consecutive skips to recover from a stuck
-        # refresh. Verify the value is the expected constant.
-        RefreshLoop::Supervisor::State::MAX_CONSECUTIVE_SKIPS.should eq(3)
-      end
-    end
-
     describe "derived timing values" do
       it "refresh_interval_seconds is refresh_minutes * 60" do
         state = RefreshLoop::Supervisor::State.new(build_supervisor_config(refresh_minutes: 30), Time.utc)
         state.refresh_interval_seconds.should eq(30 * 60)
       end
 
-      it "outer_timeout_seconds is refresh_interval * OUTER_TIMEOUT_SECONDS / 2" do
+      it "outer_timeout_seconds is refresh_interval * OUTER_TIMEOUT_MULTIPLIER (1.5)" do
         state = RefreshLoop::Supervisor::State.new(build_supervisor_config(refresh_minutes: 30), Time.utc)
-        # OUTER_TIMEOUT_SECONDS = 3 (from QuickHeadlines::Constants)
-        # refresh_interval = 30 * 60 = 1800
-        # outer_timeout = 1800 * 3 // 2 = 2700
-        state.outer_timeout_seconds.should eq(30 * 60 * 3 // 2)
-      end
-
-      it "sleep_timeout_seconds is refresh_interval * SLEEP_TIMEOUT_SECONDS / 2" do
-        state = RefreshLoop::Supervisor::State.new(build_supervisor_config(refresh_minutes: 30), Time.utc)
-        # SLEEP_TIMEOUT_SECONDS = 3
-        state.sleep_timeout_seconds.should eq(30 * 60 * 3 // 2)
-      end
-
-      it "stuck_threshold_seconds is refresh_interval * STUCK_THRESHOLD_SECONDS" do
-        state = RefreshLoop::Supervisor::State.new(build_supervisor_config(refresh_minutes: 30), Time.utc)
-        # STUCK_THRESHOLD_SECONDS = 3
-        state.stuck_threshold_seconds.should eq(30 * 60 * 3)
+        state.outer_timeout_seconds.should eq(2700)
       end
     end
   end
 
   describe ".start" do
     it "returns early (no exception) when the config path does not exist" do
-      semaphore = RefreshLoop::SemaphorePool.new
       # Build our own Config and DatabaseService so we don't depend
       # on the DatabaseService singleton being initialized.
       config = build_supervisor_config
@@ -165,7 +125,7 @@ describe RefreshLoop::Supervisor do
       # `load_validated_config` returns a failure result, the
       # supervisor logs and returns, and the test passes without
       # any fibers being spawned.
-      result = RefreshLoop::Supervisor.start("/nonexistent/path/feeds.yml", cache, db_service, semaphore)
+      result = RefreshLoop::Supervisor.start("/nonexistent/path/feeds.yml", cache, db_service)
       result.should be_nil
     end
   end
