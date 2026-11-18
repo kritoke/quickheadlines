@@ -82,13 +82,11 @@ def initiate_shutdown(signal_name : String) : Nil
   # Force exit after 5 seconds if graceful shutdown doesn't complete
   # This handles cases where GC or other operations block shutdown
   RefreshLoop::FiberTracker.tracked_spawn do
-    begin
-      sleep(5.seconds)
-      SHUTDOWN_LOG.warn { "Graceful shutdown taking too long, forcing exit" }
-      Process.exit(1)
-    rescue ex
-      SHUTDOWN_LOG.error(exception: ex) { "Force exit fiber failed" }
-    end
+    sleep(5.seconds)
+    SHUTDOWN_LOG.warn { "Graceful shutdown taking too long, forcing exit" }
+    Process.exit(1)
+  rescue ex
+    SHUTDOWN_LOG.error(exception: ex) { "Force exit fiber failed" }
   end
 
   SHUTDOWN_LOG.info { "Shutting down WebSocket connections..." }
@@ -130,18 +128,14 @@ begin
       Log.for("quickheadlines.app").info { "SKIP_STARTUP_TASKS set; not starting background tasks on startup" }
     else
       RefreshLoop::FiberTracker.tracked_spawn do
-        begin
-          bootstrap.start_background_tasks
-        rescue ex
-          Log.for("quickheadlines.app").error(exception: ex) { "start_background_tasks fiber crashed" }
-        end
+        bootstrap.start_background_tasks
+      rescue ex
+        Log.for("quickheadlines.app").error(exception: ex) { "start_background_tasks fiber crashed" }
       end
       RefreshLoop::FiberTracker.tracked_spawn do
-        begin
-          bootstrap.verify_feeds_loaded
-        rescue ex
-          Log.for("quickheadlines.app").error(exception: ex) { "verify_feeds_loaded fiber crashed" }
-        end
+        bootstrap.verify_feeds_loaded
+      rescue ex
+        Log.for("quickheadlines.app").error(exception: ex) { "verify_feeds_loaded fiber crashed" }
       end
     end
   end

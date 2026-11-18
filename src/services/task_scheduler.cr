@@ -41,26 +41,24 @@ class TaskScheduler
     RefreshLoop::FiberTracker.tracked_spawn do
       consecutive = 0
       loop do
-        begin
-          break if QuickHeadlines.shutting_down?
-          RefreshLoop::InterruptibleSleep.sleep(QuickHeadlines::Constants::WATCHDOG_INTERVAL_SECONDS)
+        break if QuickHeadlines.shutting_down?
+        RefreshLoop::InterruptibleSleep.sleep(QuickHeadlines::Constants::WATCHDOG_INTERVAL_SECONDS)
 
-          config = StateStore.config
-          stuck_threshold = stuck_threshold_seconds(config)
+        config = StateStore.config
+        stuck_threshold = stuck_threshold_seconds(config)
 
-          unless RefreshLoop::Monitoring.stuck?(stuck_threshold)
-            consecutive = 0
-            next
-          end
-
-          consecutive += 1
-          Log.for("quickheadlines.watchdog").warn { "Watchdog: detected stuck refresh (count=#{consecutive})" }
-          next if consecutive < QuickHeadlines::Constants::WATCHDOG_DEBOUNCE_COUNT
-
-          consecutive = watchdog_recover(config, consecutive)
-        rescue ex
-          Log.for("quickheadlines.watchdog").error(exception: ex) { "Watchdog fiber error" }
+        unless RefreshLoop::Monitoring.stuck?(stuck_threshold)
+          consecutive = 0
+          next
         end
+
+        consecutive += 1
+        Log.for("quickheadlines.watchdog").warn { "Watchdog: detected stuck refresh (count=#{consecutive})" }
+        next if consecutive < QuickHeadlines::Constants::WATCHDOG_DEBOUNCE_COUNT
+
+        consecutive = watchdog_recover(config, consecutive)
+      rescue ex
+        Log.for("quickheadlines.watchdog").error(exception: ex) { "Watchdog fiber error" }
       end
     end
   end
@@ -141,25 +139,21 @@ class TaskScheduler
 
   private def start_feed_refresh
     RefreshLoop::FiberTracker.tracked_spawn do
-      begin
-        RefreshLoop.start("feeds.yml", @feed_cache, @db_service)
-      rescue ex
-        Log.for("quickheadlines.app").error(exception: ex) { "start_feed_refresh failed" }
-      end
+      RefreshLoop.start("feeds.yml", @feed_cache, @db_service)
+    rescue ex
+      Log.for("quickheadlines.app").error(exception: ex) { "start_feed_refresh failed" }
     end
   end
 
   private def start_clustering_scheduler
     RefreshLoop::FiberTracker.tracked_spawn do
       loop do
-        begin
-          RefreshLoop::InterruptibleSleep.sleep(@clustering_interval)
-          break if QuickHeadlines.shutting_down?
-          threshold = @config.clustering.try(&.threshold) || 0.35
-          QuickHeadlines::Services::ClusteringService.new(@db_service, nil, @config.clustering).recluster_with_lsh(@feed_cache, @config.db_fetch_limit, threshold)
-        rescue ex
-          Log.for("quickheadlines.app").error(exception: ex) { "Clustering scheduler iteration failed" }
-        end
+        RefreshLoop::InterruptibleSleep.sleep(@clustering_interval)
+        break if QuickHeadlines.shutting_down?
+        threshold = @config.clustering.try(&.threshold) || 0.35
+        QuickHeadlines::Services::ClusteringService.new(@db_service, nil, @config.clustering).recluster_with_lsh(@feed_cache, @config.db_fetch_limit, threshold)
+      rescue ex
+        Log.for("quickheadlines.app").error(exception: ex) { "Clustering scheduler iteration failed" }
       end
     end
   end

@@ -419,12 +419,10 @@ class MemoryManagerActor < Actor
   # Iterate all registered cleanup handlers, logging and swallowing per-handler errors.
   private def run_registered_handlers(level : String) : Nil
     @cleanup_handlers.each do |name, handler|
-      begin
-        handler.call
-        Log.for("quickheadlines.cleanup").debug { "#{level.capitalize} cleanup: #{name} completed" }
-      rescue ex
-        Log.for("quickheadlines.cleanup").error(exception: ex) { "#{level.capitalize} cleanup: #{name} failed" }
-      end
+      handler.call
+      Log.for("quickheadlines.cleanup").debug { "#{level.capitalize} cleanup: #{name} completed" }
+    rescue ex
+      Log.for("quickheadlines.cleanup").error(exception: ex) { "#{level.capitalize} cleanup: #{name} failed" }
     end
   end
 

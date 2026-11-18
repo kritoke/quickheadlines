@@ -71,11 +71,9 @@ module RefreshLoop::FiberTracker
   def self.tracked_spawn(name : String? = nil, &block) : Fiber
     track_spawn
     spawn(name: name) do
-      begin
-        block.call
-      ensure
-        track_exit
-      end
+      block.call
+    ensure
+      track_exit
     end
   end
 end

@@ -192,22 +192,20 @@ class SocketManager < Actor
 
   private def handle_broadcast_message(message : String) : Nil
     @connections.each do |conn|
-      begin
-        # Never block the actor on a slow client: if its queue is full, drop
-        # the message for that client and move on.
-        select
-        when conn.outgoing.send(message)
-          # Will be counted by writer fiber on actual send
-        else
-          @messages_dropped += 1
-          Log.for("quickheadlines.websocket").debug { "Dropped message for slow client: #{conn.ip}" }
-        end
-      rescue Channel::ClosedError
+      # Never block the actor on a slow client: if its queue is full, drop
+      # the message for that client and move on.
+      select
+      when conn.outgoing.send(message)
+        # Will be counted by writer fiber on actual send
+      else
         @messages_dropped += 1
-      rescue ex : IO::TimeoutError | IO::Error
-        @send_errors += 1
-        Log.for("quickheadlines.websocket").error(exception: ex) { "Broadcast error (#{ex.class})" }
+        Log.for("quickheadlines.websocket").debug { "Dropped message for slow client: #{conn.ip}" }
       end
+    rescue Channel::ClosedError
+      @messages_dropped += 1
+    rescue ex : IO::TimeoutError | IO::Error
+      @send_errors += 1
+      Log.for("quickheadlines.websocket").error(exception: ex) { "Broadcast error (#{ex.class})" }
     end
   end
 
@@ -347,30 +345,28 @@ class SocketManager < Actor
   private def spawn_writer_fiber(connection : Connection) : Nil
     RefreshLoop::FiberTracker.tracked_spawn("ws-writer-#{connection.ip}") do
       loop do
-        begin
-          # Use select with timeout to detect dead connections
-          select
-          when message = connection.outgoing.receive?
-            break if message.nil?
-            connection.websocket.send(message)
-            @messages_sent.add(1)
-            connection_activity(connection.websocket)
-          when timeout(5.seconds)
-            # Check if websocket is still alive
-            if connection.websocket.closed?
-              Log.for("quickheadlines.websocket").debug { "Writer fiber: websocket closed for #{connection.ip}" }
-              break
-            end
+        # Use select with timeout to detect dead connections
+        select
+        when message = connection.outgoing.receive?
+          break if message.nil?
+          connection.websocket.send(message)
+          @messages_sent.add(1)
+          connection_activity(connection.websocket)
+        when timeout(5.seconds)
+          # Check if websocket is still alive
+          if connection.websocket.closed?
+            Log.for("quickheadlines.websocket").debug { "Writer fiber: websocket closed for #{connection.ip}" }
+            break
           end
-        rescue Channel::ClosedError
-          break
-        rescue IO::TimeoutError
-          connection_send_error(connection.websocket, "IO::TimeoutError")
-          break
-        rescue ex
-          connection_send_error(connection.websocket, ex.class.name)
-          break
         end
+      rescue Channel::ClosedError
+        break
+      rescue IO::TimeoutError
+        connection_send_error(connection.websocket, "IO::TimeoutError")
+        break
+      rescue ex
+        connection_send_error(connection.websocket, ex.class.name)
+        break
       end
 
       begin

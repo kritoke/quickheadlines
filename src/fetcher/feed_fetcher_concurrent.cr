@@ -139,26 +139,24 @@ module RefreshLoop
       # fetch really ends, so real concurrency never exceeds the pool limit.
       semaphore.acquire
       RefreshLoop::FiberTracker.tracked_spawn("feed_fetch_inner_#{index}") do
+        fetch_result = FetcherRegistry.impl.fetch(feed, config.item_limit, config.db_fetch_limit, previous_feed_data)
+        result_channel.send(fetch_result)
+      rescue Channel::ClosedError
+        # The outer fiber already closed the channel — either
+        # because the per-feed timeout fired, or because
+        # `fetch_all` closed the fan-in channel after collecting
+        # all results. The fetch itself may have completed or
+        # failed; either way the result is no longer wanted.
+        # This is not a fetch failure, so it must NOT be logged
+        # as one.
+      rescue ex : Exception
+        Log.for("quickheadlines.feed").error(exception: ex) { "Fetch failed for #{feed.url}" }
         begin
-          fetch_result = FetcherRegistry.impl.fetch(feed, config.item_limit, config.db_fetch_limit, previous_feed_data)
-          result_channel.send(fetch_result)
+          result_channel.send(nil)
         rescue Channel::ClosedError
-          # The outer fiber already closed the channel — either
-          # because the per-feed timeout fired, or because
-          # `fetch_all` closed the fan-in channel after collecting
-          # all results. The fetch itself may have completed or
-          # failed; either way the result is no longer wanted.
-          # This is not a fetch failure, so it must NOT be logged
-          # as one.
-        rescue ex : Exception
-          Log.for("quickheadlines.feed").error(exception: ex) { "Fetch failed for #{feed.url}" }
-          begin
-            result_channel.send(nil)
-          rescue Channel::ClosedError
-          end
-        ensure
-          semaphore.release
         end
+      ensure
+        semaphore.release
       end
 
       timed_out = false

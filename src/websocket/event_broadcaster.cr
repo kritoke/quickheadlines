@@ -26,36 +26,34 @@ class EventBroadcaster
   def self.start : Nil
     RefreshLoop::FiberTracker.tracked_spawn("event-broadcaster") do
       loop do
-        begin
-          select
-          when event = UPDATE_CHANNEL.receive?
-            begin
-              json = event.to_json
-              broadcast_json(json)
-              SENT_EVENTS.add(1)
-              PROCESSED_EVENTS.add(1)
-            rescue ex
-              Log.for("quickheadlines.websocket").error(exception: ex) { "EventBroadcaster broadcast error, dropping event" }
-            end
-          when timeout(QuickHeadlines::Constants::WEBSOCKET_HEARTBEAT_SECONDS.seconds)
-            begin
-              json = HeartbeatEvent.new.to_json
-              broadcast_json(json)
-              SENT_EVENTS.add(1)
-              # Log client count every heartbeat (every 30s)
-              log_client_stats
-            rescue ex
-              Log.for("quickheadlines.websocket").error(exception: ex) { "EventBroadcaster heartbeat error" }
-            end
-          when SHUTDOWN_CHANNEL.receive?
-            UPDATE_CHANNEL.close
-            shutdown_all
-            Log.for("quickheadlines.websocket").info { "EventBroadcaster shut down" }
-            break
+        select
+        when event = UPDATE_CHANNEL.receive?
+          begin
+            json = event.to_json
+            broadcast_json(json)
+            SENT_EVENTS.add(1)
+            PROCESSED_EVENTS.add(1)
+          rescue ex
+            Log.for("quickheadlines.websocket").error(exception: ex) { "EventBroadcaster broadcast error, dropping event" }
           end
-        rescue ex
-          Log.for("quickheadlines.websocket").error(exception: ex) { "EventBroadcaster loop error" }
+        when timeout(QuickHeadlines::Constants::WEBSOCKET_HEARTBEAT_SECONDS.seconds)
+          begin
+            json = HeartbeatEvent.new.to_json
+            broadcast_json(json)
+            SENT_EVENTS.add(1)
+            # Log client count every heartbeat (every 30s)
+            log_client_stats
+          rescue ex
+            Log.for("quickheadlines.websocket").error(exception: ex) { "EventBroadcaster heartbeat error" }
+          end
+        when SHUTDOWN_CHANNEL.receive?
+          UPDATE_CHANNEL.close
+          shutdown_all
+          Log.for("quickheadlines.websocket").info { "EventBroadcaster shut down" }
+          break
         end
+      rescue ex
+        Log.for("quickheadlines.websocket").error(exception: ex) { "EventBroadcaster loop error" }
       end
     end
     Log.for("quickheadlines.websocket").info { "EventBroadcaster started" }
@@ -101,11 +99,9 @@ class EventBroadcaster
       # Notify subscriber channels — collect failures, delete after iteration
       failed_subs = [] of SubscribeMessage
       @@subscribers.each do |sub|
-        begin
-          sub.channel.send(json)
-        rescue Channel::ClosedError
-          failed_subs << sub
-        end
+        sub.channel.send(json)
+      rescue Channel::ClosedError
+        failed_subs << sub
       end
       failed_subs.each { |sub| @@subscribers.delete(sub) }
     end

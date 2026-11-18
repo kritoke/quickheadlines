@@ -172,22 +172,20 @@ class FeedCache
       vacuum_succeeded = false
 
       max_retries.times do |attempt|
-        begin
-          @cleanup_store.vacuum
-          vacuum_succeeded = true
-          break
-        rescue ex : Exception
-          if ex.message.try(&.includes?("database is locked")) || ex.message.try(&.includes?("database locked"))
-            if attempt < max_retries - 1
-              Log.for("quickheadlines.storage").warn { "VACUUM locked (attempt #{attempt + 1}/#{max_retries}), retrying in #{retry_delay}s" }
-              sleep(retry_delay.seconds)
-            else
-              Log.for("quickheadlines.storage").warn { "VACUUM skipped - database locked after #{max_retries} attempts" }
-            end
+        @cleanup_store.vacuum
+        vacuum_succeeded = true
+        break
+      rescue ex : Exception
+        if ex.message.try(&.includes?("database is locked")) || ex.message.try(&.includes?("database locked"))
+          if attempt < max_retries - 1
+            Log.for("quickheadlines.storage").warn { "VACUUM locked (attempt #{attempt + 1}/#{max_retries}), retrying in #{retry_delay}s" }
+            sleep(retry_delay.seconds)
           else
-            Log.for("quickheadlines.storage").warn { "vacuum failed: #{ex.message}" }
-            break
+            Log.for("quickheadlines.storage").warn { "VACUUM skipped - database locked after #{max_retries} attempts" }
           end
+        else
+          Log.for("quickheadlines.storage").warn { "vacuum failed: #{ex.message}" }
+          break
         end
       end
 

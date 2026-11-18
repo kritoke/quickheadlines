@@ -208,18 +208,16 @@ module RefreshLoop
       cancel_ch = Channel(Nil).new(1)
       @state.initial_cancel_ch = cancel_ch
       RefreshLoop::FiberTracker.tracked_spawn("initial_refresh") do
-        begin
-          RefreshLoop.refresh_all(config_for_initial, @cache, @db_service, cancel_ch)
-        rescue CancelError
-          Log.for("quickheadlines.feed").warn { "Initial refresh cancelled by supervisor" }
-          RefreshLoop::Monitoring.record_failure
-        rescue ex : Exception
-          Log.for("quickheadlines.feed").error(exception: ex) { "Initial refresh failed" }
-          RefreshLoop::Monitoring.record_failure
-        ensure
-          StateStore.refreshing = false
-          @state.initial_cancel_ch = nil
-        end
+        RefreshLoop.refresh_all(config_for_initial, @cache, @db_service, cancel_ch)
+      rescue CancelError
+        Log.for("quickheadlines.feed").warn { "Initial refresh cancelled by supervisor" }
+        RefreshLoop::Monitoring.record_failure
+      rescue ex : Exception
+        Log.for("quickheadlines.feed").error(exception: ex) { "Initial refresh failed" }
+        RefreshLoop::Monitoring.record_failure
+      ensure
+        StateStore.refreshing = false
+        @state.initial_cancel_ch = nil
       end
 
       if @state.active_config.debug?

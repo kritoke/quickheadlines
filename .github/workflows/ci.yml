@@ -8,6 +8,31 @@ on:
     branches: [main, master]
 
 jobs:
+  lint:
+    name: Ameba + format
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Crystal
+        uses: crystal-lang/install-crystal@v1
+        with:
+          crystal: 1.21.0
+
+      - name: Install shards (incl. ameba, pinned by shard.lock)
+        run: shards install
+
+      - name: Build ameba
+        # ameba's postinstall generates bin/ameba.cr; compile it once
+        run: crystal build bin/ameba.cr -o bin/ameba
+
+      - name: Run ameba
+        run: bin/ameba
+
+      - name: Check formatting
+        run: crystal tool format --check src spec
+
   test-ubuntu:
     name: Test on Ubuntu
     runs-on: ubuntu-latest
