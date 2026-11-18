@@ -28,7 +28,7 @@ jobs:
 
       - name: Build ameba
         # ameba 1.7 has no postinstall; build its CLI entrypoint from lib/
-        run: crystal build lib/ameba/bin/ameba.cr -o bin/ameba
+        run: mkdir -p bin && crystal build lib/ameba/bin/ameba.cr -o bin/ameba
 
       - name: Run ameba
         run: bin/ameba
