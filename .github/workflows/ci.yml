@@ -20,6 +20,9 @@ jobs:
         with:
           crystal: 1.21.0
 
+      - name: Install system dependencies (ameba links libyaml/pcre2)
+        run: sudo apt-get update && sudo apt-get install -y libyaml-dev libpcre2-dev
+
       - name: Install shards (incl. ameba, pinned by shard.lock)
         run: shards install
 
