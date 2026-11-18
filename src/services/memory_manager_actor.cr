@@ -1,3 +1,4 @@
+require "./rss_reader"
 require "../infrastructure/actor"
 require "../services/fiber_tracker"
 require "../favicon_cache"
@@ -460,17 +461,7 @@ class MemoryManagerActor < Actor
   # =========================================================================
 
   private def read_rss_mb : Float64
-    {% if flag?(:freebsd) %}
-      if File.exists?("/proc/curproc/status")
-        status = File.read("/proc/curproc/status")
-        if match = status.match(/VmRSS:\s+(\d+)\s+kB/)
-          return match[1].to_f64 / 1024.0
-        end
-      end
-    {% end %}
-
-    gc_stats = GC.stats
-    gc_stats.heap_size.to_f64 / (1024.0 * 1024.0)
+    RssReader.read[0]
   rescue ex
     Log.for("quickheadlines.memory").warn { "Failed to read RSS: #{ex.message}" }
     @last_rss_mb

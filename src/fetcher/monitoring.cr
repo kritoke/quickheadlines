@@ -224,7 +224,7 @@ module RefreshLoop::Monitoring
       favicon_pool = FaviconActor.instance?.try(&.client_pool_size) || 0 rescue 0
 
       Log.for("quickheadlines.memory").info do
-        "Memory: RSS=#{current_rss.round(1)}MB (#{delta_since_startup >= 0 ? "+" : ""}#{delta_since_startup.round(1)} since startup, #{delta_since_last >= 0 ? "+" : ""}#{delta_since_last.round(1)} in #{time_since_last.round(0)}s), " \
+        "Memory: RSS=#{current_rss.round(1)}MB [src=#{RssReader.read[1]}] native≈#{(current_rss - gc.heap_size / 1024.0 / 1024.0).round(1)}MB (#{delta_since_startup >= 0 ? "+" : ""}#{delta_since_startup.round(1)} since startup, #{delta_since_last >= 0 ? "+" : ""}#{delta_since_last.round(1)} in #{time_since_last.round(0)}s), " \
         "pressure=#{memory_status.pressure_level}, GC=#{memory_status.gc_count}\n" \
         "Diag: sockets=#{socket_count}, event_clients=#{event_clients}, fibers=#{fiber_stats}, " \
         "rate_cache=#{rate_limiter_cache}, favicon_pool=#{favicon_pool}\n" \
