@@ -425,7 +425,7 @@ item_limit: 20
 
 ```bash
 # Run Ameba linter (auto-fix issues)
-nix develop . --command ameba --fix
+nix develop . --command sh -c "mkdir -p bin && crystal build lib/ameba/bin/ameba.cr -o bin/ameba && bin/ameba --fix"  # same pinned ameba as CI
 
 # Check formatting only
 nix develop . --command crystal tool format --check src/
