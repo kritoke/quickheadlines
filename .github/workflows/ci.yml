@@ -37,14 +37,14 @@ jobs:
         with:
           node-version: "22"
 
-      - name: Install pnpm
-        run: npm install -g pnpm@9
+      - name: Enable pnpm (version from package.json packageManager)
+        run: corepack enable
 
       - name: Install shards
         run: shards install
 
       - name: Install Svelte dependencies
-        run: cd frontend && pnpm install
+        run: cd frontend && pnpm install --frozen-lockfile
 
       - name: Build Svelte frontend
         run: cd frontend && pnpm run build
@@ -82,14 +82,14 @@ jobs:
         with:
           node-version: "22"
 
-      - name: Install pnpm
-        run: npm install -g pnpm@9
+      - name: Enable pnpm (version from package.json packageManager)
+        run: corepack enable
 
       - name: Install shards
         run: shards install
 
       - name: Install Svelte dependencies
-        run: cd frontend && pnpm install
+        run: cd frontend && pnpm install --frozen-lockfile
 
       - name: Build Svelte frontend
         run: cd frontend && pnpm run build
@@ -104,3 +104,43 @@ jobs:
         run: |
           test -f bin/quickheadlines
           file bin/quickheadlines
+
+  docker-build:
+    # Build (don't push) the image natively on both architectures so Dockerfile
+    # breakage is caught on every push/PR rather than at release time.
+    name: Docker build (${{ matrix.platform }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: linux/amd64
+            runner: ubuntu-24.04
+          - platform: linux/arm64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: ${{ matrix.platform }}
+          push: false
+          load: true
+          tags: quickheadlines:ci
+          cache-from: type=gha,scope=ci-${{ matrix.runner }}
+          cache-to: type=gha,mode=max,scope=ci-${{ matrix.runner }}
+
+      - name: Smoke test container
+        run: |
+          docker run -d --name qh -p 8080:8080 quickheadlines:ci
+          for i in $(seq 1 30); do curl -fsS http://localhost:8080/ >/dev/null && break; sleep 2; done
+          curl -fsS http://localhost:8080/ >/dev/null
+          docker logs qh | tail -20

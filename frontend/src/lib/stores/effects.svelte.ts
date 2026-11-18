@@ -1,9 +1,9 @@
 import { loadFeeds, feedState } from "./feedStore.svelte";
 import { loadTimeline, timelineState } from "./timelineStore.svelte";
-import { websocketConnection } from "$lib/websocket";
-import { logger } from "$lib/utils/debug";
-import type { WebSocketMessage } from "$lib/websocket";
-import { loadConfigForStore } from "$lib/utils/storeConfig";
+import { websocketConnection } from "#lib/websocket";
+import { logger } from "#lib/utils/debug";
+import type { WebSocketMessage } from "#lib/websocket";
+import { loadConfigForStore } from "#lib/utils/storeConfig";
 import { setRefreshMinutes as setFeedRefreshMinutes } from "./feedStore.svelte";
 import { setRefreshMinutes as setTimelineRefreshMinutes } from "./timelineStore.svelte";
 

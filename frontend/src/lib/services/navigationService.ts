@@ -27,7 +27,7 @@ export class NavigationService {
     const url = `/timeline?tab=${encodedTab}`;
     // Use pushState to ensure proper history tracking
     // This ensures the $page effect in timeline page fires correctly
-    await goto(url, { replaceState: false, noScroll: false });
+    await goto(url, { replaceState: false });
   }
 
   /**
@@ -38,21 +38,21 @@ export class NavigationService {
     const encodedTab = encodeURIComponent(tab);
     const url = `/?tab=${encodedTab}`;
     // Use pushState to ensure proper history tracking
-    await goto(url, { replaceState: false, noScroll: false });
+    await goto(url, { replaceState: false });
   }
 
   /**
    * Navigate to the global timeline (all tabs).
    */
   static async navigateToGlobalTimeline(): Promise<void> {
-    await goto('/timeline', { replaceState: true, noScroll: false });
+    await goto('/timeline', { replaceState: true });
   }
 
   /**
    * Navigate to the global feed view (all tabs).
    */
   static async navigateToGlobalFeeds(): Promise<void> {
-    await goto('/', { replaceState: true, noScroll: false });
+    await goto('/', { replaceState: true });
   }
 
   /**

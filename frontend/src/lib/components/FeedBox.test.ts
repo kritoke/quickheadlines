@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { flushSync, mount, unmount } from 'svelte';
 import FeedBox from './FeedBox.svelte';
-import { createMockFeed, createMockItem } from '$lib/test/test-utils';
+import { createMockFeed, createMockItem } from '#lib/test/test-utils';
 
 describe('FeedBox', () => {
 	beforeEach(() => {

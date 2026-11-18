@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { getScrollContainer, getScrollTop } from '$lib/utils/scroll';
+	import { getScrollContainer, getScrollTop } from '#lib/utils/scroll';
 	
 	let isMobile = $state(false);
 	let visible = $state(true);

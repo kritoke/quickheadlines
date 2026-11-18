@@ -1,15 +1,15 @@
 <script lang="ts">
-	import AppHeader from '$lib/components/AppHeader.svelte';
-	import TabSelector from '$lib/components/TabSelector.svelte';
-	import LayoutPicker from '$lib/components/LayoutPicker.svelte';
-	import { fetchTabs } from '$lib/api';
-	import type { TabResponse } from '$lib/types';
+	import AppHeader from '#lib/components/AppHeader.svelte';
+	import TabSelector from '#lib/components/TabSelector.svelte';
+	import LayoutPicker from '#lib/components/LayoutPicker.svelte';
+	import { fetchTabs } from '#lib/api';
+	import type { TabResponse } from '#lib/types';
 	import {
 		createTimelineEffects,
-	} from '$lib/stores/effects.svelte';
-	import { logger } from '$lib/utils/debug';
-	import { NavigationService } from '$lib/services/navigationService';
-	import { page } from '$app/stores';
+	} from '#lib/stores/effects.svelte';
+	import { logger } from '#lib/utils/debug';
+	import { NavigationService } from '#lib/services/navigationService';
+	import { page } from '$app/state';
 	import {
 		timelineState,
 		loadTimeline,
@@ -22,14 +22,14 @@
 		cancelRetry,
 		loadAllRemainingItems,
 		isSearchLoadingAll
-	} from '$lib/stores/timelineStore.svelte';
-	import { searchState, toggleSearch } from '$lib/stores/search.svelte';
-	import { createLazyLoader } from '$lib/utils/lazyComponent';
+	} from '#lib/stores/timelineStore.svelte';
+	import { searchState, toggleSearch } from '#lib/stores/search.svelte';
+	import { createLazyLoader } from '#lib/utils/lazyComponent';
 	import { onMount } from 'svelte';
-	import { getStoredTab } from '$lib/stores/tabStore.svelte';
+	import { getStoredTab } from '#lib/stores/tabStore.svelte';
 
-	const loadTimelineView = createLazyLoader(() => import('$lib/components/TimelineView.svelte'));
-	const loadSearchModal = createLazyLoader(() => import('$lib/components/BitsSearchModal.svelte'));
+	const loadTimelineView = createLazyLoader(() => import('#lib/components/TimelineView.svelte'));
+	const loadSearchModal = createLazyLoader(() => import('#lib/components/BitsSearchModal.svelte'));
 
 	let tabs = $state<TabResponse[]>([]);
 	let timelineEffects: ReturnType<typeof createTimelineEffects> | null = null;
@@ -72,7 +72,7 @@
     let initialized = $state(false);
     
 	onMount(() => {
-		const tab = $page.url?.searchParams.get('tab') ?? getStoredTab();
+		const tab = page.url?.searchParams.get('tab') ?? getStoredTab();
         initialized = true;
 		
 		let disposed = false;
@@ -103,7 +103,7 @@
     $effect(() => {
         if (!initialized) return;
         
-        const urlTab = $page.url?.searchParams.get('tab') ?? getStoredTab();
+        const urlTab = page.url?.searchParams.get('tab') ?? getStoredTab();
         if (urlTab !== timelineState.tabName) {
             logger.log(`[Timeline] Tab changed from ${timelineState.tabName} to ${urlTab}, reloading...`);
             loadTimeline(false, urlTab);
@@ -111,7 +111,7 @@
     });
 	
 	async function handleRetry() {
-		const tab = $page.url?.searchParams.get('tab') ?? getStoredTab();
+		const tab = page.url?.searchParams.get('tab') ?? getStoredTab();
 		await loadTimeline(false, tab);
 	}
 

@@ -1,0 +1,14 @@
+# Built/installed inside the image — never copy host copies in
+frontend/node_modules
+frontend/dist
+frontend/.svelte-kit
+lib
+.shards
+bin
+# Not needed for the build
+.git
+.tickets
+openspec
+ss
+spec
+*.log

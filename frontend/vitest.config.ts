@@ -1,9 +1,9 @@
 import { defineConfig } from 'vitest/config';
 import { sveltekit } from '@sveltejs/kit/vite';
-import { resolve } from 'path';
+import { vitePreprocess } from '@sveltejs/vite-plugin-svelte';
 
 export default defineConfig({
-	plugins: [sveltekit({		ssr: false	})],
+	plugins: [sveltekit({ preprocess: vitePreprocess() })],
 	test: {
 		environment: 'happy-dom',
 		globals: true,
@@ -11,9 +11,6 @@ export default defineConfig({
 		setupFiles: ['./src/lib/test/setup.ts']
 	},
 	resolve: {
-		alias: {
-			$lib: resolve('./src/lib')
-		},
 		conditions: process.env.VITEST ? ['browser'] : []
 	}
 });

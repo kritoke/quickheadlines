@@ -12,7 +12,7 @@ export interface ToastMessage {
 
 // Use top-level $state for reactivity
 const toasts = $state<ToastMessage[]>([]);
-const timeoutIds = new Set<number>();
+const timeoutIds = new Set<ReturnType<typeof setTimeout>>();
 
 function generateUUID(): string {
 	// Check if crypto.randomUUID is available (modern browsers)

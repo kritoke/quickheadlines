@@ -1,5 +1,5 @@
 import { vi } from 'vitest';
-import type { FeedResponse, ItemResponse, TimelineItemResponse, ClusterItemsResponse } from '$lib/types';
+import type { FeedResponse, ItemResponse, TimelineItemResponse, ClusterItemsResponse } from '#lib/types';
 
 // ============== Mock Data Factories ==============
 

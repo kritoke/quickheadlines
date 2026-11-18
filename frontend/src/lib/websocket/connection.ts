@@ -6,13 +6,13 @@ export type WebSocketMessage = {
 	is_clustering?: boolean;
 };
 
-import { logger } from "$lib/utils/debug";
+import { logger } from "#lib/utils/debug";
 import {
 	setConnectionState,
 	setLatency,
 	incrementReconnectAttempts,
 	resetReconnectAttempts,
-} from "$lib/stores/connection.svelte";
+} from "#lib/stores/connection.svelte";
 
 // Shared WebSocket connection instance
 let sharedConnection: WebSocket | null = null;

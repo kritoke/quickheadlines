@@ -26,8 +26,21 @@ env:
   IMAGE_NAME: ${{ github.repository }}
 
 jobs:
-  build-and-push-amd64:
-    runs-on: ubuntu-22.04
+  # Build each architecture natively (no QEMU), push by digest only, then the
+  # merge job publishes ONE multi-arch manifest under the tags. Previously each
+  # arch pushed its own single-arch image to the same tags, so whichever job
+  # finished last overwrote the other (arm64 hosts could pull an amd64 image).
+  docker-build:
+    if: github.event_name == 'push' || inputs.platform == 'all' || inputs.platform == 'linux'
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: linux/amd64
+            runner: ubuntu-24.04
+          - platform: linux/arm64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
     permissions:
       contents: read
       packages: write
@@ -35,6 +48,11 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Prepare
+        run: echo "PLATFORM_PAIR=${PLATFORM//\//-}" >> $GITHUB_ENV
+        env:
+          PLATFORM: ${{ matrix.platform }}
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -46,42 +64,53 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Extract metadata (tags, labels) for Docker
+      - name: Extract metadata (labels) for Docker
         id: meta
         uses: docker/metadata-action@v5
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-          tags: |
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=raw,value=latest
-            type=sha
 
-      - name: Build and push Docker image (amd64)
+      - name: Build and push by digest
+        id: build
         uses: docker/build-push-action@v6
         with:
           context: .
-          platforms: linux/amd64
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
+          platforms: ${{ matrix.platform }}
           labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          outputs: type=image,name=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }},push-by-digest=true,name-canonical=true,push=true
+          cache-from: type=gha,scope=${{ env.PLATFORM_PAIR }}
+          cache-to: type=gha,mode=max,scope=${{ env.PLATFORM_PAIR }}
           build-args: |
             BUILD_REV=${{ github.ref_name }}
 
-  build-and-push-arm64:
-    runs-on: ubuntu-latest
+      - name: Export digest
+        run: |
+          mkdir -p ${{ runner.temp }}/digests
+          digest="${{ steps.build.outputs.digest }}"
+          touch "${{ runner.temp }}/digests/${digest#sha256:}"
+
+      - name: Upload digest
+        uses: actions/upload-artifact@v4
+        with:
+          name: digests-${{ env.PLATFORM_PAIR }}
+          path: ${{ runner.temp }}/digests/*
+          if-no-files-found: error
+          retention-days: 1
+
+  docker-merge:
+    needs: docker-build
+    runs-on: ubuntu-24.04
     permissions:
       contents: read
       packages: write
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
+      - name: Download digests
+        uses: actions/download-artifact@v4
+        with:
+          path: ${{ runner.temp }}/digests
+          pattern: digests-*
+          merge-multiple: true
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -93,7 +122,7 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Extract metadata (tags, labels) for Docker
+      - name: Extract metadata (tags) for Docker
         id: meta
         uses: docker/metadata-action@v5
         with:
@@ -104,18 +133,16 @@ jobs:
             type=raw,value=latest
             type=sha
 
-      - name: Build and push Docker image (arm64)
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          platforms: linux/arm64
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-          build-args: |
-            BUILD_REV=${{ github.ref_name }}
+      - name: Create and push multi-arch manifest
+        working-directory: ${{ runner.temp }}/digests
+        run: |
+          docker buildx imagetools create $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
+            $(printf '${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@sha256:%s ' *)
+
+      - name: Verify manifest has both architectures
+        run: |
+          docker buildx imagetools inspect ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.version }} | tee /tmp/inspect.txt
+          grep -q "linux/amd64" /tmp/inspect.txt && grep -q "linux/arm64" /tmp/inspect.txt
 
   build-binaries:
     if: startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && (inputs.platform == 'all' || inputs.platform == 'linux' || inputs.platform == 'macos'))
@@ -124,10 +151,10 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: ubuntu-latest
+          - os: ubuntu-24.04
             target: linux
             arch: x64
-          - os: ubuntu-latest
+          - os: ubuntu-24.04-arm
             target: linux
             arch: arm64
           - os: macos-latest
@@ -138,24 +165,10 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up QEMU
-        if: matrix.target == 'linux'
-        uses: docker/setup-qemu-action@v3
-
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: "22"
-
-      - name: Verify Node.js version
-        run: |
-          echo "Node.js version: $(node --version)"
-          echo "npm version: $(npm --version)"
-          if [[ "$(node --version | cut -d. -f1 | tr -d 'v')" -lt 18 ]]; then
-            echo "Error: Node.js 18+ required"
-            exit 1
-          fi
-          echo "Node.js version is sufficient (18+)"
 
       - name: Cache shards
         uses: actions/cache@v4
@@ -167,16 +180,16 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-shards-
 
-      - name: Install pnpm
-        run: npm install -g pnpm@9
+      - name: Enable pnpm (version from package.json packageManager)
+        run: corepack enable
 
       - name: Build Svelte frontend
-        run: cd frontend && pnpm install && pnpm run build
+        run: cd frontend && pnpm install --frozen-lockfile && pnpm run build
 
       - name: Build Linux Binaries (via Docker)
         if: matrix.target == 'linux'
         run: |
-          docker run --rm --platform linux/${{ matrix.arch == 'x64' && 'amd64' || 'arm64' }} \
+          docker run --rm \
             --entrypoint /bin/sh \
             -v ${{ github.workspace }}:/app -w /app 84codes/crystal:1.21.0-ubuntu-22.04 \
             -c "apt-get update && apt-get install -y libxml2-dev libssl-dev libyaml-dev libsqlite3-dev libmagic-dev curl make && \
@@ -193,14 +206,6 @@ jobs:
           echo "LDFLAGS=-L$(brew --prefix libmagic)/lib" >> $GITHUB_ENV
           echo "CPPFLAGS=-I$(brew --prefix libmagic)/include" >> $GITHUB_ENV
           echo "PATH=$(brew --prefix openssl@3)/bin:$PATH" >> $GITHUB_ENV
-
-      - name: Install pnpm (macOS)
-        if: matrix.target == 'macos'
-        run: npm install -g pnpm@9
-
-      - name: Build Svelte frontend (macOS)
-        if: matrix.target == 'macos'
-        run: cd frontend && pnpm install && pnpm run build
 
       - name: Install Crystal
         if: matrix.target == 'macos'
@@ -233,11 +238,11 @@ jobs:
         with:
           node-version: "22"
 
-      - name: Install pnpm
-        run: npm install -g pnpm@9
+      - name: Enable pnpm (version from package.json packageManager)
+        run: corepack enable
 
       - name: Build Svelte frontend
-        run: cd frontend && pnpm install && pnpm run build
+        run: cd frontend && pnpm install --frozen-lockfile && pnpm run build
 
       - name: Install shards (for caching)
         uses: crystal-lang/install-crystal@v1

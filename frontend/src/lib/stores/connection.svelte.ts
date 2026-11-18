@@ -1,4 +1,4 @@
-import type { ConnectionState } from '$lib/websocket';
+import type { ConnectionState } from '#lib/websocket';
 
 let hideTimeout: ReturnType<typeof setTimeout> | null = null;
 

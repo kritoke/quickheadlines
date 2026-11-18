@@ -1,8 +1,8 @@
-import { getStoredInt, setStoredValue } from "$lib/utils/storage";
+import { getStoredInt, setStoredValue } from "#lib/utils/storage";
 
 // Grid classes live in tokens/grid.ts as complete string literals so Tailwind
 // can see them; re-exported here for existing importers.
-export { getFeedGridClass } from "$lib/tokens/grid";
+export { getFeedGridClass } from "#lib/tokens/grid";
 
 export type ColumnCount = 1 | 2 | 3 | 4;
 

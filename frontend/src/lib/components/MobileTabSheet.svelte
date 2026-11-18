@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { Dialog, Portal } from '@skeletonlabs/skeleton-svelte';
-	import type { TabResponse } from '$lib/types';
+	import type { TabResponse } from '#lib/types';
 
 	interface Props {
 		tabs: TabResponse[];

@@ -1,4 +1,4 @@
-import { getStoredValue, setStoredValue } from "$lib/utils/storage";
+import { getStoredValue, setStoredValue } from "#lib/utils/storage";
 
 const STORAGE_KEY = "quickheadlines-read-mode";
 

@@ -1,12 +1,12 @@
 <script lang="ts">
 	import '../app.css';
-	import { themeState, initTheme } from '$lib/stores/theme.svelte';
-	import { initReadMode } from '$lib/stores/readMode.svelte';
-	import { initLayout } from '$lib/stores/layout.svelte';
-	import { isIOS } from '$lib/utils/theme';
-	import { initBreakpoints } from '$lib/utils/breakpoint.svelte';
+	import { themeState, initTheme } from '#lib/stores/theme.svelte';
+	import { initReadMode } from '#lib/stores/readMode.svelte';
+	import { initLayout } from '#lib/stores/layout.svelte';
+	import { isIOS } from '#lib/utils/theme';
+	import { initBreakpoints } from '#lib/utils/breakpoint.svelte';
 	import { onNavigate } from '$app/navigation';
-	import type { Navigation } from '@sveltejs/kit';
+	import type { Navigation } from '$app/navigation';
 	import {
 		saveScroll,
 		getScroll,
@@ -14,11 +14,11 @@
 		markVisited,
 		scrollToPosition,
 		resetScroll
-	} from '$lib/stores/navigation.svelte';
-	import Effects from '$lib/components/Effects.svelte';
-	import CrystalBadge from '$lib/components/CrystalBadge.svelte';
-	import ScrollToTop from '$lib/components/ScrollToTop.svelte';
-	import ToastContainer from '$lib/components/ToastContainer.svelte';
+	} from '#lib/stores/navigation.svelte';
+	import Effects from '#lib/components/Effects.svelte';
+	import CrystalBadge from '#lib/components/CrystalBadge.svelte';
+	import ScrollToTop from '#lib/components/ScrollToTop.svelte';
+	import ToastContainer from '#lib/components/ToastContainer.svelte';
 	
 	let { children } = $props();
 	

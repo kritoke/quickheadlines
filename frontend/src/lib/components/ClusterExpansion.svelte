@@ -1,8 +1,8 @@
 <script lang="ts">
-	import type { StoryResponse } from '$lib/types';
-	import { formatTimestamp } from '$lib/api';
-	import { getFaviconSrc } from '$lib/utils/feedItem';
-	import { sanitizeUrl } from '$lib/utils/validation';
+	import type { StoryResponse } from '#lib/types';
+	import { formatTimestamp } from '#lib/api';
+	import { getFaviconSrc } from '#lib/utils/feedItem';
+	import { sanitizeUrl } from '#lib/utils/validation';
 
 	interface Props {
 		items: StoryResponse[];

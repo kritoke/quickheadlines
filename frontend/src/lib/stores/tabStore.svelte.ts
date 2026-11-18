@@ -9,7 +9,7 @@ import {
 	getStoredValue,
 	setStoredValue,
 	removeStoredValue,
-} from "$lib/utils/storage";
+} from "#lib/utils/storage";
 
 const TAB_STORAGE_KEY = "quickheadlines-active-tab";
 

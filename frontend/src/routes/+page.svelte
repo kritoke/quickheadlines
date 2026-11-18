@@ -1,13 +1,13 @@
 <script lang="ts">
-	import FeedBox from '$lib/components/FeedBox.svelte';
-	import AppHeader from '$lib/components/AppHeader.svelte';
-	import TabSelector from '$lib/components/TabSelector.svelte';
-	import LayoutPicker from '$lib/components/LayoutPicker.svelte';
-	import type { FeedResponse } from '$lib/types';
-	import { NavigationService } from '$lib/services/navigationService';
-	import { createFeedEffects } from '$lib/stores/effects.svelte';
-	import { logger, initDebug } from '$lib/utils/debug';
-	import { page } from '$app/stores';
+	import FeedBox from '#lib/components/FeedBox.svelte';
+	import AppHeader from '#lib/components/AppHeader.svelte';
+	import TabSelector from '#lib/components/TabSelector.svelte';
+	import LayoutPicker from '#lib/components/LayoutPicker.svelte';
+	import type { FeedResponse } from '#lib/types';
+	import { NavigationService } from '#lib/services/navigationService';
+	import { createFeedEffects } from '#lib/stores/effects.svelte';
+	import { logger, initDebug } from '#lib/utils/debug';
+	import { page } from '$app/state';
 	import { onMount } from 'svelte';
 	import {
 		feedState,
@@ -19,13 +19,13 @@
 		isRefreshing,
 		isError,
 		getError
-	} from '$lib/stores/feedStore.svelte';
-	import { layoutState, getFeedGridClass } from '$lib/stores/layout.svelte';
-	import { searchState, toggleSearch } from '$lib/stores/search.svelte';
-	import { createLazyLoader } from '$lib/utils/lazyComponent';
-	import { getStoredTab } from '$lib/stores/tabStore.svelte';
+	} from '#lib/stores/feedStore.svelte';
+	import { layoutState, getFeedGridClass } from '#lib/stores/layout.svelte';
+	import { searchState, toggleSearch } from '#lib/stores/search.svelte';
+	import { createLazyLoader } from '#lib/utils/lazyComponent';
+	import { getStoredTab } from '#lib/stores/tabStore.svelte';
 
-	const loadSearchModal = createLazyLoader(() => import('$lib/components/BitsSearchModal.svelte'));
+	const loadSearchModal = createLazyLoader(() => import('#lib/components/BitsSearchModal.svelte'));
 
 	let tabChangeTimeout: ReturnType<typeof setTimeout> | null = null;
 
@@ -84,7 +84,7 @@
 	let handledInitialTabUrl = false;
 
 	$effect(() => {
-		const urlTab = $page.url?.searchParams.get('tab') ?? getStoredTab();
+		const urlTab = page.url?.searchParams.get('tab') ?? getStoredTab();
 
 		if (!handledInitialTabUrl) {
 			handledInitialTabUrl = true;

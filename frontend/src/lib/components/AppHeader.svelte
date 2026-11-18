@@ -1,11 +1,11 @@
 <script lang="ts">
-	import { themeState, toggleEffects } from '$lib/stores/theme.svelte';
-	import { readModeState, toggleReadMode } from '$lib/stores/readMode.svelte';
+	import { themeState, toggleEffects } from '#lib/stores/theme.svelte';
+	import { readModeState, toggleReadMode } from '#lib/stores/readMode.svelte';
 	import ThemePicker from './ThemePicker.svelte';
 	import TabSelector from './TabSelector.svelte';
 	import { goto } from '$app/navigation';
-	import type { TabResponse } from '$lib/types';
-	import { NavigationService } from '$lib/services/navigationService';
+	import type { TabResponse } from '#lib/types';
+	import { NavigationService } from '#lib/services/navigationService';
 	interface Props {
 		title: string;
 		tabs?: TabResponse[];

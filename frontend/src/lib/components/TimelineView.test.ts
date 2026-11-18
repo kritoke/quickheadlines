@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { flushSync, mount, unmount } from 'svelte';
 import TimelineView from './TimelineView.svelte';
-import { createMockTimelineItem, createMockClusterItem } from '$lib/test/test-utils';
-import type { ClusterItemsResponse } from '$lib/types';
+import { createMockTimelineItem, createMockClusterItem } from '#lib/test/test-utils';
+import type { ClusterItemsResponse } from '#lib/types';
 
 describe('TimelineView', () => {
 	let mockFetchClusterItems: (id: string) => Promise<ClusterItemsResponse>;

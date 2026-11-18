@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { Menu, Portal } from '@skeletonlabs/skeleton-svelte';
-	import { layoutState, setTimelineColumns, setFeedColumns, columnOptions, type ColumnCount } from '$lib/stores/layout.svelte';
-	import { breakpointState } from '$lib/utils/breakpoint.svelte';
+	import { layoutState, setTimelineColumns, setFeedColumns, columnOptions, type ColumnCount } from '#lib/stores/layout.svelte';
+	import { breakpointState } from '#lib/utils/breakpoint.svelte';
 
 	let isMobile = $derived(breakpointState.isMobile);
 

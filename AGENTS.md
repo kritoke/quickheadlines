@@ -276,10 +276,14 @@ This is required because `just nix-build` touches `assets.cr` before each build,
 
 ### SvelteKit SPA Mode with adapter-static
 
-Project uses SPA mode (client-side rendering only):
+Project uses SPA mode (client-side rendering only). On SvelteKit 3,
+`svelte.config.js` is no longer read — config is passed to the `sveltekit()`
+plugin in `frontend/vite.config.ts`. Tailwind 4 runs via `@tailwindcss/vite`.
+Imports use `#lib/...` (package.json `imports`), not `$lib`; page state comes
+from `$app/state` (not `$app/stores`); `browser`/`dev` from `$app/env`.
 
 ```javascript
-// svelte.config.js
+// frontend/vite.config.ts → sveltekit({ adapter: ... })
 adapter: adapter({
   pages: 'dist',
   assets: 'dist',

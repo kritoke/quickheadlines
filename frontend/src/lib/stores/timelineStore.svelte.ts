@@ -1,15 +1,15 @@
-import { fetchTimeline, RateLimitError } from "$lib/api";
-import { loadConfigForStore } from "$lib/utils/storeConfig";
-import { deepClone } from "$lib/utils/clone";
+import { fetchTimeline, RateLimitError } from "#lib/api";
+import { loadConfigForStore } from "#lib/utils/storeConfig";
+import { deepClone } from "#lib/utils/clone";
 import {
 	isIdle,
 	isLoading,
 	isRefreshing,
 	isError,
 	getError,
-} from "$lib/utils/storeTypes";
-import type { LoadStatus } from "$lib/utils/storeTypes";
-import type { TimelineItemResponse } from "$lib/types";
+} from "#lib/utils/storeTypes";
+import type { LoadStatus } from "#lib/utils/storeTypes";
+import type { TimelineItemResponse } from "#lib/types";
 import { SvelteSet } from "svelte/reactivity";
 import { toastStore } from "./toast.svelte";
 import { saveTab } from "./tabStore.svelte";

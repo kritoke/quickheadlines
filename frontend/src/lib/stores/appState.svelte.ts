@@ -1,5 +1,5 @@
-import type { TabResponse } from '$lib/types';
-import { fetchFeeds, fetchTabs } from '$lib/api';
+import type { TabResponse } from '#lib/types';
+import { fetchFeeds, fetchTabs } from '#lib/api';
 
 export const appState = $state({
 	tabs: [] as TabResponse[],

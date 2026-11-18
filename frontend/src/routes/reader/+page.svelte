@@ -1,10 +1,10 @@
 <script lang="ts">
-	import AppHeader from '$lib/components/AppHeader.svelte';
-	import { page } from '$app/stores';
+	import AppHeader from '#lib/components/AppHeader.svelte';
+	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
 	import { onMount } from 'svelte';
 	import DOMPurify from 'dompurify';
-	import { isValidUrl } from '$lib/utils/validation';
+	import { isValidUrl } from '#lib/utils/validation';
 	
 	let content: string | null = $state(null);
 	let title: string = $state('');
@@ -18,8 +18,8 @@
 	const SUMMARY_PARAGRAPH_COUNT = 2;
 	
 	onMount(() => {
-		const url = $page.url.searchParams.get('url');
-		const pageTitle = $page.url.searchParams.get('title');
+		const url = page.url.searchParams.get('url');
+		const pageTitle = page.url.searchParams.get('title');
 		
 		let decoded: string | null = null;
 		if (url) {

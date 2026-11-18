@@ -2,7 +2,7 @@ import {
 	getStoredValue,
 	setStoredValue,
 	getStoredBoolean,
-} from "$lib/utils/storage";
+} from "#lib/utils/storage";
 
 export type ThemeId = string;
 

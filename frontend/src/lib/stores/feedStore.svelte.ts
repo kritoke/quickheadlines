@@ -1,15 +1,15 @@
-import { fetchFeeds, fetchMoreFeedItems } from "$lib/api";
-import { loadConfigForStore } from "$lib/utils/storeConfig";
-import { deepClone } from "$lib/utils/clone";
+import { fetchFeeds, fetchMoreFeedItems } from "#lib/api";
+import { loadConfigForStore } from "#lib/utils/storeConfig";
+import { deepClone } from "#lib/utils/clone";
 import {
 	isIdle,
 	isLoading,
 	isRefreshing,
 	isError,
 	getError,
-} from "$lib/utils/storeTypes";
-import type { LoadStatus } from "$lib/utils/storeTypes";
-import type { FeedResponse, FeedsPageResponse } from "$lib/types";
+} from "#lib/utils/storeTypes";
+import type { LoadStatus } from "#lib/utils/storeTypes";
+import type { FeedResponse, FeedsPageResponse } from "#lib/types";
 import { toastStore } from "./toast.svelte";
 import { saveTab } from "./tabStore.svelte";
 

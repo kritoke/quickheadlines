@@ -3,8 +3,8 @@ import {
 	getScrollContainer,
 	getScrollTop,
 	scrollToPosition as doScrollToPosition,
-} from "$lib/utils/scroll";
-import type { ScrollTarget } from "$lib/utils/scroll";
+} from "#lib/utils/scroll";
+import type { ScrollTarget } from "#lib/utils/scroll";
 
 type NavigationState = {
 	scrollPositions: Map<string, number>;

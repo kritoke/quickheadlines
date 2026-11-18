@@ -1,9 +1,9 @@
 <script lang="ts">
-	import { breakpointState } from '$lib/utils/breakpoint.svelte';
+	import { breakpointState } from '#lib/utils/breakpoint.svelte';
 	import { Tabs } from '@skeletonlabs/skeleton-svelte';
 	import MobileTabSheet from './MobileTabSheet.svelte';
-	import type { TabResponse } from '$lib/types';
-	import { cn } from '$lib/utils';
+	import type { TabResponse } from '#lib/types';
+	import { cn } from '#lib/utils';
 
 	interface Props {
 		tabs: TabResponse[];

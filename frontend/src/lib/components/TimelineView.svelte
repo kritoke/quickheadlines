@@ -1,14 +1,14 @@
 <script lang="ts">
-	import type { TimelineItemResponse, ClusterItemsResponse } from '$lib/types';
-	import { fetchClusterItems as defaultFetchClusterItems, formatTimestamp } from '$lib/api';
+	import type { TimelineItemResponse, ClusterItemsResponse } from '#lib/types';
+	import { fetchClusterItems as defaultFetchClusterItems, formatTimestamp } from '#lib/api';
 	import ClusterExpansion from './ClusterExpansion.svelte';
-	import { isDarkTheme } from '$lib/stores/theme.svelte';
-	import { readModeState } from '$lib/stores/readMode.svelte';
-	import { layoutState } from '$lib/stores/layout.svelte';
+	import { isDarkTheme } from '#lib/stores/theme.svelte';
+	import { readModeState } from '#lib/stores/readMode.svelte';
+	import { layoutState } from '#lib/stores/layout.svelte';
 	import { goto } from '$app/navigation';
-	import { getFaviconSrc, getHeaderStyle } from '$lib/utils/feedItem';
-	import { sanitizeUrl } from '$lib/utils/validation';
-	import { getGridClass } from '$lib/tokens';
+	import { getFaviconSrc, getHeaderStyle } from '#lib/utils/feedItem';
+	import { sanitizeUrl } from '#lib/utils/validation';
+	import { getGridClass } from '#lib/tokens';
 	import CommentIcon from './icons/CommentIcon.svelte';
 	import DiscussionIcon from './icons/DiscussionIcon.svelte';
 

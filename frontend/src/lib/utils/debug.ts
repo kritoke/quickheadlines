@@ -1,4 +1,4 @@
-import { fetchConfig } from '$lib/api';
+import { fetchConfig } from '#lib/api';
 
 let debugEnabled = false;
 let configLoaded = false;

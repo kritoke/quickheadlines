@@ -1,15 +1,18 @@
 # Multi-stage build for QuickHeadlines with Svelte 5 frontend
 # Multi-arch build (amd64 + arm64)
 
-# Stage 1: Build Svelte frontend
-FROM node:22 AS svelte-builder
+# Stage 1: Build Svelte frontend.
+# The output (static JS/CSS/HTML) is architecture-independent, so always run
+# this stage natively on the build host instead of under QEMU emulation.
+FROM --platform=$BUILDPLATFORM node:22-bookworm-slim AS svelte-builder
 
 WORKDIR /app/frontend
 
-RUN npm install -g pnpm@9
+# pnpm version comes from "packageManager" in package.json
+RUN corepack enable
 
-COPY frontend/package.json frontend/pnpm-lock.yaml* ./
-RUN pnpm install --frozen-lockfile || pnpm install
+COPY frontend/package.json frontend/pnpm-lock.yaml ./
+RUN pnpm install --frozen-lockfile
 
 COPY frontend/ ./
 RUN pnpm run build
@@ -18,7 +21,9 @@ RUN pnpm run build
 RUN cp static/logo.svg dist/ 2>/dev/null || true
 
 # Stage 2: Build Crystal binary
-FROM crystallang/crystal:1.21.0 AS builder
+# Debian bookworm builder so the runtime stage below can use the same distro
+# (and therefore the same shared-library versions and package names).
+FROM 84codes/crystal:1.21.0-debian-bookworm AS builder
 
 WORKDIR /app
 
@@ -73,11 +78,13 @@ RUN if file /app/server | grep -q "executable"; then \
     exit 1; \
     fi
 
-# Stage 3: Minimal runtime
-FROM debian:stable-slim
+# Stage 3: Minimal runtime — must match the builder's distro (bookworm).
+# Don't use debian:stable-slim: "stable" moves (now trixie), which renames
+# packages (libssl3t64, ...) and changes library versions under the binary.
+FROM debian:bookworm-slim
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    libmagic1 libxml2 libssl3 libyaml-0-2 libsqlite3-0 libreadline8 ca-certificates curl \
+    libmagic1 libxml2 libssl3 libyaml-0-2 libsqlite3-0 libreadline8 libpcre2-8-0 libevent-2.1-7 ca-certificates curl \
     && rm -rf /var/lib/apt/lists/* \
     && useradd --create-home --shell /bin/bash appuser
 
@@ -87,6 +94,9 @@ ENV APP_ENV=production
 
 COPY --from=builder /app/server /home/appuser/server
 COPY --from=builder /app/feeds.yml /home/appuser/feeds.yml
+
+# Fail the build (rather than the container at startup) if any shared library is missing
+RUN if ldd /home/appuser/server | grep "not found"; then echo "ERROR: missing shared libraries"; exit 1; fi
 
 USER appuser
 

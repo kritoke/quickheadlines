@@ -9,7 +9,7 @@
  * - Grid system
  * 
  * Usage:
- * import { spacing, radius, getGridClass } from '$lib/tokens';
+ * import { spacing, radius, getGridClass } from '#lib/tokens';
  */
 
 export * from './spacing';
@@ -17,8 +17,9 @@ export * from './radius';
 export * from './shadows';
 export * from './grid';
 
-import { spacing } from './spacing';
-import { radius } from './radius';
+import { spacing, spacingToCss } from './spacing';
+import { radius, radiusToCss } from './radius';
+import { shadowsToCss } from './shadows';
 
 /**
  * Generate all CSS custom properties from tokens

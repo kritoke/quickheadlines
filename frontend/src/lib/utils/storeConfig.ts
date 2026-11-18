@@ -1,4 +1,4 @@
-import { fetchConfig } from "$lib/api";
+import { fetchConfig } from "#lib/api";
 
 /**
  * Shared config loader for stores that track refreshMinutes.
