@@ -1,7 +1,6 @@
 import type {
 	FeedsPageResponse,
 	TimelinePageResponse,
-	ClustersResponse,
 	ClusterItemsResponse,
 	FeedResponse,
 	ConfigResponse,
@@ -118,11 +117,6 @@ export async function fetchTimeline(
 	return apiFetch<TimelinePageResponse>(url, { timeout: TIMELINE_FETCH_TIMEOUT_MS, errorContext: 'Fetch Timeline' });
 }
 
-export async function fetchClusters(): Promise<ClustersResponse> {
-	const url = `${API_BASE}/clusters`;
-	return apiFetch<ClustersResponse>(url, { errorContext: 'Fetch Clusters' });
-}
-
 export async function fetchClusterItems(clusterId: string): Promise<ClusterItemsResponse> {
 	const url = `${API_BASE}/clusters/${clusterId}/items`;
 	return apiFetch<ClusterItemsResponse>(url, { timeout: 10000, errorContext: 'Fetch Cluster Items' });
@@ -135,23 +129,6 @@ export async function fetchMoreFeedItems(
 ): Promise<FeedResponse> {
 	const url = `${API_BASE}/feed_more?url=${encodeURIComponent(feedUrl)}&limit=${limit}&offset=${offset}`;
 	return apiFetch<FeedResponse>(url, { timeout: FETCH_TIMEOUT_MS, errorContext: 'Fetch More Items' });
-}
-
-export async function saveHeaderColor(
-	feedUrl: string,
-	color: string,
-	textColor: string
-): Promise<void> {
-	const url = `${API_BASE}/header_color`;
-	await apiFetch<void>(url, {
-		method: 'POST',
-		body: {
-			feed_url: feedUrl,
-			color,
-			text_color: textColor
-		},
-		errorContext: 'Save Header Color'
-	});
 }
 
 export function formatTimestamp(ms?: number): string {
@@ -169,17 +146,6 @@ export function formatTimestamp(ms?: number): string {
 	if (diffDays < 7) return `${diffDays}d ago`;
 	
 	return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-}
-
-export function formatDate(ms?: number): string {
-	if (ms == null) return '';
-	const date = new Date(ms);
-	return date.toLocaleDateString('en-US', {
-		weekday: 'long',
-		year: 'numeric',
-		month: 'long',
-		day: 'numeric'
-	});
 }
 
 export async function fetchConfig(): Promise<ConfigResponse> {

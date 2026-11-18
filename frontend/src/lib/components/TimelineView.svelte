@@ -8,7 +8,7 @@
 	import { goto } from '$app/navigation';
 	import { getFaviconSrc, getHeaderStyle } from '#lib/utils/feedItem';
 	import { sanitizeUrl } from '#lib/utils/validation';
-	import { getGridClass } from '#lib/tokens';
+	import { getGridClass } from '#lib/tokens/grid';
 	import CommentIcon from './icons/CommentIcon.svelte';
 	import DiscussionIcon from './icons/DiscussionIcon.svelte';
 

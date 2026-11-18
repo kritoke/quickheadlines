@@ -10,7 +10,6 @@ import {
 } from "#lib/utils/storeTypes";
 import type { LoadStatus } from "#lib/utils/storeTypes";
 import type { FeedResponse, FeedsPageResponse } from "#lib/types";
-import { toastStore } from "./toast.svelte";
 import { saveTab } from "./tabStore.svelte";
 
 export type { LoadStatus };
@@ -62,16 +61,10 @@ export function setLoading(
 	state: FeedState,
 	tab: string,
 ): FeedStateLoading | FeedStateRefreshing {
-	const base: BaseFeedState = {
+	return {
 		...state,
-		loadingFeeds: state.loadingFeeds,
-		tabCache: state.tabCache,
+		status: state.tabCache[tab]?.loaded ? "refreshing" : "loading",
 	};
-
-	if (state.tabCache[tab]?.loaded) {
-		return { ...base, status: "refreshing" };
-	}
-	return { ...base, status: "loading" };
 }
 
 export function setFeedsData(
@@ -82,10 +75,10 @@ export function setFeedsData(
 	const swReleases = response.software_releases || [];
 	const newFeeds = [...swReleases, ...(response.feeds || [])];
 
-	// Only update feeds if the response has data, OR if we don't have existing feeds
-	// This prevents overwriting valid cached feeds with empty responses
-	const feedsToUse =
-		newFeeds.length > 0 ? newFeeds : state.feeds.length > 0 ? state.feeds : [];
+	// The single preserve-on-empty rule: an empty response never wipes feeds
+	// (or tabs) we are already showing; it is treated as "nothing new yet".
+	const feedsToUse = newFeeds.length > 0 ? newFeeds : state.feeds;
+	const tabs = response.tabs?.length ? response.tabs : state.tabs;
 
 	// Only mark cache as loaded if we got actual new data from API
 	// Don't cache empty results - they should NOT mark cache as loaded
@@ -101,7 +94,7 @@ export function setFeedsData(
 	return {
 		...state,
 		feeds: feedsToUse,
-		tabs: response.tabs || [],
+		tabs,
 		activeTab: tab,
 		status: "idle",
 		lastUpdated: response.updated_at || Date.now(),
@@ -127,34 +120,6 @@ export function setFeedLoading(
 		loadingFeeds: {
 			...state.loadingFeeds,
 			[feedUrl]: isLoading,
-		},
-	};
-}
-
-export function appendFeedItems(
-	state: FeedState,
-	feedUrl: string,
-	newItems: FeedResponse["items"],
-	totalCount: number,
-): FeedState {
-	const feedIndex = state.feeds.findIndex((f) => f.url === feedUrl);
-	if (feedIndex === -1) return state;
-
-	const updatedFeeds = state.feeds.map((feed, i) => {
-		if (i !== feedIndex) return feed;
-		return {
-			...feed,
-			items: [...feed.items, ...newItems],
-			total_item_count: totalCount,
-		};
-	});
-
-	return {
-		...state,
-		feeds: updatedFeeds,
-		tabCache: {
-			...state.tabCache,
-			[state.activeTab]: { feeds: deepClone(updatedFeeds), loaded: true },
 		},
 	};
 }
@@ -187,68 +152,25 @@ export async function loadFeeds(
 	force: boolean = false,
 ): Promise<void> {
 	const requestId = ++feedRequestId;
-	const currentFeeds = feedState.feeds;
-	const currentTabs = feedState.tabs;
+	const previousTabs = feedState.tabs;
 
 	Object.assign(feedState, setActiveTab(feedState, tab));
 
-	// Determine what feeds we should show while loading
-	let feedsToShowWhileLoading = currentFeeds;
-
-	if (!force && feedState.tabCache[tab]?.loaded) {
-		// Use cached feeds if available
-		if (feedState.tabCache[tab].feeds.length > 0) {
-			feedState.feeds = feedState.tabCache[tab].feeds;
-			feedsToShowWhileLoading = feedState.tabCache[tab].feeds;
-		} else if (currentFeeds.length > 0) {
-			feedsToShowWhileLoading = currentFeeds;
-		}
-		Object.assign(feedState, setLoading(feedState, tab));
-		try {
-			const response = await fetchFeeds(tab, { force });
-			// Ignore stale responses from previous tab switches
-			if (requestId !== feedRequestId) return;
-
-			const newState = setFeedsData(feedState, response, tab);
-			// Preserve feeds if the response is empty but we have existing data
-			if (newState.feeds.length === 0 && currentFeeds.length > 0) {
-				newState.feeds = currentFeeds;
-				newState.tabs = currentTabs;
-			}
-			Object.assign(feedState, newState);
-		} catch (e) {
-			// Ignore errors from stale requests
-			if (requestId !== feedRequestId) return;
-
-			// On error, preserve the feeds we were showing (cache or existing)
-			feedState.feeds = feedsToShowWhileLoading;
-			feedState.tabs = currentTabs;
-			feedState.status = "idle";
-		}
-		return;
+	// Show cached feeds for this tab immediately while the fresh copy loads.
+	const cached = feedState.tabCache[tab];
+	if (!force && cached?.loaded && cached.feeds.length > 0) {
+		feedState.feeds = cached.feeds;
 	}
-
 	Object.assign(feedState, setLoading(feedState, tab));
 
 	try {
 		const response = await fetchFeeds(tab, { force });
-		// Ignore stale responses from previous tab switches
+		if (requestId !== feedRequestId) return; // superseded by a newer load
+		Object.assign(feedState, setFeedsData(feedState, response, tab));
+	} catch {
 		if (requestId !== feedRequestId) return;
-
-		const newState = setFeedsData(feedState, response, tab);
-		// Preserve feeds if the response is empty but we have existing data
-		if (newState.feeds.length === 0 && currentFeeds.length > 0) {
-			newState.feeds = currentFeeds;
-			newState.tabs = currentTabs;
-		}
-		Object.assign(feedState, newState);
-	} catch (e) {
-		// Ignore errors from stale requests
-		if (requestId !== feedRequestId) return;
-
-		// On error, preserve existing feeds
-		feedState.feeds = currentFeeds;
-		feedState.tabs = currentTabs;
+		// Keep whatever feeds are showing; apiFetch has already toasted the error.
+		feedState.tabs = previousTabs;
 		feedState.status = "idle";
 	}
 }
@@ -275,7 +197,6 @@ export async function loadMoreFeedItems(feed: FeedResponse): Promise<void> {
 
 		Object.assign(feedState, { feeds: updatedFeeds });
 	} catch (e) {
-		toastStore.error(`Failed to load more items from ${feed.title}`, "Feeds");
 		Object.assign(
 			feedState,
 			setError(

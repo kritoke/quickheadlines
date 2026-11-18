@@ -11,7 +11,6 @@ import {
 import type { LoadStatus } from "#lib/utils/storeTypes";
 import type { TimelineItemResponse } from "#lib/types";
 import { SvelteSet } from "svelte/reactivity";
-import { toastStore } from "./toast.svelte";
 import { saveTab } from "./tabStore.svelte";
 
 export type { LoadStatus };
@@ -68,21 +67,6 @@ export const timelineState = $state<TimelineState>({
 	itemIds: new SvelteSet<string>(),
 });
 
-export function setLoading(
-	state: TimelineState,
-	isAppend: boolean,
-): TimelineState {
-	if (isAppend) {
-		return { ...state, loadingMore: true };
-	}
-	if (isRefreshing(state) || isLoading(state)) {
-		return state;
-	}
-	// Optimistic UI: keep existing items visible when tab changes
-	// Only show loading indicator, don't clear items until new data arrives
-	return { ...state, status: "loading", loadingMore: false };
-}
-
 export function setTimelineData(
 	state: TimelineState,
 	items: TimelineItemResponse[],
@@ -130,16 +114,6 @@ export function setError(
 	};
 }
 
-export function setClustering(
-	state: TimelineState,
-	isClustering: boolean,
-): TimelineState {
-	return {
-		...state,
-		isClustering,
-	};
-}
-
 export function setRefreshMinutes(
 	state: TimelineState,
 	minutes: number,
@@ -159,36 +133,24 @@ export function setTabName(state: TimelineState, tab: string): TimelineState {
 }
 
 export function resetTimelineStore(): void {
-	cancelAllRetries();
+	cancelRetry();
 	Object.assign(timelineState, {
 		...deepClone(initialBaseState),
 		itemIds: new SvelteSet<string>(),
 	});
 }
 
-let timelineRequestId = 0;
-// Incremented by every full load (refresh / tab change). Appends started under
-// an older generation are discarded so they can't mix old offsets into new data.
+// Incremented by every full load (refresh / tab change). Any request or retry
+// started under an older generation is stale and discarded, so old offsets
+// never mix into new data.
 let timelineGeneration = 0;
-let latestFullRequestId = 0;
 let retryTimerId: ReturnType<typeof setTimeout> | null = null;
-// Track the request ID that a pending retry is for
-let pendingRetryRequestId: number | null = null;
-let pendingRetryParams: { append: boolean; tab: string | undefined } | null =
-	null;
 
 export function cancelRetry(): void {
 	if (retryTimerId) {
 		clearTimeout(retryTimerId);
 		retryTimerId = null;
 	}
-	pendingRetryRequestId = null;
-	pendingRetryParams = null;
-}
-
-// Cancel all pending retries - call this when component unmounts or store resets
-export function cancelAllRetries(): void {
-	cancelRetry();
 }
 
 export async function loadTimeline(
@@ -238,11 +200,7 @@ export async function loadTimeline(
 	}
 
 	const generation = timelineGeneration;
-	const requestId = ++timelineRequestId;
-	const isStale = () =>
-		generation !== timelineGeneration ||
-		(!append && requestId !== latestFullRequestId);
-	if (!append) latestFullRequestId = requestId;
+	const isStale = () => generation !== timelineGeneration;
 
 	try {
 		const response = await fetchTimeline(
@@ -266,23 +224,14 @@ export async function loadTimeline(
 				retryAfterMs: e.retryAfterMs,
 			});
 			cancelRetry();
-			pendingRetryRequestId = generation;
-			pendingRetryParams = { append, tab };
 			retryTimerId = setTimeout(() => {
 				retryTimerId = null;
-				const retryGen = pendingRetryRequestId;
-				const params = pendingRetryParams;
-				pendingRetryRequestId = null;
-				pendingRetryParams = null;
-				// Only retry if nothing newer has replaced this timeline since
-				if (retryGen === timelineGeneration && params) {
-					loadTimeline(params.append, params.tab);
-				}
+				// Only retry if nothing newer has replaced this timeline since.
+				if (generation === timelineGeneration) loadTimeline(append, tab);
 			}, e.retryAfterMs);
 			return;
 		}
 
-		toastStore.error("Failed to load timeline", "Timeline");
 		Object.assign(
 			timelineState,
 			setError(

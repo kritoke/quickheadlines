@@ -13,7 +13,6 @@
 		feedState,
 		loadFeeds,
 		loadMoreFeedItems,
-		loadFeedConfig,
 		getFilteredFeeds,
 		isLoading,
 		isRefreshing,
@@ -26,8 +25,6 @@
 	import { getStoredTab } from '#lib/stores/tabStore.svelte';
 
 	const loadSearchModal = createLazyLoader(() => import('#lib/components/BitsSearchModal.svelte'));
-
-	let tabChangeTimeout: ReturnType<typeof setTimeout> | null = null;
 
 	// Track if feeds have ever been loaded successfully to distinguish between
 	// "no feeds configured" vs "feeds failed temporarily"
@@ -60,14 +57,12 @@
 		const urlTab = params.get('tab') || getStoredTab();
 
 		loadFeeds(urlTab, true);
-		loadFeedConfig();
 		initDebug();
 
 		feedEffects = createFeedEffects();
 		feedEffects.start();
 
 		return () => {
-			if (tabChangeTimeout) clearTimeout(tabChangeTimeout);
 			if (feedEffects) {
 				feedEffects.stop();
 				feedEffects = null;

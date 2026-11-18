@@ -1,194 +1,101 @@
-import { loadFeeds, feedState } from "./feedStore.svelte";
-import { loadTimeline, timelineState } from "./timelineStore.svelte";
+import { loadFeeds, feedState, loadFeedConfig } from "./feedStore.svelte";
+import { loadTimeline, timelineState, loadTimelineConfig } from "./timelineStore.svelte";
 import { websocketConnection } from "#lib/websocket";
-import { logger } from "#lib/utils/debug";
 import type { WebSocketMessage } from "#lib/websocket";
-import { loadConfigForStore } from "#lib/utils/storeConfig";
-import { setRefreshMinutes as setFeedRefreshMinutes } from "./feedStore.svelte";
-import { setRefreshMinutes as setTimelineRefreshMinutes } from "./timelineStore.svelte";
-
-export interface EffectHandles {
-	refreshInterval: ReturnType<typeof setInterval> | null;
-	configInterval: ReturnType<typeof setInterval> | null;
-	clusteringInterval: ReturnType<typeof setInterval> | null;
-}
-
-function createEffectHandles(): EffectHandles {
-	return {
-		refreshInterval: null,
-		configInterval: null,
-		clusteringInterval: null,
-	};
-}
+import { logger } from "#lib/utils/debug";
 
 const FEED_UPDATE_DEBOUNCE_MS = 2000;
 const CONFIG_CHECK_INTERVAL_MS = 60000;
 
-/** Per-effect-instance state, so two pages' effects never clobber each other. */
-interface EffectContext {
-	lastUpdate: number;
-	feedUpdateDebounce: ReturnType<typeof setTimeout> | null;
+export interface RefreshEffect {
+	start: () => Promise<void>;
+	stop: () => void;
 }
 
-/** Pure predicate: should this update be accepted? */
-function shouldAcceptUpdate(timestamp: number, lastUpdate: number): boolean {
-	return timestamp >= lastUpdate;
-}
-
-/** Reload feeds + timeline, restoring scroll only after the data has landed. */
-async function reloadPreservingScroll(): Promise<void> {
-	const scrollY = window.scrollY;
-	await Promise.all([loadFeeds(feedState.activeTab, true), loadTimeline()]);
-	window.scrollTo(0, scrollY);
-}
-
-function handleFeedUpdate(ctx: EffectContext, timestamp: number) {
-	const delta = timestamp - ctx.lastUpdate;
-	logger.log(
-		`[Effects] Feed update received: ts=${timestamp}, lastUpdate=${ctx.lastUpdate}, delta=${delta}ms`,
-	);
-
-	if (shouldAcceptUpdate(timestamp, ctx.lastUpdate)) {
-		logger.log("[Effects] Update accepted, scheduling reload...");
-		ctx.lastUpdate = timestamp;
-
-		if (ctx.feedUpdateDebounce) clearTimeout(ctx.feedUpdateDebounce);
-		ctx.feedUpdateDebounce = setTimeout(() => {
-			ctx.feedUpdateDebounce = null;
-			logger.log("[Effects] Debounce fired, reloading feeds and timeline...");
-			void reloadPreservingScroll();
-		}, FEED_UPDATE_DEBOUNCE_MS);
-	} else {
-		logger.log("[Effects] Update rejected (stale)");
-	}
-}
-
-/** Pure predicate: has clustering state actually changed? */
-function clusteringChanged(
-	wasClustering: boolean,
-	isClustering: boolean,
-): boolean {
-	return wasClustering !== isClustering;
-}
-
-function handleClusteringStatus(isClustering: boolean) {
-	if (!clusteringChanged(timelineState.isClustering, isClustering)) return;
-
-	timelineState.isClustering = isClustering;
-	if (!isClustering) {
-		void reloadPreservingScroll();
-	}
-}
-
-async function checkConfig(): Promise<number> {
-	return loadConfigForStore(feedState, setFeedRefreshMinutes);
-}
-
-function stopEffects(handles: EffectHandles, ctx: EffectContext) {
-	if (handles.refreshInterval) clearInterval(handles.refreshInterval);
-	if (handles.configInterval) clearInterval(handles.configInterval);
-	if (handles.clusteringInterval) clearInterval(handles.clusteringInterval);
-	handles.refreshInterval = null;
-	handles.configInterval = null;
-	handles.clusteringInterval = null;
-	if (ctx.feedUpdateDebounce) {
-		clearTimeout(ctx.feedUpdateDebounce);
-		ctx.feedUpdateDebounce = null;
-	}
-}
-
+/**
+ * One instance per page. It owns that page's refresh interval, config poll and
+ * websocket listener, and only ever reloads that page's own data.
+ */
 function createRefreshEffect(
-	refreshFn: () => void,
-	onConnect?: () => void,
-): { start: () => Promise<void>; stop: () => void; handles: EffectHandles } {
-	const handles = createEffectHandles();
-	const ctx: EffectContext = { lastUpdate: 0, feedUpdateDebounce: null };
+	refresh: () => Promise<void>,
+	loadConfig: () => Promise<number>,
+): RefreshEffect {
 	let started = false;
+	let lastUpdate = 0;
+	let refreshInterval: ReturnType<typeof setInterval> | null = null;
+	let configInterval: ReturnType<typeof setInterval> | null = null;
+	let debounce: ReturnType<typeof setTimeout> | null = null;
+	let refreshMinutes = 0;
+
+	async function reloadPreservingScroll(): Promise<void> {
+		const scrollY = window.scrollY;
+		await refresh();
+		window.scrollTo(0, scrollY);
+	}
 
 	// A distinct function per instance: the connection stores listeners in a
-	// Set, so sharing one module-level function would let one page's stop()
-	// unsubscribe the other page.
+	// Set, so sharing one function would let one page's stop() unsubscribe another.
 	const listener = (message: WebSocketMessage) => {
 		if (message.type === "feed_update") {
-			handleFeedUpdate(ctx, message.timestamp);
+			if (message.timestamp < lastUpdate) return; // stale
+			lastUpdate = message.timestamp;
+			if (debounce) clearTimeout(debounce);
+			debounce = setTimeout(() => {
+				debounce = null;
+				void reloadPreservingScroll();
+			}, FEED_UPDATE_DEBOUNCE_MS);
 		} else if (message.type === "clustering_status") {
-			handleClusteringStatus(message.is_clustering ?? false);
+			const isClustering = message.is_clustering ?? false;
+			if (timelineState.isClustering === isClustering) return;
+			timelineState.isClustering = isClustering;
+			if (!isClustering) void reloadPreservingScroll();
 		}
 	};
+
+	function setRefreshInterval(minutes: number) {
+		if (minutes === refreshMinutes && refreshInterval) return;
+		refreshMinutes = minutes;
+		if (refreshInterval) clearInterval(refreshInterval);
+		refreshInterval = setInterval(() => void refresh(), minutes * 60 * 1000);
+	}
 
 	async function start() {
 		if (started) return;
 		started = true;
-
-		ctx.lastUpdate = 0;
+		lastUpdate = 0;
 		websocketConnection.addEventListener(listener);
 		websocketConnection.connect();
 
-		onConnect?.();
-
-		const minutes = await checkConfig();
+		const minutes = await loadConfig();
 		// stop() may have run while we awaited; don't create orphaned intervals.
 		if (!started) return;
+		setRefreshInterval(minutes);
 
-		handles.refreshInterval = setInterval(refreshFn, minutes * 60 * 1000);
-
-		handles.configInterval = setInterval(async () => {
-			const newMinutes = await checkConfig();
-			if (!started) return;
-			if (handles.refreshInterval) {
-				clearInterval(handles.refreshInterval);
-				handles.refreshInterval = setInterval(
-					refreshFn,
-					newMinutes * 60 * 1000,
-				);
-			}
+		configInterval = setInterval(async () => {
+			const next = await loadConfig();
+			if (started) setRefreshInterval(next);
 		}, CONFIG_CHECK_INTERVAL_MS);
 	}
 
 	function stop() {
 		if (!started) return;
 		started = false;
-		stopEffects(handles, ctx);
+		if (refreshInterval) clearInterval(refreshInterval);
+		if (configInterval) clearInterval(configInterval);
+		if (debounce) clearTimeout(debounce);
+		refreshInterval = configInterval = debounce = null;
+		refreshMinutes = 0;
 		websocketConnection.removeEventListener(listener);
+		logger.log("[Effects] stopped");
 	}
 
-	return { start, stop, handles };
+	return { start, stop };
 }
 
-export function createFeedEffects(): {
-	start: () => Promise<void>;
-	stop: () => void;
-	handles: EffectHandles;
-} {
-	return createRefreshEffect(() => loadFeeds(feedState.activeTab, true));
+export function createFeedEffects(): RefreshEffect {
+	return createRefreshEffect(() => loadFeeds(feedState.activeTab, true), loadFeedConfig);
 }
 
-export function createTimelineEffects(): {
-	start: () => Promise<void>;
-	stop: () => void;
-	handles: EffectHandles;
-} {
-	return createRefreshEffect(loadTimeline);
-}
-
-export function createInfiniteScrollObserver(
-	sentinel: HTMLDivElement,
-	onIntersect: () => void,
-	hasMore: boolean,
-	isLoading: boolean,
-) {
-	const observer = new IntersectionObserver(
-		(entries) => {
-			entries.forEach((entry) => {
-				if (entry.isIntersecting && !isLoading && hasMore) {
-					onIntersect();
-				}
-			});
-		},
-		{ rootMargin: "500px" },
-	);
-
-	observer.observe(sentinel);
-
-	return () => observer.disconnect();
+export function createTimelineEffects(): RefreshEffect {
+	return createRefreshEffect(() => loadTimeline(), loadTimelineConfig);
 }

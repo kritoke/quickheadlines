@@ -13,7 +13,6 @@
 	import {
 		timelineState,
 		loadTimeline,
-		loadTimelineConfig,
 		handleLoadMore as doLoadMore,
 		getFilteredItems,
 		isLoading,
@@ -75,21 +74,12 @@
 		const tab = page.url?.searchParams.get('tab') ?? getStoredTab();
         initialized = true;
 		
-		let disposed = false;
-		(async () => {
-			await Promise.all([
-				loadTimeline(false, tab),
-				loadTimelineConfig(),
-				loadTabs()
-			]);
-			// The page may have been left while loading; cleanup already ran.
-			if (disposed) return;
-			timelineEffects = createTimelineEffects();
-			timelineEffects.start();
-		})();
-		
+		loadTimeline(false, tab);
+		loadTabs();
+		timelineEffects = createTimelineEffects();
+		timelineEffects.start();
+
 		return () => {
-			disposed = true;
 			if (timelineEffects) {
 				timelineEffects.stop();
 				timelineEffects = null;
@@ -229,7 +219,7 @@
 					</div>
 				{:then TimelineView}
 					<div class="pt-4 md:pt-6">
-						<TimelineView items={filteredItems} hasMore={timelineState.hasMore} onLoadMore={doLoadMore} />
+						<TimelineView items={filteredItems} hasMore={timelineState.hasMore} activeTab={timelineState.tabName} onLoadMore={doLoadMore} />
 					</div>
 				{/await}
 		{:else if searchState.query && filteredItems.length === 0}

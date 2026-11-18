@@ -1,3 +1,5 @@
+import { logger } from "#lib/utils/debug";
+
 export type ConnectionState = "connecting" | "connected" | "disconnected";
 
 export type WebSocketMessage = {
@@ -6,67 +8,14 @@ export type WebSocketMessage = {
 	is_clustering?: boolean;
 };
 
-import { logger } from "#lib/utils/debug";
-import {
-	setConnectionState,
-	setLatency,
-	incrementReconnectAttempts,
-	resetReconnectAttempts,
-} from "#lib/stores/connection.svelte";
-
-// Shared WebSocket connection instance
-let sharedConnection: WebSocket | null = null;
-let sharedState: ConnectionState = "disconnected";
-let reconnectTimeout: ReturnType<typeof setTimeout> | null = null;
-let intentionalClose = false;
-const reconnectListeners = new Set<() => void>();
-
-// Exponential backoff state
 const INITIAL_DELAY_MS = 1000;
 const MAX_DELAY_MS = 30000;
-const DELAY_MULTIPLIER = 2;
+
+let socket: WebSocket | null = null;
+let state: ConnectionState = "disconnected";
+let reconnectTimeout: ReturnType<typeof setTimeout> | null = null;
 let currentDelayMs = INITIAL_DELAY_MS;
-
-// Rate limiting to prevent connection spam
-const MAX_CONNECT_ATTEMPTS_PER_MINUTE = 10;
-let connectAttempts = 0;
-let connectAttemptsResetTime = 0;
-
-function resetConnectAttemptsIfNeeded(): void {
-	const now = Date.now();
-	if (now > connectAttemptsResetTime) {
-		connectAttempts = 0;
-		connectAttemptsResetTime = now + 60000; // Reset every minute
-	}
-}
-
-// Event listeners for WebSocket messages
 const listeners = new Set<(message: WebSocketMessage) => void>();
-
-// Calculate delay with jitter
-function calculateDelay(): number {
-	const jitter = Math.random() * currentDelayMs;
-	const delay = currentDelayMs + jitter;
-	return Math.min(delay, MAX_DELAY_MS);
-}
-
-// Exponential backoff with jitter
-function scheduleReconnect() {
-	if (reconnectTimeout) {
-		clearTimeout(reconnectTimeout);
-	}
-
-	const delay = calculateDelay();
-	incrementReconnectAttempts();
-	logger.log(
-		`[WebSocket] Reconnecting in ${Math.round(delay)}ms (current delay: ${currentDelayMs}ms)`,
-	);
-
-	reconnectTimeout = setTimeout(() => {
-		reconnectTimeout = null;
-		connectWebSocket();
-	}, delay);
-}
 
 /** `location.protocol` already ends in ":" — don't add another. */
 export function buildWebSocketUrl(loc: Pick<Location, "protocol" | "host">): string {
@@ -74,165 +23,94 @@ export function buildWebSocketUrl(loc: Pick<Location, "protocol" | "host">): str
 	return `${protocol}//${loc.host}/api/ws`;
 }
 
-export function onReconnect(callback: () => void): () => void {
-	reconnectListeners.add(callback);
-	return () => reconnectListeners.delete(callback);
+/** Exponential backoff with jitter. Always schedules another attempt — never gives up. */
+function scheduleReconnect(): void {
+	if (reconnectTimeout) clearTimeout(reconnectTimeout);
+	const delay = Math.min(currentDelayMs + Math.random() * currentDelayMs, MAX_DELAY_MS);
+	currentDelayMs = Math.min(currentDelayMs * 2, MAX_DELAY_MS);
+	logger.log(`[WebSocket] Reconnecting in ${Math.round(delay)}ms`);
+	reconnectTimeout = setTimeout(() => {
+		reconnectTimeout = null;
+		open();
+	}, delay);
 }
 
-// Helper to reset connection state after failure
-function resetConnectionState(): void {
-	sharedConnection = null;
-	sharedState = "disconnected";
-	setConnectionState("disconnected");
-}
+function open(): void {
+	if (socket) return;
+	state = "connecting";
 
-// Reconnection logic with exponential backoff
-function connectWebSocket() {
-	// Guard against multiple simultaneous connection attempts
-	if (sharedConnection || sharedState === "connecting") {
-		return;
-	}
-
-	// Rate limit connection attempts
-	resetConnectAttemptsIfNeeded();
-	if (connectAttempts >= MAX_CONNECT_ATTEMPTS_PER_MINUTE) {
-		logger.warn("[WebSocket] Rate limited: too many connection attempts");
-		return;
-	}
-	connectAttempts++;
-
-	sharedState = "connecting";
-	setConnectionState("connecting");
-
-	const wsUrl = buildWebSocketUrl(window.location);
-
+	let ws: WebSocket;
 	try {
-		sharedConnection = new WebSocket(wsUrl);
+		ws = new WebSocket(buildWebSocketUrl(window.location));
 	} catch (e) {
 		logger.error("[WebSocket] Failed to create WebSocket:", e);
-		resetConnectionState();
+		state = "disconnected";
+		scheduleReconnect();
 		return;
 	}
+	socket = ws;
 
-	sharedConnection.onopen = () => {
-		const wasReconnect = currentDelayMs > INITIAL_DELAY_MS;
-		sharedState = "connected";
-		setConnectionState("connected");
-		resetReconnectAttempts();
-		currentDelayMs = INITIAL_DELAY_MS; // Reset delay on successful connection
+	ws.onopen = () => {
+		state = "connected";
+		currentDelayMs = INITIAL_DELAY_MS;
 		logger.log("[WebSocket] Connected");
-
-		if (wasReconnect) {
-			logger.log("[WebSocket] Reconnected, calling hooks");
-			reconnectListeners.forEach((listener) => listener());
-		}
 	};
 
-	sharedConnection.onmessage = (event) => {
+	ws.onmessage = (event) => {
+		let data: WebSocketMessage;
 		try {
-			const data: WebSocketMessage = JSON.parse(event.data);
-
-			// Track latency from heartbeats
-			if (data.type === "heartbeat") {
-				const latency = Date.now() - data.timestamp;
-				setLatency(latency);
-			}
-
-			// Dispatch to all registered listeners
-			listeners.forEach((listener) => {
-				try {
-					listener(data);
-				} catch (err) {
-					logger.error("[WebSocket] Listener error:", err);
-				}
-			});
+			data = JSON.parse(event.data);
 		} catch (e) {
 			logger.error("[WebSocket] Failed to parse message:", e);
+			return;
 		}
+		listeners.forEach((listener) => {
+			try {
+				listener(data);
+			} catch (err) {
+				logger.error("[WebSocket] Listener error:", err);
+			}
+		});
 	};
 
-	sharedConnection.onerror = (error) => {
-		logger.error("[WebSocket] Error:", error);
-		// Error will trigger onclose, so we don't need to set state here
-	};
+	ws.onerror = (error) => logger.error("[WebSocket] Error:", error);
 
-	sharedConnection.onclose = () => {
-		sharedConnection = null;
-		sharedState = "disconnected";
-		setConnectionState("disconnected");
+	ws.onclose = () => {
+		// Ignore close events from a socket we already dropped via disconnect().
+		if (socket !== ws) return;
+		socket = null;
+		state = "disconnected";
 		logger.log("[WebSocket] Disconnected");
+		scheduleReconnect();
+	};
+}
 
-		if (!intentionalClose) {
-			// Increase delay for next attempt (exponential backoff)
-			currentDelayMs = Math.min(currentDelayMs * DELAY_MULTIPLIER, MAX_DELAY_MS);
-			scheduleReconnect();
+export const websocketConnection = {
+	get state(): ConnectionState {
+		return state;
+	},
+
+	connect(): void {
+		if (!socket && !reconnectTimeout) open();
+	},
+
+	disconnect(): void {
+		if (reconnectTimeout) {
+			clearTimeout(reconnectTimeout);
+			reconnectTimeout = null;
 		}
-		intentionalClose = false;
-	};
-}
+		const ws = socket;
+		socket = null;
+		state = "disconnected";
+		currentDelayMs = INITIAL_DELAY_MS;
+		ws?.close();
+	},
 
-// Public API for the shared WebSocket connection
-export function getWebSocketConnection() {
-	return {
-		get state() {
-			return sharedState;
-		},
+	addEventListener(listener: (message: WebSocketMessage) => void): void {
+		listeners.add(listener);
+	},
 
-		connect() {
-			// Connect if disconnected or if connection attempt failed and we're stuck in 'connecting'
-			if (sharedState === "disconnected" || sharedState === "connecting") {
-				// If stuck in 'connecting', reset state first
-				if (sharedState === "connecting" && !sharedConnection) {
-					resetConnectionState();
-				}
-				connectWebSocket();
-			}
-		},
-
-		disconnect() {
-			intentionalClose = true;
-			if (reconnectTimeout) {
-				clearTimeout(reconnectTimeout);
-				reconnectTimeout = null;
-			}
-			if (sharedConnection) {
-				sharedConnection.close();
-				sharedConnection = null;
-			}
-			sharedState = "disconnected";
-			// Reset delay on intentional disconnect
-			currentDelayMs = INITIAL_DELAY_MS;
-		},
-
-		forceReconnect() {
-			this.disconnect();
-			currentDelayMs = INITIAL_DELAY_MS;
-			this.connect();
-		},
-
-		addEventListener(listener: (message: WebSocketMessage) => void) {
-			listeners.add(listener);
-		},
-
-		removeEventListener(listener: (message: WebSocketMessage) => void) {
-			listeners.delete(listener);
-		},
-
-		// For debugging purposes
-		getConnection() {
-			return sharedConnection;
-		},
-
-		// Get current backoff state (for debugging)
-		getBackoffDelay() {
-			return currentDelayMs;
-		},
-	};
-}
-
-// Initialize the shared connection when the module is loaded
-// This ensures there's only one connection instance
-const websocketConnection = getWebSocketConnection();
-
-// Export the singleton instance
-export { websocketConnection };
+	removeEventListener(listener: (message: WebSocketMessage) => void): void {
+		listeners.delete(listener);
+	},
+};

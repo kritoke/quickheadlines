@@ -7,14 +7,9 @@
 	import { initBreakpoints } from '#lib/utils/breakpoint.svelte';
 	import { onNavigate } from '$app/navigation';
 	import type { Navigation } from '$app/navigation';
-	import {
-		saveScroll,
-		getScroll,
-		hasVisited,
-		markVisited,
-		scrollToPosition,
-		resetScroll
-	} from '#lib/stores/navigation.svelte';
+	import { saveScroll, getScroll } from '#lib/stores/navigation.svelte';
+	import { scrollToPosition } from '#lib/utils/scroll';
+	import { onMount } from 'svelte';
 	import Effects from '#lib/components/Effects.svelte';
 	import CrystalBadge from '#lib/components/CrystalBadge.svelte';
 	import ScrollToTop from '#lib/components/ScrollToTop.svelte';
@@ -33,12 +28,8 @@
 				navigation.complete.then(() => scrollToPosition(savedScroll));
 			}
 		} else {
-			navigation.complete.then(() => {
-				resetScroll();
-			});
+			navigation.complete.then(() => scrollToPosition(0));
 		}
-		
-		markVisited(toPath);
 		
 		if (!navigation.from || !navigation.complete) return;
 		
@@ -48,13 +39,8 @@
 		}
 	});
 	
-	let layoutMounted = $state(false);
-
-	$effect(() => {
-		if (layoutMounted) return;
-		layoutMounted = true;
-
-		if (typeof window !== 'undefined' && isIOS()) {
+	onMount(() => {
+		if (isIOS()) {
 			document.documentElement.classList.add('ios-device');
 		}
 

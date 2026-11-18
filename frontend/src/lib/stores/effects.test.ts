@@ -10,13 +10,13 @@ vi.mock('#lib/websocket', () => ({
 }));
 
 let resolveConfig: ((n: number) => void) | null = null;
-vi.mock('#lib/utils/storeConfig', () => ({
-	loadConfigForStore: vi.fn(() => new Promise<number>((r) => { resolveConfig = r; })),
-}));
-vi.mock('./feedStore.svelte', () => ({ loadFeeds: vi.fn(async () => {}), feedState: { activeTab: 'all' }, setRefreshMinutes: vi.fn() }));
-vi.mock('./timelineStore.svelte', () => ({ loadTimeline: vi.fn(async () => {}), timelineState: { isClustering: false }, setRefreshMinutes: vi.fn() }));
+const pendingConfig = () => new Promise<number>((r) => { resolveConfig = r; });
+vi.mock('./feedStore.svelte', () => ({ loadFeeds: vi.fn(async () => {}), feedState: { activeTab: 'all' }, loadFeedConfig: vi.fn(() => pendingConfig()) }));
+vi.mock('./timelineStore.svelte', () => ({ loadTimeline: vi.fn(async () => {}), timelineState: { isClustering: false }, loadTimelineConfig: vi.fn(() => pendingConfig()) }));
 
 import { createFeedEffects, createTimelineEffects } from './effects.svelte';
+import { loadFeeds } from './feedStore.svelte';
+import { loadTimeline } from './timelineStore.svelte';
 
 describe('refresh effects lifecycle', () => {
 	beforeEach(() => { listeners.clear(); vi.useFakeTimers(); });
@@ -30,7 +30,6 @@ describe('refresh effects lifecycle', () => {
 		resolveConfig!(10);
 		await starting;
 		expect(setIntervalSpy).not.toHaveBeenCalled();
-		expect(fx.handles.refreshInterval).toBeNull();
 		expect(listeners.size).toBe(0);
 		setIntervalSpy.mockRestore();
 	});
@@ -45,5 +44,17 @@ describe('refresh effects lifecycle', () => {
 		expect(listeners.size).toBe(1);
 		timeline.stop();
 		expect(listeners.size).toBe(0);
+	});
+
+	it('a feed_update reloads only the owning page', async () => {
+		const timeline = createTimelineEffects();
+		const t = timeline.start(); resolveConfig!(10); await t;
+		vi.mocked(loadFeeds).mockClear();
+		vi.mocked(loadTimeline).mockClear();
+		listeners.forEach((l) => l({ type: 'feed_update', timestamp: Date.now() }));
+		await vi.advanceTimersByTimeAsync(2500);
+		expect(loadTimeline).toHaveBeenCalledTimes(1);
+		expect(loadFeeds).not.toHaveBeenCalled();
+		timeline.stop();
 	});
 });
