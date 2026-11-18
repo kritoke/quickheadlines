@@ -24,8 +24,8 @@ jobs:
         run: shards install
 
       - name: Build ameba
-        # ameba's postinstall generates bin/ameba.cr; compile it once
-        run: crystal build bin/ameba.cr -o bin/ameba
+        # ameba 1.7 has no postinstall; build its CLI entrypoint from lib/
+        run: crystal build lib/ameba/bin/ameba.cr -o bin/ameba
 
       - name: Run ameba
         run: bin/ameba
