@@ -60,11 +60,14 @@ class QuickHeadlines::Controllers::ProxyController < QuickHeadlines::Controllers
         return r
       end
 
+      location = next_location
+      raise AHK::Exception::HTTPException.new(502, "Bad Gateway") unless location
+
       redirects += 1
       raise AHK::Exception::HTTPException.new(502, "Too many redirects") if redirects > MAX_PROXY_REDIRECTS
 
       # Resolve relative Location headers against the current URL
-      redirect_uri = current_uri.resolve(next_location.not_nil!)
+      redirect_uri = current_uri.resolve(location)
       redirect_valid, redirect_ip = validate_proxy_url_with_ip(redirect_uri.to_s)
       unless redirect_valid
         Log.for("quickheadlines.proxy").warn { "Redirect to unvalidated URL blocked: #{redirect_uri}" }

@@ -27,7 +27,6 @@ module FetcherRegistry
 
   def self.impl : FetcherAdapter
     @@impl ||= DefaultFetcherAdapter.new
-    @@impl.not_nil!
   end
 
   def self.register_impl(adapter : FetcherAdapter)

@@ -1,7 +1,7 @@
 require "./spec_helper"
 
 private def feed_with_items(url : String, titles : Array(String)) : FeedData
-  items = titles.map_with_index { |t, i| Item.new(t, "#{url}/item-#{i}", Time.utc) }
+  items = titles.map_with_index { |title, idx| Item.new(title, "#{url}/item-#{idx}", Time.utc) }
   FeedData.new(title: "Feed #{url}", url: url, site_link: url, header_color: nil, header_text_color: nil, items: items)
 end
 

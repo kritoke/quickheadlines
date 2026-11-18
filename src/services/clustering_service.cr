@@ -169,8 +169,8 @@ class QuickHeadlines::Services::ClusteringService
   end
 
   private def assign_cluster_item(item_id : Int64, match : ClusterMatchResult, threshold : Float64, title : String, cache : FeedCache) : Int64
-    if match.match_id && match.similarity >= threshold
-      match_id = match.match_id.not_nil!
+    match_id = match.match_id
+    if match_id && match.similarity >= threshold
       # Join the match's existing cluster (its representative), not the match
       # itself — the match may be a non-representative member. If the match
       # isn't clustered yet, it becomes the representative.

@@ -63,7 +63,7 @@ module RssReader
   def self.read_ps : Float64?
     output = IO::Memory.new
     status = Process.run("ps", ["-o", "rss=", "-p", Process.pid.to_s], output: output, error: Process::Redirect::Close)
-    return nil unless status.success?
+    return unless status.success?
     kb = output.to_s.strip.to_f64?
     kb ? kb / 1024.0 : nil
   rescue ex

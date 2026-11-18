@@ -119,7 +119,7 @@ describe QuickHeadlines::RateLimiter, "cache layer" do
     allowed.should eq(20)
 
     admin_key = "strict-admin-#{rand(100000)}"
-    results = 5.times.map { QuickHeadlines::RateLimiter.allowed?(admin_key, 1, 60) }.to_a
+    results = Array.new(5) { QuickHeadlines::RateLimiter.allowed?(admin_key, 1, 60) }
     results.should eq([true, false, false, false, false])
   end
 
