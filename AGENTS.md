@@ -97,7 +97,7 @@ If you don't use the prefix, you will get a `command not found: crystal` error, 
 **MANDATORY WORKFLOW:**
 
 1. **COMPILE FIRST:** Run `just nix-build` - MUST succeed before proceeding
-2. **Verify Work:** Run `nix develop . --command crystal spec` and `cd frontend && npm run test`
+2. **Verify Work:** Run `nix develop . --command crystal spec` and `cd frontend && pnpm run test`
 3. **Archival:** Use `/opsx:archive <name>` for all completed changes.
 4. **PUSH TO REMOTE:**
 
@@ -136,14 +136,14 @@ just nix-build
 nix develop . --command crystal spec
 
 # Run frontend tests (Vitest)
-cd frontend && npm run test
+cd frontend && pnpm run test
 ```
 
 ### Why `just nix-build`?
 
 The `just nix-build` command:
 
-1. Builds the Svelte frontend (`npm run build`)
+1. Builds the Svelte frontend (`pnpm run build`)
 2. Updates a timestamp in `src/web/assets.cr` to force BakedFileSystem recompilation
 3. Rebuilds the Crystal binary with fresh assets baked in
 
@@ -239,14 +239,14 @@ export const themeState = $state({
 
 BakedFileSystem embeds files at **compile time**, not runtime. If you:
 
-1. Run `npm run build` in frontend/
+1. Run `pnpm run build` in frontend/
 2. But don't rebuild the Crystal binary
 
 The new JS/CSS files won't be served - you'll get 404s.
 
 ```bash
 # Full rebuild workflow
-cd frontend && npm run build
+cd frontend && pnpm run build
 cp frontend/static/logo.svg frontend/dist/
 cd ..
 nix develop . --command crystal build --release src/quickheadlines.cr -o bin/quickheadlines
@@ -342,7 +342,7 @@ document.documentElement.classList.toggle('dark', isDark);
 
 ### Visual Regression Testing
 
-- **Snapshot tests fail on UI changes**: Update with `npx playwright test --update-snapshots`
+- **Snapshot tests fail on UI changes**: Update with `pnpm exec playwright test --update-snapshots`
 - **Commit snapshots**: Always commit updated snapshot files with design changes
 
 ### OpenSpec Workflow Notes
@@ -355,13 +355,13 @@ document.documentElement.classList.toggle('dark', isDark);
 
 ```bash
 # Build Svelte frontend
-cd frontend && npm run build
+cd frontend && pnpm run build
 
 # Check for build errors
-cd frontend && npm run build 2>&1 | tail -20
+cd frontend && pnpm run build 2>&1 | tail -20
 
 # Preview production build locally
-cd frontend && npm run preview
+cd frontend && pnpm run preview
 ```
 
 ### Svelte MCP Autofix
@@ -440,13 +440,13 @@ nix develop . --command crystal tool unreachable src/quickheadlines.cr
 
 ```bash
 # Run all tests once
-cd frontend && npm run test
+cd frontend && pnpm run test
 
 # Run tests in watch mode
-cd frontend && npm run test:watch
+cd frontend && pnpm run test:watch
 
 # Run specific test file
-cd frontend && npx vitest run src/lib/stores/theme.test.ts
+cd frontend && pnpm exec vitest run src/lib/stores/theme.test.ts
 ```
 
 ### Test Structure
