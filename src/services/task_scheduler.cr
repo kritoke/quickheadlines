@@ -3,7 +3,7 @@ require "../constants"
 require "../services/fiber_tracker"
 require "../fetcher/interruptible_sleep"
 require "../fetcher/refresh_loop"
-require "./memory_manager_actor"
+require "./memory_manager"
 
 # Schedules and manages background fibers for periodic tasks.
 # Extracted from AppBootstrap to separate initialization from scheduling.
@@ -102,23 +102,7 @@ class TaskScheduler
         RefreshLoop::InterruptibleSleep.sleep(@cleanup_interval)
         break if QuickHeadlines.shutting_down?
         begin
-          begin
-            memory_status = MemoryManagerActor.instance.get_memory_status
-            case memory_status.pressure_level
-            when .critical?
-              Log.for("quickheadlines.app").warn { "Running emergency cleanup due to critical memory pressure" }
-              MemoryManagerActor.instance.request_cleanup(MemoryManagerActor::CleanupPriority::Emergency)
-            when .high?
-              Log.for("quickheadlines.app").warn { "Running aggressive cleanup due to high memory pressure" }
-              MemoryManagerActor.instance.request_cleanup(MemoryManagerActor::CleanupPriority::Aggressive)
-            else
-              MemoryManagerActor.instance.request_cleanup(MemoryManagerActor::CleanupPriority::Normal)
-            end
-          rescue ex
-            Log.for("quickheadlines.app").debug { "Memory pressure check failed: #{ex.message}" }
-            MemoryManagerActor.instance.request_cleanup(MemoryManagerActor::CleanupPriority::Normal)
-          end
-
+          MemoryManager.clear_caches
           @feed_cache.cleanup_store.cleanup_old_articles(QuickHeadlines::Constants::CACHE_RETENTION_DAYS)
           @feed_cache.cleanup_store.cleanup_old_entries(@config.cache_retention_hours || QuickHeadlines::Constants::CACHE_RETENTION_HOURS)
           QuickHeadlines::Services::ContentService.instance.check_size_and_cleanup

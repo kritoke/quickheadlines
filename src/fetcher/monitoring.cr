@@ -2,7 +2,7 @@ require "log"
 require "../module"
 require "../constants"
 require "../websocket"
-require "../services/memory_manager_actor"
+require "../services/memory_manager"
 require "../services/fiber_tracker"
 require "./interruptible_sleep"
 require "../favicon_storage"
@@ -92,7 +92,7 @@ module RefreshLoop::Monitoring
 
   # Initialize RSS tracking (call once at startup)
   def self.init_rss_tracking : Nil
-    @@startup_rss_mb = MemoryManagerActor.instance.get_memory_status.rss_mb
+    @@startup_rss_mb = MemoryManager.rss_mb
     @@last_rss_mb = @@startup_rss_mb
     @@last_report_time = Time.utc
     Log.for("quickheadlines.memory").info { "RSS tracking initialized: #{@@startup_rss_mb.round(1)}MB" }
@@ -136,8 +136,6 @@ module RefreshLoop::Monitoring
     # best-effort: a failure in one should not silence the others or
     # kill the reporter loop.
     begin
-      memory_status = MemoryManagerActor.instance.get_memory_status
-
       socket_count = begin
         SocketManager.instance.connection_count
       rescue ex : Exception
@@ -161,7 +159,7 @@ module RefreshLoop::Monitoring
 
       # Calculate RSS deltas
       now = Time.utc
-      current_rss = memory_status.rss_mb
+      current_rss, rss_src = RssReader.read
       delta_since_startup = current_rss - @@startup_rss_mb
       delta_since_last = current_rss - @@last_rss_mb
       time_since_last = (now - @@last_report_time).total_seconds
@@ -173,8 +171,7 @@ module RefreshLoop::Monitoring
       favicon_pool = FaviconActor.instance?.try(&.client_pool_size) || 0 rescue 0
 
       Log.for("quickheadlines.memory").info do
-        "Memory: RSS=#{current_rss.round(1)}MB [src=#{RssReader.read[1]}] native≈#{(current_rss - gc.heap_size / 1024.0 / 1024.0).round(1)}MB (#{delta_since_startup >= 0 ? "+" : ""}#{delta_since_startup.round(1)} since startup, #{delta_since_last >= 0 ? "+" : ""}#{delta_since_last.round(1)} in #{time_since_last.round(0)}s), " \
-        "pressure=#{memory_status.pressure_level}\n" \
+        "Memory: RSS=#{current_rss.round(1)}MB [src=#{rss_src}] native≈#{(current_rss - gc.heap_size / 1024.0 / 1024.0).round(1)}MB (#{delta_since_startup >= 0 ? "+" : ""}#{delta_since_startup.round(1)} since startup, #{delta_since_last >= 0 ? "+" : ""}#{delta_since_last.round(1)} in #{time_since_last.round(0)}s)\n" \
         "Diag: sockets=#{socket_count}, event_clients=#{event_clients}, fibers=#{fiber_stats}, " \
         "rate_cache=#{rate_limiter_cache}, favicon_pool=#{favicon_pool}\n" \
         "GC: heap=#{(gc.heap_size / 1024 / 1024).round(1)}MB, free=#{(gc.free_bytes / 1024 / 1024).round(1)}MB, " \

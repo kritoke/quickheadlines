@@ -296,8 +296,8 @@ class QuickHeadlines::Controllers::AdminController < QuickHeadlines::Controllers
     check_rate_limit!(request, "heap_dump", 1, 300)
 
     deep = request.query_params["deep"]? == "1"
-    path = @memory_manager.dump_heap(deep)
-    rss_mb = @memory_manager.get_rss_mb
+    path = MemoryManager.dump_heap(deep)
+    rss_mb = MemoryManager.rss_mb
 
     Log.for("quickheadlines.admin").info do
       "Memory snapshot requested: path=#{path}, deep=#{deep}, rss=#{rss_mb.round(1)}MB, by=#{client_ip(request)}"

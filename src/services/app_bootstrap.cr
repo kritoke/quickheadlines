@@ -10,7 +10,7 @@ require "./app_state_service"
 require "../websocket"
 require "../fetcher/vug_adapter"
 require "azurite"
-require "./memory_manager_actor"
+require "./memory_manager"
 require "./task_scheduler"
 require "../rate_limiter"
 
@@ -28,7 +28,7 @@ require "../rate_limiter"
 #   - FeedFetcher: needs FeedCache
 #   - ContentService: needs Azurite store config
 # - Explicitly-wired actors: created here, set via .instance= accessor
-#   - FaviconActor, ClusteringActor, MemoryManagerActor, SocketManager
+#   - FaviconActor, ClusteringActor, SocketManager
 class AppBootstrap
   @config : Config
   @db_service : DatabaseService
@@ -80,9 +80,6 @@ class AppBootstrap
     QuickHeadlines::Services::FeedService.content_store = content_store
     Log.for("quickheadlines.app").info { "Azurite content store initialized: #{content_db_path} (#{content_store.db_size_mb.round(2)}MB)" }
 
-    MemoryManagerActor.instance = MemoryManagerActor.new
-    MemoryManagerActor.instance.start
-    MemoryManagerActor.instance.start_periodic_gc
     Log.for("quickheadlines.app").info { "Memory management actor initialized (with periodic GC timer)" }
 
     SocketManager.instance = SocketManager.new

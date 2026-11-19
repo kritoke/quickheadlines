@@ -21,7 +21,6 @@ class QuickHeadlines::Controllers::ApiBaseController < Athena::Framework::Contro
   @clustering_service : QuickHeadlines::Services::ClusteringService?
   @favicon_actor : FaviconActor
   @content_service : QuickHeadlines::Services::ContentService
-  @memory_manager : MemoryManagerActor
   @feed_fetcher : FetcherAdapter
 
   def self.new : self
@@ -30,9 +29,8 @@ class QuickHeadlines::Controllers::ApiBaseController < Athena::Framework::Contro
     sm = SocketManager.instance
     favicon = FaviconActor.instance
     content = QuickHeadlines::Services::ContentService.instance
-    memory = MemoryManagerActor.instance
     fetcher = FetcherRegistry.impl
-    new(db, cache, sm, favicon, content, memory, fetcher)
+    new(db, cache, sm, favicon, content, fetcher)
   end
 
   def initialize(
@@ -41,7 +39,6 @@ class QuickHeadlines::Controllers::ApiBaseController < Athena::Framework::Contro
     @socket_manager : SocketManager,
     @favicon_actor : FaviconActor,
     @content_service : QuickHeadlines::Services::ContentService,
-    @memory_manager : MemoryManagerActor,
     @feed_fetcher : FetcherAdapter,
   )
   end

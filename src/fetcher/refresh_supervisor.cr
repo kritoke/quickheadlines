@@ -5,7 +5,6 @@ require "../models"
 require "../storage"
 require "../constants"
 require "../services/gc_collector"
-require "../services/memory_manager_actor"
 require "../websocket"
 require "./feed_fetcher_concurrent"
 require "./interruptible_sleep"
@@ -67,7 +66,7 @@ module RefreshLoop
       first = @state.first_run?
       @state.mark_first_run_done
       reload_config_if_changed unless first
-      refresh_duration = run_timed_refresh(check_pressure: !first)
+      refresh_duration = run_timed_refresh
       log_duration_warning(refresh_duration, @state.active_config) unless first
       RefreshLoop::InterruptibleSleep.sleep(@state.refresh_interval_seconds.seconds)
       return if QuickHeadlines.shutting_down? || first
@@ -104,28 +103,7 @@ module RefreshLoop
       end
     end
 
-    # Memory pressure gate before a regular refresh (not on the first run).
-    private def critical_memory_pressure? : Bool
-      memory_status = MemoryManagerActor.instance.get_memory_status
-      case memory_status.pressure_level
-      when .critical?
-        Log.for("quickheadlines.feed").warn { "Skipping refresh due to critical memory pressure (RSS=#{memory_status.rss_mb.round(1)}MB)" }
-        RefreshLoop::Monitoring.record_failure
-        true
-      when .high?
-        Log.for("quickheadlines.feed").warn { "Refresh proceeding with high memory pressure (RSS=#{memory_status.rss_mb.round(1)}MB)" }
-        false
-      else
-        false
-      end
-    rescue ex : Exception
-      Log.for("quickheadlines.feed").debug { "Memory pressure check failed: #{ex.message}" }
-      false
-    end
-
-    private def run_timed_refresh(check_pressure : Bool) : Float64
-      return 0.0 if check_pressure && critical_memory_pressure?
-
+    private def run_timed_refresh : Float64
       if @worker_alive.get
         @stuck_skips += 1
         Log.for("quickheadlines.feed").warn { "Previous refresh worker still running (cancelled, not yet exited) - skipping this cycle (#{@stuck_skips})" }
@@ -177,14 +155,14 @@ module RefreshLoop
         Log.for("quickheadlines.feed").debug { "Starting save_feed_cache..." }
         @cache.save(config_snapshot.cache_retention_hours, config_snapshot.max_cache_size_mb)
         Log.for("quickheadlines.feed").debug { "save_feed_cache complete" }
-        GCCollector.maybe_collect
+        GCCollector.collect_now
         refresh_duration
       when timeout(outer_timeout)
         cancel_ch.send(nil)
         StateStore.refreshing = false
         Log.for("quickheadlines.feed").error { "refresh_all timed out after #{outer_timeout.total_seconds.round}s - worker signalled to cancel" }
         RefreshLoop::Monitoring.record_failure
-        GCCollector.maybe_collect
+        GCCollector.collect_now
         (Time.utc - refresh_start_time).total_seconds
       end
     end

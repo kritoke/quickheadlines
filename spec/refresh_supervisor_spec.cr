@@ -6,7 +6,7 @@ require "../src/fetcher/refresh_supervisor"
 #
 # Covers the parts of the class that don't require mocking the
 # supervisor's many global dependencies (StateStore, RefreshHealthMonitor,
-# MemoryManagerActor, etc.):
+# MemoryManager, etc.):
 # - the class-level constants
 # - the nested `State` class (now public on the module)
 # - the early-return path of `#start` when the config file fails

@@ -2,12 +2,6 @@ require "gc"
 require "time"
 require "../config"
 
-module RefreshLoop
-  lib LibGC
-    fun GC_gcollect_and_unmap : Void
-  end
-end
-
 require "../models"
 require "../storage"
 require "../software_fetcher"
@@ -18,9 +12,8 @@ require "./semaphore_pool"
 require "./software_util"
 require "./monitoring"
 require "./refresh_supervisor"
-require "../services/gc_collector"
 require "../services/fiber_tracker"
-require "../services/memory_manager_actor"
+require "../services/memory_manager"
 
 # CancelError is raised when the refresh supervisor signals cancellation
 # during a refresh cycle.
@@ -91,9 +84,6 @@ module RefreshLoop
       Log.for("quickheadlines.feed").debug { "refresh_all: fetched #{fetched_count}/#{all_configs.size} feeds successfully" }
     end
 
-    # Reclaim memory from temporary feed data before building new state
-    GC.collect
-
     new_feeds = config.feeds.map do |feed|
       FeedFetcherConcurrent.best_available_feed(feed, fetched_map[feed.url]?, existing_data[feed.url]?)
     end
@@ -133,43 +123,6 @@ module RefreshLoop
 
     EventBroadcaster.notify_feed_update(StateStore.updated_at.to_unix_ms)
     RefreshLoop::Monitoring.record_cycle_complete
-
-    GCCollector.collect_now
-
-    # Memory diagnostics after every refresh cycle
-    gc = GC.stats
-    feed_count = StateStore.feeds.size
-    item_count = StateStore.feeds.sum(&.items.size)
-    tab_feed_count = StateStore.tabs.sum(&.feeds.size)
-    tab_item_count = StateStore.tabs.sum(&.feeds.sum(&.items.size))
-    string_pool = QuickHeadlines::StringIntern.size
-
-    # Estimate data size: sum of title + link string bytes across all items
-    data_bytes = 0_i64
-    StateStore.feeds.each do |feed|
-      feed.items.each do |item|
-        data_bytes += item.title.bytesize + item.link.bytesize
-      end
-    end
-    StateStore.tabs.each do |tab|
-      tab.feeds.each do |feed|
-        feed.items.each do |item|
-          data_bytes += item.title.bytesize + item.link.bytesize
-        end
-      end
-    end
-
-    Log.for("quickheadlines.memory").info do
-      "Post-refresh memory: " \
-      "heap=#{(gc.heap_size / 1024 / 1024).round(1)}MB, " \
-      "free=#{(gc.free_bytes / 1024 / 1024).round(1)}MB, " \
-      "unmapped=#{(gc.unmapped_bytes / 1024 / 1024).round(1)}MB, " \
-      "total=#{(gc.total_bytes / 1024 / 1024).round(1)}MB, " \
-      "feeds=#{feed_count}, items=#{item_count}, " \
-      "tab_feeds=#{tab_feed_count}, tab_items=#{tab_item_count}, " \
-      "string_pool=#{string_pool}, " \
-      "data_bytes=#{(data_bytes / 1024).round(1)}KB"
-    end
 
     if config.debug?
       Log.for("quickheadlines.feed").debug { "refresh_all: complete - StateStore.feeds=#{new_feeds.size}, StateStore.tabs=#{new_tabs.size}" }
