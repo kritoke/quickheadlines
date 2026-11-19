@@ -1,6 +1,7 @@
 require "athena"
 
 require "./gc_diagnostics"
+require "./xml_document_cycle_fix"
 
 require "./module"
 
