@@ -48,7 +48,7 @@ FINAL_CRYSTAL := if os == "Darwin" {
 OPENSSL_PREFIX := `brew --prefix openssl@3 2>/dev/null || echo ""`
 
 # Find available llvm-config on FreeBSD
-FIND_LLVM_CONFIG := `for v in 19 18 17 15 14 13; do if [ -x "/usr/local/bin/llvm-config$v" ]; then echo "llvm-config$v"; break; fi; done || echo ""`
+FIND_LLVM_CONFIG := `for v in 21 20 19 18 17 15 14 13; do if [ -x "/usr/local/bin/llvm-config$v" ]; then echo "llvm-config$v"; break; fi; done || echo ""`
 
 # Default recipe
 default: build
@@ -133,18 +133,24 @@ check-deps:
     fi
     @SYSTEM_CRYSTAL=$(which crystal 2>/dev/null || echo ""); \
     FINAL_CRYSTAL=$(if [ -n "$SYSTEM_CRYSTAL" ] && [ -x "$SYSTEM_CRYSTAL" ]; then echo "$SYSTEM_CRYSTAL"; else echo "crystal"; fi); \
-    echo "✓ Crystal compiler: $$($FINAL_CRYSTAL --version | head -1)"
-    @if command -v node >/dev/null 2>&1; then \
-        echo "✓ Node.js: $$(node --version)"; \
-    else \
-        echo "❌ Error: Node.js not found (required for Svelte build)"; \
-        exit 1; \
+    echo "✓ Crystal compiler: $($FINAL_CRYSTAL --version | head -1)"
+    @CV=$({{FINAL_CRYSTAL}} --version 2>/dev/null | head -1 | sed -E 's/^Crystal ([0-9.]+).*/\1/'); \
+    if [ -n "$CV" ] && [ "$(printf '%s\n' {{CRYSTAL_VERSION}} "$CV" | sort -t. -k1,1n -k2,2n -k3,3n | head -1)" != "{{CRYSTAL_VERSION}}" ]; then \
+        echo "❌ Crystal $CV found, >= {{CRYSTAL_VERSION}} required"; exit 1; \
     fi
-    @if command -v npm >/dev/null 2>&1; then \
-        echo "✓ npm: $$(npm --version)"; \
+    @if ! command -v node >/dev/null 2>&1; then \
+        echo "❌ Error: Node.js not found (>= 22.17 required for the Svelte build)"; exit 1; \
+    fi; \
+    NV=$(node -p 'process.versions.node'); \
+    node -e 'const [a,b]=process.versions.node.split(".").map(Number);process.exit(a>22||(a===22&&b>=17)?0:1)' || { \
+        echo "❌ Node.js $NV found, >= 22.17 required (FreeBSD: pkg install node22 or node24)"; exit 1; }; \
+    echo "✓ Node.js: $NV"
+    @if command -v pnpm >/dev/null 2>&1; then \
+        echo "✓ pnpm: $(pnpm --version)"; \
+    elif command -v corepack >/dev/null 2>&1; then \
+        echo "✓ pnpm will be enabled via corepack"; \
     else \
-        echo "❌ Error: npm not found"; \
-        exit 1; \
+        echo "❌ Error: pnpm not found. Install: npm i -g pnpm@10.30.2"; exit 1; \
     fi
     @if [ "{{os}}" = "Linux" ]; then \
         pkg-config --exists sqlite3 || { \
@@ -190,8 +196,8 @@ check-deps:
         }; \
         echo "✓ OpenSSL found"; \
     fi
-    @if [ "{{os}}" = "FreeBSD" ]; then \
-        echo "Checking Crystal build dependencies..."; \
+    @if [ "{{os}}" = "FreeBSD" ] && ! command -v crystal >/dev/null 2>&1; then \
+        echo "Checking Crystal source-build dependencies..."; \
         pkg info -e git >/dev/null 2>&1 || { \
             echo "❌ Error: git not found (required for Crystal build)"; \
             echo ""; \
@@ -213,18 +219,11 @@ check-deps:
             echo "  FreeBSD: sudo pkg install libyaml"; \
             exit 1; \
         }; \
-        pkg info -e llvm19 >/dev/null 2>&1 || pkg info -e llvm18 >/dev/null 2>&1 || pkg info -e llvm17 >/dev/null 2>&1 || pkg info -e llvm15 >/dev/null 2>&1 || { \
+        pkg info -e llvm21 >/dev/null 2>&1 || pkg info -e llvm20 >/dev/null 2>&1 || pkg info -e llvm19 >/dev/null 2>&1 || pkg info -e llvm18 >/dev/null 2>&1 || pkg info -e llvm17 >/dev/null 2>&1 || pkg info -e llvm15 >/dev/null 2>&1 || { \
             echo "❌ Error: llvm not found (required for Crystal build)"; \
             echo ""; \
             echo "Install llvm:"; \
             echo "  FreeBSD: sudo pkg install llvm19"; \
-            exit 1; \
-        }; \
-        pkg info -e libevent >/dev/null 2>&1 || { \
-            echo "❌ Error: libevent not found (required for Crystal build)"; \
-            echo ""; \
-            echo "Install libevent:"; \
-            echo "  FreeBSD: sudo pkg install libevent"; \
             exit 1; \
         }; \
         echo "✓ All Crystal build dependencies found"; \
@@ -266,6 +265,32 @@ check-deps:
         fi; \
     fi
 
+# Install shard dependencies (lib/ is not committed)
+shards:
+    @{{FINAL_CRYSTAL}} --version >/dev/null 2>&1 || { echo "❌ crystal not found"; exit 1; }
+    @if [ ! -d lib ] || [ shard.lock -nt lib ]; then \
+        echo "Installing shards..."; \
+        shards install || exit 1; \
+    fi
+
+# Build the Svelte frontend if missing or stale (fails loudly)
+frontend:
+    #!/bin/sh
+    set -e
+    if [ -f frontend/dist/index.html ] && [ -z "$(find frontend/src frontend/package.json frontend/vite.config.ts -newer frontend/dist/index.html -type f 2>/dev/null | head -1)" ]; then
+        echo "✓ Frontend dist is up to date"
+        exit 0
+    fi
+    cd frontend
+    if ! command -v pnpm >/dev/null 2>&1; then
+        echo "pnpm not found, enabling via corepack..."
+        corepack enable 2>/dev/null || { echo "❌ pnpm missing: run 'corepack enable' or 'npm i -g pnpm@10.30.2'"; exit 1; }
+    fi
+    pnpm install --frozen-lockfile
+    pnpm run build
+    cp static/logo.svg dist/ 2>/dev/null || true
+    echo "✓ Frontend built to frontend/dist/"
+
 # --- Svelte Tasks ---
 
 # Install Svelte dependencies
@@ -276,45 +301,21 @@ svelte-install:
 
 # Check if dist is stale (source files newer than dist)
 check-dist-fresh:
-    #!/usr/bin/env bash
-    set -e
-    
-    # If dist doesn't exist, it's stale
-    if [ ! -d "frontend/dist" ]; then
-        echo "❌ frontend/dist does not exist"
-        exit 1
+    #!/bin/sh
+    if [ ! -f frontend/dist/index.html ]; then
+        echo "❌ frontend/dist does not exist"; exit 1
     fi
-    
-    # Get the newest file in dist
-    DIST_NEWEST=$(find frontend/dist -type f -printf '%T@\n' 2>/dev/null | sort -n | tail -1)
-    
-    # Get the newest source file
-    SRC_NEWEST=$(find frontend/src -type f \( -name "*.svelte" -o -name "*.ts" -o -name "*.js" \) -printf '%T@\n' 2>/dev/null | sort -n | tail -1)
-    
-    # If no source files found, skip check
-    if [ -z "$SRC_NEWEST" ]; then
-        echo "✓ No source files to compare"
-        exit 0
+    NEWER=$(find frontend/src -type f -newer frontend/dist/index.html 2>/dev/null | head -1)
+    if [ -n "$NEWER" ]; then
+        echo "❌ Source newer than dist ($NEWER) - run 'just svelte-build-force'"; exit 1
     fi
-    
-    # Compare timestamps
-    if [ "$(echo "$SRC_NEWEST > $DIST_NEWEST" | bc -l 2>/dev/null || echo "0")" = "1" ]; then
-        echo "❌ Source files are newer than dist - rebuild needed"
-        echo ""
-        echo "Newest source file:"
-        find frontend/src -type f \( -name "*.svelte" -o -name "*.ts" -o -name "*.js" \) -printf '%T@ %p\n' 2>/dev/null | sort -n | tail -1 | cut -d' ' -f2-
-        echo ""
-        echo "Run 'just svelte-build' to rebuild"
-        exit 1
-    fi
-    
     echo "✓ Dist is up to date"
 
 # Build Svelte frontend (outputs to frontend/dist/)
 svelte-build: check-dist-fresh
     @echo "Building Svelte frontend..."
     @if [ ! -d "frontend/node_modules" ]; then \
-        cd frontend && npm install --legacy-peer-deps; \
+        cd frontend && pnpm install --frozen-lockfile; \
     fi
     cd frontend && pnpm run build
     @# Copy static assets
@@ -328,7 +329,7 @@ svelte-build-force:
     @echo "Force rebuilding Svelte frontend..."
     @rm -rf frontend/dist frontend/.svelte-kit
     @if [ ! -d "frontend/node_modules" ]; then \
-        cd frontend && npm install --legacy-peer-deps; \
+        cd frontend && pnpm install --frozen-lockfile; \
     fi
     cd frontend && pnpm run build
     @# Copy static assets
@@ -344,8 +345,8 @@ verify-baked-assets *ARGS:
     echo "Verifying baked assets..."
     
     # Get the main JS entry point from index.html
-    START_JS=$(grep -oP 'start\.[A-Za-z0-9_-]+\.js' frontend/dist/index.html | head -1)
-    APP_JS=$(grep -oP 'app\.[A-Za-z0-9_-]+\.js' frontend/dist/index.html | head -1)
+    START_JS=$(grep -oE 'start\.[A-Za-z0-9_-]+\.js' frontend/dist/index.html | head -1)
+    APP_JS=$(grep -oE 'app\.[A-Za-z0-9_-]+\.js' frontend/dist/index.html | head -1)
     
     if [ -z "$START_JS" ] || [ -z "$APP_JS" ]; then
         echo "❌ Could not find JS entry points in index.html"
@@ -402,26 +403,8 @@ test-frontend:
 
 # Build Release Binary (includes baked Svelte assets)
 # Works on all platforms: Linux, macOS, FreeBSD, Docker
-build: check-deps
+build: check-deps shards frontend
     @echo "Building QuickHeadlines for {{os}}-{{arch}}..."
-    @# Ensure frontend is built - this is CRITICAL for BakedFileSystem
-    @if [ ! -d "frontend/dist" ] || [ ! -f "frontend/dist/index.html" ]; then \
-        echo "Frontend dist not found or incomplete. Building..."; \
-        cd frontend && pnpm install --frozen-lockfile 2>/dev/null || npm install 2>/dev/null || true; \
-        pnpm run build 2>/dev/null || npm run build 2>/dev/null || { \
-            echo "❌ Failed to build frontend"; \
-            exit 1; \
-        }; \
-    fi
-    @# Check if dist is stale (source newer than dist)
-    @STALE=$(find frontend/src -newer frontend/dist -type f 2>/dev/null | head -1)
-    @if [ -n "$STALE" ]; then \
-        echo "Frontend source files newer than dist. Rebuilding..."; \
-        cd frontend && pnpm run build 2>/dev/null || npm run build 2>/dev/null; \
-    fi
-    @# Copy static assets
-    @cp frontend/static/logo.svg frontend/dist/ 2>/dev/null || true
-    @echo "Frontend built to frontend/dist/"
     @echo "Compiling release binary..."
     @mkdir -p bin
     @# Force BakedFileSystem to pick up new frontend by updating timestamp
@@ -477,26 +460,8 @@ nix-build-optimized:
     @ls -lh bin/quickheadlines
 
 # Build with specific OS/Arch naming for GitHub Releases (optimized by default)
-build-release: check-deps
+build-release: check-deps shards frontend
     @echo "Building QuickHeadlines {{BUILD_REV}} for {{os}}-{{arch}}..."
-    @# Ensure frontend is built - CRITICAL for BakedFileSystem
-    @if [ ! -d "frontend/dist" ] || [ ! -f "frontend/dist/index.html" ]; then \
-        echo "Frontend dist not found. Building..."; \
-        cd frontend && pnpm install --frozen-lockfile 2>/dev/null || npm install 2>/dev/null || true; \
-        pnpm run build 2>/dev/null || npm run build 2>/dev/null || { \
-            echo "❌ Failed to build frontend"; \
-            exit 1; \
-        }; \
-    fi
-    @# Check if dist is stale
-    @STALE=$(find frontend/src -newer frontend/dist -type f 2>/dev/null | head -1)
-    @if [ -n "$STALE" ]; then \
-        echo "Frontend source newer than dist. Rebuilding..."; \
-        cd frontend && pnpm run build 2>/dev/null || npm run build 2>/dev/null; \
-    fi
-    @# Copy static assets
-    @cp frontend/static/logo.svg frontend/dist/ 2>/dev/null || true
-    @echo "Frontend built to frontend/dist/"
     @echo "Compiling release binary (optimized: -Os -Dpreview_lto)..."
     @mkdir -p bin
     @# Force BakedFileSystem to pick up new frontend
@@ -508,15 +473,7 @@ build-release: check-deps
     @ls -lh bin/{{NAME}}-{{BUILD_REV}}-{{os}}-{{arch}}
 
 # Build release with size optimization (-Os)
-build-release-size: check-deps
-    @echo "Building Svelte frontend..."
-    @if [ ! -d "frontend/dist" ]; then \
-        cd frontend && npm run build; \
-        cp frontend/static/logo.svg frontend/dist/ 2>/dev/null || true; \
-    elif [ -n "$(find frontend/src -newer frontend/dist -type f 2>/dev/null | head -1)" ]; then \
-        cd frontend && npm run build; \
-        cp frontend/static/logo.svg frontend/dist/ 2>/dev/null || true; \
-    fi
+build-release-size: check-deps shards frontend
     @echo "Compiling release binary (size optimized): bin/{{NAME}}-{{BUILD_REV}}-{{os}}-{{arch}}"
     @mkdir -p bin
     @touch src/web/assets.cr
@@ -525,15 +482,7 @@ build-release-size: check-deps
     @ls -lh bin/{{NAME}}-{{BUILD_REV}}-{{os}}-{{arch}}-size
 
 # Build release with LTO
-build-release-lto: check-deps
-    @echo "Building Svelte frontend..."
-    @if [ ! -d "frontend/dist" ]; then \
-        cd frontend && npm run build; \
-        cp frontend/static/logo.svg frontend/dist/ 2>/dev/null || true; \
-    elif [ -n "$(find frontend/src -newer frontend/dist -type f 2>/dev/null | head -1)" ]; then \
-        cd frontend && npm run build; \
-        cp frontend/static/logo.svg frontend/dist/ 2>/dev/null || true; \
-    fi
+build-release-lto: check-deps shards frontend
     @echo "Compiling release binary (LTO): bin/{{NAME}}-{{BUILD_REV}}-{{os}}-{{arch}}"
     @mkdir -p bin
     @touch src/web/assets.cr
@@ -542,15 +491,7 @@ build-release-lto: check-deps
     @ls -lh bin/{{NAME}}-{{BUILD_REV}}-{{os}}-{{arch}}-lto
 
 # Build release optimized (size + LTO)
-build-release-optimized: check-deps
-    @echo "Building Svelte frontend..."
-    @if [ ! -d "frontend/dist" ]; then \
-        cd frontend && npm run build; \
-        cp frontend/static/logo.svg frontend/dist/ 2>/dev/null || true; \
-    elif [ -n "$(find frontend/src -newer frontend/dist -type f 2>/dev/null | head -1)" ]; then \
-        cd frontend && npm run build; \
-        cp frontend/static/logo.svg frontend/dist/ 2>/dev/null || true; \
-    fi
+build-release-optimized: check-deps shards frontend
     @echo "Compiling release binary (optimized): bin/{{NAME}}-{{BUILD_REV}}-{{os}}-{{arch}}"
     @mkdir -p bin
     @touch src/web/assets.cr
@@ -632,7 +573,7 @@ help:
     @echo ""
     @echo "Required dependencies:"
     @echo "  - Crystal {{CRYSTAL_VERSION}}"
-    @echo "  - Node.js 18+ (for Svelte build)"
+    @echo "  - Node.js 22.17+ and pnpm (for Svelte build)"
     @echo "  - SQLite3"
     @echo "  - OpenSSL"
     @echo "  - libmagic"
@@ -647,4 +588,4 @@ help:
     @echo "  Fedora/RHEL:   sudo dnf install crystal sqlite-devel openssl-devel file-devel nodejs"
     @echo "  Arch:          sudo pacman -S crystal sqlite openssl libmagic nodejs"
     @echo "  macOS:         brew install crystal openssl libmagic node"
-    @echo "  FreeBSD:       sudo pkg install crystal sqlite3 openssl git gmake libyaml libevent llvm19 libmagic node"
+    @echo "  FreeBSD:       sudo pkg install crystal shards sqlite3 node22 npm-node22 \&\& npm i -g pnpm@10.30.2"
