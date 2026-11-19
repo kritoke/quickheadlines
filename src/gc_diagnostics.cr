@@ -26,6 +26,36 @@ private module GCDiagnostics
   # (very-large-block spam); keep that behavior so diagnostics do not add noise.
   SUPPRESSED = "GC Warning: Repeated allocation of very large block"
 
+  # Classes (stdlib + shards) that define #finalize and can therefore take
+  # part in a Boehm finalization cycle. Each is resolved at compile time so
+  # types not linked into this program are skipped.
+  macro finalizable_types
+    {% names = %w(
+         OpenSSL::SSL::Socket::Client OpenSSL::SSL::Socket::Server
+         OpenSSL::SSL::Context::Client OpenSSL::SSL::Context::Server
+         OpenSSL::X509::Certificate OpenSSL::X509::Name OpenSSL::X509::Extension
+         OpenSSL::Digest OpenSSL::Cipher
+         TCPSocket UNIXSocket UDPSocket TCPServer UNIXServer Socket
+         IO::FileDescriptor File Process
+         IO::Encoding::Decoder IO::Encoding::Encoder
+         XML::Document XML::XPathContext XML::Reader XML::Builder
+         YAML::PullParser YAML::Builder
+         Regex Log::AsyncDispatcher
+         BakedFileSystem::BakedFile Crtemp
+       ) %}
+    {% for n in names %}
+      {% t = parse_type(n).resolve? %}
+      {% if t %}
+        return Crystal::System.print_error("  [gc-diag] type={{n.id}}\n") if id == {{t}}.crystal_instance_type_id
+      {% end %}
+    {% end %}
+  end
+
+  def self.print_type(id : Int32) : Nil
+    finalizable_types
+    Crystal::System.print_error "  [gc-diag] type=unknown id=%d\n", id
+  end
+
   def self.install : Nil
     LibGC.set_warn_proc ->(msg : LibC::Char*, v : LibGC::Word) do
       begin
@@ -54,6 +84,13 @@ private module GCDiagnostics
           slice[i] = 0xA_u8 # '\n'
           i += 1
           Crystal::System.print_error slice[0, i]
+
+          # 3) Name the object's type. Every Crystal reference stores its
+          # type id in the first 4 bytes; compare against classes that have
+          # finalizers. Static strings only - no allocation.
+          if v != 0
+            print_type Pointer(Int32).new(v.to_u64).value
+          end
         end
       rescue
         # Never let diagnostics take the process down - GC context is fragile.
