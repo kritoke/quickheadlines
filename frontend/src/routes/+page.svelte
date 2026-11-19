@@ -7,7 +7,6 @@
 	import { NavigationService } from '#lib/services/navigationService';
 	import { createFeedEffects } from '#lib/stores/effects.svelte';
 	import { logger, initDebug } from '#lib/utils/debug';
-	import { page } from '$app/state';
 	import { onMount } from 'svelte';
 	import {
 		feedState,
@@ -22,7 +21,7 @@
 	import { layoutState, getFeedGridClass } from '#lib/stores/layout.svelte';
 	import { searchState, toggleSearch } from '#lib/stores/search.svelte';
 	import { createLazyLoader } from '#lib/utils/lazyComponent';
-	import { getStoredTab } from '#lib/stores/tabStore.svelte';
+	import { currentUrlTab, syncTabFromUrl } from '#lib/utils/urlTab.svelte';
 
 	const loadSearchModal = createLazyLoader(() => import('#lib/components/BitsSearchModal.svelte'));
 
@@ -53,10 +52,7 @@
 	let feedEffects: ReturnType<typeof createFeedEffects> | null = null;
 
 	onMount(() => {
-		const params = new URLSearchParams(window.location.search);
-		const urlTab = params.get('tab') || getStoredTab();
-
-		loadFeeds(urlTab, true);
+		loadFeeds(currentUrlTab(), true);
 		initDebug();
 
 		feedEffects = createFeedEffects();
@@ -70,27 +66,16 @@
 		};
 	});
 
-	// Skip only the effect's initial mount run — onMount performs the first
-	// load, so we avoid a double-load by skipping once, then react to every
-	// subsequent URL tab change. The previous gate inferred "loaded" from
-	// feedState.feeds.length > 0, which made tab CLICKS no-ops when a category
-	// was legitimately empty (e.g. after clearing the cache DB): a browser
-	// refresh worked only because it re-runs onMount and bypassed this gate.
-	let handledInitialTabUrl = false;
-
-	$effect(() => {
-		const urlTab = page.url?.searchParams.get('tab') ?? getStoredTab();
-
-		if (!handledInitialTabUrl) {
-			handledInitialTabUrl = true;
-			return;
+	// React to later ?tab= changes; onMount performs the first load. Every
+	// subsequent change reloads, even into a legitimately empty category
+	// (an earlier gate on feedState.feeds.length made such clicks no-ops).
+	syncTabFromUrl(
+		() => feedState.activeTab,
+		(tab) => {
+			logger.log('[Page] URL tab changed from', feedState.activeTab, 'to', tab, ', reloading...');
+			loadFeeds(tab);
 		}
-
-		if (urlTab !== feedState.activeTab) {
-			logger.log('[Page] URL tab changed from', feedState.activeTab, 'to', urlTab, ', reloading...');
-			loadFeeds(urlTab);
-		}
-	});
+	);
 	
 	// Track when feeds are successfully loaded
 	$effect(() => {

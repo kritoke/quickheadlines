@@ -9,7 +9,6 @@
 	} from '#lib/stores/effects.svelte';
 	import { logger } from '#lib/utils/debug';
 	import { NavigationService } from '#lib/services/navigationService';
-	import { page } from '$app/state';
 	import {
 		timelineState,
 		loadTimeline,
@@ -25,10 +24,15 @@
 	import { searchState, toggleSearch } from '#lib/stores/search.svelte';
 	import { createLazyLoader } from '#lib/utils/lazyComponent';
 	import { onMount } from 'svelte';
-	import { getStoredTab } from '#lib/stores/tabStore.svelte';
+	import { currentUrlTab, syncTabFromUrl } from '#lib/utils/urlTab.svelte';
+	import StatusBanner from '#lib/components/StatusBanner.svelte';
 
 	const loadTimelineView = createLazyLoader(() => import('#lib/components/TimelineView.svelte'));
 	const loadSearchModal = createLazyLoader(() => import('#lib/components/BitsSearchModal.svelte'));
+
+	const STICKY_BANNER =
+		'sticky top-[var(--header-height,3.5rem)] z-20 bg-surface-50/80 dark:bg-surface-950/80 backdrop-blur-sm py-2 flex items-center justify-center gap-2';
+	const BANNER_TEXT = 'text-sm text-surface-700 dark:text-surface-300';
 
 	let tabs = $state<TabResponse[]>([]);
 	let timelineEffects: ReturnType<typeof createTimelineEffects> | null = null;
@@ -67,14 +71,8 @@
 		return () => observer.disconnect();
 	});
 	
-    // Track initialization to prevent double-firing on URL changes during load
-    let initialized = $state(false);
-    
 	onMount(() => {
-		const tab = page.url?.searchParams.get('tab') ?? getStoredTab();
-        initialized = true;
-		
-		loadTimeline(false, tab);
+		loadTimeline(false, currentUrlTab());
 		loadTabs();
 		timelineEffects = createTimelineEffects();
 		timelineEffects.start();
@@ -87,22 +85,18 @@
 			cancelRetry();
 		};
 	});
-    
-    // Only react to URL changes AFTER initial load is complete
-    // This prevents race conditions where URL changes while loading trigger duplicate requests
-    $effect(() => {
-        if (!initialized) return;
-        
-        const urlTab = page.url?.searchParams.get('tab') ?? getStoredTab();
-        if (urlTab !== timelineState.tabName) {
-            logger.log(`[Timeline] Tab changed from ${timelineState.tabName} to ${urlTab}, reloading...`);
-            loadTimeline(false, urlTab);
-        }
-    });
-	
+
+	// React to later ?tab= changes; onMount handles the initial tab.
+	syncTabFromUrl(
+		() => timelineState.tabName,
+		(tab) => {
+			logger.log(`[Timeline] Tab changed from ${timelineState.tabName} to ${tab}, reloading...`);
+			loadTimeline(false, tab);
+		}
+	);
+
 	async function handleRetry() {
-		const tab = page.url?.searchParams.get('tab') ?? getStoredTab();
-		await loadTimeline(false, tab);
+		await loadTimeline(false, currentUrlTab());
 	}
 
 	async function loadTabs() {
@@ -176,10 +170,12 @@
 			</div>
 		{:else if error && timelineState.items.length === 0}
 			{#if timelineState.retryAfterMs > 0}
-				<div class="bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 px-4 py-3 rounded-xl flex items-center gap-2">
-					<div class="w-4 h-4 border-2 border-amber-500 border-t-transparent rounded-full animate-spin"></div>
-					<span class="text-sm font-medium">Rate limited — retrying in {Math.ceil(timelineState.retryAfterMs / 1000)}s...</span>
-				</div>
+				<StatusBanner
+					tone="amber"
+					class="bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 px-4 py-3 rounded-xl flex items-center gap-2"
+					textClass="text-sm font-medium"
+					message="Rate limited — retrying in {Math.ceil(timelineState.retryAfterMs / 1000)}s..."
+				/>
 			{:else}
 				<div class="bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 px-4 py-3 rounded-xl">
 					<span>{error}</span>
@@ -193,23 +189,27 @@
 			{/if}
 		{:else}
 			{#if loading && timelineState.items.length > 0}
-				<div class="sticky top-[var(--header-height,3.5rem)] z-20 bg-surface-50/80 dark:bg-surface-950/80 backdrop-blur-sm py-2 flex items-center justify-center gap-2 border-b border-surface-200 dark:border-surface-700">
-					<div class="w-4 h-4 border-2 border-primary-500 border-t-transparent rounded-full animate-spin"></div>
-					<span class="text-sm text-surface-700 dark:text-surface-300">Refreshing...</span>
-				</div>
+				<StatusBanner
+					class="{STICKY_BANNER} border-b border-surface-200 dark:border-surface-700"
+					textClass={BANNER_TEXT}
+					message="Refreshing..."
+				/>
 			{:else if loading}
 				<!-- Optimistic UI: show subtle indicator while keeping current content visible -->
-				<div class="sticky top-[var(--header-height,3.5rem)] z-20 bg-surface-50/80 dark:bg-surface-950/80 backdrop-blur-sm py-2 flex items-center justify-center gap-2">
-					<div class="w-4 h-4 border-2 border-primary-500 border-t-transparent rounded-full animate-spin"></div>
-					<span class="text-sm text-surface-700 dark:text-surface-300">Switching to {timelineState.tabName}...</span>
-				</div>
+				<StatusBanner
+					class={STICKY_BANNER}
+					textClass={BANNER_TEXT}
+					message="Switching to {timelineState.tabName}..."
+				/>
 			{/if}
 
 			{#if timelineState.isClustering}
-				<div class="sticky top-[var(--header-height,3.5rem)] z-10 bg-amber-50 dark:bg-amber-900/20 py-2.5 flex items-center justify-center gap-2 mt-4 rounded-xl">
-					<div class="w-4 h-4 border-2 border-amber-500 border-t-transparent rounded-full animate-spin"></div>
-					<span class="text-sm text-amber-700 dark:text-amber-400 font-medium">Grouping similar articles...</span>
-				</div>
+				<StatusBanner
+					tone="amber"
+					class="sticky top-[var(--header-height,3.5rem)] z-10 bg-amber-50 dark:bg-amber-900/20 py-2.5 flex items-center justify-center gap-2 mt-4 rounded-xl"
+					textClass="text-sm text-amber-700 dark:text-amber-400 font-medium"
+					message="Grouping similar articles..."
+				/>
 			{/if}
 
 			{#if filteredItems.length > 0}
