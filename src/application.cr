@@ -80,6 +80,18 @@ rescue ex
   Log.for("quickheadlines.gc").warn { "GC tuning failed: #{ex.message}" }
 end
 
+# Startup self-check for the XML::Document cycle fix (FreeBSD leak).
+begin
+  probe = XML.parse("<probe/>")
+  raw = probe.to_unsafe.as(LibXML::Doc*).value._private
+  active = raw.address == ~probe.as(Void*).address
+  Log.for("quickheadlines.gc").info do
+    "XML cycle fix #{active ? "active" : "INACTIVE"} (libxml #{LibXML::VERSION}, crystal #{Crystal::VERSION})"
+  end
+rescue ex
+  Log.for("quickheadlines.gc").warn { "XML cycle fix self-check failed: #{ex.message}" }
+end
+
 # Initialize application state
 begin
   config_result = ConfigLoader.load_validated_config(QuickHeadlines::CONFIG_PATH)

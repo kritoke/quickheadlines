@@ -56,6 +56,25 @@ private module GCDiagnostics
     Crystal::System.print_error "  [gc-diag] type=unknown id=%d\n", id
   end
 
+  # For a stuck XML::Document, show its libxml doc's `_private` slot. If it
+  # equals the object's own address the cycle fix is not active; if it is the
+  # bit-inverted address the fix is active and the cycle runs elsewhere.
+  def self.print_xml_document_detail(v : LibGC::Word, id : Int32) : Nil
+    {% if parse_type("XML::Document").resolve? %}
+      return unless id == XML::Document.crystal_instance_type_id
+      doc = Pointer(Void).new(v.to_u64).as(XML::Document)
+      priv = doc.to_unsafe.as(LibXML::Doc*).value._private
+      state = if priv.address == v.to_u64
+                "RAW-SELF(fix inactive)"
+              elsif priv.address == ~v.to_u64
+                "hidden(fix active)"
+              else
+                "other"
+              end
+      Crystal::System.print_error "  [gc-diag] doc_private=%p state=%s\n", priv, state
+    {% end %}
+  end
+
   def self.install : Nil
     LibGC.set_warn_proc ->(msg : LibC::Char*, v : LibGC::Word) do
       begin
@@ -89,7 +108,9 @@ private module GCDiagnostics
           # type id in the first 4 bytes; compare against classes that have
           # finalizers. Static strings only - no allocation.
           if v != 0
-            print_type Pointer(Int32).new(v.to_u64).value
+            id = Pointer(Int32).new(v.to_u64).value
+            print_type id
+            print_xml_document_detail(v, id)
           end
         end
       rescue
