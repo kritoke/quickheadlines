@@ -22,8 +22,7 @@ class QuickHeadlines::Controllers::FeedsController < QuickHeadlines::Controllers
     has_valid_feeds = has_successful_feeds?(feeds_snapshot, tabs_snapshot)
 
     unless has_valid_feeds
-      feeds_snapshot, tabs_snapshot_hash = load_feeds_from_cache_fallback(cache)
-      tabs_snapshot = tabs_snapshot_hash.map { |tab| Tab.new(tab[:name], tab[:feeds], tab[:software_releases]) }
+      feeds_snapshot, tabs_snapshot = load_feeds_from_cache_fallback(cache)
     end
 
     QuickHeadlines::Services::FeedService.build_feeds_page(

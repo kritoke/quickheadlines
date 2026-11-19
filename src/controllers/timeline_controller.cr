@@ -42,9 +42,9 @@ class QuickHeadlines::Controllers::TimelineController < QuickHeadlines::Controll
 
     if found_tab.nil? || found_tab.feeds.empty?
       feeds_snapshot, cached_tabs = load_feeds_from_cache_fallback(@feed_cache)
-      found_tab = cached_tabs.find { |cached_tab| cached_tab[:name].downcase == tab.downcase }
+      found_tab = cached_tabs.find { |cached_tab| cached_tab.name.downcase == tab.downcase }
       if found_tab
-        return found_tab[:feeds].map(&.url)
+        return found_tab.feeds.map(&.url)
       elsif feeds_snapshot.any? { |feed| feed.url == tab }
         return [tab]
       end

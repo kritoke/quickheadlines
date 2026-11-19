@@ -220,9 +220,9 @@ class QuickHeadlines::Controllers::ApiBaseController < Athena::Framework::Contro
     )
   end
 
-  protected def load_feeds_from_cache_fallback(cache : FeedCache)
+  protected def load_feeds_from_cache_fallback(cache : FeedCache) : Tuple(Array(FeedData), Array(Tab))
     config = StateStore.config
-    return {[] of FeedData, [] of NamedTuple(name: String, feeds: Array(FeedData), software_releases: Array(FeedData))} unless config
+    return {[] of FeedData, [] of Tab} unless config
 
     cached_feeds = [] of FeedData
     config.feeds.each do |feed_config|
@@ -240,7 +240,7 @@ class QuickHeadlines::Controllers::ApiBaseController < Athena::Framework::Contro
         cached
       end
 
-      {name: tab_config.name, feeds: tab_feeds, software_releases: [] of FeedData}
+      Tab.new(tab_config.name, tab_feeds, [] of FeedData)
     end
 
     {cached_feeds, cached_tabs}
