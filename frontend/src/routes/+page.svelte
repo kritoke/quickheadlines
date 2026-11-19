@@ -10,6 +10,7 @@
 	import { onMount } from 'svelte';
 	import {
 		feedState,
+		getLoadedTab,
 		loadFeeds,
 		loadMoreFeedItems,
 		getFilteredFeeds,
@@ -34,6 +35,8 @@
 	let loading = $derived(isLoading(feedState) || isRefreshing(feedState));
 	let error = $derived(isError(feedState) ? getError(feedState) : null);
 
+	let activeTab = $derived(currentUrlTab());
+
 	let feedGridClass = $derived(getFeedGridClass(layoutState.feedColumns));
 
 	async function handleTabChange(tab: string) {
@@ -46,7 +49,7 @@
 	}
 	
 	async function handleRetry() {
-		await loadFeeds(feedState.activeTab, true);
+		await loadFeeds(activeTab, true);
 	}
 	
 	let feedEffects: ReturnType<typeof createFeedEffects> | null = null;
@@ -70,9 +73,9 @@
 	// subsequent change reloads, even into a legitimately empty category
 	// (an earlier gate on feedState.feeds.length made such clicks no-ops).
 	syncTabFromUrl(
-		() => feedState.activeTab,
+		getLoadedTab,
 		(tab) => {
-			logger.log('[Page] URL tab changed from', feedState.activeTab, 'to', tab, ', reloading...');
+			logger.log('[Page] URL tab changed from', getLoadedTab(), 'to', tab, ', reloading...');
 			loadFeeds(tab);
 		}
 	);
@@ -98,7 +101,7 @@
 	<AppHeader 
 		title="QuickHeadlines"
 		tabs={feedState.tabs}
-		activeTab={feedState.activeTab}
+		{activeTab}
 		onTabChange={handleTabChange}
 		viewLink={{ href: '/timeline', icon: 'clock' }}
 		searchExpanded={searchState.expanded}
@@ -114,7 +117,7 @@
 		<div class="md:hidden sticky top-[var(--header-height,3.5rem)] z-40 bg-surface-50 dark:bg-surface-950 border-b border-surface-200 dark:border-surface-700">
 			<TabSelector 
 				tabs={feedState.tabs}
-				activeTab={feedState.activeTab}
+				{activeTab}
 				onTabChange={handleTabChange}
 				maxInline={0}
 			/>
@@ -156,7 +159,7 @@
 			{/if}
 
 				{#if displayFeeds.length > 0}
-				{#key feedState.activeTab}
+				{#key activeTab}
 					<div class="grid {feedGridClass} gap-3 sm:gap-4 md:gap-5 pt-2 sm:pt-4 md:pt-6">
 						{#each displayFeeds as feed, i (`feed-${i}`)}
 							<FeedBox {feed} onLoadMore={() => handleLoadMore(feed)} loading={feedState.loadingFeeds[feed.url] ?? false} />

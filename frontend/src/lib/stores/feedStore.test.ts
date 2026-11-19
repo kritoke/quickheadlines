@@ -14,6 +14,7 @@ import {
 	loadMoreFeedItems,
 	resetFeedStore,
 	getCachedFeeds,
+	getLoadedTab,
 } from './feedStore.svelte';
 
 const feed = (url: string, n: number) => ({
@@ -35,6 +36,14 @@ describe('feedStore tab cache', () => {
 		resetFeedStore();
 		vi.mocked(fetchFeeds).mockReset();
 		vi.mocked(fetchMoreFeedItems).mockReset();
+	});
+
+	it('tracks the most recently requested tab, even if it fails', async () => {
+		expect(getLoadedTab()).toBe('all');
+		vi.mocked(fetchFeeds).mockRejectedValueOnce(new Error('down'));
+		await loadFeeds('Tech');
+		expect(getLoadedTab()).toBe('Tech');
+		expect('activeTab' in feedState).toBe(false);
 	});
 
 	it('shows cached feeds immediately when switching back to a tab', async () => {

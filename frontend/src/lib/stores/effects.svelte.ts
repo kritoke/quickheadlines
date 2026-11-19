@@ -1,4 +1,4 @@
-import { loadFeeds, feedState, loadFeedConfig } from "./feedStore.svelte";
+import { loadFeeds, getLoadedTab, loadFeedConfig } from "./feedStore.svelte";
 import { loadTimeline, timelineState, loadTimelineConfig } from "./timelineStore.svelte";
 import { websocketConnection } from "#lib/websocket";
 import type { WebSocketMessage } from "#lib/websocket";
@@ -93,7 +93,7 @@ function createRefreshEffect(
 }
 
 export function createFeedEffects(): RefreshEffect {
-	return createRefreshEffect(() => loadFeeds(feedState.activeTab, true), loadFeedConfig);
+	return createRefreshEffect(() => loadFeeds(getLoadedTab(), true), loadFeedConfig);
 }
 
 export function createTimelineEffects(): RefreshEffect {

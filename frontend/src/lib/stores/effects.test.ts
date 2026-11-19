@@ -11,7 +11,7 @@ vi.mock('#lib/websocket', () => ({
 
 let resolveConfig: ((n: number) => void) | null = null;
 const pendingConfig = () => new Promise<number>((r) => { resolveConfig = r; });
-vi.mock('./feedStore.svelte', () => ({ loadFeeds: vi.fn(async () => {}), feedState: { activeTab: 'all' }, loadFeedConfig: vi.fn(() => pendingConfig()) }));
+vi.mock('./feedStore.svelte', () => ({ loadFeeds: vi.fn(async () => {}), getLoadedTab: () => 'all', loadFeedConfig: vi.fn(() => pendingConfig()) }));
 vi.mock('./timelineStore.svelte', () => ({ loadTimeline: vi.fn(async () => {}), timelineState: { isClustering: false }, loadTimelineConfig: vi.fn(() => pendingConfig()) }));
 
 import { createFeedEffects, createTimelineEffects } from './effects.svelte';

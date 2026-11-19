@@ -16,7 +16,6 @@ export type { LoadStatus };
 type BaseFeedState = {
 	feeds: FeedResponse[];
 	tabs: { name: string }[];
-	activeTab: string;
 	lastUpdated: number | null;
 	loadingFeeds: Record<string, boolean>;
 	refreshMinutes: number;
@@ -37,6 +36,15 @@ export { isIdle, isLoading, isRefreshing, isError, getError };
 
 // Request tracking to prevent race conditions on tab switch
 let feedRequestId = 0;
+
+// The tab whose feeds were most recently requested. The URL is the source of
+// truth for the selected tab; this is only bookkeeping so refreshes reload the
+// same tab and URL changes can be detected.
+let loadedTab = "all";
+
+export function getLoadedTab(): string {
+	return loadedTab;
+}
 
 // Last successful feeds per tab, shown instantly on tab switch while the fresh
 // copy loads. Not reactive state: nothing renders from it directly, and keeping
@@ -62,7 +70,6 @@ function cacheTab(tab: string, feeds: FeedResponse[], tabs: { name: string }[]):
 const initialBaseState: BaseFeedState = {
 	feeds: [],
 	tabs: [],
-	activeTab: "all",
 	lastUpdated: null,
 	loadingFeeds: {},
 	refreshMinutes: 10,
@@ -105,7 +112,6 @@ export function setFeedsData(
 		...state,
 		feeds: feedsToUse,
 		tabs,
-		activeTab: tab,
 		status: "idle",
 		lastUpdated: response.updated_at || Date.now(),
 	};
@@ -143,16 +149,9 @@ export function setRefreshMinutes(
 	};
 }
 
-export function setActiveTab(state: FeedState, tab: string): FeedState {
-	saveTab(tab);
-	return {
-		...state,
-		activeTab: tab,
-	};
-}
-
 export function resetFeedStore(): void {
 	feedRequestId = 0;
+	loadedTab = "all";
 	tabCache.clear();
 	Object.assign(feedState, { ...initialState });
 }
@@ -164,7 +163,8 @@ export async function loadFeeds(
 	const requestId = ++feedRequestId;
 	const previousTabs = feedState.tabs;
 
-	Object.assign(feedState, setActiveTab(feedState, tab));
+	loadedTab = tab;
+	saveTab(tab);
 
 	// Show cached feeds for this tab immediately while the fresh copy loads.
 	const cached = tabCache.get(tab);
