@@ -26,7 +26,7 @@ dependencies:
     version: ~> 0.14.0
   fetcher:
     github: kritoke/fetcher.cr
-    version: ~> 0.9.22
+    version: ~> 0.9.24
   vug:
     github: kritoke/vug.cr
     version: ~> 0.5.8

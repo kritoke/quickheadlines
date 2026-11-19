@@ -11,7 +11,6 @@ require "../repositories/feed_repository"
 require "../repositories/story_repository"
 require "../repositories/cluster_repository"
 require "../websocket"
-require "../fetcher/adapter"
 require "../rate_limiter"
 
 class QuickHeadlines::Controllers::ApiBaseController < Athena::Framework::Controller
@@ -21,7 +20,6 @@ class QuickHeadlines::Controllers::ApiBaseController < Athena::Framework::Contro
   @clustering_service : QuickHeadlines::Services::ClusteringService?
   @favicon_actor : FaviconActor
   @content_service : QuickHeadlines::Services::ContentService
-  @feed_fetcher : FetcherAdapter
 
   def self.new : self
     db = DatabaseService.instance
@@ -29,8 +27,7 @@ class QuickHeadlines::Controllers::ApiBaseController < Athena::Framework::Contro
     sm = SocketManager.instance
     favicon = FaviconActor.instance
     content = QuickHeadlines::Services::ContentService.instance
-    fetcher = FetcherRegistry.impl
-    new(db, cache, sm, favicon, content, fetcher)
+    new(db, cache, sm, favicon, content)
   end
 
   def initialize(
@@ -39,7 +36,6 @@ class QuickHeadlines::Controllers::ApiBaseController < Athena::Framework::Contro
     @socket_manager : SocketManager,
     @favicon_actor : FaviconActor,
     @content_service : QuickHeadlines::Services::ContentService,
-    @feed_fetcher : FetcherAdapter,
   )
   end
 

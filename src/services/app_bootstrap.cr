@@ -86,10 +86,6 @@ class AppBootstrap
     SocketManager.instance.start
     Log.for("quickheadlines.app").info { "SocketManager initialized" }
 
-    QuickHeadlines::ThrottlerActor.instance = QuickHeadlines::ThrottlerActor.new
-    QuickHeadlines::ThrottlerActor.instance.start
-    Log.for("quickheadlines.app").info { "ThrottlerActor initialized" }
-
     QuickHeadlines::Services::ClusteringActor.instance = QuickHeadlines::Services::ClusteringActor.new(@db_service)
     QuickHeadlines::Services::ClusteringActor.instance.start
     Log.for("quickheadlines.app").info { "ClusteringActor initialized" }

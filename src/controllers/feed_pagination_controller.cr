@@ -42,7 +42,7 @@ class QuickHeadlines::Controllers::FeedPaginationController < QuickHeadlines::Co
       db_fetch_limit = StateStore.config.try(&.db_fetch_limit) || 500
       if current_count < needed_count && current_count < db_fetch_limit
         fetch_target = {needed_count + QuickHeadlines::Constants::FETCH_BUFFER_ITEMS, db_fetch_limit}.min
-        @feed_fetcher.fetch(feed_config, fetch_target, db_fetch_limit, nil)
+        FeedFetcher.fetch(feed_config, fetch_target, db_fetch_limit, nil)
       end
 
       if data = cache.get(url)

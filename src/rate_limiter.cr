@@ -1,91 +1,96 @@
-require "./services/throttler_actor"
+require "time"
+require "log"
+require "./constants"
 
 module QuickHeadlines
-  # Backward-compatible API — delegates to ThrottlerActor.
+  # Sliding-window rate limiter, in-process and Mutex-guarded.
   #
-  # Adds a small token-lease cache in front of the actor to avoid an actor
-  # round-trip per request. On a miss, the actor *reserves* a small batch of
-  # requests (at most 10% of the limit, capped at LEASE_MAX) and records them
-  # as used; cache hits then spend those pre-counted tokens. The actor's count
-  # therefore never under-counts, so the limit can't be exceeded. The cost is
-  # that unused leased tokens still count against the client for the window.
+  # Each (key, max_requests, window_seconds) combination has its own window of
+  # request timestamps. Counting is exact: a request is allowed only while the
+  # window holds fewer than `max_requests` entries, so the limit can never be
+  # exceeded. Idle entries are evicted after RATE_LIMITER_INSTANCE_TTL seconds
+  # (checked at most every RATE_LIMITER_CLEANUP_INTERVAL seconds), which keeps
+  # memory bounded to recently active clients.
   class RateLimiter
-    # =========================================================================
-    # Cache configuration
-    # =========================================================================
+    private class Window
+      getter last_accessed : Int64
 
-    # How long a cached `true` result is reused. Short enough that
-    # the worst-case overshoot is bounded, long enough to absorb
-    # typical burst traffic and avoid per-request actor calls.
-    CACHE_TTL_SECONDS = 1
-
-    # Maximum number of entries before the cache is cleared. The
-    # cache is best-effort, so dropping it under pressure is fine —
-    # the actor will just process more requests until the cache
-    # repopulates. This prevents the cache from growing unboundedly
-    # under a key-bombing attack.
-    CACHE_MAX_ENTRIES = 256
-
-    # =========================================================================
-    # Cache state
-    # =========================================================================
-
-    @@cache_mutex = Mutex.new
-    @@allowed_cache = {} of String => {Int64, Int32}
-
-    # =========================================================================
-    # Public API
-    # =========================================================================
-
-    LEASE_MAX = 10
-
-    def self.allowed?(key : String, max_requests : Int32 = 60, window_seconds : Int32 = 60) : Bool
-      cache_key = "#{key}:#{max_requests}:#{window_seconds}"
-      now = Time.utc.to_unix
-
-      @@cache_mutex.synchronize do
-        if entry = @@allowed_cache[cache_key]?
-          ts, tokens = entry
-          if (now - ts) < CACHE_TTL_SECONDS && tokens > 0
-            @@allowed_cache[cache_key] = {ts, tokens - 1}
-            return true
-          end
-          @@allowed_cache.delete(cache_key)
-        end
+      def initialize(@max_requests : Int32, @window_seconds : Int32)
+        @requests = Deque(Int64).new
+        @last_accessed = Time.utc.to_unix
       end
 
-      want = (max_requests // 10).clamp(1, LEASE_MAX)
-      granted = ThrottlerActor.instance.reserve(key, max_requests, window_seconds, want)
-      return false if granted <= 0
+      def allow?(now : Int64) : Bool
+        prune(now)
+        @last_accessed = now
+        return false if @requests.size >= @max_requests
+        @requests << now
+        true
+      end
 
-      # One token is spent by this request; cache the rest.
-      if granted > 1
-        @@cache_mutex.synchronize do
-          @@allowed_cache.clear if @@allowed_cache.size >= CACHE_MAX_ENTRIES
-          @@allowed_cache[cache_key] = {now, granted - 1}
+      def retry_after(now : Int64) : Int32
+        prune(now)
+        oldest = @requests.first?
+        return @window_seconds unless oldest
+        (@window_seconds - (now - oldest)).to_i32.clamp(1, @window_seconds)
+      end
+
+      private def prune(now : Int64) : Nil
+        cutoff = now - @window_seconds
+        while (first = @requests.first?) && first < cutoff
+          @requests.shift
         end
       end
-      true
     end
 
+    @@mutex = Mutex.new
+    @@windows = {} of String => Window
+    @@last_cleanup = Time.utc.to_unix
+
+    def self.allowed?(key : String, max_requests : Int32 = 60, window_seconds : Int32 = 60) : Bool
+      now = Time.utc.to_unix
+      @@mutex.synchronize do
+        maybe_cleanup(now)
+        window = (@@windows["#{key}:#{max_requests}:#{window_seconds}"] ||= Window.new(max_requests, window_seconds))
+        window.allow?(now)
+      end
+    end
+
+    # Seconds until the oldest request for `key` (any max_requests) leaves the
+    # window; `window_seconds` when the key has no recorded requests.
     def self.retry_after(key : String, window_seconds : Int32 = 60) : Int32
-      # `retry_after` is only called when `allowed?` returned
-      # `false`, so the actor call is unavoidable. No cache here.
-      ThrottlerActor.instance.retry_after(key, window_seconds)
+      now = Time.utc.to_unix
+      prefix = "#{key}:"
+      suffix = ":#{window_seconds}"
+      @@mutex.synchronize do
+        retries = @@windows.compact_map do |limiter_key, window|
+          window.retry_after(now) if limiter_key.starts_with?(prefix) && limiter_key.ends_with?(suffix)
+        end
+        retries.min? || window_seconds
+      end
     end
 
     def self.shutdown : Nil
-      @@cache_mutex.synchronize { @@allowed_cache.clear }
-      ThrottlerActor.instance.shutdown_throttler
+      clear_cache
     end
 
-    # Exposed for tests and instrumentation.
+    # Number of tracked limiter windows (reported in the health log).
     def self.cache_size : Int32
-      @@cache_mutex.synchronize { @@allowed_cache.size }
+      @@mutex.synchronize { @@windows.size }
     end
 
     def self.clear_cache : Nil
-      @@cache_mutex.synchronize { @@allowed_cache.clear }
+      @@mutex.synchronize { @@windows.clear }
+    end
+
+    private def self.maybe_cleanup(now : Int64) : Nil
+      return if now - @@last_cleanup < Constants::RATE_LIMITER_CLEANUP_INTERVAL
+      @@last_cleanup = now
+      cutoff = now - Constants::RATE_LIMITER_INSTANCE_TTL
+      before = @@windows.size
+      @@windows.reject! { |_, window| window.last_accessed < cutoff }
+      removed = before - @@windows.size
+      Log.for("quickheadlines.ratelimiter").debug { "Evicted #{removed} idle rate limiter windows" } if removed > 0
     end
   end
 end

@@ -160,7 +160,7 @@ These files set up the service user, cache directory at `/var/cache/quickheadlin
 - **Development Mode**: `just run` - Runs with development settings
 - **Check Dependencies**: `just check-deps` - Verify all required dependencies are installed
 - **Clean Build**: `just clean && just build` - Remove all build artifacts and rebuild
-- **Run Tests**: `cd frontend && npm run test` - Run Vitest tests for Svelte components
+- **Run Tests**: `cd frontend && pnpm run test` - Run Vitest tests for Svelte components
 
 ### Running the Application
 
@@ -177,6 +177,23 @@ The application will:
 1. Auto-download `feeds.yml` from GitHub if missing
 2. Create SQLite cache database on first run
 3. Start listening on port 3030 on localhost unless you changed the port in the `feeds.yml` file.
+
+### Reddit Authentication (optional)
+
+Reddit blocks unauthenticated requests from many server and datacenter IPs
+(HTTP 403). The fetcher already falls back to Reddit's RSS feed and
+old.reddit.com, but if those are blocked too, give it OAuth credentials from a
+Reddit "script" app (<https://www.reddit.com/prefs/apps>):
+
+```bash
+export REDDIT_CLIENT_ID=...
+export REDDIT_CLIENT_SECRET=...
+export REDDIT_USERNAME=...
+export REDDIT_PASSWORD=...
+```
+
+All four must be set for OAuth to be used; blank or missing values mean
+unauthenticated access. The values are never logged.
 
 ### Cache Directory Configuration
 

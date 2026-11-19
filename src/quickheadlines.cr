@@ -1,5 +1,6 @@
 require "./application"
 require "./websocket"
+require "./websocket_path_handler"
 require "./services/clustering_service"
 
 require "http"
@@ -25,22 +26,6 @@ end
 
 # Only lets WebSocket upgrades through on a single path; everything else
 # falls through to the next handler as a normal HTTP request.
-class WebSocketPathHandler
-  include HTTP::Handler
-
-  def initialize(@path : String, @inner : HTTP::WebSocketHandler)
-  end
-
-  def call(context : HTTP::Server::Context)
-    if context.request.path == @path
-      @inner.next = self.next
-      @inner.call(context)
-    else
-      call_next(context)
-    end
-  end
-end
-
 class ClientIPHandler
   include HTTP::Handler
 

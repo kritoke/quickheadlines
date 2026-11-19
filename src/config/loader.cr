@@ -129,11 +129,5 @@ module ConfigLoader
         end
       end
     end
-
-    non_empty_lines = lines.reject(&.strip.empty?)
-    if lines.size > non_empty_lines.size
-      trailing_blanks = lines.size - non_empty_lines.size
-      Log.for("quickheadlines.config").warn { "Found #{trailing_blanks} trailing blank line(s) at end of file" }
-    end
   end
 end

@@ -48,6 +48,19 @@ class FeedFetcher
     @@instance = value
   end
 
+  # Test seam: when set, `FeedFetcher.fetch` calls this instead of the
+  # singleton (e.g. to inject a slow or failing fetch in specs).
+  class_property fetch_override : Proc(Feed, Int32, Int32, FeedData?, FeedData)? = nil
+
+  # Entry point used by the refresh loop and the pagination endpoint.
+  def self.fetch(feed : Feed, display_item_limit : Int32, db_fetch_limit : Int32, previous_data : FeedData? = nil) : FeedData
+    if override = @@fetch_override
+      override.call(feed, display_item_limit, db_fetch_limit, previous_data)
+    else
+      instance.fetch(feed, display_item_limit, db_fetch_limit, previous_data)
+    end
+  end
+
   # Main entry point — fetch a feed with caching and retry logic.
   # Timeout control is handled at the caller level (fetch_single_feed_with_timeout).
   def fetch(feed : Feed, display_item_limit : Int32, db_fetch_limit : Int32, previous_data : FeedData? = nil) : FeedData
@@ -140,11 +153,21 @@ class FeedFetcher
         max_retries: QuickHeadlines::Constants::MAX_RETRIES
       ),
       max_redirects: QuickHeadlines::Constants::MAX_REDIRECTS,
+      reddit_client_id: env_credential("REDDIT_CLIENT_ID"),
+      reddit_client_secret: env_credential("REDDIT_CLIENT_SECRET"),
+      reddit_username: env_credential("REDDIT_USERNAME"),
+      reddit_password: env_credential("REDDIT_PASSWORD"),
       streaming: Fetcher::StreamingConfig.new(
         enabled: debug_enabled,
         debug: debug_enabled
       )
     )
+  end
+
+  # Reddit OAuth credentials (optional). Unset or blank means unauthenticated
+  # Reddit access. Values are never logged.
+  private def self.env_credential(name : String) : String?
+    ENV[name]?.presence.try(&.strip).presence
   end
 
   def self.load_feeds_from_cache(config : Config) : Bool
