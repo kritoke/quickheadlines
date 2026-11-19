@@ -1,6 +1,5 @@
 import { fetchFeeds, fetchMoreFeedItems } from "#lib/api";
 import { loadConfigForStore } from "#lib/utils/storeConfig";
-import { deepClone } from "#lib/utils/clone";
 import {
 	isIdle,
 	isLoading,
@@ -20,7 +19,6 @@ type BaseFeedState = {
 	activeTab: string;
 	lastUpdated: number | null;
 	loadingFeeds: Record<string, boolean>;
-	tabCache: Record<string, { feeds: FeedResponse[]; loaded: boolean }>;
 	refreshMinutes: number;
 };
 
@@ -40,13 +38,33 @@ export { isIdle, isLoading, isRefreshing, isError, getError };
 // Request tracking to prevent race conditions on tab switch
 let feedRequestId = 0;
 
+// Last successful feeds per tab, shown instantly on tab switch while the fresh
+// copy loads. Not reactive state: nothing renders from it directly, and keeping
+// it out of $state avoids deep-proxying every cached tab. Responses are never
+// mutated in place (load-more builds new arrays), so no cloning is needed.
+// Bounded to the tabs the server currently reports.
+const tabCache = new Map<string, FeedResponse[]>();
+
+export function getCachedFeeds(tab: string): FeedResponse[] | undefined {
+	return tabCache.get(tab);
+}
+
+function cacheTab(tab: string, feeds: FeedResponse[], tabs: { name: string }[]): void {
+	tabCache.set(tab, feeds);
+	if (tabs.length === 0) return;
+	const known = new Set(["all", ...tabs.map((t) => t.name.toLowerCase())]);
+	known.add(tab.toLowerCase());
+	for (const key of tabCache.keys()) {
+		if (!known.has(key.toLowerCase())) tabCache.delete(key);
+	}
+}
+
 const initialBaseState: BaseFeedState = {
 	feeds: [],
 	tabs: [],
 	activeTab: "all",
 	lastUpdated: null,
 	loadingFeeds: {},
-	tabCache: {},
 	refreshMinutes: 10,
 };
 
@@ -63,7 +81,7 @@ export function setLoading(
 ): FeedStateLoading | FeedStateRefreshing {
 	return {
 		...state,
-		status: state.tabCache[tab]?.loaded ? "refreshing" : "loading",
+		status: tabCache.has(tab) ? "refreshing" : "loading",
 	};
 }
 
@@ -80,16 +98,8 @@ export function setFeedsData(
 	const feedsToUse = newFeeds.length > 0 ? newFeeds : state.feeds;
 	const tabs = response.tabs?.length ? response.tabs : state.tabs;
 
-	// Only mark cache as loaded if we got actual new data from API
-	// Don't cache empty results - they should NOT mark cache as loaded
-	// so next refresh will try again
-	const updatedCache =
-		newFeeds.length > 0
-			? {
-					...state.tabCache,
-					[tab]: { feeds: deepClone(newFeeds), loaded: true },
-				}
-			: state.tabCache;
+	// Empty results are not cached, so the next refresh tries again.
+	if (newFeeds.length > 0) cacheTab(tab, newFeeds, tabs);
 
 	return {
 		...state,
@@ -98,7 +108,6 @@ export function setFeedsData(
 		activeTab: tab,
 		status: "idle",
 		lastUpdated: response.updated_at || Date.now(),
-		tabCache: updatedCache,
 	};
 }
 
@@ -144,6 +153,7 @@ export function setActiveTab(state: FeedState, tab: string): FeedState {
 
 export function resetFeedStore(): void {
 	feedRequestId = 0;
+	tabCache.clear();
 	Object.assign(feedState, { ...initialState });
 }
 
@@ -157,9 +167,9 @@ export async function loadFeeds(
 	Object.assign(feedState, setActiveTab(feedState, tab));
 
 	// Show cached feeds for this tab immediately while the fresh copy loads.
-	const cached = feedState.tabCache[tab];
-	if (!force && cached?.loaded && cached.feeds.length > 0) {
-		feedState.feeds = cached.feeds;
+	const cached = tabCache.get(tab);
+	if (!force && cached) {
+		feedState.feeds = cached;
 	}
 	Object.assign(feedState, setLoading(feedState, tab));
 
