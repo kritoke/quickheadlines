@@ -30,7 +30,7 @@ private module GCDiagnostics
   # part in a Boehm finalization cycle. Each is resolved at compile time so
   # types not linked into this program are skipped.
   macro finalizable_types
-    {% names = %w(
+    {% names = %w[
          OpenSSL::SSL::Socket::Client OpenSSL::SSL::Socket::Server
          OpenSSL::SSL::Context::Client OpenSSL::SSL::Context::Server
          OpenSSL::X509::Certificate OpenSSL::X509::Name OpenSSL::X509::Extension
@@ -42,11 +42,11 @@ private module GCDiagnostics
          YAML::PullParser YAML::Builder
          Regex Log::AsyncDispatcher
          BakedFileSystem::BakedFile Crtemp
-       ) %}
+       ] %}
     {% for n in names %}
       {% t = parse_type(n).resolve? %}
       {% if t %}
-        return Crystal::System.print_error("  [gc-diag] type={{n.id}}\n") if id == {{t}}.crystal_instance_type_id
+        return Crystal::System.print_error("  [gc-diag] type={{ n.id }}\n") if id == {{ t }}.crystal_instance_type_id
       {% end %}
     {% end %}
   end
