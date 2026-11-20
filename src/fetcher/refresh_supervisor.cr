@@ -16,7 +16,10 @@ require "../services/fiber_tracker"
 # Each cycle runs one refresh in a worker fiber bounded by an outer
 # timeout (refresh interval * OUTER_TIMEOUT_MULTIPLIER). On timeout the
 # worker is signalled to cancel. While a cancelled worker is still alive,
-# later cycles are skipped instead of spawning a second worker. This is the
+# later cycles are skipped instead of spawning a second worker. After
+# STUCK_WORKER_EXIT_AFTER_SKIPS skips the wedged worker is abandoned (or the
+# process exits, with QUICKHEADLINES_WATCHDOG_EXIT_ON_FAIL=true) so refreshing
+# never stops for good. This is the
 # single stuck-refresh mechanism; it replaces the old watchdog fiber,
 # Monitoring.stuck?/attempt_recovery and the consecutive-skip reset.
 #
@@ -45,6 +48,9 @@ module RefreshLoop
     # signalled to cancel after the outer timeout but hasn't exited yet.
     @worker_alive = Atomic(Bool).new(false)
     @stuck_skips = 0
+    # Generation of the current worker. An abandoned worker that finally
+    # exits must not clear @worker_alive for its replacement.
+    @worker_gen = Atomic(Int32).new(0)
 
     def initialize(initial_config : Config, @config_path : String, @cache : FeedCache, @db_service : DatabaseService)
       @state = State.new(initial_config, File.info(@config_path).modification_time)
@@ -106,13 +112,16 @@ module RefreshLoop
     private def run_timed_refresh : Float64
       if @worker_alive.get
         @stuck_skips += 1
-        Log.for("quickheadlines.feed").warn { "Previous refresh worker still running (cancelled, not yet exited) - skipping this cycle (#{@stuck_skips})" }
         RefreshLoop::Monitoring.record_failure
-        if QuickHeadlines::Constants::WATCHDOG_ESCALATE_EXIT && @stuck_skips >= QuickHeadlines::Constants::STUCK_WORKER_EXIT_AFTER_SKIPS
+        if @stuck_skips < QuickHeadlines::Constants::STUCK_WORKER_EXIT_AFTER_SKIPS
+          Log.for("quickheadlines.feed").warn { "Previous refresh worker still running (cancelled, not yet exited) - skipping this cycle (#{@stuck_skips})" }
+          return 0.0
+        end
+        if QuickHeadlines::Constants::WATCHDOG_ESCALATE_EXIT
           Log.for("quickheadlines.feed").fatal { "Refresh worker wedged for #{@stuck_skips} cycles - exiting for external supervisor restart" }
           exit 1
         end
-        return 0.0
+        Log.for("quickheadlines.feed").error { "Refresh worker wedged for #{@stuck_skips} cycles - abandoning it and starting a fresh refresh" }
       end
       @stuck_skips = 0
 
@@ -125,6 +134,7 @@ module RefreshLoop
       cancel_ch = Channel(Nil).new(1)
       completion_channel = Channel(Nil).new(1)
       @worker_alive.set(true)
+      gen = @worker_gen.add(1) + 1
       RefreshLoop::FiberTracker.tracked_spawn("refresh_worker") do
         begin
           # Use local variable to avoid holding config reference after refresh
@@ -143,7 +153,7 @@ module RefreshLoop
           Log.for("quickheadlines.feed").error(exception: ex) { "refresh_loop refresh_all failed" }
           RefreshLoop::Monitoring.record_failure
         ensure
-          @worker_alive.set(false)
+          @worker_alive.set(false) if @worker_gen.get == gen
         end
         completion_channel.send(nil)
       end
